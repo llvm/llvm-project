@@ -19,8 +19,8 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__format/concepts.h>
 #include <__format/enable_insertable.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_to_n_result.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>

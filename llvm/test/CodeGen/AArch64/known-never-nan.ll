@@ -52,7 +52,7 @@ define float @not_fmaxnm_maybe_nan(i32 %i1, i32 %i2) #0 {
 ; CHECK-GI-NEXT:    fmax s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %f1 = uitofp i32 %i1 to float
-  %fmul = fmul float %f1, 0xfff0000000000000 ; -INFINITY as 64-bit hex
+  %fmul = fmul float %f1, -inf ; -INFINITY as 64-bit hex
   %f2 = uitofp i32 %i2 to float
   %fadd2 = fadd float %f2, 17.0
   %cmp = fcmp uge float %fmul, %fadd2

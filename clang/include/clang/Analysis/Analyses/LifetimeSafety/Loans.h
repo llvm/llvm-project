@@ -89,9 +89,13 @@ public:
     return ParamOrMethod.dyn_cast<const CXXMethodDecl *>();
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
+  using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
+  static void Profile(llvm::FoldingSetNodeID &ID, KeyTy ParamOrMethod) {
     ID.AddPointer(ParamOrMethod.getOpaqueValue());
   }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const { Profile(ID, ParamOrMethod); }
 };
 
 /// Represents the storage location being borrowed, e.g., a specific stack

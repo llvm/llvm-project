@@ -57,6 +57,24 @@ define <vscale x 2 x double> @test_compress_nxv2f64(<vscale x 2 x double> %vec, 
     ret <vscale x 2 x double> %out
 }
 
+define <vscale x 2 x bfloat> @test_compress_nxv2bf16(<vscale x 2 x bfloat> %vec, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.d, p0, z0.d
+; CHECK-NEXT:    ret
+    %out = call <vscale x 2 x bfloat> @llvm.experimental.vector.compress(<vscale x 2 x bfloat> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x bfloat> poison)
+    ret <vscale x 2 x bfloat> %out
+}
+
+define <vscale x 2 x half> @test_compress_nxv2f16(<vscale x 2 x half> %vec, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.d, p0, z0.d
+; CHECK-NEXT:    ret
+    %out = call <vscale x 2 x half> @llvm.experimental.vector.compress(<vscale x 2 x half> %vec, <vscale x 2 x i1> %mask, <vscale x 2 x half> poison)
+    ret <vscale x 2 x half> %out
+}
+
 define <vscale x 4 x i8> @test_compress_nxv4i8(<vscale x 4 x i8> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compress_nxv4i8:
 ; CHECK:       // %bb.0:
@@ -91,6 +109,24 @@ define <vscale x 4 x float> @test_compress_nxv4f32(<vscale x 4 x float> %vec, <v
 ; CHECK-NEXT:    ret
     %out = call <vscale x 4 x float> @llvm.experimental.vector.compress(<vscale x 4 x float> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x float> poison)
     ret <vscale x 4 x float> %out
+}
+
+define <vscale x 4 x bfloat> @test_compress_nxv4bf16(<vscale x 4 x bfloat> %vec, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    ret
+    %out = call <vscale x 4 x bfloat> @llvm.experimental.vector.compress(<vscale x 4 x bfloat> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x bfloat> poison)
+    ret <vscale x 4 x bfloat> %out
+}
+
+define <vscale x 4 x half> @test_compress_nxv4f16(<vscale x 4 x half> %vec, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: test_compress_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    ret
+    %out = call <vscale x 4 x half> @llvm.experimental.vector.compress(<vscale x 4 x half> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x half> poison)
+    ret <vscale x 4 x half> %out
 }
 
 define <vscale x 4 x i4> @test_compress_illegal_element_type(<vscale x 4 x i4> %vec, <vscale x 4 x i1> %mask) {

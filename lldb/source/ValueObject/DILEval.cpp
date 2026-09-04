@@ -8,10 +8,12 @@
 
 #include "lldb/ValueObject/DILEval.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
@@ -42,6 +44,17 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       name, addr, exe_ctx,
       valobj.GetCompilerType().GetArrayElementType(&ctx).GetPointerType(),
       /* do_deref */ false);
+}
+
+static llvm::Expected<lldb::LanguageType>
+GetSourceLanguageFromCU(StackFrame &ctx) {
+  SymbolContext symbol_context =
+      ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
+  if (!symbol_context.comp_unit)
+    return llvm::createStringErrorV("no compile unit for frame: {}",
+                                    ctx.GetFunctionName());
+
+  return symbol_context.comp_unit->GetLanguage();
 }
 
 static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
@@ -88,10 +101,20 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       if (!uint_bit_size)
         return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
-          (in_type.IsSigned() && bitfield_size == *int_bit_size))
-        return valobj->CastToBasicType(int_type);
-      if (bitfield_size <= *uint_bit_size)
-        return valobj->CastToBasicType(uint_type);
+          (in_type.IsSigned() && bitfield_size == *int_bit_size)) {
+        auto result = valobj->CastToBasicType(int_type);
+        if (result->GetError().Fail())
+          return llvm::make_error<DILDiagnosticError>(
+              m_expr, result->GetError().AsCString(), location);
+        return result;
+      }
+      if (bitfield_size <= *uint_bit_size) {
+        auto result = valobj->CastToBasicType(uint_type);
+        if (result->GetError().Fail())
+          return llvm::make_error<DILDiagnosticError>(
+              m_expr, result->GetError().AsCString(), location);
+        return result;
+      }
       // Re-create as a const value with the same underlying type
       Scalar scalar;
       bool resolved = valobj->ResolveValue(scalar);
@@ -107,8 +130,13 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
 
   CompilerType promoted_type =
       valobj->GetCompilerType().GetPromotedIntegerType();
-  if (promoted_type)
-    return valobj->CastToBasicType(promoted_type);
+  if (promoted_type) {
+    auto result = valobj->CastToBasicType(promoted_type);
+    if (result->GetError().Fail())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, result->GetError().AsCString(), location);
+    return result;
+  }
 
   return valobj;
 }
@@ -323,6 +351,20 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
   return nullptr;
 }
 
+lldb::ValueObjectSP LookupPersistentIdentifier(llvm::StringRef name_ref,
+                                               StackFrame &stack_frame,
+                                               lldb::TargetSP target_sp,
+                                               lldb::LanguageType language) {
+  if (name_ref.starts_with("$")) {
+    if (auto *state =
+            target_sp->GetPersistentExpressionStateForLanguage(language))
+      if (auto var_sp = state->GetVariable(name_ref))
+        if (auto valobj_sp = var_sp->GetValueObject())
+          return valobj_sp;
+  }
+  return nullptr;
+}
+
 lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
                                      StackFrame &stack_frame,
                                      lldb::DynamicValueType use_dynamic) {
@@ -458,6 +500,14 @@ Interpreter::Visit(const IdentifierNode &node) {
 
   if (!identifier)
     identifier = LookupEnumValue(node.GetName(), m_stack_frame);
+
+  if (!identifier && node.GetName()[0] == '$') {
+    auto language = GetSourceLanguageFromCU(m_stack_frame);
+    if (!language)
+      return language.takeError();
+    identifier = LookupPersistentIdentifier(node.GetName(), m_stack_frame,
+                                            m_target, language.get());
+  }
 
   if (!identifier && node.GetName() == "nullptr") {
     // If we got a "nullptr" identifier, and there is no defined variable with
@@ -1933,18 +1983,19 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                                                   node.GetLocation());
   }
 
+  lldb::ValueObjectSP result;
   switch (cast_kind) {
   case CastKind::eEnumeration: {
     // FIXME: is this correct for float vector types?
     if (op_type.GetTypeInfo() & lldb::eTypeIsFloat || op_type.IsInteger() ||
         op_type.IsEnumerationType())
-      return operand->CastToEnumType(target_type);
+      result = operand->CastToEnumType(target_type);
     break;
   }
   case CastKind::eArithmetic: {
     if (op_type.IsPointerType() || op_type.IsNullPtrType() ||
         op_type.IsScalarType() || op_type.IsEnumerationType())
-      return operand->CastToBasicType(target_type);
+      result = operand->CastToBasicType(target_type);
     break;
   }
   case CastKind::ePointer: {
@@ -1954,14 +2005,23 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                                               : operand->GetValueAsUnsigned(0));
     llvm::StringRef name = "result";
     ExecutionContext exe_ctx(m_target.get(), false);
-    return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                     target_type,
-                                                     /* do_deref */ false);
+    result = ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                       target_type,
+                                                       /* do_deref */ false);
+    break;
   }
   case CastKind::eNone: {
     return lldb::ValueObjectSP();
   }
   } // switch
+
+  if (result) {
+    // If cast failed, retrieve the error message from the result.
+    if (result->GetError().Fail())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, result->GetError().AsCString(), node.GetLocation());
+    return result;
+  }
 
   std::string errMsg =
       llvm::formatv("unable to cast from '{0}' to '{1}'",

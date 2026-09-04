@@ -18,6 +18,7 @@
 #include "Decomposer.h"
 #include "Utils.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/reference-wrapper.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -46,6 +47,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-dsa.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
@@ -61,6 +63,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -119,12 +122,12 @@ emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
 // Code generation helper functions
 //===----------------------------------------------------------------------===//
 
-static void genOMPDispatch(lower::AbstractConverter &converter,
-                           lower::SymMap &symTable,
-                           semantics::SemanticsContext &semaCtx,
-                           lower::pft::Evaluation &eval, mlir::Location loc,
-                           const ConstructQueue &queue,
-                           ConstructQueue::const_iterator item);
+static void genOMPDispatch(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs = {});
 
 /// Return the directive that is immediately nested inside of the given
 /// \c parent evaluation, if it is its only non-end-statement nested evaluation
@@ -210,11 +213,13 @@ struct ObjectEntryBlockArgs {
   ObjectEntryBlockArgsEntry taskReduction;
   ObjectEntryBlockArgsEntry useDeviceAddr;
   ObjectEntryBlockArgsEntry useDevicePtr;
+  std::size_t sourceUseDeviceAddrCount{0};
 
   bool isValid() const {
     return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
            priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
-           useDeviceAddr.isValid() && useDevicePtr.isValid();
+           useDeviceAddr.isValid() && useDevicePtr.isValid() &&
+           sourceUseDeviceAddrCount <= useDeviceAddr.objects.size();
   }
 
   llvm::SmallVector<const semantics::Symbol *> getSyms() const {
@@ -1218,7 +1223,7 @@ static fir::GlobalOp globalInitialization(lower::AbstractConverter &converter,
                                           const lower::pft::Variable &var,
                                           mlir::Location currentLocation) {
   std::string globalName = converter.mangleName(sym);
-  mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
+  fir::LinkageAttr linkage = firOpBuilder.createInternalLinkage();
   return Fortran::lower::defineGlobal(converter, var, globalName, linkage);
 }
 
@@ -1496,7 +1501,7 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
 /// 'declare target' directive and return the intended device type for them.
 static void getDeclareTargetInfo(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::pft::Evaluation &eval,
+    std::optional<common::reference_wrapper<lower::pft::Evaluation>> eval,
     const parser::OmpDeclareTargetDirective &construct,
     mlir::omp::DeclareTargetOperands &clauseOps,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause) {
@@ -1510,8 +1515,10 @@ static void getDeclareTargetInfo(
     List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
     if (clauses.empty()) {
       // Case: implicit capture of the enclosing function/subroutine.
+      assert(eval.has_value() &&
+             "expected eval to have value when clauses is empty");
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
-          eval.getOwningProcedure();
+          eval->get().getOwningProcedure();
       bool owningProcNotMainProgram =
           owningProc && !owningProc->isMainProgram();
 
@@ -1852,6 +1859,36 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
                                    /*implicit=*/false);
 }
 
+// Take a declare target directive, and mark the globals and functions
+// named in its clauses.
+static void markDeclareTargetWithDirective(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    std::optional<common::reference_wrapper<lower::pft::Evaluation>> eval,
+    const parser::OmpDeclareTargetDirective &declareTargetConstruct) {
+  mlir::omp::DeclareTargetOperands clauseOps;
+  llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
+  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
+  getDeclareTargetInfo(converter, semaCtx, eval, declareTargetConstruct,
+                       clauseOps, symbolAndClause);
+
+  for (const DeclareTargetCaptureInfo &symClause : symbolAndClause) {
+    mlir::Operation *op =
+        mod.lookupSymbol(converter.mangleName(symClause.symbol));
+
+    // Skip if no op is found. This happens during module declaration
+    // scope lowering for symbols that are deferred to be handled
+    // later in finalizeOpenMPLowering. This is also expected when
+    // handling a directive imported from a module file and the symbol
+    // is not used in the current translation unit, because no op is
+    // created for unused imports.
+    if (!op)
+      continue;
+
+    markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
+                      symClause.automap);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Op body generation helper structures and functions
 //===----------------------------------------------------------------------===//
@@ -2122,6 +2159,12 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   marker->erase();
 }
 
+static void genIntermediateCommonBlockAccessors(
+    Fortran::lower::AbstractConverter &converter,
+    const mlir::Location &currentLocation,
+    llvm::ArrayRef<mlir::BlockArgument> mapBlockArgs,
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> mapSyms);
+
 static void genBodyOfTargetDataOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
@@ -2132,6 +2175,15 @@ static void genBodyOfTargetDataOp(
 
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), dataOp.getRegion());
   bindEntryBlockArgs(converter, dataOp, args);
+  auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*dataOp);
+  llvm::SmallVector<const semantics::Symbol *> sourceUseDeviceAddrSyms{
+      args.useDeviceAddr.getSyms()};
+  genIntermediateCommonBlockAccessors(
+      converter, currentLocation,
+      argIface.getUseDeviceAddrBlockArgs().take_front(
+          args.sourceUseDeviceAddrCount),
+      llvm::ArrayRef(sourceUseDeviceAddrSyms)
+          .take_front(args.sourceUseDeviceAddrCount));
 
   // Insert dummy instruction to remember the insertion position. The
   // marker will be deleted by clean up passes since there are no uses.
@@ -2169,7 +2221,7 @@ static void genBodyOfTargetDataOp(
 // When the scope changes, the bindings to the intermediate accessors should
 // be dropped in place of the original symbol bindings.
 //
-// This is for utilisation with TargetOp.
+// This is for utilisation with TargetOp and TargetDataOp.
 static void genIntermediateCommonBlockAccessors(
     Fortran::lower::AbstractConverter &converter,
     const mlir::Location &currentLocation,
@@ -2531,7 +2583,7 @@ genSimdImplicitLinear(lower::AbstractConverter &converter,
           Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
       mlir::Type ty = converter.genType(*loopVar);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
-      if (semaCtx.langOptions().OpenMPVersion >= 52)
+      if (semaCtx.langOptions().getOpenMPVersion() >= 52)
         linearModAttrs.push_back(mlir::omp::LinearModifierAttr::get(
             &converter.getMLIRContext(), mlir::omp::LinearModifier::val));
       else
@@ -2635,12 +2687,15 @@ static void genTargetDataClauses(
     lower::StatementContext &stmtCtx, const List<Clause> &clauses,
     mlir::Location loc, mlir::omp::TargetDataOperands &clauseOps,
     llvm::SmallVectorImpl<Object> &useDeviceAddrObjects,
-    llvm::SmallVectorImpl<Object> &useDevicePtrObjects) {
+    llvm::SmallVectorImpl<Object> &useDevicePtrObjects,
+    std::size_t &sourceUseDeviceAddrCount) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_target_data, clauseOps);
   cp.processMap(loc, stmtCtx, clauseOps);
   cp.processUseDeviceAddr(stmtCtx, clauseOps, useDeviceAddrObjects);
+  // Record the source UDA prefix before non-C_PTR UDP operands are promoted.
+  sourceUseDeviceAddrCount = useDeviceAddrObjects.size();
   cp.processUseDevicePtr(stmtCtx, clauseOps, useDevicePtrObjects);
 
   // This function implements the deprecated functionality of use_device_ptr
@@ -4278,8 +4333,10 @@ static mlir::omp::TargetDataOp genTargetDataOp(
     const ConstructQueue &queue, ConstructQueue::const_iterator item) {
   mlir::omp::TargetDataOperands clauseOps;
   llvm::SmallVector<Object> useDeviceAddrObjects, useDevicePtrObjects;
+  std::size_t sourceUseDeviceAddrCount;
   genTargetDataClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
-                       clauseOps, useDeviceAddrObjects, useDevicePtrObjects);
+                       clauseOps, useDeviceAddrObjects, useDevicePtrObjects,
+                       sourceUseDeviceAddrCount);
 
   auto targetDataOp = mlir::omp::TargetDataOp::create(
       converter.getFirOpBuilder(), loc, clauseOps);
@@ -4294,6 +4351,7 @@ static mlir::omp::TargetDataOp genTargetDataOp(
   args.useDeviceAddr.vars = useDeviceAddrBaseValues;
   args.useDevicePtr.objects = useDevicePtrObjects;
   args.useDevicePtr.vars = useDevicePtrBaseValues;
+  args.sourceUseDeviceAddrCount = sourceUseDeviceAddrCount;
 
   genBodyOfTargetDataOp(converter, symTable, semaCtx, eval, targetDataOp, args,
                         loc, queue, item);
@@ -4702,7 +4760,8 @@ static mlir::omp::WsloopOp genStandaloneDo(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
-    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+    const ConstructQueue &queue, ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
   genWsloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
@@ -4710,7 +4769,9 @@ static mlir::omp::WsloopOp genStandaloneDo(
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
+                           enableDelayedPrivatization, symTable,
+                           /*isTargetPrivatization=*/false,
+                           metadirectiveLoopIVs);
   // Worksharing loops use the private-copy lowering for conditional lastprivate
   // (each list item gets an ordinary private copy + a reduction accumulator),
   // which is correct under any schedule including nonmonotonic.
@@ -4919,12 +4980,12 @@ static mlir::omp::ParallelOp genStandaloneParallel(
                        enableDelayedPrivatization ? &dsp.value() : nullptr);
 }
 
-static mlir::omp::SimdOp
-genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                  semantics::SemanticsContext &semaCtx,
-                  lower::pft::Evaluation &eval, mlir::Location loc,
-                  const ConstructQueue &queue,
-                  ConstructQueue::const_iterator item) {
+static mlir::omp::SimdOp genStandaloneSimd(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
   genSimdClauses(converter, semaCtx, item->clauses, loc, simdClauseOps,
@@ -4932,7 +4993,9 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
+                           enableDelayedPrivatization, symTable,
+                           /*isTargetPrivatization=*/false,
+                           metadirectiveLoopIVs);
   dsp.processStep1(&simdClauseOps);
 
   if (!dsp.getConditionalLastprivateSymbols().empty())
@@ -5266,7 +5329,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
-    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+    const ConstructQueue &queue, ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   assert(std::distance(item, queue.end()) == 2 && "Invalid leaf constructs");
   ConstructQueue::const_iterator doItem = item;
   ConstructQueue::const_iterator simdItem = std::next(doItem);
@@ -5311,7 +5375,9 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
 
   DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
                                    /*shouldCollectPreDeterminedSymbols=*/true,
-                                   /*useDelayedPrivatization=*/true, symTable);
+                                   /*useDelayedPrivatization=*/true, symTable,
+                                   /*isTargetPrivatization=*/false,
+                                   metadirectiveLoopIVs);
   simdItemDSP.processStep1(&simdClauseOps, simdItem->id);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
@@ -5369,7 +5435,8 @@ static bool genOMPCompositeDispatch(
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item,
-    mlir::Operation *&newOp) {
+    mlir::Operation *&newOp,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   using llvm::omp::Directive;
   using lower::omp::matchLeafSequence;
 
@@ -5389,7 +5456,7 @@ static bool genOMPCompositeDispatch(
                                        eval, loc, queue, item);
   else if (matchLeafSequence(item, queue, Directive::OMPD_do_simd))
     newOp = genCompositeDoSimd(converter, symTable, stmtCtx, semaCtx, eval, loc,
-                               queue, item);
+                               queue, item, metadirectiveLoopIVs);
   else if (matchLeafSequence(item, queue, Directive::OMPD_taskloop_simd))
     newOp = genCompositeTaskloopSimd(converter, symTable, stmtCtx, semaCtx,
                                      eval, loc, queue, item);
@@ -5399,12 +5466,12 @@ static bool genOMPCompositeDispatch(
   return true;
 }
 
-static void genOMPDispatch(lower::AbstractConverter &converter,
-                           lower::SymMap &symTable,
-                           semantics::SemanticsContext &semaCtx,
-                           lower::pft::Evaluation &eval, mlir::Location loc,
-                           const ConstructQueue &queue,
-                           ConstructQueue::const_iterator item) {
+static void
+genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
+               semantics::SemanticsContext &semaCtx,
+               lower::pft::Evaluation &eval, mlir::Location loc,
+               const ConstructQueue &queue, ConstructQueue::const_iterator item,
+               llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   assert(item != queue.end());
 
   lower::StatementContext stmtCtx;
@@ -5425,7 +5492,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   if (loopLeaf) {
     symTable.pushScope();
     if (genOMPCompositeDispatch(converter, symTable, stmtCtx, semaCtx, eval,
-                                loc, queue, item, newOp)) {
+                                loc, queue, item, newOp,
+                                metadirectiveLoopIVs)) {
       symTable.popScope();
       finalizeStmtCtx();
       return;
@@ -5443,7 +5511,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_do:
     newOp = genStandaloneDo(converter, symTable, stmtCtx, semaCtx, eval, loc,
-                            queue, item);
+                            queue, item, metadirectiveLoopIVs);
     break;
   case llvm::omp::Directive::OMPD_loop:
     newOp = genLoopOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -5475,8 +5543,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genSectionsOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_simd:
-    newOp =
-        genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue, item);
+    newOp = genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue,
+                              item, metadirectiveLoopIVs);
     break;
   case llvm::omp::Directive::OMPD_scope:
     newOp = genScopeOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -6749,7 +6817,7 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
   auto mlirType = converter.genType(varType.declTypeSpec->derivedTypeSpec());
   auto declMapperOp = mlir::omp::DeclareMapperOp::create(
-      firOpBuilder, loc, mapperNameStr, mlirType);
+      firOpBuilder, loc, mapperNameStr, /*sym_visibility=*/nullptr, mlirType);
   auto &region = declMapperOp.getRegion();
   firOpBuilder.createBlock(&region);
   auto varVal = region.addArgument(firOpBuilder.getRefType(mlirType), loc);
@@ -6774,25 +6842,8 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareTargetDirective &declareTargetConstruct) {
-  mlir::omp::DeclareTargetOperands clauseOps;
-  llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
-  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
-  getDeclareTargetInfo(converter, semaCtx, eval, declareTargetConstruct,
-                       clauseOps, symbolAndClause);
-
-  for (const DeclareTargetCaptureInfo &symClause : symbolAndClause) {
-    mlir::Operation *op =
-        mod.lookupSymbol(converter.mangleName(symClause.symbol));
-
-    // Some symbols are deferred until later in the module, these are handled
-    // upon finalization of the module for OpenMP inside of Bridge, so we simply
-    // skip for now.
-    if (!op)
-      continue;
-
-    markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
-                      symClause.automap);
-  }
+  markDeclareTargetWithDirective(converter, semaCtx, eval,
+                                 declareTargetConstruct);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -6822,22 +6873,401 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 }
 
 namespace {
-struct MetadirectiveCandidate {
-  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
-                         llvm::omp::VariantMatchInfo vmi, bool isExplicit,
-                         std::optional<semantics::omp::DynamicUserCondition>
-                             dynamicCond = std::nullopt,
-                         bool conditionShouldBeTrue = true)
-      : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond),
-        conditionShouldBeTrue(conditionShouldBeTrue) {}
+struct SplicedAssociatedEvaluations {
+  using Iterator = lower::pft::EvaluationList::iterator;
 
-  const parser::OmpDirectiveSpecification *spec = nullptr;
-  llvm::omp::VariantMatchInfo vmi;
-  bool isExplicit = false;
-  std::optional<semantics::omp::DynamicUserCondition> dynamicCond;
-  bool conditionShouldBeTrue = true;
+  void record(lower::pft::EvaluationList &parent, Iterator evaluation) {
+    assert((!parentList || parentList == &parent) &&
+           "associated evaluations have different parents");
+    parentList = &parent;
+    evaluations.emplace_back(evaluation, std::next(evaluation));
+  }
+
+  void restore(lower::pft::EvaluationList &nested) {
+    if (evaluations.empty())
+      return;
+    assert(parentList && "missing parent evaluation list");
+    // A saved successor may also have been spliced. Restore in reverse order
+    // so every insertion point is back in the parent list before it is used.
+    for (auto &entry : llvm::reverse(evaluations)) {
+      entry.first->skipNextLowering = true;
+      parentList->splice(entry.second, nested, entry.first);
+    }
+    if (entryEvaluation) {
+      entryEvaluation->isNewBlock = true;
+      entryEvaluation->block = entryBlock;
+    }
+  }
+
+  void suppressEntryBlock(lower::pft::Evaluation &evaluation) {
+    assert(!entryEvaluation && evaluation.isNewBlock && evaluation.block &&
+           "invalid associated entry evaluation");
+    // Do not let either cloned loop arm enter a function-region block. The
+    // metadirective selection will be placed in this block for an active ENTRY.
+    entryEvaluation = &evaluation;
+    entryBlock = evaluation.block;
+    evaluation.isNewBlock = false;
+    evaluation.block = nullptr;
+  }
+
+  mlir::Block *getEntryBlock() const { return entryBlock; }
+
+private:
+  lower::pft::EvaluationList *parentList = nullptr;
+  llvm::SmallVector<std::pair<Iterator, Iterator>, 4> evaluations;
+  lower::pft::Evaluation *entryEvaluation = nullptr;
+  mlir::Block *entryBlock = nullptr;
 };
 } // namespace
+
+static bool isSupportedMetadirectiveLoopCompilerDirective(
+    const parser::CompilerDirective &directive) {
+  // Only directives known not to emit executable operations may be processed
+  // before runtime selection. New variants remain unsupported until classified.
+  using SupportedDirectives = std::tuple<
+      std::list<parser::CompilerDirective::IgnoreTKR>,
+      parser::CompilerDirective::LoopCount,
+      std::list<parser::CompilerDirective::AssumeAligned>,
+      parser::CompilerDirective::VectorAlways,
+      parser::CompilerDirective::VectorLength,
+      std::list<parser::CompilerDirective::NameValue>,
+      parser::CompilerDirective::Unroll,
+      parser::CompilerDirective::UnrollAndJam,
+      parser::CompilerDirective::Unrecognized,
+      parser::CompilerDirective::NoVector, parser::CompilerDirective::NoUnroll,
+      parser::CompilerDirective::NoUnrollAndJam,
+      parser::CompilerDirective::ForceInline, parser::CompilerDirective::Inline,
+      parser::CompilerDirective::NoInline,
+      parser::CompilerDirective::InlineAlways, parser::CompilerDirective::IVDep,
+      parser::CompilerDirective::Simd>;
+
+  return common::visit(
+      [](const auto &value) {
+        using T = std::decay_t<decltype(value)>;
+        return common::HasMember<T, SupportedDirectives>;
+      },
+      directive.u);
+}
+
+static bool
+isIgnorableMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
+  const auto *directive = eval.getIf<parser::CompilerDirective>();
+  return eval.isEndStmt() ||
+         (directive &&
+          isSupportedMetadirectiveLoopCompilerDirective(*directive));
+}
+
+static bool
+isUnsupportedMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
+  if (const auto *directive = eval.getIf<parser::CompilerDirective>())
+    return !isSupportedMetadirectiveLoopCompilerDirective(*directive);
+  return eval.isOtherStmt() ||
+         (eval.isDirective() && !eval.isExecutableDirective());
+}
+
+/// A loop-associated metadirective is lowered like a real loop construct, but
+/// the PFT leaves its associated loop nest as the following sibling instead of
+/// nesting it underneath. Splice that sibling into the metadirective's own
+/// nested evaluations so the shared loop-lowering path can find it. Return
+/// nullptr if no associated DO loop follows.
+static lower::pft::Evaluation *spliceAssociatedDoEval(
+    lower::pft::Evaluation &eval,
+    SplicedAssociatedEvaluations *splicedEvaluations = nullptr,
+    lower::pft::Evaluation **unsupportedInterveningEval = nullptr) {
+  if (unsupportedInterveningEval)
+    *unsupportedInterveningEval = nullptr;
+
+  if (eval.hasNestedEvaluations()) {
+    auto nestedIt =
+        llvm::find_if(eval.getNestedEvaluations(), [](auto &nested) {
+          return !isIgnorableMetadirectiveLoopAssociationEval(nested);
+        });
+    if (nestedIt != eval.getNestedEvaluations().end()) {
+      if (nestedIt->getIf<parser::DoConstruct>())
+        return &*nestedIt;
+      if (unsupportedInterveningEval &&
+          isUnsupportedMetadirectiveLoopAssociationEval(*nestedIt))
+        *unsupportedInterveningEval = &*nestedIt;
+    }
+    return nullptr;
+  }
+
+  // A delimited metadirective owns only its nested evaluations. An empty body
+  // must not capture a following sibling loop as its associated DO.
+  if (const auto *omp = eval.getIf<parser::OpenMPConstruct>();
+      omp && std::holds_alternative<parser::OmpDelimitedMetadirectiveDirective>(
+                 omp->u))
+    return nullptr;
+
+  // A metadirective in a specification part (e.g. at module scope) has no
+  // parent construct and no owning procedure, so there is no sibling list.
+  lower::pft::FunctionLikeUnit *owningProc = eval.getOwningProcedure();
+  if (!eval.parentConstruct && !owningProc)
+    return nullptr;
+  auto *parentList = eval.parentConstruct
+                         ? eval.parentConstruct->evaluationList.get()
+                         : &owningProc->evaluationList;
+  auto metaIt = llvm::find_if(
+      *parentList, [&](lower::pft::Evaluation &e) { return &e == &eval; });
+  assert(metaIt != parentList->end() &&
+         "metadirective eval not found in parent list");
+
+  auto firstAssociatedIt = std::next(metaIt);
+  auto loopIt = firstAssociatedIt;
+  while (loopIt != parentList->end() &&
+         isIgnorableMetadirectiveLoopAssociationEval(*loopIt))
+    ++loopIt;
+
+  if (loopIt == parentList->end())
+    return nullptr;
+  if (!loopIt->getIf<parser::DoConstruct>()) {
+    if (unsupportedInterveningEval &&
+        isUnsupportedMetadirectiveLoopAssociationEval(*loopIt))
+      *unsupportedInterveningEval = &*loopIt;
+    return nullptr;
+  }
+
+  if (splicedEvaluations) {
+    auto entryIt =
+        llvm::find_if(llvm::make_range(firstAssociatedIt, loopIt),
+                      [](lower::pft::Evaluation &candidate) {
+                        return candidate.isNewBlock && candidate.block;
+                      });
+    if (entryIt != loopIt) {
+      splicedEvaluations->suppressEntryBlock(*entryIt);
+    } else {
+      lower::pft::Evaluation &doStmt = loopIt->getFirstNestedEvaluation();
+      if (doStmt.isNewBlock && doStmt.block)
+        splicedEvaluations->suppressEntryBlock(doStmt);
+    }
+  }
+
+  // Compiler directives between the metadirective and its associated loop
+  // must be processed before the loop is lowered. Move them with the loop so
+  // they are not visited later as siblings of the metadirective.
+  for (auto it = firstAssociatedIt; it != loopIt;) {
+    auto current = it++;
+    if (current->getIf<parser::CompilerDirective>()) {
+      if (splicedEvaluations)
+        splicedEvaluations->record(*parentList, current);
+      eval.evaluationList->splice(eval.evaluationList->end(), *parentList,
+                                  current);
+    }
+  }
+  if (splicedEvaluations)
+    splicedEvaluations->record(*parentList, loopIt);
+  eval.evaluationList->splice(eval.evaluationList->end(), *parentList, loopIt);
+  return &eval.getNestedEvaluations().back();
+}
+
+static bool hasContentFollowingAssociatedDo(lower::pft::Evaluation &eval,
+                                            lower::pft::Evaluation &loopEval) {
+  auto &nested = eval.getNestedEvaluations();
+  auto loopIt = llvm::find_if(
+      nested, [&](lower::pft::Evaluation &e) { return &e == &loopEval; });
+  assert(loopIt != nested.end() && "associated loop not nested");
+  return llvm::any_of(llvm::make_range(std::next(loopIt), nested.end()),
+                      [](lower::pft::Evaluation &e) {
+                        // PFTBuilder adds a source-less CONTINUE as the exit
+                        // target when an executable directive's region ends
+                        // with a construct.
+                        bool isSyntheticExit =
+                            e.getIf<parser::ContinueStmt>() &&
+                            e.position.empty();
+                        return !e.isEndStmt() && !isSyntheticExit;
+                      });
+}
+
+static bool hasNestedOpenMPConstruct(lower::pft::Evaluation &eval) {
+  if (!eval.hasNestedEvaluations())
+    return false;
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    if (nested.getIf<parser::OpenMPConstruct>() ||
+        hasNestedOpenMPConstruct(nested))
+      return true;
+  }
+  return false;
+}
+
+static bool hasDirectiveAssociation(llvm::omp::Directive directive,
+                                    llvm::omp::Association association) {
+  return llvm::any_of(llvm::omp::getLeafConstructsOrSelf(directive),
+                      [association](llvm::omp::Directive leaf) {
+                        return llvm::omp::getDirectiveAssociation(leaf) ==
+                               association;
+                      });
+}
+
+static bool hasDirectiveAssociation(const ConstructQueue &queue,
+                                    llvm::omp::Association association) {
+  return llvm::any_of(queue, [association](const auto &item) {
+    return llvm::omp::getDirectiveAssociation(item.id) == association;
+  });
+}
+
+static bool isSupportedMetadirectiveLoopQueue(const ConstructQueue &queue) {
+  using llvm::omp::Directive;
+  using lower::omp::matchLeafSequence;
+  return matchLeafSequence(queue.begin(), queue, Directive::OMPD_do) ||
+         matchLeafSequence(queue.begin(), queue, Directive::OMPD_simd) ||
+         matchLeafSequence(queue.begin(), queue, Directive::OMPD_do_simd);
+}
+
+static bool isNestedInOpenMPDataEnvironment(lower::pft::Evaluation &eval,
+                                            mlir::Operation *currentOp) {
+  for (lower::pft::Evaluation *parent = eval.parentConstruct; parent;
+       parent = parent->parentConstruct) {
+    if (const auto *omp = parent->getIf<parser::OpenMPConstruct>()) {
+      llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(*omp).v;
+      if (semantics::omp::HasDataEnvironment(directive))
+        return true;
+    }
+  }
+
+  // A PFT ancestor can itself be a metadirective, so its source directive does
+  // not reveal the data environment selected during lowering. Check the
+  // already-emitted OpenMP operation ancestry as well.
+  for (mlir::Operation *op = currentOp; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::DistributeOp, mlir::omp::LoopNestOp,
+                  mlir::omp::ParallelOp, mlir::omp::ScopeOp,
+                  mlir::omp::SectionsOp, mlir::omp::SimdOp, mlir::omp::SingleOp,
+                  mlir::omp::TargetDataOp, mlir::omp::TargetOp,
+                  mlir::omp::TaskgroupOp, mlir::omp::TaskloopContextOp,
+                  mlir::omp::TaskOp, mlir::omp::TeamsOp, mlir::omp::WsloopOp>(
+            op))
+      return true;
+  }
+  return false;
+}
+
+static bool
+hasUnsupportedDataEnvironmentDirective(const ConstructQueue &queue) {
+  return llvm::any_of(queue, [](const auto &item) {
+    return llvm::omp::allParallelSet.test(item.id) ||
+           llvm::omp::taskGeneratingSet.test(item.id) ||
+           llvm::omp::allTeamsSet.test(item.id);
+  });
+}
+
+static bool hasUnsupportedDataSharingClause(const ConstructQueue &queue,
+                                            llvm::omp::Version version) {
+  return llvm::any_of(queue, [version](const auto &item) {
+    return llvm::any_of(item.clauses, [version](const Clause &ompClause) {
+      return std::holds_alternative<clause::Default>(ompClause.u) ||
+             llvm::omp::isDataSharingAttributeClause(ompClause.id, version);
+    });
+  });
+}
+
+class SymbolDSAGuard {
+public:
+  ~SymbolDSAGuard() {
+    for (auto &[sym, flags] : llvm::reverse(savedFlags))
+      sym->flags() = flags;
+  }
+
+  void setSymbolDSA(semantics::Symbol &sym, semantics::Symbol::Flag dsa) {
+    if (!llvm::any_of(savedFlags,
+                      [&](const auto &entry) { return entry.first == &sym; })) {
+      savedFlags.emplace_back(&sym, sym.flags());
+      markedSymbols.push_back(&sym);
+    }
+    using Symbol = semantics::Symbol;
+    semantics::SetSymbolDSA(sym, {Symbol::Flag::OmpPreDetermined, dsa});
+  }
+
+  llvm::ArrayRef<const semantics::Symbol *> getMarkedSymbols() const {
+    return markedSymbols;
+  }
+
+private:
+  llvm::SmallVector<std::pair<semantics::Symbol *, semantics::Symbol::Flags>, 4>
+      savedFlags;
+  llvm::SmallVector<const semantics::Symbol *, 4> markedSymbols;
+};
+
+enum class MetadirectiveLoopIVMarking {
+  Marked,           // Induction variables marked (or there was nothing to do).
+  NestTooShallow,   // Fewer DO loops than the variant's COLLAPSE/ORDERED needs.
+  NonCanonicalLoop, // An affected loop is a DO WHILE or has no loop control.
+  IndirectIV,       // An affected induction variable is POINTER or ALLOCATABLE.
+  AssociateIV,      // An affected induction variable is an ASSOCIATE name.
+  ThreadprivateIV,  // An affected induction variable is THREADPRIVATE.
+};
+
+/// Mark loop induction variable data-sharing attributes for a
+/// metadirective-selected loop variant. Semantic analysis cannot mark these
+/// because the variant is resolved at lowering time. Return a non-`Marked`
+/// result, leaving the diagnostic to the caller, when the associated loop nest
+/// is shallower than the variant's COLLAPSE/ORDERED requires or an affected
+/// loop is not a canonical DO loop or an affected induction variable requires
+/// construct-scoped name resolution that metadirective lowering cannot yet
+/// reproduce.
+static MetadirectiveLoopIVMarking
+markMetadirectiveLoopIVs(semantics::SemanticsContext &semaCtx,
+                         const parser::OmpDirectiveSpecification &spec,
+                         lower::pft::Evaluation &loopEval,
+                         SymbolDSAGuard &dsaGuard) {
+  using Symbol = semantics::Symbol;
+
+  auto [depth, _] = semantics::omp::GetAffectedNestDepthWithReason(
+      spec, semaCtx.langOptions().getOpenMPVersion(), &semaCtx);
+  if (!depth || !depth.value || *depth.value <= 0)
+    return MetadirectiveLoopIVMarking::Marked;
+
+  int64_t affectedDepth = *depth.value;
+  bool isSimdVariant = llvm::omp::allSimdSet.test(spec.DirId());
+  Symbol::Flag ivDSA;
+  if (!isSimdVariant)
+    ivDSA = Symbol::Flag::OmpPrivate;
+  else if (affectedDepth == 1 && semaCtx.langOptions().getOpenMPVersion() < 60)
+    ivDSA = Symbol::Flag::OmpLinear;
+  else
+    ivDSA = Symbol::Flag::OmpLastPrivate;
+
+  lower::pft::Evaluation *doEval = &loopEval;
+  for (int64_t level = 0; level < affectedDepth; ++level) {
+    // A nest shallower than COLLAPSE/ORDERED requires is diagnosed during
+    // semantic analysis in check-omp-variant. Guard against it here too so the
+    // caller handles it instead of descending into a missing loop.
+    const parser::DoConstruct *doConstruct =
+        doEval ? doEval->getIf<parser::DoConstruct>() : nullptr;
+    if (!doConstruct)
+      return MetadirectiveLoopIVMarking::NestTooShallow;
+    // The affected loop must be a canonical DO loop (or a DO CONCURRENT, which
+    // lowering rejects further down). A DO WHILE or a loop without loop control
+    // is rejected earlier by the merged metadirective loop-nest semantic checks
+    // (check-omp-variant.cpp), so it should not reach lowering. This guard is
+    // defense-in-depth: bail out for the caller to emit a TODO rather than
+    // crash if that invariant is ever violated.
+    if (!doConstruct->IsDoNormal() && !doConstruct->IsDoConcurrent())
+      return MetadirectiveLoopIVMarking::NonCanonicalLoop;
+    if (semantics::Symbol *sym = getIterationVariableSymbol(*doEval)) {
+      // Ordinary OpenMP name resolution creates a construct-scoped symbol for
+      // an ASSOCIATE-name induction variable. Marking the associate name after
+      // name resolution cannot create the private or lastprivate binding that
+      // loop lowering requires.
+      if (sym->GetUltimate().has<semantics::AssocEntityDetails>())
+        return MetadirectiveLoopIVMarking::AssociateIV;
+      // Ordinary OpenMP semantic resolution creates a construct-scoped symbol
+      // for a POINTER or ALLOCATABLE induction variable. A metadirective
+      // variant is selected too late for that name-resolution step, and marking
+      // the descriptor-backed source symbol cannot recreate it.
+      if (semantics::IsAllocatableOrObjectPointer(sym))
+        return MetadirectiveLoopIVMarking::IndirectIV;
+      // A canonical OpenMP loop iteration variable may not be THREADPRIVATE.
+      // Semantic analysis does not apply the selected variant's loop checks,
+      // so reject it here rather than also marking it with the variant's DSA.
+      if (sym->GetUltimate().test(Symbol::Flag::OmpThreadprivate))
+        return MetadirectiveLoopIVMarking::ThreadprivateIV;
+      dsaGuard.setSymbolDSA(*sym, ivDSA);
+    }
+    if (level + 1 < affectedDepth)
+      doEval = tryGetNestedDoConstruct(*doEval);
+  }
+
+  return MetadirectiveLoopIVMarking::Marked;
+}
 
 static void genMetadirective(lower::AbstractConverter &converter,
                              lower::SymMap &symTable,
@@ -6852,49 +7282,16 @@ static void genMetadirective(lower::AbstractConverter &converter,
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(builder.getModule(), constructTraits);
 
-  llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
-  // A null directive specification represents either the implicit `nothing`
-  // variant or the absence of an explicit otherwise/default clause.
-  const parser::OmpDirectiveSpecification *fallback = nullptr;
-
-  // Extract the context-selector that controls whether a WHEN variant is
-  // applicable. Modifier validation requires exactly one selector per clause.
-  auto getContextSelector = [](const parser::OmpClause::When &whenClause)
-      -> const parser::modifier::OmpContextSelector & {
-    const auto &modifiers = std::get<0>(whenClause.v.t);
-    assert(modifiers && modifiers->size() == 1 &&
-           "WHEN clause should contain one context-selector");
-    return std::get<parser::modifier::OmpContextSelector>(modifiers->front().u);
-  };
-
-  // Extract the directive variant spec from a when clause.
-  // Returns {spec_ptr, isExplicit}. A null spec means "nothing".
-  auto getDirectiveVariant = [](const parser::OmpClause::When &whenClause)
-      -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
-    const auto &opt = std::get<1>(whenClause.v.t);
-    if (!opt)
-      return {nullptr, false};
-    if (opt->value().DirId() == llvm::omp::Directive::OMPD_nothing)
-      return {nullptr, true};
-    return {&opt->value(), true};
-  };
-
-  // Return the directive spec pointer, or nullptr for "nothing".
-  auto getFallbackVariant = [](const parser::OmpDirectiveSpecification &spec)
-      -> const parser::OmpDirectiveSpecification * {
-    if (spec.DirId() == llvm::omp::Directive::OMPD_nothing)
-      return nullptr;
-    return &spec;
-  };
-
+  // Lowering does not yet support every selector feature accepted by
+  // semantics. Diagnose those before building the shared selection plan.
   for (const auto &clause : clauseList.v) {
     if (const auto *whenClause =
             std::get_if<parser::OmpClause::When>(&clause.u)) {
-      const auto &ctxSel = getContextSelector(*whenClause);
-      auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
-
-      // METADIRECTIVE cannot yet honour some selector features that are
-      // otherwise accepted; reject them before building the match info.
+      const auto &modifiers = std::get<0>(whenClause->v.t);
+      assert(modifiers && modifiers->size() == 1 &&
+             "WHEN clause should contain one context-selector");
+      const auto &ctxSel =
+          std::get<parser::modifier::OmpContextSelector>(modifiers->front().u);
       switch (semantics::omp::FindUnsupportedSelectorFeature(ctxSel, semaCtx)) {
       case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
         TODO(converter.genLocation(clause.source),
@@ -6908,126 +7305,128 @@ static void genMetadirective(lower::AbstractConverter &converter,
       case semantics::omp::UnsupportedSelectorFeature::None:
         break;
       }
-
-      llvm::omp::VariantMatchInfo rawVMI;
-      std::optional<semantics::omp::DynamicUserCondition> dynamicCond =
-          semantics::omp::MakeVariantMatchInfo(rawVMI, ctxSel, semaCtx);
-
-      if (dynamicCond) {
-        constexpr llvm::omp::TraitProperty dynamicConditionTrait =
-            llvm::omp::TraitProperty::user_condition_unknown;
-        constexpr llvm::omp::TraitProperty matchAnyTrait =
-            llvm::omp::TraitProperty::implementation_extension_match_any;
-        constexpr llvm::omp::TraitProperty matchNoneTrait =
-            llvm::omp::TraitProperty::implementation_extension_match_none;
-
-        // Static applicability must only use traits known at lowering time.
-        // For example, in
-        //   when(implementation={vendor(llvm)},
-        //        user={condition(score(5): flag)}: barrier)
-        // vendor(llvm) can be checked now, but flag cannot. Drop the
-        // runtime-only user_condition_unknown for applicability, while keeping
-        // score(5) so ranking can still honor the user-condition selector.
-        llvm::omp::VariantMatchInfo staticVMI = rawVMI;
-        std::optional<llvm::APInt> conditionScore;
-        auto scoreIt = staticVMI.ScoreMap.find(dynamicConditionTrait);
-        if (scoreIt != staticVMI.ScoreMap.end()) {
-          conditionScore = scoreIt->second;
-          staticVMI.ScoreMap.erase(scoreIt);
-        }
-        staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
-        llvm::APInt *conditionScorePtr =
-            conditionScore ? &*conditionScore : nullptr;
-
-        bool hasMatchAny = rawVMI.RequiredTraits.test(unsigned(matchAnyTrait));
-        bool hasMatchNone =
-            rawVMI.RequiredTraits.test(unsigned(matchNoneTrait));
-        bool isStaticVMIApplicable =
-            llvm::omp::isVariantApplicableInContext(staticVMI, ompCtx);
-        // If staticVMI does not match, only match_any can still apply. Check
-        // conditionTrueVMI because the runtime condition may satisfy match_any.
-        if (!isStaticVMIApplicable) {
-          if (!hasMatchAny || staticVMI.RequiredTraits.test(
-                                  unsigned(llvm::omp::TraitProperty::invalid)))
-            continue;
-
-          llvm::omp::VariantMatchInfo conditionTrueVMI = staticVMI;
-          conditionTrueVMI.addTrait(
-              llvm::omp::TraitProperty::user_condition_true, "<condition>",
-              conditionScorePtr);
-          if (!llvm::omp::isVariantApplicableInContext(conditionTrueVMI,
-                                                       ompCtx))
-            continue;
-        }
-
-        auto addConditionTraitForRanking =
-            [&](llvm::omp::VariantMatchInfo &rankingVMI) {
-              rankingVMI.addTrait(
-                  hasMatchNone ? dynamicConditionTrait
-                               : llvm::omp::TraitProperty::user_condition_true,
-                  "<condition>", conditionScorePtr);
-            };
-
-        if (hasMatchAny && isStaticVMIApplicable) {
-          // A statically matched match_any selector needs two candidates: a
-          // guarded candidate with the user condition and score, and an
-          // unguarded candidate with only the statically matched traits. If the
-          // when clause omits its directive, only add the unguarded candidate.
-          if (isExplicit) {
-            llvm::omp::VariantMatchInfo conditionTrueVMI = staticVMI;
-            addConditionTraitForRanking(conditionTrueVMI);
-            candidates.emplace_back(spec, conditionTrueVMI, isExplicit,
-                                    dynamicCond);
-          }
-          candidates.emplace_back(spec, staticVMI, isExplicit);
-          continue;
-        }
-
-        llvm::omp::VariantMatchInfo rankingVMI = staticVMI;
-        // An omitted directive is implicit nothing, so do not let the runtime
-        // condition raise its rank. Explicit `nothing` is still a variant.
-        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
-          rankingVMI = llvm::omp::VariantMatchInfo();
-        else if (isExplicit)
-          addConditionTraitForRanking(rankingVMI);
-        candidates.emplace_back(spec, rankingVMI, isExplicit, dynamicCond,
-                                /*conditionShouldBeTrue=*/!hasMatchNone);
-        continue;
-      }
-
-      if (!llvm::omp::isVariantApplicableInContext(rawVMI, ompCtx))
-        continue;
-
-      candidates.emplace_back(spec, rawVMI, isExplicit);
-    } else if (const auto *otherwiseClause =
-                   std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
-      if (otherwiseClause->v && otherwiseClause->v->v)
-        fallback = getFallbackVariant(otherwiseClause->v->v->value());
-    } else if (const auto *defaultVariantClause =
-                   std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)) {
-      const auto &dirSpec = defaultVariantClause->v.v;
-      fallback = getFallbackVariant(dirSpec.value());
     }
   }
+
+  std::optional<semantics::omp::MetadirectiveCandidateSet> candidateSet =
+      semantics::omp::BuildMetadirectiveCandidateSet(clauseList, semaCtx,
+                                                     ompCtx);
+  assert(candidateSet && "unsupported selector reached candidate planning");
+  auto &candidates = candidateSet->candidates;
+  const parser::OmpDirectiveSpecification *fallback = candidateSet->fallback;
+
+  llvm::SmallVector<unsigned, 4> allCandidateIndices;
+  allCandidateIndices.reserve(candidates.size());
+  for (unsigned idx = 0, end = candidates.size(); idx < end; ++idx)
+    allCandidateIndices.push_back(idx);
+
+  llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
+      reachableVariantSpecs = semantics::omp::GetReachableMetadirectiveVariants(
+          *candidateSet, ompCtx, semaCtx);
+
+  bool hasLoopAssociatedCandidate =
+      llvm::any_of(reachableVariantSpecs, [](const auto *spec) {
+        return spec && hasDirectiveAssociation(
+                           spec->DirId(), llvm::omp::Association::LoopNest);
+      });
+  SplicedAssociatedEvaluations splicedAssociatedEvaluations;
+  lower::pft::Evaluation *associatedLoopEval = nullptr;
+  llvm::scope_exit restoreEvaluationOwnership([&]() {
+    if (eval.hasNestedEvaluations())
+      splicedAssociatedEvaluations.restore(eval.getNestedEvaluations());
+  });
+  if (hasLoopAssociatedCandidate) {
+    lower::pft::Evaluation *unsupportedInterveningEval = nullptr;
+    if (lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(
+            eval, &splicedAssociatedEvaluations, &unsupportedInterveningEval)) {
+      associatedLoopEval = loopEval;
+      if (lower::pft::FunctionLikeUnit *owningProc =
+              eval.getOwningProcedure()) {
+        if (owningProc->getEntryEval() &&
+            splicedAssociatedEvaluations.getEntryBlock()) {
+          // Alternate ENTRY lowering starts with a branch. Emit selection in
+          // the detached associated block, which is either that branch's
+          // destination or unreachable for an ENTRY after the metadirective.
+          builder.setInsertionPointToStart(
+              splicedAssociatedEvaluations.getEntryBlock());
+        }
+      }
+
+      auto &nested = eval.getNestedEvaluations();
+      auto loopIt =
+          llvm::find_if(nested, [loopEval](lower::pft::Evaluation &e) {
+            return &e == loopEval;
+          });
+      assert(loopIt != nested.end() && "associated loop not nested");
+
+      // Attach compiler directives to the loop before any selected variant
+      // lowers it. Variant bodies skip them below to avoid processing them a
+      // second time.
+      for (auto it = nested.begin(); it != loopIt; ++it)
+        if (it->getIf<parser::CompilerDirective>())
+          converter.genEval(*it);
+    } else if (unsupportedInterveningEval) {
+      std::string evalName;
+      if (unsupportedInterveningEval->getIf<parser::EntryStmt>())
+        evalName = "ENTRY statement";
+      else if (unsupportedInterveningEval->getIf<parser::FormatStmt>())
+        evalName = "FORMAT statement";
+      else if (const auto *directive =
+                   unsupportedInterveningEval
+                       ->getIf<parser::CompilerDirective>()) {
+        assert(!isSupportedMetadirectiveLoopCompilerDirective(*directive) &&
+               "unexpected compiler directive");
+        evalName = std::holds_alternative<parser::CompilerDirective::Prefetch>(
+                       directive->u)
+                       ? "PREFETCH compiler directive"
+                       : "unsupported compiler directive";
+      } else if (const auto *omp =
+                     unsupportedInterveningEval
+                         ->getIf<parser::OpenMPDeclarativeConstruct>()) {
+        evalName =
+            parser::omp::GetUpperName(parser::omp::GetOmpDirectiveName(*omp).v,
+                                      semaCtx.langOptions().getOpenMPVersion());
+        evalName += " directive";
+      } else if (const auto *acc =
+                     unsupportedInterveningEval
+                         ->getIf<parser::OpenACCDeclarativeConstruct>()) {
+        evalName = std::holds_alternative<
+                       parser::OpenACCStandaloneDeclarativeConstruct>(acc->u)
+                       ? "OpenACC DECLARE directive"
+                       : "OpenACC ROUTINE directive";
+      } else if (unsupportedInterveningEval
+                     ->getIf<parser::OpenACCRoutineConstruct>()) {
+        evalName = "OpenACC ROUTINE directive";
+      } else {
+        evalName = "non-executable directive";
+      }
+
+      TODO(converter.getCurrentLocation(),
+           llvm::Twine(evalName) +
+               " between loop-associated METADIRECTIVE and its associated "
+               "DO");
+    }
+  }
+
+  auto genMetadirectiveBody = [&]() {
+    for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
+      if (!hasLoopAssociatedCandidate ||
+          !nested.getIf<parser::CompilerDirective>())
+        converter.genEval(nested);
+  };
 
   // Lower a single resolved candidate.
   auto genVariant = [&](const parser::OmpDirectiveSpecification *spec) {
     if (!spec) {
-      genNestedEvaluations(converter, eval);
+      genMetadirectiveBody();
       return;
     }
-    List<Clause> variantClauses = makeClauses(spec->Clauses(), semaCtx);
     mlir::Location variantLoc = converter.genLocation(spec->source);
+    List<Clause> variantClauses = makeClauses(spec->Clauses(), semaCtx);
     ConstructQueue queue{
         buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                             eval, spec->source, spec->DirId(), variantClauses)};
-
-    if (llvm::any_of(queue, [](const auto &item) {
-          return llvm::omp::getDirectiveAssociation(item.id) ==
-                 llvm::omp::Association::LoopNest;
-        })) {
-      TODO(variantLoc, "loop-associated METADIRECTIVE variant");
-    }
+    llvm::omp::Version ompVersion{semaCtx.langOptions().getOpenMPVersion()};
 
     if (llvm::any_of(queue, [](const auto &item) {
           return llvm::omp::getDirectiveAssociation(item.id) ==
@@ -7038,50 +7437,96 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(variantLoc, "declarative METADIRECTIVE variant");
     }
 
+    bool hasLoopAssociation =
+        hasDirectiveAssociation(queue, llvm::omp::Association::LoopNest);
+    if (hasLoopAssociation && llvm::any_of(queue, [](const auto &item) {
+          return llvm::omp::allTargetSet.test(item.id);
+        }))
+      TODO(variantLoc,
+           "TARGET construct selected by METADIRECTIVE (host-eval)");
+    if (hasLoopAssociation && hasUnsupportedDataEnvironmentDirective(queue))
+      TODO(variantLoc,
+           "data-environment construct in loop-associated METADIRECTIVE "
+           "variant");
+
+    if (hasLoopAssociation) {
+      // Name resolution cannot give a metadirective variant its own DSA
+      // scope, so marking its loop IV can otherwise contaminate an enclosing
+      // data environment.
+      if (isNestedInOpenMPDataEnvironment(
+              eval, builder.getInsertionBlock()->getParentOp()))
+        TODO(variantLoc, "loop-associated METADIRECTIVE nested in an OpenMP "
+                         "data environment");
+      if (hasUnsupportedDataSharingClause(queue, ompVersion))
+        TODO(variantLoc,
+             "data-sharing clause in loop-associated METADIRECTIVE variant");
+      if (!isSupportedMetadirectiveLoopQueue(queue))
+        TODO(variantLoc,
+             "loop-associated METADIRECTIVE variant other than DO, SIMD, or "
+             "DO SIMD");
+      // Eager privatization requires a construct-scoped IV symbol with a host
+      // association, which name resolution cannot create for a
+      // metadirective-selected loop.
+      if (!enableDelayedPrivatization)
+        TODO(variantLoc,
+             "loop-associated METADIRECTIVE with eager privatization");
+      lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(eval);
+      if (!loopEval)
+        TODO(variantLoc, "loop-associated METADIRECTIVE without associated DO");
+      if (hasContentFollowingAssociatedDo(eval, *loopEval))
+        TODO(variantLoc,
+             "loop-associated METADIRECTIVE with content following the "
+             "associated DO");
+      // Unstructured loops own PFT blocks that cannot be reused by begin/end
+      // metadirectives or alternate ENTRY lowering without independent block
+      // mappings. Keep Part 2 conservative for all such loops.
+      if (loopEval->lowerAsUnstructured())
+        TODO(variantLoc, "unstructured associated DO in loop-associated "
+                         "METADIRECTIVE variant");
+      if (hasNestedOpenMPConstruct(*loopEval))
+        TODO(variantLoc, "nested OpenMP construct in loop-associated "
+                         "METADIRECTIVE loop region");
+      SymbolDSAGuard dsaGuard;
+      MetadirectiveLoopIVMarking marking =
+          markMetadirectiveLoopIVs(semaCtx, *spec, *loopEval, dsaGuard);
+      if (marking == MetadirectiveLoopIVMarking::NestTooShallow)
+        TODO(variantLoc, "METADIRECTIVE variant with COLLAPSE or ORDERED "
+                         "requires a deeper perfectly-nested loop nest than "
+                         "is present");
+      if (marking == MetadirectiveLoopIVMarking::NonCanonicalLoop)
+        TODO(variantLoc, "METADIRECTIVE variant with a non-canonical affected "
+                         "loop (a DO WHILE or a DO without loop control)");
+      if (marking == MetadirectiveLoopIVMarking::IndirectIV)
+        TODO(variantLoc, "POINTER or ALLOCATABLE loop iteration variable in "
+                         "loop-associated METADIRECTIVE variant");
+      if (marking == MetadirectiveLoopIVMarking::AssociateIV)
+        TODO(variantLoc, "ASSOCIATE name loop iteration variable in "
+                         "loop-associated METADIRECTIVE variant");
+      if (marking == MetadirectiveLoopIVMarking::ThreadprivateIV)
+        TODO(variantLoc, "THREADPRIVATE loop iteration variable in "
+                         "loop-associated METADIRECTIVE variant");
+      genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
+                     queue.begin(), dsaGuard.getMarkedSymbols());
+      return;
+    }
+
+    bool consumesBody = llvm::any_of(queue, [](const auto &item) {
+      return llvm::omp::getDirectiveAssociation(item.id) !=
+             llvm::omp::Association::None;
+    });
+    if (hasLoopAssociatedCandidate && consumesBody)
+      TODO(variantLoc,
+           "METADIRECTIVE with both block- and loop-associated variants");
+
     genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                    queue.begin());
+    // A standalone variant (Association::None, e.g. barrier/taskwait/nothing)
+    // does not consume the metadirective's nested block, so lower it here.
+    if (!consumesBody && eval.hasNestedEvaluations())
+      genMetadirectiveBody();
   };
 
-  auto selectBestCandidate =
-      [](llvm::ArrayRef<unsigned> candidateIndices,
-         llvm::ArrayRef<MetadirectiveCandidate> candidates,
-         const semantics::omp::OmpVariantMatchContext &ompCtx)
-      -> std::optional<unsigned> {
-    if (candidateIndices.empty())
-      return std::nullopt;
-    if (candidateIndices.size() == 1)
-      return candidateIndices.front();
-
-    // The OpenMP context scorer preserves input order for tied candidates.
-    // Put explicit variants first so they take precedence over implicit
-    // `nothing`, as required by metadirective selection.
-    llvm::SmallVector<unsigned, 4> candidateOrder;
-    candidateOrder.reserve(candidateIndices.size());
-    for (unsigned idx : candidateIndices)
-      if (candidates[idx].isExplicit)
-        candidateOrder.push_back(idx);
-    for (unsigned idx : candidateIndices)
-      if (!candidates[idx].isExplicit)
-        candidateOrder.push_back(idx);
-
-    llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> orderedVMIs;
-    orderedVMIs.reserve(candidateOrder.size());
-    for (unsigned idx : candidateOrder)
-      orderedVMIs.push_back(candidates[idx].vmi);
-
-    int bestIdx = llvm::omp::getBestVariantMatchForContext(orderedVMIs, ompCtx);
-    if (bestIdx >= 0) {
-      assert(static_cast<size_t>(bestIdx) < candidateOrder.size() &&
-             "best variant index out of range");
-      return candidateOrder[bestIdx];
-    }
-    return std::nullopt;
-  };
-
-  llvm::SmallVector<unsigned, 4> remainingCandidates;
-  remainingCandidates.reserve(candidates.size());
-  for (unsigned idx = 0, end = candidates.size(); idx < end; ++idx)
-    remainingCandidates.push_back(idx);
+  llvm::SmallVector<unsigned, 4> remainingCandidates{allCandidateIndices};
 
   lower::StatementContext stmtCtx;
 
@@ -7102,23 +7547,23 @@ static void genMetadirective(lower::AbstractConverter &converter,
   // Stop when selection reaches an unguarded candidate or the fallback.
   while (!remainingCandidates.empty()) {
     std::optional<unsigned> selected =
-        selectBestCandidate(remainingCandidates, candidates, ompCtx);
+        semantics::omp::SelectBestMetadirectiveCandidate(remainingCandidates,
+                                                         candidates, ompCtx);
     if (!selected) {
       genVariant(fallback);
       return;
     }
 
-    const MetadirectiveCandidate &candidate = candidates[*selected];
-    if (!candidate.dynamicCond) {
+    const semantics::omp::MetadirectiveCandidate &candidate =
+        candidates[*selected];
+    if (!candidate.dynamicCondition) {
       genVariant(candidate.spec);
       return;
     }
 
-    llvm::SmallVector<unsigned, 4> elsePathCandidates(remainingCandidates);
-    auto *remainingIt = llvm::find(elsePathCandidates, *selected);
-    assert(remainingIt != elsePathCandidates.end() &&
-           "selected candidate missing from remaining candidates");
-    elsePathCandidates.erase(remainingIt);
+    llvm::SmallVector<unsigned, 4> elsePathCandidates =
+        semantics::omp::GetMetadirectiveElsePathCandidates(
+            *selected, remainingCandidates, candidates, ompCtx, semaCtx);
 
     // match_any may create a guarded condition-true candidate and an unguarded
     // static candidate for the same directive. If the else path picks the
@@ -7127,20 +7572,29 @@ static void genMetadirective(lower::AbstractConverter &converter,
     //   if (flag) barrier    into just    barrier
     //   else barrier
     if (std::optional<unsigned> selectedInElse =
-            selectBestCandidate(elsePathCandidates, candidates, ompCtx)) {
-      const MetadirectiveCandidate &candidateInElse =
+            semantics::omp::SelectBestMetadirectiveCandidate(
+                elsePathCandidates, candidates, ompCtx)) {
+      const semantics::omp::MetadirectiveCandidate &candidateInElse =
           candidates[*selectedInElse];
-      if (!candidateInElse.dynamicCond &&
+      if (!candidateInElse.dynamicCondition &&
           candidateInElse.spec == candidate.spec) {
         genVariant(candidate.spec);
         return;
       }
     }
 
+    // Unstructured evaluations own PFT blocks that lowering reparents into the
+    // generated region. They cannot be reused for both sides of a runtime
+    // selection until each arm can receive an independent block mapping.
+    if (associatedLoopEval && associatedLoopEval->lowerAsUnstructured())
+      TODO(converter.genLocation(candidate.dynamicCondition->source),
+           "unstructured associated DO in loop-associated METADIRECTIVE "
+           "variant");
+
     mlir::Location condLoc =
-        converter.genLocation(candidate.dynamicCond->source);
+        converter.genLocation(candidate.dynamicCondition->source);
     const auto *condExpr =
-        semantics::GetExpr(semaCtx, *candidate.dynamicCond->expr);
+        semantics::GetExpr(semaCtx, *candidate.dynamicCondition->expr);
     assert(condExpr && "missing expression for user condition");
     mlir::Value condVal =
         fir::getBase(converter.genExprValue(*condExpr, stmtCtx, &condLoc));
@@ -7522,7 +7976,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const common::LangOptions &options = semaCtx.langOptions();
       if (!options.OpenMPSimd) {
         std::string name =
-            parser::omp::GetUpperName(clause.id, options.OpenMPVersion);
+            parser::omp::GetUpperName(clause.id, options.getOpenMPVersion());
         TODO(clauseLocation, name + " clause is not implemented yet");
       }
     }
@@ -7732,7 +8186,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // generating the omp.loop_nest op.
         break;
       default: {
-        unsigned version = semaCtx.langOptions().OpenMPVersion;
+        llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
         TODO(currentLocation,
              "Applying a loop-associated on the loop generated by the " +
                  llvm::omp::getOpenMPDirectiveName(nestedDirective, version) +
@@ -7816,7 +8270,10 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     const parser::OpenMPDeclarativeConstruct &omp) {
   genOMP(converter, symTable, semaCtx, eval, omp);
-  genNestedEvaluations(converter, eval);
+  // Metadirective lowering selects a variant and consumes its associated
+  // evaluations itself.
+  if (!std::holds_alternative<parser::OmpMetadirectiveDirective>(omp.u))
+    genNestedEvaluations(converter, eval);
 }
 
 void Fortran::lower::genOpenMPSymbolProperties(
@@ -8093,3 +8550,37 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
 // Walk scopes and materialize omp.declare_reduction ops for user-defined
 // operator reductions imported from modules (deleted: replaced by lazy,
 // clause-driven materialization).
+
+namespace {
+// Visitor used to mark declare target globals from imported modules.
+struct ModuleDeclareTargetVisitor {
+  Fortran::lower::AbstractConverter &converter;
+  semantics::SemanticsContext &semaCtx;
+
+  explicit ModuleDeclareTargetVisitor(
+      Fortran::lower::AbstractConverter &converter,
+      semantics::SemanticsContext &ctx)
+      : converter(converter), semaCtx(ctx) {}
+
+  template <typename T>
+  bool Pre(const T &) {
+    return true;
+  }
+  template <typename T>
+  void Post(const T &) {}
+
+  void Post(const parser::OmpDeclareTargetDirective &directive) {
+    markDeclareTargetWithDirective(converter, semaCtx, std::nullopt, directive);
+  }
+};
+} // namespace
+
+void Fortran::lower::markOpenMPImportedDeclareTargets(
+    Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx) {
+  const std::list<parser::Program> &modTrees = semaCtx.GetModFileParseTrees();
+  ModuleDeclareTargetVisitor visitor{converter, semaCtx};
+  for (auto &modTree : modTrees) {
+    parser::Walk(modTree, visitor);
+  }
+}

@@ -1,7 +1,7 @@
 ; RUN: llc --mtriple=wasm32-unknown-unknown -filetype=obj %s -o - | obj2yaml | FileCheck --check-prefixes CHECK,CHK32 %s
 ; RUN: llc --mtriple=wasm64-unknown-unknown -filetype=obj %s -o - | obj2yaml | FileCheck --check-prefixes CHECK,CHK64 %s
 
-; Function that uses explict stack, and should generate a reference to
+; Function that uses explicit stack, and should generate a reference to
 ; __stack_pointer, along with the corresponding reloction entry.
 define hidden void @foo() #0 {
 entry:
