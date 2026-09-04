@@ -5106,13 +5106,13 @@ struct FormatStyle {
     ///    #include "A10.h"           #include "A2.h"
     /// \endcode
     bool Natural;
-    /// When ``true``, sort includes so that files in a directory appear
+    /// When `true`, sort includes so that files in a directory appear
     /// before subdirectories at each level, recursively. Within a level,
     /// files and folders are each sorted alphabetically.
-    /// When ``false`` (default), sorts includes purely alphabetically.
+    /// When `false` (default), sorts includes purely alphabetically.
     ///
-    /// This option is a secondary sort key within each ``Priority`` group
-    /// defined by ``IncludeCategories``. Includes in different ``Priority``
+    /// This option is a secondary sort key within each `Priority` group
+    /// defined by `IncludeCategories`. Includes in different `Priority`
     /// groups are still separated by that primary ordering.
     /// \code
     ///    true:                             false (default):
