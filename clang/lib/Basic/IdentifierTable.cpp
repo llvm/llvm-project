@@ -137,6 +137,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return LangOpts.ObjC ? KS_Enabled : KS_Unknown;
   case KEYZVECTOR:
     return LangOpts.ZVector ? KS_Enabled : KS_Unknown;
+  case KEYCONTRACTS:
+    return LangOpts.CPlusPlus && LangOpts.Contracts ? KS_Enabled : KS_Unknown;
   case KEYCOROUTINES:
     return LangOpts.Coroutines ? KS_Enabled : KS_Unknown;
   case KEYMODULES:
@@ -199,8 +201,8 @@ KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
 }
 
 static bool IsKeywordInCpp(unsigned Flags) {
-  return (Flags & (KEYCXX | KEYCXX11 | KEYCXX20 | BOOLSUPPORT | WCHARSUPPORT |
-                   CHAR8SUPPORT)) != 0;
+  return (Flags & (KEYCXX | KEYCXX11 | KEYCXX20 | KEYCONTRACTS | BOOLSUPPORT |
+                   WCHARSUPPORT | CHAR8SUPPORT)) != 0;
 }
 
 static void MarkIdentifierAsKeywordInCpp(IdentifierTable &Table,

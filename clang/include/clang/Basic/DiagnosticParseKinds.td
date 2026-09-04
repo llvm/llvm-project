@@ -428,6 +428,10 @@ def warn_cxx98_compat_trailing_return_type : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_requires_clause_must_appear_after_trailing_return : Error<
   "trailing return type must appear before trailing requires clause">;
+def err_requires_clause_must_precede_contract_specifiers : Error<
+  "trailing requires clause must appear before contract specifiers">;
+def err_contract_specifier_not_function : Error<
+  "contract specifiers can only be applied to function declarations">;
 def err_requires_clause_on_declarator_not_declaring_a_function : Error<
   "trailing requires clause can only be used when declaring a function">;
 def err_requires_clause_inside_parens : Error<

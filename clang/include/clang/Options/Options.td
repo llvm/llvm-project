@@ -1833,6 +1833,14 @@ defm coroutines : BoolFOption<"coroutines",
           "Enable support for the C++ Coroutines">,
   NegFlag<SetFalse>>;
 
+defm contracts : BoolFOption<"contracts",
+  LangOpts<"Contracts">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable support for C++ Contracts">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Disable support for C++ Contracts">>,
+  ShouldParseIf<cplusplus.KeyPath>;
+
 defm coro_aligned_allocation : BoolFOption<"coro-aligned-allocation",
   LangOpts<"CoroAlignedAllocation">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],

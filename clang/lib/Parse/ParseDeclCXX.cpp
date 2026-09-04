@@ -2563,8 +2563,9 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
     LateParsedAttrList &LateParsedAttrs) {
   // member-declarator:
-  //   declarator virt-specifier-seq[opt] pure-specifier[opt]
-  //   declarator requires-clause
+  //   declarator virt-specifier-seq[opt]
+  //     function-contract-specifier-seq[opt] pure-specifier[opt]
+  //   declarator requires-clause function-contract-specifier-seq[opt]
   //   declarator brace-or-equal-initializer[opt]
   //   identifier attribute-specifier-seq[opt] ':' constant-expression
   //       brace-or-equal-initializer[opt]
@@ -2591,21 +2592,30 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     BitfieldSize = ParseConstantExpression();
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
-  } else if (Tok.is(tok::kw_requires)) {
-    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-    // With abbreviated function templates - we need to explicitly add depth to
-    // account for the implicit template parameter list induced by the template.
-    if (DeclaratorInfo.getTemplateParameterLists().empty() &&
-        DeclaratorInfo.getInventedTemplateParameterList())
-      ++CurTemplateDepthTracker;
-    ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
-    ParseOptionalCXX11VirtSpecifierSeq(
-        VS, getCurrentClass().IsInterface,
-        DeclaratorInfo.getDeclSpec().getFriendSpecLoc());
-    if (!VS.isUnset())
-      MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(DeclaratorInfo,
-                                                              VS);
+    // Requires clause can't follow 'override' but contracts can follow
+    // 'override'. Even if we don't support virtual functions with contractcs,
+    // we should diagnose at the sema stage instead of the parser stage.
+    if (Tok.isNot(tok::kw_requires)) {
+      ParseOptionalCXX11VirtSpecifierSeq(
+          VS, getCurrentClass().IsInterface,
+          DeclaratorInfo.getDeclSpec().getFriendSpecLoc());
+      if (!VS.isUnset())
+        MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(DeclaratorInfo,
+                                                                VS);
+    }
+
+    if (Tok.is(tok::kw_requires) || getContractSpecifierKind()) {
+      TemplateParameterDepthRAII CurTemplateDepthTracker(
+          TemplateParameterDepth);
+      // With abbreviated function templates - we need to explicitly add depth
+      // to account for the implicit template parameter list induced by the
+      // template.
+      if (DeclaratorInfo.getTemplateParameterLists().empty() &&
+          DeclaratorInfo.getInventedTemplateParameterList())
+        ++CurTemplateDepthTracker;
+      ParseFunctionDeclaratorTail(DeclaratorInfo);
+    }
   }
 
   // If a simple-asm-expr is present, parse it.
@@ -4242,6 +4252,134 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
       SkipUntil({tok::equal, tok::l_brace, tok::arrow, tok::kw_try, tok::comma},
                 StopAtSemi | StopBeforeMatch);
   }
+}
+
+std::optional<Parser::ContractSpecifierKind>
+Parser::getContractSpecifierKind() {
+  if (!getLangOpts().Contracts || Tok.isNot(tok::identifier))
+    return std::nullopt;
+
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  if (II->isStr("pre"))
+    return ContractSpecifierKind::Pre;
+  if (II->isStr("post"))
+    return ContractSpecifierKind::Post;
+  return std::nullopt;
+}
+
+void Parser::ParseContractSpecifiers(Declarator &D) {
+  assert(getLangOpts().Contracts && "contracts are not enabled");
+
+  const bool IsFunction = D.isDeclarationOfFunction() &&
+                          (D.isFunctionDeclarationContext() ||
+                           D.getContext() == DeclaratorContext::LambdaExpr);
+  if (!IsFunction)
+    Diag(Tok, diag::err_contract_specifier_not_function);
+
+  while (std::optional<ContractSpecifierKind> Kind =
+             getContractSpecifierKind()) {
+    const bool IsPost = *Kind == ContractSpecifierKind::Post;
+    ConsumeToken();
+
+    ParsedAttributes Attrs(AttrFactory);
+    MaybeParseCXX11Attributes(Attrs);
+
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+    if (T.expectAndConsume(diag::err_expected_lparen_after,
+                           IsPost ? "post" : "pre"))
+      return;
+
+    // !IsFunction is diagnosed before, avoid confusing diagnostics.
+    if (!IsFunction) {
+      T.skipToEnd();
+      continue;
+    }
+
+    // FIXME: We should accept attribute for the result binding, e.g.,
+    // post(r [[attr]] : expr).
+    std::optional<ParseScope> ResultNameScope;
+    if (IsPost && Tok.is(tok::identifier) && NextToken().is(tok::colon)) {
+      IdentifierInfo *ResultName = Tok.getIdentifierInfo();
+      SourceLocation ResultNameLoc = ConsumeToken();
+      ConsumeToken();
+
+      ResultNameScope.emplace(this, Scope::DeclScope);
+      Actions.ActOnPostConditionResultName(getCurScope(), ResultName,
+                                           ResultNameLoc);
+    }
+
+    EnterExpressionEvaluationContext Evaluated(
+        Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+    ExprResult Predicate = ParseConditionalExpression();
+    ResultNameScope.reset();
+    if (Predicate.isInvalid())
+      T.skipToEnd();
+    else
+      T.consumeClose();
+  }
+}
+
+// Parse the function tail where the require clause must appear first
+// and the contracts later.
+void Parser::ParseFunctionDeclaratorTail(Declarator &D,
+                                         bool ParametersAlreadyInScope) {
+  assert((Tok.is(tok::kw_requires) || getContractSpecifierKind()) &&
+         "expected a function declarator tail");
+
+  // TODO: We can consider merging ParseTrailingRequiresClauseWithScope into
+  // this function.
+  if (!ParametersAlreadyInScope && Tok.is(tok::kw_requires)) {
+    ParseTrailingRequiresClauseWithScope(D);
+    if (!getContractSpecifierKind())
+      return;
+  }
+
+  auto ParseTail = [&] {
+    bool ParametersInScope = ParametersAlreadyInScope;
+    if (Tok.is(tok::kw_requires)) {
+      ParseTrailingRequiresClause(D);
+      ParametersInScope = true;
+    }
+
+    while (getContractSpecifierKind()) {
+      if (!ParametersInScope) {
+        // FIXME: ActOnStartTrailingRequiresClause is not actually deal with
+        // require clause. It is actually adds the parameters to the scope
+        // chains. It needs a better name.
+        Actions.ActOnStartTrailingRequiresClause(getCurScope(), D);
+        ParametersInScope = true;
+      }
+
+      const DeclSpec *MethodDS = &D.getDeclSpec();
+      if (D.isFunctionDeclarator() && D.getFunctionTypeInfo().MethodQualifiers)
+        MethodDS = D.getFunctionTypeInfo().MethodQualifiers;
+      std::optional<Sema::CXXThisScopeRAII> ThisScope;
+      InitCXXThisScopeForDeclaratorIfRelevant(D, *MethodDS, ThisScope);
+      ParseContractSpecifiers(D);
+
+      // If we meet requires after contracts, emit a nice diagnostics and
+      // recovering compilation.
+      if (Tok.is(tok::kw_requires)) {
+        Diag(Tok, diag::err_requires_clause_must_precede_contract_specifiers);
+        ParseTrailingRequiresClause(D);
+      }
+    }
+  };
+
+  if (ParametersAlreadyInScope) {
+    ParseTail();
+    return;
+  }
+
+  CXXScopeSpec &SS = D.getCXXScopeSpec();
+  DeclaratorScopeObj DeclScopeObj(*this, SS);
+  if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
+    DeclScopeObj.EnterDeclaratorScope();
+
+  ParseScope ParamScope(this, Scope::DeclScope |
+                                  Scope::FunctionDeclarationScope |
+                                  Scope::FunctionPrototypeScope);
+  ParseTail();
 }
 
 Sema::ParsingClassState Parser::PushParsingClass(Decl *ClassDecl,

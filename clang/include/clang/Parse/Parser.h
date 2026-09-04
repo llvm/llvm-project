@@ -2763,6 +2763,17 @@ private:
       const Declarator &D, const DeclSpec &DS,
       std::optional<Sema::CXXThisScopeRAII> &ThisScope);
 
+  enum class ContractSpecifierKind { Pre, Post };
+  std::optional<ContractSpecifierKind> getContractSpecifierKind();
+  void ParseContractSpecifiers(Declarator &D);
+  /// Parse the function tails. e.g., requires clause and contracts.
+  ///
+  /// \param ParametersAlreadyInScope whether the paramers are arealdy in an
+  /// active function prototype scope. This can be true for lambda as lambda
+  /// would always build its function prototype scope.
+  void ParseFunctionDeclaratorTail(Declarator &D,
+                                   bool ParametersAlreadyInScope = false);
+
   /// ParseRefQualifier - Parses a member function ref-qualifier. Returns
   /// true if a ref-qualifier is found.
   bool ParseRefQualifier(bool &RefQualifierIsLValueRef,
@@ -7597,6 +7608,11 @@ public:
   /// Note: this lets the caller parse the end ';'.
   ///
   StmtResult ParseBreakStatement();
+
+  /// Parse a C++26 contract-assertion statement.
+  /// TODO: Currently the AST result of contracts is not support, its predicate
+  /// will be parsed and the corresponding AST result will be discarded.
+  StmtResult ParseContractAssertStatement();
 
   /// ParseReturnStatement
   /// \verbatim
