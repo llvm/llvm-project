@@ -1,7 +1,7 @@
 // REQUIRES: linux
 
-// RUN: %clangxx -DSHARED_LIB -fPIC -shared %s -o %t.so
-// RUN: %clangxx_memprof %s -o %t
+// RUN: %clangxx -fno-sanitize=all -DSHARED_LIB -fPIC -shared %s -o %t.so
+// RUN: %clangxx %s -o %t
 // RUN: env LD_PRELOAD=%t.so %run %t
 
 #include <dirent.h>
