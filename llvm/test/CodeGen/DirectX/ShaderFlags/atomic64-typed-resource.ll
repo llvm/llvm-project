@@ -23,7 +23,7 @@ define void @main() #0 {
           i32 0, i32 0, i32 1, i32 0, ptr null)
   %old = call i64 @llvm.dx.resource.atomic.binop.i64(
       target("dx.TypedBuffer", i64, 1, 0, 0) %handle,
-      i32 0, i32 0, i32 poison, i64 1)
+      i32 0, i32 0, i32 poison, i32 poison, i64 1)
   ret void
 }
 
