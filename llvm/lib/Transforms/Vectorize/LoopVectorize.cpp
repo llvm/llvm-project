@@ -2001,7 +2001,11 @@ static void addFullyUnrolledInstructionsToIgnore(
   for (const auto &KV : IL) {
     // Extract the key by hand so that it can be used in the lambda below.  Note
     // that captured structured bindings are a C++20 extension.
-    const PHINode *IV = KV.first;
+    PHINode *IV = KV.first;
+
+    // The induction is free: a widened induction generates a vector phi with
+    // its start value and an increment that is dead without a backedge.
+    InstsToIgnore.insert(IV);
 
     // Get next iteration value of the induction variable.
     Instruction *IVInst =
@@ -5549,6 +5553,12 @@ bool VPCostContext::isMaskRequired(Instruction *I) const {
   return CM.isMaskRequired(I);
 }
 
+bool VPCostContext::executesAtMostOnce(const VPlan &Plan, ElementCount VF) {
+  auto *TC = dyn_cast_if_present<ConstantInt>(
+      Plan.getTripCount()->getUnderlyingValue());
+  return TC && TC->getValue().ule(VF.getKnownMinValue());
+}
+
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -5592,6 +5602,10 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   }
 
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
+    // Integer inductions are always costed via the VPlan-based cost model.
+    // TODO: Also migrate FP and pointer inductions.
+    if (IndDesc.getKind() == InductionDescriptor::IK_IntInduction)
+      continue;
     if (WidenedIVs.contains(IV))
       continue;
     Instruction *IVInc = cast<Instruction>(
@@ -6210,7 +6224,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
       VPI->getOperand(0)->getDefiningRecipe());
   PHINode *Phi = WidenIV->getPHINode();
-  VPIRValue *Start = WidenIV->getStartValue();
+  VPValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
   // Wrap flags from the original induction do not apply to the truncated type,
@@ -6439,7 +6453,8 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   // We can only replicate an extractvalue if its operand generates per lane in
   // the same block, otherwise we would need to extract a lane from its struct
   // operand which is invalid.
-  if (VPI->getOpcode() == Instruction::ExtractValue)
+  if (VPI->getOpcode() == Instruction::ExtractValue &&
+      !vputils::isSingleScalar(VPI->getOperand(0)))
     if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
       if (!vputils::doesGeneratePerAllLanes(OpR) ||
           OpR->getParent() != VPI->getParent())

@@ -107,6 +107,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`modernize-use-to-underlying
+  <clang-tidy/checks/modernize/use-to-underlying>` check.
+
+  Finds casts from a scoped enumeration (`enum class`) to an integer type and
+  replaces them with a call to `std::to_underlying` (introduced in C++23).
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
@@ -146,6 +152,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
+
+- Improved {doc}`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
+  unforwarded `auto&&` parameters in C++20 abbreviated function templates.
 
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
