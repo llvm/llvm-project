@@ -16,6 +16,7 @@
 #include "lldb/Expression/DWARFExpression.h"
 
 #include <cinttypes>
+#include <limits>
 
 #include <optional>
 #include <vector>
@@ -1182,6 +1183,15 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
       }
     } break;
     case Value::ValueType::HostAddress: {
+      // DW_OP_implicit_value uses a host-address Value to own its bytes. For
+      // a full-width piece, the address is only an implementation detail and
+      // the backing bytes are the value of the piece.
+      if (piece_locdesc == Implicit &&
+          curr_piece_source_value.GetBuffer().GetByteSize() ==
+              piece_byte_size) {
+        curr_piece = curr_piece_source_value;
+        break;
+      }
       return llvm::createStringError(
           "failed to read memory DW_OP_piece(%" PRIu64
           ") from host address 0x%" PRIx64,
@@ -1239,14 +1249,14 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
 static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
                                           uint64_t relative_die_offset) {
   uint64_t bit_size;
-  bool sign;
+  llvm::dwarf::TypeKind encoding;
   if (relative_die_offset == 0) {
     // The generic type has the size of an address on the target
     // machine and an unspecified signedness. Scalar has no
     // "unspecified signedness", so we use unsigned types.
     if (!eval_ctx.module_sp)
       return llvm::createStringError("no module");
-    sign = false;
+    encoding = llvm::dwarf::DW_ATE_unsigned;
     bit_size = eval_ctx.module_sp->GetArchitecture().GetAddressByteSize() * 8;
     if (!bit_size)
       return llvm::createStringError("unspecified architecture");
@@ -1254,14 +1264,62 @@ static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
     if (!eval_ctx.dwarf_cu)
       return llvm::createStringError(
           "DW_OP_convert with a DIE offset requires a DWARF unit");
-    auto bit_size_sign_or_err =
-        eval_ctx.dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
-    if (!bit_size_sign_or_err)
-      return bit_size_sign_or_err.takeError();
-    bit_size = bit_size_sign_or_err->first;
-    sign = bit_size_sign_or_err->second;
+    auto bit_size_encoding_or_err =
+        eval_ctx.dwarf_cu->GetDIEBitSizeAndEncoding(relative_die_offset);
+    if (!bit_size_encoding_or_err)
+      return bit_size_encoding_or_err.takeError();
+    bit_size = bit_size_encoding_or_err->first;
+    encoding = bit_size_encoding_or_err->second;
   }
-  eval_ctx.stack.back().GetScalar().TruncOrExtendTo(bit_size, sign);
+
+  Scalar &scalar = eval_ctx.stack.back().GetScalar();
+  if (encoding == llvm::dwarf::DW_ATE_float) {
+    const llvm::fltSemantics *semantics;
+    switch (bit_size) {
+    case 32:
+      semantics = &llvm::APFloat::IEEEsingle();
+      break;
+    case 64:
+      semantics = &llvm::APFloat::IEEEdouble();
+      break;
+    case 80:
+      semantics = &llvm::APFloat::x87DoubleExtended();
+      break;
+    default:
+      return llvm::createStringError("unsupported floating-point type size");
+    }
+
+    if (scalar.GetType() == Scalar::e_float) {
+      llvm::APFloat value = scalar.GetAPFloat();
+      bool loses_info;
+      value.convert(*semantics, llvm::APFloat::rmNearestTiesToEven,
+                    &loses_info);
+      scalar = Scalar(std::move(value));
+    } else if (!scalar.FloatPromote(*semantics)) {
+      return llvm::createStringError("cannot convert value to floating point");
+    }
+    return llvm::Error::success();
+  }
+
+  const bool sign = encoding == llvm::dwarf::DW_ATE_signed ||
+                    encoding == llvm::dwarf::DW_ATE_signed_char;
+  if (scalar.GetType() == Scalar::e_float) {
+    if (bit_size > std::numeric_limits<uint16_t>::max())
+      return llvm::createStringError("unsupported integer type size: %" PRIu64,
+                                     bit_size);
+
+    llvm::APSInt value(static_cast<unsigned>(bit_size),
+                       /*isUnsigned=*/!sign);
+    bool is_exact;
+    llvm::APFloat::opStatus status = scalar.GetAPFloat().convertToInteger(
+        value, llvm::APFloat::rmTowardZero, &is_exact);
+    if (status & llvm::APFloat::opInvalidOp)
+      return llvm::createStringError(
+          "cannot convert floating-point value to integer");
+    scalar = Scalar(std::move(value));
+  } else {
+    scalar.TruncOrExtendTo(bit_size, sign);
+  }
   return llvm::Error::success();
 }
 
@@ -1378,6 +1436,15 @@ static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
     return mismatch("signedness");
 
   return llvm::Error::success();
+}
+
+// Scalar does not preserve DWARF's generic type identifier. Since generic
+// values are address-sized integers, use the scalar kind and width as an
+// approximation.
+static bool IsPotentiallyGenericIntegerOperand(const Scalar &operand,
+                                               size_t address_size) {
+  return address_size != 0 && operand.GetType() == Scalar::e_int &&
+         operand.GetByteSize() == address_size;
 }
 
 llvm::Expected<Value> DWARFExpression::Evaluate(
@@ -1592,6 +1659,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeUnsigned();
+        stack.back().GetScalar().MakeUnsigned();
+      }
       stack.back().GetScalar() = stack.back().GetScalar() % tmp.GetScalar();
       break;
 
@@ -1745,6 +1818,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() >= tmp.GetScalar());
       break;
@@ -1756,6 +1835,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() > tmp.GetScalar());
       break;
@@ -1767,6 +1852,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() <= tmp.GetScalar());
       break;
@@ -1778,6 +1869,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() < tmp.GetScalar());
       break;
@@ -1962,7 +2059,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return llvm::createStringError(
             "expression stack needs at least 1 item for DW_OP_bit_piece");
       } else {
-        UpdateValueTypeFromLocationDescription(eval_ctx, eval_ctx.loc_desc_kind,
+        const LocationDescriptionKind piece_locdesc = eval_ctx.loc_desc_kind;
+        UpdateValueTypeFromLocationDescription(eval_ctx, piece_locdesc,
                                                &stack.back());
         // Reset for the next piece.
         eval_ctx.loc_desc_kind = Memory;
@@ -1985,7 +2083,18 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
         case Value::ValueType::FileAddress:
         case Value::ValueType::LoadAddress:
+          return llvm::createStringError(
+              "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
+              ", bit_offset = %" PRIu64 ") from an address value.",
+              piece_bit_size, piece_bit_offset);
+
         case Value::ValueType::HostAddress:
+          // As above, a full-width DW_OP_implicit_value piece refers to the
+          // backing bytes, not the address of that backing storage.
+          if (piece_locdesc == Implicit && piece_bit_offset == 0 &&
+              piece_bit_size % 8 == 0 &&
+              stack.back().GetBuffer().GetByteSize() == piece_bit_size / 8)
+            break;
           return llvm::createStringError(
               "unable to extract DW_OP_bit_piece(bit_size = %" PRIu64
               ", bit_offset = %" PRIu64 ") from an address value.",
@@ -2043,6 +2152,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_call_frame_cfa:
       if (llvm::Error err = Evaluate_DW_OP_call_frame_cfa(eval_ctx))
         return err;
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar().ULongLong());
       break;
 
     case DW_OP_form_tls_address:

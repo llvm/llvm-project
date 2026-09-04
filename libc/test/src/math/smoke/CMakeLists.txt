@@ -159,6 +159,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lgammaf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lgammaf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.lgammaf
+)
+
+add_fp_unittest(
   lgammaf16_test
   SUITE
     libc-math-smoke-tests
@@ -241,6 +252,7 @@ add_fp_unittest(
     FAbsTest.h
   DEPENDS
     libc.src.math.fabsf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1429,6 +1441,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expf_static_rounding_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expf16_test
   SUITE
     libc-math-smoke-tests
@@ -1644,6 +1669,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysignf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2865,6 +2891,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmaximumf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3210,6 +3237,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fminimumf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 

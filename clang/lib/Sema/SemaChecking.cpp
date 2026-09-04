@@ -2314,7 +2314,7 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::ppc64le:
     return PPC().CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::amdgpu:
-    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
+    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
   case llvm::Triple::riscv32be:
@@ -3015,8 +3015,9 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
     if (MPT->isMemberDataPointer())
       return BinOp;
 
+    // Give the synthesized expression a valid source range for diagnostics.
     auto *MemCall = new (S.Context)
-        ParenExpr(SourceLocation(), SourceLocation(), BinOp.get());
+        ParenExpr(TheCall->getBeginLoc(), TheCall->getRParenLoc(), BinOp.get());
 
     return S.ActOnCallExpr(S.getCurScope(), MemCall, TheCall->getBeginLoc(),
                            Args.drop_front(2), TheCall->getRParenLoc());
@@ -16592,19 +16593,13 @@ static bool isLayoutCompatibleUnion(const ASTContext &C, const RecordDecl *RD1,
                                                           RD2->fields());
 
   for (auto *Field1 : RD1->fields()) {
-    auto I = UnmatchedFields.begin();
-    auto E = UnmatchedFields.end();
-
-    for ( ; I != E; ++I) {
-      if (isLayoutCompatible(C, Field1, *I, /*IsUnionMember=*/true)) {
-        bool Result = UnmatchedFields.erase(*I);
-        (void) Result;
-        assert(Result);
-        break;
-      }
-    }
-    if (I == E)
+    auto It = llvm::find_if(UnmatchedFields, [&](const FieldDecl *Field2) {
+      return isLayoutCompatible(C, Field1, Field2, /*IsUnionMember=*/true);
+    });
+    if (It == UnmatchedFields.end())
       return false;
+    [[maybe_unused]] bool Result = UnmatchedFields.erase(*It);
+    assert(Result);
   }
 
   return UnmatchedFields.empty();

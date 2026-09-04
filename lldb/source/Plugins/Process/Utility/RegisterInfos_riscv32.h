@@ -98,15 +98,23 @@ using namespace riscv_dwarf;
 #define DEFINE_CSR32(reg, generic_kind) DEFINE_CSR32_ALT(reg, reg, generic_kind)
 
 // Defines a 32-bit CSR.
-// The byte offset of 0 is a placeholder and should be corrected at runtime.
 #define DEFINE_CSR32_ALT(reg, alt, generic_kind)                               \
-  {#reg,                                                                       \
+  DEFINE_CSR32_ALT_REGID(reg, alt, reg, generic_kind)
+
+// Defines a 32-bit CSR specified by Xqci or its sub-extension.
+#define DEFINE_QC_CSR32_ALT(name, alt, generic_kind)                           \
+  DEFINE_CSR32_ALT_REGID(qc.name, alt, qc_##name, generic_kind)
+
+// Defines a 32-bit CSR.
+// The byte offset of 0 is a placeholder and should be corrected at runtime.
+#define DEFINE_CSR32_ALT_REGID(name, alt, regid, generic_kind)                 \
+  {#name,                                                                      \
    #alt,                                                                       \
    4,                                                                          \
    0,                                                                          \
    lldb::eEncodingUint,                                                        \
    lldb::eFormatHex,                                                           \
-   CSR_KIND(csr_##reg, generic_kind),                                          \
+   CSR_KIND(csr_##regid, generic_kind),                                        \
    nullptr,                                                                    \
    nullptr,                                                                    \
    nullptr}
@@ -679,6 +687,78 @@ static lldb_private::RegisterInfo g_register_infos_riscv32_csr_patch[] = {
     DEFINE_CSR32_ALT(mimpid, csr_0xf13, LLDB_INVALID_REGNUM),
     DEFINE_CSR32_ALT(mhartid, csr_0xf14, LLDB_INVALID_REGNUM),
     DEFINE_CSR32_ALT(mconfigptr, csr_0xf15, LLDB_INVALID_REGNUM),
+};
+
+static lldb_private::RegisterInfo g_register_infos_riscv32_csr_xqci_patch[] = {
+    DEFINE_QC_CSR32_ALT(mmcr, csr_0x7c0, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mntvec, csr_0x7c3, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mstktopaddr, csr_0x7c4, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mstkbottomaddr, csr_0x7c5, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mscratch0, csr_0x7c6, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mscratch1, csr_0x7c7, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mthreadptr, csr_0x7c8, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpstartaddr0, csr_0x7d0, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpstartaddr1, csr_0x7d1, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpstartaddr2, csr_0x7d2, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpstartaddr3, csr_0x7d3, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpendaddr0, csr_0x7d4, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpendaddr1, csr_0x7d5, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpendaddr2, csr_0x7d6, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mwpendaddr3, csr_0x7d7, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl0, csr_0xbc0, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl1, csr_0xbc1, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl2, csr_0xbc2, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl3, csr_0xbc3, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl4, csr_0xbc4, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl5, csr_0xbc5, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl6, csr_0xbc6, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl7, csr_0xbc7, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl8, csr_0xbc8, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl9, csr_0xbc9, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl10, csr_0xbca, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl11, csr_0xbcb, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl12, csr_0xbcc, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl13, csr_0xbcd, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl14, csr_0xbce, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl15, csr_0xbcf, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl16, csr_0xbd0, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl17, csr_0xbd1, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl18, csr_0xbd2, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl19, csr_0xbd3, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl20, csr_0xbd4, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl21, csr_0xbd5, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl22, csr_0xbd6, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl23, csr_0xbd7, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl24, csr_0xbd8, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl25, csr_0xbd9, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl26, csr_0xbda, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl27, csr_0xbdb, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl28, csr_0xbdc, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl29, csr_0xbdd, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl30, csr_0xbde, LLDB_INVALID_REGNUM),
+    DEFINE_QC_CSR32_ALT(mclicilvl31, csr_0xbdf, LLDB_INVALID_REGNUM),
+};
+
+static lldb_private::RegisterInfo g_register_infos_riscv32_csr_xqciint_patch[] =
+    {
+        DEFINE_QC_CSR32_ALT(mnepc, csr_0x7c1, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mncause, csr_0x7c2, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip0, csr_0x7f0, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip1, csr_0x7f1, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip2, csr_0x7f2, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip3, csr_0x7f3, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip4, csr_0x7f4, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip5, csr_0x7f5, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip6, csr_0x7f6, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicip7, csr_0x7f7, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie0, csr_0x7f8, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie1, csr_0x7f9, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie2, csr_0x7fa, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie3, csr_0x7fb, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie4, csr_0x7fc, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie5, csr_0x7fd, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie6, csr_0x7fe, LLDB_INVALID_REGNUM),
+        DEFINE_QC_CSR32_ALT(mclicie7, csr_0x7ff, LLDB_INVALID_REGNUM),
 };
 
 #endif // DECLARE_REGISTER_INFOS_RISCV32_STRUCT

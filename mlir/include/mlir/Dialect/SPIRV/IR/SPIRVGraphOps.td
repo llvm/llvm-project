@@ -36,7 +36,8 @@ class SPIRV_GraphARMOp<string mnemonic, list<Trait> traits = []> :
 
 def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
-    FunctionOpInterface, InModuleScope, IsolatedFromAbove
+    SymbolName, SymbolVisibility, FunctionOpInterface, InModuleScope,
+    IsolatedFromAbove
   ]> {
 
   let summary = "Declare or define a SPIR-V graph";
@@ -77,7 +78,8 @@ def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<BoolAttr>:$entry_point,
-    StrAttr:$sym_name
+    StrAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);

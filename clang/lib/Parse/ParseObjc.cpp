@@ -2881,7 +2881,7 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
 
       ExprResult Expr;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-        Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+        Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
         Expr = ParseBraceInitializer();
       } else
         Expr = ParseAssignmentExpression();
@@ -3306,15 +3306,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
     Actions.ObjC().ActOnStartOfObjCMethodDef(getCurScope(), MCDecl);
   else
     Actions.ActOnStartOfFunctionDef(getCurScope(), MCDecl);
-  if (Tok.is(tok::kw_try))
-    ParseFunctionTryBlock(MCDecl, BodyScope);
-  else {
-    if (Tok.is(tok::colon))
-      ParseConstructorInitializer(MCDecl);
-    else
-      Actions.ActOnDefaultCtorInitializers(MCDecl);
-    ParseFunctionStatementBody(MCDecl, BodyScope);
-  }
+  ParseFunctionBody(MCDecl, BodyScope);
 
   if (Tok.getLocation() != OrigLoc) {
     // Due to parsing error, we either went over the cached tokens or

@@ -229,6 +229,62 @@ def EnumAttrB : EnumAttr<Test_Dialect, TestEnumB, "EnumAttrB"> {
   let assemblyFormat = "$value";
 }
 
+def TestStructEnum : I32EnumAttr<"TestStructEnum", "TestStructEnumType", [
+  I32EnumAttrCase<"first", 0>,
+  I32EnumAttrCase<"second", 1>,
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def EnumAttrC : EnumAttr<Test_Dialect, TestStructEnum, "EnumAttrC">;
+
+// EnumAttr parameters in a struct use the underlying enum syntax rather than
+// the EnumAttr's assembly format.
+// ATTR-LABEL: AttrWithEnumAttrStructAttr::parse
+// ATTR: _result_required = [&]() -> ::mlir::FailureOr<::TestStructEnumAttr> {
+// ATTR-NEXT: auto odsEnumValue = ::mlir::FieldParser<::TestStructEnum>::parse(odsParser);
+// ATTR: return ::TestStructEnumAttr::get(odsParser.getContext(), *odsEnumValue);
+// ATTR-LABEL: AttrWithEnumAttrStructAttr::print
+// ATTR: odsPrinter << getRequired().getValue();
+// ATTR: odsPrinter << getOptional().getValue();
+def AttrWithEnumAttrStruct : TestAttr<"AttrWithEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<EnumAttrC>:$required,
+    OptionalEnumAttrParameter<EnumAttrC>:$optional
+  );
+  let mnemonic = "enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def TestStructBitEnum : I32BitEnum<"TestStructBitEnum", "", [
+  I32BitEnumCaseNone<"none">,
+  I32BitEnumCaseBit<"read", 0>,
+  I32BitEnumCaseBit<"write", 1>,
+]> {
+  let separator = ", ";
+}
+
+def EnumAttrD : EnumAttr<Test_Dialect, TestStructBitEnum, "EnumAttrD">;
+
+// A non-final comma-separated bit enum is bracketed so its commas are not
+// confused with the struct separator.
+// ATTR-LABEL: AttrWithBitEnumAttrStructAttr::parse
+// ATTR: if (odsParser.parseLSquare()) return {};
+// ATTR: FieldParser<::TestStructBitEnum>::parse(odsParser)
+// ATTR: if (odsParser.parseRSquare()) return {};
+// ATTR-LABEL: AttrWithBitEnumAttrStructAttr::print
+// ATTR: odsPrinter << "[";
+// ATTR: odsPrinter << getFlags().getValue();
+// ATTR: odsPrinter << "]";
+def AttrWithBitEnumAttrStruct : TestAttr<"AttrWithBitEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<EnumAttrD>:$flags,
+    "int64_t":$count
+  );
+  let mnemonic = "bit_enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 /// Test type parser and printer that mix variables and struct are generated
 /// correctly.
 

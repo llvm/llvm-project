@@ -693,12 +693,19 @@ void RecordType::removeABIConversionNamePrefix() {
   return mlir::cast<UnionType>(*this).removeABIConversionNamePrefix();
 }
 
+bool cir::isZeroWidthBitField(mlir::Type memberTy, RecordMemberKind kind) {
+  if (kind != RecordMemberKind::BitField)
+    return false;
+  auto arrTy = mlir::dyn_cast<ArrayType>(memberTy);
+  return arrTy && arrTy.getSize() == 0;
+}
+
 bool RecordType::isEmptyForABI() const {
   // An incomplete record has no members yet, which must not read as vacuously
   // holding no data.
   if (isIncomplete())
     return false;
-  return llvm::none_of(getMemberKinds(), holdsDataForABI);
+  return !anyMemberHoldsDataForABI(getMembers(), getMemberKinds());
 }
 
 //===----------------------------------------------------------------------===//
@@ -839,6 +846,8 @@ UnionType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 uint64_t
 UnionType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                            ::mlir::DataLayoutEntryListRef params) const {
+  if (getPacked())
+    return 1;
   mlir::Type storage = getUnionStorageType(dataLayout);
   if (!storage)
     return 1;
@@ -853,7 +862,9 @@ StructType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   unsigned recordSize = 0;
   uint64_t recordAlignment = 1;
 
-  for (mlir::Type ty : getMembers()) {
+  for (auto [ty, kind] : llvm::zip_equal(getMembers(), getMemberKinds())) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     // This assumes that we're calculating size based on the ABI alignment, not
     // the preferred alignment for each type.
     const uint64_t tyAlign =
@@ -879,20 +890,24 @@ unsigned
 StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
-  // Tail padding is the trailing run of pad members.  A member of any other
-  // kind stays inside the data size, only pad being reusable by a derived
-  // class.
+  // Tail padding is the trailing run of pad members, which is what a derived
+  // class may reuse.  A zero-width bit-field holds no storage, so it does not
+  // end that run.  A member of any other kind stays inside the data size.
   llvm::ArrayRef<mlir::Type> members = getMembers();
   llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
   assert(kinds.size() == members.size() &&
          "the two drop_back calls below must stay in step");
-  while (!kinds.empty() && kinds.back() == RecordMemberKind::Pad) {
+  while (!kinds.empty() &&
+         (kinds.back() == RecordMemberKind::Pad ||
+          isZeroWidthBitField(members.back(), kinds.back()))) {
     kinds = kinds.drop_back();
     members = members.drop_back();
   }
 
   unsigned recordSize = 0;
-  for (mlir::Type ty : members) {
+  for (auto [ty, kind] : llvm::zip_equal(members, kinds)) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     const uint64_t tyAlign =
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
     recordSize = llvm::alignTo(recordSize, tyAlign);
@@ -910,9 +925,12 @@ StructType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
   uint64_t recordAlignment = 1;
-  for (mlir::Type ty : getMembers())
+  for (auto [ty, kind] : llvm::zip_equal(getMembers(), getMemberKinds())) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     recordAlignment =
         std::max(dataLayout.getTypeABIAlignment(ty), recordAlignment);
+  }
   return recordAlignment;
 }
 
@@ -925,15 +943,22 @@ uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
   assert(isComplete() && "Cannot get layout of incomplete records");
   assert(idx < getNumElements());
   llvm::ArrayRef<mlir::Type> members = getMembers();
+  llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
 
   unsigned offset = 0;
-  for (mlir::Type ty :
-       llvm::make_range(members.begin(), std::next(members.begin(), idx))) {
-    const llvm::Align tyAlign =
-        llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+  for (unsigned i = 0; i != idx; ++i) {
+    if (isZeroWidthBitField(members[i], kinds[i]))
+      continue;
+    const llvm::Align tyAlign = llvm::Align(
+        getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[i]));
     offset = llvm::alignTo(offset, tyAlign);
-    offset += dataLayout.getTypeSize(ty);
+    offset += dataLayout.getTypeSize(members[i]);
   }
+
+  // A zero-width bit-field imposes no alignment, so its offset is where the
+  // storage ahead of it ends.
+  if (isZeroWidthBitField(members[idx], kinds[idx]))
+    return offset;
 
   const llvm::Align tyAlign = llvm::Align(
       getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[idx]));
@@ -1006,7 +1031,24 @@ void IntType::print(mlir::AsmPrinter &printer) const {
 llvm::TypeSize
 IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                            mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(getWidth());
+  return llvm::TypeSize::getFixed(getStorageTypeWidth(dataLayout));
+}
+
+unsigned
+IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
+  if (!isBitInt())
+    return getWidth();
+  uint64_t alignBits = getABIAlignment(dataLayout, {}) * 8;
+  return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
+}
+
+uint64_t
+IntType::getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const {
+  if (!isBitInt())
+    return getABIAlignment(dataLayout, {});
+  auto storageTy =
+      mlir::IntegerType::get(getContext(), getStorageTypeWidth(dataLayout));
+  return dataLayout.getTypeABIAlignment(storageTy);
 }
 
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,

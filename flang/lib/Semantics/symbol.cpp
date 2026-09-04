@@ -78,8 +78,13 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
   size_t idx{0}, size{clauses.count()};
 
   for (llvm::omp::Clause c : clauses) {
-    os << toLower(llvm::omp::getOpenMPClauseName(c, version_));
-    switch (c) {
+    llvm::omp::Clause clause = c;
+    // Write to as enter when writing a mod file
+    if (clause == llvm::omp::Clause::OMPC_to && !name.empty()) {
+      clause = llvm::omp::Clause::OMPC_enter;
+    }
+    os << toLower(llvm::omp::getOpenMPClauseName(clause, version_));
+    switch (clause) {
     case llvm::omp::Clause::OMPC_atomic_default_mem_order:
       os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
       break;
