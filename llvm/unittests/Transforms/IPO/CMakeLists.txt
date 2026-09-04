@@ -14,5 +14,6 @@ add_llvm_unittest(IPOTests
   AttributorTest.cpp
   FunctionSpecializationTest.cpp
   ImportIDTableTests.cpp
+  InstrumentorTest.cpp
   MergeFunctionsTest.cpp
   )
