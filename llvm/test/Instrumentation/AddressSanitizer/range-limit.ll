@@ -50,7 +50,7 @@ entry:
 
 ; CHECK-MAX-LABEL: @read
 ; CHECK-MAX: [[ADDR:%[0-9]+]] = ptrtoaddr ptr %a to i64
-; CHECK-MAX: [[CMP:%[0-9]+]] = icmp ult i64 [[ADDR]], 8192
+; CHECK-MAX: [[CMP:%[0-9]+]] = icmp ule i64 [[ADDR]], 8192
 ; CHECK-MAX: br i1 [[CMP]], label %[[BEFORE_ASAN:[0-9]+]], label %[[AFTER_ASAN:[0-9]+]]
 ; CHECK-MAX: [[BEFORE_ASAN]]:
 ; CHECK-MAX: call void @__asan_report_load4
@@ -59,7 +59,7 @@ entry:
 
 ; CHECK-MAX-LABEL: @write
 ; CHECK-MAX: [[ADDR:%[0-9]+]] = ptrtoaddr ptr %a to i64
-; CHECK-MAX: [[CMP:%[0-9]+]] = icmp ult i64 [[ADDR]], 8192
+; CHECK-MAX: [[CMP:%[0-9]+]] = icmp ule i64 [[ADDR]], 8192
 ; CHECK-MAX: br i1 [[CMP]], label %[[BEFORE_ASAN:[0-9]+]], label %[[AFTER_ASAN:[0-9]+]]
 ; CHECK-MAX: [[BEFORE_ASAN]]:
 ; CHECK-MAX: call void @__asan_report_store4
@@ -67,7 +67,7 @@ entry:
 ; CHECK-MAX: store i32 %v, ptr %a, align 4
 
 ; CHECK-MAX-LABEL: @no_sanitize
-; CHECK-MAX-NOT: icmp ult i64
+; CHECK-MAX-NOT: icmp ule i64
 ; CHECK-MAX-NOT: __asan_report
 ; CHECK-MAX: %tmp1 = load i32, ptr %a, align 4
 ; CHECK-MAX: ret i32 %tmp1
@@ -79,7 +79,7 @@ entry:
 ; CHECK-BOTH: br i1 [[CMP_MIN]], label %[[MIN_THEN:[0-9]+]], label %[[EXIT:[0-9]+]]
 ; CHECK-BOTH: [[MIN_THEN]]:
 ; CHECK-BOTH: [[ADDR2:%[0-9]+]] = ptrtoaddr ptr %a to i64
-; CHECK-BOTH: [[CMP_MAX:%[0-9]+]] = icmp ult i64 [[ADDR2]], 8192
+; CHECK-BOTH: [[CMP_MAX:%[0-9]+]] = icmp ule i64 [[ADDR2]], 8192
 ; CHECK-BOTH: br i1 [[CMP_MAX]], label %[[MAX_THEN:[0-9]+]], label %[[MIN_EXIT:[0-9]+]]
 ; CHECK-BOTH: [[MAX_THEN]]:
 ; CHECK-BOTH: call void @__asan_report_load4
@@ -94,7 +94,7 @@ entry:
 ; CHECK-BOTH: br i1 [[CMP_MIN]], label %[[MIN_THEN:[0-9]+]], label %[[EXIT:[0-9]+]]
 ; CHECK-BOTH: [[MIN_THEN]]:
 ; CHECK-BOTH: [[ADDR2:%[0-9]+]] = ptrtoaddr ptr %a to i64
-; CHECK-BOTH: [[CMP_MAX:%[0-9]+]] = icmp ult i64 [[ADDR2]], 8192
+; CHECK-BOTH: [[CMP_MAX:%[0-9]+]] = icmp ule i64 [[ADDR2]], 8192
 ; CHECK-BOTH: br i1 [[CMP_MAX]], label %[[MAX_THEN:[0-9]+]], label %[[MIN_EXIT:[0-9]+]]
 ; CHECK-BOTH: [[MAX_THEN]]:
 ; CHECK-BOTH: call void @__asan_report_store4
@@ -105,7 +105,7 @@ entry:
 
 ; CHECK-BOTH-LABEL: @no_sanitize
 ; CHECK-BOTH-NOT: icmp uge i64
-; CHECK-BOTH-NOT: icmp ult i64
+; CHECK-BOTH-NOT: icmp ule i64
 ; CHECK-BOTH-NOT: __asan_report
 ; CHECK-BOTH: %tmp1 = load i32, ptr %a, align 4
 ; CHECK-BOTH: ret i32 %tmp1
