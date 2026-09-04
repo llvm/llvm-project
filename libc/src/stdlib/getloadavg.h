@@ -18,7 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int getloadavg(double *loadavg, int nelem);
+int getloadavg(double loadavg[], int nelem);
 
 } // namespace LIBC_NAMESPACE_DECL
 

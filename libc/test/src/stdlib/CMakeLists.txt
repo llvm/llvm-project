@@ -611,5 +611,6 @@ add_libc_test(
   DEPENDS
     libc.src.stdlib.getloadavg
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 

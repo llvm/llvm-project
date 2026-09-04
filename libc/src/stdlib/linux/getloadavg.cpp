@@ -21,7 +21,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, getloadavg, (double *loadavg, int nelem)) {
+LLVM_LIBC_FUNCTION(int, getloadavg, (double loadavg[], int nelem)) {
   if (nelem <= 0)
     return 0;
 
