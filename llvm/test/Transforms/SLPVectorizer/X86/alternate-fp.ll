@@ -3,6 +3,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=slm -passes=slp-vectorizer -S | FileCheck %s --check-prefix=SLM
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=corei7-avx -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX2
+; RUN: opt < %s -mtriple=x86_64-unknown -mattr=+avx2,+fast-vector-fdiv -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX2-FAST-FDIV
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=knl -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skx -passes=slp-vectorizer -S | FileCheck %s --check-prefix=AVX512
 
@@ -145,6 +146,12 @@ define <8 x float> @fmul_fdiv_v8f32(<8 x float> %a, <8 x float> %b) {
 ; AVX2-NEXT:    [[TMP8:%.*]] = shufflevector <8 x float> [[TMP7]], <8 x float> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; AVX2-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP8]], <8 x float> poison, <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
 ; AVX2-NEXT:    ret <8 x float> [[TMP5]]
+;
+; AVX2-FAST-FDIV-LABEL: @fmul_fdiv_v8f32(
+; AVX2-FAST-FDIV-NEXT:    [[TMP1:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
+; AVX2-FAST-FDIV-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
+; AVX2-FAST-FDIV-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
+; AVX2-FAST-FDIV-NEXT:    ret <8 x float> [[TMP3]]
 ;
 ; AVX512-LABEL: @fmul_fdiv_v8f32(
 ; AVX512-NEXT:    [[TMP1:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
