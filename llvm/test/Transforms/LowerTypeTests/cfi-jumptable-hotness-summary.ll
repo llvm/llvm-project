@@ -69,27 +69,28 @@ define i1 @test_generalized(ptr %p) {
 !2 = !{i32 0, !"typeid.generalized"}
 
 ^0 = module: (path: "cfi-jumptable-hotness-summary.o", hash: (0, 0, 0, 0, 0))
-^1 = gv: (guid: 100, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
+; Caller function calling jump table targets with various hotness tiers:
+^1 = gv: (guid: 100, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^2, hotness: cold), (callee: ^3, hotness: unknown), (callee: ^4, hotness: none), (callee: ^5, hotness: hot), (callee: ^6, hotness: critical), (callee: ^7, hotness: cold), (callee: ^8, hotness: cold), (callee: ^8, hotness: unknown), (callee: ^9, hotness: none), (callee: ^9, hotness: hot)))))
 
 ; Functions in typeid1 covering all 5 call edge hotness types:
 ; f_cold (GUID: 3658589069114391263) -> Cold (tier 0)
-^2 = gv: (guid: 3658589069114391263, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: cold)))))
+^2 = gv: (guid: 3658589069114391263, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 ; f_unknown (GUID: 1205929326482009600) -> Unknown (tier 1)
-^3 = gv: (guid: 1205929326482009600, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: unknown)))))
+^3 = gv: (guid: 1205929326482009600, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 ; f_none (GUID: 1928809046209326017) -> None (tier 2)
-^4 = gv: (guid: 1928809046209326017, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: none)))))
+^4 = gv: (guid: 1928809046209326017, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 ; f_hot (GUID: 9377218764429055595) -> Hot (tier 3)
-^5 = gv: (guid: 9377218764429055595, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: hot)))))
+^5 = gv: (guid: 9377218764429055595, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 ; f_critical (GUID: 14457025706112322155) -> Critical (tier 4)
-^6 = gv: (guid: 14457025706112322155, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: critical)))))
+^6 = gv: (guid: 14457025706112322155, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 
 ; Functions in typeid2:
 ; g_cold (GUID: 4485074774011110174) -> Cold (tier 0)
-^7 = gv: (guid: 4485074774011110174, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: cold)))))
+^7 = gv: (guid: 4485074774011110174, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 ; g_unknown (GUID: 16691380702939550262) -> multiple calls (cold, unknown), max hotness Unknown (tier 1)
-^8 = gv: (guid: 16691380702939550262, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: cold), (callee: ^1, hotness: unknown)))))
+^8 = gv: (guid: 16691380702939550262, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 ; g_hot (GUID: 18081025037889099144) -> multiple calls, max hotness Hot (tier 3)
-^9 = gv: (guid: 18081025037889099144, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, calls: ((callee: ^1, hotness: none), (callee: ^1, hotness: hot)))))
+^9 = gv: (guid: 18081025037889099144, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1)))
 ; CHECK-LABEL: define hidden void @f_critical.cfi(
 ; CHECK-SAME: ) !type [[META0:![0-9]+]] !type [[META1:![0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -133,7 +134,7 @@ define i1 @test_generalized(ptr %p) {
 ; CHECK-LABEL: define i1 @test_typeid1(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 32) to i64), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 56) to i64), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 4
 ; CHECK-NEXT:    ret i1 [[TMP4]]
@@ -151,7 +152,7 @@ define i1 @test_generalized(ptr %p) {
 ; CHECK-LABEL: define i1 @test_generalized(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 56) to i64), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 16) to i64), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 2
 ; CHECK-NEXT:    ret i1 [[TMP4]]
@@ -160,14 +161,14 @@ define i1 @test_generalized(ptr %p) {
 ; CHECK-LABEL: define private void @.cfi.jumptable(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] prefalign(8) !elf_section_properties [[META3:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_critical.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_cold.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_none.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_unknown.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_hot.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_cold.cfi)
 ; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_unknown.cfi)
 ; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_hot.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_cold.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_cold.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_unknown.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_none.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_hot.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_critical.cfi)
 ; CHECK-NEXT:    unreachable
 ;
 ;.

@@ -472,6 +472,10 @@ class LowerTypeTestsModule {
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
 
+  // Map from callee GUID to incoming call edge hotness count in the summary.
+  std::optional<DenseMap<GlobalValue::GUID, uint64_t>> IncomingCallHotness;
+  void computeIncomingCallHotness();
+
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
   PointerType *PtrTy = PointerType::getUnqual(M.getContext());
@@ -556,42 +560,7 @@ class LowerTypeTestsModule {
   unsigned getJumpTableEntrySize(Triple::ArchType JumpTableArch);
   InlineAsm *createJumpTableEntryAsm(Triple::ArchType JumpTableArch);
   void verifyTypeMDNode(GlobalObject *GO, MDNode *Type);
-  class HotnessScore {
-    std::optional<CalleeInfo::HotnessType> Tier;
-    uint64_t Count = 0;
-
-    static int toLayoutRank(CalleeInfo::HotnessType HT) {
-      // Work around HotnessType enum ordering where Unknown is 0 and Cold is 1;
-      // Cold should be ranked below Unknown (unprofiled/default).
-      if (HT == CalleeInfo::HotnessType::Cold)
-        return -1;
-      return static_cast<int>(HT);
-    }
-
-    static CalleeInfo::HotnessType maxHotness(CalleeInfo::HotnessType A,
-                                              CalleeInfo::HotnessType B) {
-      return toLayoutRank(A) < toLayoutRank(B) ? B : A;
-    }
-
-    CalleeInfo::HotnessType getTier() const {
-      return Tier.value_or(CalleeInfo::HotnessType::Unknown);
-    }
-
-  public:
-    HotnessScore(uint64_t Count = 0) : Count(Count) {}
-
-    void add(CalleeInfo::HotnessType EdgeTier, uint64_t EdgeCount = 0) {
-      Tier = Tier ? maxHotness(*Tier, EdgeTier) : EdgeTier;
-      Count = SaturatingAdd(Count, EdgeCount);
-    }
-
-    bool operator<(const HotnessScore &Other) const {
-      if (getTier() != Other.getTier())
-        return toLayoutRank(getTier()) < toLayoutRank(Other.getTier());
-      return Count < Other.Count;
-    }
-  };
-  HotnessScore getFunctionHotness(const Function *F) const;
+  uint64_t getFunctionHotness(const Function *F) const;
   void buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
                                  ArrayRef<GlobalTypeMember *> Functions);
   void buildBitSetsFromFunctionsNative(ArrayRef<Metadata *> TypeIds,
@@ -1963,27 +1932,70 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsWASM(
                      GlobalLayout);
 }
 
-LowerTypeTestsModule::HotnessScore
-LowerTypeTestsModule::getFunctionHotness(const Function *F) const {
-  HotnessScore Score(F->getEntryCount().value_or(0));
-  if (F->hasFnAttribute(Attribute::Cold))
-    Score.add(CalleeInfo::HotnessType::Cold);
-  else if (F->hasFnAttribute(Attribute::Hot))
-    Score.add(CalleeInfo::HotnessType::Hot);
+static uint64_t getHotnessWeight(CalleeInfo::HotnessType HT) {
+  switch (HT) {
+  case CalleeInfo::HotnessType::Critical:
+    return 10000000;
+  case CalleeInfo::HotnessType::Hot:
+    return 100000;
+  case CalleeInfo::HotnessType::None:
+    return 1000;
+  case CalleeInfo::HotnessType::Unknown:
+    return 10;
+  case CalleeInfo::HotnessType::Cold:
+    return 0;
+  }
+  llvm_unreachable("unknown hotness type");
+}
+
+void LowerTypeTestsModule::computeIncomingCallHotness() {
+  if (IncomingCallHotness)
+    return;
+
+  IncomingCallHotness.emplace();
 
   const auto *Index = ImportSummary ? ImportSummary : ExportSummary;
-  if (Index) {
-    if (ValueInfo VI = Index->getValueInfo(F->getGUIDOrFallback())) {
-      for (const auto &GVS : VI.getSummaryList()) {
-        if (auto *FS = dyn_cast<FunctionSummary>(GVS.get())) {
-          for (const auto &Edge : FS->calls())
-            Score.add(Edge.second.getHotness());
+  if (!Index)
+    return;
+
+  for (const auto &P : *Index) {
+    for (const auto &GVS : P.second.getSummaryList()) {
+      if (auto *FS = dyn_cast<FunctionSummary>(GVS.get())) {
+        for (const auto &Edge : FS->calls()) {
+          GlobalValue::GUID CalleeGUID = Edge.first.getGUID();
+          for (const auto &CalleeGVS : Edge.first.getSummaryList()) {
+            if (auto *AS = dyn_cast<AliasSummary>(CalleeGVS.get()))
+              CalleeGUID = AS->getAliaseeGUID();
+          }
+          auto [It, Inserted] = IncomingCallHotness->try_emplace(CalleeGUID, 0);
+          It->second = SaturatingAdd(
+              It->second, getHotnessWeight(Edge.second.getHotness()));
         }
       }
     }
   }
+}
 
-  return Score;
+uint64_t LowerTypeTestsModule::getFunctionHotness(const Function *F) const {
+  uint64_t Count = F->getEntryCount().value_or(0);
+
+  auto ToHT = [&](const Function *F) {
+    if (F->hasFnAttribute(Attribute::Hot))
+      return CalleeInfo::HotnessType::Hot;
+    if (F->hasFnAttribute(Attribute::Cold)) 
+      return CalleeInfo::HotnessType::Cold;
+    return CalleeInfo::HotnessType::Unknown;
+  };
+
+  Count = SaturatingAdd(Count, getHotnessWeight(ToHT(F)));
+
+  if (IncomingCallHotness) {
+    if (auto It = IncomingCallHotness->find(F->getGUIDOrFallback());
+        It != IncomingCallHotness->end())
+      Count = SaturatingAdd(Count, It->second);
+  }
+
+  return Count;
 }
 
 void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
@@ -2028,8 +2040,9 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 
   unique_function<bool(uint64_t, uint64_t)> Less;
   if (!IsGlobalSet) {
+    computeIncomingCallHotness();
     // Estimated hotness of each jump entry.
-    std::vector<HotnessScore> GTMHotness;
+    std::vector<uint64_t> GTMHotness;
     GTMHotness.reserve(Globals.size());
     for (GlobalTypeMember *GTM : Globals)
       GTMHotness.push_back(
