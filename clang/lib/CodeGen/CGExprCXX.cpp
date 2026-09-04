@@ -268,7 +268,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     if (OCE->isAssignmentOp()) {
       if (TrivialAssignment) {
-        TrivialAssignmentRHS = EmitCheckedLValue(CE->getArg(1), TCK_Load);
+        TrivialAssignmentRHS =
+            EmitLValue(CE->getArg(1), NotKnownNonNull, ObjectRequired);
+        EmitTypeCheck(TCK_Load, CE->getArg(1), TrivialAssignmentRHS);
       } else {
         RtlArgs = &RtlArgStorage;
         EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
@@ -284,13 +286,16 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     if (IsArrow) {
       LValueBaseInfo BaseInfo;
       TBAAAccessInfo TBAAInfo;
-      Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
+      Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo,
+                                                  NotKnownNonNull,
+                                                  ObjectRequired);
       return MakeAddrLValue(ThisValue, Base->getType()->getPointeeType(),
                             BaseInfo, TBAAInfo);
     }
+    LValue LV = EmitLValue(Base, NotKnownNonNull, ObjectRequired);
     if (EmitCheckedForStore)
-      return EmitCheckedLValue(Base, TCK_Store);
-    return EmitLValue(Base);
+      EmitTypeCheck(TCK_Store, Base, LV);
+    return LV;
   };
 
   if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
@@ -323,12 +328,17 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       // when it isn't necessary; just produce the proper effect here.
       LValue This = getLValueForThis(/*EmitCheckedForStore=*/true);
 
-      // It's important that we use the result of EmitCheckedLValue here rather
-      // than emitting call arguments, in order to preserve TBAA information
-      // from the RHS.
-      LValue RHS = isa<CXXOperatorCallExpr>(CE)
-                       ? TrivialAssignmentRHS
-                       : EmitCheckedLValue(*CE->arg_begin(), TCK_Load);
+      // It's important that we emit the RHS as an lvalue here rather than
+      // emitting call arguments, in order to preserve TBAA information from the
+      // RHS.
+      LValue RHS;
+      if (isa<CXXOperatorCallExpr>(CE)) {
+        RHS = TrivialAssignmentRHS;
+      } else {
+        const Expr *RHSExpr = *CE->arg_begin();
+        RHS = EmitLValue(RHSExpr, NotKnownNonNull, ObjectRequired);
+        EmitTypeCheck(TCK_Load, RHSExpr, RHS);
+      }
       EmitAggregateAssign(This, RHS, CE->getType());
       return RValue::get(This.getPointer(*this));
     }

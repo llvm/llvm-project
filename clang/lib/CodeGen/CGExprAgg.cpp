@@ -251,7 +251,9 @@ public:
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
 void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
-  LValue LV = CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+  LValue LV =
+      CGF.EmitLValue(E, NotKnownNonNull, CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Load, E, LV);
 
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV)) {
@@ -837,8 +839,9 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_Dynamic: {
     // FIXME: Can this actually happen? We have no test coverage for it.
     assert(isa<CXXDynamicCastExpr>(E) && "CK_Dynamic without a dynamic_cast?");
-    LValue LV =
-        CGF.EmitCheckedLValue(E->getSubExpr(), CodeGenFunction::TCK_Load);
+    LValue LV = CGF.EmitLValue(E->getSubExpr(), NotKnownNonNull,
+                               CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Load, E->getSubExpr(), LV);
     // FIXME: Do we also need to handle property references here?
     if (LV.isSimple())
       CGF.EmitDynamicCast(LV.getAddress(), cast<CXXDynamicCastExpr>(E));
@@ -1406,7 +1409,9 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     Visit(E->getRHS());
 
     // Now emit the LHS and copy into it.
-    LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+    LValue LHS = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                                CodeGenFunction::ObjectRequired);
+    CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LHS);
 
     // That copy is an atomic copy if the LHS is atomic.
     if (LHS.getType()->isAtomicType() ||
@@ -1424,7 +1429,9 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+  LValue LHS = CGF.EmitLValue(E->getLHS(), NotKnownNonNull,
+                              CodeGenFunction::ObjectRequired);
+  CGF.EmitTypeCheck(CodeGenFunction::TCK_Store, E->getLHS(), LHS);
 
   // If we have an atomic type, evaluate into the destination and then
   // do an atomic copy.

@@ -2212,7 +2212,8 @@ void CodeGenFunction::EmitCXXConstructorCall(
     assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
 
     const Expr *Arg = E->getArg(0);
-    LValue Src = EmitCheckedLValue(Arg, TCK_Load);
+    LValue Src = EmitLValue(Arg, NotKnownNonNull, ObjectRequired);
+    EmitTypeCheck(TCK_Load, Arg, Src);
     CanQualType DestTy = getContext().getCanonicalTagType(D->getParent());
     LValue Dest = MakeAddrLValue(This, DestTy);
     EmitAggregateCopyCtor(Dest, Src, ThisAVS.mayOverlap());
