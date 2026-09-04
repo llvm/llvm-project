@@ -73,20 +73,6 @@ protected:
       return std::nullopt;
     }
 
-    std::optional<Symbol::Flag> FindObjectWithDSAByUltimate(
-        const Symbol &symbol) {
-      if (auto flag{FindSymbolWithDSA(symbol)}) {
-        return flag;
-      }
-      const Symbol &ultimate{symbol.GetUltimate()};
-      for (const auto &entry : objectWithDSA) {
-        if (entry.first->GetUltimate() == ultimate) {
-          return entry.second;
-        }
-      }
-      return std::nullopt;
-    }
-
     bool withinConstruct{false};
     std::int64_t associatedLoopLevel{0};
   };
@@ -3199,15 +3185,8 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
   }
 }
 
-static bool WithMultipleAppearancesOmpException(const Symbol &symbol,
-    Symbol::Flag flag, std::optional<Symbol::Flag> prevFlag = std::nullopt) {
-  if (prevFlag &&
-      ((flag == Symbol::Flag::OmpFirstPrivate &&
-           *prevFlag == Symbol::Flag::OmpLastPrivate) ||
-          (flag == Symbol::Flag::OmpLastPrivate &&
-              *prevFlag == Symbol::Flag::OmpFirstPrivate))) {
-    return true;
-  }
+static bool WithMultipleAppearancesOmpException(
+    const Symbol &symbol, Symbol::Flag flag) {
   return (flag == Symbol::Flag::OmpFirstPrivate &&
              symbol.test(Symbol::Flag::OmpLastPrivate)) ||
       (flag == Symbol::Flag::OmpLastPrivate &&
@@ -3263,14 +3242,12 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
         if (dataCopyingAttributeFlags.test(ompFlag)) {
           CheckDataCopyingClause(name, *resolvedObject, ompFlag);
         } else {
-          // Check for member conflicts before recording this clause's DSA so
-          // that FindObjectWithDSAByUltimate only reflects prior clauses.
           if (!memberConflict && !allowRepeatedAppearance &&
               dataSharingAttributeFlags.test(ompFlag)) {
             const Symbol &member{object->GetUltimate()};
             if (HasDataSharingAttributeObject(member) &&
-                !WithMultipleAppearancesOmpException(member, ompFlag,
-                    GetContext().FindObjectWithDSAByUltimate(member))) {
+                !WithMultipleAppearancesOmpException(
+                    *resolvedObject, ompFlag)) {
               memberConflict = true;
             }
           }
