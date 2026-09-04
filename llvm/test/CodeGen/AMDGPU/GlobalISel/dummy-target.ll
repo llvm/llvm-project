@@ -29,18 +29,16 @@ define <2 x i16> @vop3p_add_v2i16(<2 x i16> %arg0) #0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
   ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR]](i32)
-  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](<2 x i16>)
-  ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(i16) = G_TRUNC [[BITCAST1]](i32)
-  ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
-  ; CHECK-NEXT:   [[TRUNC3:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR1]](i32)
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i16) = G_ADD [[TRUNC]], [[TRUNC2]]
-  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(i16) = G_ADD [[TRUNC1]], [[TRUNC3]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i16) = COPY [[TRUNC]](i16)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i16) = COPY [[TRUNC1]](i16)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i16) = G_ADD [[TRUNC]], [[COPY1]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(i16) = G_ADD [[TRUNC1]], [[COPY2]]
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[ADD]](i16)
   ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[ADD1]](i16)
   ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
   ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x i16>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST1]](<2 x i16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add
@@ -69,18 +67,16 @@ define <2 x i16> @halfinsts_add_v2i16(<2 x i16> %arg0) #1 {
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x i16>)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
   ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
-  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x i16>)
-  ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST2]], [[C]](i32)
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[BITCAST1]], [[BITCAST2]]
-  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(i32) = G_ADD [[LSHR]], [[LSHR1]]
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = G_ADD [[BITCAST1]], [[BITCAST1]]
+  ; CHECK-NEXT:   [[ADD1:%[0-9]+]]:_(i32) = G_ADD [[LSHR]], [[LSHR]]
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i32) = G_AND [[ADD]], [[C1]]
   ; CHECK-NEXT:   [[AND1:%[0-9]+]]:_(i32) = G_AND [[ADD1]], [[C1]]
   ; CHECK-NEXT:   [[SHL:%[0-9]+]]:_(i32) = G_SHL [[AND1]], [[C]](i32)
   ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[AND]], [[SHL]]
-  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
-  ; CHECK-NEXT:   [[BITCAST4:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST3]](<2 x i16>)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST4]](i32)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST2]](<2 x i16>)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[BITCAST3]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add

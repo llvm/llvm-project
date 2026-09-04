@@ -1118,19 +1118,22 @@ define <2 x i32> @ucmp_v2i16_uniform(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_lt_u32 s0, s3
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX12-GISEL-NEXT:    s_and_b32 s2, 0xffff, s2
+; GFX12-GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_cmp_lt_u32 s2, s1
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_sub_co_i32 s0, s2, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_sub_co_i32 s1, s3, s1
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1

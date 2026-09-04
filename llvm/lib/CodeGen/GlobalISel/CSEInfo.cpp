@@ -71,6 +71,7 @@ bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_BITCAST:
     return true;
   }
   return false;
