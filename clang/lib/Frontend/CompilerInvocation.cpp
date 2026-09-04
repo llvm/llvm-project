@@ -4349,6 +4349,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMP && !Args.hasArg(options::OPT_fnoopenmp_use_tls);
   Opts.OpenMPIsTargetDevice =
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_target_device);
+  if (!Args.getLastArg(OPT_foffload_uniform_block,
+                       OPT_fno_offload_uniform_block))
+    Opts.OffloadUniformBlock = Opts.defaultOffloadUniformBlock(T);
   Opts.OpenMPIRBuilder =
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
