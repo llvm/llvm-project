@@ -155,6 +155,8 @@ private:
   bool AIXFuncUseTLSIEForLD = false;
   bool AIXFuncTLSModelOptInitDone = false;
 
+  bool HasBuiltinSJLJ_SetJmp = false;
+
 public:
   explicit PPCFunctionInfo(const Function &F, const TargetSubtargetInfo *STI);
 
@@ -181,6 +183,9 @@ public:
   void setROPProtectionHashSaveIndex(int Idx) {
     ROPProtectionHashSaveIndex = Idx;
   }
+
+  void setHasBuiltinSetJmp() { HasBuiltinSJLJ_SetJmp = true; }
+  bool hasBuiltinSetJmp() { return HasBuiltinSJLJ_SetJmp; }
 
   unsigned getMinReservedArea() const { return MinReservedArea; }
   void setMinReservedArea(unsigned size) { MinReservedArea = size; }

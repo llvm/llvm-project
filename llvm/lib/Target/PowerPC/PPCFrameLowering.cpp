@@ -633,11 +633,12 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   if (!isPPC64 && (!isInt<32>(FrameSize) || !isInt<32>(NegFrameSize)))
     llvm_unreachable("Unhandled stack size!");
 
-  if (MFI.isFrameAddressTaken())
+  PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
+
+  if (MFI.isFrameAddressTaken() || FI->hasBuiltinSetJmp())
     replaceFPWithRealFP(MF);
 
   // Check if the link register (LR) must be saved.
-  PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
   bool MustSaveLR = FI->mustSaveLR();
   bool MustSaveTOC = FI->mustSaveTOC();
   const SmallVectorImpl<Register> &MustSaveCRs = FI->getMustSaveCRs();
