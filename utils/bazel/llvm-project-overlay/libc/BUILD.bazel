@@ -7874,8 +7874,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fdimf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -11765,6 +11765,8 @@ libc_math_function(
 libc_math_function(
     name = "fdimf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fdimf128",
     ],
 )

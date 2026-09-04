@@ -351,6 +351,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.faddl
     libc.src.math.fdim
     libc.src.math.fdimf
+    libc.src.math.fdimf128
     libc.src.math.fdiml
     libc.src.math.fdiv
     libc.src.math.fdivl
