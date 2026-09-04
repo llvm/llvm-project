@@ -137,7 +137,8 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
 
-- Clang now supports iterating expansion statements.
+- Clang now supports iterating expansion statements, which isc part of [P1306R5](https://wg21.link/P1306R5) Expansion Statements. This
+  means that all three types of expansion statements (enumerating, iterating, and destructuring) are now supported.
 
 #### C++23 Feature Support
 

@@ -1295,9 +1295,9 @@ public:
     return CurScope->incrementMSManglingNumber();
   }
 
-  void
-  setTokenInjectionHandler(std::unique_ptr<sema::TokenInjectionHandler> TIH) {
-    TokenInjectionHandler = std::move(TIH);
+  void setTokenInjectionHandler(
+      std::unique_ptr<sema::TokenInjectionHandler> InjectionHandler) {
+    TokenInjectionHandler = std::move(InjectionHandler);
   }
 
   /// Try to recover by turning the given expression into a

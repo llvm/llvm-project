@@ -186,7 +186,8 @@ public:
   Lexer &operator=(const Lexer &) = delete;
 
   /// CreateScratchLexer: Lexer constructor - Create a new lexer object that
-  /// places 'Code' in the scratch buffer and lexes from it.
+  /// places 'Code' in the scratch buffer and lexes from it. This is used to
+  /// support '_Pragma' and string injection.
   static std::unique_ptr<Lexer>
   CreateScratchLexer(StringRef Code, SourceLocation ExpansionLocStart,
                      SourceLocation ExpansionLocEnd, Preprocessor &PP);

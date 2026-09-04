@@ -582,7 +582,7 @@ bool Preprocessor::LexTokensInString(SmallVectorImpl<Token> &Tokens,
                                      StringRef Code, SourceLocation Loc) {
   std::unique_ptr<Lexer> L = Lexer::CreateScratchLexer(Code, Loc, Loc, *this);
   L->LexingInjectedString = true;
-  EnterSourceFileWithLexer(std::move(L), nullptr);
+  EnterSourceFileWithLexer(std::move(L), /*Dir=*/nullptr);
   for (;;) {
     Token Tok;
     Lex(Tok);
