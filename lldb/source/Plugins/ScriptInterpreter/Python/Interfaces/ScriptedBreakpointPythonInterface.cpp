@@ -9,6 +9,7 @@
 #include "../lldb-python.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -142,7 +143,8 @@ void ScriptedBreakpointPythonInterface::Initialize() {
       GetPluginNameStatic(),
       llvm::StringRef("Create a breakpoint that chooses locations based on "
                       "user-created callbacks"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedBreakpointResolver,
+      eScriptLanguagePython, {ci_usages, api_usages});
 }
 
 void ScriptedBreakpointPythonInterface::Terminate() {

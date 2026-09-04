@@ -148,10 +148,10 @@ define i32 @test7(i32 %x) nounwind {
 ;
 ; X64-LABEL: test7:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    shrl $2, %edi
-; X64-NEXT:    imulq $613566757, %rdi, %rax # imm = 0x24924925
-; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movabsq $658812288404291584, %rcx # imm = 0x924924928000000
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdx, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %div = udiv i32 %x, 28

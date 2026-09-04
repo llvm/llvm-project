@@ -6,6 +6,7 @@
 ; RUN: not opt -passes=verify %t/invalid-count.ll --disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT
 ; RUN: not opt -passes=verify %t/invalid-place.ll --disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-PLACE
 ; RUN: not opt -passes=verify %t/invalid-duplicate-values.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-DUPLICATE-VALUES
+; RUN: not opt -passes=verify %t/invalid-value-not-const-int.ll -disable-output 2>&1 | FileCheck %s --check-prefix=INVALID-VALUE-NOT-CONST-INT
 
 ;--- valid.ll
 define void @test(ptr %0) {
@@ -45,3 +46,11 @@ define void @test(ptr %0) {
 }
 !0 = !{!"VP", i32 0, i64 1234, i64 72657670687977694852, i64 1, i64 72657670687977694852, i64 2}
 ; INVALID-DUPLICATE-VALUES: VP !prof should not have duplicate profile values
+
+;--- invalid-value-not-const-int.ll
+define void @test(ptr %0) {
+  call void %0(), !prof !0
+  ret void
+}
+!0 = !{!"VP", i32 0, i64 100, !"oops", i64 50}
+; INVALID-VALUE-NOT-CONST-INT: VP !prof value operand is not a const int

@@ -23,7 +23,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %0 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<contract>} : f64
     omp.yield(%0 : f64)
   }
-  llvm.func @_QQmain() attributes {fir.bindc_name = "reduction", frame_pointer = #llvm.framePointerKind<all>, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, target_cpu = "gfx1030", target_features = #llvm.target_features<["+16-bit-insts", "+ci-insts", "+dl-insts", "+dot1-insts", "+dot10-insts", "+dot2-insts", "+dot5-insts", "+dot6-insts", "+dot7-insts", "+dpp", "+gfx10-3-insts", "+gfx10-insts", "+gfx8-insts", "+gfx9-insts", "+gws", "+image-insts", "+s-memrealtime", "+s-memtime-inst", "+vmem-to-lds-load-insts", "+wavefrontsize32"]>} {
+  llvm.func @_QQmain() attributes {fir.bindc_name = "reduction", frame_pointer = #llvm.framePointerKind<all>, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>, target_cpu = "gfx1030", target_features = #llvm.target_features<["+16-bit-insts", "+ci-insts", "+dl-insts", "+dot1-insts", "+dot10-insts", "+dot2-insts", "+dot5-insts", "+dot6-insts", "+dot7-insts", "+dpp", "+gfx10-3-insts", "+gfx10-insts", "+gfx8-insts", "+gfx9-insts", "+gws", "+image-insts", "+s-memrealtime", "+s-memtime-inst", "+vmem-to-lds-load-insts", "+wavefrontsize32"]>} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x i32 {bindc_name = "k"} : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -58,12 +58,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     llvm.store %22, %17 : f64, !llvm.ptr
     llvm.store %21, %14 : f32, !llvm.ptr
     llvm.store %21, %11 : f32, !llvm.ptr
-    %30 = omp.map.info var_ptr(%20 : !llvm.ptr, f64) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "ce1"}
-    %31 = omp.map.info var_ptr(%17 : !llvm.ptr, f64) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "ce2"}
-    %32 = omp.map.info var_ptr(%14 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "ce3"}
-    %33 = omp.map.info var_ptr(%11 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "ce4"}
-    %34 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "j"}
-    omp.target map_entries(%30 -> %arg0, %31 -> %arg1, %32 -> %arg2, %33 -> %arg3, %34 -> %arg4 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %30 = omp.map.info var_ptr(%20 : !llvm.ptr, f64) map_clauses(tofrom) capture(ByRef) name("ce1") -> !llvm.ptr
+    %31 = omp.map.info var_ptr(%17 : !llvm.ptr, f64) map_clauses(tofrom) capture(ByRef) name("ce2") -> !llvm.ptr
+    %32 = omp.map.info var_ptr(%14 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) name("ce3") -> !llvm.ptr
+    %33 = omp.map.info var_ptr(%11 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) name("ce4") -> !llvm.ptr
+    %34 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("j") -> !llvm.ptr
+    omp.target kernel_type(spmd) map_entries(%30 -> %arg0, %31 -> %arg1, %32 -> %arg2, %33 -> %arg3, %34 -> %arg4 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %35 = llvm.mlir.constant(1.000000e+00 : f32) : f32
       %36 = llvm.mlir.constant(1.000000e+00 : f64) : f64
       %37 = llvm.mlir.constant(1000 : i32) : i32
@@ -95,20 +95,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }
 
 // CHECK: kernel_environment =
-// CHECK-SAME: i32 24, i32 1024
+// CHECK-SAME: i32 24
 // CHECK: call void @[[OUTLINED:__omp_offloading_[A-Za-z0-9_.]*]]
-// CHECK: %[[MASTER:.+]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2
+// CHECK: %[[MASTER:.+]] = call i32 @__kmpc_gpu_xteam_reduce_nowait
 // CHECK: icmp eq i32 %[[MASTER]], 1
 // CHECK: i1 %{{.+}}, label %[[THEN:[A-Za-z0-9_.]*]], label %[[DONE:[A-Za-z0-9_.]*]]
 // CHECK: [[THEN]]:
+// CHECK-NEXT: call void @_omp_reduction_global_to_list_copy_func
 // CHECK-NEXT: %[[FINAL_LHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RESULT0:[A-Za-z0-9_.]*]] = fadd contract double %[[FINAL_LHS0]], %[[FINAL_RHS0]]

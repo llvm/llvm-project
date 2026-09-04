@@ -81,6 +81,15 @@ def G_ROLW : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_ROLW, riscv_rolw>;
 
+// Pseudo equivalent to a RISCVISD::BREV8.
+def G_BREV8 : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = false;
+}
+
+def : GINodeEquiv<G_BREV8, riscv_brev8>;
+
 // Pseudo equivalent to a RISCVISD::CLZW.
 def G_CLZW : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);

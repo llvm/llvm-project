@@ -199,11 +199,14 @@ static clang::Qualifiers GetFrameCVQualifiers(StackFrame *frame) {
   if (!this_sp)
     return {};
 
-  // Lambdas that capture 'this' have a member variable called 'this'. The class
-  // context of __lldb_expr for a lambda is the class type of the 'this' capture
-  // (not the anonymous lambda structure). So use the qualifiers of the captured
-  // 'this'.
-  if (auto this_this_sp = this_sp->GetChildMemberWithName("this"))
+  // Lambdas that capture 'this' have a member variable called 'this' (DWARF) /
+  // '__this' (CodeView). The class context of __lldb_expr for a lambda is the
+  // class type of the 'this' capture (not the anonymous lambda structure). So
+  // use the qualifiers of the captured 'this'.
+  auto this_this_sp = this_sp->GetChildMemberWithName("this");
+  if (!this_this_sp)
+    this_this_sp = this_sp->GetChildMemberWithName("__this");
+  if (this_this_sp)
     return clang::Qualifiers::fromCVRMask(
         this_this_sp->GetCompilerType().GetPointeeType().GetTypeQualifiers());
 

@@ -33,7 +33,7 @@ entry:
   store float 0x3E212E0BE0000000, ptr %h, align 4
   store float 8.000000e+00, ptr %i, align 4
   store float 0x7FF8000000000000, ptr %j, align 4
-  store float 0x7FF0000000000000, ptr %k, align 4
+  store float +inf, ptr %k, align 4
   store double 1.000000e+00, ptr %l, align 8
   store double 8.000000e+00, ptr %m, align 8
   store double 0x7FF8000000000000, ptr %n, align 8

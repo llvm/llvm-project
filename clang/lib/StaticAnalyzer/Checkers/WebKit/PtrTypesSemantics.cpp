@@ -139,8 +139,8 @@ bool isCheckedPtr(const std::string &Name) {
 }
 
 bool isOwnerPtr(const std::string &Name) {
-  return isRefType(Name) || isCheckedPtr(Name) || Name == "unique_ptr" ||
-         Name == "UniqueRef" || Name == "LazyUniqueRef";
+  return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
+         Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
 }
 
 static bool isWeakPtrClass(const std::string &Name) {
@@ -219,6 +219,9 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
     } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
       auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
       return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *RD = type->getAs<RecordType>()) {
+      auto *Decl = RD->getDecl();
+      return Decl && Pred(Decl->getNameAsString());
     } else
       break;
   }
@@ -284,7 +287,7 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
     if (Redecl->getAttr<ObjCBridgeAttr>() ||
         Redecl->getAttr<ObjCBridgeMutableAttr>()) {
-      CFPointees.insert(RT);
+      CFPointees.insert({RT, TD});
       return;
     }
   }
@@ -297,6 +300,22 @@ bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
           QT.getCanonicalType()->getPointeeType().getTypePtrOrNull()))
     return CFPointees.contains(RT);
   return RecordlessTypes.contains(QT.getTypePtr());
+}
+
+const TypedefDecl *RetainTypeChecker::getCanonicalDecl(QualType QT) {
+  if (auto *TT = dyn_cast_or_null<TypedefType>(QT.getTypePtrOrNull())) {
+    if (auto *TD = dyn_cast<TypedefDecl>(TT->getDecl()))
+      return TD;
+  }
+  QT = QT.getCanonicalType();
+  auto PointeeQT = QT->getPointeeType();
+  auto *PointeeType = PointeeQT.getTypePtrOrNull();
+  if (!PointeeType)
+    return nullptr;
+  auto *RD = dyn_cast<RecordType>(PointeeType);
+  if (!RD)
+    return nullptr;
+  return CFPointees.lookup(RD);
 }
 
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
@@ -337,49 +356,50 @@ std::optional<bool> isUncheckedPtr(const QualType T) {
 std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
-  if (isa<CXXMethodDecl>(M)) {
-    const CXXRecordDecl *calleeMethodsClass = M->getParent();
-    auto className = safeGetName(calleeMethodsClass);
-    auto method = safeGetName(M);
+  const CXXRecordDecl *calleeMethodsClass = M->getParent();
+  std::string className = safeGetName(calleeMethodsClass);
+  std::string method = safeGetName(M);
 
-    if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
-      return true;
+  auto OpType = M->getOverloadedOperator();
+  if (isCheckedPtr(className) &&
+      (method == "get" || method == "ptr" || OpType == OO_Star))
+    return true;
 
-    if ((isRefType(className) && (method == "get" || method == "ptr")) ||
-        ((className == "String" || className == "AtomString" ||
-          className == "AtomStringImpl" || className == "UniqueString" ||
-          className == "UniqueStringImpl" || className == "Identifier") &&
-         method == "impl"))
-      return true;
+  if ((isRefType(className) &&
+       (method == "get" || method == "ptr" || OpType == OO_Star)) ||
+      ((className == "String" || className == "AtomString" ||
+        className == "AtomStringImpl" || className == "UniqueString" ||
+        className == "UniqueStringImpl" || className == "Identifier") &&
+       method == "impl"))
+    return true;
 
-    if (isRetainPtrOrOSPtr(className) && method == "get")
-      return true;
+  if (isRetainPtrOrOSPtr(className) && method == "get")
+    return true;
 
-    // Ref<T> -> T conversion
-    // FIXME: Currently allowing any Ref<T> -> whatever cast.
-    if (isRefType(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-        auto QT = maybeRefToRawOperator->getConversionType();
-        auto *T = QT.getTypePtrOrNull();
-        return T && (T->isPointerType() || T->isReferenceType());
-      }
+  // Ref<T> -> T conversion
+  // FIXME: Currently allowing any Ref<T> -> whatever cast.
+  if (isRefType(className)) {
+    if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
+      QualType QT = maybeRefToRawOperator->getConversionType();
+      const Type *T = QT.getTypePtrOrNull();
+      return T && (T->isPointerType() || T->isReferenceType());
     }
+  }
 
-    if (isCheckedPtr(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-        auto QT = maybeRefToRawOperator->getConversionType();
-        auto *T = QT.getTypePtrOrNull();
-        return T && (T->isPointerType() || T->isReferenceType());
-      }
+  if (isCheckedPtr(className)) {
+    if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
+      QualType QT = maybeRefToRawOperator->getConversionType();
+      const Type *T = QT.getTypePtrOrNull();
+      return T && (T->isPointerType() || T->isReferenceType());
     }
+  }
 
-    if (isRetainPtrOrOSPtr(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-        auto QT = maybeRefToRawOperator->getConversionType();
-        auto *T = QT.getTypePtrOrNull();
-        return T && (T->isPointerType() || T->isReferenceType() ||
-                     T->isObjCObjectPointerType());
-      }
+  if (isRetainPtrOrOSPtr(className)) {
+    if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
+      QualType QT = maybeRefToRawOperator->getConversionType();
+      const Type *T = QT.getTypePtrOrNull();
+      return T && (T->isPointerType() || T->isReferenceType() ||
+                   T->isObjCObjectPointerType());
     }
   }
   return false;
@@ -568,6 +588,14 @@ class TrivialFunctionAnalysisVisitor
     if (Ty->isPointerOrReferenceType())
       return true;
 
+    // FIXME: Handle a case when there is a local autorelease pool.
+    if (Ty->isObjCObjectPointerType()) {
+      auto Type = Ty.isDestructedType();
+      if (Type == QualType::DK_objc_weak_lifetime || Type == QualType::DK_none)
+        return true;
+      // strong lifetime in ARC could dealloc an object.
+    }
+
     // Fundamental types (integral, nullptr_t, etc...) don't have destructors.
     if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
       return true;
@@ -646,21 +674,45 @@ public:
   bool IsFunctionTrivial(const Decl *D) {
     const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
     auto Result = WithCachedResult(D, [&]() {
-      if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
+      auto *FnDecl = dyn_cast<FunctionDecl>(D);
+      auto *MethodDecl = dyn_cast<CXXMethodDecl>(D);
+      auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D);
+      auto *DtorDecl = dyn_cast<CXXDestructorDecl>(D);
+
+      if (FnDecl) {
         if (isNoDeleteFunction(FnDecl))
           return true;
-        if (auto *MD = dyn_cast<CXXMethodDecl>(D); MD && MD->isVirtual())
+        if (MethodDecl && MethodDecl->isVirtual())
           return false;
         for (auto *Param : FnDecl->parameters()) {
           if (!HasTrivialDestructor(Param))
             return false;
         }
       }
-      if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
+      if (CtorDecl) {
         for (auto *CtorInit : CtorDecl->inits()) {
           if (!Visit(CtorInit->getInit()))
             return false;
         }
+      }
+      // An implicit or =default special member runs no user code when it is
+      // trivial in the C++ standard sense, so it cannot delete. Such a
+      // member's synthesized body is typically absent from the AST until
+      // codegen materialises it, which the generic null-body check below
+      // would otherwise conservatively classify as non-trivial.
+      if (MethodDecl && !MethodDecl->isUserProvided()) {
+        if (CtorDecl) {
+          const CXXRecordDecl *RD = CtorDecl->getParent();
+          if ((CtorDecl->isDefaultConstructor() &&
+               RD->hasTrivialDefaultConstructor()) ||
+              (CtorDecl->isCopyConstructor() &&
+               RD->hasTrivialCopyConstructor()) ||
+              (CtorDecl->isMoveConstructor() &&
+               RD->hasTrivialMoveConstructor()))
+            return true;
+        }
+        if (DtorDecl && DtorDecl->getParent()->hasTrivialDestructor())
+          return true;
       }
       const Stmt *Body = D->getBody();
       if (!Body)
@@ -707,9 +759,12 @@ public:
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
-    // A return statement is allowed as long as the return value is trivial.
+    // A return statement is allowed as long as the return value is trivial. A
+    // returned smart-pointer prvalue is special: under guaranteed copy elision
+    // the temporary *is* the function's return slot, so it is destructed by the
+    // caller, not here. Hence we may ignore that temporary's destructor.
     if (auto *RV = RS->getRetValue())
-      return Visit(RV);
+      return visitReturnValueElidingTemp(RV);
     return true;
   }
 
@@ -895,7 +950,62 @@ public:
     return true;
   }
 
+  // Triviality check for a return value that may elide a smart-pointer
+  // temporary's destructor.
+  //
+  // This is only valid for *return values*: a returned class prvalue is
+  // constructed directly into the function's return slot (C++17 guaranteed copy
+  // elision), so the temporary is destructed by the caller rather than here.
+  //
+  // It is deliberately NOT applied to call/constructor arguments. An argument
+  // temporary's lifetime ends at the full-expression *in this function* (the
+  // caller destroys arguments, e.g. per the Itanium C++ ABI), so its destructor
+  // runs here and may invoke delete. Proving otherwise would require
+  // interprocedural ownership analysis, so arguments are checked normally.
+  bool visitReturnValueElidingTemp(const Expr *Arg) {
+    QualType OriginalQT = Arg->getType();
+    auto *Type = OriginalQT.getTypePtrOrNull();
+    if (!Type)
+      return Visit(Arg);
+    auto *CXXRD = Type->getAsCXXRecordDecl();
+    if (!CXXRD || !isSmartPtrClass(safeGetName(CXXRD)))
+      return Visit(Arg);
+    Arg = Arg->IgnoreParenCasts();
+    if (!Arg->isPRValue())
+      return Visit(Arg);
+    if (auto *Init = dyn_cast<InitListExpr>(Arg)) {
+      if (Init->getNumInits() == 1)
+        Arg = Init->getInit(0);
+    }
+    if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
+      // Only elide when the temporary *is* the returned object, i.e. it has the
+      // same smart-pointer type as the return value. Compare canonical,
+      // unqualified types rather than relying on exact QualType identity, which
+      // is sensitive to sugar (typedefs/aliases) and cv-qualifiers.
+      if (OriginalQT.getCanonicalType().getUnqualifiedType() ==
+          BTE->getType().getCanonicalType().getUnqualifiedType())
+        return Visit(BTE->getSubExpr());
+    }
+    return Visit(Arg);
+  }
+
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+    if (CE->getNumArgs() == 1) {
+      auto *InnerArg = CE->getArg(0);
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(InnerArg)) {
+        auto *InnerExpr = MTE->getSubExpr();
+        if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(InnerExpr))
+          InnerExpr = BTE->getSubExpr();
+        auto InnerQT = InnerExpr->getType();
+        if (auto *InnerDecl = InnerQT->getAsCXXRecordDecl()) {
+          auto *OuterCls = CE->getConstructor()->getParent();
+          if (isRefType(safeGetName(OuterCls)) &&
+              isRefType(safeGetName(InnerDecl)))
+            return Visit(InnerExpr);
+        }
+      }
+    }
+
     for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
         return false;

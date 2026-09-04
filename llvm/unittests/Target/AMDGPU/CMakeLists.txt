@@ -23,12 +23,15 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_target_unittest(AMDGPUTests
+  AMDGPUMCExprTest.cpp
   AMDGPUUnitTests.cpp
   CSETest.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
   GCNRegPressureTest.cpp
+  InstSizes.cpp
   LiveRegUnits.cpp
   PALMetadata.cpp
+  RCIUpdateReservedRegsTest.cpp
   UniformityAnalysisTest.cpp
   )

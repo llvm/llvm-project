@@ -25,7 +25,7 @@ contains
 
 end module m1
 
-! CHECK-LABEL: omp.declare_reduction @plus_t{{.*}} : !fir.ref<{{.*}}>
+! CHECK-LABEL: omp.declare_reduction @_QQFplus_t{{.*}} byref_element_type({{.*}}) : !fir.ref<{{.*}}>
 !
 ! -- alloc region
 ! CHECK:        alloc {

@@ -95,8 +95,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
 
 DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
                                      unsigned CompatDiagId) {
-  return Diag(Loc,
-              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(getLangOpts(), CompatDiagId));
 }
 
 DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
@@ -1302,18 +1301,16 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
 
     if (TryConsumeToken(tok::kw_delete, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      D.SetRangeEnd(PrevTokLocation);
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      D.SetRangeEnd(PrevTokLocation);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
@@ -1395,24 +1392,30 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
+  return ParseFunctionBody(Res, BodyScope);
+}
+
+Decl *Parser::ParseFunctionBody(Decl *D, ParseScope &BodyScope) {
   if (Tok.is(tok::kw_try))
-    return ParseFunctionTryBlock(Res, BodyScope);
+    return ParseFunctionTryBlock(D, BodyScope);
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.
   if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(Res);
+    ParseConstructorInitializer(D);
 
     // Recover from error.
     if (!Tok.is(tok::l_brace)) {
       BodyScope.Exit();
-      Actions.ActOnFinishFunctionBody(Res, nullptr);
-      return Res;
+      if (D)
+        D->getAsFunction()->setInvalidDecl();
+      Actions.ActOnFinishFunctionBody(D, nullptr);
+      return D;
     }
   } else
-    Actions.ActOnDefaultCtorInitializers(Res);
+    Actions.ActOnDefaultCtorInitializers(D);
 
-  return ParseFunctionStatementBody(Res, BodyScope);
+  return ParseFunctionStatementBody(D, BodyScope);
 }
 
 void Parser::SkipFunctionBody() {
@@ -1848,11 +1851,20 @@ SourceLocation Parser::getEndOfPreviousToken() const {
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
   assert(Tok.isNot(tok::identifier));
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+
+  // A token lexed and cached before an earlier fallback reverted this keyword
+  // still carries the stale keyword kind; it is already an identifier.
+  if (II->getTokenID() == tok::identifier) {
+    Tok.setKind(tok::identifier);
+    return true;
+  }
+
   Diag(Tok, diag::ext_keyword_as_ident)
     << PP.getSpelling(Tok)
     << DisableKeyword;
   if (DisableKeyword)
-    Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+    II->revertTokenIDToIdentifier();
   Tok.setKind(tok::identifier);
   return true;
 }
@@ -2381,9 +2393,11 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
       return nullptr;
   }
 
-  // This should already diagnosed in phase 4, just skip unil semicolon.
-  if (!Tok.isOneOf(tok::semi, tok::l_square))
+  if (Tok.isNoneOf(tok::semi, tok::l_square, tok::eof)) {
+    Diag(Tok, diag::err_unexpected_tok_after_module_name)
+        << PP.getSpelling(Tok);
     SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
+  }
 
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
@@ -2506,6 +2520,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
 
+  // FIXME: If the previous token is tok::header_name like the following:
+  //
+  //  import <%%>
+  //
+  // The diagnostic location is incorrect.
+  //
+  //  <source file>:1:10: error: import directive must end with a ';'
+  //   1 | import <%%>
+  //     |          ^
+  //     |          ;
   bool LexedSemi = false;
   if (getLangOpts().CPlusPlusModules)
     LexedSemi =

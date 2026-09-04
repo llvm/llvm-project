@@ -76,7 +76,9 @@ RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *descriptor,
     dim->sm = byteSize;
     byteSize *= extent;
   }
-  void *p{runtime::AllocateValidatedPointerPayload(byteSize)};
+  std::size_t alignment{rank > 0 ? kDefaultArrayAlignment : 0};
+  void *p{runtime::AllocateValidatedPointerPayload(
+      byteSize, /*allocatorIdx=*/0, alignment)};
   if (!p && byteSize) {
     return CFI_ERROR_MEM_ALLOCATION;
   }

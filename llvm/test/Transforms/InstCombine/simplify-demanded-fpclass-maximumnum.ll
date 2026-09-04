@@ -1725,7 +1725,7 @@ define nofpclass(snan) float @not_nan__maximumnum_noundef_md__not_nan(float nofp
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.maximumnum.f32(float [[NOT_NAN0]], float [[NOT_NAN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
-  %result = call float @llvm.maximumnum.f32(float %not.nan0, float %not.nan1), !noundef !0, !unknown.md !0
+  %result = call noundef float @llvm.maximumnum.f32(float %not.nan0, float %not.nan1), !unknown.md !0
   ret float %result
 }
 

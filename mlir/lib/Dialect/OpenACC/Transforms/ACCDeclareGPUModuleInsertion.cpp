@@ -1,5 +1,4 @@
-//===- ACCDeclareGPUModuleInsertion.cpp
-//------------------------------------===//
+//===- ACCDeclareGPUModuleInsertion.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -72,9 +71,20 @@ namespace {
 
 static bool hasAccDeclareGlobals(ModuleOp mod) {
   for (Operation &op : mod.getBody()->getOperations())
-    if (op.getAttr(acc::getDeclareAttrName()))
+    if (op.getDiscardableAttr(acc::getDeclareAttrName()))
       return true;
   return false;
+}
+
+static void makeDeviceGlobalDeclaration(Operation &globalOp) {
+  globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "initVal"),
+                           {});
+  globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "linkage"),
+                           {});
+  for (Region &region : globalOp.getRegions()) {
+    region.dropAllReferences();
+    region.getBlocks().clear();
+  }
 }
 
 class ACCDeclareGPUModuleInsertion
@@ -89,7 +99,7 @@ public:
     SymbolTable gpuSymTable(gpuMod);
 
     for (Operation &globalOp : mod.getBody()->getOperations()) {
-      if (!globalOp.getAttr(acc::getDeclareAttrName()))
+      if (!globalOp.getDiscardableAttr(acc::getDeclareAttrName()))
         continue;
 
       auto symOp = dyn_cast<SymbolOpInterface>(&globalOp);
@@ -97,26 +107,62 @@ public:
         continue;
 
       StringAttr name = symOp.getNameAttr();
+      Operation *deviceGlobal = globalOp.clone();
+      auto declareAttr = globalOp.getDiscardableAttrOfType<acc::DeclareAttr>(
+          acc::getDeclareAttrName());
+      auto globalVar = dyn_cast<acc::GlobalVariableOpInterface>(&globalOp);
+      bool makeUnifiedDeclaration =
+          cudaUnified &&
+          declareAttr.getDataClause().getValue() !=
+              acc::DataClause::acc_declare_device_resident &&
+          (!globalVar || !globalVar.isConstant());
+      if (makeUnifiedDeclaration)
+        makeDeviceGlobalDeclaration(*deviceGlobal);
 
       if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
-        // Reuse only when the existing GPU symbol is structurally equivalent to
-        // the global we would insert. Otherwise treat as a conflict (different
-        // op type or different definition).
-        if (existing->getName() != globalOp.getName() ||
-            !OperationEquivalence::isEquivalentTo(
-                existing, &globalOp,
-                OperationEquivalence::ignoreValueEquivalence,
-                /*markEquivalent=*/nullptr,
-                OperationEquivalence::IgnoreLocations)) {
+        // Reuse when structurally equivalent ignoring locations and discardable
+        // attrs such as `acc.declare` attributes. Only a different op type or a
+        // true definition mismatch is a conflict.
+        auto isEquivalent = [](Operation *lhs, Operation *rhs) {
+          return lhs->getName() == rhs->getName() &&
+                 OperationEquivalence::isEquivalentTo(
+                     lhs, rhs, OperationEquivalence::ignoreValueEquivalence,
+                     /*markEquivalent=*/nullptr,
+                     OperationEquivalence::IgnoreLocations |
+                         OperationEquivalence::IgnoreDiscardableAttrs);
+        };
+        if (!isEquivalent(existing, deviceGlobal)) {
+          // Earlier GPU lowering can create a global in the GPU module before
+          // this pass. In unified memory, convert an equivalent pre-existing
+          // global to the declaration form expected for an OpenACC global.
+          if (makeUnifiedDeclaration) {
+            Operation *normalizedExisting = existing->clone();
+            makeDeviceGlobalDeclaration(*normalizedExisting);
+            bool canReuse = isEquivalent(normalizedExisting, deviceGlobal);
+            normalizedExisting->destroy();
+            if (canReuse)
+              makeDeviceGlobalDeclaration(*existing);
+          }
+        }
+        if (!isEquivalent(existing, deviceGlobal)) {
+          deviceGlobal->destroy();
           accSupport.emitNYI(globalOp.getLoc(),
                              llvm::Twine("duplicate global symbol '") +
                                  name.getValue() + "' in gpu module");
           return failure();
         }
+        // Propagate acc.declare onto the GPU copy if it was cloned before the
+        // host global was marked.
+        if (!existing->getDiscardableAttr(acc::getDeclareAttrName()))
+          if (Attribute declareAttr =
+                  globalOp.getDiscardableAttr(acc::getDeclareAttrName()))
+            existing->setDiscardableAttr(acc::getDeclareAttrName(),
+                                         declareAttr);
+        deviceGlobal->destroy();
         continue;
       }
 
-      gpuSymTable.insert(globalOp.clone());
+      gpuSymTable.insert(deviceGlobal);
     }
     return success();
   }

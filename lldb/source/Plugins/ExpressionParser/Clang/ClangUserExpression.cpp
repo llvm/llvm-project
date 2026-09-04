@@ -854,15 +854,16 @@ lldb::addr_t ClangUserExpression::GetCppObjectPointer(
   auto valobj_sp =
       GetObjectPointerValueObject(std::move(frame_sp), object_name, err);
 
+  if (!err.Success() || !valobj_sp)
+    return LLDB_INVALID_ADDRESS;
+
   // We're inside a C++ class method. This could potentially be an unnamed
   // lambda structure. If the lambda captured a "this", that should be
   // the object pointer.
-  if (auto thisChildSP = valobj_sp->GetChildMemberWithName("this")) {
+  if (auto thisChildSP = valobj_sp->GetChildMemberWithName("this"))
     valobj_sp = thisChildSP;
-  }
-
-  if (!err.Success() || !valobj_sp.get())
-    return LLDB_INVALID_ADDRESS;
+  else if (auto cv_this_child_sp = valobj_sp->GetChildMemberWithName("__this"))
+    valobj_sp = cv_this_child_sp;
 
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 

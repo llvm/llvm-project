@@ -193,16 +193,18 @@ private:
 
 class TypeFormatImpl_EnumType : public TypeFormatImpl {
 public:
-  TypeFormatImpl_EnumType(ConstString type_name = ConstString(""),
+  TypeFormatImpl_EnumType(std::string type_name = "",
                           const TypeFormatImpl::Flags &flags = Flags());
 
   typedef std::shared_ptr<TypeFormatImpl_EnumType> SharedPointer;
 
   ~TypeFormatImpl_EnumType() override;
 
-  ConstString GetTypeName() { return m_enum_type; }
+  const std::string &GetTypeName() { return m_enum_type; }
 
-  void SetTypeName(ConstString enum_type) { m_enum_type = enum_type; }
+  void SetTypeName(std::string enum_type) {
+    m_enum_type = std::move(enum_type);
+  }
 
   TypeFormatImpl::Type GetType() override {
     return TypeFormatImpl::Type::eTypeEnum;
@@ -213,7 +215,7 @@ public:
   std::string GetDescription() override;
 
 protected:
-  ConstString m_enum_type;
+  std::string m_enum_type;
   mutable std::unordered_map<void *, CompilerType> m_types;
 
 private:

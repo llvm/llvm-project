@@ -34,10 +34,10 @@ static constexpr StringRef ErrorMsg =
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto DirectMemberVirtualFunctionPointer = unaryOperator(
+  const auto DirectMemberVirtualFunctionPointer = unaryOperator(
       allOf(hasOperatorName("&"),
             hasUnaryOperand(declRefExpr(to(cxxMethodDecl(isVirtual()))))));
-  auto IndirectMemberPointer =
+  const auto IndirectMemberPointer =
       ignoringImpCasts(declRefExpr().bind("indirect_member_pointer"));
 
   Finder->addMatcher(

@@ -1,4 +1,4 @@
-# RUN: llc -o %t -filetype=obj -start-before=prologepilog %s
+# RUN: llc -o %t -filetype=obj -start-before=prolog-epilog %s
 # RUN: llvm-dwarfdump --name="value0" %t | FileCheck %s --check-prefix=CHECK0
 # RUN: llvm-dwarfdump --name="value1" %t | FileCheck %s --check-prefix=CHECK1
 # RUN: llvm-dwarfdump --name="value2" %t | FileCheck %s --check-prefix=CHECK2

@@ -393,6 +393,28 @@ define void @test_addrspace(ptr addrspace(1) %src, i64 %src_size, ptr addrspace(
   ret void
 }
 
+define void @test_volatile_memset_same_size(ptr %src, ptr noalias %dst, i8 %c) {
+; CHECK-LABEL: @test_volatile_memset_same_size(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST:%.*]], i8 [[C:%.*]], i64 16, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 16, i1 true)
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 16, i1 false)
+  ret void
+}
+
+define void @test_volatile_memset_larger_than_memcpy(ptr %src, ptr noalias %dst, i8 %c) {
+; CHECK-LABEL: @test_volatile_memset_larger_than_memcpy(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST:%.*]], i8 [[C:%.*]], i64 32, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 32, i1 true)
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 16, i1 false)
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
 declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1)

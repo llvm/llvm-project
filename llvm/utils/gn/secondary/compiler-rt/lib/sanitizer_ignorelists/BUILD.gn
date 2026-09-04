@@ -1,0 +1,11 @@
+import("//clang/resource_dir.gni")
+
+# FIXME: hwasan_ignorelist.txt, msan_ignorelist.txt
+
+copy("sanitizer_ignorelists") {
+  sources = [
+    "asan_ignorelist.txt",
+    "cfi_ignorelist.txt",
+  ]
+  outputs = [ "$clang_resource_dir/share/{{source_target_relative}}" ]
+}

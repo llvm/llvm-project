@@ -14,7 +14,7 @@
 ; RUN: opt -passes=instcombine -S < %s -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,LIB,CHECK-NO-EXP10,VC19,VC51
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-pc-windows-msvc18 | FileCheck %s --check-prefixes=CHECK,LIB,CHECK-NO-EXP10,VC64
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-pc-windows-msvc   | FileCheck %s --check-prefixes=CHECK,LIB,CHECK-NO-EXP10,VC19,VC83
-; RUN: opt -passes=instcombine -S < %s -mtriple=amdgcn--                 | FileCheck %s --check-prefixes=CHECK,CHECK-NO-EXP10,NOLIB
+; RUN: opt -passes=instcombine -S < %s -mtriple=amdgpu--                 | FileCheck %s --check-prefixes=CHECK,CHECK-NO-EXP10,NOLIB
 
 ; NOTE: The readonly attribute on the pow call should be preserved
 ; in the cases below where pow is transformed into another function call.
@@ -923,7 +923,7 @@ define float @test_simplify9(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float +inf
 ;
-  %retval = call float @llvm.pow.f32(float 0xFFF0000000000000, float 0.5)
+  %retval = call float @llvm.pow.f32(float -inf, float 0.5)
   ret float %retval
 }
 

@@ -14,7 +14,10 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -378,10 +381,14 @@ getRecipeBounds(fir::FirOpBuilder &builder, mlir::Location loc,
     assert(
         dataBound.getLowerbound() && dataBound.getUpperbound() &&
         "expect acc bounds for Fortran to always have lower and upper bounds");
-    std::optional<std::int64_t> lb =
-        fir::getIntIfConstant(dataBound.getLowerbound());
-    std::optional<std::int64_t> ub =
-        fir::getIntIfConstant(dataBound.getUpperbound());
+    std::optional<std::int64_t> lb;
+    if (std::optional<llvm::APInt> constant =
+            fir::getIntIfConstant(dataBound.getLowerbound()))
+      lb = constant->trySExtValue();
+    std::optional<std::int64_t> ub;
+    if (std::optional<llvm::APInt> constant =
+            fir::getIntIfConstant(dataBound.getUpperbound()))
+      ub = constant->trySExtValue();
     assert(lb.has_value() && ub.has_value() &&
            "must get constant bounds when there are no bound block arguments");
     bounds.push_back(builder.createIntegerConstant(loc, idxTy, *lb));
@@ -437,9 +444,11 @@ static RecipeOp genRecipeOp(
   RecipeOp recipe;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
     recipe = mlir::acc::ReductionRecipeOp::create(modBuilder, loc, recipeName,
+                                                  /*sym_visibility=*/nullptr,
                                                   ty, op);
   } else {
-    recipe = RecipeOp::create(modBuilder, loc, recipeName, ty);
+    recipe = RecipeOp::create(modBuilder, loc, recipeName,
+                              /*sym_visibility=*/nullptr, ty);
   }
 
   assert(hlfir::isFortranVariableType(ty) && "expect Fortran variable type");
@@ -471,13 +480,16 @@ static RecipeOp genRecipeOp(
          "Expected that all variable types are considered mappable");
   auto initArg = mlir::cast<MappableValue>(initBlock->getArgument(0));
   bool needsDestroy = false;
+  llvm::SmallVector<mlir::Value> destroyValues;
   llvm::SmallVector<mlir::Value> initBounds =
       getRecipeBounds(builder, loc, dataOperationBounds,
                       initBlock->getArguments().drop_front(1));
   mlir::Value retVal = mappableTy.generatePrivateInit(
       builder, loc, initArg, initName, initBounds, initValue, varInfo,
-      needsDestroy);
-  mlir::acc::YieldOp::create(builder, loc, retVal);
+      needsDestroy, destroyValues);
+  llvm::SmallVector<mlir::Value> initResults{retVal};
+  initResults.append(destroyValues);
+  mlir::acc::YieldOp::create(builder, loc, initResults);
   // Create destroy region and generate destruction if requested.
   if (needsDestroy) {
     llvm::SmallVector<mlir::Type> destroyArgsTy;
@@ -487,6 +499,10 @@ static RecipeOp genRecipeOp(
     destroyArgsTy.push_back(ty);
     destroyArgsLoc.push_back(loc);
     destroyArgsLoc.push_back(loc);
+    for (mlir::Value destroyValue : destroyValues) {
+      destroyArgsTy.push_back(destroyValue.getType());
+      destroyArgsLoc.push_back(loc);
+    }
     // Append bounds arguments (if any) in the same order as init region
     if (argsTy.size() > 1) {
       destroyArgsTy.append(argsTy.begin() + 1, argsTy.end());
@@ -498,11 +514,14 @@ static RecipeOp genRecipeOp(
         destroyArgsTy, destroyArgsLoc);
     builder.setInsertionPointToEnd(destroyBlock);
 
-    llvm::SmallVector<mlir::Value> destroyBounds =
-        getRecipeBounds(builder, loc, dataOperationBounds,
-                        destroyBlock->getArguments().drop_front(2));
+    llvm::SmallVector<mlir::Value> destroyBounds = getRecipeBounds(
+        builder, loc, dataOperationBounds,
+        destroyBlock->getArguments().drop_front(2 + destroyValues.size()));
+    mlir::ValueRange destroyArgs =
+        destroyBlock->getArguments().slice(2, destroyValues.size());
     [[maybe_unused]] bool success = mappableTy.generatePrivateDestroy(
-        builder, loc, destroyBlock->getArgument(1), destroyBounds, varInfo);
+        builder, loc, destroyBlock->getArgument(1), destroyArgs, destroyBounds,
+        varInfo);
     assert(success && "failed to generate destroy region");
     mlir::acc::TerminatorOp::create(builder, loc);
   }
@@ -661,4 +680,111 @@ mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
   }
 
   return currentValue;
+}
+
+static bool isFIRPassByValueScalar(mlir::Type type) {
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type))
+    return charTy.hasConstantLen() && charTy.getLen() == 1;
+  return mlir::isa<fir::LogicalType>(type);
+}
+
+static bool isTriviallyCopyableRecordType(fir::RecordType recType) {
+  for (auto &field : recType.getTypeList()) {
+    mlir::Type fieldType = fir::unwrapRefType(field.second);
+    if (auto nested = mlir::dyn_cast<fir::RecordType>(fieldType)) {
+      if (!isTriviallyCopyableRecordType(nested))
+        return false;
+      continue;
+    }
+    if (fieldType.isIntOrIndexOrFloat() ||
+        mlir::isa<mlir::ComplexType>(fieldType) ||
+        isFIRPassByValueScalar(fieldType))
+      continue;
+    return false;
+  }
+  return true;
+}
+
+static bool isTriviallyCopyableScalarType(mlir::Type type) {
+  mlir::Type baseType = fir::unwrapRefType(type);
+  if (baseType.isIntOrIndexOrFloat() ||
+      mlir::isa<mlir::ComplexType>(baseType) ||
+      isFIRPassByValueScalar(baseType))
+    return true;
+  if (auto recType = mlir::dyn_cast<fir::RecordType>(baseType))
+    return isTriviallyCopyableRecordType(recType);
+  return false;
+}
+
+static bool isCUFKernelRegion(mlir::Region &region) {
+  mlir::Operation *parentOp = region.getParentOp();
+  if (!parentOp)
+    return false;
+  if (mlir::isa<cuf::KernelOp>(parentOp))
+    return true;
+  if (auto computeRegion = mlir::dyn_cast<mlir::acc::ComputeRegionOp>(parentOp))
+    return computeRegion.getOrigin() == cuf::KernelOp::getOperationName();
+  return false;
+}
+
+bool fir::acc::isValidSymbolUse(mlir::Operation *user,
+                                mlir::SymbolRefAttr symbol,
+                                mlir::Operation **definingOpPtr) {
+  // FIR uses `fir.use_stmt` for debugging; referenced symbols are not
+  // guaranteed to be defined in the module.
+  if (mlir::isa_and_nonnull<fir::UseStmtOp>(user))
+    return true;
+
+  mlir::Operation *definingOp = nullptr;
+  if (mlir::acc::isValidSymbolUse(user, symbol, &definingOp)) {
+    if (definingOpPtr)
+      *definingOpPtr = definingOp;
+    return true;
+  }
+
+  if (!definingOp)
+    return false;
+  if (definingOpPtr)
+    *definingOpPtr = definingOp;
+
+  if (definingOp->hasDiscardableAttr(
+          fir::FIROpsDialect::getFirRuntimeAttrName()))
+    return true;
+
+  if (auto cufProcAttr = definingOp->getAttrOfType<cuf::ProcAttributeAttr>(
+          cuf::getProcAttrName())) {
+    if (cufProcAttr.getValue() != cuf::ProcAttribute::Host)
+      return true;
+  }
+
+  return false;
+}
+
+bool fir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
+  if (mlir::acc::isValidValueUse(val, region))
+    return true;
+
+  if (isFIRPassByValueScalar(val.getType()))
+    return true;
+
+  // Scalars, and aggregates composed solely of them, are passed by value to a
+  // CUF kernel. Thus they need neither to be device data nor to be mapped.
+  if (isCUFKernelRegion(region) && isTriviallyCopyableScalarType(val.getType()))
+    return true;
+
+  mlir::Type type = val.getType();
+  if (mlir::acc::isPointerLikeType(type) || mlir::acc::isMappableType(type) ||
+      fir::isa_ref_type(type)) {
+    mlir::Value original = fir::acc::getOriginalDef(val, /*stripDeclare=*/true);
+    mlir::Operation *definingOp = original.getDefiningOp();
+    if (!definingOp)
+      return false;
+    if (mlir::isa<ACC_DATA_ENTRY_OPS>(definingOp))
+      return true;
+    if (definingOp->hasDiscardableAttr(cuf::getDataAttrName()) ||
+        definingOp->hasDiscardableAttr("data_attr"))
+      return true;
+  }
+
+  return false;
 }

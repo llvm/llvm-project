@@ -33,8 +33,7 @@ namespace llvm {
 namespace rc {
 
 RCParser::ParserError::ParserError(const Twine &Expected, const LocIter CurLoc,
-                                   const LocIter End)
-    : ErrorLoc(CurLoc), FileEnd(End) {
+                                   const LocIter End) {
   CurMessage = "Error parsing file: expected " + Expected.str() + ", got " +
                (CurLoc == End ? "<EOF>" : CurLoc->value()).str();
 }

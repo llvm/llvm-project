@@ -17,7 +17,6 @@
 using namespace llvm;
 
 template class llvm::GenericCycleInfo<llvm::MachineSSAContext>;
-template class llvm::GenericCycle<llvm::MachineSSAContext>;
 
 char MachineCycleInfoWrapperPass::ID = 0;
 
@@ -116,7 +115,8 @@ MachineCycleInfoPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {
+bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
+                            MachineInstr &I) {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
@@ -143,14 +143,14 @@ bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            !TII->isIgnorableUse(I, I.getOperandNo(&MO)))
           return false;
         // Otherwise it's safe to move.
         continue;
       } else if (!MO.isDead()) {
         // A def that isn't dead can't be moved.
         return false;
-      } else if (any_of(Cycle->getEntries(),
+      } else if (any_of(CI.getEntries(Cycle),
                         [&](const MachineBasicBlock *Block) {
                           return Block->isLiveIn(Reg);
                         })) {
@@ -167,7 +167,7 @@ bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {
 
     // If the cycle contains the definition of an operand, then the instruction
     // isn't cycle invariant.
-    if (Cycle->contains(MRI->getVRegDef(Reg)->getParent()))
+    if (CI.contains(Cycle, MRI->getDefBlock(Reg)))
       return false;
   }
 

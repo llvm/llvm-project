@@ -151,7 +151,7 @@ void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
   AverageTime3 = (double)(Entry.CyclesSpentAfterWBAndBeforeRetire * 10) /
                  CumulativeExecutions;
 
-  OS << Executions;
+  OS << CumulativeExecutions;
   OS.PadToColumn(13);
 
   int BufferSize = PrintingTotals ? 0 : UsedBuffer[SourceIndex].second;

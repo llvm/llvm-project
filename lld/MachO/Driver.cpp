@@ -16,6 +16,7 @@
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SectionPriorities.h"
+#include "StripSwiftForceLoad.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -31,6 +32,7 @@
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -706,22 +708,41 @@ void macho::resolveLCLinkerOptions() {
     unprocessedLCLinkerOptions.clear();
 
     DeferredFiles deferred;
+    SmallVector<StringRef> frameworks;
+    SmallVector<StringRef> libraries;
+
     for (unsigned i = 0; i < LCLinkerOptions.size(); ++i) {
       StringRef arg = LCLinkerOptions[i];
       if (arg.consume_front("-l")) {
         assert(!config->ignoreAutoLinkOptions.contains(arg));
-        addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-                   /*isReexport=*/false, /*isHidden=*/false,
-                   /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
+        libraries.push_back(arg);
       } else if (arg == "-framework") {
         StringRef name = LCLinkerOptions[++i];
         assert(!config->ignoreAutoLinkOptions.contains(name));
-        addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
-                     /*isReexport=*/false, /*isExplicit=*/false,
-                     LoadType::LCLinkerOption, deferred);
+        frameworks.push_back(name);
       } else {
         error(arg + " is not allowed in LC_LINKER_OPTION");
       }
+    }
+
+    llvm::sort(frameworks);
+    llvm::sort(libraries);
+
+    frameworks.erase(std::unique(frameworks.begin(), frameworks.end()),
+                     frameworks.end());
+    libraries.erase(std::unique(libraries.begin(), libraries.end()),
+                    libraries.end());
+
+    for (const StringRef framework : frameworks) {
+      addFramework(framework, /*isNeeded=*/false, /*isWeak=*/false,
+                   /*isReexport=*/false, /*isExplicit=*/false,
+                   LoadType::LCLinkerOption, deferred);
+    }
+
+    for (const StringRef library : libraries) {
+      addLibrary(library, /*isNeeded=*/false, /*isWeak=*/false,
+                 /*isReexport=*/false, /*isHidden=*/false,
+                 /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
     }
 
     for (auto &file : deferred) {
@@ -1340,12 +1361,20 @@ void SymbolPatterns::clear() {
 }
 
 void SymbolPatterns::insert(StringRef symbolName) {
-  if (symbolName.find_first_of("*?[]") == StringRef::npos)
-    literals.insert(CachedHashStringRef(symbolName));
-  else if (Expected<GlobPattern> pattern = GlobPattern::create(symbolName))
-    globs.emplace_back(*pattern);
-  else
-    error("invalid symbol-name pattern: " + symbolName);
+  Expected<GlobPattern> pattern = GlobPattern::create(symbolName);
+  if (!pattern) {
+    error("invalid symbol-name pattern: " + symbolName + ": " +
+          toString(pattern.takeError()));
+    return;
+  }
+  // A pattern that denotes a single string is kept as a literal: literals are
+  // matched by hash lookup, and only literals seed the force-load of lazy
+  // archive members below.
+  if (std::optional<std::string> literal = pattern->asLiteral()) {
+    literals.insert(CachedHashStringRef(saver().save(*literal)));
+    return;
+  }
+  globs.emplace_back(std::move(*pattern));
 }
 
 bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
@@ -1733,6 +1762,16 @@ static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
   return vals;
 }
 
+static void computeColdness() {
+  TimeTraceScope timeScope("Compute coldness");
+  for (InputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    isec->isCold =
+        llvm::any_of(isec->symbols, [](Defined *sym) { return sym->isCold(); });
+  }
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -2011,6 +2050,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
+  config->stripSwiftForceLoad =
+      args.hasFlag(OPT_strip_swift_force_load, OPT_no_strip_swift_force_load,
+                   /*Default=*/false);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
@@ -2488,6 +2530,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                      false))
       objc::mergeCategories();
 
+    computeColdness();
+
     // ICF assumes that all literals have been folded already, so we must run
     // foldIdenticalLiterals before foldIdenticalSections.
     foldIdenticalLiterals();
@@ -2499,6 +2543,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     } else if (config->dedupStrings) {
       foldIdenticalSections(/*onlyCfStrings=*/true);
     }
+
+    stripSwiftForceLoadFixups();
 
     // Write to an output file.
     if (target->wordSize == 8)

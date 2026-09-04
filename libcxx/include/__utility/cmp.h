@@ -22,9 +22,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Tp, typename _Ip>
 concept __comparison_can_promote_to =
@@ -84,9 +84,9 @@ template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Up>
          std::cmp_greater_equal(__u, numeric_limits<_Tp>::min());
 }
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

@@ -71,13 +71,13 @@ define void @test2(ptr %begin, ptr %end) ssp {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  Classifying expressions for: @test2
 ; CHECK-NEXT:    %__first.addr.02.i.i = phi ptr [ %begin, %for.body.lr.ph.i.i ], [ %ptrincdec.i.i, %for.body.i.i ]
-; CHECK-NEXT:    --> {%begin,+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {%begin,+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %begin)<u nuw> LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:    %ptrincdec.i.i = getelementptr inbounds i32, ptr %__first.addr.02.i.i, i64 1
-; CHECK-NEXT:    --> {(4 + %begin),+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {(4 + %begin),+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
-; CHECK-NEXT:  Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: constant max backedge-taken count is i64 4611686018427387903
-; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: Trip multiple is 1
 ;
 entry:
@@ -106,17 +106,17 @@ define void @test3(ptr %begin, ptr %end) nounwind ssp {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  Classifying expressions for: @test3
 ; CHECK-NEXT:    %indvar.i.i = phi i64 [ %tmp, %for.body.i.i ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body.i.i> U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4) LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body.i.i> U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4) LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:    %tmp = add nsw i64 %indvar.i.i, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body.i.i> U: [1,4611686018427387905) S: [1,4611686018427387905) Exits: (1 + ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw><nsw> LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body.i.i> U: [1,4611686018427387905) S: [1,4611686018427387905) Exits: (1 + ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw><nsw> LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:    %ptrincdec.i.i = getelementptr inbounds i32, ptr %begin, i64 %tmp
-; CHECK-NEXT:    --> {(4 + %begin),+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {(4 + %begin),+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:    %__first.addr.08.i.i = getelementptr inbounds i32, ptr %begin, i64 %indvar.i.i
-; CHECK-NEXT:    --> {%begin,+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %begin) LoopDispositions: { %for.body.i.i: Computable }
+; CHECK-NEXT:    --> {%begin,+,4}<nuw><%for.body.i.i> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4))<nuw> + %begin)<u nuw> LoopDispositions: { %for.body.i.i: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
-; CHECK-NEXT:  Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: constant max backedge-taken count is i64 4611686018427387903
-; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %begin to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %for.body.i.i: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoaddr ptr %begin to i64)) + (ptrtoaddr ptr %end to i64)) /u 4)
 ; CHECK-NEXT:  Loop %for.body.i.i: Trip multiple is 1
 ;
 entry:
@@ -200,13 +200,13 @@ define void @PR12376(ptr nocapture %arg, ptr nocapture %arg1)  {
 ; CHECK-LABEL: 'PR12376'
 ; CHECK-NEXT:  Classifying expressions for: @PR12376
 ; CHECK-NEXT:    %tmp = phi ptr [ %arg, %bb ], [ %tmp4, %bb2 ]
-; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb2> U: full-set S: full-set Exits: ((4 * ((-1 + (-1 * (ptrtoint ptr %arg to i64)) + ((4 + (ptrtoint ptr %arg to i64))<nuw> umax (ptrtoint ptr %arg1 to i64))) /u 4))<nuw> + %arg) LoopDispositions: { %bb2: Computable }
+; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb2> U: full-set S: full-set Exits: ((4 * ((-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + ((4 + (ptrtoaddr ptr %arg to i64))<nuw> umax (ptrtoaddr ptr %arg1 to i64))) /u 4))<nuw> + %arg)<u nuw> LoopDispositions: { %bb2: Computable }
 ; CHECK-NEXT:    %tmp4 = getelementptr inbounds i32, ptr %tmp, i64 1
-; CHECK-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb2> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-1 + (-1 * (ptrtoint ptr %arg to i64)) + ((4 + (ptrtoint ptr %arg to i64))<nuw> umax (ptrtoint ptr %arg1 to i64))) /u 4))<nuw> + %arg) LoopDispositions: { %bb2: Computable }
+; CHECK-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb2> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + ((4 + (ptrtoaddr ptr %arg to i64))<nuw> umax (ptrtoaddr ptr %arg1 to i64))) /u 4))<nuw> + %arg) LoopDispositions: { %bb2: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12376
-; CHECK-NEXT:  Loop %bb2: backedge-taken count is ((-1 + (-1 * (ptrtoint ptr %arg to i64)) + ((4 + (ptrtoint ptr %arg to i64))<nuw> umax (ptrtoint ptr %arg1 to i64))) /u 4)
+; CHECK-NEXT:  Loop %bb2: backedge-taken count is ((-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + ((4 + (ptrtoaddr ptr %arg to i64))<nuw> umax (ptrtoaddr ptr %arg1 to i64))) /u 4)
 ; CHECK-NEXT:  Loop %bb2: constant max backedge-taken count is i64 4611686018427387902
-; CHECK-NEXT:  Loop %bb2: symbolic max backedge-taken count is ((-1 + (-1 * (ptrtoint ptr %arg to i64)) + ((4 + (ptrtoint ptr %arg to i64))<nuw> umax (ptrtoint ptr %arg1 to i64))) /u 4)
+; CHECK-NEXT:  Loop %bb2: symbolic max backedge-taken count is ((-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + ((4 + (ptrtoaddr ptr %arg to i64))<nuw> umax (ptrtoaddr ptr %arg1 to i64))) /u 4)
 ; CHECK-NEXT:  Loop %bb2: Trip multiple is 1
 ;
 bb:
@@ -309,7 +309,7 @@ define void @bad_postinc_nsw_a(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,7}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 7
-; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))))<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @bad_postinc_nsw_a
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 613566756
@@ -367,7 +367,7 @@ define void @pr28012(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,7}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (7 * ((-1 + (7 umax %n)) /u 7))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 7
-; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,-3) Exits: (7 + (7 * ((-1 + (7 umax %n)) /u 7))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,-3) Exits: (7 + (7 * ((-1 + (7 umax %n)) /u 7))<nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pr28012
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (7 umax %n)) /u 7)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 613566755

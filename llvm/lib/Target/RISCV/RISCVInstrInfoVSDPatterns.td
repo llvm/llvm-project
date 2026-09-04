@@ -1118,10 +1118,12 @@ defm : VPatBinarySDNode_VV_VX<mul, "PseudoVMUL">;
 
 defm : VPatBinarySDNode_VV_VX<mulhs, "PseudoVMULH", IntegerVectorsExceptI64>;
 defm : VPatBinarySDNode_VV_VX<mulhu, "PseudoVMULHU", IntegerVectorsExceptI64>;
+defm : VPatBinarySDNode_VV_VX<riscv_mulhsu, "PseudoVMULHSU", IntegerVectorsExceptI64>;
 
 let Predicates = [HasVInstructionsFullMultiply] in {
   defm : VPatBinarySDNode_VV_VX<mulhs, "PseudoVMULH", I64IntegerVectors>;
   defm : VPatBinarySDNode_VV_VX<mulhu, "PseudoVMULHU", I64IntegerVectors>;
+  defm : VPatBinarySDNode_VV_VX<riscv_mulhsu, "PseudoVMULHSU", I64IntegerVectors>;
 }
 
 // 11.11. Vector Integer Divide Instructions
@@ -1530,6 +1532,30 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+}
+
+// Match vselect with a splat that is a bitcast integer splat of the
+// floating-point type (e.g. when the scalar type doesn't have native
+// FP splat support, such as f16 or bf16).
+foreach fvti = !listconcat(AllFP16Vectors, AllBF16Vectors) in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                    (fvti.Vector (bitconvert
+                                      (ivti.Vector (SplatPat XLenVT:$rs1)))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, GPR:$rs1, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                    (fvti.Vector (bitconvert
+                                      (ivti.Vector (SplatPat_simm5 simm5:$rs1)))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, simm5:$rs1, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+  }
 }
 
 // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions

@@ -557,8 +557,8 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   }
 
   // Parse the expression.
-  auto tree_or_error = dil::DILParser::Parse(
-      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic, mode);
+  auto tree_or_error = dil::DILParser::Parse(var_expr, std::move(*lex_or_err),
+                                             *this, use_dynamic, mode);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
     return ValueObjectConstResult::Create(nullptr, error.Clone());
@@ -566,8 +566,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
-  dil::Interpreter interpreter(target, var_expr, shared_from_this(),
-                               use_dynamic, options);
+  dil::Interpreter interpreter(target, var_expr, *this, use_dynamic, options);
 
   auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
   if (!valobj_or_error) {

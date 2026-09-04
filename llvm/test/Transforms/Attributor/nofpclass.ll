@@ -573,7 +573,7 @@ define float @is_fpclass_assume_arg_return(float %arg) {
 ; CHECK-LABEL: define nofpclass(nan pinf pzero sub nnorm) float @is_fpclass_assume_arg_return
 ; CHECK-SAME: (float returned nofpclass(nan pinf pzero sub nnorm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CLASS_TEST:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan pinf pzero sub nnorm) [[ARG]], i32 noundef 292) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS_TEST:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan pinf pzero sub nnorm) [[ARG]], /* (ninf nzero pnorm) */ i32 noundef 292) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS_TEST]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use(float nofpclass(nan pinf pzero sub nnorm) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
@@ -642,34 +642,6 @@ entry:
   call void @extern.use.f16(half %arg)
   call void @extern.use.f16(half %fabs)
   ret half %arg
-}
-
-define float @assume_bundles(i1 %c, float %ret) {
-; CHECK-LABEL: define float @assume_bundles
-; CHECK-SAME: (i1 noundef [[C:%.*]], float returned [[RET:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR22]] [ "nofpclass"(float [[RET]], i32 3) ]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(nan) [[RET]])
-; CHECK-NEXT:    ret float [[RET]]
-; CHECK:       B:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofpclass"(float [[RET]], i32 12) ]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(ninf nnorm) [[RET]])
-; CHECK-NEXT:    ret float [[RET]]
-;
-entry:
-  br i1 %c, label %A, label %B
-
-A:
-  call void @llvm.assume(i1 true) [ "nofpclass"(float %ret, i32 3) ]
-  call void @extern.use(float %ret)
-  ret float %ret
-
-B:
-  call void @llvm.assume(i1 true) [ "nofpclass"(float %ret, i32 12) ]
-  call void @extern.use(float %ret)
-  ret float %ret
 }
 
 define float @returned_load(ptr %ptr) {
@@ -1402,9 +1374,9 @@ define float @assume_intersection_class(float %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @assume_intersection_class
 ; CHECK-SAME: (float returned nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[POS_NORMAL_OR_POS_SUBNORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], i32 noundef 384) #[[ATTR24]]
+; CHECK-NEXT:    [[POS_NORMAL_OR_POS_SUBNORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], /* (psub pnorm) */ i32 noundef 384) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[POS_NORMAL_OR_POS_SUBNORMAL]]) #[[ATTR22]]
-; CHECK-NEXT:    [[IS_NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], i32 noundef 264) #[[ATTR24]]
+; CHECK-NEXT:    [[IS_NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], /* (norm) */ i32 noundef 264) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NORMAL]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use(float nofpclass(nan inf zero sub nnorm) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
@@ -1423,9 +1395,9 @@ define float @assume_intersection_none(float %arg) {
 ; CHECK-LABEL: define nofpclass(all) float @assume_intersection_none
 ; CHECK-SAME: (float returned nofpclass(all) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 682) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], /* (qnan pinf nzero psub nnorm) */ i32 noundef 682) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS1]]) #[[ATTR22]]
-; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 341) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], /* (snan ninf pzero nsub pnorm) */ i32 noundef 341) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS2]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use(float nofpclass(all) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
@@ -1531,7 +1503,7 @@ define <4 x float> @insertelement_constant_chain() {
   %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
   %ins.1 = insertelement <4 x float> %ins.0, float 0.0, i32 1
   %ins.2 = insertelement <4 x float> %ins.1, float -9.0, i32 2
-  %ins.3 = insertelement <4 x float> %ins.2, float 0x7FF0000000000000, i32 3
+  %ins.3 = insertelement <4 x float> %ins.2, float +inf, i32 3
   ret <4 x float> %ins.3
 }
 
@@ -1567,7 +1539,7 @@ define <vscale x 4 x float> @insertelement_scalable_constant_chain() {
   %ins.0 = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
   %ins.1 = insertelement <vscale x 4 x float> %ins.0, float 0.0, i32 1
   %ins.2 = insertelement <vscale x 4 x float> %ins.1, float -9.0, i32 2
-  %ins.3 = insertelement <vscale x 4 x float> %ins.2, float 0x7FF0000000000000, i32 3
+  %ins.3 = insertelement <vscale x 4 x float> %ins.2, float +inf, i32 3
   ret <vscale x 4 x float> %ins.3
 }
 
@@ -1628,7 +1600,7 @@ define <4 x float> @insertelement_index_oob_chain() {
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float +inf, i32 4
 ; CHECK-NEXT:    ret <4 x float> [[INSERT]]
 ;
-  %insert = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
+  %insert = insertelement <4 x float> zeroinitializer, float +inf, i32 4
   ret <4 x float> %insert
 }
 
@@ -1878,7 +1850,7 @@ define double @fpext(float noundef nofpclass(inf nan) %arg) {
 }
 
 define float @atomicrmw_fadd(ptr %ptr, float nofpclass(inf nan) %val) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define float @atomicrmw_fadd
 ; CHECK-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[PTR:%.*]], float nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VAL]] seq_cst, align 4
@@ -1904,7 +1876,7 @@ define float @load(ptr %ptr, float noundef nofpclass(nan inf) %val) {
 }
 
 define float @load_atomic(ptr %ptr, float noundef nofpclass(nan inf) %val) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @load_atomic
 ; CHECK-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[PTR:%.*]], float noundef nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    store atomic float [[VAL]], ptr [[PTR]] seq_cst, align 4
@@ -1934,22 +1906,34 @@ define <8 x float> @shufflevector_shufflevector(<4 x float> nofpclass(inf nan) %
 }
 
 define float @constrained_sitofp(i32 %arg) strictfp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR24]]
-; CHECK-NEXT:    ret float [[VAL]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; TUNIT-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
+; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
+; TUNIT-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR27:[0-9]+]]
+; TUNIT-NEXT:    ret float [[VAL]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; CGSCC-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
+; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
+; CGSCC-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR26:[0-9]+]]
+; CGSCC-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %val
 }
 
 define float @constrained_uitofp(i32 %arg) strictfp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
-; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
-; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR24]]
-; CHECK-NEXT:    ret float [[VAL]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; TUNIT-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
+; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
+; TUNIT-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR27]]
+; TUNIT-NEXT:    ret float [[VAL]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; CGSCC-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
+; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
+; CGSCC-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR26]]
+; CGSCC-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %val
@@ -2297,7 +2281,7 @@ define float @fadd_known_positive_daz(float nofpclass(ninf nsub nnorm) %arg0, fl
 define float @test_fadd_no_nan_from_no_ninf(float nofpclass(nan ninf) %arg0, float nofpclass(nan ninf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan) float @test_fadd_no_nan_from_no_ninf
-; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -2308,7 +2292,7 @@ define float @test_fadd_no_nan_from_no_ninf(float nofpclass(nan ninf) %arg0, flo
 define float @test_fadd_no_nan_from_no_pinf(float nofpclass(nan pinf) %arg0, float nofpclass(nan pinf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nan) float @test_fadd_no_nan_from_no_pinf
-; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -2319,7 +2303,7 @@ define float @test_fadd_no_nan_from_no_pinf(float nofpclass(nan pinf) %arg0, flo
 define float @test_fadd_may_nan_from_no_pinf_no_ninf(float nofpclass(nan pinf) %arg0, float nofpclass(nan ninf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @test_fadd_may_nan_from_no_pinf_no_ninf
-; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan pinf) [[ARG0:%.*]], float nofpclass(nan ninf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -2330,7 +2314,7 @@ define float @test_fadd_may_nan_from_no_pinf_no_ninf(float nofpclass(nan pinf) %
 define float @test_fadd_may_nan_from_no_ninf_no_pinf(float nofpclass(nan ninf) %arg0, float nofpclass(nan pinf) %arg1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @test_fadd_may_nan_from_no_ninf_no_pinf
-; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR:[0-9]+]] {
+; CHECK-SAME: (float nofpclass(nan ninf) [[ARG0:%.*]], float nofpclass(nan pinf) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -2755,272 +2739,6 @@ define double @call_abs(double noundef %__x) {
 entry:
   %abs = tail call double @llvm.fabs.f64(double %__x)
   ret double %abs
-}
-
-define float @bitcast_to_float_sign_0(i32 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @bitcast_to_float_sign_0
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ARG]], 1
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[SHR]] to float
-; CHECK-NEXT:    ret float [[CAST]]
-;
-  %shr = lshr i32 %arg, 1
-  %cast = bitcast i32 %shr to float
-  ret float %cast
-}
-
-define float @bitcast_to_float_nnan(i32 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @bitcast_to_float_nnan
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ARG]], 2
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[SHR]] to float
-; CHECK-NEXT:    ret float [[CAST]]
-;
-  %shr = lshr i32 %arg, 2
-  %cast = bitcast i32 %shr to float
-  ret float %cast
-}
-
-define float @bitcast_to_float_sign_1(i32 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @bitcast_to_float_sign_1
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG]], -2147483648
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[OR]] to float
-; CHECK-NEXT:    ret float [[CAST]]
-;
-  %or = or i32 %arg, -2147483648
-  %cast = bitcast i32 %or to float
-  ret float %cast
-}
-
-define float @bitcast_to_float_nan(i32 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(inf zero sub norm) float @bitcast_to_float_nan
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG]], 2139095041
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[OR]] to float
-; CHECK-NEXT:    ret float [[CAST]]
-;
-  %or = or i32 %arg, 2139095041
-  %cast = bitcast i32 %or to float
-  ret float %cast
-}
-
-define float @bitcast_to_float_zero(i32 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf sub norm) float @bitcast_to_float_zero
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ARG]], 31
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[SHL]] to float
-; CHECK-NEXT:    ret float [[CAST]]
-;
-  %shl = shl i32 %arg, 31
-  %cast = bitcast i32 %shl to float
-  ret float %cast
-}
-
-define float @bitcast_to_float_nzero(i32 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(zero) float @bitcast_to_float_nzero
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG]], 134217728
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[OR]] to float
-; CHECK-NEXT:    ret float [[CAST]]
-;
-  %or = or i32 %arg, 134217728
-  %cast = bitcast i32 %or to float
-  ret float %cast
-}
-
-define float @bitcast_to_float_inf(i32 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan zero sub norm) float @bitcast_to_float_inf
-; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[ARG]], 31
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], 2139095040
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32 [[OR]] to float
-; CHECK-NEXT:    ret float [[CAST]]
-;
-  %shr = shl i32 %arg, 31
-  %or = or i32 %shr, 2139095040
-  %cast = bitcast i32 %or to float
-  ret float %cast
-}
-
-define double @bitcast_to_double_sign_0(i64 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) double @bitcast_to_double_sign_0
-; CHECK-SAME: (i64 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[ARG]], 1
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[SHR]] to double
-; CHECK-NEXT:    ret double [[CAST]]
-;
-  %shr = lshr i64 %arg, 1
-  %cast = bitcast i64 %shr to double
-  ret double %cast
-}
-
-define double @bitcast_to_double_nnan(i64 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) double @bitcast_to_double_nnan
-; CHECK-SAME: (i64 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[ARG]], 2
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[SHR]] to double
-; CHECK-NEXT:    ret double [[CAST]]
-;
-  %shr = lshr i64 %arg, 2
-  %cast = bitcast i64 %shr to double
-  ret double %cast
-}
-
-define double @bitcast_to_double_sign_1(i64 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) double @bitcast_to_double_sign_1
-; CHECK-SAME: (i64 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[ARG]], -9223372036854775808
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[OR]] to double
-; CHECK-NEXT:    ret double [[CAST]]
-;
-  %or = or i64 %arg, -9223372036854775808
-  %cast = bitcast i64 %or to double
-  ret double %cast
-}
-
-define double @bitcast_to_double_nan(i64 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(inf zero sub norm) double @bitcast_to_double_nan
-; CHECK-SAME: (i64 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[ARG]], -4503599627370495
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[OR]] to double
-; CHECK-NEXT:    ret double [[CAST]]
-;
-  %or = or i64 %arg, -4503599627370495
-  %cast = bitcast i64 %or to double
-  ret double %cast
-}
-
-
-define double @bitcast_to_double_zero(i64 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf sub norm) double @bitcast_to_double_zero
-; CHECK-SAME: (i64 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ARG]], 63
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[SHL]] to double
-; CHECK-NEXT:    ret double [[CAST]]
-;
-  %shl = shl i64 %arg, 63
-  %cast = bitcast i64 %shl to double
-  ret double %cast
-}
-
-define double @bitcast_to_double_nzero(i64 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(zero) double @bitcast_to_double_nzero
-; CHECK-SAME: (i64 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[ARG]], 1152921504606846976
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[OR]] to double
-; CHECK-NEXT:    ret double [[CAST]]
-;
-  %or = or i64 %arg, 1152921504606846976
-  %cast = bitcast i64 %or to double
-  ret double %cast
-}
-
-define double @bitcast_to_double_inf(i64 %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan zero sub norm) double @bitcast_to_double_inf
-; CHECK-SAME: (i64 [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = shl i64 [[ARG]], 63
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SHR]], 9218868437227405312
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i64 [[OR]] to double
-; CHECK-NEXT:    ret double [[CAST]]
-;
-  %shr = shl i64 %arg, 63
-  %or = or i64 %shr, 9218868437227405312
-  %cast = bitcast i64 %or to double
-  ret double %cast
-}
-
-
-define <2 x float> @bitcast_to_float_vect_sign_0(<2 x i32> %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <2 x float> @bitcast_to_float_vect_sign_0
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[ARG]], <i32 1, i32 2>
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[SHR]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[CAST]]
-;
-  %shr = lshr <2 x i32> %arg, <i32 1, i32 2>
-  %cast = bitcast <2 x i32> %shr to <2 x float>
-  ret <2 x float> %cast
-}
-
-define <2 x float> @bitcast_to_float_vect_nnan(<2 x i32> %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) <2 x float> @bitcast_to_float_vect_nnan
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[ARG]], splat (i32 4)
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[SHR]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[CAST]]
-;
-  %shr = lshr <2 x i32> %arg, <i32 4, i32 4>
-  %cast = bitcast <2 x i32> %shr to <2 x float>
-  ret <2 x float> %cast
-}
-
-define <2 x float> @bitcast_to_float_vect_sign_1(<2 x i32> %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) <2 x float> @bitcast_to_float_vect_sign_1
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], splat (i32 -2147483648)
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[OR]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[CAST]]
-;
-  %or = or <2 x i32> %arg, <i32 -2147483648, i32 -2147483648>
-  %cast = bitcast <2 x i32> %or to <2 x float>
-  ret <2 x float> %cast
-}
-
-define <2 x float> @bitcast_to_float_vect_nan(<2 x i32> %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(inf zero sub norm) <2 x float> @bitcast_to_float_vect_nan
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], splat (i32 2139095041)
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[OR]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[CAST]]
-;
-  %or = or <2 x i32> %arg, <i32 2139095041, i32 2139095041>
-  %cast = bitcast <2 x i32> %or to <2 x float>
-  ret <2 x float> %cast
-}
-
-define <2 x float> @bitcast_to_float_vect_conservative_1(<2 x i32> %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <2 x float> @bitcast_to_float_vect_conservative_1
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], <i32 -2147483648, i32 0>
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[OR]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[CAST]]
-;
-  %or = or <2 x i32> %arg, <i32 -2147483648, i32 0>
-  %cast = bitcast <2 x i32> %or to <2 x float>
-  ret <2 x float> %cast
-}
-
-define <2 x float> @bitcast_to_float_vect_conservative_2(<2 x i32> %arg) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <2 x float> @bitcast_to_float_vect_conservative_2
-; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG]], <i32 0, i32 2139095041>
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i32> [[OR]] to <2 x float>
-; CHECK-NEXT:    ret <2 x float> [[CAST]]
-;
-  %or = or <2 x i32> %arg, <i32 0, i32 2139095041>
-  %cast = bitcast <2 x i32> %or to <2 x float>
-  ret <2 x float> %cast
 }
 
 define float @fadd_double(float noundef %arg) {
@@ -3969,7 +3687,5 @@ attributes #9 = { denormal_fpenv(ieee|dynamic) }
 !2 = !{i32 512}
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CGSCC-CI: {{.*}}
 ; CGSCC-CV: {{.*}}
-; TUNIT-CI: {{.*}}
 ; TUNIT-CV: {{.*}}

@@ -8,6 +8,7 @@
 
 #include "flang/Support/Fortran.h"
 #include "flang/Support/Fortran-features.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::common {
 
@@ -107,7 +108,7 @@ std::string AsFortran(IgnoreTKRSet tkr) {
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
     bool allowUnifiedMatchingRule, bool isHostDeviceProcedure,
-    const LanguageFeatureControl *features) {
+    const LanguageFeatureControl *features, bool actualIsVariable) {
   bool isCudaManaged{features
           ? features->IsEnabled(common::LanguageFeature::CudaManaged)
           : false};
@@ -159,18 +160,21 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
         // by host modules to mark device-typed dummies as overload
         // discriminators that should only accept actuals with an explicit
         // device/managed/unified attribute.
+        // Non-variable actuals (expression results, intrinsic call results)
+        // are host temporaries whose storage is not accessible from device
+        // code even under unified memory, so the relaxation does not apply.
         if (!y && (isCudaUnified || isCudaManaged) &&
-            !ignoreTKR.test(IgnoreTKR::Managed)) {
+            !ignoreTKR.test(IgnoreTKR::Managed) && actualIsVariable) {
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {
         if ((y && *y == CUDADataAttr::Unified) ||
-            (!y && (isCudaUnified || isCudaManaged))) {
+            (!y && (isCudaUnified || isCudaManaged) && actualIsVariable)) {
           return true;
         }
       } else if (*x == CUDADataAttr::Unified) {
         if ((y && *y == CUDADataAttr::Managed) ||
-            (!y && (isCudaUnified || isCudaManaged))) {
+            (!y && (isCudaUnified || isCudaManaged) && actualIsVariable)) {
           return true;
         }
       }
@@ -179,6 +183,41 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   } else {
     return false;
   }
+}
+
+std::string FormatVectorTypeAsFortran(
+    int category, int64_t elementCategory, int64_t elementKind) {
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
+
+  switch (static_cast<VectorTypeCategory>(category)) {
+  case (VectorTypeCategory::IntrinsicVector): {
+    CHECK(elementCategory >= 0 && elementKind > 0);
+    ss << "vector(";
+    switch (static_cast<VectorElementCategory>(elementCategory)) {
+    case VectorElementCategory::Integer:
+      ss << "integer(" << elementKind << ")";
+      break;
+    case VectorElementCategory::Unsigned:
+      ss << "unsigned(" << elementKind << ")";
+      break;
+    case VectorElementCategory::Real:
+      ss << "real(" << elementKind << ")";
+      break;
+    }
+    ss << ")";
+    break;
+  }
+  case (VectorTypeCategory::PairVector):
+    ss << "__vector_pair";
+    break;
+  case (VectorTypeCategory::QuadVector):
+    ss << "__vector_quad";
+    break;
+  default:
+    CHECK(false && "Vector element type not implemented");
+  }
+  return buf;
 }
 
 } // namespace Fortran::common

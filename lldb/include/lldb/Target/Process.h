@@ -40,11 +40,13 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
@@ -52,6 +54,8 @@
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/Policy.h"
+#include "lldb/Utility/ProcessAddress.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -84,6 +88,9 @@ public:
   ~ProcessProperties() override;
 
   bool GetDisableMemoryCache() const;
+#ifndef NDEBUG
+  bool GetVerifyMemoryReads() const;
+#endif
   uint64_t GetMemoryCacheLineSize() const;
   Args GetExtraStartupCommands() const;
   void SetExtraStartupCommands(const Args &args);
@@ -120,6 +127,9 @@ public:
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
   std::unique_ptr<ProcessExperimentalProperties> m_experimental_properties_up;
+
+private:
+  OptionValueProperties *GetExperimentalProperties() const;
 };
 
 // ProcessAttachInfo
@@ -362,6 +372,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class StopInfo;
   friend class Target;
   friend class ThreadList;
+  friend class MemoryCache;
 
 public:
   /// Broadcaster event bits definitions.
@@ -1420,7 +1431,18 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-  virtual lldb_private::UUID FindModuleUUID(const llvm::StringRef path);
+  /// Given a module spec, try to find the UUID information.
+  ///
+  /// \param [in,out] spec
+  ///     A module specification with as much detail as possible about the
+  ///     module for which we are trying to find a UUID. The
+  ///     ModuleSpec.m_file should be filled in. If a dynamic loader is
+  ///     calling this, the load address of the module can be filled in as
+  ///     well. Sometimes the file path for a library can be a symlink and
+  ///     the load address can help resolve the module.
+  ///
+  /// \return True if the UUID was added, false otherwise.
+  virtual bool FindModuleUUID(ModuleSpec &spec);
 
   /// Get the exit status for a process.
   ///
@@ -1589,8 +1611,8 @@ public:
   /// and remove any traps that may have been inserted into the memory.
   ///
   /// This function is not meant to be overridden by Process subclasses, the
-  /// subclasses should implement Process::DoReadMemory (lldb::addr_t, size_t,
-  /// void *).
+  /// subclasses should implement Process::DoReadMemory(const ProcessAddress &,
+  /// void *, size_t, Status &).
   ///
   /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start reading
@@ -1615,13 +1637,10 @@ public:
   ///     size, then this function will get called again with \a
   ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
   ///     returned in the case of an error.
-  virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                            Status &error);
+  virtual size_t ReadMemory(const ProcessAddress &process_addr, void *buf,
+                            size_t size, Status &error);
 
   /// Read from multiple memory ranges and write the results into buffer.
-  /// This calls ReadMemoryFromInferior multiple times, once per range,
-  /// bypassing the read cache. Process implementations that can perform this
-  /// operation more efficiently should override this.
   ///
   /// \param[in] ranges
   ///     A collection of ranges (base address + size) to read from.
@@ -1636,7 +1655,7 @@ public:
   ///     of the slice indicates how many bytes were read successfully. Partial
   ///     reads are always performed from the start of the requested range,
   ///     never from the middle or end.
-  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
   ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                    llvm::MutableArrayRef<uint8_t> buffer);
 
@@ -1771,7 +1790,7 @@ public:
   int64_t ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size,
                                       int64_t fail_value, Status &error);
 
-  lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+  llvm::Expected<lldb::addr_t> ReadPointerFromMemory(lldb::addr_t vm_addr);
 
   /// Use Process::ReadMemoryRanges to efficiently read multiple pointers from
   /// memory at once.
@@ -2046,6 +2065,12 @@ public:
   ///     An error value.
   virtual Status
   GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list);
+
+  llvm::Expected<AddressSpaceInfo>
+  GetAddressSpaceInfo(llvm::StringRef address_space_name);
+
+  llvm::Expected<AddressSpaceInfo>
+  GetAddressSpaceInfo(lldb::addr_space_t address_space_id);
 
   /// Get the number of watchpoints supported by this target.
   ///
@@ -2717,10 +2742,6 @@ void PruneThreadPlans();
 
   ProcessRunLock &GetRunLock();
 
-  bool CurrentThreadIsPrivateStateThread();
-
-  bool CurrentThreadPosesAsPrivateStateThread();
-
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(
         "Sending an event is not supported for this process.");
@@ -3044,8 +3065,15 @@ protected:
   /// \return
   ///     The number of bytes that were actually read into \a buf.
   ///     Zero is returned in the case of an error.
-  virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                              Status &error) = 0;
+  virtual size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                              size_t size, Status &error) = 0;
+
+  /// Reads each range individually via ReadMemoryFromInferior, bypassing the
+  /// memory cache. Subclasses may override it to batch the reads more
+  /// efficiently.
+  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buffer);
 
   virtual void DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
                               const uint8_t *buf, size_t size,
@@ -3300,11 +3328,20 @@ protected:
   /// private state thread that we spin up when we need to run an expression on
   /// the private state thread.
   struct PrivateStateThread {
+    /// Why this PST exists. RunPrivateStateThread reads this directly to
+    /// decide which Policy to push, rather than re-deriving it from a
+    /// generic "is this an override PST" flag. This is the same enum
+    /// Policy::CreatePrivateState()/PolicyStack::PushPrivateState() take, so
+    /// there's a single purpose value flowing from PST creation through to
+    /// the policy it pushes.
+    using Purpose = Policy::PrivateStatePurpose;
+
     PrivateStateThread(Process &process, lldb::StateType public_state,
                        lldb::StateType private_state,
-                       llvm::StringRef thread_name, bool is_override = false)
+                       llvm::StringRef thread_name,
+                       Purpose purpose = Purpose::Default)
         : m_process(process), m_public_state(public_state),
-          m_private_state(private_state), m_is_override(is_override),
+          m_private_state(private_state), m_purpose(purpose),
           m_thread_name(thread_name) {}
     // This returns false if we couldn't start up the thread.  If that happens,
     // you won't be doing any debugging today.
@@ -3323,7 +3360,7 @@ protected:
 
     bool IsRunning() { return m_is_running; }
 
-    bool IsOverride() const { return m_is_override; }
+    bool IsOverride() const { return m_purpose != Purpose::Default; }
 
     void SetThreadName(llvm::StringRef new_name) { m_thread_name = new_name; }
 
@@ -3389,7 +3426,7 @@ protected:
     ProcessRunLock m_public_run_lock;
     ProcessRunLock m_private_run_lock;
     bool m_is_running = false;
-    bool m_is_override = false;
+    Purpose m_purpose;
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
@@ -3493,6 +3530,9 @@ protected:
   ThreadList
       m_extended_thread_list; ///< Constituent for extended threads that may be
                               /// generated, cleared on natural stops
+  /// A list of address spaces for this process. Empty for single address space
+  /// processes.
+  std::vector<AddressSpaceInfo> m_address_spaces;
   lldb::RunDirection m_base_direction; ///< ThreadPlanBase run direction
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
                                       ///extended_thread_list was last updated
@@ -3533,6 +3573,7 @@ protected:
   std::vector<std::string> m_profile_data;
   Predicate<uint32_t> m_iohandler_sync;
   MemoryCache m_memory_cache;
+  MemoryRegionInfoCache m_memory_region_infos_cache;
   AllocatedMemoryCache m_allocated_memory_cache;
   bool m_should_detach; /// Should we detach if the process object goes away
                         /// with an explicit call to Kill or Detach?
@@ -3647,7 +3688,8 @@ private:
   // Starts up the private state thread that will watch for events from the
   // debugee.
 
-  lldb::thread_result_t RunPrivateStateThread(bool is_override);
+  lldb::thread_result_t
+  RunPrivateStateThread(PrivateStateThread::Purpose purpose);
 
 protected:
   void HandlePrivateEvent(lldb::EventSP &event_sp);
@@ -3707,6 +3749,13 @@ protected:
 
 private:
   Status DestroyImpl(bool force_kill);
+
+#ifndef NDEBUG
+  /// Re-read \a size bytes at \a addr and assert they match the cache.
+  void VerifyMemoryRead(lldb::addr_t addr, const void *cache_buf,
+                        size_t cache_bytes_read, size_t size,
+                        const Status &cache_error);
+#endif
 
   /// This is the part of the event handling that for a process event. It
   /// decides what to do with the event and returns true if the event needs to

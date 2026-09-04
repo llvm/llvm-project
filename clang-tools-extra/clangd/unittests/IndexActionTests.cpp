@@ -11,6 +11,7 @@
 #include "URI.h"
 #include "index/IndexAction.h"
 #include "index/Serialization.h"
+#include "index/Symbol.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Tooling.h"
@@ -37,6 +38,8 @@ MATCHER(isTU, "") { return arg.Flags & IncludeGraphNode::SourceFlag::IsTU; }
 MATCHER_P(hasDigest, Digest, "") { return arg.Digest == Digest; }
 
 MATCHER_P(hasName, Name, "") { return arg.Name == Name; }
+
+MATCHER_P(hasSignature, Signature, "") { return arg.Signature == Signature; }
 
 MATCHER(hasSameURI, "") {
   llvm::StringRef URI = ::testing::get<0>(arg);
@@ -256,6 +259,30 @@ TEST_F(IndexActionTest, NoWarnings) {
   ASSERT_TRUE(IndexFile.Sources);
   ASSERT_NE(0u, IndexFile.Sources->size());
   EXPECT_THAT(*IndexFile.Symbols, ElementsAre(hasName("foo"), hasName("bar")));
+}
+
+TEST_F(IndexActionTest, DeclParamName) {
+  // This is 3/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See CompletionTest.DeclParamName and SignatureHelpTest.DeclParamName for
+  // the other tests.
+  std::string MainFilePath = testPath("main.cpp");
+  std::string MainCode = R"cpp( #include "zenith.hpp" )cpp";
+  std::string HeaderPath = testPath("zenith.hpp");
+  std::string HeaderCode = R"cpp(
+      void moon(int, int);
+      void moon(int month, int day);
+      void moon(int, int day);
+      void moon(int, int);
+      )cpp";
+
+  addFile(MainFilePath, MainCode);
+  addFile(HeaderPath, HeaderCode);
+
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath);
+
+  EXPECT_THAT(*IndexFile.Symbols, ElementsAre(hasSignature("(int, int day)")));
 }
 
 TEST_F(IndexActionTest, SkipFiles) {

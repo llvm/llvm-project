@@ -9,6 +9,7 @@
 #include "../lldb-python.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/ThreadPlan.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -27,7 +28,8 @@ ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
 llvm::Expected<StructuredData::GenericSP>
 ScriptedThreadPlanPythonInterface::CreatePluginObject(
     const ScriptedMetadata &scripted_metadata,
-    lldb::ThreadPlanSP thread_plan_sp, const StructuredDataImpl &args_sp) {
+    lldb::ThreadPlanSP thread_plan_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
   return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      thread_plan_sp, args_sp);
 }
@@ -107,7 +109,8 @@ void ScriptedThreadPlanPythonInterface::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
       llvm::StringRef("Alter thread stepping logic and stop reason"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedThreadPlan,
+      eScriptLanguagePython, {ci_usages, api_usages});
 }
 
 void ScriptedThreadPlanPythonInterface::Terminate() {

@@ -114,6 +114,11 @@ void DemandedBits::determineLiveOperandBits(
         // the output.
         AB = AOut.reverseBits();
         break;
+      case Intrinsic::clmul:
+        // Output bits only depend on input bits with lower or
+        // equal bit index.
+        AB = APInt::getLowBitsSet(BitWidth, AOut.getActiveBits());
+        break;
       case Intrinsic::ctlz:
         if (OperandNo == 0) {
           // We need some output bits, so we need all bits of the

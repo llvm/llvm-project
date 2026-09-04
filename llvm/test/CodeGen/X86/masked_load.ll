@@ -701,15 +701,15 @@ define <8 x double> @load_v8f64_i8(i8 %trigger, ptr %addr, <8 x double> %dst) {
 ; AVX1-LABEL: load_v8f64_i8:
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    shrb %al
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movl %edi, %ecx
-; AVX1-NEXT:    andb $1, %cl
-; AVX1-NEXT:    vmovd %ecx, %xmm2
-; AVX1-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
-; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    shrb $2, %al
 ; AVX1-NEXT:    andb $1, %al
+; AVX1-NEXT:    movl %edi, %ecx
+; AVX1-NEXT:    shrb %cl
+; AVX1-NEXT:    andb $1, %cl
+; AVX1-NEXT:    movl %edi, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    vmovd %edx, %xmm2
+; AVX1-NEXT:    vpinsrb $2, %ecx, %xmm2, %xmm2
 ; AVX1-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
 ; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    shrb $3, %al
@@ -750,15 +750,15 @@ define <8 x double> @load_v8f64_i8(i8 %trigger, ptr %addr, <8 x double> %dst) {
 ; AVX2-LABEL: load_v8f64_i8:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    shrb %al
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movl %edi, %ecx
-; AVX2-NEXT:    andb $1, %cl
-; AVX2-NEXT:    vmovd %ecx, %xmm2
-; AVX2-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
-; AVX2-NEXT:    movl %edi, %eax
 ; AVX2-NEXT:    shrb $2, %al
 ; AVX2-NEXT:    andb $1, %al
+; AVX2-NEXT:    movl %edi, %ecx
+; AVX2-NEXT:    shrb %cl
+; AVX2-NEXT:    andb $1, %cl
+; AVX2-NEXT:    movl %edi, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    vmovd %edx, %xmm2
+; AVX2-NEXT:    vpinsrb $2, %ecx, %xmm2, %xmm2
 ; AVX2-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
 ; AVX2-NEXT:    movl %edi, %eax
 ; AVX2-NEXT:    shrb $3, %al
@@ -1205,7 +1205,7 @@ define <2 x float> @load_v2f32_i2(i2 %trigger, ptr %addr, <2 x float> %dst) {
 ; AVX1OR2-NEXT:    movl %edi, %eax
 ; AVX1OR2-NEXT:    andb $2, %al
 ; AVX1OR2-NEXT:    shrb %al
-; AVX1OR2-NEXT:    andb $1, %dil
+; AVX1OR2-NEXT:    andl $1, %edi
 ; AVX1OR2-NEXT:    vmovd %edi, %xmm1
 ; AVX1OR2-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero

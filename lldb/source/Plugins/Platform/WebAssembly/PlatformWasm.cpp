@@ -10,6 +10,7 @@
 #include "Plugins/Platform/WebAssembly/PlatformWasmRemoteGDBServer.h"
 #include "Plugins/Platform/WebAssembly/PlatformWebInspectorWasm.h"
 #include "Plugins/Process/wasm/ProcessWasm.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -17,6 +18,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Environment.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
@@ -57,6 +59,10 @@ public:
 
   llvm::StringRef GetPortArg() const {
     return GetPropertyAtIndexAs<llvm::StringRef>(ePropertyPortArg, {});
+  }
+
+  llvm::StringRef GetEnvArg() const {
+    return GetPropertyAtIndexAs<llvm::StringRef>(ePropertyEnvArg, {});
   }
 };
 
@@ -126,8 +132,7 @@ llvm::Expected<uint16_t> PlatformWasm::FindFreeTCPPort() {
 
 std::vector<ArchSpec>
 PlatformWasm::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
-  return {ArchSpec("wasm32-unknown-unknown-wasm"),
-          ArchSpec("wasm64-unknown-unknown-wasm")};
+  return {ArchSpec("wasm32"), ArchSpec("wasm64")};
 }
 
 lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,
@@ -139,6 +144,36 @@ lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,
   status = Status::FromErrorString(
       "attaching is only supported when connected to a remote Wasm platform");
   return nullptr;
+}
+
+Args PlatformWasm::MakeRuntimeCommand(llvm::StringRef runtime_path,
+                                      const Args &runtime_args,
+                                      llvm::StringRef port_arg, uint16_t port,
+                                      llvm::StringRef env_arg,
+                                      const Environment &env,
+                                      llvm::StringRef module_path,
+                                      const Args &inferior_args) {
+  Args args({runtime_path});
+  args.AppendArguments(runtime_args);
+  args.AppendArgument(llvm::formatv("{0}{1}", port_arg, port).str());
+
+  if (!env_arg.empty())
+    for (const auto &kv : env)
+      args.AppendArgument(
+          llvm::formatv("{0}{1}", env_arg, Environment::compose(kv)).str());
+
+  // The runtime resolves the module as a host path, while arg0 is the name the
+  // platform reports for the executable and need not resolve here.
+  Args module_args = inferior_args;
+  if (!module_path.empty()) {
+    if (module_args.GetArgumentCount() > 0)
+      module_args.ReplaceArgumentAtIndex(0, module_path);
+    else
+      module_args.AppendArgument(module_path);
+  }
+  args.AppendArguments(module_args);
+
+  return args;
 }
 
 lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
@@ -168,16 +203,21 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
   }
   uint16_t port = *expected_port;
 
-  Args args({runtime.GetPath(),
-             llvm::formatv("{0}{1}", properties.GetPortArg(), port).str()});
-  args.AppendArguments(properties.GetRuntimeArgs());
-  args.AppendArguments(launch_info.GetArguments());
+  std::string module_path;
+  if (ModuleSP exe_module_sp = target.GetExecutableModule())
+    module_path = exe_module_sp->GetFileSpec().GetPath();
+
+  Args args = MakeRuntimeCommand(
+      runtime.GetPath(), properties.GetRuntimeArgs(), properties.GetPortArg(),
+      port, properties.GetEnvArg(), launch_info.GetEnvironment(), module_path,
+      launch_info.GetArguments());
 
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);
   // We're launching the Wasm runtime (a native host binary), not the target
   // being debugged. Clear flags that don't apply to the runtime process.
   launch_info.GetFlags().Clear(eLaunchFlagDebug | eLaunchFlagDisableASLR);
+  // The runtime itself runs with the host environment.
   launch_info.GetEnvironment() = Host::GetEnvironment();
 
   auto exit_code = std::make_shared<std::optional<int>>();

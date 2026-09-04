@@ -14,7 +14,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace fir::omp {
 class FortranSafeTempArrayCopyAttrImpl

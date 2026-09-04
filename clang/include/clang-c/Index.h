@@ -1910,9 +1910,9 @@ enum CXCursorKind {
    */
   CXCursor_SEHLeaveStmt = 247,
 
-  /** OpenMP ordered directive.
+  /** OpenMP ordered-standalone directive.
    */
-  CXCursor_OMPOrderedDirective = 248,
+  CXCursor_OMPOrderedStandaloneDirective = 248,
 
   /** OpenMP atomic directive.
    */
@@ -2169,6 +2169,10 @@ enum CXCursorKind {
   /** OpenMP split directive.
    */
   CXCursor_OMPSplitDirective = 312,
+
+  /** OpenMP ordered-blockassoc directive.
+   */
+  CXCursor_OMPOrderedBlockAssocDirective = 313,
 
   /** OpenACC Compute Construct.
    */
@@ -3043,7 +3047,9 @@ enum CXTypeKind {
   /* HLSL Types */
   CXType_HLSLResource = 179,
   CXType_HLSLAttributedResource = 180,
-  CXType_HLSLInlineSpirv = 181
+  CXType_HLSLInlineSpirv = 181,
+
+  CXType_PredefinedSugar = 182
 };
 
 /**

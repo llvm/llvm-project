@@ -228,12 +228,16 @@ func.func @entry() {
     (1.0, 0.0),
     // CHECK-NEXT:  0.761594
     // CHECK-NEXT:  0
-    (1.0, 1.0)
+    (1.0, 1.0),
     // CHECK-NEXT:  1.08392
     // CHECK-NEXT:  0.271753
-  ]> : tensor<7xcomplex<f32>>
+    // Near pole at (0.002, pi/2): tests avoidance of catastrophic cancellation
+    (0.002, 1.5707964)
+    // CHECK-NEXT:  499.99
+    // CHECK-NEXT: -0.010927
+  ]> : tensor<8xcomplex<f32>>
   %tanh_test_cast = tensor.cast %tanh_test
-    :  tensor<7xcomplex<f32>> to tensor<?xcomplex<f32>>
+    :  tensor<8xcomplex<f32>> to tensor<?xcomplex<f32>>
 
   %tanh_func = func.constant @tanh : (complex<f32>) -> complex<f32>
   call @test_unary(%tanh_test_cast, %tanh_func)

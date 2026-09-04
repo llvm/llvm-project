@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=asm -o - 2>&1 | FileCheck %s
+; RUN: llc %s -o - 2>&1 | FileCheck %s
 target triple = "dxil-pc-shadermodel6.6-compute"
 
 

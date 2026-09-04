@@ -449,6 +449,9 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
       // enabled.
       (!Style.BraceWrapping.BeforeLambdaBody ||
        Current.isNot(TT_LambdaLBrace)) &&
+      // Same for the opening brace of requires expressions.
+      (!Style.BraceWrapping.AfterRequiresExpression ||
+       Current.isNot(TT_RequiresExpressionLBrace)) &&
       CurrentState.NoLineBreakInOperand) {
     return false;
   }
@@ -476,6 +479,11 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
     auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
     return LambdaBodyLength > getColumnLimit(State);
+  }
+  if (Style.BraceWrapping.AfterRequiresExpression && Current.CanBreakBefore &&
+      Current.is(TT_RequiresExpressionLBrace) &&
+      getLengthToMatchingParen(Current, State.Stack) > getColumnLimit(State)) {
+    return true;
   }
   if (Current.MustBreakBefore ||
       (Current.is(TT_InlineASMColon) &&
@@ -1508,6 +1516,13 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return From + Style.IndentWidth;
   }
 
+  // Align the wrapped opening brace of a requires expression with its
+  // closing brace.
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Current.is(TT_RequiresExpressionLBrace)) {
+    return CurrentState.NestedBlockIndent;
+  }
+
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
       (Style.isVerilog() && Keywords.isVerilogBegin(*NextNonComment))) {
     if (Current.NestingLevel == 0 ||
@@ -1528,8 +1543,26 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
-    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit))
+    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit)) {
+      // The brace should line up with the start of the line in this case. The
+      // stack depth is checked to make sure that the brace is at the top
+      // level. It should contain the levels for the top, the assignment if
+      // there is an equal sign, and the braces.
+      //
+      // SomeStruct //
+      //     s = {
+      //         "xxxxxxxxxxxxx",
+      // };
+      if ((State.Stack.size() == 2 &&
+           Current.MatchingParen->getPreviousNonComment() &&
+           Current.MatchingParen->getPreviousNonComment()->is(
+               TT_StartOfName)) ||
+          (State.Stack.size() == 3 &&
+           State.Stack[1].Precedence == prec::Assignment)) {
+        return State.FirstIndent;
+      }
       return State.Stack[State.Stack.size() - 2].LastSpace;
+    }
     return State.FirstIndent;
   }
   // Indent a closing parenthesis at the previous level if followed by a semi,
@@ -1981,6 +2014,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     NewParenState.UnindentOperator = false;
     NewParenState.NoLineBreak =
         NewParenState.NoLineBreak || CurrentState.NoLineBreakInOperand;
+    NewParenState.Precedence = PrecedenceLevel;
 
     // Don't propagate AvoidBinPacking into subexpressions of arg/param lists.
     if (PrecedenceLevel > prec::Comma)

@@ -176,16 +176,16 @@ func.func @no_unroll_jam_dependent_ubound(%in0: memref<?xf32, 1>) {
 // CHECK-NEXT: }
 // CHECK-NEXT: return
 
-// Inner loop with one iter_arg.
-// CHECK-LABEL: func @unroll_jam_one_iter_arg
-func.func @unroll_jam_one_iter_arg() {
+// Inner loop attrs survive append-only iter_arg extension.
+// CHECK-LABEL: func @unroll_jam_one_iter_arg_preserves_attrs
+func.func @unroll_jam_one_iter_arg_preserves_attrs() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 1 : i32
     %x = "addi32"(%i, %i) : (index, index) -> i32
     %red = affine.for %j = 0 to 17 iter_args(%acc = %cst) -> (i32) {
       %y = "bar"(%i, %j, %acc) : (index, index, i32) -> i32
       affine.yield %y : i32
-    }
+    } {test.keep = "inner"}
     %w = "foo"(%i, %x, %red) : (index, i32, i32) -> i32
   }
   return
@@ -201,7 +201,7 @@ func.func @unroll_jam_one_iter_arg() {
 // CHECK-NEXT:     [[INC1:%[0-9]+]] = affine.apply [[$MAP_PLUS_1]]([[IV0]])
 // CHECK-NEXT:     [[RES5:%[0-9]+]] = "bar"([[INC1]], [[IV1]], [[ACC2]])
 // CHECK-NEXT:     affine.yield [[RES4]], [[RES5]]
-// CHECK-NEXT:   }
+// CHECK-NEXT:   } {test.keep = "inner"}
 // CHECK:        "foo"([[IV0]], [[RES1]], [[RES3]]#0)
 // CHECK-NEXT:   affine.apply [[$MAP_PLUS_1]]([[IV0]])
 // CHECK-NEXT:   "foo"({{.*}}, [[RES2]], [[RES3]]#1)

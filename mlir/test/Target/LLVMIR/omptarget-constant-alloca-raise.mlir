@@ -11,11 +11,11 @@
 // scenarios. 
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @_QQmain() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
+  llvm.func @_QQmain() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x !llvm.struct<(ptr)> : (i64) -> !llvm.ptr
     %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.struct<(ptr)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
-    omp.target map_entries(%3 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%3 -> %arg0 : !llvm.ptr) {
       %4 = llvm.mlir.constant(1 : i32) : i32
       %5 = llvm.alloca %4 x !llvm.struct<(ptr)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
       %ascast1 = llvm.addrspacecast %5 : !llvm.ptr<5> to !llvm.ptr

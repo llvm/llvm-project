@@ -149,14 +149,13 @@ integer function test_stmt_character_with_different_length_2(c, n)
   test_stmt_character = func(c)
 end function
 
-! issue #247
-! CHECK-LABEL: @_QPbug247
-subroutine bug247(r)
+! CHECK-LABEL: @_QPstatement_function_in_io
+subroutine statement_function_in_io(r)
   I(R) = R
   ! CHECK: fir.call {{.*}}OutputInteger
   PRINT *, I(2.5)
   ! CHECK: fir.call {{.*}}EndIo
-END subroutine bug247
+END subroutine statement_function_in_io
 
 ! Test that the argument is truncated to the length of the dummy argument.
 subroutine truncate_arg

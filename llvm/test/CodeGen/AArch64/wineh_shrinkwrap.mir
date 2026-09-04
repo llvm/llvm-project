@@ -1,7 +1,7 @@
 # RUN: llc -O2 -o - %s -mtriple=aarch64-windows -start-before=shrink-wrap \
-# RUN:   -stop-after=prologepilog | FileCheck %s --check-prefix=WIN64
+# RUN:   -stop-after=prolog-epilog | FileCheck %s --check-prefix=WIN64
 # RUN: llc -O2 -o - %s -mtriple=aarch64-linux -start-before=shrink-wrap \
-# RUN:   -stop-after=prologepilog | FileCheck %s --check-prefix=LINUX
+# RUN:   -stop-after=prolog-epilog | FileCheck %s --check-prefix=LINUX
 
 # This tests checks that shrink wrapping bails out on Windows AMR64 due to the
 # use of Windows CFI.  We don't currently support fragments for WIndows EH on

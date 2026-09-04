@@ -38,7 +38,7 @@ contains
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
@@ -68,7 +68,7 @@ contains
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
@@ -91,21 +91,21 @@ subroutine sb3 (x1, x2)
 contains
   subroutine sub (v1, v2)
     type(c_ptr), value :: v1, v2
-!CHECK: !$OMP DECLARE VARIANT(vsub) MATCH(CONSTRUCT={DISPATCH}) ADJUST_ARGS(NOTHING:v1&
-!CHECK: !$OMP&) ADJUST_ARGS(NEED_DEVICE_PTR:v2)
+!CHECK: !$OMP DECLARE VARIANT(vsub) MATCH(CONSTRUCT={DISPATCH}) ADJUST_ARGS(NOTHING: v&
+!CHECK: !$OMP&1) ADJUST_ARGS(NEED_DEVICE_PTR: v2)
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'vsub'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector
 !PARSE-TREE: | | | OmpTraitSelectorName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | OmpClause -> AdjustArgs -> OmpAdjustArgsClause
-!PARSE-TREE: | | OmpAdjustOp -> Value = Nothing
+!PARSE-TREE: | | Modifier -> OmpAdjustOp -> Value = Nothing
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'v1'
 !PARSE-TREE: | OmpClause -> AdjustArgs -> OmpAdjustArgsClause
-!PARSE-TREE: | | OmpAdjustOp -> Value = Need_Device_Ptr
+!PARSE-TREE: | | Modifier -> OmpAdjustOp -> Value = Need_Device_Ptr
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'v2'
 !PARSE-TREE: | Flags = {}
 
@@ -136,7 +136,7 @@ end subroutine
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare variant
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f1'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'f1'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | OmpTraitSetSelectorName -> Value = Construct
 !PARSE-TREE: | | OmpTraitSelector

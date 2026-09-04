@@ -13,10 +13,10 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
   }
 
   // CHECK-LABEL: declare void @device_func(ptr)
-  llvm.func @device_func(!llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>}
+  llvm.func @device_func(!llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = to>}
   
   // CHECK-NOT: define {{.*}} void @target_map_single_shared_mem_private
-  llvm.func @target_map_single_shared_mem_private() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
+  llvm.func @target_map_single_shared_mem_private() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -27,7 +27,7 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     // CHECK: call void @device_func(ptr %[[ALLOC0]])
     // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC0]], i64 4)
     // CHECK: call void @__kmpc_target_deinit
-    omp.target private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
       llvm.call @device_func(%arg0) : (!llvm.ptr) -> ()
       omp.terminator
     }
@@ -44,7 +44,7 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC_ARGS0]], i64 8)
     // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC1]], i64 4)
     // CHECK: call void @__kmpc_target_deinit
-    omp.target private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
       omp.parallel reduction(@simple_var.reducer %arg0 -> %arg1 : !llvm.ptr) {
         %3 = llvm.load %arg1 : !llvm.ptr -> i32
         omp.terminator
@@ -64,7 +64,7 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC_ARGS1]], i64 8)
     // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC2]], i64 4)
     // CHECK: call void @__kmpc_target_deinit
-    omp.target private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
       omp.parallel {
         %4 = llvm.load %arg0 : !llvm.ptr -> i32
         omp.terminator

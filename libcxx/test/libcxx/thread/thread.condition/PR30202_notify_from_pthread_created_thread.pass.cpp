@@ -20,6 +20,8 @@
 // Test that this function works with threads that were not created by
 // std::thread. See https://llvm.org/PR30202
 
+// Segfault
+// XFAIL: LLVM-LIBC-FIXME
 
 #include <condition_variable>
 #include <mutex>

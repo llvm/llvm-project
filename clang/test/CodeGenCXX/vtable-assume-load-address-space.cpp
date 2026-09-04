@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -emit-llvm -o %t.ms.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
 // RUN: %clang_cc1 %s -triple=spirv64-amd-amdhsa -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
 // FIXME: Assume load should not require -fstrict-vtable-pointers
@@ -204,7 +204,7 @@ void g() {
 
 namespace test7 {
 // Because A's key function is defined here, vtable is generated in this TU
-// CHECK7: @_ZTVN5test71AE ={{.*}} unnamed_addr addrspace(1) constant
+// CHECK7: @_ZTVN5test71AE ={{.*}}addrspace(1) constant
 struct A {
   A();
   virtual void foo();
@@ -229,14 +229,14 @@ struct A {
   virtual void bar();
 };
 
-// CHECK8-DAG: @_ZTVN5test81BE = available_externally unnamed_addr addrspace(1) constant
+// CHECK8-DAG: @_ZTVN5test81BE = available_externally addrspace(1) constant
 struct B : A {
   B();
   void foo();
   void bar();
 };
 
-// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr unnamed_addr addrspace(1) constant
+// CHECK8-DAG: @_ZTVN5test81CE = linkonce_odr addrspace(1) constant
 struct C : A {
   C();
   void bar();
@@ -251,7 +251,7 @@ struct D : A {
 };
 void D::bar() {}
 
-// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr unnamed_addr addrspace(1) constant
+// CHECK8-DAG: @_ZTVN5test81EE = linkonce_odr addrspace(1) constant
 struct E : A {
   E();
 };

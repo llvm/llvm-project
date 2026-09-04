@@ -16,8 +16,8 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 10, i64 9, i64 8, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 10, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND1]], splat (i8 10)
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 10, [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[OFFSET_IDX]]

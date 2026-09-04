@@ -15,7 +15,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -45,8 +44,6 @@ struct ExpandPostRALegacy : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -61,10 +58,7 @@ ExpandPostRAPseudosPass::run(MachineFunction &MF,
   if (!ExpandPostRA().run(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserveSet<CFGAnalyses>()
-      .preserve<MachineLoopAnalysis>()
-      .preserve<MachineDominatorTreeAnalysis>();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
 char ExpandPostRALegacy::ID = 0;

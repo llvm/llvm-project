@@ -2031,3 +2031,26 @@ namespace StaticMemberRedecl {
   const int S::m = 10;
   static_assert(getM() == 10, "");
 }
+
+namespace VariadicCtorStartsLifetime {
+  struct S {
+    constexpr S(int, ...) {}
+  };
+  class C {
+  public:
+    S s;
+    constexpr C() : s(1,1) {}
+  };
+  /// Used to not start the lifetime of 's'.
+  constexpr C c;
+}
+
+namespace BaseInitViaDIE {
+  struct S {
+    int a = 42, b = a;
+  };
+
+  struct SS : S {};
+  constexpr SS ss {};
+  static_assert(ss.b == 42, "");
+}

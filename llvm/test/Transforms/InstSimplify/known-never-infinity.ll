@@ -637,13 +637,10 @@ define i1 @isKnownNeverInfinity_minimum(double %x, double %y) {
   ret i1 %cmp
 }
 
-define i1 @isNotKnownNeverInfinity_minimum_lhs(double %x, double %y) {
-; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_minimum_lhs
+define i1 @isNotKnownNeverPInfinity_minimum_lhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverPInfinity_minimum_lhs
 ; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
-; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minimum.f64(double [[X]], double [[NINF_Y]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], +inf
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf.y = fadd ninf double %y, 1.0
   %op = call double @llvm.minimum.f64(double %x, double %ninf.y)
@@ -651,17 +648,42 @@ define i1 @isNotKnownNeverInfinity_minimum_lhs(double %x, double %y) {
   ret i1 %cmp
 }
 
-define i1 @isNotKnownNeverInfinity_minimum_rhs(double %x, double %y) {
-; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_minimum_rhs
+define i1 @isNotKnownNeverNInfinity_minimum_lhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverNInfinity_minimum_lhs
 ; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
-; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minimum.f64(double [[NINF_X]], double [[Y]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], +inf
+; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minimum.f64(double [[X]], double [[NINF_Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], -inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.minimum.f64(double %x, double %ninf.y)
+  %cmp = fcmp une double %op, 0xfff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverPInfinity_minimum_rhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverPInfinity_minimum_rhs
+; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.minimum.f64(double %ninf.x, double %y)
   %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverNInfinity_minimum_rhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverNInfinity_minimum_rhs
+; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X]], 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.minimum.f64(double [[NINF_X]], double [[Y]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], -inf
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %op = call double @llvm.minimum.f64(double %ninf.x, double %y)
+  %cmp = fcmp une double %op, 0xfff0000000000000
   ret i1 %cmp
 }
 
@@ -677,8 +699,8 @@ define i1 @isKnownNeverInfinity_maximum(double %x, double %y) {
   ret i1 %cmp
 }
 
-define i1 @isNotKnownNeverInfinity_maximum_lhs(double %x, double %y) {
-; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_maximum_lhs
+define i1 @isNotKnownNeverPInfinity_maximum_lhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverPInfinity_maximum_lhs
 ; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NINF_Y:%.*]] = fadd ninf double [[Y]], 1.000000e+00
 ; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maximum.f64(double [[X]], double [[NINF_Y]])
@@ -691,8 +713,19 @@ define i1 @isNotKnownNeverInfinity_maximum_lhs(double %x, double %y) {
   ret i1 %cmp
 }
 
-define i1 @isNotKnownNeverInfinity_maximum_rhs(double %x, double %y) {
-; CHECK-LABEL: define i1 @isNotKnownNeverInfinity_maximum_rhs
+define i1 @isNotKnownNeverNInfinity_maximum_lhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverNInfinity_maximum_lhs
+; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %ninf.y = fadd ninf double %y, 1.0
+  %op = call double @llvm.maximum.f64(double %x, double %ninf.y)
+  %cmp = fcmp une double %op, 0xfff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverPInfinity_maximum_rhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverPInfinity_maximum_rhs
 ; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf double [[X]], 1.000000e+00
 ; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.maximum.f64(double [[NINF_X]], double [[Y]])
@@ -702,6 +735,17 @@ define i1 @isNotKnownNeverInfinity_maximum_rhs(double %x, double %y) {
   %ninf.x = fadd ninf double %x, 1.0
   %op = call double @llvm.maximum.f64(double %ninf.x, double %y)
   %cmp = fcmp une double %op, 0x7ff0000000000000
+  ret i1 %cmp
+}
+
+define i1 @isNotKnownNeverNInfinity_maximum_rhs(double %x, double %y) {
+; CHECK-LABEL: define i1 @isNotKnownNeverNInfinity_maximum_rhs
+; CHECK-SAME: (double [[X:%.*]], double [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %ninf.x = fadd ninf double %x, 1.0
+  %op = call double @llvm.maximum.f64(double %ninf.x, double %y)
+  %cmp = fcmp une double %op, 0xfff0000000000000
   ret i1 %cmp
 }
 
@@ -988,7 +1032,7 @@ define i1 @not_inf_fabs_select_pzero_or_ninf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float 0.000000e+00, float 0xFFF0000000000000
+  %select = select i1 %cond, float 0.000000e+00, float -inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp one float %fabs, 0x7FF0000000000000
   ret i1 %one
@@ -1004,7 +1048,7 @@ define i1 @not_inf_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp one float %fabs, 0x7FF0000000000000
   ret i1 %one
@@ -1017,7 +1061,7 @@ define i1 @not_ninf_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp one float %fabs, 0xFFF0000000000000
   ret i1 %one
@@ -1034,7 +1078,7 @@ define i1 @not_ninf_fneg_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %fneg.fabs = fneg float %fabs
   %one = fcmp one float %fneg.fabs, 0xFFF0000000000000

@@ -349,3 +349,17 @@ This trait removes the requirement on regions held by an operation to have
 [terminator operations](../LangRef.md/#control-flow-and-ssacfg-regions) at the end of a block.
 This requires that these regions have a single block. An example of operation
 using this trait is the top-level `ModuleOp`.
+
+### TokenProducerTrait
+
+*   `OpTrait::TokenProducerTrait` -- `TokenProducerTrait`
+
+This trait marks operations that are allowed to produce builtin `token` values
+as operation results or as region entry block arguments.
+
+### TokenConsumerTrait
+
+*   `OpTrait::TokenConsumerTrait` -- `TokenConsumerTrait`
+
+This trait marks operations that are allowed to consume builtin `token` values
+as operands.

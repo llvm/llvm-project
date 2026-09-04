@@ -22,10 +22,10 @@ module thread_private01
 
   !$omp threadprivate(my_var)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the THREADPRIVATE directive
+  !ERROR: A structure component cannot appear on the THREADPRIVATE directive
   !$omp threadprivate(my_var%t_i)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the THREADPRIVATE directive
+  !ERROR: A structure component cannot appear on the THREADPRIVATE directive
   !$omp threadprivate(my_var%t_arr)
 
   !ERROR: A type parameter inquiry cannot appear on the THREADPRIVATE directive
@@ -36,10 +36,10 @@ module thread_private01
 
   !$omp threadprivate(arr)
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the THREADPRIVATE directive
+  !ERROR: An array element cannot appear on the THREADPRIVATE directive
   !$omp threadprivate(arr(1))
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the THREADPRIVATE directive
+  !ERROR: An array element cannot appear on the THREADPRIVATE directive
   !$omp threadprivate(arr(1:2))
 
   !ERROR: A type parameter inquiry cannot appear on the THREADPRIVATE directive

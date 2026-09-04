@@ -138,7 +138,7 @@ int main(int, char**)
     test<std::size_t>();
 
     // _BitInt tests. Width tiers follow C23 7.18.2.5.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
     {
       using T13 = unsigned _BitInt(13);
       using T32 = unsigned _BitInt(32);
@@ -198,7 +198,7 @@ int main(int, char**)
       assert(std::countl_one(T4096(~T4096(0) ^ (T4096(1) << 1000))) == 3095);
     }
 #  endif
-#endif // TEST_HAS_EXTENSION(bit_int)
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

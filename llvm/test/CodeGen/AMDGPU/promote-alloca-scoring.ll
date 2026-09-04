@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -debug-only=amdgpu-promote-alloca -amdgpu-promote-alloca-to-vector-limit=512 -passes=amdgpu-promote-alloca %s -o - 2>&1 | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu7.00-unknown-amdhsa -debug-only=amdgpu-promote-alloca -amdgpu-promote-alloca-to-vector-limit=512 -passes=amdgpu-promote-alloca %s -o - 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: Analyzing:   %simpleuser = alloca [4 x i64], align 4, addrspace(5)

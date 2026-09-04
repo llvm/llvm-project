@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -107,12 +108,14 @@ class Chain;
 
 class AArch64A57FPLoadBalancingImpl {
 public:
+  explicit AArch64A57FPLoadBalancingImpl(RegisterClassInfo *RCI) : RCI(RCI) {}
+
   bool run(MachineFunction &MF);
 
 private:
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
-  RegisterClassInfo RCI;
+  RegisterClassInfo *RCI = nullptr;
 
   bool runOnBasicBlock(MachineBasicBlock &MBB);
   bool colorChainSet(std::vector<Chain *> GV, MachineBasicBlock &MBB,
@@ -122,7 +125,7 @@ private:
   void scanInstruction(MachineInstr *MI, unsigned Idx,
                        std::map<unsigned, Chain *> &Active,
                        std::vector<std::unique_ptr<Chain>> &AllChains);
-  void maybeKillChain(MachineOperand &MO, unsigned Idx,
+  void maybeKillChain(MachineInstr &MI, MachineOperand &MO, unsigned Idx,
                       std::map<unsigned, Chain *> &RegChains);
   Color getColor(unsigned Register);
   Chain *getAndEraseNext(Color PreferredColor, std::vector<Chain *> &L);
@@ -145,6 +148,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -154,6 +158,7 @@ char AArch64A57FPLoadBalancingLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64A57FPLoadBalancingLegacy, DEBUG_TYPE,
                       "AArch64 A57 FP Load-Balancing", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(AArch64A57FPLoadBalancingLegacy, DEBUG_TYPE,
                     "AArch64 A57 FP Load-Balancing", false, false)
 
@@ -316,7 +321,6 @@ bool AArch64A57FPLoadBalancingImpl::run(MachineFunction &MF) {
 
   MRI = &MF.getRegInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
-  RCI.runOnMachineFunction(MF);
 
   for (auto &MBB : MF) {
     Changed |= runOnBasicBlock(MBB);
@@ -329,13 +333,16 @@ bool AArch64A57FPLoadBalancingLegacy::runOnMachineFunction(
     MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
-  return AArch64A57FPLoadBalancingImpl().run(MF);
+  RegisterClassInfo *RCI =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  return AArch64A57FPLoadBalancingImpl(RCI).run(MF);
 }
 
 PreservedAnalyses
 AArch64A57FPLoadBalancingPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
-  if (AArch64A57FPLoadBalancingImpl().run(MF)) {
+  RegisterClassInfo *RCI = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  if (AArch64A57FPLoadBalancingImpl(RCI).run(MF)) {
     PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
     PA.preserveSet<CFGAnalyses>();
     return PA;
@@ -535,7 +542,7 @@ int AArch64A57FPLoadBalancingImpl::scavengeRegister(Chain *G, Color C,
 
   // Make sure we allocate in-order, to get the cheapest registers first.
   unsigned RegClassID = ChainBegin->getDesc().operands()[0].RegClass;
-  auto Ord = RCI.getOrder(TRI->getRegClass(RegClassID));
+  auto Ord = RCI->getOrder(TRI->getRegClass(RegClassID));
   for (auto Reg : Ord) {
     if (!Units.available(Reg))
       continue;
@@ -624,9 +631,9 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
   if (isMul(MI)) {
 
     for (auto &I : MI->uses())
-      maybeKillChain(I, Idx, ActiveChains);
+      maybeKillChain(*MI, I, Idx, ActiveChains);
     for (auto &I : MI->defs())
-      maybeKillChain(I, Idx, ActiveChains);
+      maybeKillChain(*MI, I, Idx, ActiveChains);
 
     // Create a new chain. Multiplies don't require forwarding so can go on any
     // unit.
@@ -646,10 +653,10 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
     Register DestReg = MI->getOperand(0).getReg();
     Register AccumReg = MI->getOperand(3).getReg();
 
-    maybeKillChain(MI->getOperand(1), Idx, ActiveChains);
-    maybeKillChain(MI->getOperand(2), Idx, ActiveChains);
+    maybeKillChain(*MI, MI->getOperand(1), Idx, ActiveChains);
+    maybeKillChain(*MI, MI->getOperand(2), Idx, ActiveChains);
     if (DestReg != AccumReg)
-      maybeKillChain(MI->getOperand(0), Idx, ActiveChains);
+      maybeKillChain(*MI, MI->getOperand(0), Idx, ActiveChains);
 
     if (ActiveChains.find(AccumReg) != ActiveChains.end()) {
       LLVM_DEBUG(dbgs() << "Chain found for accumulator register "
@@ -675,7 +682,7 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
       LLVM_DEBUG(
           dbgs() << "Cannot add to chain because accumulator operand wasn't "
                  << "marked <kill>!\n");
-      maybeKillChain(MI->getOperand(3), Idx, ActiveChains);
+      maybeKillChain(*MI, MI->getOperand(3), Idx, ActiveChains);
     }
 
     LLVM_DEBUG(dbgs() << "Creating new chain for dest register "
@@ -689,27 +696,24 @@ void AArch64A57FPLoadBalancingImpl::scanInstruction(
     // Non-MUL or MLA instruction. Invalidate any chain in the uses or defs
     // lists.
     for (auto &I : MI->uses())
-      maybeKillChain(I, Idx, ActiveChains);
+      maybeKillChain(*MI, I, Idx, ActiveChains);
     for (auto &I : MI->defs())
-      maybeKillChain(I, Idx, ActiveChains);
-
+      maybeKillChain(*MI, I, Idx, ActiveChains);
   }
 }
 
 void AArch64A57FPLoadBalancingImpl::maybeKillChain(
-    MachineOperand &MO, unsigned Idx,
+    MachineInstr &MI, MachineOperand &MO, unsigned Idx,
     std::map<unsigned, Chain *> &ActiveChains) {
   // Given an operand and the set of active chains (keyed by register),
   // determine if a chain should be ended and remove from ActiveChains.
-  MachineInstr *MI = MO.getParent();
-
   if (MO.isReg()) {
 
     // If this is a KILL of a current chain, record it.
     if (MO.isKill() && ActiveChains.find(MO.getReg()) != ActiveChains.end()) {
       LLVM_DEBUG(dbgs() << "Kill seen for chain " << printReg(MO.getReg(), TRI)
                         << "\n");
-      ActiveChains[MO.getReg()]->setKill(MI, Idx, /*Immutable=*/MO.isTied());
+      ActiveChains[MO.getReg()]->setKill(&MI, Idx, /*Immutable=*/MO.isTied());
     }
     ActiveChains.erase(MO.getReg());
 
@@ -720,7 +724,7 @@ void AArch64A57FPLoadBalancingImpl::maybeKillChain(
       if (MO.clobbersPhysReg(I->first)) {
         LLVM_DEBUG(dbgs() << "Kill (regmask) seen for chain "
                           << printReg(I->first, TRI) << "\n");
-        I->second->setKill(MI, Idx, /*Immutable=*/true);
+        I->second->setKill(&MI, Idx, /*Immutable=*/true);
         ActiveChains.erase(I++);
       } else
         ++I;

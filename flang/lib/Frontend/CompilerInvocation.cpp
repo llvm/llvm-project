@@ -48,7 +48,6 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
-#include <sstream>
 
 using namespace Fortran::frontend;
 
@@ -122,7 +121,8 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
                                             llvm::opt::ArgList &args) {
-  opts.ShowColors = parseShowColorsArgs(args);
+  opts.setShowColors(parseShowColorsArgs(args) ? clang::ShowColorsKind::On
+                                               : clang::ShowColorsKind::Off);
 
   return true;
 }
@@ -150,6 +150,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
     opts.setDebugInfo(val.value());
     if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::DebugDirectivesOnly &&
         val != llvm::codegenoptions::FullDebugInfo &&
         val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
@@ -173,6 +174,23 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.DebugInfoForProfiling =
       args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_compress_debug_sections_EQ)) {
+    auto type = llvm::StringSwitch<std::optional<llvm::DebugCompressionType>>(
+                    a->getValue())
+                    .Case("none", llvm::DebugCompressionType::None)
+                    .Case("zlib", llvm::DebugCompressionType::Zlib)
+                    .Case("zstd", llvm::DebugCompressionType::Zstd)
+                    .Default(std::nullopt);
+    if (type) {
+      opts.setCompressDebugSections(*type);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+      return false;
+    }
+  }
 
   return true;
 }
@@ -299,8 +317,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_safe_trampoline, false))
     opts.EnableSafeTrampoline = 1;
 
-  if (args.getLastArg(clang::options::OPT_floop_interchange))
-    opts.InterchangeLoops = 1;
+  if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
+                   clang::options::OPT_fno_fp_sum_reassociation, false))
+    opts.SplitSumExpressionTree = 1;
+
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
+  opts.InterchangeLoops =
+      args.hasFlag(clang::options::OPT_floop_interchange,
+                   clang::options::OPT_fno_loop_interchange, true);
 
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
@@ -359,6 +384,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
                     clang::options::OPT_fno_integrated_as, true))
     opts.DisableIntegratedAS = 1;
+
+  opts.FunctionSections =
+      args.hasFlag(clang::options::OPT_ffunction_sections,
+                   clang::options::OPT_fno_function_sections,
+                   /*Default=*/false);
+  opts.DataSections = args.hasFlag(clang::options::OPT_fdata_sections,
+                                   clang::options::OPT_fno_data_sections,
+                                   /*Default=*/false);
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
@@ -468,8 +501,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.IsPIE = 1;
   }
 
-  if (args.hasArg(clang::options::OPT_fprofile_generate)) {
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_fprofile_generate,
+                          clang::options::OPT_fprofile_generate_EQ)) {
     opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    if (a->getOption().matches(clang::options::OPT_fprofile_generate_EQ)) {
+      llvm::SmallString<128> path(a->getValue());
+      llvm::sys::path::append(path, "default_%m.profraw");
+      opts.InstrProfileOutput = std::string(path);
+    }
   }
 
   if (auto A = args.getLastArg(clang::options::OPT_fprofile_use_EQ)) {
@@ -479,6 +519,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.SampleProfileFile =
       args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
+
+  if (args.hasFlag(clang::options::OPT_fpseudo_probe_for_profiling,
+                   clang::options::OPT_fno_pseudo_probe_for_profiling, false)) {
+    opts.PseudoProbeForProfiling = 1;
+  }
 
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
@@ -575,6 +620,9 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
       opts.EnableAIXExtendedAltivecABI = false;
     }
   }
+
+  opts.SplitMachineFunctions =
+      args.hasArg(clang::options::OPT_fsplit_machine_functions);
 
   opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
                                  clang::options::OPT_fno_verbose_asm, false);
@@ -746,6 +794,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   opts.outputFile = args.getLastArgValue(clang::options::OPT_o);
+  opts.dependencyOutputFile =
+      args.getLastArgValue(clang::options::OPT_dependency_file);
+  opts.dependencyTargets = args.getAllArgValues(clang::options::OPT_MT);
   opts.showHelp = args.hasArg(clang::options::OPT_help);
   opts.showVersion = args.hasArg(clang::options::OPT_version);
   opts.printSupportedCPUs =
@@ -807,15 +858,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                            : FortranForm::FreeForm;
   }
 
-  // Set fixedFormColumns based on -ffixed-line-length=<value> or
-  // set freeFormColumns based on -ffree-line-length=<value>.
-  for (const auto *arg :
-       args.filtered(clang::options::OPT_ffixed_line_length_EQ,
-                     clang::options::OPT_ffree_line_length_EQ)) {
-
+  // Set fixedFormColumns based on -ffixed-line-length=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    bool isFixedLineFlag =
-        arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ);
     std::int64_t columns = -1;
     if (argValue == "none") {
       columns = 0;
@@ -823,17 +869,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       columns = -1;
     }
     if (columns < 0) {
-      diags.Report(clang::diag::err_drv_invalid_columns)
+      diags.Report(clang::diag::err_drv_negative_columns)
           << arg->getOption().getName() << arg->getValue();
-    } else if (columns == 0 && isFixedLineFlag) {
-      columns = 1000000;
-    } else if (columns < 7 && isFixedLineFlag) {
-      // Specific to the fixed form
+    } else if (columns == 0) {
+      opts.fixedFormColumns = 1000000;
+    } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
+    } else {
+      opts.fixedFormColumns = columns;
     }
-
-    (isFixedLineFlag ? opts.fixedFormColumns : opts.freeFormColumns) = columns;
   }
 
   // Set conversion based on -fconvert=<value>
@@ -874,17 +919,46 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -f{no-}out-of-bounds-subscripts
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
+      args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
+                   clang::options::OPT_fno_out_of_bounds_subscripts, true));
+
+  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
+  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
+                       args.hasFlag(clang::options::OPT_fenumeration_type,
+                                    clang::options::OPT_fno_enumeration_type,
+                                    false));
+
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
   }
 
-  // -f{no-}acc-allow-default-none-scalars
+  // -f{no-}openacc-default-none-scalars-strict
   opts.features.Enable(
-      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
-      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
-                   clang::options::OPT_fno_acc_allow_default_none_scalars,
+      Fortran::common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
+      args.hasFlag(clang::options::OPT_fopenacc_default_none_scalars_strict,
+                   clang::options::OPT_fno_openacc_default_none_scalars_strict,
                    false));
+
+  // -f{no-}openacc-multiple-names-in-routine
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OpenACCMultipleNamesInRoutine,
+      args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
+                   clang::options::OPT_fno_openacc_multiple_names_in_routine,
+                   true));
+
+  // -f{no-}prefer-intrinsic-module-use-association
+  if (const auto *arg = args.getLastArg(
+          clang::options::OPT_fprefer_intrinsic_module_use_association,
+          clang::options::OPT_fno_prefer_intrinsic_module_use_association)) {
+    opts.features.Enable(
+        Fortran::common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+        arg->getOption().matches(
+            clang::options::OPT_fprefer_intrinsic_module_use_association));
+  }
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
@@ -933,15 +1007,6 @@ static std::string getIntrinsicDir(const char *argv) {
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
-}
-
-// Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir(const char *argv) {
-  llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
-  llvm::sys::path::remove_filename(includePath);
-  includePath.append("/../include/flang/OpenMP/");
-  return std::string(includePath);
 }
 
 /// Parses all preprocessor input arguments and populates the preprocessor
@@ -1097,8 +1162,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Default to off for `flang -fc1`.
   bool showColors{parseShowColorsArgs(args, false)};
-  diags.getDiagnosticOptions().ShowColors = showColors;
-  res.getDiagnosticOpts().ShowColors = showColors;
+  auto colorsMode =
+      showColors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off;
+  diags.getDiagnosticOptions().setShowColors(colorsMode);
+  res.getDiagnosticOpts().setShowColors(colorsMode);
   res.getFrontendOpts().showColors = showColors;
   return !diags.hasUncompilableErrorOccurred();
 }
@@ -1247,7 +1314,10 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
-    llvm::ArrayRef<unsigned> ompVersions = llvm::omp::getOpenMPVersions();
+    llvm::SmallVector<unsigned> ompVersions;
+    for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
+      ompVersions.push_back(static_cast<unsigned>(v));
+    }
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
 
@@ -1287,6 +1357,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
+  if (args.hasFlag(clang::options::OPT_fopenmp_assume_teams_oversubscription,
+                   clang::options::OPT_fno_openmp_assume_teams_oversubscription,
+                   /*Default=*/false))
+    res.getLangOpts().OpenMPTeamSubscription = true;
+  if (args.hasFlag(
+          clang::options::OPT_fopenmp_assume_threads_oversubscription,
+          clang::options::OPT_fno_openmp_assume_threads_oversubscription,
+          /*Default=*/false))
+    res.getLangOpts().OpenMPThreadSubscription = true;
+
   if (args.hasArg(clang::options::OPT_fopenmp_force_usm)) {
     res.getLangOpts().OpenMPForceUSM = 1;
   }
@@ -1303,23 +1383,11 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             << res.getLangOpts().OMPHostIRFile;
     }
 
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_teams_oversubscription,
-            clang::options::OPT_fno_openmp_assume_teams_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPTeamSubscription = true;
-
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_thread_state))
       res.getLangOpts().OpenMPNoThreadState = 1;
 
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_nested_parallelism))
       res.getLangOpts().OpenMPNoNestedParallelism = 1;
-
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_threads_oversubscription,
-            clang::options::OPT_fno_openmp_assume_threads_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPThreadSubscription = true;
 
     if ((args.hasArg(clang::options::OPT_fopenmp_target_debug) ||
          args.hasArg(clang::options::OPT_fopenmp_target_debug_EQ))) {
@@ -1396,6 +1464,54 @@ static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// Set the IEEE Floating point rounding modes, underflow mode and halting mode.
+///
+/// Initial halting mode:
+/// -ffpe-trap= sets the initial floating-point exception halting mode for the
+/// main program. Only the last -ffpe-trap= on the command line is effective.
+/// The value is a comma-separated set of exception mnemonics: "invalid",
+/// "zero", "overflow", "underflow", and "inexact" correspond to the Fortran
+/// 2023 IEEE_FLAG_TYPE values (F2023 17.2), and "denormal" is a non-standard,
+/// gfortran-compatible extension. "none", as well as an empty list, requests no
+/// halting and resets any earlier request.
+///
+/// TODO:
+/// Rounding modes
+/// Underflow mode
+///
+/// The value and the target-support warnings are validated in the driver (see
+/// addIEEEFPModesOptions() in clang/lib/Driver/ToolChains/Flang.cpp);
+/// here we only translate the already-validated list, so an unrecognized
+/// mnemonic maps to 0 and is ignored rather than re-diagnosed.
+static void setIEEEFPModesArgs(Fortran::common::LangOptions &opts,
+                               llvm::opt::ArgList &args) {
+  const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_ffpe_trap_EQ);
+  if (!a)
+    return;
+
+  using LangOptions = Fortran::common::LangOptions;
+  unsigned traps = 0;
+  llvm::SmallVector<llvm::StringRef> trapList;
+  llvm::StringRef(a->getValue())
+      .split(trapList, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (llvm::StringRef trap : trapList) {
+    if (trap == "none") {
+      // Reset to no halting; a later mnemonic can re-enable.
+      traps = 0;
+      continue;
+    }
+    traps |= llvm::StringSwitch<unsigned>(trap)
+                 .Case("invalid", LangOptions::FPE_Invalid)
+                 .Case("denormal", LangOptions::FPE_Denormal)
+                 .Case("zero", LangOptions::FPE_DivByZero)
+                 .Case("overflow", LangOptions::FPE_Overflow)
+                 .Case("underflow", LangOptions::FPE_Underflow)
+                 .Case("inexact", LangOptions::FPE_Inexact)
+                 .Default(0);
+  }
+  opts.FPExceptionTraps = traps;
+}
+
 /// Parses all floating point related arguments and populates the
 /// CompilerInvocation accordingly.
 /// Returns false if new errors are generated.
@@ -1469,6 +1585,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     if (arg->getOption().matches(clang::options::OPT_fno_fast_real_mod))
       opts.FastRealMod = false;
   }
+
+  // Set the initial IEEE floating point modes
+  setIEEEFPModesArgs(opts, args);
 
   return true;
 }
@@ -1550,6 +1669,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
     else
       opts.PrepareForThinLTO = true;
   }
+
+  // -fsplit-lto-unit option
+  if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
+    opts.EnableSplitLTOUnit = true;
 
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =
@@ -1734,6 +1857,9 @@ bool CompilerInvocation::createFromArgs(
   invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
   invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
 
+  if (args.hasArg(clang::options::OPT_foffload_device))
+    invoc.getLangOpts().OffloadDevice = 1;
+
   success &= parseLangOptionsArgs(invoc, args, diags);
 
   success &= parseLinkerOptionsArgs(invoc, args, diags);
@@ -1801,11 +1927,6 @@ void CompilerInvocation::setDefaultFortranOpts() {
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
 
-  // Add the location of omp_lib.h to the search directories. Currently this is
-  // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(
-      getOpenMPHeadersDir(getArgv0()));
-
   fortranOptions.isFixedForm = false;
 }
 
@@ -1845,8 +1966,9 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
-                                    fortranOptions.predefinitions);
+    Fortran::common::setOpenMPMacro(
+        static_cast<unsigned>(getLangOpts().getOpenMPVersion()),
+        fortranOptions.predefinitions);
   }
 
   if (frontendOptions.features.IsEnabled(
@@ -1882,6 +2004,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
     fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
     fortranOptions.predefinitions.emplace_back("__aarch64", "1");
     break;
+  case llvm::Triple::ArchType::systemz:
+    fortranOptions.predefinitions.emplace_back("__s390x__", "1");
+    fortranOptions.predefinitions.emplace_back("__s390x", "1");
+    break;
   }
 }
 
@@ -1896,7 +2022,6 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
-  fortranOptions.freeFormColumns = frontendOptions.freeFormColumns;
 
   // -E
   fortranOptions.prescanAndReformat =
@@ -1960,7 +2085,14 @@ CompilerInvocation::getSemanticsCtx(
       .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
-      .set_underscoring(getCodeGenOpts().Underscoring);
+      .set_underscoring(getCodeGenOpts().Underscoring)
+      .set_openAccDefaultNoneScalarsStrictDisableOption(
+          clang::getDriverOptTable()
+              .getOptionPrefixedName(
+                  clang::options::OPT_fno_openacc_default_none_scalars_strict)
+              .str())
+      .set_targetTriple(targetMachine.getTargetTriple().str())
+      .set_targetFeatures(targetMachine.getTargetFeatureString().str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
@@ -1983,6 +2115,7 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
                                     Fortran::common::LangOptions::SOB_Defined);
   loweringOpts.setProtectParens(codegenOpts.ProtectParens);
+  loweringOpts.setSplitSumExpressionTree(codegenOpts.SplitSumExpressionTree);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,
@@ -2002,4 +2135,6 @@ void CompilerInvocation::setLoweringOptions() {
       codegenOpts.getComplexRange() ==
           CodeGenOptions::ComplexRangeKind::CX_Basic)
     loweringOpts.setComplexDivisionToRuntime(false);
+
+  loweringOpts.setFPExceptionTraps(langOptions.FPExceptionTraps);
 }

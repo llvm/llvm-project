@@ -37,7 +37,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cstdint>
-#include <map>
 #include <optional>
 using namespace llvm;
 
@@ -104,6 +103,12 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
     if (auto *DV = dyn_cast<DILocalVariable>(MD))
       if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
         return ShouldKeep(S->getSubprogram());
+
+    // DIGlobalVariableExpression representing static local variable may be
+    // encountered in DISubprogram's retainedNodes list. Do not remap it, and
+    // remove it from retainedNodes after mapping.
+    if (isa<DIGlobalVariableExpression>(MD))
+      return true;
 
     // Clone types that are local to subprograms being cloned.
     // Avoid cloning other types.
@@ -283,6 +288,7 @@ void llvm::CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
 
   // Loop over all of the instructions in the new function, fixing up operand
   // references as we go. This uses VMap to do all the hard work.
+  ValueMapper Mapper(VMap, RemapFlag, TypeMapper, Materializer, IdentityMD);
   for (Function::iterator
            BB = cast<BasicBlock>(VMap[&OldFunc.front()])->getIterator(),
            BE = NewFunc.end();
@@ -290,10 +296,8 @@ void llvm::CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
     // Loop over all instructions, fixing each one as we find it, and any
     // attached debug-info records.
     for (Instruction &II : *BB) {
-      RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer,
-                       IdentityMD);
-      RemapDbgRecordRange(II.getModule(), II.getDbgRecordRange(), VMap,
-                          RemapFlag, TypeMapper, Materializer, IdentityMD);
+      Mapper.remapInstruction(II);
+      Mapper.remapDbgRecordRange(II.getModule(), II.getDbgRecordRange());
     }
 }
 
@@ -350,6 +354,15 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   CloneFunctionBodyInto(*NewFunc, *OldFunc, VMap, RemapFlag, Returns,
                         NameSuffix, CodeInfo, TypeMapper, Materializer,
                         &IdentityMD);
+
+  // DIGlobalVariableExpressions representing static locals stay in the scope of
+  // OldSP after function cloning. Remove them from retainedNodes of NewSP.
+  if (DISubprogram *NewSP = NewFunc->getSubprogram())
+    NewSP->cleanupRetainedNodesIf([NewSP](Metadata *N) {
+      auto *GVE = dyn_cast_or_null<DIGlobalVariableExpression>(N);
+      return !GVE ||
+             DISubprogram::getRetainedNodeScope(GVE)->getSubprogram() == NewSP;
+    });
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
   // same module, the compile unit will already be listed (or not). When
@@ -432,6 +445,7 @@ struct PruningFunctionCloner {
   Function *NewFunc;
   const Function *OldFunc;
   ValueToValueMapTy &VMap;
+  ValueMapper &Remapper;
   bool ModuleLevelChanges;
   const char *NameSuffix;
   ClonedCodeInfo &CodeInfo;
@@ -441,9 +455,10 @@ struct PruningFunctionCloner {
 
 public:
   PruningFunctionCloner(Function *newFunc, const Function *oldFunc,
-                        ValueToValueMapTy &valueMap, bool moduleLevelChanges,
-                        const char *nameSuffix, ClonedCodeInfo &codeInfo)
-      : NewFunc(newFunc), OldFunc(oldFunc), VMap(valueMap),
+                        ValueToValueMapTy &valueMap, ValueMapper &remapper,
+                        bool moduleLevelChanges, const char *nameSuffix,
+                        ClonedCodeInfo &codeInfo)
+      : NewFunc(newFunc), OldFunc(oldFunc), VMap(valueMap), Remapper(remapper),
         ModuleLevelChanges(moduleLevelChanges), NameSuffix(nameSuffix),
         CodeInfo(codeInfo) {
     HostFuncIsStrictFP =
@@ -572,8 +587,7 @@ void PruningFunctionCloner::CloneBlock(
     // Eagerly remap operands to the newly cloned instruction, except for PHI
     // nodes for which we defer processing until we update the CFG.
     if (!isa<PHINode>(NewInst)) {
-      RemapInstruction(NewInst, VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges);
+      Remapper.remapInstruction(*NewInst);
 
       // Eagerly constant fold the newly cloned instruction. If successful, add
       // a mapping to the new value. Non-constant operands may be incomplete at
@@ -711,7 +725,10 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       assert(VMap.count(&II) && "No mapping from source argument specified!");
 #endif
 
-  PruningFunctionCloner PFC(NewFunc, OldFunc, VMap, ModuleLevelChanges,
+  ValueMapper Mapper(VMap,
+                     ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
+                     TypeMapper, Materializer);
+  PruningFunctionCloner PFC(NewFunc, OldFunc, VMap, Mapper, ModuleLevelChanges,
                             NameSuffix, CodeInfo);
   const BasicBlock *StartingBB;
   if (StartingInst)
@@ -758,9 +775,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
     // Finally, remap the terminator instructions, as those can't be remapped
     // until all BBs are mapped.
-    RemapInstruction(NewBB->getTerminator(), VMap,
-                     ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                     TypeMapper, Materializer);
+    Mapper.remapInstruction(*NewBB->getTerminator());
   }
 
   // Defer PHI resolution until rest of function is resolved, PHI resolution
@@ -781,9 +796,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       for (int64_t pred = NumPreds - 1; pred >= 0; --pred) {
         Value *V = VMap.lookup(PN->getIncomingBlock(pred));
         if (BasicBlock *MappedBlock = cast_or_null<BasicBlock>(V)) {
-          Value *InVal =
-              MapValue(PN->getIncomingValue(pred), VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges);
+          Value *InVal = Mapper.mapValue(*PN->getIncomingValue(pred));
           assert(InVal && "Unknown input value?");
           PN->setIncomingValue(pred, InVal);
           PN->setIncomingBlock(pred, MappedBlock);
@@ -889,10 +902,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   for (BasicBlock &BB : make_range(Begin, NewFunc->end())) {
     for (Instruction &I : BB) {
-      RemapDbgRecordRange(I.getModule(), I.getDbgRecordRange(), VMap,
-                          ModuleLevelChanges ? RF_None
-                                             : RF_NoModuleLevelChanges,
-                          TypeMapper, Materializer);
+      Mapper.remapDbgRecordRange(I.getModule(), I.getDbgRecordRange());
     }
   }
 
@@ -991,12 +1001,11 @@ void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
                                      ValueToValueMapTy &VMap) {
   // Rewrite the code to refer to itself.
+  ValueMapper Mapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
   for (BasicBlock *BB : Blocks) {
     for (Instruction &Inst : *BB) {
-      RemapDbgRecordRange(Inst.getModule(), Inst.getDbgRecordRange(), VMap,
-                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      RemapInstruction(&Inst, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      Mapper.remapDbgRecordRange(Inst.getModule(), Inst.getDbgRecordRange());
+      Mapper.remapInstruction(Inst);
     }
   }
 }
@@ -1006,6 +1015,8 @@ void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
+/// The client needs to further update the CFG and DominatorTree after calling
+/// this function, to ensure the IR remains valid.
 Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                    Loop *OrigLoop, ValueToValueMapTy &VMap,
                                    const Twine &NameSuffix, LoopInfo *LI,

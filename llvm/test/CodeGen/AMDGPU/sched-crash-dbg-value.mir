@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -passes=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -passes=machine-scheduler -o - %s | FileCheck %s
 
 --- |
   %struct.widget.0 = type { float, i32, i32 }
@@ -153,7 +153,7 @@
 
   attributes #0 = { argmemonly nounwind }
   attributes #1 = { nounwind readnone speculatable }
-  attributes #2 = { convergent nounwind "amdgpu-dispatch-ptr" "amdgpu-flat-scratch" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" "target-cpu"="gfx900" }
+  attributes #2 = { convergent nounwind "amdgpu-dispatch-ptr" "amdgpu-flat-scratch" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
   attributes #3 = { nounwind }
 
   !llvm.dbg.cu = !{!0}

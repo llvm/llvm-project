@@ -101,8 +101,7 @@ define i32 @load_i32_acquire_device(ptr addrspace(1) %ptr) {
 define float @load_float_acquire(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: OpFunction %[[#]]
 ; CHECK:       %[[#ptr:]] = OpFunctionParameter %[[#]]
-; CHECK:       %[[#load:]] = OpAtomicLoad %[[#Int32]] %[[#ptr]] %[[#Const0]] %[[#Const514]]
-; CHECK:       %[[#val:]] = OpBitcast %[[#Float]] %[[#load]]
+; CHECK:       %[[#val:]] = OpAtomicLoad %[[#Float]] %[[#ptr]] %[[#Const0]] %[[#Const514]]
 ; CHECK:       OpReturnValue %[[#val]]
   %val = load atomic float, ptr addrspace(1) %ptr acquire, align 8
   ret float %val

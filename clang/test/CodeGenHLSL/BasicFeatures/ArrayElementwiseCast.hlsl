@@ -10,7 +10,7 @@
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[Tmp]], i32 0, i32 1
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G1]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L]] to float
 // CHECK-NEXT: store float [[C]], ptr [[B]], align 4
 export void call0() {
   int A[2] = {0,1};
@@ -47,7 +47,7 @@ export void call1() {
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [1 x float], ptr [[B]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [1 x i32], ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G2]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G1]], align 4
 export void call2() {
   int A[1] = {0};
@@ -157,8 +157,8 @@ struct Derived : BFields {
 // flatten from a derived struct with bitfields
 // CHECK-LABEL: call8
 // CHECK: [[A:%.*]] = alloca [4 x i32], align 4
-// CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 %D, i32 19, i1 false)
+// CHECK: [[Tmp:%.*]] = alloca %struct.Derived, align 1
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 %D, i32 19, i1 false)
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 0, i32 0
 // CHECK-NEXT: [[Gep1:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 0, i32 1
 // CHECK-NEXT: [[Gep2:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i32 0, i32 2

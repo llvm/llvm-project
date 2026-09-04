@@ -1,4 +1,4 @@
-; RUN: not opt -S -mtriple=amdgcn-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
+; RUN: not opt -S -mtriple=amdgpu-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
 ; RUN: %s 2>&1 | FileCheck %s
 
 ; CHECK: error: {{.*}} in function foo void (): Accelerator does not support the __builtin_ia32_pause function

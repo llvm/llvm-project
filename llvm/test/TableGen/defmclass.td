@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s
-// XFAIL: vg_leak
 
 class XD { bits<4> Prefix = 11; }
 // CHECK: Prefix = { 1, 1, 0, 0 };

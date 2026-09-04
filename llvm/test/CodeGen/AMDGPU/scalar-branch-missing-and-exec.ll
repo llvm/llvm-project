@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx700 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx802 < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck %s
 
 ; This checks for a bug where uniform control flow can result in multiple
 ; v_cmp results being combined together with s_and_b64, s_or_b64 and s_xor_b64,

@@ -563,7 +563,7 @@ public:
   }
 
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const clang::TypedefNameDecl *, 4> &Decls) override {
+      llvm::SmallPtrSetImpl<const clang::TypedefNameDecl *> &Decls) override {
     for (auto &Source : Sources)
       Source->ReadUnusedLocalTypedefNameCandidates(Decls);
   }

@@ -270,4 +270,53 @@ public:
   LLVM_DETAIL_INSTANTIATE_REGISTRY_1(, REGISTRY_CLASS)
 #endif
 
+/// Variants of the registration macros that take an explicit export annotation
+/// (EXPORT_ABI) in place of the hard-coded `LLVM_ABI_EXPORT`. Use these when a
+/// registry is owned by a component that is NOT part of the LLVM dylib. For
+/// example, a clang library that is statically linked (`CLANG_LINK_CLANG_DYLIB`
+/// OFF). With `LLVM_ABI_EXPORT` the `getRegistryLinkListInstance` accessor is
+/// unconditionally `dllexport`ed; when such a static component is embedded in a
+/// DLL that should only export its own API surface (e.g. libclang.dll), the
+/// accessor leaks into that DLL's export table and then collides on the link
+/// line of any tool that also links the static component directly.
+///
+/// EXPORT_ABI must export-or-be-empty, NEVER dllimport, for the same reason
+/// `LLVM_ABI_EXPORT` is used here rather than `LLVM_ABI`: the definition may be
+/// in the same object, a static library, or an import library.
+/// `CLANG_ABI_EXPORT` satisfies this (it is empty under `CLANG_BUILD_STATIC`).
+#define LLVM_DECLARE_REGISTRY_EX(EXPORT_ABI, REGISTRY_CLASS)                   \
+  namespace llvm::detail {                                                     \
+  template <>                                                                  \
+  struct RegistryLinkListDeclarationMarker<REGISTRY_CLASS> : std::true_type {  \
+  };                                                                           \
+  template <>                                                                  \
+  EXPORT_ABI RegistryLinkListStorage<REGISTRY_CLASS> &                         \
+  getRegistryLinkListInstance<REGISTRY_CLASS>();                               \
+  }
+
+#define LLVM_DEFINE_REGISTRY_EX(EXPORT_ABI, REGISTRY_CLASS)                    \
+  namespace llvm::detail {                                                     \
+  static_assert(RegistryLinkListDeclarationMarker<REGISTRY_CLASS>::value,      \
+                "Missing matching registry declaration of " #REGISTRY_CLASS    \
+                ". Place `LLVM_DECLARE_REGISTRY(" #REGISTRY_CLASS              \
+                ")` in a header.");                                            \
+  template <>                                                                  \
+  EXPORT_ABI RegistryLinkListStorage<REGISTRY_CLASS> &                         \
+  getRegistryLinkListInstance<REGISTRY_CLASS>() {                              \
+    static RegistryLinkListStorage<REGISTRY_CLASS> Instance;                   \
+    return Instance;                                                           \
+  }                                                                            \
+  }
+
+#define LLVM_INSTANTIATE_REGISTRY_EX(EXPORT_ABI, REGISTRY_CLASS)               \
+  LLVM_DECLARE_REGISTRY_EX(EXPORT_ABI, REGISTRY_CLASS)                         \
+  LLVM_DEFINE_REGISTRY_EX(EXPORT_ABI, REGISTRY_CLASS)                          \
+  namespace llvm {                                                             \
+  template class EXPORT_ABI Registry<REGISTRY_CLASS::type>;                    \
+  static_assert(!REGISTRY_CLASS::HasCtorParamTypes,                            \
+                "LLVM_INSTANTIATE_REGISTRY can't be used with extra "          \
+                "constructor parameter types. Use "                            \
+                "LLVM_DECLARE/DEFINE_REGISTRY istead.");                       \
+  }
+
 #endif // LLVM_SUPPORT_REGISTRY_H

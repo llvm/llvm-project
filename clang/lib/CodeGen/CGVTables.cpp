@@ -20,7 +20,9 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cstdio>
@@ -381,10 +383,12 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
 
 #ifndef NDEBUG
   const CGFunctionInfo &CallFnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs);
+      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs, MD);
   assert(CallFnInfo.getRegParm() == CurFnInfo->getRegParm() &&
          CallFnInfo.isNoReturn() == CurFnInfo->isNoReturn() &&
-         CallFnInfo.getCallingConvention() == CurFnInfo->getCallingConvention());
+         CallFnInfo.getCallingConvention() ==
+             CurFnInfo->getCallingConvention() &&
+         CallFnInfo.getX86ABIAVXLevel() == CurFnInfo->getX86ABIAVXLevel());
   assert(isa<CXXDestructorDecl>(MD) || // ignore dtor return types
          similar(CallFnInfo.getReturnInfo(), CallFnInfo.getReturnType(),
                  CurFnInfo->getReturnInfo(), CurFnInfo->getReturnType()));
@@ -985,8 +989,13 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   llvm::GlobalVariable *VTable =
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
 
-  // V-tables are always unnamed_addr.
-  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  // dynamic_cast assumes the vtable address is unique; see
+  // https://github.com/llvm/llvm-project/pull/200108. The address is
+  // insignificant either when no RTTI is emitted or for a weak vtable on a
+  // target that may duplicate vtables. In those cases the vtable can be marked
+  // unnamed_addr.
+  if (!CGM.shouldEmitRTTI() || CGM.mayVTableBeDuplicated(VTable->getLinkage()))
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
       CGM.getContext().getCanonicalTagType(Base.getBase()));
@@ -1130,9 +1139,13 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     switch (Kind) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
+      // Under OpenMP offloading we force-emit vtable definitions for classes
+      // mapped into target regions even when the key function is defined in
+      // another TU, so the linkage may legitimately be queried here.
       assert(
           (IsInNamedModule || def || CodeGenOpts.OptimizationLevel > 0 ||
-           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
+           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo ||
+           getLangOpts().OpenMP) &&
           "Shouldn't query vtable linkage without the class in module units, "
           "key function, optimizations, or debug info");
       if (IsExternalDefinition && CodeGenOpts.OptimizationLevel > 0)
@@ -1200,6 +1213,13 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("Invalid TemplateSpecializationKind!");
+}
+
+bool CodeGenModule::mayVTableBeDuplicated(
+    llvm::GlobalValue::LinkageTypes Linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         llvm::GlobalValue::isWeakForLinker(Linkage);
 }
 
 /// This is a callback from Sema to tell us that a particular vtable is

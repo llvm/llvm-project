@@ -14,9 +14,9 @@
 namespace llvm {
 
 struct InferAddressSpacesPass : OptionalPassInfoMixin<InferAddressSpacesPass> {
-  InferAddressSpacesPass();
-  InferAddressSpacesPass(unsigned AddressSpace);
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI InferAddressSpacesPass();
+  LLVM_ABI InferAddressSpacesPass(unsigned AddressSpace);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   unsigned FlatAddrSpace = 0;

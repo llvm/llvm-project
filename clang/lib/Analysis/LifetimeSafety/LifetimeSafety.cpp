@@ -24,7 +24,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -35,7 +34,8 @@ namespace internal {
 
 #ifndef NDEBUG
 static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
-                              FactManager &FactMgr) {
+                              FactManager &FactMgr,
+                              const LoanPropagationAnalysis *LPA) {
   std::string Name;
   if (const Decl *D = AC.getDecl()) {
     if (const auto *ND = dyn_cast<NamedDecl>(D))
@@ -44,7 +44,7 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
   DEBUG_WITH_TYPE(Name.c_str(), AC.getDecl()->dumpColor());
   DEBUG_WITH_TYPE(Name.c_str(), Cfg.dump(AC.getASTContext().getLangOpts(),
                                          /*ShowColors=*/true));
-  DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC));
+  DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC, LPA));
 }
 #endif
 
@@ -96,17 +96,18 @@ void LifetimeSafetyAnalysis::run() {
       Factory.MovedLoansMapFactory);
 
   runLifetimeChecker(*LoanPropagation, *MovedLoans, *LiveOrigins, *FactMgr, AC,
-                     SemaHelper);
+                     SemaHelper, LSOpts);
 
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
 
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
+  DEBUG_WITH_TYPE("LifetimeFacts",
+                  FactMgr->dump(Cfg, AC, LoanPropagation.get()));
 
   // Debug print facts for a specific function using
   // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
   DEBUG_WITH_TYPE("EnableFilterByFunctionName",
-                  DebugOnlyFunction(AC, Cfg, *FactMgr));
+                  DebugOnlyFunction(AC, Cfg, *FactMgr, LoanPropagation.get()));
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr->getTestPoints()));
 }
@@ -122,11 +123,8 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetySemaHelper *SemaHelper,
+                               const LifetimeSafetyOpts &LSOpts,
                                LifetimeSafetyStats &Stats, bool CollectStats) {
-  LifetimeSafetyOpts LSOpts;
-  LSOpts.MaxCFGBlocks =
-      AC.getASTContext().getLangOpts().LifetimeSafetyMaxCFGBlocks;
-
   internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper, LSOpts);
   Analysis.run();
   if (CollectStats)

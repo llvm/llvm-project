@@ -143,7 +143,13 @@ class CollectUnexpandedParameterPacksVisitor
     }
 
     /// Record occurrences of template template parameter packs.
-    bool TraverseTemplateName(TemplateName Template) override {
+    bool TraverseTemplateName(TemplateName Template,
+                              bool TraverseQualifier = true) override {
+
+      if (PackIndexingTemplateStorage *PI =
+              Template.getAsPackIndexingTemplate())
+        return DynamicRecursiveASTVisitor::TraverseStmt(PI->getIndexExpr());
+
       if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
               Template.getAsTemplateDecl())) {
         if (TTP->isParameterPack())
@@ -155,7 +161,8 @@ class CollectUnexpandedParameterPacksVisitor
           (bool)Template.getAsSubstTemplateTemplateParmPack();
 #endif
 
-      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
+      return DynamicRecursiveASTVisitor::TraverseTemplateName(
+          Template, TraverseQualifier);
     }
 
     bool
@@ -681,6 +688,13 @@ void Sema::collectUnexpandedParameterPacks(QualType T,
   CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseType(T);
 }
 
+void Sema::collectUnexpandedParameterPacks(
+    TemplateName Template,
+    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
+  CollectUnexpandedParameterPacksVisitor(Unexpanded)
+      .TraverseTemplateName(Template);
+}
+
 void Sema::collectUnexpandedParameterPacks(TypeLoc TL,
                    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
   CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseTypeLoc(TL);
@@ -912,10 +926,14 @@ bool Sema::CheckParameterPacksForExpansion(
     unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
+      //
+      // The instantiation may not exist; this can happen when instantiating an
+      // expansion statement that contains a pack (e.g.
+      // `template for (auto x : {{ts...}})`).
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
-          CurrentInstantiationScope->findInstantiationOf(
+          CurrentInstantiationScope->getInstantiationOfIfExists(
               cast<NamedDecl *>(ParmPack.first));
-      if (isa<DeclArgumentPack *>(*Instantiation)) {
+      if (Instantiation && isa<DeclArgumentPack *>(*Instantiation)) {
         // We could expand this function parameter pack.
         NewPackSize = cast<DeclArgumentPack *>(*Instantiation)->size();
       } else {
@@ -1141,7 +1159,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_typeof_unqualType:
   case TST_typeofType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   case TST_atomic: {
     QualType T = DS.getRepAsType().get();
     if (!T.isNull() && T->containsUnexpandedParameterPack())
@@ -1342,9 +1360,7 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
   ExprResult Res =
       BuildPackIndexingExpr(PackExpression, EllipsisLoc, IndexExpr, RSquareLoc);
   if (!Res.isInvalid())
-    Diag(Res.get()->getBeginLoc(), getLangOpts().CPlusPlus26
-                                       ? diag::warn_cxx23_pack_indexing
-                                       : diag::ext_pack_indexing);
+    DiagCompat(Res.get()->getBeginLoc(), diag_compat::pack_indexing);
   return Res;
 }
 
@@ -1355,20 +1371,20 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
                                        ArrayRef<Expr *> ExpandedExprs,
                                        bool FullySubstituted) {
 
-  std::optional<int64_t> Index;
+  std::optional<uint64_t> Index;
   if (!IndexExpr->isInstantiationDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
 
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
-    if (!Res.isUsable())
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
       return ExprError();
-    Index = Value.getExtValue();
+    Index = Value.getZExtValue();
     IndexExpr = Res.get();
   }
 
   if (Index && FullySubstituted) {
-    if (*Index < 0 || *Index >= int64_t(ExpandedExprs.size())) {
+    if (*Index >= ExpandedExprs.size()) {
       Diag(PackExpression->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << *Index << PackExpression << ExpandedExprs.size();
       return ExprError();
@@ -1378,6 +1394,61 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
   return PackIndexingExpr::Create(getASTContext(), EllipsisLoc, RSquareLoc,
                                   PackExpression, IndexExpr, Index,
                                   ExpandedExprs, FullySubstituted);
+}
+
+TemplateName Sema::ActOnPackIndexingTemplateName(TemplateName Pattern,
+                                                 SourceLocation NameLoc,
+                                                 Expr *IndexExpr) {
+  assert(!Pattern.isNull() && IndexExpr);
+
+  // C++29 [temp.names]p3:
+  //   The simple-template-name P in a pack-index-template-name shall denote a
+  //   pack.
+  bool DenotesPack = Pattern.containsUnexpandedParameterPack();
+  if (!DenotesPack)
+    Diag(NameLoc, diag::err_expected_name_of_pack) << Pattern;
+
+  TemplateName Name = BuildPackIndexingTemplateName(Pattern, IndexExpr);
+  if (!Name.isNull() && DenotesPack)
+    DiagCompat(NameLoc, diag_compat::pack_indexing_template);
+  return Name;
+}
+
+TemplateName
+Sema::BuildPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                                    bool FullySubstituted,
+                                    ArrayRef<TemplateName> Expansions) {
+  if (!IndexExpr->isInstantiationDependent()) {
+    llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
+    ExprResult Res = CheckConvertedConstantExpression(
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
+      return TemplateName();
+
+    IndexExpr = Res.get();
+    uint64_t V = Value.getZExtValue();
+    if (FullySubstituted && V >= Expansions.size()) {
+      Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
+          << V << Pattern << Expansions.size();
+      return TemplateName();
+    }
+  }
+
+  return Context.getPackIndexingTemplateName(Pattern, IndexExpr,
+                                             FullySubstituted, Expansions);
+}
+
+TypeResult Sema::ActOnPackIndexingDeducedTemplateSpecializationType(
+    TemplateName Name, SourceLocation NameLoc) {
+
+  QualType T = Context.getDeducedTemplateSpecializationType(
+      DeducedKind::Undeduced, QualType(), ElaboratedTypeKeyword::None, Name);
+  TypeLocBuilder TLB;
+  auto TL = TLB.push<DeducedTemplateSpecializationTypeLoc>(T);
+  TL.setElaboratedKeywordLoc(SourceLocation());
+  TL.setQualifierLoc(NestedNameSpecifierLoc());
+  TL.setNameLoc(NameLoc);
+  return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
 }
 
 TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(

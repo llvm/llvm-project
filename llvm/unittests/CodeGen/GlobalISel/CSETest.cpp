@@ -407,6 +407,52 @@ TEST_F(AArch64GISelMITest, TestConstantFoldCTT) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, TestBitcastConstantNoFoldToVector) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  EXPECT_TRUE(LLT::getUseExtended());
+
+  LLT I32 = LLT::integer(32);
+  LLT I16 = LLT::integer(16);
+  LLT V2I16 = LLT::fixed_vector(2, I16);
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigFull>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+  CSEB.setInsertPt(B.getMBB(), B.getInsertPt());
+
+  auto Cst = CSEB.buildConstant(I32, 0x00020001);
+  auto VecCast = CSEB.buildBitcast(V2I16, Cst);
+  EXPECT_EQ(TargetOpcode::G_BITCAST, VecCast->getOpcode());
+}
+
+TEST_F(AArch64GISelMITest, TestBitcastFConstantFoldToInt) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  EXPECT_TRUE(LLT::getUseExtended());
+
+  LLT I16 = LLT::integer(16);
+  LLT BF16 = LLT::bfloat16();
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigFull>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+  CSEB.setInsertPt(B.getMBB(), B.getInsertPt());
+
+  auto Cst = CSEB.buildFConstant(BF16, 0.5);
+  auto InstCast = CSEB.buildBitcast(I16, Cst);
+  EXPECT_EQ(TargetOpcode::G_CONSTANT, InstCast->getOpcode());
+  EXPECT_EQ(APInt(16, 0x3F00), InstCast->getOperand(1).getCImm()->getValue());
+}
+
 TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   setUp();
   if (!TM)

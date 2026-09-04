@@ -20,7 +20,8 @@ namespace llvm {
 
 class MachineFunction;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class Triple;
 
 class AArch64RegisterInfo final : public AArch64GenRegisterInfo {
@@ -59,7 +60,7 @@ public:
     // cold path instead of using a callee-saved register.
     return 5;
   }
-  unsigned getCSRFirstUseCost() const override {
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override {
     // The cost of 2 means push and pop for each CSR.
     return 2;
   }

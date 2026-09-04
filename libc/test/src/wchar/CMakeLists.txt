@@ -487,8 +487,7 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcstof
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -500,8 +499,7 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcstod
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -517,7 +515,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   wcsxfrm_test
   SUITE
     libc_wchar_unittests
@@ -718,5 +716,19 @@ add_libc_test(
     libc.src.stdio.stdout
     libc.src.wchar.fwide
     libc.src.wchar.putwchar
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  swprintf_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    swprintf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.swprintf
     libc.test.UnitTest.ErrnoCheckingTest
 )

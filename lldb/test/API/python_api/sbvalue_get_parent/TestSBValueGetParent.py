@@ -19,6 +19,10 @@ class TestCase(TestBase):
         self._do_test(frame, "parent", "child")
         self._do_test(frame, "vec", 0)
 
+        # Test Python synthetic formatters using CreateChildAtOffset.
+        self.runCmd("command script import MyContainer_synthetic.py")
+        self._do_test(frame, "container", 0)
+
     def _do_test(
         self, frame: lldb.SBFrame, parent_name: str, child_key: Union[str, int]
     ):
@@ -32,7 +36,7 @@ class TestCase(TestBase):
             child = parent.GetChildMemberWithName(child_key)
         self.assertTrue(child.IsValid())
 
-        # GetParent of child should be the parent struct.
+        # GetParent of child should be the original parent.
         child_parent = child.GetParent()
         self.assertTrue(child_parent.IsValid())
         self.assertEqual(child_parent.name, parent_name)

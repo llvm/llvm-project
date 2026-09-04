@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu-- -verify -fsyntax-only %s
 
 void func() {
   __private char max_size_private_arr[4294967295];

@@ -76,11 +76,6 @@ class TypedPointerType;
 class ValueHandleBase;
 
 template <> struct DenseMapInfo<APFloat> {
-  static inline APFloat getEmptyKey() { return APFloat(APFloat::Bogus(), 1); }
-  static inline APFloat getTombstoneKey() {
-    return APFloat(APFloat::Bogus(), 2);
-  }
-
   static unsigned getHashValue(const APFloat &Key) {
     return static_cast<unsigned>(hash_value(Key));
   }
@@ -110,14 +105,6 @@ struct AnonStructTypeKeyInfo {
     bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
   };
 
-  static inline StructType *getEmptyKey() {
-    return DenseMapInfo<StructType *>::getEmptyKey();
-  }
-
-  static inline StructType *getTombstoneKey() {
-    return DenseMapInfo<StructType *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) {
     return hash_combine(hash_combine_range(Key.ETypes), Key.isPacked);
   }
@@ -127,8 +114,6 @@ struct AnonStructTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const StructType *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-      return false;
     return LHS == KeyTy(RHS);
   }
 
@@ -161,14 +146,6 @@ struct FunctionTypeKeyInfo {
     bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
   };
 
-  static inline FunctionType *getEmptyKey() {
-    return DenseMapInfo<FunctionType *>::getEmptyKey();
-  }
-
-  static inline FunctionType *getTombstoneKey() {
-    return DenseMapInfo<FunctionType *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) {
     return hash_combine(Key.ReturnType, hash_combine_range(Key.Params),
                         Key.isVarArg);
@@ -179,8 +156,6 @@ struct FunctionTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const FunctionType *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-      return false;
     return LHS == KeyTy(RHS);
   }
 
@@ -208,14 +183,6 @@ struct TargetExtTypeKeyInfo {
     bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
   };
 
-  static inline TargetExtType *getEmptyKey() {
-    return DenseMapInfo<TargetExtType *>::getEmptyKey();
-  }
-
-  static inline TargetExtType *getTombstoneKey() {
-    return DenseMapInfo<TargetExtType *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) {
     return hash_combine(Key.Name, hash_combine_range(Key.TypeParams),
                         hash_combine_range(Key.IntParams));
@@ -226,8 +193,6 @@ struct TargetExtTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const TargetExtType *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-      return false;
     return LHS == KeyTy(RHS);
   }
 
@@ -1431,6 +1396,32 @@ template <> struct MDNodeKeyImpl<DIObjCProperty> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIProperty> {
+  MDString *Name;
+  Metadata *File;
+  unsigned Line;
+  Metadata *Type;
+  Metadata *BackingStorage;
+
+  MDNodeKeyImpl(MDString *Name, Metadata *File, unsigned Line, Metadata *Type,
+                Metadata *BackingStorage)
+      : Name(Name), File(File), Line(Line), Type(Type),
+        BackingStorage(BackingStorage) {}
+  MDNodeKeyImpl(const DIProperty *N)
+      : Name(N->getRawName()), File(N->getRawFile()), Line(N->getLine()),
+        Type(N->getRawType()), BackingStorage(N->getRawBackingStorage()) {}
+
+  bool isKeyOf(const DIProperty *RHS) const {
+    return Name == RHS->getRawName() && File == RHS->getRawFile() &&
+           Line == RHS->getLine() && Type == RHS->getRawType() &&
+           BackingStorage == RHS->getRawBackingStorage();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Name, File, Line, Type, BackingStorage);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIImportedEntity> {
   unsigned Tag;
   Metadata *Scope;
@@ -1523,14 +1514,6 @@ struct DIArgListKeyInfo {
 struct DIArgListInfo {
   using KeyTy = DIArgListKeyInfo;
 
-  static inline DIArgList *getEmptyKey() {
-    return DenseMapInfo<DIArgList *>::getEmptyKey();
-  }
-
-  static inline DIArgList *getTombstoneKey() {
-    return DenseMapInfo<DIArgList *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) { return Key.getHashValue(); }
 
   static unsigned getHashValue(const DIArgList *N) {
@@ -1538,8 +1521,6 @@ struct DIArgListInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const DIArgList *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-      return false;
     return LHS.isKeyOf(RHS);
   }
 
@@ -1553,14 +1534,6 @@ template <class NodeTy> struct MDNodeInfo {
   using KeyTy = MDNodeKeyImpl<NodeTy>;
   using SubsetEqualTy = MDNodeSubsetEqualImpl<NodeTy>;
 
-  static inline NodeTy *getEmptyKey() {
-    return DenseMapInfo<NodeTy *>::getEmptyKey();
-  }
-
-  static inline NodeTy *getTombstoneKey() {
-    return DenseMapInfo<NodeTy *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) { return Key.getHashValue(); }
 
   static unsigned getHashValue(const NodeTy *N) {
@@ -1568,16 +1541,12 @@ template <class NodeTy> struct MDNodeInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const NodeTy *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-      return false;
     return SubsetEqualTy::isSubsetEqual(LHS, RHS) || LHS.isKeyOf(RHS);
   }
 
   static bool isEqual(const NodeTy *LHS, const NodeTy *RHS) {
     if (LHS == RHS)
       return true;
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-      return false;
     return SubsetEqualTy::isSubsetEqual(LHS, RHS);
   }
 };
@@ -1668,6 +1637,20 @@ public:
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
 
+  uint32_t NextMetadataPrintID = 0;
+
+  uint32_t allocateMetadataPrintID() { return NextMetadataPrintID++; }
+
+  void getAllMetadataNodes(SmallVectorImpl<MDNode *> &Nodes) const;
+
+  uint32_t getMetadataPrintID(const MDNode *N) const {
+    return N->getHeader().MetadataPrintID;
+  }
+
+  void setMetadataPrintID(MDNode *N, uint32_t ID) {
+    N->getHeader().MetadataPrintID = ID;
+  }
+
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
 #include "llvm/IR/Metadata.def"
@@ -1680,6 +1663,10 @@ public:
   // one object can destroy them.  Keep track of them here so we can delete
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
+
+  // Temporary nodes are caller-owned, but track live ones for persistent
+  // metadata print IDs.
+  DenseSet<MDNode *> TemporaryMDNodes;
 
   // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
   // ConstantRange. Since this is a dynamically sized class, it's not

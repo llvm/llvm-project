@@ -61,9 +61,13 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
+TypeSize AllocaInst::getAllocationBaseSize(const DataLayout &DL) const {
+  return DL.getTypeAllocSize(getAllocatedType());
+}
+
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  TypeSize Size = getAllocationBaseSize(DL);
   // Zero-sized types can return early since 0 * N = 0 for any array size N.
   if (Size.isZero())
     return Size;
@@ -71,9 +75,12 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
       return std::nullopt;
+    std::optional<uint64_t> NumElements = C->getValue().tryZExtValue();
+    if (!NumElements)
+      return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     auto CheckedProd =
-        checkedMulUnsigned(Size.getKnownMinValue(), C->getZExtValue());
+        checkedMulUnsigned(Size.getKnownMinValue(), *NumElements);
     if (!CheckedProd)
       return std::nullopt;
     return TypeSize::getFixed(*CheckedProd);
@@ -129,8 +136,8 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
 PHINode::PHINode(const PHINode &PN)
     : Instruction(PN.getType(), Instruction::PHI, AllocMarker),
       ReservedSpace(PN.getNumOperands()) {
-  NumUserOperands = PN.getNumOperands();
   allocHungoffUses(PN.getNumOperands());
+  setNumHungOffUseOperands(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
   FMF = PN.FMF;
@@ -249,8 +256,8 @@ LandingPadInst::LandingPadInst(Type *RetTy, unsigned NumReservedValues,
 LandingPadInst::LandingPadInst(const LandingPadInst &LP)
     : Instruction(LP.getType(), Instruction::LandingPad, AllocMarker),
       ReservedSpace(LP.getNumOperands()) {
-  NumUserOperands = LP.getNumOperands();
   allocHungoffUses(LP.getNumOperands());
+  setNumHungOffUseOperands(LP.getNumOperands());
   Use *OL = getOperandList();
   const Use *InOL = LP.getOperandList();
   for (unsigned I = 0, E = ReservedSpace; I != E; ++I)
@@ -267,8 +274,8 @@ LandingPadInst *LandingPadInst::Create(Type *RetTy, unsigned NumReservedClauses,
 
 void LandingPadInst::init(unsigned NumReservedValues, const Twine &NameStr) {
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(0);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(0);
   setName(NameStr);
   setCleanup(false);
 }
@@ -607,6 +614,22 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   }
 
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
+}
+
+CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
+                                          InsertPosition InsertPt) {
+  auto OpBundleCount = CB->getNumOperandBundles();
+  assert(Offset < OpBundleCount &&
+         "Trying to remove non-existant operand bundle");
+  SmallVector<OperandBundleDef> Bundles;
+  Bundles.reserve(OpBundleCount - 1);
+  size_t I = 0;
+  for (; I != Offset; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  ++I;
+  for (; I != OpBundleCount; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  return Create(CB, Bundles, InsertPt);
 }
 
 bool CallBase::hasReadingOperandBundles() const {
@@ -1109,8 +1132,8 @@ void CatchSwitchInst::init(Value *ParentPad, BasicBlock *UnwindDest,
   assert(ParentPad && NumReservedValues);
 
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
 
   Op<0>() = ParentPad;
   if (UnwindDest) {
@@ -1189,18 +1212,15 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-
 UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
-                 AllocMarker, InsertBefore) {
+    : Instruction(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
+                  AllocMarker, InsertBefore) {
   Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)
-    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
-                 AllocMarker) {
+    : Instruction(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
+                  AllocMarker) {
   Op<-1>() = BI.Op<-1>();
   SubclassOptionalData = BI.SubclassOptionalData;
 }
@@ -1216,8 +1236,8 @@ void CondBrInst::AssertOK() {
 
 CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                        InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
-                 AllocMarker, InsertBefore) {
+    : Instruction(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
+                  AllocMarker, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
   Op<-2>() = IfTrue;
@@ -1228,8 +1248,8 @@ CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
 }
 
 CondBrInst::CondBrInst(const CondBrInst &BI)
-    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
-                 AllocMarker) {
+    : Instruction(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
+                  AllocMarker) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = BI.Op<-3>();
   Op<-2>() = BI.Op<-2>();
@@ -1244,9 +1264,6 @@ void CondBrInst::swapSuccessors() {
   // expectations.
   swapProfMetadata();
 }
-
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation
@@ -1346,6 +1363,14 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertBef) {}
 
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
+                   const LoadStoreInstProperties &Props,
+                   InsertPosition InsertBef)
+    : LoadInst(Ty, Ptr, Name, Props.IsVolatile, Props.Alignment, Props.Ordering,
+               Props.SSID, InsertBef) {
+  setElementwise(Props.IsElementwise);
+}
+
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    InsertPosition InsertBef)
@@ -1380,6 +1405,14 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      InsertPosition InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertBefore) {}
+
+StoreInst::StoreInst(Value *Val, Value *Ptr,
+                     const LoadStoreInstProperties &Props,
+                     InsertPosition InsertBefore)
+    : StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment, Props.Ordering,
+                Props.SSID, InsertBefore) {
+  setElementwise(Props.IsElementwise);
+}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -1723,7 +1756,7 @@ bool InsertElementInst::isValidOperands(const Value *Vec, const Value *Elt,
     return false;// Second operand of insertelement must be vector element type.
 
   if (!Index->getType()->isIntegerTy())
-    return false;  // Third operand of insertelement must be i32.
+    return false; // Third operand of insertelement must be an integer.
   return true;
 }
 
@@ -3017,6 +3050,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // addrspacecast can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3028,6 +3065,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       return firstOp;
     case 14:
       // bitcast, addrspacecast -> addrspacecast
+      // addrspacecast can only fold through a bitcast if the source was already
+      // a pointer. A byte-to-pointer bitcast must stay as a separate bitcast.
+      if (!SrcTy->isPtrOrPtrVectorTy())
+        return 0;
       return Instruction::AddrSpaceCast;
     case 15:
       // FIXME: this state can be merged with (1), but the following assert
@@ -4080,8 +4121,8 @@ CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {
 void SwitchInst::init(Value *Value, BasicBlock *Default, unsigned NumReserved) {
   assert(Value && Default && NumReserved);
   ReservedSpace = NumReserved;
-  setNumHungOffUseOperands(2);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(2);
 
   Op<0>() = Value;
   Op<1>() = Default;
@@ -4259,11 +4300,11 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
-    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
-      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
-          ->getValue()
-          .getZExtValue();
+  if (MDNode *ProfileData = getValidBranchWeightMDNode(SI)) {
+    SmallVector<uint32_t> Weights;
+    extractFromBranchWeightMD32(ProfileData, Weights);
+    return Weights[idx];
+  }
 
   return std::nullopt;
 }
@@ -4275,9 +4316,9 @@ SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
 void IndirectBrInst::init(Value *Address, unsigned NumDests) {
   assert(Address && Address->getType()->isPointerTy() &&
          "Address of indirectbr must be a pointer");
-  ReservedSpace = 1+NumDests;
-  setNumHungOffUseOperands(1);
+  ReservedSpace = 1 + NumDests;
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(1);
 
   Op<0>() = Address;
 }
@@ -4304,8 +4345,8 @@ IndirectBrInst::IndirectBrInst(Value *Address, unsigned NumCases,
 IndirectBrInst::IndirectBrInst(const IndirectBrInst &IBI)
     : Instruction(Type::getVoidTy(IBI.getContext()), Instruction::IndirectBr,
                   AllocMarker) {
-  NumUserOperands = IBI.NumUserOperands;
   allocHungoffUses(IBI.getNumOperands());
+  setNumHungOffUseOperands(IBI.NumUserOperands);
   Use *OL = getOperandList();
   const Use *InOL = IBI.getOperandList();
   for (unsigned i = 0, E = IBI.getNumOperands(); i != E; ++i)
@@ -4414,13 +4455,13 @@ AllocaInst *AllocaInst::cloneImpl() const {
 }
 
 LoadInst *LoadInst::cloneImpl() const {
-  return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
-                      getAlign(), getOrdering(), getSyncScopeID());
+  return new LoadInst(getType(), getOperand(0), Twine(), getProperties(),
+                      /*InsertBefore=*/nullptr);
 }
 
 StoreInst *StoreInst::cloneImpl() const {
-  return new StoreInst(getOperand(0), getOperand(1), isVolatile(), getAlign(),
-                       getOrdering(), getSyncScopeID());
+  return new StoreInst(getOperand(0), getOperand(1), getProperties(),
+                       /*InsertBefore=*/nullptr);
 }
 
 AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
@@ -4469,11 +4510,15 @@ FPExtInst *FPExtInst::cloneImpl() const {
 }
 
 UIToFPInst *UIToFPInst::cloneImpl() const {
-  return new UIToFPInst(getOperand(0), getType());
+  auto *Result = new UIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 SIToFPInst *SIToFPInst::cloneImpl() const {
-  return new SIToFPInst(getOperand(0), getType());
+  auto *Result = new SIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 FPToUIInst *FPToUIInst::cloneImpl() const {

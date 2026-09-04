@@ -399,10 +399,10 @@
         stc2l p6, c2, [r7, #4]
         ldc2 p0, c8, [r1, #4]
         ldc2l p6, c2, [r7, #4]
-@ CHECK-ERRORS: error: invalid instruction
-@ CHECK-ERRORS: error: invalid instruction
-@ CHECK-ERRORS: error: invalid instruction
-@ CHECK-ERRORS: error: invalid instruction
+@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: invalid operand for instruction
+@ CHECK-ERRORS: error: invalid operand for instruction
 
 @------------------------------------------------------------------------------
 @ Generic error for too few operands

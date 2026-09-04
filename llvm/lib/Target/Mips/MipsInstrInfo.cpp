@@ -708,6 +708,13 @@ bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
+    // Handle non-finalized bundle.
+    if (MI.isBundledWithSucc())
+      return MI.getDesc().getSize() + getInstBundleSize(MI);
+    if (MI.hasDelaySlot()) {
+      // instr + 1 nop
+      return MI.getDesc().getSize() + 4;
+    }
     return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM:
   case  TargetOpcode::INLINEASM_BR: {       // Inline Asm: Variable size.

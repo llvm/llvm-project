@@ -10,8 +10,15 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
-#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
+#include <optional>
+
+namespace clang {
+class LifetimeBoundAttr;
+} // namespace clang
 
 namespace clang ::lifetimes {
 
@@ -56,13 +63,36 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD);
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
+using LifetimeBoundParamInfo =
+    llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
+/// Stores the callee and normalized arguments for a function call.
+struct FunctionCallInfo {
+  const FunctionDecl *FD = nullptr;
+  llvm::SmallVector<const Expr *, 4> Args;
+
+  explicit FunctionCallInfo(const Expr *Call);
+};
+
+/// Returns the parameter corresponding to argument I when the argument should
+/// be tracked for lifetime safety.
+std::optional<LifetimeBoundParamInfo>
+getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
+                  unsigned I);
+
+/// Returns lifetime safety tracking info for the call argument containing
+/// Source.
+std::optional<LifetimeBoundParamInfo>
+getTrackingInfoForCallArg(const Expr *Call, const Expr *Source);
+
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return
 // pointers or references that depend on the lifetime of the object, such as
 // container iterators (begin, end), data accessors (c_str, data, get),
 // element accessors (operator[], operator*, front, back, at), or propagating
 // operations (operator+, operator-, operator++, operator--).
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+bool shouldTrackImplicitObjectArg(const Expr &ImplicitObjectArgument,
+                                  const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety);
 
 // Returns true if the first argument of a free function should be tracked for
@@ -81,6 +111,7 @@ bool shouldTrackSecondArgument(const FunctionDecl *FD);
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
+bool isGslOwnerType(const CXXRecordDecl *RD);
 
 // Returns true if the given method is std::unique_ptr::release().
 // This is treated as a move in lifetime analysis to avoid false-positives
@@ -103,6 +134,11 @@ bool destructsFirstArg(const FunctionDecl &FD);
 /// Returns true for standard library callable wrappers (e.g., std::function)
 /// that can propagate the stored lambda's origins.
 bool isStdCallableWrapperType(const CXXRecordDecl *RD);
+
+/// Returns true for std reference-cast builtins (e.g., std::move). Their result
+/// refers to the same object as the argument, so all origins propagate from
+/// argument to result.
+bool isStdReferenceCast(const FunctionDecl *FD);
 
 } // namespace clang::lifetimes
 

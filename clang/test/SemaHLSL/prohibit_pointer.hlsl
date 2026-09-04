@@ -68,7 +68,7 @@ struct Fish {
 
   // expected-note@+1 {{'->' applied to return value of the operator->() declared here}}
   Fins operator ->() {
-    return Fins();
+    return Fins(); // expected-error {{no matching constructor for initialization of 'Fins'}}
   }
 };
 

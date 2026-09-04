@@ -252,3 +252,24 @@ module attributes {transform.with_named_sequence} {
       transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @already_destination_passing_style(
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<134217728xf32>, %[[ARG1:.*]]: tensor<134217728xf32>) -> tensor<134217728xf32>
+//       CHECK:   %[[RESULT:.*]] = linalg.add ins(%[[ARG0]], %[[ARG1]] : tensor<134217728xf32>, tensor<134217728xf32>)
+//  CHECK-SAME:   outs(%[[ARG0]] : tensor<134217728xf32>) -> tensor<134217728xf32>
+//       CHECK:   return %[[RESULT]] : tensor<134217728xf32>
+func.func @already_destination_passing_style(%arg0: tensor<134217728xf32>, %arg1: tensor<134217728xf32>) -> tensor<134217728xf32> {
+  %0 = linalg.add ins(%arg0, %arg1 : tensor<134217728xf32>, tensor<134217728xf32>) outs(%arg0 : tensor<134217728xf32>) -> tensor<134217728xf32>
+  return %0 : tensor<134217728xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.add"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.rewrite_in_destination_passing_style %0 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+

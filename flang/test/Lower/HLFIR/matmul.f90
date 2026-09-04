@@ -43,18 +43,15 @@ endsubroutine
 ! CHECK:         fir.call @_QPfill
 ! CHECK:         fir.call @_QPfill
 ! CHECK-NEXT:    %[[B_BOX:.*]] = fir.load %[[B_BOX_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
-! CHECK-NEXT:    %[[C0:.*]] = arith.constant 0 : index
-! CHECK-NEXT:    %[[B_DIMS_0:.*]]:3 = fir.box_dims %[[B_BOX]], %[[C0]]
-! CHECK-NEXT:    %[[C1:.*]] = arith.constant 1 : index
-! CHECK-NEXT:    %[[B_DIMS_1:.*]]:3 = fir.box_dims %[[B_BOX]], %[[C1]]
-! CHECK-NEXT:    %[[B_SHAPE:.*]] = fir.shape %[[B_DIMS_0]]#1, %[[B_DIMS_1]]#1
-! CHECK-NEXT:    %[[ELEMENTAL:.*]] = hlfir.elemental %[[B_SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
+! The elemental shape is taken from the constant-shape operand "x" (see above),
+! so "b - x" is inferred as a 4x4 array rather than a dynamically shaped one.
+! CHECK-NEXT:    %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<2>) -> !hlfir.expr<4x4xi32> {
 
 ! CHECK:         }
 ! CHECK-NEXT:    %[[A_BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 
 ! The shapes in these types are what is being tested:
-! CHECK-NEXT:    %[[MATMUL:.*]] = hlfir.matmul %[[A_BOX]] %[[ELEMENTAL]] {{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x4xi32>
+! CHECK-NEXT:    %[[MATMUL:.*]] = hlfir.matmul %[[A_BOX]] %[[ELEMENTAL]] {{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !hlfir.expr<4x4xi32>) -> !hlfir.expr<?x4xi32>
 
 subroutine matmul3(lhs, rhs, res)
   integer, allocatable :: lhs(:,:), rhs(:,:), res(:,:)

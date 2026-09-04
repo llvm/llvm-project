@@ -68,10 +68,6 @@ public:
     fixedFormColumnLimit_ = limit;
     return *this;
   }
-  Prescanner &set_freeFormColumnLimit(int limit) {
-    freeFormColumnLimit_ = limit;
-    return *this;
-  }
 
   Prescanner &AddCompilerDirectiveSentinel(const std::string &);
 
@@ -202,7 +198,15 @@ private:
     return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();
   }
   bool IsOpenMPDirective() const {
-    return directiveSentinel_ && std::strcmp(directiveSentinel_, "$omp") == 0;
+    return directiveSentinel_ &&
+        (std::strcmp(directiveSentinel_, "$omp") == 0 ||
+            // Implementation-defined extension sentinels (OpenMP 5.2, 3.1):
+            // "$omx" (fixed form) and "$ompx" (free form).  The form is
+            // enforced during recognition (IsCompilerDirectiveSentinel), so a
+            // wrong-form spelling is treated as a comment and never reaches
+            // here.
+            std::strcmp(directiveSentinel_, "$omx") == 0 ||
+            std::strcmp(directiveSentinel_, "$ompx") == 0);
   }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
@@ -225,11 +229,14 @@ private:
   // True when input flowed to a continuation line
   bool SkipToNextSignificantCharacter();
   void SkipCComments();
+  void WarnCComment(const char *at);
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
-  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
+  const char *SkipWhiteSpaceIncludingEmptyMacros(
+      const char *, const char **) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
+  void UpdateSourcePositionAfterSkip(const char *);
   bool NextToken(TokenSequence &);
   bool HandleExponent(TokenSequence &);
   bool HandleKindSuffix(TokenSequence &);
@@ -244,6 +251,7 @@ private:
   void FortranInclude(const char *quote);
   const char *IsPreprocessorDirectiveLine(const char *) const;
   const char *FixedFormContinuationLine(bool atNewline);
+  const char *GetFreeFormContinuationLine(bool ampersand, const char *p);
   const char *FreeFormContinuationLine(bool ampersand);
   bool IsImplicitContinuation() const;
   bool FixedFormContinuation(bool atNewline);
@@ -273,7 +281,6 @@ private:
   bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
-  int freeFormColumnLimit_{10000};
   Encoding encoding_{Encoding::UTF_8};
   int parenthesisNesting_{0};
   int prescannerNesting_{0};

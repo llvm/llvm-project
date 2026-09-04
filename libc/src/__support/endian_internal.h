@@ -41,6 +41,16 @@ template <unsigned ORDER> struct Endian {
   static constexpr const bool IS_BIG = ORDER == __ORDER_BIG_ENDIAN__;
   template <typename T> LIBC_INLINE static T to_big_endian(T value);
   template <typename T> LIBC_INLINE static T to_little_endian(T value);
+
+  // Converting "to" and "from" a given endianness is actually the same
+  // operation, but we provide dedicated functions to let the user express their
+  // intent clearly.
+  template <typename T> LIBC_INLINE static T from_big_endian(T value) {
+    return to_big_endian(value);
+  }
+  template <typename T> LIBC_INLINE static T from_little_endian(T value) {
+    return to_little_endian(value);
+  }
 };
 
 // Little Endian specializations

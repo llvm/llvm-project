@@ -16,7 +16,7 @@ define i64 @test_pr98660(ptr %dst, i64 %N) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 32
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -50,7 +50,7 @@ define i64 @test_pr98660(ptr %dst, i64 %N) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF5:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF5:%.*]] = and i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[N_VEC6:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF5]]
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -129,8 +129,8 @@ define i64 @reverse_load_liveout_only(ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 -1
@@ -164,7 +164,7 @@ loop:
   %dst.gep = getelementptr i32, ptr %A, i64 %iv.next
   store i32 %store.val, ptr %dst.gep, align 4
   %exit.cond = icmp eq i64 %iv, 0
-  br i1 %exit.cond, label %exit, label %loop
+  br i1 %exit.cond, label %exit, label %loop, !llvm.loop !0
 
 exit:
   %liveout = phi i32 [ %load, %loop ]
@@ -172,3 +172,8 @@ exit:
 }
 
 attributes #0 = { "target-cpu"="skylake-avx512" }
+
+!0 = distinct !{!0, !1, !2, !3}
+!1 = !{!"llvm.loop.vectorize.width", i32 2}
+!2 = !{!"llvm.loop.vectorize.scalable.disable"}
+!3 = !{!"llvm.loop.vectorize.enable"}

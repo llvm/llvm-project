@@ -113,34 +113,31 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-static llvm::cl::opt<OutputFormatTy> FormatEnum(
-    "format", llvm::cl::desc("Format for outputted docs."),
-    llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
-                                "Documentation in YAML format."),
-                     clEnumValN(OutputFormatTy::md, "md",
-                                "Documentation in MD format."),
-                     clEnumValN(OutputFormatTy::html, "html",
-                                "Documentation in HTML format."),
-                     clEnumValN(OutputFormatTy::json, "json",
-                                "Documentation in JSON format"),
-                     clEnumValN(OutputFormatTy::md_mustache, "md_mustache",
-                                "Documentation in MD format.")),
-    llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<bool>
+    Pretty("pretty-json", llvm::cl::desc("Serialize JSON with whitespace."),
+           llvm::cl::cat(ClangDocCategory));
+
+static llvm::cl::opt<OutputFormatTy>
+    FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
+               llvm::cl::values(clEnumValN(OutputFormatTy::md, "md",
+                                           "Documentation in MD format."),
+                                clEnumValN(OutputFormatTy::html, "html",
+                                           "Documentation in HTML format."),
+                                clEnumValN(OutputFormatTy::json, "json",
+                                           "Documentation in JSON format")),
+               llvm::cl::init(OutputFormatTy::json),
+               llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
 
 static llvm::StringRef getFormatString() {
   switch (FormatEnum) {
-  case OutputFormatTy::yaml:
-    return "yaml";
   case OutputFormatTy::md:
     return "md";
   case OutputFormatTy::html:
     return "html";
   case OutputFormatTy::json:
     return "json";
-  case OutputFormatTy::md_mustache:
-    return "md_mustache";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -224,18 +221,13 @@ static llvm::Error getMdFiles(const char *Argv0,
 
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
-static void
-sortUsrToInfo(llvm::StringMap<doc::OwnedPtr<doc::Info>> &USRToInfo) {
+static void sortUsrToInfo(llvm::StringMap<doc::Info *> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
-    if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(getPtr(Info));
+    if (auto *Namespace = dyn_cast<doc::NamespaceInfo>(Info))
       Namespace->Children.sort();
-    }
-    if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(getPtr(Info));
+    else if (auto *Record = dyn_cast<doc::RecordInfo>(Info))
       Record->Children.sort();
-    }
   }
 }
 
@@ -310,11 +302,11 @@ Example usage for a project using a compile commands database:
         Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
         SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
         {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
-        FTimeTrace);
+        FTimeTrace, Pretty);
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));
-    else if (Format == "md_mustache")
+    else if (Format == "md")
       ExitOnErr(getMdFiles(argv[0], CDCtx));
 
     llvm::timeTraceProfilerBegin("Executor Launch", "total runtime");
@@ -340,7 +332,7 @@ Example usage for a project using a compile commands database:
     // Collects all Infos according to their unique USR value. This map is added
     // to from the thread pool below and is protected by the USRToInfoMutex.
     llvm::sys::Mutex USRToInfoMutex;
-    llvm::StringMap<doc::OwnedPtr<doc::Info>> USRToInfo;
+    llvm::StringMap<doc::Info *> USRToInfo;
 
     // First reducing phase (reduce all decls into one info per decl).
     llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
@@ -368,13 +360,13 @@ Example usage for a project using a compile commands database:
           if (CDCtx.FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-          doc::OwnedPtr<doc::Info> Reduced = nullptr;
+          doc::Info *Reduced = nullptr;
           {
             llvm::TimeTraceScope Red("decoding and merging bitcode");
             for (const auto &Bitcode : Bitcodes) {
 
               llvm::scope_exit ArenaGuard(
-                  [] { clang::doc::TransientArena.Reset(); });
+                  [] { clang::doc::getTransientArena().Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
               doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
@@ -388,7 +380,8 @@ Example usage for a project using a compile commands database:
               }
               for (auto &I : *ReadInfos) {
                 if (auto Err = doc::mergeSingleInfo(
-                        Reduced, std::move(I), clang::doc::PersistentArena)) {
+                        Reduced, std::move(I),
+                        clang::doc::getPersistentArena())) {
                   std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
                   Diags.Report(DiagIDBitcodeMerging)
                       << toString(std::move(Err));
@@ -402,7 +395,7 @@ Example usage for a project using a compile commands database:
           {
             llvm::TimeTraceScope Merge("addInfoToIndex");
             std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
-            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, getPtr(Reduced));
+            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced);
           }
           // Save in the result map (needs a lock due to threaded access).
           {

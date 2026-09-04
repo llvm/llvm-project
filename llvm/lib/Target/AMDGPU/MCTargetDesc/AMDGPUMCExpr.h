@@ -24,9 +24,11 @@ enum class LitModifier { None, Lit, Lit64 };
 /// operations are:
 ///   - (bitwise) or
 ///   - max
+///   - min
 ///
-/// \note If the 'or'/'max' operations are provided only a single argument, the
-/// operation will act as a no-op and simply resolve as the provided argument.
+/// \note If the 'or'/'max'/'min' operations are provided only a single
+/// argument, the operation will act as a no-op and simply resolve as the
+/// provided argument.
 ///
 class AMDGPUMCExpr : public MCTargetExpr {
 public:
@@ -41,6 +43,7 @@ public:
     AGVK_InstPrefSize,
     AGVK_Lit,
     AGVK_Lit64,
+    AGVK_Min,
   };
 
   // Relocation specifiers.
@@ -76,6 +79,10 @@ public:
   static const AMDGPUMCExpr *
   create(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
 
+  /// \returns the required operand count for \p Kind, or 0 for the variadic
+  /// kinds (or/max/min). Used at parse time and by the create() assert.
+  static unsigned getNumExpectedArgs(VariantKind Kind);
+
   static const AMDGPUMCExpr *createOr(ArrayRef<const MCExpr *> Args,
                                       MCContext &Ctx) {
     return create(VariantKind::AGVK_Or, Args, Ctx);
@@ -84,6 +91,10 @@ public:
   static const AMDGPUMCExpr *createMax(ArrayRef<const MCExpr *> Args,
                                        MCContext &Ctx) {
     return create(VariantKind::AGVK_Max, Args, Ctx);
+  }
+  static const AMDGPUMCExpr *createMin(ArrayRef<const MCExpr *> Args,
+                                       MCContext &Ctx) {
+    return create(VariantKind::AGVK_Min, Args, Ctx);
   }
 
   static const AMDGPUMCExpr *createExtraSGPRs(const MCExpr *VCCUsed,

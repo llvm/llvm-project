@@ -15,7 +15,9 @@
 #include "CodeComplete.h"
 #include "Compiler.h"
 #include "ModulesBuilder.h"
+#include "Preamble.h"
 #include "ProjectModules.h"
+#include "SemanticHighlighting.h"
 #include "TestTU.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
@@ -339,6 +341,30 @@ export module M;
   EXPECT_TRUE(MInfo->canReuse(*Invocation, FS.view(TestDir)));
 }
 
+TEST_F(PrerequisiteModulesTests, ObservedModuleOutsideCompilationDatabase) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+  CDB.addFile("Use.cpp", R"cpp(
+import M;
+  )cpp");
+
+  SmallString<256> ModulePath(TestDir);
+  llvm::sys::path::append(ModulePath, "M.cppm");
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(ModulePath, EC);
+  ASSERT_FALSE(EC);
+  OS << "export module M;";
+  OS.close();
+
+  ModulesBuilder Builder(CDB);
+  EXPECT_TRUE(Builder.observeSourcePath(ModulePath));
+  EXPECT_FALSE(Builder.observeSourcePath(ModulePath));
+  auto Info = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+
+  HeaderSearchOptions HSOpts;
+  Info->adjustHeaderSearchOptions(HSOpts);
+  EXPECT_EQ(HSOpts.PrebuiltModuleFiles.count("M"), 1u);
+}
+
 TEST_F(PrerequisiteModulesTests, ModuleWithArgumentPatch) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 
@@ -574,7 +600,8 @@ int use() { return a; }
 
   ModulesBuilder Builder(CDB);
 
-  auto UseInfo = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  auto UseInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
   ASSERT_TRUE(UseInfo);
 
   HeaderSearchOptions HSOpts;
@@ -1611,6 +1638,110 @@ struct TypeFromHeader {};
   EXPECT_THAT(Result.Completions,
               testing::UnorderedElementsAre(named("TypeFromModule"),
                                             named("TypeFromHeader")));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       SkipPreambleBuildInvalidatedByNewModuleImport) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("Dep.cppm", R"cpp(
+export module Dep;
+)cpp");
+
+  CDB.addFile("Consumer.cpp", R"cpp(
+import Dep;
+void use() {}
+)cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto Inputs = getInputs("Consumer.cpp", CDB);
+  Inputs.ModulesManager = &Builder;
+  Inputs.Opts.SkipPreambleBuild = true;
+
+  auto CI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(CI);
+
+  auto Preamble = buildPreamble(getFullPath("Consumer.cpp"), *CI, Inputs,
+                                /*StoreInMemory=*/true,
+                                /*PreambleCallback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+  EXPECT_EQ(Preamble->Preamble.getBounds().Size, 0u);
+  ASSERT_TRUE(Preamble->RequiredModules);
+
+  CDB.addFile("NewDep.cppm", R"cpp(
+export module NewDep;
+)cpp");
+
+  // Add a new import.
+  Inputs.Contents = R"cpp(
+import Dep;
+import NewDep;
+void use() {}
+)cpp";
+
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(getFullPath("Consumer.cpp"), EC,
+                            llvm::sys::fs::OF_None);
+    ASSERT_FALSE(EC);
+    OS << Inputs.Contents;
+  }
+
+  auto NewCI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(NewCI);
+
+  EXPECT_FALSE(isPreambleCompatible(*Preamble, Inputs,
+                                    getFullPath("Consumer.cpp"), *NewCI));
+}
+
+TEST_F(PrerequisiteModulesTests, ModuleSemanticHighlighting) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  llvm::StringRef AnnotatedCode = R"cpp(
+      module;
+      $import[[import]] M;
+      export module highlight;
+      $export[[export]] void foo() {
+      }
+)cpp";
+  Annotations UseCpp(AnnotatedCode);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export struct TypeFromModule {};
+)cpp");
+
+  CDB.addFile("Use.cpp", UseCpp.code());
+
+  ModulesBuilder Builder(CDB);
+
+  auto Inputs = getInputs("Use.cpp", CDB);
+  Inputs.ModulesManager = &Builder;
+  Inputs.Opts.SkipPreambleBuild = true;
+
+  auto CI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Inputs, /*StoreInMemory=*/true,
+                    /*PeambleCallback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+
+  auto AST = ParsedAST::build(getFullPath("Use.cpp"), Inputs, std::move(CI), {},
+                              Preamble);
+
+  ASSERT_TRUE(AST);
+
+  auto Actual = getSemanticHighlightings(AST.value(),
+                                         /*IncludeInactiveRegionTokens=*/true);
+  auto HasToken = [&](llvm::StringRef Name, HighlightingKind Kind) {
+    return llvm::any_of(Actual, [&](const HighlightingToken &T) {
+      return T.Kind == Kind && T.R == UseCpp.range(Name);
+    });
+  };
+  EXPECT_TRUE(HasToken("import", HighlightingKind::Modifier));
+  EXPECT_TRUE(HasToken("export", HighlightingKind::Modifier));
 }
 
 } // namespace

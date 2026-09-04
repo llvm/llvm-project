@@ -1,5 +1,5 @@
 if(NOT (TARGET libc.src.__support.threads.mutex)
-   OR LIBC_TARGET_OS_IS_GPU)
+  OR LIBC_TARGET_OS_IS_GPU)
   # Not all platforms have a mutex implementation. If mutex is unvailable,
   # we just skip everything about files.
   return()
@@ -43,6 +43,11 @@ add_object_library(
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.alloc_checker
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_dirent
 )
 
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})

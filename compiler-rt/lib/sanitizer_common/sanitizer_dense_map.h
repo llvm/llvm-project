@@ -44,10 +44,10 @@ class DenseMapBase {
   }
 
   void clear() {
-    if (getNumEntries() == 0 && getNumTombstones() == 0)
+    if (getNumEntries() == 0)
       return;
 
-    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
+    const KeyT EmptyKey = getEmptyKey();
     if (__sanitizer::is_trivially_destructible<ValueT>::value) {
       // Use a simpler loop when values don't need destruction.
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
@@ -56,17 +56,14 @@ class DenseMapBase {
       unsigned NumEntries = getNumEntries();
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
         if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey)) {
-          if (!KeyInfoT::isEqual(P->getFirst(), TombstoneKey)) {
-            P->getSecond().~ValueT();
-            --NumEntries;
-          }
+          P->getSecond().~ValueT();
+          --NumEntries;
           P->getFirst() = EmptyKey;
         }
       }
       CHECK_EQ(NumEntries, 0);
     }
     setNumEntries(0);
-    setNumTombstones(0);
   }
 
   /// Return true if the specified key is in the map, false otherwise.
@@ -171,20 +168,13 @@ class DenseMapBase {
     if (!TheBucket)
       return false;  // not in map.
 
-    TheBucket->getSecond().~ValueT();
-    TheBucket->getFirst() = getTombstoneKey();
-    decrementNumEntries();
-    incrementNumTombstones();
+    eraseFromFilledBucket(TheBucket);
     return true;
   }
 
   void erase(value_type *I) {
     CHECK_NE(I, nullptr);
-    BucketT *TheBucket = &*I;
-    TheBucket->getSecond().~ValueT();
-    TheBucket->getFirst() = getTombstoneKey();
-    decrementNumEntries();
-    incrementNumTombstones();
+    eraseFromFilledBucket(I);
   }
 
   value_type &FindAndConstruct(const KeyT &Key) {
@@ -214,11 +204,10 @@ class DenseMapBase {
   /// Function can return fast to stop the process.
   template <class Fn>
   void forEach(Fn fn) {
-    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
+    const KeyT EmptyKey = getEmptyKey();
     for (auto *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
       const KeyT K = P->getFirst();
-      if (!KeyInfoT::isEqual(K, EmptyKey) &&
-          !KeyInfoT::isEqual(K, TombstoneKey)) {
+      if (!KeyInfoT::isEqual(K, EmptyKey)) {
         if (!fn(*P))
           return;
       }
@@ -238,10 +227,9 @@ class DenseMapBase {
     if (getNumBuckets() == 0)  // Nothing to do.
       return;
 
-    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
+    const KeyT EmptyKey = getEmptyKey();
     for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
-      if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey) &&
-          !KeyInfoT::isEqual(P->getFirst(), TombstoneKey))
+      if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey))
         P->getSecond().~ValueT();
       P->getFirst().~KeyT();
     }
@@ -249,7 +237,6 @@ class DenseMapBase {
 
   void initEmpty() {
     setNumEntries(0);
-    setNumTombstones(0);
 
     CHECK_EQ((getNumBuckets() & (getNumBuckets() - 1)), 0);
     const KeyT EmptyKey = getEmptyKey();
@@ -273,10 +260,8 @@ class DenseMapBase {
 
     // Insert all the old elements.
     const KeyT EmptyKey = getEmptyKey();
-    const KeyT TombstoneKey = getTombstoneKey();
     for (BucketT *B = OldBucketsBegin, *E = OldBucketsEnd; B != E; ++B) {
-      if (!KeyInfoT::isEqual(B->getFirst(), EmptyKey) &&
-          !KeyInfoT::isEqual(B->getFirst(), TombstoneKey)) {
+      if (!KeyInfoT::isEqual(B->getFirst(), EmptyKey)) {
         // Insert the key/value into the new table.
         BucketT *DestBucket;
         bool FoundVal = LookupBucketFor(B->getFirst(), DestBucket);
@@ -301,7 +286,6 @@ class DenseMapBase {
     CHECK_EQ(getNumBuckets(), other.getNumBuckets());
 
     setNumEntries(other.getNumEntries());
-    setNumTombstones(other.getNumTombstones());
 
     if (__sanitizer::is_trivially_copyable<KeyT>::value &&
         __sanitizer::is_trivially_copyable<ValueT>::value)
@@ -311,8 +295,7 @@ class DenseMapBase {
       for (uptr i = 0; i < getNumBuckets(); ++i) {
         ::new (&getBuckets()[i].getFirst())
             KeyT(other.getBuckets()[i].getFirst());
-        if (!KeyInfoT::isEqual(getBuckets()[i].getFirst(), getEmptyKey()) &&
-            !KeyInfoT::isEqual(getBuckets()[i].getFirst(), getTombstoneKey()))
+        if (!KeyInfoT::isEqual(getBuckets()[i].getFirst(), getEmptyKey()))
           ::new (&getBuckets()[i].getSecond())
               ValueT(other.getBuckets()[i].getSecond());
       }
@@ -329,9 +312,40 @@ class DenseMapBase {
 
   static const KeyT getEmptyKey() { return KeyInfoT::getEmptyKey(); }
 
-  static const KeyT getTombstoneKey() { return KeyInfoT::getTombstoneKey(); }
-
  private:
+  /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
+  /// TAOCP 6.4 Algorithm R: walk forward over the cluster, shifting back any
+  /// entry whose linear-probe chain from its home bucket passes through the
+  /// hole, until an empty bucket terminates the cluster.
+  void eraseFromFilledBucket(BucketT* TheBucket) {
+    TheBucket->getSecond().~ValueT();
+    decrementNumEntries();
+
+    BucketT* BucketsPtr = getBuckets();
+    const unsigned NumBuckets = getNumBuckets();
+    const unsigned Mask = NumBuckets - 1;
+    const KeyT EmptyKey = getEmptyKey();
+    unsigned I = static_cast<unsigned>(TheBucket - BucketsPtr);
+    unsigned J = I;
+    while (true) {
+      J = (J + 1) & Mask;
+      BucketT& BJ = BucketsPtr[J];
+      if (KeyInfoT::isEqual(BJ.getFirst(), EmptyKey))
+        break;
+      unsigned Ideal = getHashValue(BJ.getFirst()) & Mask;
+      // If the hole (I) lies on the linear-probe chain from the home bucket
+      // (Ideal) to J, shift J into the hole and make J the new hole.
+      if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
+        BucketT& BI = BucketsPtr[I];
+        BI.getFirst() = __sanitizer::move(BJ.getFirst());
+        ::new (&BI.getSecond()) ValueT(__sanitizer::move(BJ.getSecond()));
+        BJ.getSecond().~ValueT();
+        I = J;
+      }
+    }
+    BucketsPtr[I].getFirst() = EmptyKey;
+  }
+
   unsigned getNumEntries() const {
     return static_cast<const DerivedT *>(this)->getNumEntries();
   }
@@ -343,18 +357,6 @@ class DenseMapBase {
   void incrementNumEntries() { setNumEntries(getNumEntries() + 1); }
 
   void decrementNumEntries() { setNumEntries(getNumEntries() - 1); }
-
-  unsigned getNumTombstones() const {
-    return static_cast<const DerivedT *>(this)->getNumTombstones();
-  }
-
-  void setNumTombstones(unsigned Num) {
-    static_cast<DerivedT *>(this)->setNumTombstones(Num);
-  }
-
-  void incrementNumTombstones() { setNumTombstones(getNumTombstones() + 1); }
-
-  void decrementNumTombstones() { setNumTombstones(getNumTombstones() - 1); }
 
   const BucketT *getBuckets() const {
     return static_cast<const DerivedT *>(this)->getBuckets();
@@ -398,36 +400,22 @@ class DenseMapBase {
   template <typename LookupKeyT>
   BucketT *InsertIntoBucketImpl(const KeyT &Key, const LookupKeyT &Lookup,
                                 BucketT *TheBucket) {
-    // If the load of the hash table is more than 3/4, or if fewer than 1/8 of
-    // the buckets are empty (meaning that many are filled with tombstones),
-    // grow the table.
-    //
-    // The later case is tricky.  For example, if we had one empty bucket with
-    // tons of tombstones, failing lookups (e.g. for insertion) would have to
-    // probe almost the entire table until it found the empty bucket.  If the
-    // table completely filled with tombstones, no lookup would ever succeed,
-    // causing infinite loops in lookup.
+    // Grow the table if the load factor would exceed 3/4 after insertion.
+    // Linear probing with gap-closing deletion (Knuth Algorithm R) keeps every
+    // chain compact and bounded by the table's empty-bucket count, so no
+    // tombstone-driven resize is needed.
     unsigned NewNumEntries = getNumEntries() + 1;
     unsigned NumBuckets = getNumBuckets();
     if (UNLIKELY(NewNumEntries * 4 >= NumBuckets * 3)) {
       this->grow(NumBuckets * 2);
       LookupBucketFor(Lookup, TheBucket);
       NumBuckets = getNumBuckets();
-    } else if (UNLIKELY(NumBuckets - (NewNumEntries + getNumTombstones()) <=
-                        NumBuckets / 8)) {
-      this->grow(NumBuckets);
-      LookupBucketFor(Lookup, TheBucket);
     }
     CHECK(TheBucket);
 
     // Only update the state after we've grown our bucket space appropriately
     // so that when growing buckets we have self-consistent entry count.
     incrementNumEntries();
-
-    // If we are writing over a tombstone, remember this.
-    const KeyT EmptyKey = getEmptyKey();
-    if (!KeyInfoT::isEqual(TheBucket->getFirst(), EmptyKey))
-      decrementNumTombstones();
 
     return TheBucket;
   }
@@ -441,7 +429,6 @@ class DenseMapBase {
 
     const KeyT EmptyKey = getEmptyKey();
     unsigned BucketNo = getHashValue(Val) & (NumBuckets - 1);
-    unsigned ProbeAmt = 1;
     while (true) {
       BucketT *Bucket = BucketsPtr + BucketNo;
       if (LIKELY(KeyInfoT::isEqual(Val, Bucket->getFirst())))
@@ -449,10 +436,8 @@ class DenseMapBase {
       if (LIKELY(KeyInfoT::isEqual(Bucket->getFirst(), EmptyKey)))
         return nullptr;
 
-      // Otherwise, it's a hash collision or a tombstone, continue quadratic
-      // probing.
-      BucketNo += ProbeAmt++;
-      BucketNo &= NumBuckets - 1;
+      // Hash collision: continue linear probing.
+      BucketNo = (BucketNo + 1) & (NumBuckets - 1);
     }
   }
 
@@ -463,8 +448,8 @@ class DenseMapBase {
 
   /// LookupBucketFor - Lookup the appropriate bucket for Val, returning it in
   /// FoundBucket.  If the bucket contains the key and a value, this returns
-  /// true, otherwise it returns a bucket with an empty marker or tombstone and
-  /// returns false.
+  /// true, otherwise it returns a bucket with an empty marker and returns
+  /// false.
   template <typename LookupKeyT>
   bool LookupBucketFor(const LookupKeyT &Val,
                        const BucketT *&FoundBucket) const {
@@ -476,15 +461,10 @@ class DenseMapBase {
       return false;
     }
 
-    // FoundTombstone - Keep track of whether we find a tombstone while probing.
-    const BucketT *FoundTombstone = nullptr;
     const KeyT EmptyKey = getEmptyKey();
-    const KeyT TombstoneKey = getTombstoneKey();
     CHECK(!KeyInfoT::isEqual(Val, EmptyKey));
-    CHECK(!KeyInfoT::isEqual(Val, TombstoneKey));
 
     unsigned BucketNo = getHashValue(Val) & (NumBuckets - 1);
-    unsigned ProbeAmt = 1;
     while (true) {
       const BucketT *ThisBucket = BucketsPtr + BucketNo;
       // Found Val's bucket?  If so, return it.
@@ -494,24 +474,14 @@ class DenseMapBase {
       }
 
       // If we found an empty bucket, the key doesn't exist in the set.
-      // Insert it and return the default value.
+      // Return it as the insertion point.
       if (LIKELY(KeyInfoT::isEqual(ThisBucket->getFirst(), EmptyKey))) {
-        // If we've already seen a tombstone while probing, fill it in instead
-        // of the empty bucket we eventually probed to.
-        FoundBucket = FoundTombstone ? FoundTombstone : ThisBucket;
+        FoundBucket = ThisBucket;
         return false;
       }
 
-      // If this is a tombstone, remember it.  If Val ends up not in the map, we
-      // prefer to return it than something that would require more probing.
-      if (KeyInfoT::isEqual(ThisBucket->getFirst(), TombstoneKey) &&
-          !FoundTombstone)
-        FoundTombstone = ThisBucket;  // Remember the first tombstone found.
-
-      // Otherwise, it's a hash collision or a tombstone, continue quadratic
-      // probing.
-      BucketNo += ProbeAmt++;
-      BucketNo &= (NumBuckets - 1);
+      // Hash collision: continue linear probing.
+      BucketNo = (BucketNo + 1) & (NumBuckets - 1);
     }
   }
 
@@ -587,7 +557,6 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
 
   BucketT *Buckets = nullptr;
   unsigned NumEntries = 0;
-  unsigned NumTombstones = 0;
   unsigned NumBuckets = 0;
 
  public:
@@ -614,7 +583,6 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   void swap(DenseMap &RHS) {
     Swap(Buckets, RHS.Buckets);
     Swap(NumEntries, RHS.NumEntries);
-    Swap(NumTombstones, RHS.NumTombstones);
     Swap(NumBuckets, RHS.NumBuckets);
   }
 
@@ -639,7 +607,6 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
       this->BaseT::copyFrom(other);
     } else {
       NumEntries = 0;
-      NumTombstones = 0;
     }
   }
 
@@ -649,7 +616,6 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
       this->BaseT::initEmpty();
     } else {
       NumEntries = 0;
-      NumTombstones = 0;
     }
   }
 
@@ -674,10 +640,6 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned getNumEntries() const { return NumEntries; }
 
   void setNumEntries(unsigned Num) { NumEntries = Num; }
-
-  unsigned getNumTombstones() const { return NumTombstones; }
-
-  void setNumTombstones(unsigned Num) { NumTombstones = Num; }
 
   BucketT *getBuckets() const { return Buckets; }
 

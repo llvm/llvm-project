@@ -3203,6 +3203,8 @@ class ConvertsToRefPrivate {
   mutable T obj = 42;
 };
 
+struct NoConv {};
+struct Bad { template<class T> Bad(T v) noexcept(noexcept(member_ = v)) {} int member_; };
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -3243,6 +3245,10 @@ void reference_binds_to_temporary_checks() {
   // Test that function references are never considered bound to temporaries.
   static_assert(!__reference_binds_to_temporary(void(&)(), void()));
   static_assert(!__reference_binds_to_temporary(void(&&)(), void()));
+
+  // Make sure we don't emit "assigning to 'int' from incompatible type 'NoConv'" in SFINAE context.
+  static_assert(!__reference_binds_to_temporary(Bad, NoConv&&));
+
 }
 
 
@@ -3325,7 +3331,8 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(const int&, ExplicitConversionRef));
   static_assert(!__reference_constructs_from_temporary(int&&, ExplicitConversionRvalueRef));
 
-
+  // Make sure we don't emit "assigning to 'int' from incompatible type 'NoConv'" in SFINAE context.
+  static_assert(!__reference_constructs_from_temporary(Bad, NoConv&&));
 }
 
 template<typename A, typename B, bool result = __reference_converts_from_temporary(A, B)>
@@ -3394,6 +3401,9 @@ void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(AllPrivate, AllPrivate));
   // Make sure we don't emit "calling a private constructor" in SFINAE context.
   static_assert(!reference_converts_from_temporary_sfinae<AllPrivate, AllPrivate>());
+
+  // Make sure we don't emit "assigning to 'int' from incompatible type 'NoConv'" in SFINAE context.
+  static_assert(!__reference_converts_from_temporary(Bad, NoConv&&));
 }
 
 void array_rank() {
@@ -5175,4 +5185,21 @@ struct S;
 bool b = C<T, S>;
 // expected-note@-1 {{while checking the satisfaction of concept 'C<T, S>' requested here}}
 #endif
+}
+
+namespace GH214128{
+i < 0;
+#if __cplusplus <= 201703L
+// expected-error@-2 {{no template named 'i'}}
+#endif
+// expected-error@-4 {{expected '>'}}
+// expected-note@-5 {{to match this '<'}}
+#if __cplusplus > 201703L
+// expected-warning@-7 {{declaration does not declare anything}}
+#endif
+
+void f() {
+  struct __is_pod; // expected-warning {{keyword '__is_pod' will be made available as an identifier for the remainder of the translation unit}}
+  struct __is_pod;
+}
 }

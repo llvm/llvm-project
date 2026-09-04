@@ -439,6 +439,8 @@ static void setPhysLiveRegs(LiveRegUnits &LiveUnits, LiveRegs PhysLiveRegs) {
 
 [[maybe_unused]] bool isCallStartOpcode(unsigned Opc) {
   switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRA:
   case AArch64::TLSDESC_CALLSEQ:
   case AArch64::TLSDESC_AUTH_CALLSEQ:
   case AArch64::ADJCALLSTACKDOWN:
@@ -585,6 +587,9 @@ MachineSMEABI::findStateChangeInsertionPoint(
   setPhysLiveRegs(LiveUnits, PhysLiveRegs);
   auto BestCandidate = std::make_pair(InsertPt, PhysLiveRegs);
   for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
+    if (I->isDebugInstr())
+      continue;
+
     // Don't move before/into a call (which may have a state change before it).
     if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
       break;

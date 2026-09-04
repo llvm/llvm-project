@@ -623,11 +623,13 @@ public:
   /// Set the correction for frame offsets.
   void setOffsetAdjustment(int64_t Adj) { OffsetAdjustment = Adj; }
 
-  /// Return the alignment in bytes that this function must be aligned to,
-  /// which is greater than the default stack alignment provided by the target.
+  /// Return alignment of this function's frame.
   Align getMaxAlign() const { return MaxAlignment; }
 
-  /// Make sure the function is at least Align bytes aligned.
+  /// Overwrite alignment of this function's frame.
+  void setMaxAlign(Align Alignment) { MaxAlignment = Alignment; }
+
+  /// Make sure the function's frame is at least Align bytes aligned.
   LLVM_ABI void ensureMaxAlignment(Align Alignment);
 
   /// Return true if stack realignment is forced by function attributes or if
@@ -833,7 +835,9 @@ public:
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
-  LLVM_ABI int CreateSpillStackObject(uint64_t Size, Align Alignment);
+  LLVM_ABI int
+  CreateSpillStackObject(uint64_t Size, Align Alignment,
+                         TargetStackID::Value StackID = TargetStackID::Default);
 
   /// Remove or mark dead a statically sized stack object.
   void RemoveStackObject(int ObjectIdx) {

@@ -24,6 +24,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <utility>
 
@@ -53,9 +54,6 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  LLVM_ABI LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                           "BasicBlock::iterator")
-      InsertPosition(Instruction *InsertBefore);
   LLVM_ABI InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }
@@ -238,16 +236,6 @@ public:
   LLVM_ABI InstListType::iterator eraseFromParent();
 
   /// Insert an unlinked instruction into a basic block immediately before
-  /// the specified instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// insertBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void insertBefore(Instruction *InsertPos);
-
-  /// Insert an unlinked instruction into a basic block immediately before
   /// the specified position.
   LLVM_ABI void insertBefore(InstListType::iterator InsertPos);
 
@@ -268,16 +256,6 @@ public:
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// moveBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBefore(Instruction *MovePos);
-
-  /// Unlink this instruction from its current basic block and insert it into
-  /// the basic block that MovePos lives in, right before MovePos.
   LLVM_ABI void moveBefore(InstListType::iterator InsertPos);
 
   /// Perform a \ref moveBefore operation, while signalling that the caller
@@ -289,15 +267,6 @@ public:
   /// intends to preserve the original ordering of instructions. This implicitly
   /// means that any adjacent debug-info should move with this instruction.
   LLVM_ABI void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
-
-  /// Perform a \ref moveBefore operation, while signalling that the caller
-  /// intends to preserve the original ordering of instructions. This implicitly
-  /// means that any adjacent debug-info should move with this instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour of
-  /// moveBeforePreserving, as all insertions should be at iterator positions.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBeforePreserving(Instruction *MovePos);
 
 private:
   /// RemoveDIs project: all other moves implemented with this method,
@@ -497,6 +466,11 @@ public:
   /// empty, all meta data will be copied.
   LLVM_ABI void copyMetadata(const Instruction &SrcInst,
                              ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+
+  /// Copy debug, profile, and memprof metadata from \p SrcInst to this
+  /// instruction without copying alias-analysis or type-dependent metadata.
+  /// TODO: Include additional metadata in the future if appropriate.
+  LLVM_ABI void copyProfileAndDebugMetadata(const Instruction &SrcInst);
 
   /// Erase all metadata that matches the predicate.
   LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
@@ -706,6 +680,10 @@ public:
   /// these flags.
   LLVM_ABI FastMathFlags getFastMathFlags() const LLVM_READONLY;
 
+  /// Convenience function for getting fast-math flags, or default-constructed
+  /// FastMathFlags when not a FPMathOperator.
+  LLVM_ABI FastMathFlags getFastMathFlagsOrNone() const LLVM_READONLY;
+
   /// Copy I's fast-math flags
   LLVM_ABI void copyFastMathFlags(const Instruction *I);
 
@@ -834,6 +812,10 @@ public:
   static bool isNilpotent(unsigned Opcode) {
     return Opcode == Xor;
   }
+
+  /// Return memory effects of the instruction. argmem here refers to the
+  /// operands of the instruction.
+  LLVM_ABI MemoryEffects getMemoryEffects() const LLVM_READONLY;
 
   /// Return true if this instruction may modify memory.
   LLVM_ABI bool mayWriteToMemory() const LLVM_READONLY;
@@ -969,6 +951,8 @@ public:
     CompareUsingScalarTypes = 1 << 1,
     /// Check for equivalence with intersected callbase attrs.
     CompareUsingIntersectedAttrs = 1 << 2,
+    /// Check for equivalence by comparing call targets.
+    CompareCallTargets = 1 << 3,
   };
 
   /// This function determines if the specified instruction executes the same
@@ -1011,7 +995,7 @@ public:
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *BB);
 
   LLVM_ABI iterator_range<const_succ_iterator> successors() const LLVM_READONLY;
-  LLVM_ABI iterator_range<succ_iterator> successors() {
+  iterator_range<succ_iterator> successors() {
     auto Ops = static_cast<const Instruction *>(this)->successors();
     Use *Begin = const_cast<Use *>(Ops.begin().getUse());
     Use *End = const_cast<Use *>(Ops.end().getUse());

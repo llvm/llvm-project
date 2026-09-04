@@ -45,7 +45,7 @@ namespace UnsupportedItaniumManglingKind =
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl>(DC) || isa<ObjCMethodDecl>(DC) || isa<BlockDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -381,7 +381,7 @@ class CXXNameMangler {
   ASTContext &getASTContext() const { return Context.getASTContext(); }
 
   bool isCompatibleWith(LangOptions::ClangABI Ver) {
-    return Context.getASTContext().getLangOpts().getClangABICompat() <= Ver;
+    return getASTContext().getLangOpts().isCompatibleWith(Ver);
   }
 
   bool isStd(const NamespaceDecl *NS);
@@ -518,7 +518,7 @@ private:
   void mangleUnqualifiedBlock(const BlockDecl *Block);
   void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleTemplateParameterList(const TemplateParameterList *Params);
-  void mangleTypeConstraint(const TemplateDecl *Concept,
+  void mangleTypeConstraint(TemplateName Concept,
                             ArrayRef<TemplateArgument> Arguments);
   void mangleTypeConstraint(const TypeConstraint *Constraint);
   void mangleRequiresClause(const Expr *RequiresClause);
@@ -530,12 +530,14 @@ private:
                         ArrayRef<TemplateArgument> Args);
   void mangleNestedNameWithClosurePrefix(GlobalDecl GD,
                                          const NamedDecl *PrefixND,
-                                         ArrayRef<StringRef> AdditionalAbiTags);
+                                         ArrayRef<StringRef> AdditionalAbiTags,
+                                         bool NoFunction = false);
   void manglePrefix(NestedNameSpecifier Qualifier);
   void manglePrefix(const DeclContext *DC, bool NoFunction=false);
   void manglePrefix(QualType type);
   void mangleTemplatePrefix(GlobalDecl GD, bool NoFunction=false);
   void mangleTemplatePrefix(TemplateName Template);
+  void DiagnoseUnsupportedPackIndexTemplateName();
   const NamedDecl *getClosurePrefix(const Decl *ND);
   void mangleClosurePrefix(const NamedDecl *ND, bool NoFunction = false);
   bool mangleUnresolvedTypeOrSimpleId(QualType DestroyedType,
@@ -698,8 +700,8 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
       return getASTContext().getTranslationUnitDecl();
   }
 
-  if (const auto *FD = getASTContext().getLangOpts().getClangABICompat() >
-                               LangOptions::ClangABI::Ver19
+  if (const auto *FD = !getASTContext().getLangOpts().isCompatibleWith(
+                           LangOptions::ClangABI::Ver19)
                            ? D->getAsFunction()
                            : dyn_cast<FunctionDecl>(D)) {
     if (FD->isExternC())
@@ -707,8 +709,8 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     // Member-like constrained friends are mangled as if they were members of
     // the enclosing class.
     if (FD->isMemberLikeConstrainedFriend() &&
-        getASTContext().getLangOpts().getClangABICompat() >
-            LangOptions::ClangABI::Ver17)
+        !getASTContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver17))
       return D->getLexicalDeclContext()->getRedeclContext();
   }
 
@@ -1067,10 +1069,10 @@ void CXXNameMangler::mangleNameWithAbiTags(
   //         ::= <local-name>
   //
   const DeclContext *DC = Context.getEffectiveDeclContext(ND);
-  bool IsLambda = isLambda(ND);
 
   if (GetLocalClassDecl(ND) &&
-      (!IsLambda || isCompatibleWith(LangOptions::ClangABI::Ver18))) {
+      (!isLambda(ND) || isCompatibleWith(LangOptions::ClangABI::Ver18) ||
+       !isCompatibleWith(LangOptions::ClangABI::Ver22))) {
     mangleLocalName(GD, AdditionalAbiTags);
     return;
   }
@@ -1263,6 +1265,12 @@ void CXXNameMangler::mangleFixedPointLiteral() {
   DiagnosticsEngine &Diags = Context.getDiags();
   Diags.Report(diag::err_unsupported_itanium_mangling)
       << UnsupportedItaniumManglingKind::FixedPointLiteral;
+}
+
+void CXXNameMangler::DiagnoseUnsupportedPackIndexTemplateName() {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  Diags.Report(diag::err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::PackIndexTemplateName;
 }
 
 void CXXNameMangler::mangleNullPointer(QualType T) {
@@ -1845,7 +1853,7 @@ void CXXNameMangler::mangleNestedName(const TemplateDecl *TD,
 
 void CXXNameMangler::mangleNestedNameWithClosurePrefix(
     GlobalDecl GD, const NamedDecl *PrefixND,
-    ArrayRef<StringRef> AdditionalAbiTags) {
+    ArrayRef<StringRef> AdditionalAbiTags, bool NoFunction) {
   // A <closure-prefix> represents a variable or field, not a regular
   // DeclContext, so needs special handling. In this case we're mangling a
   // limited form of <nested-name>:
@@ -1854,7 +1862,7 @@ void CXXNameMangler::mangleNestedNameWithClosurePrefix(
 
   Out << 'N';
 
-  mangleClosurePrefix(PrefixND);
+  mangleClosurePrefix(PrefixND, NoFunction);
   mangleUnqualifiedName(GD, nullptr, AdditionalAbiTags);
 
   Out << 'E';
@@ -1870,6 +1878,8 @@ static GlobalDecl getParentOfLocalEntity(const DeclContext *DC) {
     GD = GlobalDecl(CD, Ctor_Complete);
   else if (auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Complete);
+  else if (DC->isExpansionStmt())
+    GD = getParentOfLocalEntity(DC->getEnclosingNonExpansionStatementContext());
   else
     GD = GlobalDecl(cast<FunctionDecl>(DC));
   return GD;
@@ -1945,8 +1955,13 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
       mangleUnqualifiedBlock(BD);
     } else {
       const NamedDecl *ND = cast<NamedDecl>(D);
-      mangleNestedName(GD, Context.getEffectiveDeclContext(ND),
-                       AdditionalAbiTags, true /*NoFunction*/);
+      const NamedDecl *PrefixND = getClosurePrefix(ND);
+      if (PrefixND && !isCompatibleWith(LangOptions::ClangABI::Ver18))
+        mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags,
+                                          /*NoFunction=*/true);
+      else
+        mangleNestedName(GD, Context.getEffectiveDeclContext(ND),
+                         AdditionalAbiTags, /*NoFunction=*/true);
     }
   } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(D)) {
     // Mangle a block in a default parameter; see above explanation for
@@ -2087,14 +2102,19 @@ void CXXNameMangler::mangleTemplateParameterList(
 }
 
 void CXXNameMangler::mangleTypeConstraint(
-    const TemplateDecl *Concept, ArrayRef<TemplateArgument> Arguments) {
-  const DeclContext *DC = Context.getEffectiveDeclContext(Concept);
+    TemplateName Concept, ArrayRef<TemplateArgument> Arguments) {
+  const TemplateDecl *TD = Concept.getAsTemplateDecl();
+  if (!TD) {
+    DiagnoseUnsupportedPackIndexTemplateName();
+    return;
+  }
+  const DeclContext *DC = Context.getEffectiveDeclContext(TD);
   if (!Arguments.empty())
-    mangleTemplateName(Concept, Arguments);
+    mangleTemplateName(TD, Arguments);
   else if (DC->isTranslationUnit() || isStdNamespace(DC))
-    mangleUnscopedName(Concept, DC);
+    mangleUnscopedName(TD, DC);
   else
-    mangleNestedName(Concept, DC);
+    mangleNestedName(TD, DC);
 }
 
 void CXXNameMangler::mangleTypeConstraint(const TypeConstraint *Constraint) {
@@ -2211,6 +2231,9 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   if (NoFunction && isLocalContainerContext(DC))
     return;
 
+  if (DC->isExpansionStmt())
+    return;
+
   const NamedDecl *ND = cast<NamedDecl>(DC);
   if (mangleSubstitution(ND))
     return;
@@ -2261,6 +2284,11 @@ void CXXNameMangler::mangleTemplatePrefix(TemplateName Template) {
   //                   ::= <substitution>
   if (TemplateDecl *TD = Template.getAsTemplateDecl())
     return mangleTemplatePrefix(TD);
+
+  if (Template.getAsPackIndexingTemplate()) {
+    DiagnoseUnsupportedPackIndexTemplateName();
+    return;
+  }
 
   DependentTemplateName *Dependent = Template.getAsDependentTemplateName();
   assert(Dependent && "unexpected template name kind");
@@ -2419,6 +2447,11 @@ void CXXNameMangler::mangleType(TemplateName TN) {
     Out << "_SUBSTPACK_";
     break;
   }
+
+  case TemplateName::PackIndexingTemplate:
+    DiagnoseUnsupportedPackIndexTemplateName();
+    return;
+
   case TemplateName::DeducedTemplate:
     llvm_unreachable("Unexpected DeducedTemplate");
   }
@@ -2472,6 +2505,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::CountAttributed:
+  case Type::LateParsedAttr:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstBuiltinTemplatePack:
@@ -2584,6 +2618,11 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
       Out << "_SUBSTPACK_";
       break;
     }
+
+    case TemplateName::PackIndexingTemplate:
+      DiagnoseUnsupportedPackIndexTemplateName();
+      return false;
+
     case TemplateName::UsingTemplate: {
       TemplateDecl *TD = TN.getAsTemplateDecl();
       assert(TD && !isa<TemplateTemplateParmDecl>(TD));
@@ -2975,13 +3014,13 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
     return true;
   // From Clang 18.0 we correctly treat SVE types as substitution candidates.
   if (Ty->isSVESizelessBuiltinType() &&
-      Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver17)
+      !Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver17))
     return true;
   if (Ty->isBuiltinType())
     return false;
   // Through to Clang 6.0, we accidentally treated undeduced auto types as
   // substitution candidates.
-  if (Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver6 &&
+  if (!Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver6) &&
       isa<AutoType>(Ty))
     return false;
   // A placeholder type for class template deduction is substitutable with
@@ -3513,6 +3552,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(Name);                                                    \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
   }
 }
 
@@ -3529,7 +3573,6 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_IntelOclBicc:
-  case CC_SpirFunction:
   case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
@@ -4569,7 +4612,7 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     BuiltinName = "__" #Trait;                                                 \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     }
     mangleVendorType(BuiltinName);
   }
@@ -4677,6 +4720,10 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_Raw";
   if (Attrs.IsCounter)
     Str += "_Counter";
+  if (Attrs.IsArray)
+    Str += "_Array";
+  if (Attrs.isMultiSampled())
+    Str += "_MS";
   if (T->hasContainedType())
     Str += "_CT";
   mangleVendorQualifier(Str);
@@ -4994,6 +5041,7 @@ recurse:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:
@@ -5141,9 +5189,9 @@ recurse:
     auto *SNTTPE = cast<SubstNonTypeTemplateParmExpr>(E);
     if (auto *CE = dyn_cast<ConstantExpr>(SNTTPE->getReplacement())) {
       // Pull out the constant value and mangle it as a template argument.
-      QualType ParamType = SNTTPE->getParameterType(Context.getASTContext());
       assert(CE->hasAPValueResult() && "expected the NTTP to have an APValue");
-      mangleValueInTemplateArg(ParamType, CE->getAPValueResult(), false,
+      mangleValueInTemplateArg(SNTTPE->getParameterType(),
+                               CE->getAPValueResult(), false,
                                /*NeedExactType=*/true);
       break;
     }
@@ -5293,6 +5341,19 @@ recurse:
     mangleUnresolvedName(ULE->getQualifier(), ULE->getName(),
                          ULE->getTemplateArgs(), ULE->getNumTemplateArgs(),
                          Arity);
+    break;
+  }
+
+  case Expr::DependentTemplateIdExprClass: {
+    NotPrimaryExpr();
+    const auto *DTI = cast<DependentTemplateIdExpr>(E);
+    if (DTI->getTemplateName().getAsPackIndexingTemplate()) {
+      DiagnoseUnsupportedPackIndexTemplateName();
+      break;
+    }
+    mangleUnresolvedName(/*NestedNameSpecifier=*/std::nullopt, DTI->getName(),
+                         DTI->template_arguments().data(),
+                         DTI->getNumTemplateArgs(), Arity);
     break;
   }
 
@@ -5680,7 +5741,7 @@ recurse:
       // entity, meaning that references to enclosing template arguments don't
       // work.
       Out << "L_Z";
-      mangleTemplateName(CSE->getNamedConcept(), CSE->getTemplateArguments());
+      mangleTemplateName(CSE->getConceptDecl(), CSE->getTemplateArguments());
       Out << 'E';
       break;
     }
@@ -6827,8 +6888,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
       // Clang 11 and before mangled an array subject to array-to-pointer decay
       // as if it were the declaration itself.
       bool IsArrayToPointerDecayMangledAsDecl = false;
-      if (TopLevel && Ctx.getLangOpts().getClangABICompat() <=
-                          LangOptions::ClangABI::Ver11) {
+      if (TopLevel && isCompatibleWith(LangOptions::ClangABI::Ver11)) {
         QualType BType = B.getType();
         IsArrayToPointerDecayMangledAsDecl =
             BType->isArrayType() && V.getLValuePath().size() == 1 &&
@@ -7350,7 +7410,8 @@ static void mangleOverrideDiscrimination(CXXNameMangler &Mangler,
   const CXXRecordDecl *PtrauthClassRD =
       Context.baseForVTableAuthentication(ThisRD);
   unsigned TypedDiscriminator =
-      Context.getPointerAuthVTablePointerDiscriminator(ThisRD);
+      Context.getPointerAuthVTablePointerDiscriminator(ThisRD,
+                                                       /*IsVTTEntry=*/false);
   Mangler.mangleVendorQualifier("__vtptrauth");
   auto &ManglerStream = Mangler.getStream();
   ManglerStream << "I";
@@ -7567,9 +7628,8 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
   Mangler.getStream() << "_ZTC";
   // Older versions of clang did not add the record as a substitution candidate
   // here.
-  bool SuppressSubstitution =
-      getASTContext().getLangOpts().getClangABICompat() <=
-      LangOptions::ClangABI::Ver19;
+  bool SuppressSubstitution = getASTContext().getLangOpts().isCompatibleWith(
+      LangOptions::ClangABI::Ver19);
   Mangler.mangleCXXRecordDecl(RD, SuppressSubstitution);
   Mangler.getStream() << Offset;
   Mangler.getStream() << '_';

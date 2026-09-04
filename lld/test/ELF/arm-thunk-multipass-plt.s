@@ -11,6 +11,8 @@
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x80000c --stop-address=0x800010 -d %t2 | FileCheck %s --check-prefix=CHECK-CALL
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0xd00020 --stop-address=0xd00060 --triple=armv5eb-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-PLT
 
+// RUN: rm %t %t2
+
 /// When we create a thunk to a PLT entry the relocation is redirected to the
 /// Thunk, changing its expression to a non-PLT equivalent. If the thunk
 /// becomes unusable we need to restore the relocation expression to the PLT

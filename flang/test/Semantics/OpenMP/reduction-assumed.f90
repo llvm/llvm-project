@@ -31,7 +31,7 @@ end
 subroutine assumedSize1(a)
   integer :: a(*)
 
-  ! ERROR: Whole assumed-size array 'a' may not appear here without subscripts
+  ! ERROR: A whole assumed-size array is not allowed as a list item on REDUCTION clause
   !$omp parallel reduction(+:a)
   !$omp end parallel
 end
@@ -39,7 +39,7 @@ end
 subroutine assumedSize2(a)
   integer :: a(*)
 
-  ! ERROR: Whole assumed-size array 'a' may not appear here without subscripts
+  ! ERROR: A whole assumed-size array is not allowed as a list item on REDUCTION clause
   !$omp parallel reduction(max:a)
   !$omp end parallel
 end
@@ -47,7 +47,7 @@ end
 subroutine assumedSize3(a)
   integer :: a(*)
 
-  ! ERROR: Whole assumed-size array 'a' may not appear here without subscripts
+  ! ERROR: A whole assumed-size array is not allowed as a list item on REDUCTION clause
   !$omp parallel reduction(ior:a)
   !$omp end parallel
 end

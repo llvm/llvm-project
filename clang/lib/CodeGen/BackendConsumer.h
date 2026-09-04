@@ -11,6 +11,7 @@
 
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
+#include "clang/CodeGen/ModuleLinker.h"
 
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Timer.h"
@@ -25,8 +26,6 @@ class CodeGenAction;
 class CoverageSourceInfo;
 
 class BackendConsumer : public ASTConsumer {
-  using LinkModule = CodeGenAction::LinkModule;
-
   virtual void anchor();
   CompilerInstance &CI;
   DiagnosticsEngine &Diags;
@@ -121,6 +120,9 @@ public:
 
   /// Specialized handler for unsupported backend feature diagnostic.
   void UnsupportedDiagHandler(const llvm::DiagnosticInfoUnsupported &D);
+  /// Specialized handler for unsupported target intrinsic diagnostic.
+  void UnsupportedTargetIntrinsicDiagHandler(
+      const llvm::DiagnosticInfoUnsupportedTargetIntrinsic &D);
   /// Specialized handlers for optimization remarks.
   /// Note that these handlers only accept remarks and they always handle
   /// them.

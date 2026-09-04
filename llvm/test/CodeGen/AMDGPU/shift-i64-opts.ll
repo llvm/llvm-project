@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=GCN %s
 
 
 ; lshr (i64 x), c: c > 32 => reg_sequence lshr (i32 hi_32(x)), (c - 32), 0

@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include <cassert>
 #include <limits>
 #include <optional>
@@ -122,6 +123,10 @@ static Value shiftValue(Location loc, Value value, Value offset, Value mask,
 /// Returns true if the allocations of memref `type` generated from `allocOp`
 /// can be lowered to SPIR-V.
 static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
+  // Currently only support static shape
+  if (!type.hasStaticShape())
+    return false;
+
   if (isa<memref::AllocOp, memref::DeallocOp>(allocOp)) {
     auto sc = dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
     if (!sc || sc.getValue() != spirv::StorageClass::Workgroup)
@@ -130,15 +135,15 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
     auto sc = dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
     if (!sc || sc.getValue() != spirv::StorageClass::Function)
       return false;
+    // Function allocations of memref-compatible element types may be lowered
+    // to SPIRV pointers/arrays of the corresponding SPIRV element type.
+    if (isa<MemRefElementTypeInterface>(type.getElementType()))
+      return true;
   } else {
     return false;
   }
 
-  // Currently only support static shape and int or float, complex of int or
-  // float, or vector of int or float element type.
-  if (!type.hasStaticShape())
-    return false;
-
+  // Support memref of int or float types, or their vector/complex types.
   Type elementType = type.getElementType();
   if (auto vecType = dyn_cast<VectorType>(elementType))
     elementType = vecType.getElementType();
@@ -339,6 +344,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts memref.copy to spirv.CopyMemory.
+class CopyOpPattern final : public OpConversionPattern<memref::CopyOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp copyOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 class ReinterpretCastPattern final
     : public OpConversionPattern<memref::ReinterpretCastOp> {
 public:
@@ -400,9 +415,24 @@ AllocaOpPattern::matchAndRewrite(memref::AllocaOp allocaOp, OpAdaptor adaptor,
   if (!spirvType)
     return rewriter.notifyMatchFailure(allocaOp, "type conversion failed");
 
-  rewriter.replaceOpWithNewOp<spirv::VariableOp>(allocaOp, spirvType,
-                                                 spirv::StorageClass::Function,
-                                                 /*initializer=*/nullptr);
+  auto function = allocaOp->getParentOfType<FunctionOpInterface>();
+  if (!function)
+    return rewriter.notifyMatchFailure(allocaOp,
+                                       "requires a containing function");
+
+  // SPIR-V requires Function variables to be declared in the first block.
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block &entryBlock = function->getRegion(0).front();
+  Block::iterator insertionPoint = entryBlock.begin();
+  // Insert the variable after any existing ones to preserve ordering.
+  while (insertionPoint != entryBlock.end() &&
+         isa<spirv::VariableOp>(*insertionPoint))
+    ++insertionPoint;
+  rewriter.setInsertionPoint(&entryBlock, insertionPoint);
+  Value variable = spirv::VariableOp::create(
+      rewriter, allocaOp.getLoc(), spirvType, spirv::StorageClass::Function,
+      /*initializer=*/nullptr);
+  rewriter.replaceOp(allocaOp, variable);
   return success();
 }
 
@@ -454,10 +484,6 @@ LogicalResult
 AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
                                     OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  if (isa<FloatType>(atomicOp.getType()))
-    return rewriter.notifyMatchFailure(atomicOp,
-                                       "unimplemented floating-point case");
-
   auto memrefType = cast<MemRefType>(atomicOp.getMemref().getType());
   std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
   if (!scope)
@@ -488,13 +514,13 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
                                        "failed to convert memref type");
 
   Type pointeeType = pointerType.getPointeeType();
-  auto dstType = dyn_cast<IntegerType>(
-      getElementTypeForStoragePointer(pointeeType, typeConverter));
-  if (!dstType)
+  Type storageElemType =
+      getElementTypeForStoragePointer(pointeeType, typeConverter);
+  if (!storageElemType || !storageElemType.isIntOrFloat())
     return rewriter.notifyMatchFailure(
         atomicOp, "failed to determine destination element type");
 
-  int dstBits = static_cast<int>(dstType.getWidth());
+  int dstBits = static_cast<int>(storageElemType.getIntOrFloatBitWidth());
   assert(dstBits % srcBits == 0);
 
   spirv::MemorySemantics memSem = getAtomicAcqRelMemorySemantics(memrefType);
@@ -509,6 +535,7 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
     break
 
     switch (atomicOp.getKind()) {
+      ATOMIC_CASE(addf, EXTAtomicFAddOp);
       ATOMIC_CASE(addi, AtomicIAddOp);
       ATOMIC_CASE(maxs, AtomicSMaxOp);
       ATOMIC_CASE(maxu, AtomicUMaxOp);
@@ -545,6 +572,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
     return rewriter.notifyMatchFailure(
         atomicOp,
         "sub-element-width atomic ops unsupported with Kernel capability");
+
+  auto dstType = cast<IntegerType>(storageElemType);
 
   auto accessChainOp = ptr.getDefiningOp<spirv::AccessChainOp>();
   if (!accessChainOp)
@@ -1172,6 +1201,48 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+CopyOpPattern::matchAndRewrite(memref::CopyOp copyOp, OpAdaptor adaptor,
+                               ConversionPatternRewriter &rewriter) const {
+  auto memrefType = cast<MemRefType>(copyOp.getSource().getType());
+  if (!memrefType.hasStaticShape())
+    return rewriter.notifyMatchFailure(copyOp, "unsupported dynamic shape");
+
+  for (MemRefType type :
+       {memrefType, cast<MemRefType>(copyOp.getTarget().getType())}) {
+    auto memorySpaceAttr =
+        dyn_cast_if_present<spirv::StorageClassAttr>(type.getMemorySpace());
+    if (memorySpaceAttr &&
+        memorySpaceAttr.getValue() == spirv::StorageClass::Image)
+      return rewriter.notifyMatchFailure(
+          copyOp, "cannot lower memref.copy in image storage class");
+  }
+
+  // The converted operands are SPIR-V pointers to the source and target
+  // storage. spirv.CopyMemory copies the whole pointed-to object, so it only
+  // applies when both pointers point to the same fixed-size element type.
+  Value source = adaptor.getSource();
+  Value target = adaptor.getTarget();
+  auto sourcePtrType = dyn_cast<spirv::PointerType>(source.getType());
+  auto targetPtrType = dyn_cast<spirv::PointerType>(target.getType());
+  if (!sourcePtrType || !targetPtrType)
+    return rewriter.notifyMatchFailure(copyOp, "failed to convert memref type");
+
+  if (sourcePtrType.getPointeeType() != targetPtrType.getPointeeType())
+    return rewriter.notifyMatchFailure(
+        copyOp, "source and target pointee types do not match");
+
+  rewriter.replaceOpWithNewOp<spirv::CopyMemoryOp>(
+      copyOp, target, source, /*memory_access=*/spirv::MemoryAccessAttr{},
+      /*alignment=*/IntegerAttr{}, /*source_memory_access=*/
+      spirv::MemoryAccessAttr{}, /*source_alignment=*/IntegerAttr{});
+  return success();
+}
+
 LogicalResult ReinterpretCastPattern::matchAndRewrite(
     memref::ReinterpretCastOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -1240,10 +1311,10 @@ namespace mlir {
 void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
   patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
-               DeallocOpPattern, IntLoadOpPattern, ImageLoadOpPattern,
-               IntStoreOpPattern, LoadOpPattern, MemorySpaceCastOpPattern,
-               StoreOpPattern, ReinterpretCastPattern, CastPattern,
-               ExtractAlignedPointerAsIndexOpPattern>(typeConverter,
-                                                      patterns.getContext());
+               CopyOpPattern, DeallocOpPattern, IntLoadOpPattern,
+               ImageLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
+               MemorySpaceCastOpPattern, StoreOpPattern, ReinterpretCastPattern,
+               CastPattern, ExtractAlignedPointerAsIndexOpPattern>(
+      typeConverter, patterns.getContext());
 }
 } // namespace mlir

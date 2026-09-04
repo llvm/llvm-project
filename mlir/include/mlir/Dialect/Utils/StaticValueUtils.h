@@ -117,6 +117,9 @@ SmallVector<OpFoldResult> getAsIndexOpFoldResult(MLIRContext *ctx,
 std::optional<std::pair<APInt, bool>> getConstantAPIntValue(OpFoldResult ofr);
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 std::optional<int64_t> getConstantIntValue(OpFoldResult ofr);
+/// If ofr is a constant integer or an IntegerAttr, return the integer
+/// zero-extended to 64 bits.
+std::optional<uint64_t> getConstantUIntValue(OpFoldResult ofr);
 /// If all ofrs are constant integers or IntegerAttrs, return the integers.
 std::optional<SmallVector<int64_t>>
 getConstantIntValues(ArrayRef<OpFoldResult> ofrs);
@@ -244,6 +247,7 @@ struct SaturatedInteger {
                                       : SaturatedInteger{false, v};
   }
   int64_t asInteger() { return saturated ? ShapedType::kDynamic : v; }
+  bool isSaturated() const { return saturated; }
   FailureOr<SaturatedInteger> desaturate(SaturatedInteger other) {
     if (saturated && !other.saturated)
       return other;
@@ -271,6 +275,11 @@ struct SaturatedInteger {
     if (saturated || other.saturated)
       return SaturatedInteger{true, 0};
     return SaturatedInteger{false, other.v * v};
+  }
+  SaturatedInteger smax(SaturatedInteger other) {
+    if (saturated || other.saturated)
+      return SaturatedInteger{true, 0};
+    return SaturatedInteger{false, std::max(other.v, v)};
   }
   bool saturated = true;
   int64_t v = 0;
