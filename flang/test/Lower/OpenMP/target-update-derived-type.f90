@@ -4,6 +4,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda %s -o - | FileCheck %s --check-prefix=MIXED
 ! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
 
+!REQUIRES: amdgpu-registered-target
+
 module target_update_derived_type
   type :: wavefun
     real(8) :: ferwe
