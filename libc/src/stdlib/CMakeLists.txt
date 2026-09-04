@@ -607,6 +607,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.realpath
 )
 
+add_entrypoint_object(
+  getloadavg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getloadavg
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -853,3 +860,4 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
+

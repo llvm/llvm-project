@@ -2208,12 +2208,12 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_OrdNan) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp olt double %arg, 0xFFF0000000000000"
-                "  %A2 = fcmp uge double %arg, 0xFFF0000000000000"
-                "  %A3 = fcmp ogt double %arg, 0xFFF0000000000000"
-                "  %A4 = fcmp ule double %arg, 0xFFF0000000000000"
-                "  %A5 = fcmp oge double %arg, 0xFFF0000000000000"
-                "  %A6 = fcmp ult double %arg, 0xFFF0000000000000"
+                "  %A = fcmp olt double %arg, -inf"
+                "  %A2 = fcmp uge double %arg, -inf"
+                "  %A3 = fcmp ogt double %arg, -inf"
+                "  %A4 = fcmp ule double %arg, -inf"
+                "  %A5 = fcmp oge double %arg, -inf"
+                "  %A6 = fcmp ult double %arg, -inf"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2257,12 +2257,12 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
   parseAssembly("declare double @llvm.fabs.f64(double)\n"
                 "define i1 @test(double %arg) {\n"
                 "  %fabs.arg = call double @llvm.fabs.f64(double %arg)\n"
-                "  %A = fcmp olt double %fabs.arg, 0xFFF0000000000000"
-                "  %A2 = fcmp uge double %fabs.arg, 0xFFF0000000000000"
-                "  %A3 = fcmp ogt double %fabs.arg, 0xFFF0000000000000"
-                "  %A4 = fcmp ule double %fabs.arg, 0xFFF0000000000000"
-                "  %A5 = fcmp oge double %fabs.arg, 0xFFF0000000000000"
-                "  %A6 = fcmp ult double %fabs.arg, 0xFFF0000000000000"
+                "  %A = fcmp olt double %fabs.arg, -inf"
+                "  %A2 = fcmp uge double %fabs.arg, -inf"
+                "  %A3 = fcmp ogt double %fabs.arg, -inf"
+                "  %A4 = fcmp ule double %fabs.arg, -inf"
+                "  %A5 = fcmp oge double %fabs.arg, -inf"
+                "  %A6 = fcmp ult double %fabs.arg, -inf"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2306,10 +2306,10 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp ogt double %arg, 0x7FF0000000000000"
-                "  %A2 = fcmp ule double %arg, 0x7FF0000000000000"
-                "  %A3 = fcmp ole double %arg, 0x7FF0000000000000"
-                "  %A4 = fcmp ugt double %arg, 0x7FF0000000000000"
+                "  %A = fcmp ogt double %arg, +inf"
+                "  %A2 = fcmp ule double %arg, +inf"
+                "  %A3 = fcmp ole double %arg, +inf"
+                "  %A4 = fcmp ugt double %arg, +inf"
                 "  ret i1 %A\n"
                 "}\n");
 

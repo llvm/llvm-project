@@ -1450,7 +1450,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstrncpy:
   case Builtin::BI__builtin_strncpy:
   case Builtin::BIstpncpy:
-  case Builtin::BI__builtin_stpncpy: {
+  case Builtin::BI__builtin_stpncpy:
+  case Builtin::BIstrlcat:
+  case Builtin::BI__builtin_strlcat: {
     // Whether these functions overflow depends on the runtime strlen of the
     // string, not just the buffer size, so emitting the "always overflow"
     // diagnostic isn't quite right. We should still diagnose passing a buffer

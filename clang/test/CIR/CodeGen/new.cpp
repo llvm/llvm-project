@@ -864,16 +864,22 @@ void test_const_array_new_value_init() {
 // CIR-BEFORE-LPP: cir.func{{.*}} @_Z31test_const_array_new_value_initv
 // CIR-BEFORE-LPP:   cir.array.ctor %{{.*}} : !cir.ptr<!cir.array<!rec_OuterZero x 3>> {
 // CIR-BEFORE-LPP:   ^bb0(%[[EL:.*]]: !cir.ptr<!rec_OuterZero>):
-// CIR-BEFORE-LPP:     cir.const #cir.zero : !rec_OuterZero
-// CIR-BEFORE-LPP:     cir.store{{.*}} %{{.*}}, %[[EL]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CIR-BEFORE-LPP:     %[[EL_PTR_I8:.*]] = cir.cast bitcast %[[EL]] : !cir.ptr<!rec_OuterZero> -> !cir.ptr<!u8i>
+// CIR-BEFORE-LPP:     %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR-BEFORE-LPP:     %[[CONST_1:.*]] = cir.const #cir.int<1> : !u64i
+// CIR-BEFORE-LPP:     %[[EL_VOID_PTR:.*]] = cir.cast bitcast %[[EL_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR-BEFORE-LPP:     cir.libc.memset %[[CONST_1]] bytes at %[[EL_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR-BEFORE-LPP:     cir.call @_ZN9OuterZeroC1Ev(%[[EL]])
 // CIR-BEFORE-LPP:   }
 
 // CHECK: cir.func{{.*}} @_Z31test_const_array_new_value_initv
 // CHECK:   cir.do {
 // CHECK:     %[[CUR:.*]] = cir.load{{.*}} : !cir.ptr<!cir.ptr<!rec_OuterZero>>, !cir.ptr<!rec_OuterZero>
-// CHECK:     %[[ZERO:.*]] = cir.const #cir.zero : !rec_OuterZero
-// CHECK:     cir.store{{.*}} %[[ZERO]], %[[CUR]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CHECK:     %[[CUR_PTR_I8:.*]] = cir.cast bitcast %[[CUR]] : !cir.ptr<!rec_OuterZero> -> !cir.ptr<!u8i>
+// CHECK:     %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK:     %[[CONST_1:.*]] = cir.const #cir.int<1> : !u64i
+// CHECK:     %[[CUR_VOID_PTR:.*]] = cir.cast bitcast %[[CUR_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK:     cir.libc.memset %[[CONST_1]] bytes at %[[CUR_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK:     cir.call @_ZN9OuterZeroC1Ev(%[[CUR]])
 // CHECK:     cir.ptr_stride
 // CHECK:     cir.store{{.*}} : !cir.ptr<!rec_OuterZero>, !cir.ptr<!cir.ptr<!rec_OuterZero>>
@@ -899,7 +905,7 @@ void test_const_array_new_value_init() {
 // LLVM:   br i1 %[[CMP]], label %[[BODY]], label %[[EXIT:.*]]
 // LLVM: [[BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[IDX]], align 8
-// LLVM:   store %class.OuterZero zeroinitializer, ptr %[[CUR]], align 1
+// LLVM:   call void @llvm.memset.p0.i64(ptr align 1 %[[CUR]], i8 0, i64 1, i1 false)
 // LLVM:   call void @_ZN9OuterZeroC1Ev(ptr {{.*}} %[[CUR]])
 // LLVM:   %[[NEXT:.*]] = getelementptr %class.OuterZero, ptr %[[CUR]], i64 1
 // LLVM:   store ptr %[[NEXT]], ptr %[[IDX]], align 8
@@ -944,16 +950,22 @@ void test_var_array_new_value_init(int n) {
 // CIR-BEFORE-LPP-NEXT:    cir.cast bitcast %{{.*}} : !cir.ptr<!cir.array<!rec_OuterZero x 0>> -> !cir.ptr<!rec_OuterZero>
 // CIR-BEFORE-LPP-NEXT:    cir.array.ctor %{{.*}}, %[[N]] : !cir.ptr<!rec_OuterZero>, !u64i {
 // CIR-BEFORE-LPP-NEXT:  ^bb0(%[[EL:.*]]: !cir.ptr<!rec_OuterZero>):
-// CIR-BEFORE-LPP-NEXT:    cir.const #cir.zero : !rec_OuterZero
-// CIR-BEFORE-LPP-NEXT:    cir.store{{.*}} %{{.*}}, %[[EL]] : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CIR-BEFORE-LPP-NEXT:    %[[EL_PTR_I8:.*]] = cir.cast bitcast %[[EL]] : !cir.ptr<!rec_OuterZero> -> !cir.ptr<!u8i>
+// CIR-BEFORE-LPP-NEXT:    %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR-BEFORE-LPP-NEXT:    %[[CONST_1:.*]] = cir.const #cir.int<1> : !u64i
+// CIR-BEFORE-LPP-NEXT:    %[[EL_VOID_PTR:.*]] = cir.cast bitcast %[[EL_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR-BEFORE-LPP-NEXT:    cir.libc.memset %[[CONST_1]] bytes at %[[EL_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR-BEFORE-LPP-NEXT:    cir.call @_ZN9OuterZeroC1Ev(%[[EL]]) : (!cir.ptr<!rec_OuterZero> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
 // CIR-BEFORE-LPP-NEXT:  }
 
 // CHECK-LABEL: cir.func{{.*}} @_Z29test_var_array_new_value_initi
 // CHECK:       cir.do {
 // CHECK:         cir.load{{.*}} : !cir.ptr<!cir.ptr<!rec_OuterZero>>, !cir.ptr<!rec_OuterZero>
-// CHECK:         cir.const #cir.zero : !rec_OuterZero
-// CHECK:         cir.store{{.*}} : !rec_OuterZero, !cir.ptr<!rec_OuterZero>
+// CHECK:         %[[EL_PTR_I8:.*]] = cir.cast bitcast {{.*}} : !cir.ptr<!rec_OuterZero> -> !cir.ptr<!u8i>
+// CHECK:         %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK:         %[[CONST_1:.*]] = cir.const #cir.int<1> : !u64i
+// CHECK:         %[[ARG_VOID_PTR:.*]] = cir.cast bitcast %[[EL_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK:         cir.libc.memset %[[CONST_1]] bytes at %[[ARG_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK:         cir.call @_ZN9OuterZeroC1Ev(
 // CHECK:         cir.ptr_stride
 // CHECK:         cir.store{{.*}} : !cir.ptr<!rec_OuterZero>, !cir.ptr<!cir.ptr<!rec_OuterZero>>
@@ -967,7 +979,7 @@ void test_var_array_new_value_init(int n) {
 
 // LLVM-LABEL: define{{.*}} void @_Z29test_var_array_new_value_initi
 // LLVM-NOT: call void @llvm.memset.p0.i64
-// LLVM: store %class.OuterZero zeroinitializer, ptr %[[CUR:.*]], align 1
+// LLVM: call void @llvm.memset.p0.i64(ptr align 1 %[[CUR:.*]], i8 0, i64 1, i1 false)
 // LLVM-NEXT: call void @_ZN9OuterZeroC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
 
 // OGCG-LABEL: define{{.*}} void @_Z29test_var_array_new_value_initi

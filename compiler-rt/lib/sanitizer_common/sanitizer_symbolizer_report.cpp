@@ -61,7 +61,7 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
   InternalScopedString buff;
   buff.AppendF("%s ", error_type);
   StackTracePrinter::GetOrInit()->RenderFrame(
-      &buff, "%L %F", 0, info.address, &info,
+      &buff, info.function ? "%L %F" : "%L", 0, info.address, &info,
       common_flags()->symbolize_vs_style, common_flags()->strip_path_prefix);
   ReportErrorSummary(buff.data(), alt_tool_name);
 }

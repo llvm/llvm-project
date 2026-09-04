@@ -16,8 +16,9 @@
 !rec_D2 = !cir.struct<"D2" {data !rec_EmptyMem, data !rec_Base2}>
 !rec_EMed = !cir.struct<"EMed" {pad !cir.array<!u8i x 16>}>
 !rec_EBig = !cir.struct<"EBig" {pad !cir.array<!u8i x 32>}>
-!rec_EBits = !cir.struct<"EBits" {empty !u8i}>
+!rec_EBits = !cir.struct<"EBits" {empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3, unnamed>]>}>
 !rec_MixPE = !cir.struct<"MixPE" {pad !u8i, empty !u8i}>
+!rec_HoldsEmptyBits = !cir.struct<"HoldsEmptyBits" {empty !rec_EBits, data !s32i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -58,15 +59,15 @@ module attributes {
   // CHECK-NEXT: cir.return
   // LLVM: define void @take_empty()
 
-  // Unnamed bit-field storage is marked empty rather than pad, and a record of
-  // nothing else is dropped the same way.  This spelling does not set the pad
-  // flag, so before the marks it was passed as a register of data.
+  // Unnamed bit-field storage is marked empty because no field of the source
+  // reads it, but it holds data for the ABI, so a record of nothing else is
+  // still passed in a register of its own.
   cir.func @take_empty_bits(%arg0: !rec_EBits, %arg1: !s32i) -> !s32i {
     cir.return %arg1 : !s32i
   }
 
-  // CHECK: cir.func{{.*}} @take_empty_bits(%arg0: !s32i) -> !s32i
-  // LLVM: define i32 @take_empty_bits(i32 %{{[^,)]+}})
+  // CHECK: cir.func{{.*}} @take_empty_bits(%arg0: !u8i, %arg1: !s32i) -> !s32i
+  // LLVM: define i32 @take_empty_bits(i8 %{{[^,)]+}}, i32 %{{[^,)]+}})
 
   // Emptiness is the absence of a data member, not the presence of a pad one.
   cir.func @take_mixed_pad_empty(%arg0: !rec_MixPE, %arg1: !s32i) -> !s32i {
@@ -76,6 +77,17 @@ module attributes {
   // CHECK: cir.func{{.*}} @take_mixed_pad_empty(%arg0: !s32i) -> !s32i
   // LLVM: define i32 @take_mixed_pad_empty(i32 %{{[^,)]+}})
 
+  // An empty-for-ABI member can occupy bytes without a pad member, by holding
+  // an unnamed access unit of its own.  Classic CodeGen reaches those bytes
+  // through the member's own fields, so this is refused.  An empty base or a
+  // [[no_unique_address]] member of `struct { unsigned : 32; }` produces it.
+  cir.func @take_holds_empty_bits(%arg0: !rec_HoldsEmptyBits) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_holds_empty_bits(%arg0: !u64i)
+  // LLVM: define void @take_holds_empty_bits(i64 %{{[^,)]+}})
+  
   // Several [[no_unique_address]] members widen the padding past a byte.
   cir.func @take_empty_blob(%arg0: !rec_EBlob) -> !s32i {
     %0 = cir.const #cir.int<0> : !s32i

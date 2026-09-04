@@ -43,6 +43,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpwnam
+  SRCS
+    getpwnam.cpp
+  HDRS
+    getpwnam.h
+  DEPENDS
+    libc.hdr.types.struct_passwd
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .pwd_utils
+)
+
+add_entrypoint_object(
   getpwnam_r
   SRCS
     getpwnam_r.cpp
@@ -56,6 +71,21 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    .pwd_utils
+)
+
+add_entrypoint_object(
+  getpwuid
+  SRCS
+    getpwuid.cpp
+  HDRS
+    getpwuid.h
+  DEPENDS
+    libc.hdr.types.struct_passwd
+    libc.hdr.types.uid_t
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.macros.config
     .pwd_utils
 )
 

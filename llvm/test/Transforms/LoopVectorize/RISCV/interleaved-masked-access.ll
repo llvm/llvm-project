@@ -5,15 +5,14 @@
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
-define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) {
+define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) vscale_range(2, 1024) {
 ; SCALAR_EPILOGUE-LABEL: define void @masked_strided_factor2(
 ; SCALAR_EPILOGUE-SAME: ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SCALAR_EPILOGUE-NEXT:  [[ENTRY:.*:]]
 ; SCALAR_EPILOGUE-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; SCALAR_EPILOGUE-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
-; SCALAR_EPILOGUE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP1]], i32 32)
-; SCALAR_EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1024, [[TMP2]]
+; SCALAR_EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1024, [[TMP1]]
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SCALAR_EPILOGUE:       [[VECTOR_PH]]:
 ; SCALAR_EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP1]]
@@ -177,15 +176,14 @@ for.end:
 }
 
 
-define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) {
+define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) vscale_range(2, 1024) {
 ; SCALAR_EPILOGUE-LABEL: define void @masked_strided_factor4(
 ; SCALAR_EPILOGUE-SAME: ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) #[[ATTR0]] {
 ; SCALAR_EPILOGUE-NEXT:  [[ENTRY:.*:]]
 ; SCALAR_EPILOGUE-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; SCALAR_EPILOGUE-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
-; SCALAR_EPILOGUE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP1]], i32 32)
-; SCALAR_EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1024, [[TMP2]]
+; SCALAR_EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1024, [[TMP1]]
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SCALAR_EPILOGUE:       [[VECTOR_PH]]:
 ; SCALAR_EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP1]]

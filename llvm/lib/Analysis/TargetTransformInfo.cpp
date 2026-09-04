@@ -839,10 +839,6 @@ unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
   return TTIImpl->getMinVectorRegisterBitWidth();
 }
 
-std::optional<unsigned> TargetTransformInfo::getMaxVScale() const {
-  return TTIImpl->getMaxVScale();
-}
-
 std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
 }
