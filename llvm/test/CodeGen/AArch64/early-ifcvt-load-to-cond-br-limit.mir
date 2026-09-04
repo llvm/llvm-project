@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=CHECK-DEFAULT
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt -enable-early-ifcvt-data-dependent -early-ifcvt-max-region-instrs=3 -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=CHECK-SMALL-BUDGET
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt -enable-early-ifcvt-data-dependent -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=CHECK-LARGE-BUDGET
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt -enable-early-ifcvt-cascade -enable-early-ifcvt-data-dependent -early-ifcvt-limit=50 -early-ifcvt-max-region-instrs=65 -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=CHECK-CASCADE-BUDGET
 
 ---
 name:            load_in_pred_region_over_instruction_budget
@@ -138,6 +139,43 @@ body:             |
   ; CHECK-LARGE-BUDGET-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[MADDWrrr1]], 12, implicit $nzcv
   ; CHECK-LARGE-BUDGET-NEXT:   $w0 = COPY [[CSELWr]]
   ; CHECK-LARGE-BUDGET-NEXT:   RET_ReallyLR implicit $w0
+  ;
+  ; CHECK-CASCADE-BUDGET-LABEL: name: load_in_pred_region_over_instruction_budget
+  ; CHECK-CASCADE-BUDGET: bb.0:
+  ; CHECK-CASCADE-BUDGET-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-CASCADE-BUDGET-NEXT:   liveins: $x0, $w1, $w2
+  ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
+  ; CHECK-CASCADE-BUDGET-NEXT: bb.1:
+  ; CHECK-CASCADE-BUDGET-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[LDRWui]], 0, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   Bcc 0, %bb.2, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   B %bb.3
+  ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
+  ; CHECK-CASCADE-BUDGET-NEXT: bb.2:
+  ; CHECK-CASCADE-BUDGET-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
+  ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 0 :: (store (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 1 :: (store (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 2 :: (store (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 3 :: (store (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 4 :: (store (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   STRWui $wzr, [[COPY]], 5 :: (store (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   B %bb.3
+  ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
+  ; CHECK-CASCADE-BUDGET-NEXT: bb.3:
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri]], 100, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[COPY2]], $wzr
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MADDWrrr1:%[0-9]+]]:gpr32 = MADDWrrr [[MADDWrrr]], [[COPY1]], $wzr
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[MADDWrrr1]], 12, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   $w0 = COPY [[CSELWr]]
+  ; CHECK-CASCADE-BUDGET-NEXT:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1(0x80000000)
     liveins: $x0, $w1, $w2
@@ -183,4 +221,543 @@ body:             |
     %8:gpr32 = PHI %1, %bb.3, %7, %bb.4
     $w0 = COPY %8
     RET_ReallyLR implicit $w0
+...
+---
+name:            cascade_load_to_cond_br_scan_budget
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  ; CHECK-DEFAULT-LABEL: name: cascade_load_to_cond_br_scan_budget
+  ; CHECK-DEFAULT: bb.0:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x40000000), %bb.1(0x40000000)
+  ; CHECK-DEFAULT-NEXT:   liveins: $x0
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+  ; CHECK-DEFAULT-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 2
+  ; CHECK-DEFAULT-NEXT:   [[MOVi32imm2:%[0-9]+]]:gpr32 = MOVi32imm 3
+  ; CHECK-DEFAULT-NEXT:   [[MOVi32imm3:%[0-9]+]]:gpr32 = MOVi32imm 4
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui1:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 1 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui2:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 2 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui3:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 3 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui4:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 4 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui5:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 5 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui6:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 6 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 100
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri1:%[0-9]+]]:gpr32common = ADDWri [[ADDWri]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri2:%[0-9]+]]:gpr32common = ADDWri [[ADDWri1]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri3:%[0-9]+]]:gpr32common = ADDWri [[ADDWri2]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri4:%[0-9]+]]:gpr32common = ADDWri [[ADDWri3]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri4]], 1, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 10, %bb.8, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.1
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.1:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x40000000), %bb.2(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 101
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri5:%[0-9]+]]:gpr32common = ADDWri [[LDRWui1]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri6:%[0-9]+]]:gpr32common = ADDWri [[ADDWri5]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri7:%[0-9]+]]:gpr32common = ADDWri [[ADDWri6]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri8:%[0-9]+]]:gpr32common = ADDWri [[ADDWri7]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri9:%[0-9]+]]:gpr32common = ADDWri [[ADDWri8]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri9]], 2, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 11, %bb.8, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.2
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.2:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x40000000), %bb.3(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm2:%[0-9]+]]:gpr64 = MOVi64imm 102
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri10:%[0-9]+]]:gpr32common = ADDWri [[LDRWui2]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri11:%[0-9]+]]:gpr32common = ADDWri [[ADDWri10]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri12:%[0-9]+]]:gpr32common = ADDWri [[ADDWri11]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri13:%[0-9]+]]:gpr32common = ADDWri [[ADDWri12]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri14:%[0-9]+]]:gpr32common = ADDWri [[ADDWri13]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri14]], 3, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 12, %bb.8, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.3
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.3:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x40000000), %bb.4(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm3:%[0-9]+]]:gpr64 = MOVi64imm 103
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri15:%[0-9]+]]:gpr32common = ADDWri [[LDRWui3]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri16:%[0-9]+]]:gpr32common = ADDWri [[ADDWri15]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri17:%[0-9]+]]:gpr32common = ADDWri [[ADDWri16]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri18:%[0-9]+]]:gpr32common = ADDWri [[ADDWri17]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri19:%[0-9]+]]:gpr32common = ADDWri [[ADDWri18]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri3:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri19]], 4, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 13, %bb.8, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.4
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.4:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x40000000), %bb.5(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm4:%[0-9]+]]:gpr64 = MOVi64imm 104
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri20:%[0-9]+]]:gpr32common = ADDWri [[LDRWui4]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri21:%[0-9]+]]:gpr32common = ADDWri [[ADDWri20]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri22:%[0-9]+]]:gpr32common = ADDWri [[ADDWri21]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri23:%[0-9]+]]:gpr32common = ADDWri [[ADDWri22]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri24:%[0-9]+]]:gpr32common = ADDWri [[ADDWri23]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri4:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri24]], 5, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 14, %bb.8, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.5
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.5:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x40000000), %bb.6(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm5:%[0-9]+]]:gpr64 = MOVi64imm 105
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri25:%[0-9]+]]:gpr32common = ADDWri [[LDRWui5]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri26:%[0-9]+]]:gpr32common = ADDWri [[ADDWri25]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri27:%[0-9]+]]:gpr32common = ADDWri [[ADDWri26]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri28:%[0-9]+]]:gpr32common = ADDWri [[ADDWri27]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri29:%[0-9]+]]:gpr32common = ADDWri [[ADDWri28]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri5:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri29]], 6, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 15, %bb.8, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.6
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.6:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x40000000), %bb.7(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm6:%[0-9]+]]:gpr64 = MOVi64imm 106
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri30:%[0-9]+]]:gpr32common = ADDWri [[LDRWui6]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri31:%[0-9]+]]:gpr32common = ADDWri [[ADDWri30]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri32:%[0-9]+]]:gpr32common = ADDWri [[ADDWri31]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri33:%[0-9]+]]:gpr32common = ADDWri [[ADDWri32]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri34:%[0-9]+]]:gpr32common = ADDWri [[ADDWri33]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri6:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri34]], 7, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 16, %bb.8, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.7
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.7:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MOVi64imm7:%[0-9]+]]:gpr64 = MOVi64imm 107
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.8:
+  ; CHECK-DEFAULT-NEXT:   [[PHI:%[0-9]+]]:gpr64 = PHI [[MOVi64imm]], %bb.0, [[MOVi64imm1]], %bb.1, [[MOVi64imm2]], %bb.2, [[MOVi64imm3]], %bb.3, [[MOVi64imm4]], %bb.4, [[MOVi64imm5]], %bb.5, [[MOVi64imm6]], %bb.6, [[MOVi64imm7]], %bb.7
+  ; CHECK-DEFAULT-NEXT:   $x0 = COPY [[PHI]]
+  ; CHECK-DEFAULT-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; CHECK-SMALL-BUDGET-LABEL: name: cascade_load_to_cond_br_scan_budget
+  ; CHECK-SMALL-BUDGET: bb.0:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.1(0x40000000)
+  ; CHECK-SMALL-BUDGET-NEXT:   liveins: $x0
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 2
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi32imm2:%[0-9]+]]:gpr32 = MOVi32imm 3
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi32imm3:%[0-9]+]]:gpr32 = MOVi32imm 4
+  ; CHECK-SMALL-BUDGET-NEXT:   [[LDRWui1:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 1 :: (load (s32))
+  ; CHECK-SMALL-BUDGET-NEXT:   [[LDRWui2:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 2 :: (load (s32))
+  ; CHECK-SMALL-BUDGET-NEXT:   [[LDRWui3:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 3 :: (load (s32))
+  ; CHECK-SMALL-BUDGET-NEXT:   [[LDRWui4:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 4 :: (load (s32))
+  ; CHECK-SMALL-BUDGET-NEXT:   [[LDRWui5:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 5 :: (load (s32))
+  ; CHECK-SMALL-BUDGET-NEXT:   [[LDRWui6:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 6 :: (load (s32))
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 100
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri1:%[0-9]+]]:gpr32common = ADDWri [[ADDWri]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri2:%[0-9]+]]:gpr32common = ADDWri [[ADDWri1]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri3:%[0-9]+]]:gpr32common = ADDWri [[ADDWri2]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri4:%[0-9]+]]:gpr32common = ADDWri [[ADDWri3]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri4]], 1, 0, implicit-def $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   Bcc 10, %bb.8, implicit $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   B %bb.1
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.1:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.2(0x40000000)
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 101
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri5:%[0-9]+]]:gpr32common = ADDWri [[LDRWui1]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri6:%[0-9]+]]:gpr32common = ADDWri [[ADDWri5]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri7:%[0-9]+]]:gpr32common = ADDWri [[ADDWri6]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri8:%[0-9]+]]:gpr32common = ADDWri [[ADDWri7]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri9:%[0-9]+]]:gpr32common = ADDWri [[ADDWri8]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri9]], 2, 0, implicit-def $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   Bcc 11, %bb.8, implicit $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   B %bb.2
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.2:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.3(0x40000000)
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm2:%[0-9]+]]:gpr64 = MOVi64imm 102
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri10:%[0-9]+]]:gpr32common = ADDWri [[LDRWui2]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri11:%[0-9]+]]:gpr32common = ADDWri [[ADDWri10]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri12:%[0-9]+]]:gpr32common = ADDWri [[ADDWri11]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri13:%[0-9]+]]:gpr32common = ADDWri [[ADDWri12]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri14:%[0-9]+]]:gpr32common = ADDWri [[ADDWri13]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri14]], 3, 0, implicit-def $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   Bcc 12, %bb.8, implicit $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   B %bb.3
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.3:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.4(0x40000000)
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm3:%[0-9]+]]:gpr64 = MOVi64imm 103
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri15:%[0-9]+]]:gpr32common = ADDWri [[LDRWui3]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri16:%[0-9]+]]:gpr32common = ADDWri [[ADDWri15]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri17:%[0-9]+]]:gpr32common = ADDWri [[ADDWri16]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri18:%[0-9]+]]:gpr32common = ADDWri [[ADDWri17]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri19:%[0-9]+]]:gpr32common = ADDWri [[ADDWri18]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[SUBSWri3:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri19]], 4, 0, implicit-def $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   Bcc 13, %bb.8, implicit $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   B %bb.4
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.4:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.5(0x40000000)
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm4:%[0-9]+]]:gpr64 = MOVi64imm 104
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri20:%[0-9]+]]:gpr32common = ADDWri [[LDRWui4]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri21:%[0-9]+]]:gpr32common = ADDWri [[ADDWri20]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri22:%[0-9]+]]:gpr32common = ADDWri [[ADDWri21]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri23:%[0-9]+]]:gpr32common = ADDWri [[ADDWri22]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri24:%[0-9]+]]:gpr32common = ADDWri [[ADDWri23]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[SUBSWri4:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri24]], 5, 0, implicit-def $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   Bcc 14, %bb.8, implicit $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   B %bb.5
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.5:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.6(0x40000000)
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm5:%[0-9]+]]:gpr64 = MOVi64imm 105
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri25:%[0-9]+]]:gpr32common = ADDWri [[LDRWui5]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri26:%[0-9]+]]:gpr32common = ADDWri [[ADDWri25]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri27:%[0-9]+]]:gpr32common = ADDWri [[ADDWri26]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri28:%[0-9]+]]:gpr32common = ADDWri [[ADDWri27]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri29:%[0-9]+]]:gpr32common = ADDWri [[ADDWri28]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[SUBSWri5:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri29]], 6, 0, implicit-def $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   Bcc 15, %bb.8, implicit $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   B %bb.6
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.6:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.7(0x40000000)
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm6:%[0-9]+]]:gpr64 = MOVi64imm 106
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri30:%[0-9]+]]:gpr32common = ADDWri [[LDRWui6]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri31:%[0-9]+]]:gpr32common = ADDWri [[ADDWri30]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri32:%[0-9]+]]:gpr32common = ADDWri [[ADDWri31]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri33:%[0-9]+]]:gpr32common = ADDWri [[ADDWri32]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[ADDWri34:%[0-9]+]]:gpr32common = ADDWri [[ADDWri33]], 1, 0
+  ; CHECK-SMALL-BUDGET-NEXT:   [[SUBSWri6:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri34]], 7, 0, implicit-def $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   Bcc 16, %bb.8, implicit $nzcv
+  ; CHECK-SMALL-BUDGET-NEXT:   B %bb.7
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.7:
+  ; CHECK-SMALL-BUDGET-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT:   [[MOVi64imm7:%[0-9]+]]:gpr64 = MOVi64imm 107
+  ; CHECK-SMALL-BUDGET-NEXT: {{  $}}
+  ; CHECK-SMALL-BUDGET-NEXT: bb.8:
+  ; CHECK-SMALL-BUDGET-NEXT:   [[PHI:%[0-9]+]]:gpr64 = PHI [[MOVi64imm]], %bb.0, [[MOVi64imm1]], %bb.1, [[MOVi64imm2]], %bb.2, [[MOVi64imm3]], %bb.3, [[MOVi64imm4]], %bb.4, [[MOVi64imm5]], %bb.5, [[MOVi64imm6]], %bb.6, [[MOVi64imm7]], %bb.7
+  ; CHECK-SMALL-BUDGET-NEXT:   $x0 = COPY [[PHI]]
+  ; CHECK-SMALL-BUDGET-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; CHECK-LARGE-BUDGET-LABEL: name: cascade_load_to_cond_br_scan_budget
+  ; CHECK-LARGE-BUDGET: bb.0:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.1(0x40000000)
+  ; CHECK-LARGE-BUDGET-NEXT:   liveins: $x0
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 2
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi32imm2:%[0-9]+]]:gpr32 = MOVi32imm 3
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi32imm3:%[0-9]+]]:gpr32 = MOVi32imm 4
+  ; CHECK-LARGE-BUDGET-NEXT:   [[LDRWui1:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 1 :: (load (s32))
+  ; CHECK-LARGE-BUDGET-NEXT:   [[LDRWui2:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 2 :: (load (s32))
+  ; CHECK-LARGE-BUDGET-NEXT:   [[LDRWui3:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 3 :: (load (s32))
+  ; CHECK-LARGE-BUDGET-NEXT:   [[LDRWui4:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 4 :: (load (s32))
+  ; CHECK-LARGE-BUDGET-NEXT:   [[LDRWui5:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 5 :: (load (s32))
+  ; CHECK-LARGE-BUDGET-NEXT:   [[LDRWui6:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 6 :: (load (s32))
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 100
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri1:%[0-9]+]]:gpr32common = ADDWri [[ADDWri]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri2:%[0-9]+]]:gpr32common = ADDWri [[ADDWri1]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri3:%[0-9]+]]:gpr32common = ADDWri [[ADDWri2]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri4:%[0-9]+]]:gpr32common = ADDWri [[ADDWri3]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri4]], 1, 0, implicit-def $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   Bcc 10, %bb.8, implicit $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   B %bb.1
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.1:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.2(0x40000000)
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 101
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri5:%[0-9]+]]:gpr32common = ADDWri [[LDRWui1]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri6:%[0-9]+]]:gpr32common = ADDWri [[ADDWri5]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri7:%[0-9]+]]:gpr32common = ADDWri [[ADDWri6]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri8:%[0-9]+]]:gpr32common = ADDWri [[ADDWri7]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri9:%[0-9]+]]:gpr32common = ADDWri [[ADDWri8]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri9]], 2, 0, implicit-def $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   Bcc 11, %bb.8, implicit $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   B %bb.2
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.2:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.3(0x40000000)
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm2:%[0-9]+]]:gpr64 = MOVi64imm 102
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri10:%[0-9]+]]:gpr32common = ADDWri [[LDRWui2]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri11:%[0-9]+]]:gpr32common = ADDWri [[ADDWri10]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri12:%[0-9]+]]:gpr32common = ADDWri [[ADDWri11]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri13:%[0-9]+]]:gpr32common = ADDWri [[ADDWri12]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri14:%[0-9]+]]:gpr32common = ADDWri [[ADDWri13]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri14]], 3, 0, implicit-def $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   Bcc 12, %bb.8, implicit $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   B %bb.3
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.3:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.4(0x40000000)
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm3:%[0-9]+]]:gpr64 = MOVi64imm 103
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri15:%[0-9]+]]:gpr32common = ADDWri [[LDRWui3]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri16:%[0-9]+]]:gpr32common = ADDWri [[ADDWri15]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri17:%[0-9]+]]:gpr32common = ADDWri [[ADDWri16]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri18:%[0-9]+]]:gpr32common = ADDWri [[ADDWri17]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri19:%[0-9]+]]:gpr32common = ADDWri [[ADDWri18]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[SUBSWri3:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri19]], 4, 0, implicit-def $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   Bcc 13, %bb.8, implicit $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   B %bb.4
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.4:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.5(0x40000000)
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm4:%[0-9]+]]:gpr64 = MOVi64imm 104
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri20:%[0-9]+]]:gpr32common = ADDWri [[LDRWui4]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri21:%[0-9]+]]:gpr32common = ADDWri [[ADDWri20]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri22:%[0-9]+]]:gpr32common = ADDWri [[ADDWri21]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri23:%[0-9]+]]:gpr32common = ADDWri [[ADDWri22]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri24:%[0-9]+]]:gpr32common = ADDWri [[ADDWri23]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[SUBSWri4:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri24]], 5, 0, implicit-def $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   Bcc 14, %bb.8, implicit $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   B %bb.5
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.5:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.6(0x40000000)
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm5:%[0-9]+]]:gpr64 = MOVi64imm 105
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri25:%[0-9]+]]:gpr32common = ADDWri [[LDRWui5]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri26:%[0-9]+]]:gpr32common = ADDWri [[ADDWri25]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri27:%[0-9]+]]:gpr32common = ADDWri [[ADDWri26]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri28:%[0-9]+]]:gpr32common = ADDWri [[ADDWri27]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri29:%[0-9]+]]:gpr32common = ADDWri [[ADDWri28]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[SUBSWri5:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri29]], 6, 0, implicit-def $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   Bcc 15, %bb.8, implicit $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   B %bb.6
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.6:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x40000000), %bb.7(0x40000000)
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm6:%[0-9]+]]:gpr64 = MOVi64imm 106
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri30:%[0-9]+]]:gpr32common = ADDWri [[LDRWui6]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri31:%[0-9]+]]:gpr32common = ADDWri [[ADDWri30]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri32:%[0-9]+]]:gpr32common = ADDWri [[ADDWri31]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri33:%[0-9]+]]:gpr32common = ADDWri [[ADDWri32]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[ADDWri34:%[0-9]+]]:gpr32common = ADDWri [[ADDWri33]], 1, 0
+  ; CHECK-LARGE-BUDGET-NEXT:   [[SUBSWri6:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri34]], 7, 0, implicit-def $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   Bcc 16, %bb.8, implicit $nzcv
+  ; CHECK-LARGE-BUDGET-NEXT:   B %bb.7
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.7:
+  ; CHECK-LARGE-BUDGET-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT:   [[MOVi64imm7:%[0-9]+]]:gpr64 = MOVi64imm 107
+  ; CHECK-LARGE-BUDGET-NEXT: {{  $}}
+  ; CHECK-LARGE-BUDGET-NEXT: bb.8:
+  ; CHECK-LARGE-BUDGET-NEXT:   [[PHI:%[0-9]+]]:gpr64 = PHI [[MOVi64imm]], %bb.0, [[MOVi64imm1]], %bb.1, [[MOVi64imm2]], %bb.2, [[MOVi64imm3]], %bb.3, [[MOVi64imm4]], %bb.4, [[MOVi64imm5]], %bb.5, [[MOVi64imm6]], %bb.6, [[MOVi64imm7]], %bb.7
+  ; CHECK-LARGE-BUDGET-NEXT:   $x0 = COPY [[PHI]]
+  ; CHECK-LARGE-BUDGET-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; CHECK-CASCADE-BUDGET-LABEL: name: cascade_load_to_cond_br_scan_budget
+  ; CHECK-CASCADE-BUDGET: bb.0:
+  ; CHECK-CASCADE-BUDGET-NEXT:   liveins: $x0
+  ; CHECK-CASCADE-BUDGET-NEXT: {{  $}}
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 2
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi32imm2:%[0-9]+]]:gpr32 = MOVi32imm 3
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi32imm3:%[0-9]+]]:gpr32 = MOVi32imm 4
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui1:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 1 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui2:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 2 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui3:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 3 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui4:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 4 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui5:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 5 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[LDRWui6:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 6 :: (load (s32))
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 100
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri1:%[0-9]+]]:gpr32common = ADDWri [[ADDWri]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri2:%[0-9]+]]:gpr32common = ADDWri [[ADDWri1]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri3:%[0-9]+]]:gpr32common = ADDWri [[ADDWri2]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri4:%[0-9]+]]:gpr32common = ADDWri [[ADDWri3]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm1:%[0-9]+]]:gpr64 = MOVi64imm 101
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri5:%[0-9]+]]:gpr32common = ADDWri [[LDRWui1]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri6:%[0-9]+]]:gpr32common = ADDWri [[ADDWri5]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri7:%[0-9]+]]:gpr32common = ADDWri [[ADDWri6]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri8:%[0-9]+]]:gpr32common = ADDWri [[ADDWri7]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri9:%[0-9]+]]:gpr32common = ADDWri [[ADDWri8]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm2:%[0-9]+]]:gpr64 = MOVi64imm 102
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri10:%[0-9]+]]:gpr32common = ADDWri [[LDRWui2]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri11:%[0-9]+]]:gpr32common = ADDWri [[ADDWri10]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri12:%[0-9]+]]:gpr32common = ADDWri [[ADDWri11]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri13:%[0-9]+]]:gpr32common = ADDWri [[ADDWri12]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri14:%[0-9]+]]:gpr32common = ADDWri [[ADDWri13]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm3:%[0-9]+]]:gpr64 = MOVi64imm 103
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri15:%[0-9]+]]:gpr32common = ADDWri [[LDRWui3]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri16:%[0-9]+]]:gpr32common = ADDWri [[ADDWri15]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri17:%[0-9]+]]:gpr32common = ADDWri [[ADDWri16]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri18:%[0-9]+]]:gpr32common = ADDWri [[ADDWri17]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri19:%[0-9]+]]:gpr32common = ADDWri [[ADDWri18]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm4:%[0-9]+]]:gpr64 = MOVi64imm 104
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri20:%[0-9]+]]:gpr32common = ADDWri [[LDRWui4]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri21:%[0-9]+]]:gpr32common = ADDWri [[ADDWri20]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri22:%[0-9]+]]:gpr32common = ADDWri [[ADDWri21]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri23:%[0-9]+]]:gpr32common = ADDWri [[ADDWri22]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri24:%[0-9]+]]:gpr32common = ADDWri [[ADDWri23]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm5:%[0-9]+]]:gpr64 = MOVi64imm 105
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri25:%[0-9]+]]:gpr32common = ADDWri [[LDRWui5]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri26:%[0-9]+]]:gpr32common = ADDWri [[ADDWri25]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri27:%[0-9]+]]:gpr32common = ADDWri [[ADDWri26]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri28:%[0-9]+]]:gpr32common = ADDWri [[ADDWri27]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri29:%[0-9]+]]:gpr32common = ADDWri [[ADDWri28]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm6:%[0-9]+]]:gpr64 = MOVi64imm 106
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri30:%[0-9]+]]:gpr32common = ADDWri [[LDRWui6]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri31:%[0-9]+]]:gpr32common = ADDWri [[ADDWri30]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri32:%[0-9]+]]:gpr32common = ADDWri [[ADDWri31]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri33:%[0-9]+]]:gpr32common = ADDWri [[ADDWri32]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[ADDWri34:%[0-9]+]]:gpr32common = ADDWri [[ADDWri33]], 1, 0
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri34]], 7, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[MOVi64imm7:%[0-9]+]]:gpr64 = MOVi64imm 107
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELXr:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm6]], [[MOVi64imm7]], 16, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri29]], 6, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELXr1:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm5]], [[CSELXr]], 15, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri24]], 5, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELXr2:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm4]], [[CSELXr1]], 14, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri3:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri19]], 4, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELXr3:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm3]], [[CSELXr2]], 13, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri4:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri14]], 3, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELXr4:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm2]], [[CSELXr3]], 12, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri5:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri9]], 2, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELXr5:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm1]], [[CSELXr4]], 11, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[SUBSWri6:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri4]], 1, 0, implicit-def $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   [[CSELXr6:%[0-9]+]]:gpr64 = CSELXr [[MOVi64imm]], [[CSELXr5]], 10, implicit $nzcv
+  ; CHECK-CASCADE-BUDGET-NEXT:   $x0 = COPY [[CSELXr6]]
+  ; CHECK-CASCADE-BUDGET-NEXT:   RET_ReallyLR implicit $x0
+  bb.0:
+    successors: %bb.8(0x40000000), %bb.1(0x40000000)
+    liveins: $x0
+
+    %0:gpr64common = COPY $x0
+    %1:gpr32common = LDRWui %0, 0 :: (load (s32))
+    %200:gpr32 = MOVi32imm 1
+    %201:gpr32 = MOVi32imm 2
+    %202:gpr32 = MOVi32imm 3
+    %203:gpr32 = MOVi32imm 4
+    %2:gpr32common = LDRWui %0, 1 :: (load (s32))
+    %3:gpr32common = LDRWui %0, 2 :: (load (s32))
+    %4:gpr32common = LDRWui %0, 3 :: (load (s32))
+    %5:gpr32common = LDRWui %0, 4 :: (load (s32))
+    %6:gpr32common = LDRWui %0, 5 :: (load (s32))
+    %7:gpr32common = LDRWui %0, 6 :: (load (s32))
+    %50:gpr64 = MOVi64imm 100
+    %204:gpr32common = ADDWri %1, 1, 0
+    %205:gpr32common = ADDWri %204, 1, 0
+    %206:gpr32common = ADDWri %205, 1, 0
+    %207:gpr32common = ADDWri %206, 1, 0
+    %208:gpr32common = ADDWri %207, 1, 0
+    %209:gpr32 = SUBSWri %208, 1, 0, implicit-def $nzcv
+    Bcc 10, %bb.8, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    successors: %bb.8(0x40000000), %bb.2(0x40000000)
+
+    %51:gpr64 = MOVi64imm 101
+    %210:gpr32common = ADDWri %2, 1, 0
+    %211:gpr32common = ADDWri %210, 1, 0
+    %212:gpr32common = ADDWri %211, 1, 0
+    %213:gpr32common = ADDWri %212, 1, 0
+    %214:gpr32common = ADDWri %213, 1, 0
+    %215:gpr32 = SUBSWri %214, 2, 0, implicit-def $nzcv
+    Bcc 11, %bb.8, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    successors: %bb.8(0x40000000), %bb.3(0x40000000)
+
+    %52:gpr64 = MOVi64imm 102
+    %216:gpr32common = ADDWri %3, 1, 0
+    %217:gpr32common = ADDWri %216, 1, 0
+    %218:gpr32common = ADDWri %217, 1, 0
+    %219:gpr32common = ADDWri %218, 1, 0
+    %220:gpr32common = ADDWri %219, 1, 0
+    %221:gpr32 = SUBSWri %220, 3, 0, implicit-def $nzcv
+    Bcc 12, %bb.8, implicit $nzcv
+    B %bb.3
+
+  bb.3:
+    successors: %bb.8(0x40000000), %bb.4(0x40000000)
+
+    %53:gpr64 = MOVi64imm 103
+    %222:gpr32common = ADDWri %4, 1, 0
+    %223:gpr32common = ADDWri %222, 1, 0
+    %224:gpr32common = ADDWri %223, 1, 0
+    %225:gpr32common = ADDWri %224, 1, 0
+    %226:gpr32common = ADDWri %225, 1, 0
+    %227:gpr32 = SUBSWri %226, 4, 0, implicit-def $nzcv
+    Bcc 13, %bb.8, implicit $nzcv
+    B %bb.4
+
+  bb.4:
+    successors: %bb.8(0x40000000), %bb.5(0x40000000)
+
+    %54:gpr64 = MOVi64imm 104
+    %228:gpr32common = ADDWri %5, 1, 0
+    %229:gpr32common = ADDWri %228, 1, 0
+    %230:gpr32common = ADDWri %229, 1, 0
+    %231:gpr32common = ADDWri %230, 1, 0
+    %232:gpr32common = ADDWri %231, 1, 0
+    %233:gpr32 = SUBSWri %232, 5, 0, implicit-def $nzcv
+    Bcc 14, %bb.8, implicit $nzcv
+    B %bb.5
+
+  bb.5:
+    successors: %bb.8(0x40000000), %bb.6(0x40000000)
+
+    %55:gpr64 = MOVi64imm 105
+    %234:gpr32common = ADDWri %6, 1, 0
+    %235:gpr32common = ADDWri %234, 1, 0
+    %236:gpr32common = ADDWri %235, 1, 0
+    %237:gpr32common = ADDWri %236, 1, 0
+    %238:gpr32common = ADDWri %237, 1, 0
+    %239:gpr32 = SUBSWri %238, 6, 0, implicit-def $nzcv
+    Bcc 15, %bb.8, implicit $nzcv
+    B %bb.6
+
+  bb.6:
+    successors: %bb.8(0x40000000), %bb.7(0x40000000)
+
+    %56:gpr64 = MOVi64imm 106
+    %240:gpr32common = ADDWri %7, 1, 0
+    %241:gpr32common = ADDWri %240, 1, 0
+    %242:gpr32common = ADDWri %241, 1, 0
+    %243:gpr32common = ADDWri %242, 1, 0
+    %244:gpr32common = ADDWri %243, 1, 0
+    %245:gpr32 = SUBSWri %244, 7, 0, implicit-def $nzcv
+    Bcc 16, %bb.8, implicit $nzcv
+    B %bb.7
+
+  bb.7:
+    successors: %bb.8(0x80000000)
+
+    %57:gpr64 = MOVi64imm 107
+
+  bb.8:
+    %90:gpr64 = PHI %50, %bb.0, %51, %bb.1, %52, %bb.2, %53, %bb.3, %54, %bb.4, %55, %bb.5, %56, %bb.6, %57, %bb.7
+    $x0 = COPY %90
+    RET_ReallyLR implicit $x0
 ...

@@ -16,11 +16,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -65,6 +70,16 @@ static cl::opt<bool> EnableDataDependentBranchAnalysis(
     "enable-early-ifcvt-data-dependent", cl::Hidden, cl::init(false),
     cl::desc("Enable hard-to-predict branch analysis for if-conversion"));
 
+// Enable recognition of cascade if-else patterns (chains of triangles).
+static cl::opt<bool> EnableCascadeIfConv(
+    "enable-early-ifcvt-cascade", cl::Hidden, cl::init(false),
+    cl::desc("Enable recognition of cascade if-else patterns"));
+
+// Maximum depth for cascade patterns.
+static cl::opt<unsigned>
+    MaxCascadeDepth("early-ifcvt-max-cascade-depth", cl::Hidden, cl::init(8),
+                    cl::desc("Maximum cascade depth for early if-conversion"));
+
 // Limit the number steps we take when searching conditions that depend on
 // values recently loaded from memory.
 static cl::opt<unsigned>
@@ -86,6 +101,8 @@ STATISTIC(NumTrianglesConv, "Number of triangles converted");
 STATISTIC(NumDataDependant,
           "Number of data dependent conditional branches encountered");
 STATISTIC(NumLikelyBiased, "Number of branches with a hot path encountered");
+STATISTIC(NumCascadesSeen, "Number of cascade patterns detected");
+STATISTIC(NumCascadesConv, "Number of cascade patterns converted");
 
 //===----------------------------------------------------------------------===//
 //                                 SSAIfConv
@@ -109,6 +126,20 @@ STATISTIC(NumLikelyBiased, "Number of branches with a hot path encountered");
 // Head block, and phis in the Tail block are converted to select instructions.
 //
 namespace {
+
+/// What one cascade collapse step would do to one Tail phi.
+struct CascadeSelectInfo {
+  int CondCycles = 0;
+  bool NeedsSelect = false;
+};
+
+struct CascadeResult {
+  MachineBasicBlock *Head = nullptr;
+  SmallVector<MachineBasicBlock *> Blocks;
+  SmallVector<SmallVector<CascadeSelectInfo, 4>> Selects;
+  explicit operator bool() const { return Head != nullptr; }
+};
+
 class SSAIfConv {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -213,12 +244,36 @@ public:
   /// initialize the internal state, and return true.
   /// If predicate is set try to predicate the block otherwise try to
   /// speculatively execute it.
-  bool canConvertIf(MachineBasicBlock *MBB, bool Predicate = false);
+  bool canConvertIf(MachineBasicBlock *MBB, bool Predicate = false,
+                    bool AllowMultiSuccTBB = false,
+                    MachineBasicBlock *ExplicitTail = nullptr);
 
   /// convertIf - If-convert the last block passed to canConvertIf(), assuming
   /// it is possible. Add any blocks that are to be erased to RemoveBlocks.
   void convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
                  bool Predicate = false);
+
+  /// matchCascade - match a cascade of conditional branches by walking up
+  /// from MBB as a potential cascade end. A cascade is a chain of triangles
+  /// where each block has 2 successors (next cascade block + Tail) and the
+  /// last block has 1 successor (Tail). Returns the discovered Head and list
+  /// of cascade blocks [BB1, ..., BBn] if valid, empty result otherwise.
+  ///
+  ///   Head --------+
+  ///   |            |
+  ///   v            |
+  ///  BB1 ----------+
+  ///   |            |
+  ///   v            |
+  ///  BB2 ----------+
+  ///   |            |
+  ///       ...
+  ///       ...
+  ///   |            |
+  ///   v            v
+  ///  BBn (MBB) -> Tail
+  ///
+  CascadeResult matchCascade(MachineBasicBlock *MBB);
 };
 } // end anonymous namespace
 
@@ -469,7 +524,9 @@ bool SSAIfConv::findInsertionPoint() {
 /// canConvertIf - analyze the sub-cfg rooted in MBB, and return true if it is
 /// a potential candidate for if-conversion. Fill out the internal state.
 ///
-bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
+bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate,
+                             bool AllowMultiSuccTBB,
+                             MachineBasicBlock *ExplicitTail) {
   Head = MBB;
   TBB = FBB = Tail = nullptr;
 
@@ -482,31 +539,40 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
   if (Succ0->pred_size() != 1)
     std::swap(Succ0, Succ1);
 
-  if (Succ0->pred_size() != 1 || Succ0->succ_size() != 1)
+  if (Succ0->pred_size() != 1 ||
+      (!AllowMultiSuccTBB && Succ0->succ_size() != 1))
     return false;
 
-  Tail = Succ0->succ_begin()[0];
-
-  // This is not a triangle.
-  if (Tail != Succ1) {
-    // Check for a diamond. We won't deal with any critical edges.
-    if (Succ1->pred_size() != 1 || Succ1->succ_size() != 1 ||
-        Succ1->succ_begin()[0] != Tail)
-      return false;
-    LLVM_DEBUG(dbgs() << "\nDiamond: " << printMBBReference(*Head) << " -> "
-                      << printMBBReference(*Succ0) << "/"
-                      << printMBBReference(*Succ1) << " -> "
+  // Use explicit tail if provided (for cascade validation), otherwise compute.
+  if (ExplicitTail) {
+    Tail = ExplicitTail;
+    LLVM_DEBUG(dbgs() << "\nCascade triangle: " << printMBBReference(*Head)
+                      << " -> " << printMBBReference(*Succ0) << " -> "
                       << printMBBReference(*Tail) << '\n');
-
-    // Live-in physregs are tricky to get right when speculating code.
-    if (!Tail->livein_empty()) {
-      LLVM_DEBUG(dbgs() << "Tail has live-ins.\n");
-      return false;
-    }
   } else {
-    LLVM_DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
-                      << printMBBReference(*Succ0) << " -> "
-                      << printMBBReference(*Tail) << '\n');
+    Tail = Succ0->succ_begin()[0];
+
+    // This is not a triangle.
+    if (Tail != Succ1) {
+      // Check for a diamond. We won't deal with any critical edges.
+      if (Succ1->pred_size() != 1 || Succ1->succ_size() != 1 ||
+          Succ1->succ_begin()[0] != Tail)
+        return false;
+      LLVM_DEBUG(dbgs() << "\nDiamond: " << printMBBReference(*Head) << " -> "
+                        << printMBBReference(*Succ0) << "/"
+                        << printMBBReference(*Succ1) << " -> "
+                        << printMBBReference(*Tail) << '\n');
+
+      // Live-in physregs are tricky to get right when speculating code.
+      if (!Tail->livein_empty()) {
+        LLVM_DEBUG(dbgs() << "Tail has live-ins.\n");
+        return false;
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
+                        << printMBBReference(*Succ0) << " -> "
+                        << printMBBReference(*Tail) << '\n');
+    }
   }
 
   // This is a triangle or a diamond.
@@ -588,10 +654,15 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
   if (!findInsertionPoint())
     return false;
 
-  if (isTriangle())
-    ++NumTrianglesSeen;
-  else
-    ++NumDiamondsSeen;
+  // ExplicitTail means this is a validation call. Don't count towards the
+  // triangle / diamonds seen stat - that should happen only when we consider
+  // them for conversion seperately.
+  if (!ExplicitTail) {
+    if (isTriangle())
+      ++NumTrianglesSeen;
+    else
+      ++NumDiamondsSeen;
+  }
   return true;
 }
 
@@ -639,6 +710,122 @@ static bool hasSameValue(const MachineRegisterInfo &MRI,
     return false;
 
   return TIdx == FIdx;
+}
+
+/// matchCascade - match a cascade pattern by walking up from MBB.
+/// MBB is a potential cascade end (last block before Tail).
+/// A cascade is a chain of triangles where:
+/// - Head has 2 successors: one to first cascade block, one to Tail
+/// - Each cascade block has 2 successors: next cascade + Tail (or 1 for last)
+/// - Last cascade block (MBB) has 1 successor: Tail
+/// Returns the discovered Head and cascade blocks if valid, empty otherwise.
+///
+///   Head --------+
+///   |            |
+///   v            |
+///  BB1 ----------+
+///   |            |
+///   v            |
+///  BB2 ----------+
+///   |            |
+///       ...
+///       ...
+///   |            |
+///   v            v
+///  BBn (MBB) -> Tail
+///
+CascadeResult SSAIfConv::matchCascade(MachineBasicBlock *MBB) {
+  // Cascade end must have exactly 1 successor (to Tail) and 1 predecessor
+  if (MBB->succ_size() != 1 || MBB->pred_size() != 1)
+    return {};
+
+  MachineBasicBlock *Tail = MBB->succ_begin()[0];
+
+  // Collect cascade blocks from bottom to top: [BBn, BB(n-1), ..., BB1, Head]
+  SmallVector<MachineBasicBlock *> Blocks;
+  Blocks.push_back(MBB);
+  MachineBasicBlock *Current = MBB;
+
+  // Walk up the cascade chain
+  while (true) {
+    MachineBasicBlock *Pred = Current->pred_begin()[0];
+
+    // Predecessor must have 2 successors: Current and Tail
+    if (Pred->succ_size() != 2)
+      break;
+
+    MachineBasicBlock *S0 = Pred->succ_begin()[0];
+    MachineBasicBlock *S1 = Pred->succ_begin()[1];
+
+    // One successor must be Current, the other must be Tail
+    if (!((S0 == Current && S1 == Tail) || (S1 == Current && S0 == Tail)))
+      break;
+
+    Blocks.push_back(Pred);
+
+    // If Pred has multiple predecessors, it's the Head - stop here
+    if (Pred->pred_size() != 1)
+      break;
+
+    // Pred has 1 predecessor, so the cascade continues. If we've reached
+    // max depth, bail out entirely - we don't want to convert a partial
+    // cascade.
+    if (Blocks.size() > MaxCascadeDepth) {
+      LLVM_DEBUG(dbgs() << "Cascade extends beyond max depth "
+                        << MaxCascadeDepth << ", not converting.\n");
+      return {};
+    }
+
+    Current = Pred;
+  }
+
+  // Need at least 3 blocks: [BBn, BB1, Head] for a minimal 2-block cascade
+  if (Blocks.size() < 3)
+    return {};
+
+  // Reverse to get [HEAD, BB1, BB2, ..., BBn] order
+  std::reverse(Blocks.begin(), Blocks.end());
+
+  // Check that we can actually convert all the blocks in the cascade.
+  // We skip the last cascade block (BBn) since it has a single successor
+  // (to Tail), and is only used as a TBB (not a HEAD) - its speculatability
+  // is validated when we check its predecessor.
+  SmallVector<SmallVector<CascadeSelectInfo, 4>> CollectedSelects;
+  size_t NumBlocksToValidate = Blocks.size() - 1;
+  for (size_t I = 0; I < NumBlocksToValidate; ++I) {
+    if (!canConvertIf(Blocks[I], /*Predicate=*/false,
+                      /*AllowMultiSuccTBB=*/true,
+                      /*ExplicitTail=*/Tail)) {
+      LLVM_DEBUG(dbgs() << "Cannot convert cascade, block "
+                        << printMBBReference(*Blocks[I])
+                        << " is not if-convertible.\n");
+      return {};
+    }
+    assert((CollectedSelects.empty() ||
+            CollectedSelects.back().size() == PHIs.size()) &&
+           "Tail phi list changed between cascade blocks");
+
+    // Capture PHI info from canConvertIf's canInsertSelect call.
+    auto &StepSelects = CollectedSelects.emplace_back();
+    for (const PHIInfo &PI : PHIs)
+      StepSelects.push_back(
+          {PI.CondCycles, !hasSameValue(*MRI, TII, PI.TReg, PI.FReg)});
+  }
+
+  // The first block in Blocks is the cascade Head
+  MachineBasicBlock *Head = Blocks.front();
+
+  // Remove Head from the cascade blocks to convert
+  Blocks.erase(Blocks.begin());
+
+  LLVM_DEBUG({
+    dbgs() << "\nCascade found: " << printMBBReference(*Head) << " -> [";
+    for (auto *BB : Blocks)
+      dbgs() << printMBBReference(*BB) << ", ";
+    dbgs() << "] -> " << printMBBReference(*Tail) << "\n";
+  });
+
+  return {Head, std::move(Blocks), std::move(CollectedSelects)};
 }
 
 /// replacePHIInstrs - Completely replace PHI instructions with selects.
@@ -843,6 +1030,10 @@ class EarlyIfConverter {
   /// each block to the number of instructions scanned in it.
   DenseMap<const MachineBasicBlock *, unsigned> NoCallBlocksCache;
 
+  /// Set of blocks that must be converted (part of a cascade).
+  /// These blocks bypass normal profitability checks in shouldConvertIf().
+  SmallPtrSet<MachineBasicBlock *, 16> MustConvertBlocks;
+
 public:
   EarlyIfConverter(MachineDominatorTree &DT, MachineLoopInfo &LI,
                    MachineTraceMetrics &MTM, MachineBranchProbabilityInfo *MBPI)
@@ -853,11 +1044,20 @@ public:
 
 private:
   bool tryConvertIf(MachineBasicBlock *);
+  void detectCascades(MachineBasicBlock *);
+  void convertIf();
   void invalidateTraces();
   bool shouldConvertIf();
-  bool isConditionDataDependent();
-  bool doOperandsComeFromMemory(const MachineInstr *ConditionDef);
+  bool isConditionDataDependent(MachineBasicBlock *BB, bool RecordStats = true);
+  bool isCascadeDataDependent(MachineBasicBlock *Head,
+                              ArrayRef<MachineBasicBlock *> CascadeBlocks);
+  bool doOperandsComeFromMemory(const MachineInstr *ConditionDef,
+                                MachineBasicBlock *BB);
   bool hasCallOrLoopInRange(const MachineInstr *From, const MachineInstr *To);
+  bool shouldConvertCascade(CascadeResult &Cascade, MachineBasicBlock *Tail);
+  bool hasEnoughILP(MachineBasicBlock *TraceBlock,
+                    SmallVectorImpl<MachineBasicBlock *> &ExtraBlocks,
+                    unsigned CritLimit);
 };
 
 class EarlyIfConverterLegacy : public MachineFunctionPass {
@@ -1047,9 +1247,10 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
 /// depend on values loaded from memory (unless they are loop invariant,
 /// or come from a constant pool). The walk starts from the definition of
 /// ConditionDef's first operand, which is not ConditionDef itself for
-/// instructions such as FCMPSrr, where that operand is a use.
+/// instructions such as FCMPSrr, where that operand is a use. BB is the block
+/// whose terminator consumes the condition.
 bool EarlyIfConverter::doOperandsComeFromMemory(
-    const MachineInstr *ConditionDef) {
+    const MachineInstr *ConditionDef, MachineBasicBlock *BB) {
   Register Reg = ConditionDef->getOperand(0).getReg();
   if (!Reg.isVirtual())
     return false;
@@ -1057,10 +1258,10 @@ bool EarlyIfConverter::doOperandsComeFromMemory(
   LLVM_DEBUG(dbgs() << "  doOperandsComeFromMemory starting from reg "
                     << printReg(Reg) << "\n");
 
-  // The condition is consumed by the branch terminating Head, so this is the
+  // The condition is consumed by the branch terminating BB, so this is the
   // end of the interval a load has to survive without a call in between.
-  const MachineInstr *Br = &*IfConv.Head->getFirstTerminator();
-  MachineLoop *IfConvLoop = Loops->getLoopFor(IfConv.Head);
+  const MachineInstr *Br = &*BB->getFirstTerminator();
+  MachineLoop *IfConvLoop = Loops->getLoopFor(BB);
 
   // Walk the def-use chain.
   SmallPtrSet<const MachineInstr *, 8> VisitedInstrs;
@@ -1127,9 +1328,12 @@ bool EarlyIfConverter::doOperandsComeFromMemory(
 }
 
 /// Check if the branch condition is data-dependent (comes from memory loads).
-bool EarlyIfConverter::isConditionDataDependent() {
+/// RecordStats should be false when the same branch may be examined again
+/// later, so that it is only counted once.
+bool EarlyIfConverter::isConditionDataDependent(MachineBasicBlock *BB,
+                                                bool RecordStats) {
   TargetInstrInfo::MachineBranchPredicate MBP;
-  if (TII->analyzeBranchPredicate(*IfConv.Head, MBP, /*AllowModify=*/false))
+  if (TII->analyzeBranchPredicate(*BB, MBP, /*AllowModify=*/false))
     return false;
 
   if (!MBP.ConditionDef)
@@ -1138,23 +1342,65 @@ bool EarlyIfConverter::isConditionDataDependent() {
   // If the branch is biased (not 50/50), don't consider it data dependent.
   // This is to prevent converting unprofitable checks such as
   // `x[i] != 0;`
-  auto TBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
-  auto FBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB);
-  if (TBBProb != FBBProb) {
-    ++NumLikelyBiased;
-    return false;
+  if (MBP.TrueDest && MBP.FalseDest && MBPI) {
+    auto TBBProb = MBPI->getEdgeProbability(BB, MBP.TrueDest);
+    auto FBBProb = MBPI->getEdgeProbability(BB, MBP.FalseDest);
+    if (TBBProb != FBBProb) {
+      if (RecordStats)
+        ++NumLikelyBiased;
+      return false;
+    }
   }
 
   // Check if operands used to compute the branch condition were loaded recently
   // from memory, starting by the ConditionDef itself and walking up the use-def
   // chain.
-  if (doOperandsComeFromMemory(MBP.ConditionDef)) {
-    ++NumDataDependant;
+  if (doOperandsComeFromMemory(MBP.ConditionDef, BB)) {
+    if (RecordStats)
+      ++NumDataDependant;
     return true;
   }
 
   return false;
 }
+
+/// Check if ALL branches in a cascade are data-dependent (come from loads).
+/// Cascade conversion always requires data-dependent branches, so this check
+/// is enabled whenever cascade conversion is enabled.
+bool EarlyIfConverter::isCascadeDataDependent(
+    MachineBasicBlock *Head, ArrayRef<MachineBasicBlock *> CascadeBlocks) {
+
+  // Check Head block
+  if (!isConditionDataDependent(Head, /*RecordStats=*/false)) {
+    LLVM_DEBUG(dbgs() << "Cascade: Head not data-dependent\n");
+    return false;
+  }
+
+  // Check all cascade blocks except the last one (which has only 1 successor).
+  // Don't record stats because we are not converting anything yet.
+  for (auto *CascadeBlock : CascadeBlocks.drop_back()) {
+    if (!isConditionDataDependent(CascadeBlock, /*RecordStats=*/false)) {
+      LLVM_DEBUG(dbgs() << "Cascade: " << printMBBReference(*CascadeBlock)
+                        << " not data-dependent\n");
+      return false;
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "Cascade: all branches are data-dependent\n");
+  return true;
+}
+
+namespace {
+/// Helper class to simplify emission of cycle counts into optimization remarks.
+struct Cycles {
+  const char *Key;
+  unsigned Value;
+  Cycles(const char *K, unsigned V) : Key(K), Value(V) {}
+};
+template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
+  return R << ore::NV(C.Key, C.Value) << (C.Value == 1 ? " cycle" : " cycles");
+}
+} // anonymous namespace
 
 // Adjust cycles with downward saturation.
 static unsigned adjCycles(unsigned Cyc, int Delta) {
@@ -1163,24 +1409,235 @@ static unsigned adjCycles(unsigned Cyc, int Delta) {
   return Cyc + Delta;
 }
 
-namespace {
-/// Helper class to simplify emission of cycle counts into optimization remarks.
-struct Cycles {
-  const char *Key;
-  unsigned Value;
-};
-template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
-  return R << ore::NV(C.Key, C.Value) << (C.Value == 1 ? " cycle" : " cycles");
+/// Count the instructions of MBB that a predecessor would have to speculate to
+/// absorb it. This matches what canSpeculateInstrs() checks against
+/// BlockInstrLimit: the non-debug instructions ahead of the terminators.
+/// If we don't perform this check we could bail out of a cascade conversion
+/// midway by exceeding `BlockInstrLimit`.
+static unsigned countSpeculatedInstrs(const MachineBasicBlock &MBB) {
+  return count_if(make_range(MBB.begin(), MBB.getFirstTerminator()),
+                  [](const MachineInstr &MI) { return !MI.isDebugInstr(); });
 }
-} // anonymous namespace
+
+/// Apply profitability check for cascade conversion.
+bool EarlyIfConverter::shouldConvertCascade(CascadeResult &Cascade,
+                                            MachineBasicBlock *Tail) {
+  MachineBasicBlock *Head = Cascade.Head;
+  auto &CascadeBlocks = Cascade.Blocks;
+
+  if (!isCascadeDataDependent(Head, CascadeBlocks)) {
+    LLVM_DEBUG(dbgs() << "Cascade: not all branches are data-dependent\n");
+    return false;
+  }
+
+  // Calculate CritLimit using cascade formula.
+  unsigned CascadeSize = CascadeBlocks.size();
+  unsigned MispredictPenalty = STI->getMispredictionPenalty();
+  unsigned CritLimit = std::min(MispredictPenalty * 25 * CascadeSize / 100,
+                                2 * MispredictPenalty);
+
+  LLVM_DEBUG(dbgs() << "Cascade: size=" << CascadeSize
+                    << ", CritLimit=" << CritLimit
+                    << " (MispredictPenalty=" << MispredictPenalty << ")\n");
+
+  if (CritLimit == 0) {
+    LLVM_DEBUG(dbgs() << "Cascade: CritLimit is 0, skipping\n");
+    return false;
+  }
+
+  MachineOptimizationRemarkEmitter MORE(*Head->getParent(), nullptr);
+  SmallVector<MachineBasicBlock *, 8> CondBlocks;
+  CondBlocks.push_back(Head);
+  append_range(CondBlocks, ArrayRef(CascadeBlocks).drop_back());
+  assert(CondBlocks.size() == Cascade.Selects.size() &&
+         "Mismatched cascade condition info");
+
+  unsigned NumPHIs = Cascade.Selects.front().size();
+  assert(NumPHIs == range_size(Tail->phis()) &&
+         "Tail phi list changed since matchCascade()");
+
+  // A step only needs a select if the phi's two incoming values differ. But
+  // once some deeper step has produced a select, every shallower step takes
+  // that select's result as an incoming value and needs one too.
+  SmallVector<int, 4> DeepestSelectStep(NumPHIs, -1);
+  for (auto [I, Step] : enumerate(Cascade.Selects))
+    for (auto [J, Sel] : enumerate(Step))
+      if (Sel.NeedsSelect)
+        DeepestSelectStep[J] = I;
+
+  if (!Stress) {
+    unsigned NumSelects = 0;
+    for (int Deepest : DeepestSelectStep)
+      NumSelects += Deepest + 1;
+    unsigned TotalInstrs = NumSelects;
+    for (MachineBasicBlock *BB : CascadeBlocks)
+      TotalInstrs += countSpeculatedInstrs(*BB);
+
+    LLVM_DEBUG(dbgs() << "Cascade: collapsed cascade holds " << TotalInstrs
+                      << " instructions (" << NumSelects
+                      << " of them selects), limit is " << BlockInstrLimit
+                      << '\n');
+
+    if (TotalInstrs > BlockInstrLimit) {
+      LLVM_DEBUG(dbgs() << "Cascade: collapsed cascade exceeds instruction "
+                           "limit, skipping\n");
+      MORE.emit([&]() {
+        return MachineOptimizationRemarkMissed(DEBUG_TYPE,
+                                               "CascadeIfConversion",
+                                               Head->back().getDebugLoc(), Head)
+               << "did not if-convert cascade with "
+               << ore::NV("CascadeSize", CascadeSize)
+               << " blocks: the speculated blocks would hold "
+               << ore::NV("TotalInstrs", TotalInstrs)
+               << " instructions, exceeding the limit of "
+               << ore::NV("BlockInstrLimit", BlockInstrLimit) << ".";
+      });
+      return false;
+    }
+  }
+
+  // Check if there's enough ILP to hide the speculated cascade blocks.
+  if (!hasEnoughILP(Tail, CascadeBlocks, CritLimit)) {
+    LLVM_DEBUG(dbgs() << "Cascade: not enough ILP, skipping\n");
+    MORE.emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "CascadeIfConversion",
+                                             Head->back().getDebugLoc(), Head)
+             << "did not if-convert cascade with "
+             << ore::NV("CascadeSize", CascadeSize)
+             << " blocks: not enough ILP to hide speculated instructions.";
+    });
+    return false;
+  }
+
+  // Compute CSEL chain critical path depth.
+  // After conversion, we get a chain of CSELs where each CSEL depends on:
+  //   1. The condition from that block's branch
+  //   2. The previous CSEL's output (chain dependency)
+  // The chain is rooted at the deepest cascade block and ends at Head, which is
+  // the order convertIf() creates the selects in.
+  if (!MinInstr)
+    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
+
+  MachineTraceMetrics::Trace TailTrace = MinInstr->getTrace(Tail);
+
+  SmallVector<unsigned, 8> BranchDepths;
+  for (MachineBasicBlock *CondBlock : CondBlocks) {
+    MachineTraceMetrics::Trace BlockTrace = MinInstr->getTrace(CondBlock);
+    BranchDepths.push_back(
+        BlockTrace.getInstrCycles(*CondBlock->getFirstTerminator()).Depth);
+  }
+
+  // Each phi gets its own budget and its own chain: select latency depends on
+  // the phi's register class, and a phi with a lot of slack must not raise the
+  // bar for a phi with none. All of them have to be profitable.
+  unsigned MaxExtension = 0;
+  bool ExceedsLimit = false;
+  for (auto [J, PHI] : enumerate(Tail->phis())) {
+    unsigned Slack = TailTrace.getInstrSlack(PHI);
+    unsigned MaxDepth = Slack + TailTrace.getInstrCycles(PHI).Depth;
+
+    // convertIf() collapses the cascade bottom-up, so the deepest block's
+    // condition roots the CSEL chain and Head's condition feeds the last
+    // select.
+    LLVM_DEBUG(dbgs() << "CSEL chain depth computation for " << PHI);
+    unsigned CSELChainDepth = 0;
+    for (int I = DeepestSelectStep[J]; I >= 0; --I) {
+      int CondCycles = Cascade.Selects[I][J].CondCycles;
+      CSELChainDepth =
+          adjCycles(std::max(BranchDepths[I], CSELChainDepth), CondCycles);
+
+      LLVM_DEBUG(dbgs() << "  " << printMBBReference(*CondBlocks[I])
+                        << ": branch depth=" << BranchDepths[I]
+                        << ", CondCycles=" << CondCycles
+                        << ", new CSEL depth=" << CSELChainDepth << "\n");
+    }
+
+    unsigned Extension =
+        CSELChainDepth > MaxDepth ? CSELChainDepth - MaxDepth : 0;
+    MaxExtension = std::max(MaxExtension, Extension);
+
+    LLVM_DEBUG(dbgs() << "Final CSEL chain depth: " << CSELChainDepth
+                      << ", MaxDepth: " << MaxDepth << ", Extension: "
+                      << Extension << ", CritLimit: " << CritLimit << '\n');
+
+    if (Extension > CritLimit) {
+      LLVM_DEBUG(dbgs() << "Cascade: critical path extension exceeds "
+                           "limit, skipping\n");
+      ExceedsLimit = true;
+    }
+  }
+
+  if (ExceedsLimit) {
+    MORE.emit([&]() {
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "CascadeIfConversion",
+                                        Head->back().getDebugLoc(), Head);
+      R << "did not if-convert cascade with "
+        << ore::NV("CascadeSize", CascadeSize)
+        << " blocks: critical path extension of "
+        << Cycles("CritPathExtension", MaxExtension)
+        << " exceeds the threshold of " << Cycles("CritLimit", CritLimit)
+        << ".";
+      return R;
+    });
+    return false;
+  }
+
+  MORE.emit([&]() {
+    MachineOptimizationRemark R(DEBUG_TYPE, "CascadeIfConversion",
+                                Head->back().getDebugLoc(), Head);
+    R << "performing cascade if-conversion on "
+      << ore::NV("CascadeSize", CascadeSize)
+      << " blocks: critical path extension is "
+      << Cycles("CritPathExtension", MaxExtension)
+      << ", staying under the threshold of " << Cycles("CritLimit", CritLimit)
+      << ".";
+    return R;
+  });
+
+  return true;
+}
+
+/// Check if there is enough ILP to hide the latency of speculatively executing
+/// the extra blocks
+bool EarlyIfConverter::hasEnoughILP(
+    MachineBasicBlock *TraceBlock,
+    SmallVectorImpl<MachineBasicBlock *> &ExtraBlocks, unsigned CritLimit) {
+  if (!MinInstr)
+    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
+
+  MachineTraceMetrics::Trace Trace = MinInstr->getTrace(TraceBlock);
+  unsigned CritPath = Trace.getCriticalPath();
+  SmallVector<const MachineBasicBlock *, 8> ConstExtraBlocks(
+      ExtraBlocks.begin(), ExtraBlocks.end());
+  unsigned ResLength = Trace.getResourceLength(ConstExtraBlocks);
+
+  LLVM_DEBUG(dbgs() << "ILP check: CriticalPath=" << CritPath
+                    << ", ResourceLength=" << ResLength
+                    << ", CritLimit=" << CritLimit << "\n");
+
+  if (ResLength > CritPath + CritLimit) {
+    LLVM_DEBUG(dbgs() << "Not enough ILP: resource length " << ResLength
+                      << " exceeds critical path " << CritPath << " + limit "
+                      << CritLimit << "\n");
+    return false;
+  }
+  return true;
+}
 
 /// Apply cost model and heuristics to the if-conversion in IfConv.
 /// Return true if the conversion is a good idea.
 ///
 bool EarlyIfConverter::shouldConvertIf() {
+  bool InCascade = MustConvertBlocks.erase(IfConv.Head);
+
   // Stress testing mode disables all cost considerations.
   if (Stress)
     return true;
+
+  if (InCascade) {
+    LLVM_DEBUG(dbgs() << "Block is part of cascade, skipping profitability\n");
+    return true;
+  }
 
   // Do not try to if-convert if the condition has a high chance of being
   // predictable.
@@ -1228,7 +1685,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   // hard-to-predict branches, half for others. Otherwise use half for all.
   bool DataDependent = false;
   if (EnableDataDependentBranchAnalysis)
-    DataDependent = isConditionDataDependent();
+    DataDependent = isConditionDataDependent(IfConv.Head);
 
   unsigned CritLimit = DataDependent ? STI->getMispredictionPenalty()
                                      : STI->getMispredictionPenalty() / 2;
@@ -1263,10 +1720,10 @@ bool EarlyIfConverter::shouldConvertIf() {
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "IfConversion",
                                         MBB.findDebugLoc(MBB.back()), &MBB);
       R << "did not if-convert branch: the resulting critical path ("
-        << Cycles{"ResLength", ResLength}
+        << Cycles("ResLength", ResLength)
         << ") would extend the shorter leg's critical path ("
-        << Cycles{"MinCrit", MinCrit} << ") by more than the threshold of "
-        << Cycles{"CritLimit", CritLimit}
+        << Cycles("MinCrit", MinCrit) << ") by more than the threshold of "
+        << Cycles("CritLimit", CritLimit)
         << ", which cannot be hidden by available ILP.";
       return R;
     });
@@ -1348,15 +1805,15 @@ bool EarlyIfConverter::shouldConvertIf() {
       MachineOptimizationRemark R(DEBUG_TYPE, "IfConversion",
                                   MBB.back().getDebugLoc(), &MBB);
       R << "performing if-conversion on branch: the condition adds "
-        << Cycles{"CondCycles", Cond.Extra} << " to the critical path";
+        << Cycles("CondCycles", Cond.Extra) << " to the critical path";
       if (Short.Extra > 0)
         R << ", and the short leg adds another "
-          << Cycles{"ShortCycles", Short.Extra};
+          << Cycles("ShortCycles", Short.Extra);
       if (Long.Extra > 0)
         R << ", and the long leg adds another "
-          << Cycles{"LongCycles", Long.Extra};
+          << Cycles("LongCycles", Long.Extra);
       R << ", each staying under the threshold of "
-        << Cycles{"CritLimit", CritLimit} << ".";
+        << Cycles("CritLimit", CritLimit) << ".";
       return R;
     });
   } else {
@@ -1364,20 +1821,20 @@ bool EarlyIfConverter::shouldConvertIf() {
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "IfConversion",
                                         MBB.back().getDebugLoc(), &MBB);
       R << "did not if-convert branch: the condition would add "
-        << Cycles{"CondCycles", Cond.Extra} << " to the critical path";
+        << Cycles("CondCycles", Cond.Extra) << " to the critical path";
       if (Cond.Extra > CritLimit)
-        R << " exceeding the limit of " << Cycles{"CritLimit", CritLimit};
+        R << " exceeding the limit of " << Cycles("CritLimit", CritLimit);
       if (Short.Extra > 0) {
         R << ", and the short leg would add another "
-          << Cycles{"ShortCycles", Short.Extra};
+          << Cycles("ShortCycles", Short.Extra);
         if (Short.Extra > CritLimit)
-          R << " exceeding the limit of " << Cycles{"CritLimit", CritLimit};
+          R << " exceeding the limit of " << Cycles("CritLimit", CritLimit);
       }
       if (Long.Extra > 0) {
         R << ", and the long leg would add another "
-          << Cycles{"LongCycles", Long.Extra};
+          << Cycles("LongCycles", Long.Extra);
         if (Long.Extra > CritLimit)
-          R << " exceeding the limit of " << Cycles{"CritLimit", CritLimit};
+          R << " exceeding the limit of " << Cycles("CritLimit", CritLimit);
       }
       R << ".";
       return R;
@@ -1387,26 +1844,73 @@ bool EarlyIfConverter::shouldConvertIf() {
   return ShouldConvert;
 }
 
+/// Perform the actual if-conversion and update analyses.
+void EarlyIfConverter::convertIf() {
+  SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
+  invalidateTraces();
+  IfConv.convertIf(RemoveBlocks);
+  updateDomTree(DomTree, IfConv, RemoveBlocks);
+  updateLoops(Loops, RemoveBlocks);
+  // Head absorbs the instructions of the removed blocks, including any calls,
+  // so a Head cached as call-free may no longer be.
+  NoCallBlocksCache.erase(IfConv.Head);
+  for (MachineBasicBlock *MBB : RemoveBlocks) {
+    NoCallBlocksCache.erase(MBB);
+    MustConvertBlocks.erase(MBB);
+    MBB->eraseFromParent();
+  }
+}
+
+/// Try to detect a cascade ending at MBB and mark blocks for conversion.
+/// Since we visit blocks in postorder, the cascade end is visited before
+/// its head, allowing us to mark cascade blocks before they are visited.
+void EarlyIfConverter::detectCascades(MachineBasicBlock *MBB) {
+  if (!EnableCascadeIfConv || !EnableDataDependentBranchAnalysis ||
+      MustConvertBlocks.count(MBB))
+    return;
+
+  auto Cascade = IfConv.matchCascade(MBB);
+  if (!Cascade)
+    return;
+
+  ++NumCascadesSeen;
+  MachineBasicBlock *Tail = MBB->succ_begin()[0];
+  LLVM_DEBUG(dbgs() << "Found cascade with " << Cascade.Blocks.size()
+                    << " blocks, Head=" << printMBBReference(*Cascade.Head)
+                    << ", Tail=" << printMBBReference(*Tail) << "\n");
+
+  if (!shouldConvertCascade(Cascade, Tail))
+    return;
+
+  ++NumCascadesConv;
+  NumDataDependant += Cascade.Blocks.size();
+
+  // Mark Head and all cascade blocks except the last one.
+  // The last cascade block (BBn) is never a head - it's always the TBB.
+  MustConvertBlocks.insert(Cascade.Head);
+  for (size_t I = 0; I + 1 < Cascade.Blocks.size(); ++I)
+    MustConvertBlocks.insert(Cascade.Blocks[I]);
+  LLVM_DEBUG(dbgs() << "Marked " << (1 + Cascade.Blocks.size() - 1)
+                    << " blocks for cascade conversion\n");
+}
+
 /// Attempt repeated if-conversion on MBB, return true if successful.
 ///
 bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
+  detectCascades(MBB);
+
   bool Changed = false;
   while (IfConv.canConvertIf(MBB) && shouldConvertIf()) {
-    // If-convert MBB and update analyses.
-    invalidateTraces();
-    SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
-    IfConv.convertIf(RemoveBlocks);
+    convertIf();
     Changed = true;
-    updateDomTree(DomTree, IfConv, RemoveBlocks);
-    updateLoops(Loops, RemoveBlocks);
-    // Head absorbs the instructions of the removed blocks, including any calls,
-    // so a Head cached as call-free may no longer be.
-    NoCallBlocksCache.erase(IfConv.Head);
-    for (MachineBasicBlock *MBB : RemoveBlocks) {
-      NoCallBlocksCache.erase(MBB);
-      MBB->eraseFromParent();
-    }
   }
+
+  // A mark that survives means a cascade block was not converted. We only
+  // convert cascades if the entire cascade conversion is profitable, so
+  // something went wrong.
+  assert(!MustConvertBlocks.contains(MBB) &&
+         "cascade block failed to if-convert");
+
   return Changed;
 }
 
@@ -1427,6 +1931,8 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
   bool Changed = false;
   IfConv.init(MF);
 
+  MustConvertBlocks.clear();
+
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
   // blocks, but only blocks dominated by the head block. This makes it safe to
@@ -1434,6 +1940,8 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
   for (auto *DomNode : post_order(DomTree))
     if (tryConvertIf(DomNode->getBlock()))
       Changed = true;
+
+  assert(MustConvertBlocks.empty() && "cascade block failed to if-convert");
 
   return Changed;
 }
