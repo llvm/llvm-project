@@ -557,13 +557,12 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Field.OffsetInBits;
       bool BitField = Field.IsBitField;
 
-      // Ignore padding bit-fields. Under Clang 23 compatibility every unnamed
-      // bit-field is padding, faithfully reproducing Clang 23; otherwise only
-      // zero-length bit-fields are, and other unnamed bit-fields classify like
-      // named ones, matching GCC.
-      if (BitField &&
-          (getABICompatInfo().Clang23Compat ? Field.IsUnnamedBitfield
-                                            : Field.BitFieldWidth == 0))
+      // Ignore padding bit-fields. Normally only zero-length bit-fields are
+      // padding, but under Clang 23 compatibility every unnamed bit-field is,
+      // faithfully reproducing Clang 23.
+      if (BitField && (getABICompatInfo().ClassifyUnnamedBitFields
+                           ? Field.BitFieldWidth == 0
+                           : Field.IsUnnamedBitfield))
         continue;
 
       if (Size > 128 &&

@@ -433,7 +433,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
     CompatInfo.Clang11Compat =
         Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
-    CompatInfo.Clang23Compat = Compat <= LangOptions::ClangABI::Ver23;
+    CompatInfo.ClassifyUnnamedBitFields = Compat > LangOptions::ClangABI::Ver23;
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 
