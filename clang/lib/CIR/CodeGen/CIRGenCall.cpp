@@ -324,7 +324,6 @@ void CIRGenModule::constructAttributeList(
     mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
     cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
   callingConv = info.getCallingConvention();
-
   sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {
