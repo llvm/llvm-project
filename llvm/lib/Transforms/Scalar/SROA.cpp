@@ -1312,8 +1312,7 @@ private:
       if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
         TypeSize LoadSize = DL.getTypeStoreSize(LI->getType());
         if (LoadSize.isScalable()) {
-          PI.setAborted(LI,
-                        "Loaded with a scalable size and no known vscale.");
+          PI.setAborted(LI, "Loaded with a scalable size and no known vscale.");
           return nullptr;
         }
         Size = std::max(Size, LoadSize.getFixedValue());
@@ -1325,8 +1324,7 @@ private:
           return SI;
         TypeSize StoreSize = DL.getTypeStoreSize(Op->getType());
         if (StoreSize.isScalable()) {
-          PI.setAborted(SI,
-                        "Stored with a scalable size and no known vscale.");
+          PI.setAborted(SI, "Stored with a scalable size and no known vscale.");
           return nullptr;
         }
         Size = std::max(Size, StoreSize.getFixedValue());
@@ -1383,8 +1381,8 @@ private:
     }
 
     if (!IsOffsetKnown)
-      return PI.setAborted(
-          &I, "Reaches a phi or select with an unknown offset.");
+      return PI.setAborted(&I,
+                           "Reaches a phi or select with an unknown offset.");
 
     // See if we already have computed info on this node.
     uint64_t &Size = PHIOrSelectSizes[&I];
