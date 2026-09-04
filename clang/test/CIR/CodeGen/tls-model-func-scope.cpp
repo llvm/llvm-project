@@ -32,10 +32,10 @@ void func() {
 }
 // CIR-GD: module {{.*}} attributes
 // CIR-GD-SAME: cir.default_tls_model = #cir.tls_model<tls_dyn>
-// CIR-GD: cir.global "private" internal tls_model = <tls_init_exec> dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
-// CIR-GD: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
-// CIR-GD: cir.global "private" internal tls_model = <tls_init_exec> dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
-// CIR-GD: cir.global "private" internal tls_model = <tls_dyn> dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
+// CIR-GD: cir.global "private" internal tls_model = tls_init_exec dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
+// CIR-GD: cir.global "private" internal tls_model = tls_dyn dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
+// CIR-GD: cir.global "private" internal tls_model = tls_init_exec dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
+// CIR-GD: cir.global "private" internal tls_model = tls_dyn dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
 
 // LLVM-GD-DAG: @_ZGVZ4funcvE17override_tls_mode = internal thread_local(initialexec) global i8 0
 // LLVM-GD-DAG: @_ZGVZ4funcvE16default_tls_mode = internal thread_local global i8 0
@@ -44,10 +44,10 @@ void func() {
 
 // CIR-LD: module {{.*}} attributes
 // CIR-LD-SAME: cir.default_tls_model = #cir.tls_model<tls_local_dyn>
-// CIR-LD: cir.global "private" internal tls_model = <tls_init_exec> dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
-// CIR-LD: cir.global "private" internal tls_model = <tls_local_dyn> dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
-// CIR-LD: cir.global "private" internal tls_model = <tls_init_exec> dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
-// CIR-LD: cir.global "private" internal tls_model = <tls_local_dyn> dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
+// CIR-LD: cir.global "private" internal tls_model = tls_init_exec dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
+// CIR-LD: cir.global "private" internal tls_model = tls_local_dyn dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
+// CIR-LD: cir.global "private" internal tls_model = tls_init_exec dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
+// CIR-LD: cir.global "private" internal tls_model = tls_local_dyn dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
 
 // LLVM-LD-DAG: @_ZGVZ4funcvE17override_tls_mode = internal thread_local(initialexec) global i8 0
 // LLVM-LD-DAG: @_ZGVZ4funcvE16default_tls_mode = internal thread_local(localdynamic) global i8 0
@@ -56,10 +56,10 @@ void func() {
 
 // CIR-IE: module {{.*}} attributes
 // CIR-IE-SAME: cir.default_tls_model = #cir.tls_model<tls_init_exec>
-// CIR-IE: cir.global "private" internal tls_model = <tls_init_exec> dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
-// CIR-IE: cir.global "private" internal tls_model = <tls_init_exec> dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
-// CIR-IE: cir.global "private" internal tls_model = <tls_init_exec> dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
-// CIR-IE: cir.global "private" internal tls_model = <tls_init_exec> dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
+// CIR-IE: cir.global "private" internal tls_model = tls_init_exec dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
+// CIR-IE: cir.global "private" internal tls_model = tls_init_exec dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
+// CIR-IE: cir.global "private" internal tls_model = tls_init_exec dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
+// CIR-IE: cir.global "private" internal tls_model = tls_init_exec dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
 
 // LLVM-IE-DAG: @_ZGVZ4funcvE17override_tls_mode = internal thread_local(initialexec) global i8 0
 // LLVM-IE-DAG: @_ZGVZ4funcvE16default_tls_mode = internal thread_local(initialexec) global i8 0
@@ -68,10 +68,10 @@ void func() {
 
 // CIR-LE: module {{.*}} attributes
 // CIR-LE-SAME: cir.default_tls_model = #cir.tls_model<tls_local_exec>
-// CIR-LE: cir.global "private" internal tls_model = <tls_init_exec> dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
-// CIR-LE: cir.global "private" internal tls_model = <tls_local_exec> dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
-// CIR-LE: cir.global "private" internal tls_model = <tls_init_exec> dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
-// CIR-LE: cir.global "private" internal tls_model = <tls_local_exec> dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
+// CIR-LE: cir.global "private" internal tls_model = tls_init_exec dso_local @_ZGVZ4funcvE17override_tls_mode = #cir.int<0> : !s8i
+// CIR-LE: cir.global "private" internal tls_model = tls_local_exec dso_local @_ZGVZ4funcvE16default_tls_mode = #cir.int<0> : !s8i
+// CIR-LE: cir.global "private" internal tls_model = tls_init_exec dso_local static_local_guard<"_ZGVZ4funcvE17override_tls_mode"> @_ZZ4funcvE17override_tls_mode = #cir.int<0> : !s32i
+// CIR-LE: cir.global "private" internal tls_model = tls_local_exec dso_local static_local_guard<"_ZGVZ4funcvE16default_tls_mode"> @_ZZ4funcvE16default_tls_mode = #cir.int<0> : !s32i
 
 // LLVM-LE-DAG: @_ZGVZ4funcvE17override_tls_mode = internal thread_local(initialexec) global i8 0
 // LLVM-LE-DAG: @_ZGVZ4funcvE16default_tls_mode = internal thread_local(localexec) global i8 0
