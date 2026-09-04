@@ -14,12 +14,13 @@
 #define CLANG_CIR_CIRTOCIRPASSES_H
 
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 #include <memory>
 
-namespace clang {
-class ASTContext;
-}
+namespace llvm::vfs {
+class FileSystem;
+} // namespace llvm::vfs
 
 namespace mlir {
 class MLIRContext;
@@ -28,13 +29,22 @@ class ModuleOp;
 
 namespace cir {
 
-// Run set of cleanup/prepare/etc passes CIR <-> CIR.
+class LowerModule;
+
+// Run set of cleanup/prepare/etc passes CIR <-> CIR. The caller owns
+// `lowerModule`, which provides the target/LangOpts state that drives the
+// pipeline (LoweringPrepare, CallConvLowering, and any future helpers). The
+// pipeline needs no live ASTContext, so it can run on serialized .cir input
+// as well as in-process CIRGen. IdiomRecognizer documents an AST dependency
+// and is opt-in; callers without an AST should pass enableIdiomRecognizer
+// = false.
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirCtx,
-                  clang::ASTContext &astCtx, bool enableVerifier,
-                  bool enableIdiomRecognizer, bool enableCIRSimplify,
-                  bool enableLibOpt, llvm::StringRef libOptOptions,
-                  bool enableCallConvLowering);
+                  cir::LowerModule &lowerModule,
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
+                  bool enableVerifier, bool enableIdiomRecognizer,
+                  bool enableCIRSimplify, bool enableLibOpt,
+                  llvm::StringRef libOptOptions, bool enableCallConvLowering);
 
 } // namespace cir
 

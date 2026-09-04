@@ -67,7 +67,9 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
                          std::unique_ptr<clang::TargetInfo> target)
-    : module(module), target(std::move(target)), abi(createCXXABI(*this)) {}
+    : module(module), langOpts(std::move(langOpts)),
+      codeGenOpts(std::move(codeGenOpts)), target(std::move(target)),
+      abi(createCXXABI(*this)) {}
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)
@@ -111,6 +113,14 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   return std::make_unique<LowerModule>(std::move(langOpts),
                                        std::move(codeGenOpts), module,
                                        std::move(targetInfo));
+}
+
+std::unique_ptr<LowerModule>
+createLowerModule(mlir::ModuleOp module, const clang::LangOptions &langOpts,
+                  const clang::CodeGenOptions &codeGenOpts,
+                  std::unique_ptr<clang::TargetInfo> target) {
+  return std::make_unique<LowerModule>(langOpts, codeGenOpts, module,
+                                       std::move(target));
 }
 
 } // namespace cir

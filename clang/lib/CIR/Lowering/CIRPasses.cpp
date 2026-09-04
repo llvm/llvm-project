@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TargetLowering/LowerModule.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace cir {
@@ -42,10 +43,10 @@ static llvm::abi::X86AVXABILevel getX86AVXABILevel(llvm::StringRef abi) {
 /// Whether `__attribute__((target(...)))` on a function may raise its AVX ABI
 /// level above the command line's.  A target that opts out, and any ABI older
 /// than the rule, stay at the module level.
-static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext) {
-  return !astContext.getTargetInfo().getTriple().isPS() &&
-         astContext.getLangOpts().getClangABICompat() >
-             clang::LangOptions::ClangABI::Ver23;
+static bool allowsX86TargetAttrAvx(const clang::TargetInfo &targetInfo,
+                                   const clang::LangOptions &langOpts) {
+  return !targetInfo.getTriple().isPS() &&
+         langOpts.getClangABICompat() > clang::LangOptions::ClangABI::Ver23;
 }
 
 /// The x86_64 ABI-compatibility flags, derived from the target and the
@@ -54,9 +55,9 @@ static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext) {
 /// modern Linux target, so leaving it at the default classifies a union larger
 /// than an eightbyte as though every member spanned its size.
 static llvm::abi::ABICompatInfo
-getX86ABICompatInfo(const clang::ASTContext &astContext) {
-  const llvm::Triple &triple = astContext.getTargetInfo().getTriple();
-  const clang::LangOptions &langOpts = astContext.getLangOpts();
+getX86ABICompatInfo(const clang::TargetInfo &targetInfo,
+                    const clang::LangOptions &langOpts) {
+  const llvm::Triple &triple = targetInfo.getTriple();
   clang::LangOptions::ClangABI compat = langOpts.getClangABICompat();
   llvm::abi::ABICompatInfo abiCompat;
   abiCompat.HonorsRevision98 = !triple.isOSDarwin();
@@ -75,10 +76,11 @@ getX86ABICompatInfo(const clang::ASTContext &astContext) {
 
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
-                  clang::ASTContext &astContext, bool enableVerifier,
-                  bool enableIdiomRecognizer, bool enableCIRSimplify,
-                  bool enableLibOpt, llvm::StringRef libOptOptions,
-                  bool enableCallConvLowering) {
+                  cir::LowerModule &lowerModule,
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
+                  bool enableVerifier, bool enableIdiomRecognizer,
+                  bool enableCIRSimplify, bool enableLibOpt,
+                  llvm::StringRef libOptOptions, bool enableCallConvLowering) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -110,19 +112,21 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   // outlines dynamic global initializers into functions.  It must run before
   // CallConvLowering so the classifier sees them, otherwise their signatures
   // go unclassified and caller and callee disagree on the ABI.
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
+  pm.addPass(mlir::createLoweringPreparePass(&lowerModule, std::move(vfs)));
 
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
     // records the classifier can handle.  Only the x86_64 System V classifier
     // is implemented; other targets are left unchanged.
-    const clang::TargetInfo &targetInfo = astContext.getTargetInfo();
+    const clang::TargetInfo &targetInfo = lowerModule.getTarget();
+    const clang::LangOptions &langOpts = lowerModule.getLangOpts();
     CallConvTarget target = getCallConvTarget(targetInfo.getTriple());
     if (target != CallConvTarget::None)
       pm.addPass(mlir::createCallConvLoweringPass(
           target, getX86AVXABILevel(targetInfo.getABI()),
-          allowsX86TargetAttrAvx(astContext), getX86ABICompatInfo(astContext)));
+          allowsX86TargetAttrAvx(targetInfo, langOpts),
+          getX86ABICompatInfo(targetInfo, langOpts)));
   }
 
   pm.enableVerifier(enableVerifier);

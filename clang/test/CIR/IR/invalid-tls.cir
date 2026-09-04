@@ -18,6 +18,7 @@ module {
 module {
   // expected-error@+1{{op cannot have both static local and tls references}}
 cir.global "private" internal tls_model = <tls_dyn> tls_refs = <"asdf", "asdf", "asdf"> static_local_guard<"asdf"> @_ZZ1fvE1y : !s32i
+  {static_local_info = #cir.static_local_info<local = true, tls = dynamic, is_inline = false, tsk = undeclared>}
 }
 
 // -----

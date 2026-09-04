@@ -57,8 +57,12 @@ protected:
   CreateASTConsumer(clang::CompilerInstance &CI,
                     llvm::StringRef InFile) override;
 
+  void ExecuteAction() override;
+
 public:
   ~CIRGenAction() override;
+
+  bool hasCIRSupport() const override { return true; }
 
   OutputType Action;
 };
