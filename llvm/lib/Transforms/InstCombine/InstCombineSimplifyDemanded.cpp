@@ -3603,8 +3603,6 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownFPClass KnownSrc =
           computeKnownFPClass(Src, fcAllFlags, SQ, Depth + 1);
 
-      // NSZ cannot be applied in multiple use case (maybe it could if all uses
-      // were known nsz)
       if (Value *Simplified = simplifyDemandedFPClassFabs(
               Known, CI->getArgOperand(0), DemandedMask, KnownSrc))
         return Simplified;
