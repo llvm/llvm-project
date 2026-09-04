@@ -959,9 +959,10 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return false;
   }
 
-  if (I.getOpcode() == TargetOpcode::G_BITCAST) {
-    if (DstRC == &AArch64::FPR16RegClass &&
-        SrcRC == &AArch64::GPR32allRegClass) {
+  if (I.getOpcode() == TargetOpcode::G_BITCAST &&
+      RBI.getSizeInBits(DstReg, MRI, TRI) == TypeSize::getFixed(16)) {
+    if (DstRegBank.getID() == AArch64::FPRRegBankID &&
+        SrcRegBank.getID() == AArch64::GPRRegBankID) {
       if (!SrcReg.isPhysical() &&
           !RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI))
         return false;
@@ -979,8 +980,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       return true;
     }
 
-    if (DstRC == &AArch64::GPR32allRegClass &&
-        SrcRC == &AArch64::FPR16RegClass) {
+    if (DstRegBank.getID() == AArch64::GPRRegBankID &&
+        SrcRegBank.getID() == AArch64::FPRRegBankID) {
       if (!SrcReg.isPhysical() &&
           !RBI.constrainGenericRegister(SrcReg, AArch64::FPR16RegClass, MRI))
         return false;
