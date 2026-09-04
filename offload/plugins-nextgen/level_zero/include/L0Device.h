@@ -185,6 +185,8 @@ public:
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
+  uint32_t getDriverId() const override { return L0Context.getDriverId(); }
+
   bool supportsCooperativeKernels() const {
     return QueueConfig.SupportsCooperativeKernels;
   }

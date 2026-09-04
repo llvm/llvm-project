@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LINUX,LINUX-CIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LINUX --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LINUX,LINUX-OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LINUX --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclang-abi-compat=3.8 -fclangir -emit-llvm %s -o %t-38-cir.ll
 // RUN: FileCheck --check-prefix=LINUX38 --input-file=%t-38-cir.ll %s
@@ -14,9 +14,9 @@
 // RUN: FileCheck --check-prefix=LINUX9 --input-file=%t-9.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclang-abi-compat=11 -fclangir -emit-llvm %s -o %t-11-cir.ll
-// RUN: FileCheck --check-prefixes=LINUX11-CIR --input-file=%t-11-cir.ll %s
+// RUN: FileCheck --check-prefix=LINUX11 --input-file=%t-11-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclang-abi-compat=11 -emit-llvm %s -o %t-11.ll
-// RUN: FileCheck --check-prefixes=LINUX11-OGCG --input-file=%t-11.ll %s
+// RUN: FileCheck --check-prefix=LINUX11 --input-file=%t-11.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -target-feature +avx -fclangir -emit-llvm %s -o %t-darwin-cir.ll
 // RUN: FileCheck --check-prefix=DARWIN --input-file=%t-darwin-cir.ll %s
@@ -34,8 +34,7 @@ typedef float v8f __attribute__((vector_size(32)));
 typedef union { long double l; int i; } ULongDouble;
 void rev98(ULongDouble u) { (void)u; }
 
-// LINUX-CIR: define dso_local void @rev98(ptr noalias noundef byval(%union.ULongDouble) align 16 %{{[^,)]+}})
-// LINUX-OGCG: define dso_local void @rev98(ptr noundef byval(%union.ULongDouble) align 16 %{{[^,)]+}})
+// LINUX: define dso_local void @rev98(ptr noundef byval(%union.ULongDouble) align 16 %{{[^,)]+}})
 // DARWIN: define void @rev98(i64 %{{[^,)]+}}, double %{{[^,)]+}})
 
 // GCC classifies a 64-bit vector of a 64-bit integer as SSE.  Clang 3.8 and
@@ -52,8 +51,7 @@ void mmx(v1ll v) { (void)v; }
 // would otherwise reach a register, which is what makes the rule observable.
 void wide_int128(v2i128 v) { (void)v; }
 
-// LINUX-CIR: define dso_local void @wide_int128(ptr noalias noundef byval(<2 x i128>) align 32 %{{[^,)]+}})
-// LINUX-OGCG: define dso_local void @wide_int128(ptr noundef byval(<2 x i128>) align 32 %{{[^,)]+}})
+// LINUX: define dso_local void @wide_int128(ptr noundef byval(<2 x i128>) align 32 %{{[^,)]+}})
 // LINUX38: define dso_local void @wide_int128(<2 x i128> noundef %{{[^,)]+}})
 // LINUX9: define dso_local void @wide_int128(<2 x i128> noundef %{{[^,)]+}})
 // DARWIN: define void @wide_int128(<2 x i128> noundef %{{[^,)]+}})
@@ -66,5 +64,4 @@ union UnionWideVector { v8f v; float f; };
 void take_union_wide_vector(union UnionWideVector u) { (void)u; }
 
 // LINUX: define dso_local void @take_union_wide_vector(<4 x double> %{{[^,)]+}})
-// LINUX11-CIR: define dso_local void @take_union_wide_vector(ptr noalias noundef byval(%union.UnionWideVector) align 32 %{{[^,)]+}})
-// LINUX11-OGCG: define dso_local void @take_union_wide_vector(ptr noundef byval(%union.UnionWideVector) align 32 %{{[^,)]+}})
+// LINUX11: define dso_local void @take_union_wide_vector(ptr noundef byval(%union.UnionWideVector) align 32 %{{[^,)]+}})

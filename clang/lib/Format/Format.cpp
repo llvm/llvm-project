@@ -4217,6 +4217,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   }
 
   SmallVector<StringRef, 4> Matches;
+  SmallVector<tooling::HeaderIncludes::HeaderToInsert, 4> HeadersToInsert;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
     bool Matched =
@@ -4225,19 +4226,17 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                       "'#include ...'");
     (void)Matched;
     auto IncludeName = Matches[2];
-    auto Replace =
-        Includes.insert(IncludeName.trim("\"<>"), IncludeName.starts_with("<"),
-                        tooling::IncludeDirective::Include);
-    if (Replace) {
-      auto Err = Result.add(*Replace);
-      if (Err) {
-        consumeError(std::move(Err));
-        unsigned NewOffset =
-            Result.getShiftedCodePosition(Replace->getOffset());
-        auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
-                                            Replace->getReplacementText());
-        Result = Result.merge(tooling::Replacements(Shifted));
-      }
+    HeadersToInsert.emplace_back(IncludeName,
+                                 tooling::IncludeDirective::Include);
+  }
+  for (const auto &Replace : Includes.insert(HeadersToInsert)) {
+    auto Err = Result.add(Replace);
+    if (Err) {
+      consumeError(std::move(Err));
+      unsigned NewOffset = Result.getShiftedCodePosition(Replace.getOffset());
+      auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
+                                          Replace.getReplacementText());
+      Result = Result.merge(tooling::Replacements(Shifted));
     }
   }
   return Result;

@@ -31,7 +31,6 @@ struct KernelPropertiesTy {
   uint32_t SIMDWidth = 0;
   uint32_t MaxThreadGroupSize = 0;
   uint32_t NumKernelArgs = 0;
-  std::unique_ptr<uint32_t[]> ArgSizes;
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
       std::numeric_limits<decltype(IndirectAccessFlags)>::max();
   std::mutex Mtx;
@@ -43,12 +42,14 @@ struct L0LaunchEnvTy {
   KernelPropertiesTy &KernelPR;
   bool IsCooperative = false;
   void **ArgPtrs = nullptr;
+  int64_t *ArgSizes = nullptr;
   std::unique_lock<std::mutex> Lock;
 
   L0LaunchEnvTy(KernelPropertiesTy &KernelPR,
                 const KernelLaunchArgsTy &LaunchArgs)
       : KernelPR(KernelPR), IsCooperative(LaunchArgs.Flags.Cooperative),
-        ArgPtrs(LaunchArgs.Args), Lock(KernelPR.Mtx, std::defer_lock) {}
+        ArgPtrs(LaunchArgs.Args), ArgSizes(LaunchArgs.ArgSizes),
+        Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
 class L0KernelTy : public GenericKernelTy {

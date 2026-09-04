@@ -520,9 +520,7 @@ def IntegerOverflowFlags : I32BitEnum<
 }
 
 def LLVM_IntegerOverflowFlagsAttr :
-    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow">;
 
 def LLVM_IntegerOverflowFlagsProp :
     NamedEnumPropWithAttrForm<IntegerOverflowFlags, "overflow", LLVM_IntegerOverflowFlagsAttr> {
@@ -556,9 +554,7 @@ def FastmathFlags : I32BitEnumAttr<
 }
 
 def LLVM_FastmathFlagsAttr :
-    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
 // FCmp and ICmp Predicates

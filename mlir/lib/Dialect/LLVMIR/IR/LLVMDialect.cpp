@@ -50,6 +50,13 @@ using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
+static NamedAttrList getAttrsForPrinting(Operation *op) {
+  NamedAttrList attrs(op->getRawDictionaryAttrs());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.set(name, attr); });
+  return attrs;
+}
+
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -278,14 +285,15 @@ static std::optional<ParseResult> parseOpBundles(
 void ICmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
-  p.printOptionalAttrDict((*this)->getAttrs(), {"predicate"});
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"predicate"});
   p << " : " << getLhs().getType();
 }
 
 void FCmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyFCmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()), {"predicate"});
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
+                          {"predicate"});
   p << " : " << getLhs().getType();
 }
 
@@ -397,13 +405,10 @@ void AllocaOp::print(OpAsmPrinter &p) {
     p << " inalloca";
 
   p << ' ' << getArraySize() << " x " << getElemType();
+  NamedAttrList attrs((*this)->getDiscardableAttrDictionary().getValue());
   if (getAlignment() && *getAlignment() != 0)
-    p.printOptionalAttrDict((*this)->getAttrs(),
-                            {kElemTypeAttrName, getInallocaAttrName()});
-  else
-    p.printOptionalAttrDict(
-        (*this)->getAttrs(),
-        {getAlignmentAttrName(), kElemTypeAttrName, getInallocaAttrName()});
+    attrs.append(getAlignmentAttrName(), getAlignmentAttr());
+  p.printOptionalAttrDict(attrs);
   p << " : " << funcTy;
 }
 
@@ -1007,6 +1012,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1047,6 +1053,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
@@ -1073,6 +1080,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1099,6 +1107,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
@@ -1379,7 +1388,7 @@ void CallOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTags());
   }
 
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
                           {getCalleeAttrName(), getTailCallKindAttrName(),
                            getVarCalleeTypeAttrName(), getCConvAttrName(),
                            getOperandSegmentSizesAttrName(),
@@ -1598,8 +1607,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
-        unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1609,7 +1618,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
   build(builder, state, tys,
         /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
         /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr,
-        /*default_func_attrs=*/nullptr, {}, {}, normal, unwind);
+        /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1619,8 +1629,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
-        unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr,
+        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -1707,7 +1717,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTags());
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(),
                           {getCalleeAttrName(), getOperandSegmentSizeAttr(),
                            getCConvAttrName(), getVarCalleeTypeAttrName(),
                            getOpBundleSizesAttrName(),
@@ -1887,7 +1897,7 @@ void LandingpadOp::print(OpAsmPrinter &p) {
       << value.getType() << ") ";
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(), {"cleanup"});
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"cleanup"});
 
   p << ": " << getType();
 }
@@ -4107,8 +4117,7 @@ OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
   if (!rhs)
     return {};
 
-  if (rhs.getValue().getZExtValue() >=
-      getLhs().getType().getIntOrFloatBitWidth())
+  if (rhs.getValue().uge(getLhs().getType().getIntOrFloatBitWidth()))
     return {}; // TODO: Fold into poison.
 
   auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
@@ -4259,7 +4268,7 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
   }
 
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
                           {getOperandSegmentSizesAttrName(),
                            getOpBundleSizesAttrName(), getIntrinAttrName(),
                            getOpBundleTagsAttrName(), getArgAttrsAttrName(),

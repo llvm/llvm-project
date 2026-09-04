@@ -3040,6 +3040,44 @@ void copy(int dst, int src, int nelem) {
 }
 ```
 
+### `__builtin_wasm_memory_copy`
+
+This builtin function copies bytes from a source memory to a possibly
+overlapping destination region using the WebAssembly `memory.copy` instruction.
+It takes five arguments:
+1. Destination memory index (must be a constant integer)
+2. Source memory index (must be a constant integer)
+3. Destination pointer (`void *`)
+4. Source pointer (`const void *`)
+5. Number of bytes to copy (`size_t`)
+
+It returns nothing. Note that unlike C `memcpy` or `memmove`, `memory.copy`
+traps if either pointer is out of bounds even when the number of bytes is zero.
+
+```c++
+void copy(void *dst, const void *src, size_t n) {
+  __builtin_wasm_memory_copy(0, 0, dst, src, n);
+}
+```
+
+### `__builtin_wasm_memory_fill`
+
+This builtin function sets bytes in memory using the WebAssembly `memory.fill`
+instruction. It takes four arguments:
+1. Memory index (must be a constant integer)
+2. Destination pointer (`void *`)
+3. Byte value to set (passed as `int`, lowest 8 bits used)
+4. Number of bytes to set (`size_t`)
+
+It returns nothing. Note that unlike C `memset`, `memory.fill` traps if the
+pointer is out of bounds even when the number of bytes is zero.
+
+```c++
+void fill(void *dst, int val, size_t n) {
+  __builtin_wasm_memory_fill(0, dst, val, n);
+}
+```
+
 ## Builtin Functions
 
 Clang supports a number of builtin library functions with the same syntax as

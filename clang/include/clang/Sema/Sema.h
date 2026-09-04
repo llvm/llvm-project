@@ -4523,6 +4523,13 @@ public:
   bool isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S = nullptr,
                      bool AllowInlineNamespace = false) const;
 
+  /// Determine whether a tag-like declaration found by lookup can be
+  /// redeclared in the given scope. If lookup found a using-shadow, also
+  /// consider the scope of the declaration named by the using-shadow.
+  bool isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx,
+                                 Scope *S = nullptr,
+                                 bool AllowInlineNamespace = false) const;
+
   /// Finds the scope corresponding to the given decl context, if it
   /// happens to be an enclosing scope.  Otherwise return NULL.
   static Scope *getScopeForDeclContext(Scope *S, DeclContext *DC);
@@ -15665,11 +15672,12 @@ public:
   /// Determine if \p D has a definition which allows we redefine it in current
   /// TU. \p Suggested is the definition that should be made visible to expose
   /// the definition.
-  bool isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
-                                bool &Visible);
-  bool isRedefinitionAllowedFor(const NamedDecl *D, bool &Visible) {
+  bool isRedefinitionAllowedFor(NamedDecl *D, SourceLocation NewDefinitionLoc,
+                                NamedDecl **Suggested, bool &Visible);
+  bool isRedefinitionAllowedFor(const NamedDecl *D, SourceLocation NewLoc,
+                                bool &Visible) {
     NamedDecl *Hidden;
-    return isRedefinitionAllowedFor(const_cast<NamedDecl *>(D), &Hidden,
+    return isRedefinitionAllowedFor(const_cast<NamedDecl *>(D), NewLoc, &Hidden,
                                     Visible);
   }
 
@@ -15689,6 +15697,14 @@ public:
     NamedDecl *Hidden;
     return hasAcceptableDefinition(D, &Hidden, Kind);
   }
+
+  /// Determine if a definition at \p NewLoc coincides with \p PrevD.
+  ///
+  /// Including the same header as a non-modular and a modular allows to process
+  /// its content twice despite guards against multiple inclusions. To handle
+  /// such cases this method allows to detect if a currently-parsed decl is at
+  /// the same location as an existing decl imported from a module.
+  bool isFromSameSingleIncludeHeader(const Decl *PrevD, SourceLocation NewLoc);
 
   /// Try to parse the conditional expression attached to an effect attribute
   /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty

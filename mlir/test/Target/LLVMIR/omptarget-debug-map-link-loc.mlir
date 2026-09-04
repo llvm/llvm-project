@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
+  llvm.mlir.global external @_QMtest_0Esp() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : i32 {
     %0 = llvm.mlir.constant(1 : i32) : i32 loc(#loc1)
     llvm.return %0 : i32 loc(#loc1)
   } loc(#loc1)

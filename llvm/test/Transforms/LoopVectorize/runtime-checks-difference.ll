@@ -526,13 +526,12 @@ define void @nested_loop_bound_needs_constant_correction(ptr %a, ptr %b, i64 %n)
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 [[OUTER_IV]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[N]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[OUTER_IV]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[OUTER_IV]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[N]], [[OUTER_IV]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:

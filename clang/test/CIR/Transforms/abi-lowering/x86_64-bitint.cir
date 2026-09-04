@@ -763,12 +763,12 @@ module attributes {
 
   // CHECK-LABEL: cir.func{{.*}} @take_o(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_O> {llvm.align = 8 : i64
-  // CHECK-SAME:    , llvm.byval = !rec_O, llvm.noalias, llvm.noundef})
+  // CHECK-SAME:    , llvm.byval = !rec_O, llvm.noundef})
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_O>, !rec_O
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_o(
-  // LLVM-SAME:    ptr noalias noundef byval(%struct.O) align 8 %[[ARG:[0-9]+]])
+  // LLVM-SAME:    ptr noundef byval(%struct.O) align 8 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %{{[0-9]+}} = load %struct.O, ptr %[[ARG]]
   // LLVM-NEXT:    ret void
 
@@ -804,12 +804,12 @@ module attributes {
 
   // CHECK-LABEL: cir.func{{.*}} @take_arr(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_Arr> {llvm.align = 8 : i64
-  // CHECK-SAME:    , llvm.byval = !rec_Arr, llvm.noalias, llvm.noundef})
+  // CHECK-SAME:    , llvm.byval = !rec_Arr, llvm.noundef})
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_Arr>, !rec_Arr
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_arr(
-  // LLVM-SAME:    ptr noalias noundef byval(%struct.Arr) align 8 %[[ARG:[0-9]+]])
+  // LLVM-SAME:    ptr noundef byval(%struct.Arr) align 8 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %{{[0-9]+}} = load %struct.Arr, ptr %[[ARG]]
   // LLVM-NEXT:    ret void
 }

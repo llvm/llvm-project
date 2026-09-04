@@ -323,9 +323,8 @@ define void @test_expand_secv_in_entry_before_gep(ptr %dst) {
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[OUTER_IV]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 112
 ; CHECK-NEXT:    [[GEP_M:%.*]] = getelementptr [36 x [36 x double]], ptr [[DST]], i64 0, i64 [[OUTER_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 112, [[OUTER_IV]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

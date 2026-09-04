@@ -163,7 +163,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Pie || StaticPie)
     CmdArgs.push_back("-pie");
   if (Nopie || Profiling)
-    CmdArgs.push_back("-nopie");
+    CmdArgs.push_back("-no-pie");
 
   if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");

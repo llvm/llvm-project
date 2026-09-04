@@ -30,6 +30,12 @@ mlir::func::FuncOp getLlvmGetRounding(FirOpBuilder &builder);
 /// Get the `llvm.set.rounding` intrinsic.
 mlir::func::FuncOp getLlvmSetRounding(FirOpBuilder &builder);
 
+/// Get the `llvm.ppc.readflm` intrinsic (reads FPSCR, returns f64).
+mlir::func::FuncOp getLlvmPpcReadflm(FirOpBuilder &builder);
+
+/// Get the `llvm.ppc.setflm` intrinsic (sets FPSCR from f64).
+mlir::func::FuncOp getLlvmPpcSetflm(FirOpBuilder &builder);
+
 /// Get the `llvm.init.trampoline` intrinsic.
 mlir::func::FuncOp getLlvmInitTrampoline(FirOpBuilder &builder);
 

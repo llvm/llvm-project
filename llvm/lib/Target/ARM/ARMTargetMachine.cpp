@@ -220,8 +220,10 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
           const Function *Callee = CB->getCalledFunction();
           F.getContext().diagnose(DiagnosticInfoUnsupported(
               F,
-              (Callee ? Twine("call to '") + Callee->getName() + "'"
-                      : Twine("indirect call")) +
+              (Callee ? Twine("'") + F.getName() + "' calls '" +
+                            Callee->getName() + "', which"
+                      : Twine("'") + F.getName() +
+                            "' makes an indirect call that") +
                   " expects a hard-float calling convention" +
                   FPRegsUnavailableMsg,
               CB->getDebugLoc()));
