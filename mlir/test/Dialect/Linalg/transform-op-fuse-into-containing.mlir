@@ -26,8 +26,8 @@ module {
       // CHECK: %[[T1:.*]] = linalg.fill {{.*}} outs(%[[T0]]
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%[[T1]]
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[T1]]
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -76,8 +76,8 @@ module {
       %4 = affine.min #map2(%arg3)[%arg0]
       %5 = tensor.extract_slice %o[%3] [%4] [1] : tensor<64xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%[[INIT_TENSOR]]
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%0 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[INIT_TENSOR]]
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%0 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<64xf32>
       }
@@ -177,8 +177,8 @@ module {
       // CHECK: %[[T1:.*]] = linalg.fill {{.*}} outs(%[[T0]]
       %6 = tensor.extract_slice %arg1[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<abs> {{.*}} outs(%[[T1]]
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> {{.*}} outs(%[[T1]]
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -228,8 +228,8 @@ module {
       // CHECK: %[[T2:.*]] = linalg.fill {{.*}} outs(%[[T1]]
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T3:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%[[T2]] : tensor<?xf32>) outs(%[[T0]] : tensor<?xf32>)
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T3:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[T2]] : tensor<?xf32>) outs(%[[T0]] : tensor<?xf32>)
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -308,10 +308,10 @@ module {
           // CHECK:  %[[EX1:.*]] = tensor.extract_slice %[[BBARG2]]{{.*}}: tensor<?x?x?xf32> to tensor<1x1x1xf32>
           // CHECK:  linalg.elementwise kind=#linalg.elementwise_kind<abs> ins({{.*}} : tensor<1x1x1xf32>) outs(%[[EX1]] : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
           // CHECK:  %[[EX2:.*]] = tensor.extract_slice %[[BBARG2]]{{.*}} : tensor<?x?x?xf32> to tensor<1x1x1xf32>
-          // CHECK:  linalg.elementwise kind=#linalg.elementwise_kind<abs> ins({{.*}} : tensor<1x1x1xf32>) outs(%[[EX2]] : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
+          // CHECK:  linalg.elementwise kind=#linalg.elementwise_kind<exp> ins({{.*}} : tensor<1x1x1xf32>) outs(%[[EX2]] : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
           %extracted_slice = tensor.extract_slice %0[%arg2, %arg4, %arg6] [1, 1, 1] [1, 1, 1] : tensor<?x?x?xf32> to tensor<1x1x1xf32>
           %extracted_slice_2 = tensor.extract_slice %arg7[%arg2, %arg4, %arg6] [1, 1, 1] [1, 1, 1] : tensor<?x?x?xf32> to tensor<1x1x1xf32>
-          %4 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%extracted_slice : tensor<1x1x1xf32>) outs(%extracted_slice_2 : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
+          %4 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%extracted_slice : tensor<1x1x1xf32>) outs(%extracted_slice_2 : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
           %inserted_slice = tensor.insert_slice %4 into %arg7[%arg2, %arg4, %arg6] [1, 1, 1] [1, 1, 1] : tensor<1x1x1xf32> into tensor<?x?x?xf32>
           scf.yield %inserted_slice : tensor<?x?x?xf32>
         }
@@ -374,8 +374,8 @@ module {
       // CHECK: %[[T1:.*]]:2 = linalg.generic {{.*}} ins(%[[T0]]
       %6 = tensor.extract_slice %0#0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%[[T1]]#0
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[T1]]#0
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -410,8 +410,8 @@ module {
       %2 = tensor.extract_slice %0[%i][1][1] : tensor<2xf32> to tensor<1xf32>
       %3 = tensor.extract_slice %arg1[%i][1][1] : tensor<2xf32> to tensor<1xf32>
       // CHECK: %[[FUSED:.+]] = linalg.fill
-      // CHECK: elementwise kind=#linalg.elementwise_kind<abs> ins(%[[FUSED]]
-      %4 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%2 : tensor<1xf32>) outs(%3 : tensor<1xf32>) -> tensor<1xf32>
+      // CHECK: elementwise kind=#linalg.elementwise_kind<exp> ins(%[[FUSED]]
+      %4 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%2 : tensor<1xf32>) outs(%3 : tensor<1xf32>) -> tensor<1xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %4 into %arg1[%i][1][1] : tensor<1xf32> into tensor<2xf32>
       }
@@ -480,7 +480,7 @@ module {
       // CHECK: %[[T1:.*]]:2 = linalg.generic {{.*}}
       %6 = tensor.extract_slice %0#0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T1]]#0 into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -549,7 +549,7 @@ module {
       // CHECK: %[[T1:.*]] = linalg.generic {{.*}}
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T1]] into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -616,7 +616,7 @@ module {
       // CHECK: %[[T1:.*]] = linalg.generic {{.*}}
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %7 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T1]] into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -692,7 +692,7 @@ module {
       // CHECK: %[[T2:.*]] = linalg.generic {{.*}}
       %7 = tensor.extract_slice %1[%4] [%5] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %8 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%7 : tensor<?xf32>) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
+      %8 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%7 : tensor<?xf32>) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T2]] into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %8 into %o[%2] [%5] [1] : tensor<?xf32> into tensor<?xf32>

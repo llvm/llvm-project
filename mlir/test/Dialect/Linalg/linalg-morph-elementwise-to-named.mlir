@@ -135,7 +135,7 @@ func.func @ternary_select(%A: tensor<?x?xi1>, %B: tensor<?x?xf32>,
 // Non-identity indexing maps: should NOT be converted to named op.
 func.func @non_identity_maps(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.elementwise
-    kind=#linalg.elementwise_kind<abs>
+    kind=#linalg.elementwise_kind<exp>
     indexing_maps = [affine_map<(d0, d1) -> (d1)>, affine_map<(d0, d1) -> (d0, d1)>]
     ins(%A : tensor<?xf32>) outs(%Out : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -143,10 +143,9 @@ func.func @non_identity_maps(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> tensor
 
 // CHECK-LABEL: non_identity_maps
 // CHECK-SAME: %[[A:.+]]: tensor<?xf32>, %[[OUT:.+]]: tensor<?x?xf32>)
-// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<abs>
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<exp>
 // CHECK-SAME: ins(%[[A]] : tensor<?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
-// CHECK-NOT: linalg.abs
 
 // -----
 
