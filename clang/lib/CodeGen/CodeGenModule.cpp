@@ -5757,6 +5757,17 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
           }
         }
       }
+      if (LangOpts.IncrementalExtensions && LangOpts.CUDAIsDevice) {
+        const auto *FD = cast<FunctionDecl>(D);
+        if (const FunctionDecl *Def = FD->getDefinition();
+            Def && Def->hasBody()) {
+          GlobalDecl DefGD = GD.getWithDecl(Def);
+          llvm::GlobalValue::LinkageTypes L = getFunctionLinkage(DefGD);
+          if (llvm::GlobalValue::isLocalLinkage(L) ||
+              llvm::GlobalValue::isWeakForLinker(L))
+            addDeferredDeclToEmit(DefGD);
+        }
+      }
     }
   }
 
