@@ -1022,6 +1022,10 @@ def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
     [], InlineIgnore>;
 
+def FeaturePreferSVEVectors : SubtargetFeature <
+    "prefer vectors to be SVE", "PreferSVEVectors", "true",
+    "Prefer Vectors to use SVE", [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

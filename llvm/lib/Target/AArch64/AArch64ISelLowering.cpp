@@ -30117,7 +30117,8 @@ static SDValue performSelectCombine(SDNode *N,
 }
 
 static SDValue performDUPCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *SubTarget) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
@@ -30141,6 +30142,18 @@ static SDValue performDUPCombine(SDNode *N,
     //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
     //   v4i32 = DUPLANE32 (v4i32), 0
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
+      if (SubTarget->preferSVEVectors() &&
+          SubTarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
+          VT.getScalarType().isInteger()) {
+        EVT ScalaleVT = getContainerForFixedLengthVector(DCI.DAG, VT);
+        SDValue SplatNode =
+            DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalaleVT, Op);
+        // Using SVE on 64bit Vectors with the same scalar type is not
+        // profitable
+        if (!(VT.is64BitVector() && SplatNode.getValueType().getScalarType() ==
+                                        LD->getMemoryVT().getScalarType()))
+          return convertFromScalableVector(DCI.DAG, VT, SplatNode);
+      }
       ISD::LoadExtType ExtType = LD->getExtensionType();
       EVT MemVT = LD->getMemoryVT();
       EVT ElemVT = VT.getVectorElementType();
@@ -31626,7 +31639,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::DUPLANE16:
   case AArch64ISD::DUPLANE32:
   case AArch64ISD::DUPLANE64:
-    return performDUPCombine(N, DCI);
+    return performDUPCombine(N, DCI, Subtarget);
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:

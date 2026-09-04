@@ -618,7 +618,8 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
-                                      FeatureLimited64bitVectorMulBandwidth]>;
+                                      FeatureLimited64bitVectorMulBandwidth,
+                                      FeaturePreferSVEVectors]>;
 
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
