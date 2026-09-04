@@ -1,0 +1,24 @@
+; Verify /showIncludes forwards --show-includes through to clang cc1 so that
+; preprocessor-phase includes are reported in MSVC-compatible form.
+; RUN: llvm-rc -### /showIncludes -- %p/Inputs/empty.rc | FileCheck --check-prefix=CMD %s
+; RUN: llvm-rc -### -- %p/Inputs/empty.rc | FileCheck --check-prefix=NOCMD %s
+
+; CMD: "-Xclang" "--show-includes"
+; NOCMD-NOT: --show-includes
+
+; Verify /showIncludes emits a "Note: including file:" line for resource files
+; (icons, bitmaps, etc.) loaded after parsing.
+; RUN: rm -f %t.res
+; RUN: llvm-rc -no-preprocess /showIncludes /FO %t.res -- %p/Inputs/include.rc \
+; RUN:   2> %t.includes
+; RUN: FileCheck --check-prefix=RES --input-file=%t.includes %s
+
+; RES: Note: including file: {{.*}}bitmap.bmp
+
+; Without /showIncludes, the note must not be emitted.
+; RUN: rm -f %t.res
+; RUN: llvm-rc -no-preprocess /FO %t.res -- %p/Inputs/include.rc 2> %t.no-includes
+; RUN: FileCheck --check-prefix=NORES --allow-empty \
+; RUN:   --input-file=%t.no-includes %s
+
+; NORES-NOT: Note: including file:

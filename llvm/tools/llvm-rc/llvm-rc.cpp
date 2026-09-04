@@ -267,6 +267,10 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
     }
   }
   llvm::append_range(Args, Opts.PreprocessArgs);
+  if (Opts.Params.ShowIncludes) {
+    Args.push_back("-Xclang");
+    Args.push_back("--show-includes");
+  }
   Args.push_back(Src);
   Args.push_back("-o");
   Args.push_back(Dst);
@@ -547,6 +551,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
   Opts.Preprocess = !InputArgs.hasArg(OPT_no_preprocess);
   Opts.Params.Include = InputArgs.getAllArgValues(OPT_includepath);
   Opts.Params.NoInclude = InputArgs.hasArg(OPT_noinclude);
+  Opts.Params.ShowIncludes = InputArgs.hasArg(OPT_show_includes);
   if (Opts.Params.NoInclude) {
     // Clear the INLCUDE variable for the external preprocessor
 #ifdef _WIN32
