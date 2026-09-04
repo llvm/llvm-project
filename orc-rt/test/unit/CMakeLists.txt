@@ -67,6 +67,9 @@ add_orc_rt_unittest(CoreTests
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
   bedrock/sps/SimpleRemoteCATest.cpp
 
+  bedrock/sys/CPUFeaturesTest.cpp
+  bedrock/sys/TargetTripleTest.cpp
+
   tools/OptionParserTest.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB

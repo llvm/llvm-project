@@ -19,6 +19,7 @@
 #include "hdr/types/struct_passwd.h"
 #include "hdr/types/uid_t.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
@@ -91,12 +92,11 @@ LIBC_INLINE bool parse_line<struct passwd>(cpp::span<char> line,
 // Parses a colon-separated password database line into a struct passwd.
 ErrorOr<struct passwd> parse_passwd_line(char *line);
 
-} // namespace pwd
-
-namespace passwd {
-
 // Overrides the default password file path for testing purposes.
 void TESTONLY_set_passwd_path(const char *path);
+
+// Resets the password file path back to the default.
+void TESTONLY_reset_passwd_path();
 
 // Opens or rewinds the password file.
 ErrorOr<void> open();
@@ -107,7 +107,19 @@ ErrorOr<void> close();
 // Reads the next entry from the password database.
 ErrorOr<struct passwd *> read_next();
 
-} // namespace passwd
+// Searches for a password entry matching the given username.
+// The optional path parameter allows unit tests to direct lookups to hermetic
+// test database files without mutating global state.
+ErrorOr<bool> find_by_name(cpp::string_view name, struct passwd *pwd,
+                           cpp::span<char> buffer, const char *path = nullptr);
+
+// Searches for a password entry matching the given user ID.
+// The optional path parameter allows unit tests to direct lookups to hermetic
+// test database files without mutating global state.
+ErrorOr<bool> find_by_uid(uid_t uid, struct passwd *pwd, cpp::span<char> buffer,
+                          const char *path = nullptr);
+
+} // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PWD_PWD_UTILS_H

@@ -375,8 +375,14 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         tools::AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
     }
 
-    if (!Args.hasArg(options::OPT_nostartfiles))
+    if (!Args.hasArg(options::OPT_nostartfiles)) {
+      if (!Args.hasArg(options::OPT_mdll, options::OPT_shared)) {
+        std::string O = ToolChain.GetFilePath("default-manifest.o");
+        if (O != "default-manifest.o")
+          CmdArgs.push_back(Args.MakeArgString(std::move(O)));
+      }
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
+    }
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_T, options::OPT_t});

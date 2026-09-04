@@ -69,7 +69,20 @@ page](https://llvm.org/releases/).
   that unit. Constants of an intrinsic module such as `iso_fortran_env` are
   not described yet, because no compilation unit defines them.
 
+- A reference with a constant subscript that is out of range is now accepted with
+  a warning instead of being rejected with an error. A subscript is required to be
+  within its bounds only when the reference is executed (F'2023 9.5.3.1 paragraph
+  2), and that cannot be determined in general, so programs that keep such a
+  reference in a branch or procedure that never runs are no longer rejected. The
+  same applies to array section endpoints, but not to cosubscripts, which remain
+  errors. Use `-fno-out-of-bounds-subscripts` to get an error again, or
+  `-Wno-out-of-bounds-subscripts` to silence the warning.
+
 ## New Compiler Flags
+- Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of
+  rejecting an out-of-range constant subscript with an error. See the entry above
+  for the change in default behavior.
+
 - Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
   floating-point exception halting mode of the main program. It takes a
   comma-separated list of `invalid`, `zero`, `overflow`, `underflow`, `inexact`,

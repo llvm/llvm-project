@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMPasses
   PassBuilder.cpp
   PassBuilderBindings.cpp
   PassBuilderPipelines.cpp
+  RunCodeGen.cpp
   StandardInstrumentations.cpp
   TriggerCrashPasses.cpp
 
