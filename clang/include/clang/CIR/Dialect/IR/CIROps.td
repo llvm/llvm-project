@@ -242,7 +242,11 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // Enums below are specific to CIR and don't have a correspondence to classic
   // codegen:
   I32EnumAttrCase<"bool_to_float", 1000>,
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CastKindAttr : CIR_EnumAttr<CIR_CastKind, "cast">;
 
 def CIR_CastOp : CIR_Op<"cast", !listconcat([
   DeclareOpInterfaceMethods<PromotableOpInterface>
@@ -302,12 +306,12 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     ```
   }];
 
-  let arguments = (ins CIR_CastKind:$kind, CIR_AnyType:$src,
+  let arguments = (ins CIR_CastKindAttr:$kind, CIR_AnyType:$src,
                        OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    $kind $src `:` type($src) `->` type($result) attr-dict
+    enum($kind) $src `:` type($src) `->` type($result) attr-dict
   }];
 
   let builders = [
@@ -395,7 +399,12 @@ def CIR_DynamicCastKind : CIR_I32EnumAttr<
   "DynamicCastKind", "dynamic cast kind", [
     I32EnumAttrCase<"Ptr", 0, "ptr">,
     I32EnumAttrCase<"Ref", 1, "ref">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_DynamicCastKindAttr
+    : CIR_EnumAttr<CIR_DynamicCastKind, "dynamic_cast">;
 
 def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let summary = "Perform dynamic cast on record pointers";
@@ -450,7 +459,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   }];
 
   let arguments = (ins
-    CIR_DynamicCastKind:$kind,
+    CIR_DynamicCastKindAttr:$kind,
     CIR_PtrToRecordType:$src,
     OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
     UnitAttr:$relative_layout
@@ -461,7 +470,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    $kind (`relative_layout` $relative_layout^)? $src
+    enum($kind) (`relative_layout` $relative_layout^)? $src
     `:` qualified(type($src)) `->` qualified(type($result))
     (qualified($info)^)? attr-dict
   }];
@@ -1513,7 +1522,11 @@ def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
   I32EnumAttrCase<"Equal", 1, "equal">,
   I32EnumAttrCase<"Anyof", 2, "anyof">,
   I32EnumAttrCase<"Range", 3, "range">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CaseOpKindAttr : CIR_EnumAttr<CIR_CaseOpKind, "case">;
 
 def CIR_CaseOp : CIR_Op<"case", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
@@ -1537,10 +1550,11 @@ def CIR_CaseOp : CIR_Op<"case", [
     Each case region must be explicitly terminated.
   }];
 
-  let arguments = (ins ArrayAttr:$value, CIR_CaseOpKind:$kind);
+  let arguments = (ins ArrayAttr:$value, CIR_CaseOpKindAttr:$kind);
   let regions = (region AnyRegion:$caseRegion);
 
-  let assemblyFormat = "`(` $kind `,` $value `)` $caseRegion attr-dict";
+  let assemblyFormat =
+      "`(` enum($kind) `,` $value `)` $caseRegion attr-dict";
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -2522,7 +2536,11 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"ne", 5>,
   I32EnumAttrCase<"one", 6>,
   I32EnumAttrCase<"uno", 7>
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CmpOpKindAttr : CIR_EnumAttr<CIR_CmpOpKind, "cmp">;
 
 def CIR_CmpOp : CIR_Op<"cmp",
     !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
@@ -2561,7 +2579,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
   }];
 
   let arguments = (ins
-    CIR_CmpOpKind:$kind,
+    CIR_CmpOpKindAttr:$kind,
     CIR_ComparableType:$lhs,
     CIR_ComparableType:$rhs,
     OptionalAttr<CIR_FenvAttr>:$fenv
@@ -2570,7 +2588,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    $kind $lhs `,` $rhs `:` type($lhs) attr-dict
+    enum($kind) $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
 
   let builders = [
@@ -4718,7 +4736,11 @@ def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
   I32EnumAttrCase<"User", 1, "user">,
   I32EnumAttrCase<"Yield", 2, "yield">,
   I32EnumAttrCase<"Final", 3, "final">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_AwaitKindAttr : CIR_EnumAttr<CIR_AwaitKind, "await">;
 
 def CIR_AwaitOp : CIR_Op<"await",[
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
@@ -4774,12 +4796,12 @@ def CIR_AwaitOp : CIR_Op<"await",[
     as part of the enclosing await scope.
   }];
 
-  let arguments = (ins CIR_AwaitKind:$kind);
+  let arguments = (ins CIR_AwaitKindAttr:$kind);
   let regions = (region SizedRegion<1>:$ready,
                         SizedRegion<1>:$suspend,
                         SizedRegion<1>:$resume);
   let assemblyFormat = [{
-    `(` $kind `,`
+    `(` enum($kind) `,`
     `ready` `:` $ready `,`
     `suspend` `:` $suspend `,`
     `resume` `:` $resume `,`
@@ -5919,7 +5941,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
   }];
 
   let arguments = (ins
-    CIR_CmpOpKind:$kind,
+    CIR_CmpOpKindAttr:$kind,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs,
     OptionalAttr<CIR_FenvAttr>:$fenv
@@ -5928,7 +5950,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
     qualified(type($result)) attr-dict
   }];
 
@@ -6502,20 +6524,26 @@ def CIR_ComplexRangeKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Improved", 1, "improved">,
     I32EnumAttrCase<"Promoted", 2, "promoted">,
     I32EnumAttrCase<"Basic", 3, "basic">,
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_ComplexRangeKindAttr
+    : CIR_EnumAttr<CIR_ComplexRangeKind, "complex_range">;
 
 class CIR_ComplexRangeBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let arguments = (ins
     CIR_ComplexType:$lhs,
     CIR_ComplexType:$rhs,
-    CIR_ComplexRangeKind:$range
+    CIR_ComplexRangeKindAttr:$range
   );
 
   let results = (outs CIR_ComplexType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+    $lhs `,` $rhs `range` `(` enum($range) `)` `:` qualified(type($result))
+    attr-dict
   }];
 
   let hasLLVMLowering = false;
@@ -8703,7 +8731,11 @@ def CIR_InitCatchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Objc", 3, "objc">,
     I32EnumAttrCase<"TrivialCopy", 4, "trivial_copy">,
     I32EnumAttrCase<"NonTrivialCopy", 5, "non_trivial_copy">,
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
 
 def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let summary = "Initialize a catch parameter from the exception pointer";
@@ -8733,11 +8765,11 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let arguments = (ins
       CIR_PointerType:$exn_ptr,
       CIR_PointerType:$param_addr,
-      CIR_InitCatchKind:$kind
+      CIR_InitCatchKindAttr:$kind
   );
 
   let assemblyFormat = [{
-    $kind $exn_ptr `to` $param_addr `:`
+    enum($kind) $exn_ptr `to` $param_addr `:`
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
@@ -8783,12 +8815,12 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
   let arguments = (ins
       CIR_EhTokenType:$eh_token,
       CIR_PointerType:$param_addr,
-      CIR_InitCatchKind:$kind,
+      CIR_InitCatchKindAttr:$kind,
       OptionalAttr<FlatSymbolRefAttr>:$copy_fn
   );
 
   let assemblyFormat = [{
-    $kind $eh_token `to` $param_addr `using` ($copy_fn^)? `:`
+    enum($kind) $eh_token `to` $param_addr `using` ($copy_fn^)? `:`
       qualified(type($param_addr)) attr-dict
   }];
 
