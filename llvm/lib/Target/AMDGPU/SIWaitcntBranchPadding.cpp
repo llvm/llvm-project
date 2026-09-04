@@ -137,6 +137,9 @@ public:
   SIWaitcntBranchPaddingLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+
     auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     return SIWaitcntBranchPadding(MF, MLI).run();
   }

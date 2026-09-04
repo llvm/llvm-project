@@ -445,7 +445,7 @@ public:
 };
 
 class SIWaitcntBranchPaddingPass
-    : public RequiredPassInfoMixin<SIWaitcntBranchPaddingPass> {
+    : public OptionalPassInfoMixin<SIWaitcntBranchPaddingPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
