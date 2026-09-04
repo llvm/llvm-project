@@ -3072,11 +3072,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     //
     // If a function is marked as minsize/optsize or OptForSize is set, do not
     // allow this form of transformation as this will increase CodeSize.
-    ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
-    unsigned TC = ExactTC.getFixedValue();
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
-    unsigned MaxVFForTC = 1ULL << Log2_32(TC);
-    if (TC - MaxVFForTC <= 1 && !TheFunction->hasOptSize() &&
+    unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
+    if (TC.getFixedValue() - MaxVFForTC <= 1 &&
         MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
         !Config.OptForSize) {
       unsigned VF = MaxVFForTC / EffectiveIC;
