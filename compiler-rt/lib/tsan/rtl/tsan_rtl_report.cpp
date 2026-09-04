@@ -517,7 +517,8 @@ bool RestoreStack(EventType type, Sid sid, Epoch epoch, uptr addr, uptr size,
     Lock lock(&trace->mtx);
     first_part = trace->parts.Front();
     if (!first_part) {
-      DPrintf2("RestoreStack: tid=%d trace=%p no trace parts\n", tid, trace);
+      DPrintf2("RestoreStack: tid=%d trace=%p no trace parts\n", tid,
+               (void*)trace);
       return false;
     }
     last_part = trace->parts.Back();
@@ -533,7 +534,7 @@ bool RestoreStack(EventType type, Sid sid, Epoch epoch, uptr addr, uptr size,
   bool is_atomic = typ & kAccessAtomic;
   bool is_free = typ & kAccessFree;
   DPrintf2("RestoreStack: tid=%d parts=[%p-%p] last_pos=%p\n", tid,
-           trace->parts.Front(), last_part, last_pos);
+           (void*)trace->parts.Front(), (void*)last_part, (void*)last_pos);
   TraceReplay(
       trace, last_part, last_pos, sid, epoch,
       [&](Sid ev_sid, Epoch ev_epoch, Event *evp) {
