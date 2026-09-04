@@ -12,6 +12,10 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+def err_contracts_require_cxx26 : Error<"contracts are a C++26 feature">;
+def err_contracts_disabled : Error<
+  "contracts support is disabled; pass '-fcontracts' to enable it">;
+
 // C23 compatibility with C17 and earlier.
 defm c_label_at_end_of_compound_statement : C23Compat<
   "label at end of compound statement is", /*ext_warn*/true>;

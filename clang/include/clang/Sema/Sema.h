@@ -6500,7 +6500,8 @@ public:
 
   void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
                            StringLiteral *DeletedMessage = nullptr);
-  void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
+  void ActOnStartTrailingRequiresClauseOrContractSpecifier(Scope *S,
+                                                           Declarator &D);
   /// Create a result variable for postconditions and make it visible in the
   /// predicate's scope.
   VarDecl *ActOnPostConditionResultName(Scope *S, IdentifierInfo *ResultName,

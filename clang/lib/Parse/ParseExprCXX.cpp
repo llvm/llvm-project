@@ -1449,7 +1449,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
     if ((HasParentheses && Tok.is(tok::kw_requires)) ||
         getContractSpecifierKind())
-      ParseFunctionDeclaratorTail(D, /*ParametersAlreadyInScope=*/true);
+      ParseFunctionContractSpecifiersAndConstraints(
+          D, /*ParametersAlreadyInScope=*/true);
   }
 
   // Emit a warning if we see a CUDA host/device/global attribute

@@ -2192,7 +2192,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // account for the implicit template parameter list induced by the template.
     if (!TemplateInfo.TemplateParams && D.getInventedTemplateParameterList())
       ++CurTemplateDepthTracker;
-    ParseFunctionDeclaratorTail(D);
+    ParseFunctionContractSpecifiersAndConstraints(D);
   }
 
   // Save late-parsed attributes for now; they need to be parsed in the
@@ -2442,7 +2442,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       //	      declarator initializer[opt]
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires) || getContractSpecifierKind())
-        ParseFunctionDeclaratorTail(D);
+        ParseFunctionContractSpecifiersAndConstraints(D);
       Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
       D.complete(ThisDecl);
       if (ThisDecl)

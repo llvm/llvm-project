@@ -2766,13 +2766,13 @@ private:
   enum class ContractSpecifierKind { Pre, Post };
   std::optional<ContractSpecifierKind> getContractSpecifierKind();
   void ParseContractSpecifiers(Declarator &D);
-  /// Parse the function tails. e.g., requires clause and contracts.
+  /// Parse the trailing requires-clause and function contract specifiers.
   ///
-  /// \param ParametersAlreadyInScope whether the paramers are arealdy in an
-  /// active function prototype scope. This can be true for lambda as lambda
-  /// would always build its function prototype scope.
-  void ParseFunctionDeclaratorTail(Declarator &D,
-                                   bool ParametersAlreadyInScope = false);
+  /// \param ParametersAlreadyInScope whether the parameters are already in an
+  /// active function prototype scope. This can be true for lambdas, which
+  /// always build their function prototype scope.
+  void ParseFunctionContractSpecifiersAndConstraints(
+      Declarator &D, bool ParametersAlreadyInScope = false);
 
   /// ParseRefQualifier - Parses a member function ref-qualifier. Returns
   /// true if a ref-qualifier is found.
@@ -2898,6 +2898,10 @@ private:
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
 
+  /// C++26 contextual keywords.
+  mutable IdentifierInfo *Ident_pre;
+  mutable IdentifierInfo *Ident_post;
+
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
   /// parsed after the corresponding top-level class is complete.
@@ -3003,7 +3007,6 @@ private:
                                      bool MayBeFollowedByDirectInit);
 
   /// Parse a requires-clause as part of a function declaration.
-  void ParseTrailingRequiresClauseWithScope(Declarator &D);
   void ParseTrailingRequiresClause(Declarator &D);
 
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,

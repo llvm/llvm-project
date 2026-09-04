@@ -1835,9 +1835,9 @@ defm coroutines : BoolFOption<"coroutines",
 
 defm contracts : BoolFOption<"contracts",
   LangOpts<"Contracts">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [CC1Option],
           "Enable support for C++ Contracts">,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+  NegFlag<SetFalse, [], [CC1Option],
           "Disable support for C++ Contracts">>,
   ShouldParseIf<cplusplus.KeyPath>;
 

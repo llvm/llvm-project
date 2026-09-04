@@ -4206,7 +4206,8 @@ void Sema::ActOnStartCXXInClassMemberInitializer() {
   PushFunctionScope();
 }
 
-void Sema::ActOnStartTrailingRequiresClause(Scope *S, Declarator &D) {
+void Sema::ActOnStartTrailingRequiresClauseOrContractSpecifier(Scope *S,
+                                                               Declarator &D) {
   if (!D.isFunctionDeclarator())
     return;
   auto &FTI = D.getFunctionTypeInfo();
