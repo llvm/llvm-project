@@ -1,10 +1,10 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -fp-contract=fast -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
 
 define double @test_FMADD_EXT1(float %A, float %B, double %C) {
-    %D = fmul float %A, %B          ; <float> [#uses=1]
+    %D = fmul contract float %A, %B          ; <float> [#uses=1]
     %E = fpext float %D to double   ; <double> [#uses=1]
-    %F = fadd double %E, %C         ; <double> [#uses=1]
+    %F = fadd contract double %E, %C         ; <double> [#uses=1]
     ret double %F
 ; CHECK-LABEL: test_FMADD_EXT1:
 ; CHECK: fmadd
@@ -16,9 +16,9 @@ define double @test_FMADD_EXT1(float %A, float %B, double %C) {
 }
 
 define double @test_FMADD_EXT2(float %A, float %B, double %C) {
-    %D = fmul float %A, %B          ; <float> [#uses=1]
+    %D = fmul contract float %A, %B          ; <float> [#uses=1]
     %E = fpext float %D to double   ; <double> [#uses=1]
-    %F = fadd double %C, %E         ; <double> [#uses=1]
+    %F = fadd contract double %C, %E         ; <double> [#uses=1]
     ret double %F
 ; CHECK-LABEL: test_FMADD_EXT2:
 ; CHECK: fmadd
@@ -30,9 +30,9 @@ define double @test_FMADD_EXT2(float %A, float %B, double %C) {
 }
 
 define double @test_FMSUB_EXT1(float %A, float %B, double %C) {
-    %D = fmul float %A, %B          ; <float> [#uses=1]
+    %D = fmul contract float %A, %B          ; <float> [#uses=1]
     %E = fpext float %D to double   ; <double> [#uses=1]
-    %F = fsub double %E, %C         ; <double> [#uses=1]
+    %F = fsub contract double %E, %C         ; <double> [#uses=1]
     ret double %F
 ; CHECK-LABEL: test_FMSUB_EXT1:
 ; CHECK: fmsub
@@ -44,9 +44,9 @@ define double @test_FMSUB_EXT1(float %A, float %B, double %C) {
 }
 
 define double @test_FMSUB_EXT2(float %A, float %B, double %C) {
-    %D = fmul float %A, %B          ; <float> [#uses=1]
+    %D = fmul contract float %A, %B          ; <float> [#uses=1]
     %E = fpext float %D to double   ; <double> [#uses=1]
-    %F = fsub double %C, %E         ; <double> [#uses=1]
+    %F = fsub contract double %C, %E         ; <double> [#uses=1]
     ret double %F
 ; CHECK-LABEL: test_FMSUB_EXT2:
 ; CHECK: fneg
@@ -61,9 +61,9 @@ define double @test_FMSUB_EXT2(float %A, float %B, double %C) {
 
 ; need nsz flag to generate fnmsub since it may affect sign of zero
 define double @test_FMSUB_EXT2_NSZ(float %A, float %B, double %C) {
-    %D = fmul nsz float %A, %B      ; <float> [#uses=1]
+    %D = fmul nsz contract float %A, %B      ; <float> [#uses=1]
     %E = fpext float %D to double   ; <double> [#uses=1]
-    %F = fsub nsz double %C, %E     ; <double> [#uses=1]
+    %F = fsub nsz contract double %C, %E     ; <double> [#uses=1]
     ret double %F
 ; CHECK-LABEL: test_FMSUB_EXT2_NSZ:
 ; CHECK: fnmsub
@@ -75,10 +75,10 @@ define double @test_FMSUB_EXT2_NSZ(float %A, float %B, double %C) {
 }
 
 define double @test_FMSUB_EXT3(float %A, float %B, double %C) {
-    %D = fmul float %A, %B          ; <float> [#uses=1]
+    %D = fmul contract float %A, %B          ; <float> [#uses=1]
     %E = fsub float -0.000000e+00, %D ;    <float> [#uses=1]
     %F = fpext float %E to double   ; <double> [#uses=1]
-    %G = fsub double %F, %C         ; <double> [#uses=1]
+    %G = fsub contract double %F, %C         ; <double> [#uses=1]
     ret double %G
 ; CHECK-LABEL: test_FMSUB_EXT3:
 ; CHECK: fnmadd
@@ -92,10 +92,10 @@ define double @test_FMSUB_EXT3(float %A, float %B, double %C) {
 }
     
 define double @test_FMSUB_EXT4(float %A, float %B, double %C) {
-    %D = fmul float %A, %B          ; <float> [#uses=1]
+    %D = fmul contract float %A, %B          ; <float> [#uses=1]
     %E = fpext float %D to double   ; <double> [#uses=1]
     %F = fsub double -0.000000e+00, %E ;    <double> [#uses=1]
-    %G = fsub double %F, %C         ; <double> [#uses=1]
+    %G = fsub contract double %F, %C         ; <double> [#uses=1]
     ret double %G
 ; CHECK-LABEL: test_FMSUB_EXT4:
 ; CHECK: fnmadd
