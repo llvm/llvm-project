@@ -124,6 +124,10 @@ void buildGPUPassPipeline(OpPassManager &pm,
   {
     ConvertGpuOpsToLLVMSPVOpsOptions gpuToLLVMSPVOptions;
     gpuToLLVMSPVOptions.use64bitIndex = options.use64bitIndex;
+    // Static workgroup attributions are not launch operands. Lower them to
+    // workgroup address-space globals so that they do not become unset local
+    // pointer arguments in the Level Zero kernel ABI.
+    gpuToLLVMSPVOptions.encodeWorkgroupAttributionsAsArguments = false;
     pm.addNestedPass<gpu::GPUModuleOp>(
         createConvertGpuOpsToLLVMSPVOps(std::move(gpuToLLVMSPVOptions)));
   }
