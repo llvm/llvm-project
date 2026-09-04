@@ -2139,6 +2139,67 @@ static const std::pair<unsigned, unsigned> neonEquivalentIntrinsicMap[] = {
 };
 
 std::optional<mlir::Value>
+CIRGenFunction::emitARMBuiltinExpr(unsigned builtinID, const CallExpr *expr,
+                                   ReturnValueSlot returnValue,
+                                   llvm::Triple::ArchType arch) {
+  // Find out if any arguments are required to be integer constant
+  // expressions.
+  assert(!cir::MissingFeatures::handleBuiltinICEArguments());
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Should not codegen an error");
+  llvm::SmallVector<mlir::Value, 4> ops;
+
+  // Skip extra arguments used to discriminate vector types and that are
+  // intended for Sema checking.
+  //
+  // Builtins that load or store through an argument also need that pointer's
+  // alignment, which classic CodeGen captures here with
+  // EmitPointerWithAlignment. None of those are implemented yet, so the loop
+  // has no such case to handle.
+  bool hasExtraArg = hasExtraNeonArgument(builtinID);
+  unsigned numArgs = expr->getNumArgs() - (hasExtraArg ? 1 : 0);
+  for (unsigned i = 0, e = numArgs; i != e; i++)
+    ops.push_back(
+        emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i)));
+
+  // Only the NEON lane reads are implemented so far.
+  switch (builtinID) {
+  case NEON::BI__builtin_neon_vget_lane_i8:
+  case NEON::BI__builtin_neon_vget_lane_i16:
+  case NEON::BI__builtin_neon_vget_lane_i32:
+  case NEON::BI__builtin_neon_vget_lane_i64:
+  case NEON::BI__builtin_neon_vget_lane_bf16:
+  case NEON::BI__builtin_neon_vget_lane_f32:
+  case NEON::BI__builtin_neon_vgetq_lane_i8:
+  case NEON::BI__builtin_neon_vgetq_lane_i16:
+  case NEON::BI__builtin_neon_vgetq_lane_i32:
+  case NEON::BI__builtin_neon_vgetq_lane_i64:
+  case NEON::BI__builtin_neon_vgetq_lane_bf16:
+  case NEON::BI__builtin_neon_vgetq_lane_f32:
+  case NEON::BI__builtin_neon_vduph_lane_bf16:
+  case NEON::BI__builtin_neon_vduph_laneq_bf16:
+    return cir::VecExtractOp::create(builder, getLoc(expr->getExprLoc()),
+                                     ops[0], ops[1]);
+  default:
+    break;
+  }
+
+  cgm.errorNYI(expr->getSourceRange(),
+               std::string("unimplemented ARM builtin call: ") +
+                   getContext().BuiltinInfo.getName(builtinID));
+
+  // Yield an undef rather than a null value: emitBuiltinExpr forwards a null
+  // straight into an RValue, which then reaches createStore for any result
+  // that is stored to memory. Void has no value to hand back.
+  if (expr->getType()->isVoidType())
+    return mlir::Value{};
+  return getUndefConstant(getLoc(expr->getExprLoc()),
+                          convertType(expr->getType()));
+}
+
+std::optional<mlir::Value>
 CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                                        ReturnValueSlot returnValue,
                                        llvm::Triple::ArchType arch) {
