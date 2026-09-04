@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "orc-rt-internal/bedrock/sys/TargetTriple.h"
+
 #include "orc-rt-internal/bedrock/TargetDetails.h"
-#include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "orc-rt-internal/support/StringExtras.h"
 
 #include <TargetConditionals.h>
 #include <cstdlib>
@@ -19,7 +21,7 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 
-namespace orc_rt {
+namespace orc_rt::sys {
 
 namespace {
 // FIXME: jared - Add in error handling rather than an empty string.
@@ -39,7 +41,7 @@ std::string sysctlString(const char *Name) noexcept {
 
 } // namespace
 
-std::string ExecutorProcessInfo::detectTargetTriple() noexcept {
+std::string detectTargetTriple() noexcept {
   // Detection may involve system calls, so cache the result.
   static const std::string Cache = [] {
     using namespace target_detail;
@@ -98,10 +100,12 @@ std::string ExecutorProcessInfo::detectTargetTriple() noexcept {
     if (Version.empty())
       Version = sysctlString(VersionSysctl);
 
-    return makeTargetTriple(
-        {Arch, vendor::apple, std::string(Platform) + Version, Environment});
+    std::string PlatformVersion = std::string(Platform) + Version;
+    if (Environment.empty())
+      return join({Arch, vendor::apple, PlatformVersion}, "-");
+    return join({Arch, vendor::apple, PlatformVersion, Environment}, "-");
   }();
   return Cache;
 }
 
-} // namespace orc_rt
+} // namespace orc_rt::sys
