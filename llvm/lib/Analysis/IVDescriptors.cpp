@@ -192,6 +192,51 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   if (Kind != RecurKind::FAdd && Kind != RecurKind::FMulAdd)
     return false;
 
+  // A conditional reduction merges the updated and unchanged values through
+  // a phi (branch form) or a select (speculated form), instead of exiting
+  // directly on the fadd/fmuladd. Look through either to find the real exit
+  // instruction.
+  if (isa<PHINode>(Exit) || isa<SelectInst>(Exit)) {
+    Instruction *Chain = nullptr;
+    if (auto *ExitPhi = dyn_cast<PHINode>(Exit)) {
+      if (ExitPhi->getNumIncomingValues() != 2)
+        return false;
+
+      Instruction *Inc0 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(0));
+      Instruction *Inc1 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(1));
+
+      // One incoming value is the reduction phi itself (carried forward when
+      // the update did not happen); the other is the candidate exit
+      // instruction.
+      if (Inc0 == Phi)
+        Chain = Inc1;
+      else if (Inc1 == Phi)
+        Chain = Inc0;
+      else
+        return false;
+    } else {
+      // Same idea, but use the select's true/false operands.
+      auto *ExitSelect = cast<SelectInst>(Exit);
+      Value *TrueVal = ExitSelect->getTrueValue();
+      Value *FalseVal = ExitSelect->getFalseValue();
+
+      if (TrueVal == Phi)
+        Chain = dyn_cast<Instruction>(FalseVal);
+      else if (FalseVal == Phi)
+        Chain = dyn_cast<Instruction>(TrueVal);
+      else
+        return false;
+    }
+
+    // The candidate must be the tracked exact-FP instruction, and must not
+    // be used anywhere else, or replacing it with a masked operation later
+    // would not be equivalent.
+    if (!Chain || Chain != ExactFPMathInst || !Chain->hasOneUse())
+      return false;
+
+    Exit = Chain;
+  }
+
   if (Kind == RecurKind::FAdd && Exit->getOpcode() != Instruction::FAdd)
     return false;
 
@@ -967,9 +1012,12 @@ RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
     return InstDesc(false, I);
 
   Value *Op1, *Op2;
-  if (!(((m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1) ||
-          m_FSub(m_Value(Op1), m_Value(Op2)).match(I1)) &&
-         I1->isFast()) ||
+  // FAdd/FSub don't need fast-math flags here: without them, the reduction
+  // may still be vectorized later as an ordered reduction, see
+  // checkOrderedReduction.
+  bool IsFAddOrFSub = m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1) ||
+                      m_FSub(m_Value(Op1), m_Value(Op2)).match(I1);
+  if (!(IsFAddOrFSub ||
         (m_FMul(m_Value(Op1), m_Value(Op2)).match(I1) && (I1->isFast())) ||
         ((m_Add(m_Value(Op1), m_Value(Op2)).match(I1) ||
           m_Sub(m_Value(Op1), m_Value(Op2)).match(I1))) ||
@@ -980,6 +1028,11 @@ RecurrenceDescriptor::isConditionalRdxPattern(Instruction *I) {
                                         : dyn_cast<Instruction>(Op2);
   if (!IPhi || IPhi != FalseVal)
     return InstDesc(false, I);
+
+  // Without reassoc, I1 is exact FP math: only allow vectorizing this
+  // reduction if it is later recognized as an ordered reduction.
+  if (IsFAddOrFSub && !I1->hasAllowReassoc())
+    return InstDesc(true, I, I1);
 
   return InstDesc(true, I);
 }
@@ -1284,20 +1337,24 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   // to check for a pair of icmp/select, for which we use getNextInstruction and
   // isCorrectOpcode functions to step the right number of instruction, and
   // check the icmp/select pair.
-  // FIXME: We also do not attempt to look through Select's yet, which might
-  // be part of the reduction chain, or attempt to looks through And's to find a
-  // smaller bitwidth. Subs are also currently not allowed (which are usually
-  // treated as part of a add reduction) as they are expected to generally be
-  // more expensive than out-of-loop reductions, and need to be costed more
+  // FIXME: We also do not attempt to look through And's to find a smaller
+  // bitwidth. Subs are also currently not allowed (which are usually treated
+  // as part of a add reduction) as they are expected to generally be more
+  // expensive than out-of-loop reductions, and need to be costed more
   // carefully.
   unsigned ExpectedUses = 1;
   if (IsMinMax)
     ExpectedUses = 2;
 
+  // The phi or select that blends a conditional reduction's updated and
+  // unchanged values, if any; skipped below like a phi since it isn't part
+  // of the fadd/fmuladd chain itself.
+  Instruction *Blend = nullptr;
+
   auto getNextInstruction = [&](Instruction *Cur) -> Instruction * {
     for (auto *User : Cur->users()) {
       Instruction *UI = cast<Instruction>(User);
-      if (isa<PHINode>(UI))
+      if (isa<PHINode>(UI) || UI == Blend)
         continue;
       if (IsMinMax) {
         // We are expecting a icmp/select pair, which we go to the next select
@@ -1331,26 +1388,49 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     return Cur->getOpcode() == getOpcode();
   };
 
-  // Attempt to look through Phis which are part of the reduction chain
+  // Attempt to look through a phi or select blending in a conditional
+  // reduction's unchanged value, which is part of the reduction chain.
   unsigned ExtraPhiUses = 0;
   Instruction *RdxInstr = LoopExitInstr;
-  if (auto ExitPhi = dyn_cast<PHINode>(LoopExitInstr)) {
-    if (ExitPhi->getNumIncomingValues() != 2)
-      return {};
-
-    Instruction *Inc0 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(0));
-    Instruction *Inc1 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(1));
-
+  if (isa<PHINode>(LoopExitInstr) ||
+      (!IsMinMax && isa<SelectInst>(LoopExitInstr))) {
     Instruction *Chain = nullptr;
-    if (Inc0 == Phi)
-      Chain = Inc1;
-    else if (Inc1 == Phi)
-      Chain = Inc0;
-    else
+    if (auto *ExitPhi = dyn_cast<PHINode>(LoopExitInstr)) {
+      if (ExitPhi->getNumIncomingValues() != 2)
+        return {};
+
+      Instruction *Inc0 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(0));
+      Instruction *Inc1 = dyn_cast<Instruction>(ExitPhi->getIncomingValue(1));
+
+      if (Inc0 == Phi)
+        Chain = Inc1;
+      else if (Inc1 == Phi)
+        Chain = Inc0;
+      else
+        return {};
+    } else {
+      // Same idea, but use the select's true/false operands. Min/max
+      // reductions are excluded above since their select IS the reduction
+      // operation itself (handled by isCorrectOpcode/getNextInstruction
+      // below), not a wrapper around one.
+      auto *ExitSelect = cast<SelectInst>(LoopExitInstr);
+      Value *TrueVal = ExitSelect->getTrueValue();
+      Value *FalseVal = ExitSelect->getFalseValue();
+
+      if (TrueVal == Phi)
+        Chain = dyn_cast<Instruction>(FalseVal);
+      else if (FalseVal == Phi)
+        Chain = dyn_cast<Instruction>(TrueVal);
+      else
+        return {};
+    }
+
+    if (!Chain)
       return {};
 
     RdxInstr = Chain;
     ExtraPhiUses = 1;
+    Blend = LoopExitInstr;
   }
 
   // The loop exit instruction we check first (as a quick test) but add last. We
