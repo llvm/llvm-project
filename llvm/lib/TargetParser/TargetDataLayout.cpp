@@ -555,10 +555,10 @@ static std::string computeVEDataLayout(const Triple &T) {
 static std::string computeSuperHDataLayout(const Triple &T) {
 
   // Mixed-endian
-  std::string Ret = T.getArch() == Triple::shl ? "e" : "E";
+  std::string Ret = T.isLittleEndian() ? "e" : "E";
 
   // ELF name manging
-  Ret += "-m:e";
+  Ret += getManglingComponent(T);
 
   // 32-bit pointers, 32 bit aligned
   Ret += "-p:32:32";

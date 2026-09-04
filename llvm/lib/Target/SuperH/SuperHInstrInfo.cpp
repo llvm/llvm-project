@@ -126,7 +126,6 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                            Register DestReg, Register SrcReg, bool KillSrc,
                            bool RenamableDest,
                            bool RenamableSrc) const {
-
   // Do nothing, self copy.
   if (SrcReg == DestReg)
     return;
@@ -259,6 +258,8 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicB
 }
 
 Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex) const {
+  LLVM_DEBUG(dbgs() << "isLoadFromStackSlot\n");
+
   if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
       MI.getOperand(2).getImm() == 0) {
     FrameIndex = MI.getOperand(1).getIndex();
@@ -268,6 +269,8 @@ Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &Frame
 }
 
 Register SuperHInstrInfo::isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex) const {
+  LLVM_DEBUG(dbgs() << "isStoreToStackSlot\n");
+
   if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
       MI.getOperand(1).getImm() == 0) {
     FrameIndex = MI.getOperand(0).getIndex();
