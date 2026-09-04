@@ -263,7 +263,7 @@ define double @fdiv_ninf_inf_op0(double %x) {
 ; CHECK-LABEL: @fdiv_ninf_inf_op0(
 ; CHECK-NEXT:    ret double poison
 ;
-  %r = fdiv ninf double 0x7ff0000000000000, %x
+  %r = fdiv ninf double +inf, %x
   ret double %r
 }
 
@@ -271,7 +271,7 @@ define double @fadd_ninf_inf_op1(double %x) {
 ; CHECK-LABEL: @fadd_ninf_inf_op1(
 ; CHECK-NEXT:    ret double poison
 ;
-  %r = fadd ninf double %x, 0xfff0000000000000
+  %r = fadd ninf double %x, -inf
   ret double %r
 }
 
@@ -279,7 +279,7 @@ define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op0(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %r = fsub nnan double 0x7ff0000000000000, %x
+  %r = fsub nnan double +inf, %x
   ret double %r
 }
 
@@ -290,7 +290,7 @@ define double @fmul_nnan_inf_op1(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = fmul nnan double [[X:%.*]], -inf
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = fmul nnan double %x, 0xfff0000000000000
+  %r = fmul nnan double %x, -inf
   ret double %r
 }
 
