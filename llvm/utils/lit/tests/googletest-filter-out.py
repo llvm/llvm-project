@@ -1,8 +1,7 @@
 # Check that --filter-out applies to tests expanded from a GoogleTest shard.
 # Filtering the failing and unresolved tests should leave a successful run.
 
-# RUN: %{lit} --filter-out 'FirstTest/(subTestB|subTestD)' %{inputs}/googletest-format > %t.out
-# RUN: FileCheck < %t.out %s
+# RUN: %{lit} --filter-out 'FirstTest/(subTestB|subTestD)' %{inputs}/googletest-format | FileCheck %s
 
 # CHECK-NOT: Failed Tests
 # CHECK-NOT: Unresolved Tests
