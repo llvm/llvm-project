@@ -6356,7 +6356,8 @@ public:
     switch (getMaskFormat(load.getMask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::LoadOp>(
-          load, load.getType(), load.getBase(), load.getIndices());
+          load, load.getType(), load.getBase(), load.getIndices(),
+          /*nontemporal=*/false, load.getMaybeAlign());
       return success();
     case MaskFormat::AllFalse:
       rewriter.replaceOp(load, load.getPassThru());
@@ -6423,7 +6424,8 @@ public:
     switch (getMaskFormat(store.getMask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::StoreOp>(
-          store, store.getValueToStore(), store.getBase(), store.getIndices());
+          store, store.getValueToStore(), store.getBase(), store.getIndices(),
+          /*nontemporal=*/false, store.getMaybeAlign());
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(store);
@@ -6554,9 +6556,9 @@ public:
     if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 
-    rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
-                                              op.getOffsets(), op.getMask(),
-                                              op.getPassThru());
+    rewriter.replaceOpWithNewOp<MaskedLoadOp>(
+        op, op.getType(), op.getBase(), op.getOffsets(), op.getMask(),
+        op.getPassThru(), op.getMaybeAlign());
     return success();
   }
 };
@@ -6654,7 +6656,8 @@ public:
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedStoreOp>(
-        op, op.getBase(), op.getOffsets(), op.getMask(), op.getValueToStore());
+        op, op.getBase(), op.getOffsets(), op.getMask(), op.getValueToStore(),
+        op.getMaybeAlign());
     return success();
   }
 };
@@ -6714,7 +6717,8 @@ public:
     switch (getMaskFormat(expand.getMask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::LoadOp>(
-          expand, expand.getType(), expand.getBase(), expand.getIndices());
+          expand, expand.getType(), expand.getBase(), expand.getIndices(),
+          /*nontemporal=*/false, expand.getMaybeAlign());
       return success();
     case MaskFormat::AllFalse:
       rewriter.replaceOp(expand, expand.getPassThru());
@@ -6779,7 +6783,8 @@ public:
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::StoreOp>(
           compress, compress.getValueToStore(), compress.getBase(),
-          compress.getIndices());
+          compress.getIndices(), /*nontemporal=*/false,
+          compress.getMaybeAlign());
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(compress);
