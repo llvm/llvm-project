@@ -47,6 +47,7 @@
 #include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
@@ -276,8 +277,8 @@ private:
   ParseStatus tryParseGPR64sp0Operand(OperandVector &Operands);
   bool tryParseNeonVectorRegister(OperandVector &Operands);
   ParseStatus tryParseVectorIndex(OperandVector &Operands);
-  ParseStatus tryParseGPRSeqPair(OperandVector &Operands);
-  ParseStatus tryParseSyspXzrPair(OperandVector &Operands);
+  template <bool AllowXZRPair>
+  ParseStatus tryParseConsecutiveGPRSeqPair(OperandVector &Operands);
   template <bool ParseShiftExtend,
             RegConstraintEqualityTy EqTy = RegConstraintEqualityTy::EqualsReg>
   ParseStatus tryParseGPROperand(OperandVector &Operands);
@@ -1379,8 +1380,11 @@ public:
                .contains(Reg.Reg);
   }
 
-  bool isSyspXzrPair() const {
-    return isGPR64<AArch64::GPR64RegClassID>() && Reg.Reg == AArch64::XZR;
+  bool isSyspPair() const {
+    return Kind == k_Register && Reg.Kind == RegKind::Scalar &&
+           (Reg.Reg == AArch64::DUMMY_XZR_XZR ||
+            getAArch64MCRegisterClass(AArch64::SyspPairsClassRegClassID)
+                .contains(Reg.Reg));
   }
 
   template<int64_t Angle, int64_t Remainder>
@@ -2172,21 +2176,6 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm = getShiftExtendAmount();
     Inst.addOperand(MCOperand::createImm(Imm));
-  }
-
-  void addSyspXzrPairOperand(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-
-    if (!isScalarReg())
-      return;
-
-    const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    MCRegister Reg = RI->getRegClass(AArch64::GPR64RegClassID)
-                         .getRegister(RI->getEncodingValue(getReg()));
-    if (Reg != AArch64::XZR)
-      llvm_unreachable("wrong register");
-
-    Inst.addOperand(MCOperand::createReg(AArch64::XZR));
   }
 
   void addExtendOperands(MCInst &Inst, unsigned N) const {
@@ -3144,39 +3133,6 @@ ParseStatus AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
-  SMLoc StartLoc = getLoc();
-
-  MCRegister RegNum;
-
-  // The case where xzr, xzr is not present is handled by an InstAlias.
-
-  auto RegTok = getTok(); // in case we need to backtrack
-  if (!tryParseScalarRegister(RegNum).isSuccess())
-    return ParseStatus::NoMatch;
-
-  if (RegNum != AArch64::XZR) {
-    getLexer().UnLex(RegTok);
-    return ParseStatus::NoMatch;
-  }
-
-  if (parseComma())
-    return ParseStatus::Failure;
-
-  if (!tryParseScalarRegister(RegNum).isSuccess())
-    return TokError("expected register operand");
-
-  if (RegNum != AArch64::XZR)
-    return TokError("xzr must be followed by xzr");
-
-  // We need to push something, since we claim this is an operand in .td.
-  // See also AArch64AsmParser::parseKeywordOperand.
-  Operands.push_back(AArch64Operand::CreateReg(
-      RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext()));
-
-  return ParseStatus::Success;
-}
-
 /// tryParseTIndexHint - Try to parse a TIndex operand
 ParseStatus AArch64AsmParser::tryParseTIndexHint(OperandVector &Operands) {
   SMLoc S = getLoc();
@@ -4074,9 +4030,9 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
 
   if (Tok.isNot(AsmToken::Identifier))
     return TokError("expected register identifier");
-  auto Result = tryParseSyspXzrPair(Operands);
-  if (Result.isNoMatch())
-    Result = tryParseGPRSeqPair(Operands);
+  auto Result = tryParseConsecutiveGPRSeqPair</*AllowXZRPair=*/true>(Operands);
+  if (Result.isFailure())
+    return true;
   if (!Result.isSuccess())
     return TokError("specified " + Mnemonic +
                     " op requires a pair of registers");
@@ -5398,6 +5354,12 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
     } while (parseOptionalToken(AsmToken::Comma));
   }
 
+  // The optional SYSP register pair defaults to XZR/XZR.
+  if (Mnemonic == "sysp" && Operands.size() == 5)
+    Operands.push_back(AArch64Operand::CreateReg(
+        AArch64::DUMMY_XZR_XZR, RegKind::Scalar, getLoc(), getLoc(),
+        getContext()));
+
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
     return true;
 
@@ -6106,6 +6068,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 64].");
   case Match_InvalidImmM1_62:
     return Error(Loc, "immediate must be an integer in range [-1, 62].");
+  case Match_InvalidSysCR0_15:
+    return Error(Loc, "expected cN operand where 0 <= N <= 15");
   case Match_InvalidMemoryIndexedRange2UImm0:
     return Error(Loc, "vector select offset must be the immediate range 0:1.");
   case Match_InvalidMemoryIndexedRange2UImm1:
@@ -6884,6 +6848,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
   case Match_InvalidImmM1_62:
+  case Match_InvalidSysCR0_15:
   case Match_InvalidMemoryIndexedRange2UImm0:
   case Match_InvalidMemoryIndexedRange2UImm1:
   case Match_InvalidMemoryIndexedRange2UImm2:
@@ -8524,7 +8489,19 @@ unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   }
 }
 
-ParseStatus AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
+template <bool AllowXZRPair>
+ParseStatus
+AArch64AsmParser::tryParseConsecutiveGPRSeqPair(OperandVector &Operands) {
+  std::string FirstRegExpected =
+      formatv("expected {0}first even register of a consecutive {1} register "
+              "pair",
+              AllowXZRPair ? "xzr/xzr or the " : "",
+              AllowXZRPair ? "64-bit" : "same-size even/odd")
+          .str();
+  std::string SecondRegExpected =
+      formatv("expected second odd register of a consecutive {0} register pair",
+              AllowXZRPair ? "64-bit" : "same-size even/odd")
+          .str();
 
   SMLoc S = getLoc();
 
@@ -8534,26 +8511,25 @@ ParseStatus AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
   MCRegister FirstReg;
   ParseStatus Res = tryParseScalarRegister(FirstReg);
   if (!Res.isSuccess())
-    return Error(S, "expected first even register of a consecutive same-size "
-                    "even/odd register pair");
+    return Error(S, FirstRegExpected);
 
   const MCRegisterClass &WRegClass =
       getAArch64MCRegisterClass(AArch64::GPR32RegClassID);
   const MCRegisterClass &XRegClass =
       getAArch64MCRegisterClass(AArch64::GPR64RegClassID);
 
-  bool isXReg = XRegClass.contains(FirstReg),
-       isWReg = WRegClass.contains(FirstReg);
-  if (!isXReg && !isWReg)
-    return Error(S, "expected first even register of a consecutive same-size "
-                    "even/odd register pair");
+  bool IsXZR = FirstReg == AArch64::XZR;
+  bool IsXReg = XRegClass.contains(FirstReg);
+  bool IsWReg = WRegClass.contains(FirstReg);
+  bool IsXZRPair = AllowXZRPair && IsXZR;
+  if (AllowXZRPair ? (!IsXReg && !IsXZRPair) : (!IsXReg && !IsWReg))
+    return Error(S, FirstRegExpected);
 
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   unsigned FirstEncoding = RI->getEncodingValue(FirstReg);
 
-  if (FirstEncoding & 0x1)
-    return Error(S, "expected first even register of a consecutive same-size "
-                    "even/odd register pair");
+  if (!IsXZRPair && (FirstEncoding & 0x1))
+    return Error(S, FirstRegExpected);
 
   if (getTok().isNot(AsmToken::Comma))
     return Error(getLoc(), "expected comma");
@@ -8564,17 +8540,25 @@ ParseStatus AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
   MCRegister SecondReg;
   Res = tryParseScalarRegister(SecondReg);
   if (!Res.isSuccess())
-    return Error(E, "expected second odd register of a consecutive same-size "
-                    "even/odd register pair");
+    return Error(E, IsXZRPair ? "expected second xzr in xzr/xzr register pair"
+                              : SecondRegExpected);
 
-  if (RI->getEncodingValue(SecondReg) != FirstEncoding + 1 ||
-      (isXReg && !XRegClass.contains(SecondReg)) ||
-      (isWReg && !WRegClass.contains(SecondReg)))
-    return Error(E, "expected second odd register of a consecutive same-size "
-                    "even/odd register pair");
+  // For SYSP, Rt == 31 denotes the optional-pair default. If the explicit
+  // pair starts with xzr, the derived second register must be xzr too.
+  if (IsXZRPair) {
+    if (SecondReg != AArch64::XZR)
+      return Error(E, "expected second xzr in xzr/xzr register pair");
+  }
+
+  if ((!IsXZRPair && RI->getEncodingValue(SecondReg) != FirstEncoding + 1) ||
+      (IsXReg && !XRegClass.contains(SecondReg)) ||
+      (IsWReg && !WRegClass.contains(SecondReg)))
+    return Error(E, SecondRegExpected);
 
   MCRegister Pair;
-  if (isXReg) {
+  if (IsXZRPair) {
+    Pair = AArch64::DUMMY_XZR_XZR;
+  } else if (IsXReg) {
     Pair = RI->getMatchingSuperReg(
         FirstReg, AArch64::sube64,
         &getAArch64MCRegisterClass(AArch64::XSeqPairsClassRegClassID));
