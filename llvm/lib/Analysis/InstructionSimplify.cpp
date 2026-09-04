@@ -5707,6 +5707,22 @@ Value *llvm::simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
   return ::simplifyCastInst(CastOpc, Op, Ty, Q, RecursionLimit);
 }
 
+static Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
+                                        const SimplifyQuery &Q,
+                                        unsigned MaxRecurse) {
+  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.CxtI &&
+      !NullPointerIsDefined(Q.CxtI->getFunction(),
+                            Op->getType()->getPointerAddressSpace()))
+    return PoisonValue::get(Ty);
+
+  return ::simplifyCastInst(Instruction::AddrSpaceCast, Op, Ty, Q, MaxRecurse);
+}
+
+Value *llvm::simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
+                                       const SimplifyQuery &Q) {
+  return ::simplifyAddrSpaceCastInst(Op, Ty, IsNonNull, Q, RecursionLimit);
+}
+
 /// For the given destination element of a shuffle, peek through shuffles to
 /// match a root vector source operand that contains that element in the same
 /// vector lane (ie, the same mask index), so we can eliminate the shuffle(s).
@@ -7831,6 +7847,13 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:
 #include "llvm/IR/Instruction.def"
 #undef HANDLE_CAST_INST
+    if (I->getOpcode() == Instruction::AddrSpaceCast) {
+      return simplifyAddrSpaceCastInst(
+          NewOps[0], I->getType(),
+          Q.IIQ.UseInstrInfo && cast<AddrSpaceCastInst>(I)->hasNonNull(), Q,
+          MaxRecurse);
+    }
+
     return simplifyCastInst(I->getOpcode(), NewOps[0], I->getType(), Q,
                             MaxRecurse);
   case Instruction::Alloca:

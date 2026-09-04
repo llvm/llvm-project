@@ -2185,6 +2185,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximumf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximumf128
 )
 
@@ -2245,6 +2246,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_numf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximum_numf128
 )
 
@@ -2305,6 +2307,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_magf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaximum_magf128
 )
 
@@ -2425,6 +2428,7 @@ add_entrypoint_object(
   HDRS
     ../fminimumf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminimumf128
 )
 
@@ -2485,6 +2489,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_numf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminimum_numf128
 )
 
@@ -2545,6 +2550,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_magf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fminimum_magf128
 )
 

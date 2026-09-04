@@ -574,6 +574,9 @@ math_test(
 math_test(
     name = "fmaximumf128",
     hdrs = ["FMaximumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -594,6 +597,9 @@ math_test(
 math_test(
     name = "fmaximum_magf128",
     hdrs = ["FMaximumMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -634,6 +640,9 @@ math_test(
 math_test(
     name = "fmaximum_numf128",
     hdrs = ["FMaximumNumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -702,6 +711,9 @@ math_test(
 math_test(
     name = "fminimumf128",
     hdrs = ["FMinimumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -722,6 +734,9 @@ math_test(
 math_test(
     name = "fminimum_magf128",
     hdrs = ["FMinimumMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -772,6 +787,9 @@ math_test(
 math_test(
     name = "fminimum_numf128",
     hdrs = ["FMinimumNumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

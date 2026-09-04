@@ -410,6 +410,8 @@ struct MemrefGlobalVariableModel
     Attribute memSpace = globalOp.getType().getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
   }
+
+  bool isCompilerGenerated(Operation *op) const { return false; }
 };
 
 struct GPULaunchOffloadRegionModel
@@ -4741,18 +4743,22 @@ static ParseResult parseBindName(OpAsmParser &parser,
   llvm::SmallVector<mlir::Attribute> deviceStrTypeAttrs;
 
   if (failed(parser.parseCommaSeparatedList([&]() {
+        llvm::SMLoc attrLoc = parser.getCurrentLocation();
         mlir::Attribute newAttr;
         bool isSymbolRefAttr;
-        auto parseResult = parser.parseAttribute(newAttr);
+        if (parser.parseAttribute(newAttr))
+          return failure();
         if (auto symbolRefAttr = dyn_cast<mlir::SymbolRefAttr>(newAttr)) {
           bindIdNameAttrs.push_back(symbolRefAttr);
           isSymbolRefAttr = true;
         } else if (auto stringAttr = dyn_cast<mlir::StringAttr>(newAttr)) {
           bindStrNameAttrs.push_back(stringAttr);
           isSymbolRefAttr = false;
-        }
-        if (parseResult)
+        } else {
+          parser.emitError(attrLoc,
+                           "expected symbol reference or string attribute");
           return failure();
+        }
         if (failed(parser.parseOptionalLSquare())) {
           if (isSymbolRefAttr) {
             deviceIdTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(

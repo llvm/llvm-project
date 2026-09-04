@@ -135,8 +135,7 @@ struct SDNodeKeyInfo {
         Key.Opcode, DenseMapInfo<const EVT *>::getHashValue(Key.VTs));
     for (const SDValue &Op : Key.Ops)
       H = detail::combineHashValue(H, DenseMapInfo<SDValue>::getHashValue(Op));
-    FoldingSetNodeIDRef Tail = Key.Tail.getRef();
-    for (unsigned Word : ArrayRef(Tail.getData(), Tail.getSize()))
+    for (unsigned Word : Key.Tail.getRef())
       H = detail::combineHashValue(H, Word);
     return H;
   }
@@ -2781,6 +2780,16 @@ public:
 
   LLVM_ABI SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
                                          SDValue InChain, const SDLoc &DLoc);
+
+  /// Returns the maximum runtime number of elements in VT if known, or 0
+  /// otherwise.
+  unsigned getMaxRuntimeNumElements(EVT VT) const;
+
+  /// Returns a vector constructed from the scalar values in order. The number
+  /// of scalars must match the maximum runtime length of VT, but only the first
+  /// actual runtime length scalars are included in the result.
+  SDValue buildVectorFromUnrolledParts(EVT VT, const SDLoc &DL,
+                                       ArrayRef<SDValue> Scalars);
 
 private:
 #ifndef NDEBUG

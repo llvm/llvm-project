@@ -315,7 +315,7 @@ define double @test_fabs_select2(double %a) {
 ; CHECK-NEXT:    ret double [[ABS2]]
 ;
   %abs1 = call double @llvm.fabs.f64(double %a)
-  %cmp = fcmp oeq double %abs1, 0x7FF0000000000000
+  %cmp = fcmp oeq double %abs1, +inf
   %sel = select i1 %cmp, double -0.000000e+00, double %abs1
   %abs2 = call double @llvm.fabs.f64(double %sel)
   ret double %abs2
@@ -352,7 +352,7 @@ define float @test_fabs_select_multiuse(i1 %cond, float %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
-  %select = select i1 %cond, float %x, float 0x7FF0000000000000
+  %select = select i1 %cond, float %x, float +inf
   call void @usef32(float %select)
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs

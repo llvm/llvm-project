@@ -48,6 +48,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  chroot
+  SRCS
+    chroot.cpp
+  HDRS
+    ../chroot.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.chroot
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   close
   SRCS
     close.cpp
@@ -320,10 +331,7 @@ add_entrypoint_object(
     ../getpid.h
   DEPENDS
     libc.hdr.types.pid_t
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
 )
 
 add_entrypoint_object(
