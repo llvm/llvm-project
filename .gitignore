@@ -63,6 +63,7 @@ autoconf/autom4te.cache
 /GEMINI.md
 .gemini/
 AGENTS.md
+!inter/AGENTS.md
 .codex/
 # Cursor specific files
 .cursor
