@@ -54,7 +54,8 @@ static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
                                            bool passthru) {
   VectorType vectorType = maskedOp.getVectorType();
   Value load = vector::LoadOp::create(
-      builder, loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
+      builder, loc, vectorType, maskedOp.getBase(), maskedOp.getIndices(),
+      /*nontemporal=*/false, maskedOp.getMaybeAlign());
   if (passthru)
     load = arith::SelectOp::create(builder, loc, vectorType, maskedOp.getMask(),
                                    load, maskedOp.getPassThru());
@@ -225,7 +226,8 @@ struct FullMaskedStoreToConditionalStore
 
     auto trueBuilder = [&](OpBuilder &builder, Location loc) {
       vector::StoreOp::create(rewriter, loc, storeOp.getValueToStore(),
-                              storeOp.getBase(), storeOp.getIndices());
+                              storeOp.getBase(), storeOp.getIndices(),
+                              /*nontemporal=*/false, storeOp.getMaybeAlign());
       scf::YieldOp::create(rewriter, loc);
     };
     auto ifOp =
