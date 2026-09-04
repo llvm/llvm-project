@@ -44,9 +44,6 @@ static bool isSingleLine(SourceRange Range, const SourceManager &SM) {
          SM.getExpansionLineNumber(Range.getEnd());
 }
 
-// True when Tok is a preprocessor directive (the '#' or the directive
-// identifier such as 'endif'). Those tokens can sit between the last
-// enumerator and '}', and must not be treated as a missing trailing comma.
 static bool isPreprocessorDirectiveToken(const Token &Tok,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
@@ -54,7 +51,9 @@ static bool isPreprocessorDirectiveToken(const Token &Tok,
     return true;
   const std::optional<Token> Prev = Lexer::findPreviousToken(
       Tok.getLocation(), SM, LangOpts, /*IncludeComments=*/false);
-  return Prev && Prev->is(tok::hash);
+  return Prev && Prev->is(tok::hash) &&
+         SM.getExpansionLineNumber(Prev->getLocation()) ==
+             SM.getExpansionLineNumber(Tok.getLocation());
 }
 
 namespace {
@@ -129,11 +128,6 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
   if (!LastTok)
     return;
 
-  // `#endif` (and similar directives) can appear immediately before the
-  // closing brace when enumerators are guarded by `#ifdef`. Walking back from
-  // `}` would otherwise treat that directive as the last enumerator and insert
-  // a comma after it, even when every active enumerator already has a trailing
-  // comma.
   if (isPreprocessorDirectiveToken(*LastTok, *Result.SourceManager,
                                    getLangOpts()))
     return;
