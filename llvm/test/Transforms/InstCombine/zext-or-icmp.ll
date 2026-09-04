@@ -3,10 +3,10 @@
 
 define i8 @zext_or_icmp_icmp(i8 %a, i8 %b) {
 ; CHECK-LABEL: @zext_or_icmp_icmp(
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i8 [[MASK]], 0
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i8 [[B:%.*]], 0
-; CHECK-NEXT:    [[BOTHCOND:%.*]] = or i1 [[TOBOOL1]], [[TOBOOL2]]
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i8 [[B]], 0
+; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i8 [[B1:%.*]], 0
+; CHECK-NEXT:    [[BOTHCOND:%.*]] = or i1 [[TOBOOL2]], [[TOBOOL1]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[BOTHCOND]] to i8
 ; CHECK-NEXT:    ret i8 [[ZEXT]]
 ;
@@ -20,10 +20,10 @@ define i8 @zext_or_icmp_icmp(i8 %a, i8 %b) {
 
 define i8 @zext_or_icmp_icmp_logical(i8 %a, i8 %b) {
 ; CHECK-LABEL: @zext_or_icmp_icmp_logical(
-; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i8 [[MASK]], 0
-; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i8 [[B:%.*]], 0
-; CHECK-NEXT:    [[BOTHCOND:%.*]] = select i1 [[TOBOOL1]], i1 true, i1 [[TOBOOL2]]
+; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp eq i8 [[B]], 0
+; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp eq i8 [[B1:%.*]], 0
+; CHECK-NEXT:    [[BOTHCOND:%.*]] = select i1 [[TOBOOL2]], i1 true, i1 [[TOBOOL3]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[BOTHCOND]] to i8
 ; CHECK-NEXT:    ret i8 [[ZEXT]]
 ;

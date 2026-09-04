@@ -407,9 +407,8 @@ falselabel:
 define i1 @and_mask1_eq(i32 %conv) {
 ; CHECK-LABEL: @and_mask1_eq(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[CONV:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CMP]], label [[ELSE:%.*]], label [[THEN:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -432,9 +431,8 @@ else:
 define i1 @and_mask1_ne(i32 %conv) {
 ; CHECK-LABEL: @and_mask1_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[CONV:%.*]] to i1
+; CHECK-NEXT:    br i1 [[CMP]], label [[ELSE:%.*]], label [[THEN:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:

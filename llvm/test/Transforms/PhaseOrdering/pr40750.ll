@@ -7,9 +7,11 @@ define i32 @get(ptr nocapture readonly %arg) {
 ; CHECK-LABEL: @get(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I1:%.*]] = load i8, ptr [[ARG:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[I1]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
-; CHECK-NEXT:    [[I9:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[I3:%.*]] = trunc i8 [[I1]] to i1
+; CHECK-NEXT:    [[I5:%.*]] = lshr i8 [[I1]], 1
+; CHECK-NEXT:    [[I6:%.*]] = and i8 [[I5]], 1
+; CHECK-NEXT:    [[I7:%.*]] = zext nneg i8 [[I6]] to i32
+; CHECK-NEXT:    [[I9:%.*]] = select i1 [[I3]], i32 1, i32 [[I7]]
 ; CHECK-NEXT:    ret i32 [[I9]]
 ;
 bb:
