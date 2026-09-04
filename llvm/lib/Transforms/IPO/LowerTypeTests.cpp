@@ -1982,7 +1982,7 @@ uint64_t LowerTypeTestsModule::getFunctionHotness(const Function *F) const {
   auto ToHT = [&](const Function *F) {
     if (F->hasFnAttribute(Attribute::Hot))
       return CalleeInfo::HotnessType::Hot;
-    if (F->hasFnAttribute(Attribute::Cold)) 
+    if (F->hasFnAttribute(Attribute::Cold))
       return CalleeInfo::HotnessType::Cold;
     return CalleeInfo::HotnessType::Unknown;
   };
