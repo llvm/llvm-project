@@ -695,6 +695,15 @@ end program
   assignment statements as no-ops, and the rest crash during compilation.)
   The compiler flags this case as an error.
 
+* F2023 12.6.3 restricts enumeration types in I/O only for list-directed
+  transfers (prohibited) and formatted transfers (which must use an `I`, `B`,
+  `O`, or `Z` edit descriptor); it places no restriction on unformatted I/O.
+  Flang is currently stricter than the standard here and rejects an
+  enumeration type -- whether a bare item or reached as a component of a
+  derived type not processed by defined I/O -- in unformatted I/O with an
+  error.  This can be a temporary flang limitation while enumeration-type
+  support is incomplete, not a standard requirement.
+
 ## Standard features that might as well not be
 
 * Flang supports designators with constant expressions, properly

@@ -241,6 +241,7 @@ public:
         pdtInstance_{that.pdtInstance_},
         analyzingPDTComponentKindSelector_{
             that.analyzingPDTComponentKindSelector_},
+        inConstantContext_{that.inConstantContext_},
         impliedDos_{that.impliedDos_},
         languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_},
         fpMaxminBehavior_{that.fpMaxminBehavior_} {}
@@ -251,6 +252,7 @@ public:
         pdtInstance_{that.pdtInstance_},
         analyzingPDTComponentKindSelector_{
             that.analyzingPDTComponentKindSelector_},
+        inConstantContext_{that.inConstantContext_},
         impliedDos_{that.impliedDos_},
         languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_},
         fpMaxminBehavior_{that.fpMaxminBehavior_} {}
@@ -313,6 +315,11 @@ public:
     return common::ScopedSet(analyzingPDTComponentKindSelector_, true);
   }
 
+  bool inConstantContext() const { return inConstantContext_; }
+  common::Restorer<bool> WithConstantContext() {
+    return common::ScopedSet(inConstantContext_, true);
+  }
+
   common::Restorer<std::string> SetRealFlagWarningContext(std::string str) {
     return common::ScopedSet(realFlagWarningContext_, str);
   }
@@ -330,6 +337,10 @@ private:
   const TargetCharacteristics &targetCharacteristics_;
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
   bool analyzingPDTComponentKindSelector_{false};
+  // True while folding an expression that is required to be constant (e.g. a
+  // named-constant or type-parameter initializer).  Used to promote certain
+  // deferred-to-runtime conditions into compile-time diagnostics.
+  bool inConstantContext_{false};
   std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
   const common::LanguageFeatureControl &languageFeatures_;

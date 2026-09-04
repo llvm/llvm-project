@@ -224,7 +224,7 @@ EXPONENT(REAL(any) X) -> default INTEGER
 FLOOR(REAL(any) A, KIND=KIND(0)) -> INTEGER(KIND)
 IACHAR(CHARACTER(KIND=k,LEN=1) C, KIND=KIND(0)) -> INTEGER(KIND)
 ICHAR(CHARACTER(KIND=k,LEN=1) C, KIND=KIND(0)) -> INTEGER(KIND)
-INT(INTEGER or REAL or COMPLEX or BOZ A, KIND=KIND(0)) -> INTEGER(KIND)
+INT(INTEGER or REAL or COMPLEX or BOZ or enumeration type A, KIND=KIND(0)) -> INTEGER(KIND)
 LOGICAL(LOGICAL(any) L, KIND=KIND(.TRUE.)) -> LOGICAL(KIND)
 REAL(INTEGER or REAL or COMPLEX or BOZ A, KIND=KIND(0.0)) -> REAL(KIND)
 ```
@@ -378,6 +378,20 @@ When `BACK` is `.TRUE.`, it returns the position of the rightmost character in
 `TOKENIZE` extracts tokens from `STRING` delimited by characters in `SET`.
 In Form 1, it returns the tokens as an array of characters and optionally the separator characters.
 In Form 2, it returns the starting and ending positions of each token.
+
+### Enumeration type intrinsic functions (Fortran 2023)
+```
+NEXT(enumeration type A [, STAT]) -> same enumeration type as A
+PREVIOUS(enumeration type A [, STAT]) -> same enumeration type as A
+```
+
+`NEXT` returns the enumerator that follows `A` in declaration order; if `A` is
+already the last (`HUGE`) enumerator of its type, the result is `A` itself.
+`PREVIOUS` is the opposite: if `A` is the first enumerator, the result is `A`
+itself. `STAT` (optional, scalar `INTEGER` of any kind, `INTENT(OUT)`) is set
+to a positive, processor-dependent value in that boundary case, and to zero
+otherwise; if `STAT` would be assigned a nonzero value but is not present,
+error termination is initiated.
 
 ## Transformational intrinsic functions
 
@@ -574,6 +588,7 @@ DIGITS(INTEGER or REAL X(..)) -> scalar default INTEGER
 EPSILON(REAL(k) X(..)) -> scalar REAL(k)
 HUGE(INTEGER(k) X(..)) -> scalar INTEGER(k)
 HUGE(REAL(k) X(..)) -> scalar of REAL(k)
+HUGE(enumeration type X(..)) -> scalar of same enumeration type
 KIND(intrinsic X(..)) -> scalar default INTEGER
 MAXEXPONENT(REAL(k) X(..)) -> scalar default INTEGER
 MINEXPONENT(REAL(k) X(..)) -> scalar default INTEGER
@@ -825,6 +840,7 @@ functions listed below are folded using host independent implementations.
 | REAL | ABS(REAL(k)), ABS(COMPLEX(k)), AIMAG, AINT, DPROD, REAL |
 | COMPLEX | CMPLX, CONJG |
 | LOGICAL | BGE, BGT, BLE, BLT |
+| ENUMERATION | HUGE(enumeration type), NEXT/PREVIOUS(enumeration type) |
 
 #### Intrinsic Functions with Host Dependent Folding Support
 Implementations using the host runtime may not be available for all supported
