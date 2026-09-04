@@ -296,12 +296,7 @@ bool VPPredicator::shouldPreserveTerminator(VPBasicBlock *VPBB) {
     }
   }
 
-  bool IsUniformAndAvailable = [&](VPValue *V) {
-    auto *IRV = dyn_cast<VPIRValue>(V);
-    return IRV && isa<Argument>(IRV->getValue());
-  }(Term->getOperand(0));
-
-  if (!IsUniformAndAvailable)
+  if (!vputils::isUniformAcrossVFsAndUFs(Term->getOperand(0)))
     return False("non-uniform");
 
   // Should not happen in the end-to-end pass pipeline (simplifycfg would
