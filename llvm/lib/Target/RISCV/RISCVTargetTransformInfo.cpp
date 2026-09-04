@@ -444,12 +444,6 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
-std::optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
-  if (ST->hasVInstructions())
-    return ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
-  return BaseT::getMaxVScale();
-}
-
 std::optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
   if (ST->hasVInstructions())
     if (unsigned MinVLen = ST->getRealMinVLen();
