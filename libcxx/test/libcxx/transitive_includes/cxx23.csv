@@ -445,6 +445,7 @@ future string_view
 future tuple
 future typeinfo
 future version
+hazard_pointer version
 initializer_list version
 iomanip cctype
 iomanip cerrno

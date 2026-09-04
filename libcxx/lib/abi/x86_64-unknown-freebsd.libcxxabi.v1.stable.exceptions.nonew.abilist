@@ -41,8 +41,10 @@
 {'is_defined': False, 'name': '_ZdlPvm', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdlPvmSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_Znam', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZnamRKSt9nothrow_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZnamSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_Znwm', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZnwmRKSt9nothrow_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZnwmSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_allocate_exception', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_atexit@FBSD_1.0', 'type': 'FUNC'}
@@ -1227,8 +1229,11 @@
 {'is_defined': True, 'name': '_ZNSt3__123__cxx_atomic_notify_allEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__123__cxx_atomic_notify_oneEPVKNS_17__cxx_atomic_implIlNS_22__cxx_atomic_base_implIlEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__123__cxx_atomic_notify_oneEPVKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__123__hazard_pointer_retireEPNS_25__hazard_pointer_obj_nodeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIlNS_22__cxx_atomic_base_implIlEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__124__hazard_pointer_acquireEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__124__hazard_pointer_releaseEPNS_21__hazard_pointer_slotE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__126__atomic_notify_all_nativeILm8EEEvPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__126__atomic_notify_one_nativeILm8EEEvPKv', 'type': 'FUNC'}

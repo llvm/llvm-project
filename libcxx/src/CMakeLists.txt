@@ -67,6 +67,7 @@ if (LIBCXX_ENABLE_THREADS)
     condition_variable_destructor.cpp
     condition_variable.cpp
     future.cpp
+    hazard_pointer.cpp
     mutex_destructor.cpp
     mutex.cpp
     shared_mutex.cpp

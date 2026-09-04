@@ -39,6 +39,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
 
@@ -72,6 +75,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 24
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 23
 // TODO: Fill this in
@@ -252,6 +260,11 @@
       "It looks like you're trying to enable vendor availability markup, but you haven't defined the corresponding macros yet!"
 
 #endif
+
+// This controls the availability of the C++26 <hazard_pointer> facility. The hazard pointer
+// domain (records, retired lists, reclamation) lives in the built library.
+#define _LIBCPP_AVAILABILITY_HAS_HAZARD_POINTER _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_HAZARD_POINTER _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
 
 // This determines whether we assume that the internal std::__bad_variant_access_with_msg class
 // (which carries a message describing the cause of the failure in bad_variant_access::what())

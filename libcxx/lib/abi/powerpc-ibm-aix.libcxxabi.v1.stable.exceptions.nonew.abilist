@@ -569,8 +569,11 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__123__cxx_atomic_notify_allEPVKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__123__cxx_atomic_notify_oneEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__123__cxx_atomic_notify_oneEPVKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__123__hazard_pointer_retireEPNS_25__hazard_pointer_obj_nodeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__123__libcpp_atomic_monitorEPVKv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__124__hazard_pointer_acquireEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__124__hazard_pointer_releaseEPNS_21__hazard_pointer_slotE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__126__atomic_wait_global_tableEPKvi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -2030,6 +2033,8 @@
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdlPvm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZdlPvmSt11align_val_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_Znam', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wIMP', 'is_defined': False, 'name': '_ZnamRKSt9nothrow_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZnamSt11align_val_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_Znwm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'wIMP', 'is_defined': False, 'name': '_ZnwmRKSt9nothrow_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'wIMP', 'is_defined': False, 'name': '_ZnwmSt11align_val_t', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
