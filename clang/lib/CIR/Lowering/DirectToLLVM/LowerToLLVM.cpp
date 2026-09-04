@@ -5639,15 +5639,6 @@ mlir::LogicalResult CIRToLLVMCoroSizeOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMCoroPromiseOpLowering::matchAndRewrite(
-    cir::CoroPromiseOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroPromiseOp>(
-      op, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-      adaptor.getCoroframe(), adaptor.getAlign(), adaptor.getFrom());
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     cir::CpuIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
