@@ -2303,8 +2303,9 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
-      // Ignore padding bit-fields.
-      if (BitField && i->isUnnamedBitField())
+      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
+      // storage and classify like named ones, matching GCC.
+      if (BitField && i->isZeroLengthBitField())
         continue;
 
       bool IsInMemory =
@@ -2326,7 +2327,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isUnnamedBitField());
+        assert(!i->isZeroLengthBitField());
         uint64_t BitSize = i->getBitWidthValue();
         for (uint64_t BitOffset = Offset, End = Offset + BitSize;
              BitOffset < End;
