@@ -764,8 +764,19 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   if (VD->isInvalidDecl() || !VD->hasInit() || !VD->hasGlobalStorage() ||
       IsDependentVar(VD))
     return;
+
+  // A function-scope static is a device variable when it is emitted on the
+  // device side, and has the same initialization restrictions. Statics in
+  // implicit HD functions (such as lambdas) are host variables.
+  CUDAVariableTarget VT = IdentifyTarget(VD);
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(VD->getDeclContext());
+  bool IsDeviceLocalStatic =
+      !IsSharedVar && VD->isStaticLocal() &&
+      (VT == CVT_Device || (VT == CVT_Both && getLangOpts().CUDAIsDevice &&
+                            FD && !isImplicitHostDeviceFunction(FD)));
+
   const Expr *Init = VD->getInit();
-  if (IsDeviceOrConstantVar || IsSharedVar) {
+  if (IsDeviceOrConstantVar || IsSharedVar || IsDeviceLocalStatic) {
     if (HasAllowedCUDADeviceStaticInitializer(
             *this, VD, IsSharedVar ? CICK_Shared : CICK_DeviceOrConstant))
       return;
