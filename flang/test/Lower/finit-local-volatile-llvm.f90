@@ -69,7 +69,7 @@ end subroutine
 ! ---------------------------------------------------------------------------
 ! Volatile fixed-length CHARACTER local -- compile-time-length byte-fill loop.
 ! hex: loop over nLen bytes -> store volatile i8.
-! zero: fir.zero_bits store -> store volatile i8 0.
+! zero: fir.zero_bits aggregate store -> store volatile [10 x i8] zeroinitializer.
 ! ---------------------------------------------------------------------------
 subroutine test_volatile_char_fixed(res)
   character(10), volatile :: x
