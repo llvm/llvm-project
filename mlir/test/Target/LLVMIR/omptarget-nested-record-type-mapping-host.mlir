@@ -9,9 +9,9 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 llvm.func @_QQmain() {
-    %0 = llvm.mlir.constant(10 : index) : i64
-    %1 = llvm.mlir.constant(4 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
+    %0 = llvm.mlir.constant(10 : i64) : i64
+    %1 = llvm.mlir.constant(4 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = llvm.mlir.constant(1 : i64) : i64
     %4 = llvm.alloca %3 x !llvm.struct<(f32, array<10 x i32>, struct<(f32, i32)>, i32)> : (i64) -> !llvm.ptr
     %5 = llvm.getelementptr %4[0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(f32, array<10 x i32>, struct<(f32, i32)>, i32)>

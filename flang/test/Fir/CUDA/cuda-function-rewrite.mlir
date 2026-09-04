@@ -23,7 +23,8 @@ gpu.module @cuda_device_mod {
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: func.func @_QMmtestsPdo2
-// CHECK: fir.if %true
+// CHECK: arith.constant true
+// CHECK-NOT: fir.call @on_device
 
 // -----
 
@@ -46,7 +47,8 @@ func.func @_QMmtestsPdo3(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>
 }
 
 // CHECK-LABEL: func.func @_QMmtestsPdo3
-// CHECK: fir.if %false
+// CHECK: arith.constant false
+// CHECK-NOT: fir.call @on_device
 
 // -----
 
@@ -70,7 +72,8 @@ gpu.module @acc_device_mod {
 
 // CHECK-LABEL: gpu.module @acc_device_mod
 // CHECK: func.func @_QMmtestPsub_device
-// CHECK: fir.if %true
+// CHECK: arith.constant true
+// CHECK-NOT: fir.call @_QPon_device
 
 // -----
 
@@ -91,7 +94,8 @@ func.func @_QMmtestPsub_host() {
 }
 
 // CHECK-LABEL: func.func @_QMmtestPsub_host
-// CHECK: fir.if %false
+// CHECK: arith.constant false
+// CHECK-NOT: fir.call @_QPon_device
 
 // -----
 
@@ -116,7 +120,8 @@ gpu.module @acc_extname_device_mod {
 
 // CHECK-LABEL: gpu.module @acc_extname_device_mod
 // CHECK: func.func @_QMmtestPsub_extname_device
-// CHECK: fir.if %true
+// CHECK: arith.constant true
+// CHECK-NOT: fir.call @on_device_
 
 // -----
 
@@ -137,12 +142,14 @@ func.func @_QMmtestPsub_extname_host() {
 }
 
 // CHECK-LABEL: func.func @_QMmtestPsub_extname_host
-// CHECK: fir.if %false
+// CHECK: arith.constant false
+// CHECK-NOT: fir.call @on_device_
 
 // A plain host function (not an OpenACC routine) is still folded to .false.
 // even with defer-acc-routines, which only defers OpenACC routine host copies.
 // DEFER-LABEL: func.func @_QMmtestPsub_extname_host
-// DEFER: fir.if %false
+// DEFER: arith.constant false
+// DEFER-NOT: fir.call @on_device_
 
 // -----
 
@@ -166,7 +173,8 @@ func.func @_QMmtestPaccroutine_host() attributes {acc.routine_info = #acc.routin
 }
 
 // CHECK-LABEL: func.func @_QMmtestPaccroutine_host
-// CHECK: fir.if %false
+// CHECK: arith.constant false
+// CHECK-NOT: fir.call @on_device_
 
 // DEFER-LABEL: func.func @_QMmtestPaccroutine_host
 // DEFER: fir.call @on_device_()
@@ -195,11 +203,13 @@ gpu.module @acc_routine_device_mod {
 
 // CHECK-LABEL: gpu.module @acc_routine_device_mod
 // CHECK: func.func @_QMmtestPaccroutine_device
-// CHECK: fir.if %true
+// CHECK: arith.constant true
+// CHECK-NOT: fir.call @on_device_
 
 // DEFER-LABEL: gpu.module @acc_routine_device_mod
 // DEFER: func.func @_QMmtestPaccroutine_device
-// DEFER: fir.if %true
+// DEFER: arith.constant true
+// DEFER-NOT: fir.call @on_device_
 
 // -----
 

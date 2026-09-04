@@ -1,9 +1,21 @@
-// RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-exception-escape %t -- \
+// RUN: %check_clang_tidy -check-suffixes=,NONE -std=c++11,c++14 %s bugprone-exception-escape %t -- \
 // RUN:     -config="{CheckOptions: { \
 // RUN:         bugprone-exception-escape.IgnoredExceptions: 'ignored1,ignored2', \
-// RUN:         bugprone-exception-escape.FunctionsThatShouldNotThrow: 'enabled1,enabled2,enabled3' \
-// RUN:     }}" \
-// RUN:     -- -fexceptions
+// RUN:         bugprone-exception-escape.FunctionsThatShouldNotThrow: 'enabled1,enabled2,enabled3', \
+// RUN:         bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing: 'None' \
+// RUN:     }}" -- -fexceptions
+// RUN: %check_clang_tidy -check-suffixes=,UNDEFINED,UNKNOWN -std=c++11,c++14 %s bugprone-exception-escape %t -- \
+// RUN:     -config="{CheckOptions: { \
+// RUN:         bugprone-exception-escape.IgnoredExceptions: 'ignored1,ignored2', \
+// RUN:         bugprone-exception-escape.FunctionsThatShouldNotThrow: 'enabled1,enabled2,enabled3', \
+// RUN:         bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing: 'OnlyUndefined' \
+// RUN:     }}" -- -fexceptions
+// RUN: %check_clang_tidy -check-suffixes=,ALL,UNKNOWN -std=c++11,c++14 %s bugprone-exception-escape %t -- \
+// RUN:     -config="{CheckOptions: { \
+// RUN:         bugprone-exception-escape.IgnoredExceptions: 'ignored1,ignored2', \
+// RUN:         bugprone-exception-escape.FunctionsThatShouldNotThrow: 'enabled1,enabled2,enabled3', \
+// RUN:         bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing: 'All' \
+// RUN:     }}" -- -fexceptions
 // FIXME: Fix the checker to work in C++17 or later mode.
 
 struct throwing_destructor {
@@ -661,7 +673,8 @@ void enabled2() {
 // CHECK-MESSAGES: :[[@LINE-3]]:3: note: frame #1: function 'enabled2' calls function 'enabled1' here
 
 void enabled3() {
-  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'enabled3' which should not throw exceptions
+  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'enabled3' which should not throw exceptions
+  // CHECK-MESSAGES-ALL: :[[@LINE-2]]:6: note: frame #0: an exception of unknown type may be thrown in function 'enabled3' here
   try {
     enabled1();
   } catch(...) {
@@ -776,8 +789,12 @@ int indirectly_recursive(int n) noexcept {
     thrower(n);
   return recursion_helper(n);
 }
-// CHECK-MESSAGES: :[[@LINE-25]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
-// CHECK-MESSAGES: :[[@LINE-4]]:5: note: frame #1: function 'indirectly_recursive' calls function 'thrower' here
+// CHECK-MESSAGES-NONE: :[[@LINE-25]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES-NONE: :[[@LINE-4]]:5: note: frame #1: function 'indirectly_recursive' calls function 'thrower' here
+// CHECK-MESSAGES-UNDEFINED: :[[@LINE-27]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES-UNDEFINED: :[[@LINE-6]]:5: note: frame #1: function 'indirectly_recursive' calls function 'thrower' here
+// CHECK-MESSAGES-ALL: :[[@LINE-15]]:5: note: frame #0: an exception of unknown type may be thrown in function 'recursion_helper' here
+// CHECK-MESSAGES-ALL: :[[@LINE-7]]:10: note: frame #1: function 'indirectly_recursive' calls function 'recursion_helper' here
 
 struct super_throws {
   super_throws() noexcept(false) { throw 42; }
@@ -962,28 +979,36 @@ void throw_in_function_arg() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_function_arg' which should not throw exceptions
   f(false ? 0 : throw 1);
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:17: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_function_arg' here
+// CHECK-MESSAGES-NONE: :[[@LINE-2]]:17: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_function_arg' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-6]]:5: note: frame #0: an exception of unknown type may be thrown in function 'f' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-4]]:3: note: frame #1: function 'throw_in_function_arg' calls function 'f' here
 
 int g(int, int, int);
 void throw_in_last_function_arg() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'throw_in_last_function_arg' which should not throw exceptions
   g(42, 67, false ? 0 : throw 1);
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_last_function_arg' here
+// CHECK-MESSAGES-NONE: :[[@LINE-2]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'throw_in_last_function_arg' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-6]]:5: note: frame #0: an exception of unknown type may be thrown in function 'g' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-4]]:3: note: frame #1: function 'throw_in_last_function_arg' calls function 'g' here
 
 void indirect_throw_in_function_arg() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_in_function_arg' which should not throw exceptions
   f(thrower());
 }
-// CHECK-MESSAGES: :[[@LINE-26]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
-// CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #1: function 'indirect_throw_in_function_arg' calls function 'thrower' here
+// CHECK-MESSAGES-NONE: :[[@LINE-30]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES-NONE: :[[@LINE-3]]:5: note: frame #1: function 'indirect_throw_in_function_arg' calls function 'thrower' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-24]]:5: note: frame #0: an exception of unknown type may be thrown in function 'f' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-5]]:3: note: frame #1: function 'indirect_throw_in_function_arg' calls function 'f' here
 
 void indirect_throw_from_lambda_in_function_arg() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_from_lambda_in_function_arg' which should not throw exceptions
   f([] { throw 1; return 0; }());
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:10: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
-// CHECK-MESSAGES: :[[@LINE-3]]:30: note: frame #1: function 'indirect_throw_from_lambda_in_function_arg' calls function 'operator()' here
+// CHECK-MESSAGES-NONE: :[[@LINE-2]]:10: note: frame #0: unhandled exception of type 'int' may be thrown in function 'operator()' here
+// CHECK-MESSAGES-NONE: :[[@LINE-3]]:30: note: frame #1: function 'indirect_throw_from_lambda_in_function_arg' calls function 'operator()' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-33]]:5: note: frame #0: an exception of unknown type may be thrown in function 'f' here
+// CHECK-MESSAGES-UNKNOWN: :[[@LINE-5]]:3: note: frame #1: function 'indirect_throw_from_lambda_in_function_arg' calls function 'f' here
 
 struct S {
   S(int) noexcept {}
@@ -999,11 +1024,14 @@ void indirect_throw_in_constructor_arg() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'indirect_throw_in_constructor_arg' which should not throw exceptions
   S s = thrower();
 }
-// CHECK-MESSAGES: :[[@LINE-50]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
+// CHECK-MESSAGES: :[[@LINE-58]]:3: note: frame #0: unhandled exception of type 'int' may be thrown in function 'thrower' here
 // CHECK-MESSAGES: :[[@LINE-3]]:9: note: frame #1: function 'indirect_throw_in_constructor_arg' calls function 'thrower' here
 
 void weird_throw_in_call_subexpression() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'weird_throw_in_call_subexpression' which should not throw exceptions
   (false ? []{} : throw 1)();
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:19: note: frame #0: unhandled exception of type 'int' may be thrown in function 'weird_throw_in_call_subexpression' here
+// CHECK-MESSAGES-NONE: :[[@LINE-2]]:19: note: frame #0: unhandled exception of type 'int' may be thrown in function 'weird_throw_in_call_subexpression' here
+// CHECK-MESSAGES-UNDEFINED: :[[@LINE-3]]:19: note: frame #0: unhandled exception of type 'int' may be thrown in function 'weird_throw_in_call_subexpression' here
+// CHECK-MESSAGES-ALL: :[[@LINE-4]]:12: note: frame #0: an exception of unknown type may be thrown in function 'operator()' here
+// CHECK-MESSAGES-ALL: :[[@LINE-5]]:27: note: frame #1: function 'weird_throw_in_call_subexpression' calls function 'operator()' here

@@ -16,6 +16,7 @@
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SectionPriorities.h"
+#include "StripSwiftForceLoad.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -1360,12 +1361,20 @@ void SymbolPatterns::clear() {
 }
 
 void SymbolPatterns::insert(StringRef symbolName) {
-  if (symbolName.find_first_of("*?[]") == StringRef::npos)
-    literals.insert(CachedHashStringRef(symbolName));
-  else if (Expected<GlobPattern> pattern = GlobPattern::create(symbolName))
-    globs.emplace_back(*pattern);
-  else
-    error("invalid symbol-name pattern: " + symbolName);
+  Expected<GlobPattern> pattern = GlobPattern::create(symbolName);
+  if (!pattern) {
+    error("invalid symbol-name pattern: " + symbolName + ": " +
+          toString(pattern.takeError()));
+    return;
+  }
+  // A pattern that denotes a single string is kept as a literal: literals are
+  // matched by hash lookup, and only literals seed the force-load of lazy
+  // archive members below.
+  if (std::optional<std::string> literal = pattern->asLiteral()) {
+    literals.insert(CachedHashStringRef(saver().save(*literal)));
+    return;
+  }
+  globs.emplace_back(std::move(*pattern));
 }
 
 bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
@@ -2041,6 +2050,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
+  config->stripSwiftForceLoad =
+      args.hasFlag(OPT_strip_swift_force_load, OPT_no_strip_swift_force_load,
+                   /*Default=*/false);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
@@ -2531,6 +2543,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     } else if (config->dedupStrings) {
       foldIdenticalSections(/*onlyCfStrings=*/true);
     }
+
+    stripSwiftForceLoadFixups();
 
     // Write to an output file.
     if (target->wordSize == 8)

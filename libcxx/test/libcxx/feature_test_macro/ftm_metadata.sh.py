@@ -68,6 +68,12 @@ class Test(unittest.TestCase):
                 test_suite_guard=None,
                 libcxx_guard=None,
             ),
+            "__cpp_lib_view_interface": Metadata(
+                headers=["ranges"],
+                available_since="c++29",
+                test_suite_guard=None,
+                libcxx_guard=None,
+            ),
             "__cpp_lib_zz_missing_FTM_in_older_standard": Metadata(
                 headers=[],
                 available_since="c++17",

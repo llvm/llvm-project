@@ -6649,6 +6649,20 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
   return llvm::ConstantInt::getSigned(CGF.Int32Ty, MinNT);
 }
 
+/// Merge the thread count upper bound \p Val into \p UpperBound.
+///
+/// \p UpperBound is -1 while no thread limiting clause has been seen, 0 once
+/// one has been seen whose value is not known at compile time, and otherwise
+/// the smallest constant bound found so far.
+///
+/// Thread limiting clauses compose by taking the minimum, so a constant bound
+/// stays valid whatever the clauses that are not compile time constants
+/// evaluate to. That makes it correct to replace the 0 marker with \p Val, and
+/// necessary to keep a clause from raising a smaller bound found earlier.
+static void mergeThreadCountUpperBound(int32_t &UpperBound, int32_t Val) {
+  UpperBound = UpperBound > 0 ? std::min(UpperBound, Val) : Val;
+}
+
 /// Check for a num threads constant value (stored in \p DefaultVal), or
 /// expression (stored in \p E). If the value is conditional (via an if-clause),
 /// store the condition in \p CondVal. If \p E, and \p CondVal respectively, are
@@ -6712,11 +6726,8 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
       const Expr *NTExpr = NumThreadsClause->getNumThreads().front();
       if (NTExpr->isIntegerConstantExpr(CGF.getContext()))
         if (auto Constant = NTExpr->getIntegerConstantExpr(CGF.getContext()))
-          UpperBound =
-              UpperBound
-                  ? Constant->getZExtValue()
-                  : std::min(UpperBound,
-                             static_cast<int32_t>(Constant->getZExtValue()));
+          mergeThreadCountUpperBound(
+              UpperBound, static_cast<int32_t>(Constant->getZExtValue()));
       // If we haven't found a upper bound, remember we saw a thread limiting
       // clause.
       if (UpperBound == -1)
@@ -6760,9 +6771,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   auto CheckForConstExpr = [&](const Expr *E, const Expr **EPtr) {
     if (E->isIntegerConstantExpr(CGF.getContext())) {
       if (auto Constant = E->getIntegerConstantExpr(CGF.getContext()))
-        UpperBound = UpperBound ? Constant->getZExtValue()
-                                : std::min(UpperBound,
-                                           int32_t(Constant->getZExtValue()));
+        mergeThreadCountUpperBound(
+            UpperBound, static_cast<int32_t>(Constant->getZExtValue()));
     }
     // If we haven't found a upper bound, remember we saw a thread limiting
     // clause.
@@ -6817,6 +6827,17 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       if (isOpenMPTeamsDirective(Dir->getDirectiveKind()) &&
           !isOpenMPDistributeDirective(Dir->getDirectiveKind())) {
         CS = Dir->getInnermostCapturedStmt();
+        // Now that the 'teams' level has been peeled off, the remainder is
+        // shaped like a 'target teams' region, so pick up the num_threads of
+        // the directive nested in it the same way the OMPD_target_teams case
+        // below does. Without this the upper bound of a construct written as
+        // 'target' / 'teams' / 'distribute parallel for' would stay at the
+        // default, while every combined spelling of the same construct honors
+        // the clause. Only the bound is taken here: passing null for the
+        // expression and the condition keeps this from emitting anything, so
+        // the value the host passes to the kernel launch is left as it was.
+        getNumThreads(CGF, CS, /*E=*/nullptr, UpperBound, UpperBoundOnly,
+                      /*CondVal=*/nullptr);
         const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
             CGF.getContext(), CS->getCapturedStmt());
         Dir = dyn_cast_or_null<OMPExecutableDirective>(Child);

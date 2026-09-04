@@ -31,14 +31,14 @@ struct TestTopologicalSortAnalysisPass
     OpBuilder builder(op->getContext());
 
     WalkResult result = op->walk([&](Operation *root) {
-      if (!root->hasAttr("root"))
+      if (!root->hasDiscardableAttr("root"))
         return WalkResult::advance();
 
       SmallVector<Operation *> selectedOps;
       root->walk([&](Operation *selected) {
-        if (!selected->hasAttr("selected"))
+        if (!selected->hasDiscardableAttr("selected"))
           return WalkResult::advance();
-        if (root->hasAttr("ordered")) {
+        if (root->hasDiscardableAttr("ordered")) {
           // If the root has an "ordered" attribute, we fill the selectedOps
           // vector in a certain order.
           int64_t pos =
@@ -65,7 +65,7 @@ struct TestTopologicalSortAnalysisPass
       }
 
       for (const auto &it : llvm::enumerate(selectedOps))
-        it.value()->setAttr("pos", builder.getIndexAttr(it.index()));
+        it.value()->setDiscardableAttr("pos", builder.getIndexAttr(it.index()));
 
       return WalkResult::advance();
     });

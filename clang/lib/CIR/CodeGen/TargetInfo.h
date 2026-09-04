@@ -82,6 +82,10 @@ public:
     return nullptr;
   }
 
+  virtual mlir::Type getCUDADeviceBuiltinTextureDeviceType() const {
+    return nullptr;
+  }
+
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
   /// convention or the non-variadic convention.
@@ -153,16 +157,16 @@ public:
                                    mlir::Operation *global,
                                    CIRGenModule &module) const {}
 
-  /// Get the CIR calling convention to use for a device kernel entry point
-  /// (e.g. an OpenCL/SYCL or CUDA/HIP kernel) on this target.
-  virtual cir::CallingConv getDeviceKernelCallingConv() const {
-    return cir::CallingConv::C;
-  }
-
   virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
                                         mlir::Type ty) const {
     return false;
   }
+
+  /// Returns the calling convention used for device kernels on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const;
+
+  virtual void
+  setCUDAKernelCallingConvention(const clang::FunctionType *&ft) const {}
 
   /// Corrects the MLIR type for a given constraint and "usual"
   /// type.

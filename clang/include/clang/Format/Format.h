@@ -1507,6 +1507,22 @@ struct FormatStyle {
     ///  according to `AfterControlStatement` flag.
     /// \endnote
     bool AfterObjCDeclaration;
+    /// Wrap requires expression body.
+    /// \code
+    ///   true:
+    ///   template <typename T>
+    ///   concept C = requires(T t)
+    ///   {
+    ///     foo(t);
+    ///   };
+    ///
+    ///   false:
+    ///   template <typename T>
+    ///   concept C = requires(T t) {
+    ///     foo(t);
+    ///   };
+    /// \endcode
+    bool AfterRequiresExpression;
     /// Wrap struct definitions.
     /// \code
     ///   true:

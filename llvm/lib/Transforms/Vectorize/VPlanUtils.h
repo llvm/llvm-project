@@ -195,7 +195,7 @@ getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 VPScalarIVStepsRecipe *createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
     VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
@@ -245,8 +245,8 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions where possible, and returning nullptr for unsupported
-/// expressions (like adds, casts, min/max).
+/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
+/// VPExpandSCEVRecipe to be expanded to IR later.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
@@ -265,9 +265,8 @@ public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
       : Builder(Builder), SE(SE), DL(DL) {}
 
-  /// Try to expand \p S into recipes and live-ins using the builder. Returns
-  /// nullptr if \p S cannot be expanded yet.
-  VPValue *tryToExpand(const SCEV *S);
+  /// Expand \p S into recipes and live-ins using the builder.
+  VPValue *expand(const SCEV *S);
 };
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.

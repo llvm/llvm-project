@@ -19,7 +19,6 @@
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -44,9 +43,10 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
       std::max(1u, (WorkGroupSize + WaveSize - 1) / WaveSize);
 
   const unsigned WorkGroupsPerCU =
-      std::max(1u, (NWaves * getEUsPerCU()) / WavesPerWorkgroup);
+      std::max(1u, (NWaves * getNumWorkGroupSIMDs()) / WavesPerWorkgroup);
 
-  return getLocalMemorySize() / WorkGroupsPerCU;
+  const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
+  return alignDown(getLocalMemorySize() / WorkGroupsPerCU, Granularity);
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
@@ -88,7 +88,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
   if (MinWavesPerCU >= MaxWavesPerCU) {
     std::swap(MinWavesPerCU, MaxWavesPerCU);
   } else {
-    const unsigned WaveSlotsPerCU = WavesPerEU * getEUsPerCU();
+    const unsigned WaveSlotsPerCU = WavesPerEU * getNumWorkGroupSIMDs();
 
     // Look for a potential smaller group size than the maximum which decreases
     // the concurrent number of waves on the CU for the same number of
@@ -128,8 +128,9 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
 
   // Return the minimum/maximum number of waves on any EU, assuming that all
   // wavefronts are spread across all EUs as evenly as possible.
-  return {std::clamp(MinWavesPerCU / getEUsPerCU(), 1U, WavesPerEU),
-          std::clamp(divideCeil(MaxWavesPerCU, getEUsPerCU()), 1U, WavesPerEU)};
+  return {std::clamp(MinWavesPerCU / getNumWorkGroupSIMDs(), 1U, WavesPerEU),
+          std::clamp(divideCeil(MaxWavesPerCU, getNumWorkGroupSIMDs()), 1U,
+                     WavesPerEU)};
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(

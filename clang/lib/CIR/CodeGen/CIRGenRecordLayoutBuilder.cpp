@@ -22,6 +22,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -112,10 +113,6 @@ struct CIRRecordLowering final {
 
   mlir::Type getVFPtrType();
 
-  bool isAAPCS() const {
-    return astContext.getTargetInfo().getABI().starts_with("aapcs");
-  }
-
   /// Helper function to check if the target machine is BigEndian.
   bool isBigEndian() const { return astContext.getTargetInfo().isBigEndian(); }
 
@@ -152,7 +149,17 @@ struct CIRRecordLowering final {
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
-  CharUnits getAlignment(mlir::Type Ty) {
+
+  CharUnits getMemberAlignment(mlir::Type Ty) {
+    // Recurse on Arrays, they have the member alignment of their element type.
+    if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(Ty))
+      return getMemberAlignment(arrayTy.getElementType());
+    // Int types (_BitInt in particular) share the alignment of their storage
+    // type.
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(Ty))
+      return CharUnits::fromQuantity(
+          intTy.getStorageTypeAlignment(dataLayout.layout));
+
     return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
   }
 
@@ -683,16 +690,14 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       // not a horrifyingly problematic issue.
       assert(!cir::MissingFeatures::noUniqueAddressLayout());
       // Dropping the field leaves no member to mark, so its bytes read as
-      // padding.  That is only sound when the field carries no ABI data
-      // either, which isEmptyFieldForLayout does not guarantee.  Report the
-      // gap rather than claim an emptiness the record does not have.  The base
-      // subobject lowering sees the same field, so only the complete object
-      // reports it.
-      if (!nonVirtualBaseType && !isEmptyFieldForABI(astContext, *field))
-        cirGenTypes.getCGModule().errorNYI(
-            field->getSourceRange(),
-            "[[no_unique_address]] field that is empty for layout but holds "
-            "data for the ABI");
+      // padding.  That is only sound when the field carries no ABI data, so
+      // make sure we add a member for it. if it does.
+      if (!isEmptyFieldForABI(astContext, *field))
+        members.push_back(
+            MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
+                       MemberInfo::InfoKind::Field,
+                       getStorageType(field->getType()->getAsCXXRecordDecl()),
+                       getFieldMemberKind(*field), *field));
       ++field;
     } else {
       // Use base subobject layout for potentially-overlapping fields,
@@ -744,11 +749,11 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
-    if (!member.offset.isMultipleOf(getAlignment(member.data)))
+    if (!member.offset.isMultipleOf(getMemberAlignment(member.data)))
       packed = true;
     if (member.offset < nvSize)
-      nvAlignment = std::max(nvAlignment, getAlignment(member.data));
-    alignment = std::max(alignment, getAlignment(member.data));
+      nvAlignment = std::max(nvAlignment, getMemberAlignment(member.data));
+    alignment = std::max(alignment, getMemberAlignment(member.data));
   }
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
@@ -786,8 +791,8 @@ void CIRRecordLowering::insertPadding() {
     CharUnits offset = member.offset;
     assert(offset >= size);
     // Insert padding if we need to.
-    if (offset !=
-        size.alignTo(packed ? CharUnits::One() : getAlignment(member.data)))
+    if (offset != size.alignTo(packed ? CharUnits::One()
+                                      : getMemberAlignment(member.data)))
       padding.push_back(std::make_pair(size, offset - size));
     size = offset + getSize(member.data);
   }
@@ -1055,7 +1060,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     // Else we just add padding normally.
     appendPaddingBytes(layoutSize - getSize(storageType));
   }
-  packed = !layoutSize.isMultipleOf(getAlignment(storageType));
+  packed = !layoutSize.isMultipleOf(getMemberAlignment(storageType));
 }
 
 bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *decl,
@@ -1083,7 +1088,7 @@ bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *decl,
 /// Enforcing the width restriction can be disabled using
 /// -fno-aapcs-bitfield-width.
 void CIRRecordLowering::computeVolatileBitfields() {
-  if (!isAAPCS() ||
+  if (!CodeGenUtils::isAAPCS(astContext.getTargetInfo()) ||
       !cirGenTypes.getCGModule().getCodeGenOpts().AAPCSBitfieldWidth)
     return;
 

@@ -325,6 +325,10 @@ private:
   }
   void writeDIObjCProperty(const DIObjCProperty *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIProperty(const DIProperty *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DIProperty Nodes");
+  }
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
@@ -2537,7 +2541,7 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(cast<AtomicCmpXchgInst>(I).isWeak());
     break;
   case Instruction::AtomicRMW:
-    Code = bitc::FUNC_CODE_INST_ATOMICRMW;
+    Code = bitc::FUNC_CODE_INST_ATOMICRMW_OLD;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
     pushValue(I.getOperand(1), InstID, Vals);        // val.
     Vals.push_back(

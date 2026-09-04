@@ -2434,7 +2434,7 @@ define float @assume_ole_pinf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp ole float %arg, 0x7FF0000000000000
+  %fcmp = fcmp ole float %arg, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2446,7 +2446,7 @@ define float @assume_ole_ninf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp ole float %arg, 0xFFF0000000000000
+  %fcmp = fcmp ole float %arg, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2458,7 +2458,7 @@ define float @assume_ugt_pinf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp ugt float %arg, 0x7FF0000000000000
+  %fcmp = fcmp ugt float %arg, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2470,7 +2470,7 @@ define float @assume_ugt_ninf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp ugt float %arg, 0xFFF0000000000000
+  %fcmp = fcmp ugt float %arg, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2484,7 +2484,7 @@ define float @assume_fabs_ole_pinf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp ole float %fabs, 0x7FF0000000000000
+  %fcmp = fcmp ole float %fabs, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2496,7 +2496,7 @@ define float @assume_fabs_ole_ninf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp ole float %fabs, 0xFFF0000000000000
+  %fcmp = fcmp ole float %fabs, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2510,7 +2510,7 @@ define float @assume_fabs_ugt_pinf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp ugt float %fabs, 0x7FF0000000000000
+  %fcmp = fcmp ugt float %fabs, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2522,7 +2522,7 @@ define float @assume_fabs_ugt_ninf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp ugt float %fabs, 0xFFF0000000000000
+  %fcmp = fcmp ugt float %fabs, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2538,7 +2538,7 @@ define float @assume_fabs_false_pinf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp false float %fabs, 0x7FF0000000000000
+  %fcmp = fcmp false float %fabs, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2550,7 +2550,7 @@ define float @assume_fabs_false_ninf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp false float %fabs, 0xFFF0000000000000
+  %fcmp = fcmp false float %fabs, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2561,7 +2561,7 @@ define float @assume_false_pinf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp false float %arg, 0x7FF0000000000000
+  %fcmp = fcmp false float %arg, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2572,7 +2572,7 @@ define float @assume_false_ninf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp false float %arg, 0xFFF0000000000000
+  %fcmp = fcmp false float %arg, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2582,7 +2582,7 @@ define float @clamp_false_pinf_0.0(float noundef %arg) {
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp false float %arg, 0x7FF0000000000000
+  %fcmp = fcmp false float %arg, +inf
   %select = select i1 %fcmp, float 0.0, float %arg
   ret float %select
 }
@@ -2592,7 +2592,7 @@ define float @clamp_false_ninf_0.0(float noundef %arg) {
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp false float %arg, 0xFFF0000000000000
+  %fcmp = fcmp false float %arg, -inf
   %select = select i1 %fcmp, float 0.0, float %arg
   ret float %select
 }
@@ -2681,7 +2681,7 @@ define float @assume_fabs_true_pinf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp true float %fabs, 0x7FF0000000000000
+  %fcmp = fcmp true float %fabs, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2693,7 +2693,7 @@ define float @assume_fabs_true_ninf(float noundef %arg) {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %fcmp = fcmp true float %fabs, 0xFFF0000000000000
+  %fcmp = fcmp true float %fabs, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2704,7 +2704,7 @@ define float @assume_true_pinf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp true float %arg, 0x7FF0000000000000
+  %fcmp = fcmp true float %arg, +inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2715,7 +2715,7 @@ define float @assume_true_ninf(float noundef %arg) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp true float %arg, 0xFFF0000000000000
+  %fcmp = fcmp true float %arg, -inf
   call void @llvm.assume(i1 %fcmp)
   ret float %arg
 }
@@ -2758,7 +2758,7 @@ define float @clamp_true_pinf_0.0(float noundef %arg) {
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %fcmp = fcmp true float %arg, 0x7FF0000000000000
+  %fcmp = fcmp true float %arg, +inf
   %select = select i1 %fcmp, float 0.0, float %arg
   ret float %select
 }
@@ -2768,7 +2768,7 @@ define float @clamp_true_ninf_0.0(float noundef %arg) {
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %fcmp = fcmp true float %arg, 0xFFF0000000000000
+  %fcmp = fcmp true float %arg, -inf
   %select = select i1 %fcmp, float 0.0, float %arg
   ret float %select
 }

@@ -440,3 +440,23 @@ std::string fir::NameUniquer::replaceSpecialSymbols(const std::string &name) {
 bool fir::NameUniquer::isSpecialSymbol(llvm::StringRef name) {
   return !name.empty() && (name[0] == '.' || name[0] == 'X');
 }
+
+bool fir::NameUniquer::isCompilerGenerated(llvm::StringRef name) {
+  auto [nameKind, deconstructed] = fir::NameUniquer::deconstruct(name);
+
+  // Names that are not mangled by flang belong to the user (e.g. BIND(C)
+  // entities) or come from another language.
+  if (nameKind == fir::NameUniquer::NameKind::NOT_UNIQUED)
+    return false;
+
+  // Anything in the compiler-generated namespace (_QQ...): string literals,
+  // read-only array constants, runtime tables, etc.
+  if (nameKind == fir::NameUniquer::NameKind::GENERATED)
+    return true;
+
+  // Runtime type information is mangled as ordinary variables whose parse name
+  // starts with one of the separator markers, e.g. _QMmod1E.dt.struct or
+  // _QFE.n.member. The '.' becomes 'X' once
+  // CompilerGeneratedNamesConversionPass has run.
+  return fir::NameUniquer::isSpecialSymbol(deconstructed.name);
+}

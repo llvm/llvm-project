@@ -60,7 +60,7 @@ define float @logbf_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float +inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @logbf(float 0x7FF0000000000000)
+  %r = call float @logbf(float +inf)
   ret float %r
 }
 
@@ -69,7 +69,7 @@ define double @logb_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @logb(double +inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @logb(double 0x7FF0000000000000)
+  %r = call double @logb(double +inf)
   ret double %r
 }
 
