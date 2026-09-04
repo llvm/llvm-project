@@ -528,6 +528,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write<uint64_t>(Mem);
   } break;
 
+  case OL_DEVICE_INFO_DRIVER_ID:
+    return Info.write<uint32_t>(Device->Device->getDriverId());
+
   default:
     break;
   }
@@ -677,6 +680,10 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
       return createOffloadError(
           ErrorCode::INVALID_DEVICE,
           "all devices in a context must belong to the same platform");
+    if (Devices[I]->Device->getDriverId() != Devices[0]->Device->getDriverId())
+      return createOffloadError(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in a context must have the same driver ID");
     DeviceList.push_back(Devices[I]);
     auto DeviceOrErr = Devices[I]->getDevice();
     if (!DeviceOrErr)
@@ -1308,32 +1315,6 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
   *IsValid =
       Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum, Buffer);
-  return Error::success();
-}
-
-Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
-                                      ol_device_iterate_cb_t Callback,
-                                      void *UserData) {
-  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-
-  for (auto &Platform : OffloadContext::get().Platforms) {
-    if (!Platform->Plugin || !Platform->Plugin->isPluginCompatible(Buffer))
-      continue;
-
-    // If  the image is compatible, initialize the platform.
-    if (auto Err = Platform->init())
-      return Err;
-
-    for (auto &Device : Platform->Devices) {
-      if (!Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum,
-                                                       Buffer))
-        continue;
-
-      if (!Callback(Device.get(), UserData))
-        return Error::success();
-    }
-  }
-
   return Error::success();
 }
 

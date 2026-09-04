@@ -1161,7 +1161,9 @@ public:
   static mlir::Location genLocation(Fortran::parser::SourcePosition pos,
                                     mlir::MLIRContext &ctx) {
     llvm::SmallString<256> path(*pos.path);
-    llvm::sys::fs::make_absolute(path);
+    // Preserve the file path as it was presented on the command line (matching
+    // Clang): relative paths stay relative and absolute paths stay absolute.
+    // Only normalize '.' components; do not force the path to be absolute.
     llvm::sys::path::remove_dots(path);
     return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
   }

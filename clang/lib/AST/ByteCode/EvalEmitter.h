@@ -63,8 +63,6 @@ public:
 protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
 
-  virtual ~EvalEmitter();
-
   /// Define a label.
   void emitLabel(LabelTy Label);
   /// Create a label.
@@ -126,11 +124,11 @@ private:
   std::optional<PtrCallback> PtrCB;
 
   /// Temporaries which require storage.
-  llvm::SmallVector<std::unique_ptr<char[]>> Locals;
+  llvm::SmallVector<char *> Locals;
 
   Block *getLocal(unsigned Index) const {
     assert(Index < Locals.size());
-    return reinterpret_cast<Block *>(Locals[Index].get());
+    return reinterpret_cast<Block *>(Locals[Index]);
   }
 
   void updateGlobalTemporaries();

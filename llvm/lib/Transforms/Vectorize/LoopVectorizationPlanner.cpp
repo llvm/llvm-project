@@ -301,13 +301,20 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   return MaxVF;
 }
 
-std::optional<unsigned> llvm::getMaxVScale(const Function &F,
-                                           const TargetTransformInfo &TTI) {
-  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
-    return MaxVScale;
-
+std::optional<unsigned> llvm::getMaxVScale(const Function &F) {
   if (F.hasFnAttribute(Attribute::VScaleRange))
     return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
+
+  return std::nullopt;
+}
+
+std::optional<uint64_t>
+llvm::getMaxRuntimeElementCount(ElementCount EC, const Function &F) {
+  if (EC.isFixed())
+    return EC.getFixedValue();
+
+  if (std::optional<unsigned> MaxVScale = getMaxVScale(F))
+    return uint64_t(EC.getKnownMinValue()) * *MaxVScale;
 
   return std::nullopt;
 }
@@ -359,7 +366,7 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
     return false;
   }
 
-  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F, TTI)) {
+  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F)) {
     reportVectorizationInfo("The target does not provide maximum vscale value "
                             "for safe distance analysis.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
@@ -380,7 +387,7 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
   if (Legal->isSafeForAnyVectorWidth())
     return MaxScalableVF;
 
-  std::optional<unsigned> MaxVScale = getMaxVScale(F, TTI);
+  std::optional<unsigned> MaxVScale = getMaxVScale(F);
   // Limit MaxScalableVF by the maximum safe dependence distance.
   MaxScalableVF = ElementCount::getScalable(MaxSafeElements / *MaxVScale);
 

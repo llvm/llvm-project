@@ -199,9 +199,8 @@ void take_union(ZeroWidthUnion u) {}
 // Past two eightbytes the record goes to memory, where the widened coerce type
 // no longer applies.
 void take_too_big(TooBig b) {}
-// CIR: cir.func{{.*}} @take_too_big(%arg0: !cir.ptr<!rec_TooBig> {llvm.align = 8 : i64, llvm.byval = !rec_TooBig, llvm.noalias, llvm.noundef}
-// LLVM-CIR: define{{.*}} void @take_too_big(ptr noalias noundef byval(%struct.TooBig) align 8 %{{.+}})
-// LLVM-OGCG: define{{.*}} void @take_too_big(ptr noundef byval(%struct.TooBig) align 8 %{{.+}})
+// CIR: cir.func{{.*}} @take_too_big(%arg0: !cir.ptr<!rec_TooBig> {llvm.align = 8 : i64, llvm.byval = !rec_TooBig, llvm.noundef}
+// LLVM: define{{.*}} void @take_too_big(ptr noundef byval(%struct.TooBig) align 8 %{{.+}})
 
 Tail ret_tail(void) { Tail t = {3}; return t; }
 // CIR: cir.func{{.*}} @ret_tail() -> !u64i

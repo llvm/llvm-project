@@ -48,6 +48,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  chroot
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.chroot
+)
+
+add_entrypoint_object(
   confstr
   SRCS
     confstr.cpp

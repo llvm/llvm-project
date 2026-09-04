@@ -276,8 +276,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectPosInf) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
+    %lhs:_(s32) = G_FCONSTANT float f0x7F800000
+    %rhs:_(s32) = G_FCONSTANT float f0x7F800000
     %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
     %copy_sel:_(s32) = COPY %sel
 )";
@@ -302,8 +302,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectNegInf) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
+    %lhs:_(s32) = G_FCONSTANT float f0xFF800000
+    %rhs:_(s32) = G_FCONSTANT float f0xFF800000
     %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
     %copy_sel:_(s32) = COPY %sel
 )";
@@ -328,8 +328,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectPosOrNegInf) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
+    %lhs:_(s32) = G_FCONSTANT float f0x7F800000
+    %rhs:_(s32) = G_FCONSTANT float f0xFF800000
     %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
     %copy_sel:_(s32) = COPY %sel
 )";
