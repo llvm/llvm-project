@@ -116,6 +116,16 @@ void case_default(int i) {
   }
 }
 
+void GH210575(int i) {
+  switch (i) {
+    template for (auto x : {1, 2}) {
+      switch (i) {
+        bar baz(); // expected-error {{unknown type name 'bar'}}
+      }
+    }
+  }
+}
+
 void case_constexpr(int i) {
   template for (constexpr auto x : {1, 2, 3}) { // expected-note {{in instantiation of expansion statement requested here}}
     switch (i) {

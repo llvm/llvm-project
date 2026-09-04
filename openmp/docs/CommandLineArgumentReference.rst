@@ -166,8 +166,8 @@ The debugging instructions list the supported debugging arguments.
 
 ``--offload-new-driver``
 ^^^^^^^^^^^^^^^^^^^^^^^^
-In upstream LLVM, OpenMP only uses the new driver. However, enabling this 
-option for experimental linking with CUDA or HIP files is necessary.
+Deprecated and accepted as a no-op. The new offloading driver is always used for
+offloading compilation; the legacy driver has been removed.
 
 ``--offload-link``
 ^^^^^^^^^^^^^^^^^^
