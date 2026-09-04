@@ -209,12 +209,22 @@ void foo() {
 // parameters of the synthesized guide are ordered so that default template
 // arguments only refer to preceding ones ('It' comes first).
 namespace synthesized_default_args {
+
 template <class T> struct hash {};
-template <class It> struct iter_traits { using value_type = typename It::value_type; };
+
+template <class It> struct iter_traits {
+  using value_type = typename It::value_type;
+};
+
 struct Iter { using value_type = int; };
-template <class Key, class Hash = hash<Key>> struct Set { template <class It> Set(It, It); };
+
+template <class Key, class Hash = hash<Key>> struct Set {
+  template <class It> Set(It, It);
+};
+
 template <class It, class Hash = hash<typename iter_traits<It>::value_type>>
 Set(It, It, Hash = Hash()) -> Set<typename iter_traits<It>::value_type, Hash>;
+
 template <class Key, class Hash = hash<Key>> using MySet = Set<Key, Hash>;
 void f(Iter b, Iter e) { MySet s(b, e); }
 
