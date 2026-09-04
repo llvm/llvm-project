@@ -1371,7 +1371,9 @@ llvm::APInt X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
 
   unsigned Priority = 0;
   for (StringRef Feature : Features)
-    if (!Feature.empty())
+    if (!Feature.empty() &&
+        (llvm::X86::parseArchX86(Feature) != llvm::X86::CK_None ||
+         validateCpuSupports(Feature)))
       Priority = std::max(Priority, getPriority(Feature));
   return llvm::APInt(32, Priority);
 }
