@@ -469,6 +469,8 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- Fixed a false-positive `-Wshadow` warning when a function parameter in an inline-defined friend function shares the name of a non-static class member variable. (#GH221190)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
