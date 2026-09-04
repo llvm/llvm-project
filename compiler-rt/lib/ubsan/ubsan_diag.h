@@ -211,9 +211,26 @@ struct ReportOptions {
 
 bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET);
 
-#define GET_REPORT_OPTIONS(unrecoverable_handler) \
-    GET_CALLER_PC_BP; \
-    ReportOptions Opts = {unrecoverable_handler, pc, bp}
+// Called when a UBSan handler begins processing an error.
+// Used internally for running sanitizers at the same time as ubsan
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_handle_error_begin(void);
+
+// Called when a UBSan handler finishes processing an error.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __ubsan_handle_error_end(void);
+
+class ScopedHandleErrorHook {
+public:
+  ScopedHandleErrorHook() { __ubsan_handle_error_begin(); }
+  ~ScopedHandleErrorHook() { __ubsan_handle_error_end(); }
+
+  ScopedHandleErrorHook(const ScopedHandleErrorHook &) = delete;
+  void operator=(const ScopedHandleErrorHook &) = delete;
+};
+
+#define GET_REPORT_OPTIONS(unrecoverable_handler)                              \
+  GET_CALLER_PC_BP;                                                            \
+  ReportOptions Opts = {unrecoverable_handler, pc, bp};                        \
+  ScopedHandleErrorHook HandleErrorHook
 
 /// \brief Instantiate this class before printing diagnostics in the error
 /// report. This class ensures that reports from different threads and from
