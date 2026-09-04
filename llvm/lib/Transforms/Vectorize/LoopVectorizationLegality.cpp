@@ -1845,7 +1845,6 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   }
 
   ICFLoopSafetyInfo SafetyInfo(TheLoop);
-  SafetyInfo.computeLoopSafetyInfo();
   LoadInst *Load = cast<LoadInst>(L);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.

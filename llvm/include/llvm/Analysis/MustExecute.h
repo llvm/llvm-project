@@ -50,13 +50,8 @@ class raw_ostream;
 /// isGuaranteedToExecute below, but some callers bailout or fallback to
 /// alternate reasoning if a loop contains any implicit control flow.
 /// NOTE: LoopSafetyInfo contains cached information regarding loops and their
-/// particular blocks. This information is only dropped on invocation of
-/// computeLoopSafetyInfo. If the loop or any of its block is deleted, or if
-/// any thrower instructions have been added or removed from them, or if the
-/// control flow has changed, or in case of other meaningful modifications, the
-/// LoopSafetyInfo needs to be recomputed. If a meaningful modifications to the
-/// loop were made and the info wasn't recomputed properly, the behavior of all
-/// methods except for computeLoopSafetyInfo is undefined.
+/// particular blocks. Cached information may not be valid after control flow
+/// changes.
 class LoopSafetyInfo {
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
@@ -94,13 +89,6 @@ public:
   LLVM_ABI bool allLoopPathsLeadToBlockImpl(const BasicBlock *BB,
                                             const DominatorTree *DT) const;
 
-  /// Computes safety information for a loop checks loop body & header for
-  /// the possibility of may throw exception, it takes LoopSafetyInfo and loop
-  /// as argument. Updates safety information in LoopSafetyInfo argument.
-  /// Note: This is defined to clear and reinitialize an already initialized
-  /// LoopSafetyInfo.  Some callers rely on this fact.
-  virtual void computeLoopSafetyInfo() = 0;
-
   /// Returns true if the instruction in a loop is guaranteed to execute at
   /// least once (under the assumption that the loop is entered).
   virtual bool isGuaranteedToExecute(const Instruction &Inst,
@@ -120,14 +108,16 @@ class LLVM_ABI SimpleLoopSafetyInfo : public LoopSafetyInfo {
                                // may throw.
   bool HeaderMayThrow = false; // Same as previous, but specific to loop header
 
+  void computeLoopSafetyInfo();
+
 public:
-  SimpleLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {}
+  SimpleLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {
+    computeLoopSafetyInfo();
+  }
 
   bool blockMayThrow(const BasicBlock *BB) const override;
 
   bool anyBlockMayThrow() const override;
-
-  void computeLoopSafetyInfo() override;
 
   bool isGuaranteedToExecute(const Instruction &Inst,
                              const DominatorTree *DT) const override;
@@ -146,14 +136,16 @@ class LLVM_ABI ICFLoopSafetyInfo : public LoopSafetyInfo {
   // Contains information about instruction that may possibly write memory.
   mutable MemoryWriteTracking MW;
 
+  void computeLoopSafetyInfo();
+
 public:
-  ICFLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {}
+  ICFLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {
+    computeLoopSafetyInfo();
+  }
 
   bool blockMayThrow(const BasicBlock *BB) const override;
 
   bool anyBlockMayThrow() const override;
-
-  void computeLoopSafetyInfo() override;
 
   bool isGuaranteedToExecute(const Instruction &Inst,
                              const DominatorTree *DT) const override;

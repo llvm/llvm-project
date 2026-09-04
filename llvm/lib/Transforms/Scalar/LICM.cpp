@@ -461,7 +461,6 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
 
   // Compute loop safety information.
   ICFLoopSafetyInfo SafetyInfo(L);
-  SafetyInfo.computeLoopSafetyInfo();
 
   // We want to visit all of the instructions in this loop... that are not parts
   // of our subloops (they have already had their invariants hoisted out of

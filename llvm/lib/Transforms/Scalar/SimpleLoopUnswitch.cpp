@@ -2397,7 +2397,6 @@ static void unswitchNontrivialInvariants(
       // It is only legal to preserve make.implicit metadata if we are
       // guaranteed no reach implicit null check after following this branch.
       ICFLoopSafetyInfo SafetyInfo(&L);
-      SafetyInfo.computeLoopSafetyInfo();
       if (!SafetyInfo.isGuaranteedToExecute(TI, &DT))
         TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
     }
@@ -3556,7 +3555,6 @@ static bool shouldInsertFreeze(Loop &L, Instruction &TI, DominatorTree &DT,
     return false;
 
   ICFLoopSafetyInfo SafetyInfo(&L);
-  SafetyInfo.computeLoopSafetyInfo();
   if (SafetyInfo.isGuaranteedToExecute(TI, &DT))
     return false;
 

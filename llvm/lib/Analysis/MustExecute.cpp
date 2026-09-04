@@ -325,7 +325,6 @@ static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
   // result obtained by *either* implementation.  This is a bit unfair since no
   // caller actually gets the full power at the moment.
   SimpleLoopSafetyInfo LSI(L);
-  LSI.computeLoopSafetyInfo();
   return LSI.isGuaranteedToExecute(I, DT) ||
          isGuaranteedToExecuteForEveryIteration(&I, L);
 }
