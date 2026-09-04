@@ -2660,3 +2660,67 @@ buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_RT_RE
 buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV
 // GFX1250-ERR: :[[@LINE-1]]:23: error: invalid operand for instruction
 // GFX13: buffer_atomic_xor_b64 v[5:6], off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCADE_NT scope:SCOPE_DEV ; encoding: [0x03,0xc0,0x16,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_load_b32 v5, off, rsrcidx(s8), s3 offset:8388607
+// GFX1250-ERR: :[[@LINE-1]]:26: error: invalid operand for instruction
+// GFX13: buffer_load_b32 v5, off, rsrcidx(s8), s3 offset:8388607 ; encoding: [0x03,0x00,0x03,0xc4,0x05,0x10,0x81,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_load_b32 v5, off, rsrcidx(v8), s3 offset:8388607
+// GFX1250-ERR: :[[@LINE-1]]:26: error: invalid operand for instruction
+// GFX13: buffer_load_b32 v5, off, rsrcidx(v8), s3 offset:8388607 ; encoding: [0x03,0x00,0x03,0xc4,0x05,0x10,0x82,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_load_b32 v5, off, rsrcidx(vcc_lo), s3 offset:8388607
+// GFX1250-ERR: :[[@LINE-1]]:26: error: invalid operand for instruction
+// GFX13: buffer_load_b32 v5, off, rsrcidx(vcc_lo), s3 offset:8388607 ; encoding: [0x03,0x00,0x03,0xc4,0x05,0xd4,0x81,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_load_b32 v5, off, rsrcidx(vcc_hi), s3 offset:8388607
+// GFX1250-ERR: :[[@LINE-1]]:26: error: invalid operand for instruction
+// GFX13: buffer_load_b32 v5, off, rsrcidx(vcc_hi), s3 offset:8388607 ; encoding: [0x03,0x00,0x03,0xc4,0x05,0xd6,0x81,0x00,0x00,0xff,0xff,0x7f]
+
+buffer_load_b64 v[6:7], off, rsrcidx(s8), s3
+// GFX1250-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+// GFX13: buffer_load_b64 v[6:7], off, rsrcidx(s8), s3 ; encoding: [0x03,0x40,0x03,0xc4,0x06,0x10,0x81,0x00,0x00,0x00,0x00,0x00]
+
+buffer_load_b96 v[6:8], off, rsrcidx(v8), s3
+// GFX1250-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+// GFX13: buffer_load_b96 v[6:8], off, rsrcidx(v8), s3 ; encoding: [0x03,0xc0,0x03,0xc4,0x06,0x10,0x82,0x00,0x00,0x00,0x00,0x00]
+
+buffer_load_b128 v[6:9], off, rsrcidx(s8), s3
+// GFX1250-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
+// GFX13: buffer_load_b128 v[6:9], off, rsrcidx(s8), s3 ; encoding: [0x03,0x80,0x03,0xc4,0x06,0x10,0x81,0x00,0x00,0x00,0x00,0x00]
+
+buffer_load_u8 v5, off, rsrcidx(v8), s3
+// GFX1250-ERR: :[[@LINE-1]]:25: error: invalid operand for instruction
+// GFX13: buffer_load_u8 v5, off, rsrcidx(v8), s3 ; encoding: [0x03,0x00,0x02,0xc4,0x05,0x10,0x82,0x00,0x00,0x00,0x00,0x00]
+
+buffer_load_d16_b16 v5, off, rsrcidx(s8), s3
+// GFX1250-ERR: :[[@LINE-1]]:30: error: invalid operand for instruction
+// GFX13: buffer_load_d16_b16 v5, off, rsrcidx(s8), s3 ; encoding: [0x03,0x00,0x09,0xc4,0x05,0x10,0x81,0x00,0x00,0x00,0x00,0x00]
+
+buffer_load_d16_hi_u8 v5, off, rsrcidx(v8), s3
+// GFX1250-ERR: :[[@LINE-1]]:32: error: invalid operand for instruction
+// GFX13: buffer_load_d16_hi_u8 v5, off, rsrcidx(v8), s3 ; encoding: [0x03,0x40,0x08,0xc4,0x05,0x10,0x82,0x00,0x00,0x00,0x00,0x00]
+
+buffer_store_b32 v5, off, rsrcidx(s8), s3
+// GFX1250-ERR: :[[@LINE-1]]:27: error: invalid operand for instruction
+// GFX13: buffer_store_b32 v5, off, rsrcidx(s8), s3 ; encoding: [0x03,0x00,0x07,0xc4,0x05,0x10,0x81,0x00,0x00,0x00,0x00,0x00]
+
+buffer_store_b64 v[2:3], off, rsrcidx(v8), s3
+// GFX1250-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
+// GFX13: buffer_store_b64 v[2:3], off, rsrcidx(v8), s3 ; encoding: [0x03,0x40,0x07,0xc4,0x02,0x10,0x82,0x00,0x00,0x00,0x00,0x00]
+
+buffer_store_b8 v5, off, rsrcidx(vcc_lo), s3
+// GFX1250-ERR: :[[@LINE-1]]:26: error: invalid operand for instruction
+// GFX13: buffer_store_b8 v5, off, rsrcidx(vcc_lo), s3 ; encoding: [0x03,0x00,0x06,0xc4,0x05,0xd4,0x81,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_add_f32 v5, off, rsrcidx(s8), s3
+// GFX1250-ERR: :[[@LINE-1]]:32: error: invalid operand for instruction
+// GFX13: buffer_atomic_add_f32 v5, off, rsrcidx(s8), s3 ; encoding: [0x03,0x00,0x15,0xc4,0x05,0x10,0x81,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_pk_add_f16 v5, off, rsrcidx(v8), s3
+// GFX1250-ERR: :[[@LINE-1]]:35: error: invalid operand for instruction
+// GFX13: buffer_atomic_pk_add_f16 v5, off, rsrcidx(v8), s3 ; encoding: [0x03,0x80,0x12,0xc4,0x05,0x10,0x82,0x00,0x00,0x00,0x00,0x00]
+
+buffer_atomic_cmpswap_b32 v[6:7], off, rsrcidx(s8), s3
+// GFX1250-ERR: :[[@LINE-1]]:40: error: invalid operand for instruction
+// GFX13: buffer_atomic_cmpswap_b32 v[6:7], off, rsrcidx(s8), s3 ; encoding: [0x03,0x40,0x0c,0xc4,0x06,0x10,0x81,0x00,0x00,0x00,0x00,0x00]

@@ -6230,7 +6230,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
       VPI->getOperand(0)->getDefiningRecipe());
   PHINode *Phi = WidenIV->getPHINode();
-  VPIRValue *Start = WidenIV->getStartValue();
+  VPValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
   // Wrap flags from the original induction do not apply to the truncated type,
@@ -6459,7 +6459,8 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   // We can only replicate an extractvalue if its operand generates per lane in
   // the same block, otherwise we would need to extract a lane from its struct
   // operand which is invalid.
-  if (VPI->getOpcode() == Instruction::ExtractValue)
+  if (VPI->getOpcode() == Instruction::ExtractValue &&
+      !vputils::isSingleScalar(VPI->getOperand(0)))
     if (VPRecipeBase *OpR = VPI->getOperand(0)->getDefiningRecipe())
       if (!vputils::doesGeneratePerAllLanes(OpR) ||
           OpR->getParent() != VPI->getParent())

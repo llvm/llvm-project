@@ -884,6 +884,8 @@ static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAdd",
                             "__builtin_hlsl_interlocked_add");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAnd",
+                            "__builtin_hlsl_interlocked_and");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMin",
                             "__builtin_hlsl_interlocked_min");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",

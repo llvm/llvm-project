@@ -625,10 +625,7 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   // Grab the ellipsis (if given).
   SourceLocation EllipsisLoc;
   if (TryConsumeToken(tok::ellipsis, EllipsisLoc)) {
-    Diag(EllipsisLoc,
-         getLangOpts().CPlusPlus11
-           ? diag::warn_cxx98_compat_variadic_templates
-           : diag::ext_variadic_templates);
+    DiagCompat(EllipsisLoc, diag_compat::variadic_templates);
   }
 
   // Grab the template parameter name (if given)
@@ -736,10 +733,8 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
     if (Tok.is(tok::kw_typename)) {
       TypenameKeyword = true;
       Kind = TemplateNameKind::TNK_Type_template;
-      Diag(Tok.getLocation(),
-           getLangOpts().CPlusPlus17
-               ? diag::warn_cxx14_compat_template_template_param_typename
-               : diag::ext_template_template_param_typename)
+      DiagCompat(Tok.getLocation(),
+                 diag_compat::template_template_param_typename)
           << (!getLangOpts().CPlusPlus17
                   ? FixItHint::CreateReplacement(Tok.getLocation(), "class")
                   : FixItHint());
@@ -772,10 +767,7 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
 
   // Parse the ellipsis, if given.
   if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
-    Diag(EllipsisLoc,
-         getLangOpts().CPlusPlus11
-           ? diag::warn_cxx98_compat_variadic_templates
-           : diag::ext_variadic_templates);
+    DiagCompat(EllipsisLoc, diag_compat::variadic_templates);
 
   // Get the identifier, if given.
   NameLoc = Tok.getLocation();
@@ -1511,26 +1503,15 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), FunD);
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LPT.D, FnScope);
-  } else {
-    if (Tok.is(tok::colon))
-      ParseConstructorInitializer(LPT.D);
-    else
-      Actions.ActOnDefaultCtorInitializers(LPT.D);
+  assert(
+      (!isa<FunctionTemplateDecl>(LPT.D) ||
+       cast<FunctionTemplateDecl>(LPT.D)->getTemplateParameters()->getDepth() ==
+           TemplateParameterDepth - 1) &&
+      "TemplateParameterDepth should be greater than the depth of "
+      "current template being instantiated!");
 
-    if (Tok.is(tok::l_brace)) {
-      assert((!isa<FunctionTemplateDecl>(LPT.D) ||
-              cast<FunctionTemplateDecl>(LPT.D)
-                      ->getTemplateParameters()
-                      ->getDepth() == TemplateParameterDepth - 1) &&
-             "TemplateParameterDepth should be greater than the depth of "
-             "current template being instantiated!");
-      ParseFunctionStatementBody(LPT.D, FnScope);
-      Actions.UnmarkAsLateParsedTemplate(FunD);
-    } else
-      Actions.ActOnFinishFunctionBody(LPT.D, nullptr);
-  }
+  ParseFunctionBody(LPT.D, FnScope);
+  Actions.UnmarkAsLateParsedTemplate(FunD);
 }
 
 void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {

@@ -14,6 +14,7 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   support/AllocActionTest.cpp
   support/BitmaskEnumTest.cpp
+  support/CAPICompileTest.c
   support/CCallbackTest.cpp
   support/CallableTraitsHelperTest.cpp
   support/CompilerTest.cpp
@@ -65,6 +66,9 @@ add_orc_rt_unittest(CoreTests
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
   bedrock/sps/SimpleRemoteCATest.cpp
+
+  bedrock/sys/CPUFeaturesTest.cpp
+  bedrock/sys/TargetTripleTest.cpp
 
   tools/OptionParserTest.cpp
 

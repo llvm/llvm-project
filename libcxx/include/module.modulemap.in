@@ -2429,12 +2429,18 @@ module std {
         header "__pstl/cpu_algos/fill.h"
         export std_core.utility_core.empty
       }
+      module find_end {
+        header "__pstl/cpu_algos/find_end.h"
+      }
       module find_if {
         header "__pstl/cpu_algos/find_if.h"
       }
       module for_each {
         header "__pstl/cpu_algos/for_each.h"
         export std_core.utility_core.empty
+      }
+      module is_heap_until {
+        header "__pstl/cpu_algos/is_heap_until.h"
       }
       module merge {
         header "__pstl/cpu_algos/merge.h"
