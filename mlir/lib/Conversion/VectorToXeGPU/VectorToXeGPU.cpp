@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -109,9 +110,9 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   unsigned vecRank = vecTy.getRank();
   if (vecRank == 0)
     return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
-  if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
-    return rewriter.notifyMatchFailure(
-        xferOp, "Boundary check is available only for block instructions.");
+  // An out-of-bounds transfer is not rejected here. A block instruction gets a
+  // boundary check from its descriptor, and the scattered path masks off the
+  // out-of-bounds elements instead.
 
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
@@ -328,6 +329,73 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   return localOffsets;
 }
 
+// Returns the size of memref dimension `dim` as a value.
+static Value getMemrefDimSize(VectorTransferOpInterface xferOp, unsigned dim,
+                              PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  auto memrefTy = cast<MemRefType>(xferOp.getShapedType());
+  if (memrefTy.isDynamicDim(dim))
+    return memref::DimOp::create(rewriter, loc, xferOp.getBase(), dim)
+        .getResult();
+  return arith::ConstantIndexOp::create(rewriter, loc, memrefTy.getDimSize(dim))
+      .getResult();
+}
+
+// Builds the mask a scattered access needs to stay within the source bounds.
+//
+// The element at vector position `i` along vector dimension `v` accesses memref
+// dimension `d` (the one `v` maps to) at `indices[d] + i`, so it is in bounds
+// iff `i < dim(d) - indices[d]`. Dimensions the transfer declares in-bounds are
+// skipped; non-vector dimensions are always in bounds by the op's contract. The
+// per-dimension masks are spread over the full vector shape and combined, the
+// same way `computeOffsets` spreads the per-dimension offsets.
+//
+// Example, for a `vector<8xf32>` read of a `memref<?xf32>` at `%off`:
+//   %dim = memref.dim %src, %c0
+//   %limit = arith.subi %dim, %off
+//   %step = vector.step : vector<8xindex>
+//   %bcast = vector.broadcast %limit : index to vector<8xindex>
+//   %mask = arith.cmpi slt, %step, %bcast : vector<8xindex>
+static Value computeInBoundsMask(VectorTransferOpInterface xferOp,
+                                 PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
+  auto maskType = VectorType::get(vectorShape, rewriter.getI1Type());
+  AffineMap map = xferOp.getPermutationMap();
+  OperandRange indices = xferOp.getIndices();
+
+  Value mask;
+  for (unsigned v = 0, e = vectorShape.size(); v < e; ++v) {
+    if (xferOp.isDimInBounds(v))
+      continue;
+    unsigned d = cast<AffineDimExpr>(map.getResult(v)).getPosition();
+    Value bound = getMemrefDimSize(xferOp, d, rewriter);
+    // A negative limit masks the dimension off entirely, which is what a
+    // starting index past the end of the dimension should do.
+    Value limit = arith::SubIOp::create(rewriter, loc, bound, indices[d]);
+    auto stepType = VectorType::get({vectorShape[v]}, rewriter.getIndexType());
+    Value step = vector::StepOp::create(rewriter, loc, stepType);
+    Value limitVec =
+        vector::BroadcastOp::create(rewriter, loc, stepType, limit);
+    Value dimMask = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, step, limitVec);
+    if (vectorShape.size() > 1) {
+      SmallVector<int64_t> expandedShape(vectorShape.size(), 1);
+      expandedShape[v] = vectorShape[v];
+      dimMask = vector::ShapeCastOp::create(
+          rewriter, loc, VectorType::get(expandedShape, rewriter.getI1Type()),
+          dimMask);
+      dimMask = vector::BroadcastOp::create(rewriter, loc, maskType, dimMask);
+    }
+    mask = mask
+               ? arith::AndIOp::create(rewriter, loc, mask, dimMask).getResult()
+               : dimMask;
+  }
+  if (mask)
+    return mask;
+  return vector::ConstantMaskOp::create(rewriter, loc, maskType, vectorShape);
+}
+
 // Compute the element-wise offsets for vector.gather or vector.scatter ops.
 //
 // This function linearizes the base offsets of the gather/scatter operation
@@ -438,12 +506,93 @@ static Value memrefToIndexPtr(OpType xferOp, PatternRewriter &rewriter) {
       .getResult();
 }
 
+// Builds the predicate that a single-element transfer is in bounds.
+//
+// The one element it touches sits at `indices`, so it is in bounds iff
+// `indices[d] < dim(d)` for every memref dimension `d` that a vector dimension
+// not declared in-bounds maps to. Dimensions the transfer declares in-bounds
+// are skipped; non-vector dimensions are always in bounds by the op's contract.
+// Returns a null value when every dimension is in bounds.
+static Value computeUnitInBoundsPredicate(VectorTransferOpInterface xferOp,
+                                          PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+  AffineMap map = xferOp.getPermutationMap();
+  OperandRange indices = xferOp.getIndices();
+
+  Value pred;
+  for (unsigned v = 0, e = xferOp.getVectorType().getRank(); v < e; ++v) {
+    if (xferOp.isDimInBounds(v))
+      continue;
+    unsigned d = cast<AffineDimExpr>(map.getResult(v)).getPosition();
+    Value bound = getMemrefDimSize(xferOp, d, rewriter);
+    Value dimPred = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, indices[d], bound);
+    pred = pred
+               ? arith::AndIOp::create(rewriter, loc, pred, dimPred).getResult()
+               : dimPred;
+  }
+  return pred;
+}
+
+// Lowers a transfer of a single element to a scalar `memref.load`.
+//
+// A `vector<1xT>` transfer addresses exactly one location, which the transfer's
+// own indices already name, so it needs neither a block descriptor nor a
+// gather - a scalar load is both shorter and the form the consumers of such a
+// read (typically a `vector.extract` feeding scalar index math) want anyway.
+//
+// An out-of-bounds transfer must not touch memory, so the load is guarded by an
+// `scf.if` that yields the transfer's padding on the out-of-bounds side. This
+// is what keeps the lowering from being a plain `memref.load`: clamping the
+// index instead would speculate a load that the transfer never performs, which
+// faults on a zero-sized dimension.
+//
+//   %dim = memref.dim %src, %c0
+//   %inb = arith.cmpi slt, %off, %dim : index
+//   %val = scf.if %inb -> (f32) {
+//     %0 = memref.load %src[%off] : memref<?xf32>
+//     scf.yield %0 : f32
+//   } else {
+//     scf.yield %pad : f32
+//   }
+//   %vec = vector.broadcast %val : f32 to vector<1xf32>
+static LogicalResult lowerToScalarLoadOp(vector::TransferReadOp readOp,
+                                         PatternRewriter &rewriter) {
+  Location loc = readOp.getLoc();
+  if (!isa<MemRefType>(readOp.getShapedType()))
+    return rewriter.notifyMatchFailure(readOp, "Expected memref source");
+
+  Value inBounds = computeUnitInBoundsPredicate(readOp, rewriter);
+  Value scalar;
+  if (!inBounds) {
+    scalar = memref::LoadOp::create(rewriter, loc, readOp.getBase(),
+                                    readOp.getIndices())
+                 .getResult();
+  } else {
+    auto ifOp = scf::IfOp::create(
+        rewriter, loc, inBounds,
+        [&](OpBuilder &builder, Location loc) {
+          Value loaded = memref::LoadOp::create(builder, loc, readOp.getBase(),
+                                                readOp.getIndices())
+                             .getResult();
+          scf::YieldOp::create(builder, loc, loaded);
+        },
+        [&](OpBuilder &builder, Location loc) {
+          scf::YieldOp::create(builder, loc, readOp.getPadding());
+        });
+    scalar = ifOp.getResult(0);
+  }
+
+  rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+      readOp, readOp.getVectorType(), scalar);
+  return success();
+}
+
 static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
                                             PatternRewriter &rewriter) {
 
   Location loc = readOp.getLoc();
   VectorType vectorType = readOp.getVectorType();
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
   auto memrefType = dyn_cast<MemRefType>(readOp.getShapedType());
   if (!memrefType)
     return rewriter.notifyMatchFailure(readOp, "Expected memref source");
@@ -457,9 +606,7 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
 
   Value flatMemref = memrefToIndexPtr(readOp, rewriter);
 
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
+  Value mask = computeInBoundsMask(readOp, rewriter);
   auto gatherOp = xegpu::LoadGatherOp::create(
       rewriter, loc, vectorType, flatMemref, localOffsets, mask,
       /*chunk_size=*/IntegerAttr{},
@@ -468,7 +615,18 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
       /*l3_hint=*/xegpu::CachePolicyAttr{},
       /*layout=*/nullptr, /*contiguity=*/nullptr);
 
-  rewriter.replaceOp(readOp, gatherOp.getResult());
+  // The masked-off lanes of an xegpu.load are unspecified, so the transfer's
+  // padding has to be applied explicitly. A poison padding leaves them "don't
+  // care", so the select can be skipped.
+  Value result = gatherOp.getResult();
+  if (readOp.hasOutOfBoundsDim() &&
+      !readOp.getPadding().getDefiningOp<ub::PoisonOp>()) {
+    Value padding = vector::BroadcastOp::create(rewriter, loc, vectorType,
+                                                readOp.getPadding());
+    result = arith::SelectOp::create(rewriter, loc, mask, result, padding);
+  }
+
+  rewriter.replaceOp(readOp, result);
   return success();
 }
 
@@ -476,9 +634,6 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                              PatternRewriter &rewriter) {
 
   Location loc = writeOp.getLoc();
-  VectorType vectorType = writeOp.getVectorType();
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
-
   auto memrefType = dyn_cast<MemRefType>(writeOp.getShapedType());
   if (!memrefType)
     return rewriter.notifyMatchFailure(writeOp, "Expected memref source");
@@ -492,9 +647,9 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
 
   Value flatMemref = memrefToIndexPtr(writeOp, rewriter);
 
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
+  // Out-of-bounds elements are simply not stored, so the mask is all this
+  // needs - no counterpart to the read's padding.
+  Value mask = computeInBoundsMask(writeOp, rewriter);
   xegpu::StoreScatterOp::create(rewriter, loc, writeOp.getVector(), flatMemref,
                                 localOffsets, mask,
                                 /*chunk_size=*/IntegerAttr{},
@@ -553,6 +708,14 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       rewriter.replaceOp(readOp, loadMatrixOp.getResult());
       return success();
     }
+
+    // A 1-D transfer of a single element is a scalar load, not a one-lane
+    // gather. Taking it here keeps such a read - an out-of-bounds one in
+    // particular, which the scattered path would give a one-lane mask - out of
+    // the vector paths entirely. Only rank 1 is taken: a higher-rank unit-size
+    // vector can still be a block access.
+    if (loadedVecTy.getRank() == 1 && loadedVecTy.getNumElements() == 1)
+      return lowerToScalarLoadOp(readOp, rewriter);
 
     // TODO: This check needs to be replaced with proper uArch capability check.
     auto chip = xegpu::getChipStr(readOp);
@@ -621,10 +784,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     }
 
     // Fall back to a scattered load. It supports arbitrary permutations and any
-    // rank, but cannot express out-of-bounds accesses.
-    // TODO: add support for OutOfBound access.
-    if (isOutOfBounds)
-      return failure();
+    // rank, and masks off the out-of-bounds elements.
     return lowerToScatteredLoadOp(readOp, rewriter);
   }
 };
@@ -712,10 +872,7 @@ struct TransferWriteLowering
     }
 
     // Fall back to a scattered store. It supports arbitrary permutations and
-    // any rank, but cannot express out-of-bounds accesses.
-    // TODO: add support for OutOfBound access.
-    if (writeOp.hasOutOfBoundsDim())
-      return failure();
+    // any rank, and masks off the out-of-bounds elements.
     return lowerToScatteredStoreOp(writeOp, rewriter);
   }
 };

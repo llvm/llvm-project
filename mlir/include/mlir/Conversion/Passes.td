@@ -1758,7 +1758,7 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
   let summary = "Lower the operations from the vector dialect into the XeGPU "
                 "dialect";
   let dependentDialects = [
-    "memref::MemRefDialect", "arith::ArithDialect",
+    "memref::MemRefDialect", "arith::ArithDialect", "scf::SCFDialect",
     "vector::VectorDialect", "xegpu::XeGPUDialect"
   ];
 }
