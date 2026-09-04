@@ -53922,10 +53922,8 @@ static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
   // so X must keep exactly the low ShiftAmount.
   APInt ExpectedMask = APInt::getLowBitsSet(MaxMaskBitWidth, ShiftAmount);
 
-  bool Applicable = (ShiftAmount > 0) && (ShiftAmount < MaxMaskBitWidth) &&
-                    (Mask == ExpectedMask);
-
-  if (!Applicable)
+  if (!((ShiftAmount > 0) && (ShiftAmount < MaxMaskBitWidth) &&
+        (Mask == ExpectedMask)))
     return SDValue();
 
   uint64_t InvShAmt = MaxMaskBitWidth - ShiftAmount;
