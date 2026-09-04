@@ -299,6 +299,8 @@ def update_test(ti: common.TestInfo):
                 args.check_globals,
             )
         )
+    if ti.args.run_lines:
+        output_lines = common.sort_check_blocks(output_lines, ti.all_run_lines, ";")
     if ti.args.gen_unused_prefix_body:
         output_lines.extend(
             ti.get_checks_for_unused_prefixes(prefix_list, generated_prefixes)
