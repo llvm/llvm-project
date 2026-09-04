@@ -4130,7 +4130,7 @@ def AssertCapability : InheritableAttr {
                    GNU<"assert_exclusive_lock">,
                    GNU<"assert_shared_lock">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4149,7 +4149,7 @@ def AcquireCapability : InheritableAttr {
                    GNU<"exclusive_lock_function">,
                    GNU<"shared_lock_function">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4168,7 +4168,7 @@ def TryAcquireCapability : InheritableAttr {
                    GNU<"exclusive_trylock_function">,
                    GNU<"shared_trylock_function">];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4187,7 +4187,7 @@ def ReleaseCapability : InheritableAttr {
                    Clang<"release_generic_capability", 0>,
                    Clang<"unlock_function", 0>];
   let Subjects = SubjectList<[Function, Var, Field]>;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4209,7 +4209,7 @@ def RequiresCapability : InheritableAttr {
                    Clang<"shared_locks_required", 0>];
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4276,7 +4276,7 @@ def AcquiredBefore : InheritableAttr {
 def LockReturned : InheritableAttr {
   let Spellings = [GNU<"lock_returned">];
   let Args = [ExprArgument<"Arg">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let Subjects = SubjectList<[Function]>;
@@ -4287,7 +4287,7 @@ def LocksExcluded : InheritableAttr {
   let Spellings = [GNU<"locks_excluded">];
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
