@@ -15518,22 +15518,6 @@ static bool isEXTMaskWithSplat(ArrayRef<int> M, EVT VT, unsigned SplatOperand,
   return false;
 }
 
-/// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
-static bool isTRN_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + WhichResult))
-      return false;
-  }
-  return true;
-}
-
 static bool isINSMask(ArrayRef<int> M, int NumInputElements,
                       bool &DstIsLeft, int &Anomaly) {
   if (M.size() != static_cast<size_t>(NumInputElements))
@@ -16255,7 +16239,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
-  if (isTRN_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
@@ -18038,7 +18022,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isTRNMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
-          isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
+          isTRN_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isUZP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isZIP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isINSMask(M, NumElts, DummyBool, DummyInt) ||
@@ -35623,7 +35607,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op1));
 
-  if (isTRN_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
