@@ -2349,7 +2349,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       FPClassTest ThisDemandedMask =
           adjustDemandedMaskFromFlags(DemandedMask, FabsFMF);
 
-      bool IsNSZ = FMF.noSignedZeros() || FabsFMF.noSignedZeros();
+      bool IsNSZ = FMF.noSignedZeros();
       if (Value *Simplified = simplifyDemandedFPClassFnegFabs(
               Known, FNegFAbsSrc, ThisDemandedMask, KnownSrc, IsNSZ))
         return Simplified;
