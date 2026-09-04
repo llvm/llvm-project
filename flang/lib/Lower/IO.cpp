@@ -13,6 +13,7 @@
 #include "flang/Lower/IO.h"
 #include "flang/Common/uint128.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/CallInterface.h"
@@ -701,6 +702,301 @@ static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
                                                                    builder);
 }
 
+/// Return the evaluate expression of a non-implied-do io item, or nullptr if
+/// the item is itself an io-implied-do.
+static const Fortran::lower::SomeExpr *
+getIoItemLeafExpr(const Fortran::parser::OutputItem &item) {
+  if (const auto *parserExpr = std::get_if<Fortran::parser::Expr>(&item.u))
+    return Fortran::semantics::GetExpr(*parserExpr);
+  return nullptr;
+}
+static const Fortran::lower::SomeExpr *
+getIoItemLeafExpr(const Fortran::parser::InputItem &item) {
+  if (const auto *var = std::get_if<Fortran::parser::Variable>(&item.u))
+    return Fortran::semantics::GetExpr(*var);
+  return nullptr;
+}
+
+// CollectSymbols does not look through callee bodies, so this only
+// sees symbols the expression names directly (see NonSimpleCallFinder for the
+// call case).
+template <typename A, typename Pred>
+static bool ioAnyReferencedSymbol(const A &expr, Pred pred) {
+  for (const Fortran::semantics::SymbolRef &ref :
+       Fortran::evaluate::CollectSymbols(expr))
+    if (pred(ref->GetUltimate()))
+      return true;
+  return false;
+}
+
+template <typename A>
+static bool ioExprReferencesSymbol(const A &expr,
+                                   const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  return ioAnyReferencedSymbol(expr, [&](const Fortran::semantics::Symbol &s) {
+    return &s == &ultimate;
+  });
+}
+
+namespace {
+// Symbol collection does not look through callee bodies, so a non-SIMPLE
+// function hidden in a bound or retained subscript could read the io-implied-do
+// variable or the array being transferred.
+struct NonSimpleCallFinder
+    : public Fortran::evaluate::AnyTraverse<NonSimpleCallFinder, bool> {
+  using Base = Fortran::evaluate::AnyTraverse<NonSimpleCallFinder, bool>;
+  NonSimpleCallFinder() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const Fortran::evaluate::ProcedureRef &call) const {
+    if (!call.proc().IsSimple())
+      return true;
+    return Base::operator()(call);
+  }
+};
+} // namespace
+
+// A bound or retained subscript is evaluated once for the collapsed section
+// rather than once per source-loop iteration, so it must not depend on the loop
+// variable, hide a non-SIMPLE call that could read it, or read a volatile.
+template <typename A>
+static bool
+ioExprUnsafeForSingleEvaluation(const A &expr,
+                                const Fortran::semantics::Symbol &loopSym) {
+  return ioExprReferencesSymbol(expr, loopSym) || NonSimpleCallFinder{}(expr) ||
+         ioAnyReferencedSymbol(expr, [](const Fortran::semantics::Symbol &s) {
+           return s.attrs().test(Fortran::semantics::Attr::VOLATILE);
+         });
+}
+
+/// Return true if \p symbol may share storage with another symbol via
+/// EQUIVALENCE, COMMON, POINTER/TARGET, ASSOCIATE, or Cray pointee.
+static bool
+ioSymbolMayBeStorageAssociated(const Fortran::semantics::Symbol &symbol) {
+  const Fortran::semantics::Symbol &ultimate = symbol.GetUltimate();
+  return Fortran::semantics::IsPointer(ultimate) ||
+         ultimate.attrs().test(Fortran::semantics::Attr::TARGET) ||
+         ultimate.test(Fortran::semantics::Symbol::Flag::CrayPointee) ||
+         Fortran::semantics::FindEquivalenceSet(ultimate) ||
+         Fortran::semantics::FindCommonBlockContaining(ultimate) ||
+         ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>();
+}
+
+namespace {
+struct CollapsedImpliedDo {
+  Fortran::lower::SomeExpr section;
+  const Fortran::semantics::Symbol *loopSym;
+  Fortran::lower::SomeExpr loopLowerValue;
+  Fortran::lower::SomeExpr loopStepValue;
+};
+} // namespace
+
+/// Try to recognize a (single-level) io-implied-do as an equivalent contiguous
+/// array section. Returns the section expression on success, std::nullopt
+/// otherwise
+template <typename ImpliedDo>
+static std::optional<CollapsedImpliedDo>
+matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
+                         const ImpliedDo &impliedDo, bool isInput) {
+
+  // Only collapse a single body item
+  const auto &items = std::get<0>(impliedDo.t);
+  if (items.size() != 1)
+    return std::nullopt;
+
+  const Fortran::lower::SomeExpr *leaf = getIoItemLeafExpr(items.front());
+  if (!leaf)
+    return std::nullopt;
+
+  if (Fortran::semantics::ExprHasTypeCategory(
+          *leaf, Fortran::common::TypeCategory::Derived))
+    return std::nullopt;
+
+  const Fortran::parser::IoImpliedDoControl &control = std::get<1>(impliedDo.t);
+  const Fortran::semantics::Symbol *loopSym =
+      Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.Name()).symbol;
+  if (!loopSym)
+    return std::nullopt;
+
+  // A VOLATILE do-variable is stored once per iteration by the per-element loop
+  // but only once by the collapsed form, changing observable behavior.
+  if (loopSym->GetUltimate().attrs().test(Fortran::semantics::Attr::VOLATILE))
+    return std::nullopt;
+
+  // The transform updates the loop variable once rather than per iteration, so
+  // it is invalid when the loop variable can alias an io item through storage
+  // or argument association, which the symbol comparisons below cannot detect.
+  if (ioSymbolMayBeStorageAssociated(*loopSym))
+    return std::nullopt;
+
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(*leaf);
+  if (!dataRef)
+    return std::nullopt;
+
+  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef || !arrayRef->base().IsSymbol())
+    return std::nullopt;
+
+  const Fortran::lower::SomeExpr *lowerExpr =
+      Fortran::semantics::GetExpr(control.Lower());
+  const Fortran::lower::SomeExpr *upperExpr =
+      Fortran::semantics::GetExpr(control.Upper());
+  const Fortran::lower::SomeExpr *stepExpr =
+      control.Step() ? Fortran::semantics::GetExpr(*control.Step()) : nullptr;
+  if (!lowerExpr || !upperExpr || (control.Step() && !stepExpr))
+    return std::nullopt;
+
+  // Lower and step are re-evaluated after the transfer to rebuild the loop
+  // variable's final value, so an unsafe bound could change the trip count or
+  // the stored result relative to the source loop.
+  for (const Fortran::lower::SomeExpr *bound : {lowerExpr, upperExpr, stepExpr})
+    if (bound && ioExprUnsafeForSingleEvaluation(*bound, *loopSym))
+      return std::nullopt;
+
+  // The io-implied-do bounds and index are scalar integer expressions
+  // (enforced by semantics), so each narrows to Expr<SomeInteger>
+  auto toSubscript = [](const Fortran::lower::SomeExpr &expr) {
+    return Fortran::evaluate::ConvertToType<
+        Fortran::evaluate::SubscriptInteger>(
+        Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
+            DEREF(Fortran::evaluate::UnwrapExpr<
+                  Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
+                expr))});
+  };
+  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> lowerSub =
+      toSubscript(*lowerExpr);
+  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> upperSub =
+      toSubscript(*upperExpr);
+  std::optional<Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
+      stepSub;
+  if (stepExpr)
+    stepSub = toSubscript(*stepExpr);
+  // Retain the lower bound and step so the loop variable's final value can be
+  // rebuilt later as `lower + tripCount * step`.
+  Fortran::lower::SomeExpr loopLowerValue =
+      Fortran::evaluate::AsGenericExpr(Fortran::evaluate::ExtentExpr{lowerSub});
+  Fortran::lower::SomeExpr loopStepValue = Fortran::evaluate::AsGenericExpr(
+      stepSub ? Fortran::evaluate::ExtentExpr{*stepSub}
+              : Fortran::evaluate::ExtentExpr{1});
+
+  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> loopSubExpr =
+      toSubscript(Fortran::evaluate::AsGenericExpr(*loopSym).value());
+
+  std::vector<Fortran::evaluate::Subscript> newSubscripts;
+  newSubscripts.reserve(arrayRef->subscript().size());
+  bool foundLoopSubscript = false;
+  for (const Fortran::evaluate::Subscript &sub : arrayRef->subscript()) {
+    const auto *scalar =
+        std::get_if<Fortran::evaluate::IndirectSubscriptIntegerExpr>(&sub.u);
+    if (!scalar)
+      return std::nullopt; // already a triplet/vector subscript
+
+    const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>
+        &subExpr = scalar->value();
+    if (subExpr == loopSubExpr) {
+      if (foundLoopSubscript)
+        return std::nullopt; // loop variable used in more than one subscript
+      foundLoopSubscript = true;
+      newSubscripts.emplace_back(
+          Fortran::evaluate::Subscript{Fortran::evaluate::Triplet{
+              std::optional<
+                  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>{
+                  lowerSub},
+              std::optional<
+                  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>{
+                  upperSub},
+              std::move(stepSub)}});
+    } else {
+      // Every other subscript is retained and evaluated once for the collapsed
+      // section instead of once per iteration; it must be scalar and safe to
+      // evaluate a single time.
+      if (subExpr.Rank() != 0 ||
+          ioExprUnsafeForSingleEvaluation(subExpr, *loopSym))
+        return std::nullopt;
+
+      // For input, a retained subscript is re-evaluated each iteration and sees
+      // earlier stores, but the collapsed section evaluates it once; bail if it
+      // may reference the array being read, directly or via an associated
+      // symbol.
+      if (isInput &&
+          (ioExprReferencesSymbol(subExpr, arrayRef->base().GetLastSymbol()) ||
+           ioAnyReferencedSymbol(subExpr, ioSymbolMayBeStorageAssociated)))
+        return std::nullopt;
+
+      newSubscripts.push_back(sub);
+    }
+  }
+  if (!foundLoopSubscript)
+    return std::nullopt;
+
+  Fortran::evaluate::ArrayRef sectionRef{arrayRef->base().GetLastSymbol(),
+                                         std::move(newSubscripts)};
+  Fortran::lower::SomeExpr section =
+      Fortran::evaluate::AsGenericExpr(
+          Fortran::evaluate::DataRef{std::move(sectionRef)})
+          .value();
+
+  return CollapsedImpliedDo{std::move(section), loopSym,
+                            std::move(loopLowerValue),
+                            std::move(loopStepValue)};
+}
+
+/// Store into the io-implied-do variable the value it would hold after a normal
+/// loop
+static void
+genImpliedDoLoopVarFinalValue(Fortran::lower::AbstractConverter &converter,
+                              const CollapsedImpliedDo &collapsed,
+                              mlir::Value sectionBox,
+                              Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::Type idxTy = builder.getIndexType();
+  // The collapsed section is rank one and its extent is exactly the loop trip
+  // count, so reuse it rather than recomputing the count from the bounds.
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                     sectionBox, zero);
+  mlir::Value tripCount = dims.getResult(1);
+  mlir::Value lower = builder.createConvert(
+      loc, idxTy,
+      fir::getBase(converter.genExprValue(collapsed.loopLowerValue, stmtCtx)));
+  mlir::Value step = builder.createConvert(
+      loc, idxTy,
+      fir::getBase(converter.genExprValue(collapsed.loopStepValue, stmtCtx)));
+  mlir::Value finalValue = mlir::arith::AddIOp::create(
+      builder, loc, lower,
+      mlir::arith::MulIOp::create(builder, loc, tripCount, step));
+  mlir::Value loopVar = fir::getBase(converter.genExprAddr(
+      Fortran::evaluate::AsGenericExpr(*collapsed.loopSym).value(), stmtCtx));
+  mlir::Value stored = builder.createConvert(
+      loc, fir::unwrapRefType(loopVar.getType()), finalValue);
+  fir::StoreOp::create(builder, loc, stored, loopVar);
+}
+
+/// A zero-trip io-implied-do transfers nothing, and its section may designate
+/// an unallocated array whose descriptor has a null base, so the descriptor
+/// call must be skipped when the section is empty to match the per-element
+/// loop.
+static void genGuardedCollapsedTransfer(fir::FirOpBuilder &builder,
+                                        mlir::Location loc,
+                                        mlir::Value sectionBox,
+                                        llvm::function_ref<void()> genCall) {
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                     sectionBox, zero);
+  mlir::Value hasElements = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::sgt, dims.getResult(1), zero);
+  builder.genIfThen(loc, hasElements).genThen(genCall).end();
+}
+
+template <bool isInput, typename ImpliedDo>
+static bool
+tryCollapseContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
+                               mlir::Value cookie, const ImpliedDo &impliedDo,
+                               bool isFormatted, bool checkResult,
+                               mlir::Value &ok);
+
 /// Generate a sequence of output data transfer calls.
 static void genOutputItemList(
     Fortran::lower::AbstractConverter &converter, mlir::Value cookie,
@@ -709,6 +1005,10 @@ static void genOutputItemList(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const Fortran::parser::OutputItem &item : items) {
     if (const auto &impliedDo = std::get_if<1>(&item.u)) {
+      if (tryCollapseContiguousImpliedDo</*isInput=*/false>(
+              converter, cookie, impliedDo->value(), isFormatted, checkResult,
+              ok))
+        continue;
       genIoLoop(converter, cookie, impliedDo->value(), isFormatted, checkResult,
                 ok, inLoop);
       continue;
@@ -872,6 +1172,50 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
   return call.getResult(0);
 }
 
+template <bool isInput, typename ImpliedDo>
+static bool
+tryCollapseContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
+                               mlir::Value cookie, const ImpliedDo &impliedDo,
+                               bool isFormatted, bool checkResult,
+                               mlir::Value &ok) {
+  if (isFormatted || checkResult)
+    return false;
+  std::optional<CollapsedImpliedDo> collapsed =
+      matchContiguousImpliedDo(converter, impliedDo, isInput);
+  if (!collapsed)
+    return false;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Type itemTy = converter.genType(collapsed->section);
+  if constexpr (isInput) {
+    mlir::func::FuncOp inputFunc =
+        getInputFunc(loc, builder, itemTy, /*isFormatted=*/false);
+    fir::ExtendedValue itemExv =
+        converter.genExprBox(loc, collapsed->section, stmtCtx);
+    genImpliedDoLoopVarFinalValue(converter, *collapsed, fir::getBase(itemExv),
+                                  stmtCtx);
+    genGuardedCollapsedTransfer(builder, loc, fir::getBase(itemExv), [&]() {
+      createIoRuntimeCallForItem(converter, loc, inputFunc, cookie, itemExv);
+    });
+  } else {
+    mlir::func::FuncOp outputFunc =
+        getOutputFunc(loc, builder, itemTy, /*isFormatted=*/false);
+    mlir::Type argType = outputFunc.getFunctionType().getInput(1);
+    mlir::Value box =
+        fir::getBase(converter.genExprBox(loc, collapsed->section, stmtCtx));
+    llvm::SmallVector<mlir::Value> args = {
+        cookie, builder.createConvertWithVolatileCast(loc, argType, box)};
+    if (containsDerivedType(itemTy))
+      args.push_back(getNonTbpDefinedIoTableAddr(converter));
+    genGuardedCollapsedTransfer(builder, loc, box, [&]() {
+      fir::CallOp::create(builder, loc, outputFunc, args);
+    });
+    genImpliedDoLoopVarFinalValue(converter, *collapsed, box, stmtCtx);
+  }
+  return true;
+}
+
 /// Generate a sequence of input data transfer calls.
 static void genInputItemList(Fortran::lower::AbstractConverter &converter,
                              mlir::Value cookie,
@@ -881,6 +1225,11 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const Fortran::parser::InputItem &item : items) {
     if (const auto &impliedDo = std::get_if<1>(&item.u)) {
+      // Try to collapse into a single array-section descriptor call.
+      if (tryCollapseContiguousImpliedDo</*isInput=*/true>(
+              converter, cookie, impliedDo->value(), isFormatted, checkResult,
+              ok))
+        continue;
       genIoLoop(converter, cookie, impliedDo->value(), isFormatted, checkResult,
                 ok, inLoop);
       continue;
