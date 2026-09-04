@@ -1302,12 +1302,8 @@ Error olCreateProgram_impl(ol_context_handle_t Context,
 Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, bool *IsValid) {
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-  auto DeviceOrErr = Device->getDevice();
-  if (!DeviceOrErr)
-    return DeviceOrErr.takeError();
-  auto *DeviceImpl = *DeviceOrErr;
   *IsValid =
-      DeviceImpl->Plugin.isDeviceCompatible(DeviceImpl->getDeviceId(), Buffer);
+      Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum, Buffer);
   return Error::success();
 }
 
