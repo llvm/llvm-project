@@ -4807,47 +4807,77 @@ static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   return ConstVal == -1;
 }
 
-// Return the use branch instruction, otherwise null if the usage is invalid.
-static MachineInstr *
-verifyCFIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI, MachineInstr *&Br,
-                  MachineBasicBlock *&UncondBrTarget, bool &Negated) {
+namespace {
+struct CFIntrinsicBranchMatch {
+  MachineInstr *Negation = nullptr;
+  MachineInstr *CondBr = nullptr;
+  MachineInstr *UncondBr = nullptr;
+
+  MachineBasicBlock *ConditionTrueTarget = nullptr;
+  MachineBasicBlock *ConditionFalseTarget = nullptr;
+
+  bool isNegated() const { return Negation != nullptr; }
+
+  // Retarget the explicit branch for the fallthrough edge, or materialize
+  // the branch when that edge was represented by layout fallthrough. The
+  // builder must be positioned at the replacement branch.
+  void redirectFallthroughEdge(MachineIRBuilder &B,
+                               MachineBasicBlock &Target) const {
+    if (UncondBr)
+      UncondBr->getOperand(0).setMBB(&Target);
+    else
+      B.buildBr(Target);
+  }
+
+  void eraseDeadNegation(MachineRegisterInfo &MRI) {
+    if (Negation)
+      eraseInstr(*Negation, MRI);
+  }
+};
+} // namespace
+
+static std::optional<CFIntrinsicBranchMatch>
+matchCFIntrinsicBranchUse(MachineInstr &MI, MachineRegisterInfo &MRI) {
   Register CondDef = MI.getOperand(0).getReg();
   if (!MRI.hasOneNonDBGUse(CondDef))
-    return nullptr;
+    return std::nullopt;
 
   MachineBasicBlock *Parent = MI.getParent();
   MachineInstr *UseMI = &*MRI.use_instr_nodbg_begin(CondDef);
+  MachineInstr *Negation = nullptr;
 
   if (isNot(MRI, *UseMI)) {
+    Negation = UseMI;
     Register NegatedCond = UseMI->getOperand(0).getReg();
     if (!MRI.hasOneNonDBGUse(NegatedCond))
-      return nullptr;
-
-    // We're deleting the def of this value, so we need to remove it.
-    eraseInstr(*UseMI, MRI);
+      return std::nullopt;
 
     UseMI = &*MRI.use_instr_nodbg_begin(NegatedCond);
-    Negated = true;
   }
 
   if (UseMI->getParent() != Parent || UseMI->getOpcode() != AMDGPU::G_BRCOND)
-    return nullptr;
+    return std::nullopt;
 
   // Make sure the cond br is followed by a G_BR, or is the last instruction.
+  MachineInstr *UncondBr = nullptr;
+  MachineBasicBlock *OtherTarget = nullptr;
   MachineBasicBlock::iterator Next = std::next(UseMI->getIterator());
   if (Next == Parent->end()) {
     MachineFunction::iterator NextMBB = std::next(Parent->getIterator());
     if (NextMBB == Parent->getParent()->end()) // Illegal intrinsic use.
-      return nullptr;
-    UncondBrTarget = &*NextMBB;
+      return std::nullopt;
+    OtherTarget = &*NextMBB;
   } else {
     if (Next->getOpcode() != AMDGPU::G_BR)
-      return nullptr;
-    Br = &*Next;
-    UncondBrTarget = Br->getOperand(0).getMBB();
+      return std::nullopt;
+    UncondBr = &*Next;
+    OtherTarget = UncondBr->getOperand(0).getMBB();
   }
 
-  return UseMI;
+  MachineBasicBlock *TakenTarget = UseMI->getOperand(1).getMBB();
+  return CFIntrinsicBranchMatch{Negation, UseMI, UncondBr,
+                                Negation ? OtherTarget : TakenTarget,
+                                Negation ? TakenTarget : OtherTarget};
 }
 
 void AMDGPULegalizerInfo::buildLoadInputValue(Register DstReg,
@@ -8208,80 +8238,58 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   case Intrinsic::amdgcn_if:
   case Intrinsic::amdgcn_else: {
-    MachineInstr *Br = nullptr;
-    MachineBasicBlock *UncondBrTarget = nullptr;
-    bool Negated = false;
-    if (MachineInstr *BrCond =
-            verifyCFIntrinsic(MI, MRI, Br, UncondBrTarget, Negated)) {
-      const SIRegisterInfo *TRI
-        = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    if (auto Match = matchCFIntrinsicBranchUse(MI, MRI)) {
+      const SIRegisterInfo *TRI =
+          static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
 
       Register Def = MI.getOperand(1).getReg();
       Register Use = MI.getOperand(3).getReg();
 
-      MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
-
-      if (Negated)
-        std::swap(CondBrTarget, UncondBrTarget);
-
-      B.setInsertPt(B.getMBB(), BrCond->getIterator());
+      B.setInsertPt(B.getMBB(), Match->CondBr->getIterator());
       if (IntrID == Intrinsic::amdgcn_if) {
         B.buildInstr(AMDGPU::SI_IF)
-          .addDef(Def)
-          .addUse(Use)
-          .addMBB(UncondBrTarget);
+            .addDef(Def)
+            .addUse(Use)
+            .addMBB(Match->ConditionFalseTarget);
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
             .addDef(Def)
             .addUse(Use)
-            .addMBB(UncondBrTarget);
+            .addMBB(Match->ConditionFalseTarget);
       }
 
-      if (Br) {
-        Br->getOperand(0).setMBB(CondBrTarget);
-      } else {
-        // The IRTranslator skips inserting the G_BR for fallthrough cases, but
-        // since we're swapping branch targets it needs to be reinserted.
-        // FIXME: IRTranslator should probably not do this
-        B.buildBr(*CondBrTarget);
-      }
+      // The IRTranslator skips inserting the G_BR for fallthrough cases, but
+      // since we're swapping branch targets it needs to be reinserted.
+      // FIXME: IRTranslator should probably not do this
+      Match->redirectFallthroughEdge(B, *Match->ConditionTrueTarget);
 
       MRI.setRegClass(Def, TRI->getWaveMaskRegClass());
       MRI.setRegClass(Use, TRI->getWaveMaskRegClass());
+      Match->eraseDeadNegation(MRI);
       MI.eraseFromParent();
-      BrCond->eraseFromParent();
+      Match->CondBr->eraseFromParent();
       return true;
     }
 
     return false;
   }
   case Intrinsic::amdgcn_loop: {
-    MachineInstr *Br = nullptr;
-    MachineBasicBlock *UncondBrTarget = nullptr;
-    bool Negated = false;
-    if (MachineInstr *BrCond =
-            verifyCFIntrinsic(MI, MRI, Br, UncondBrTarget, Negated)) {
-      const SIRegisterInfo *TRI
-        = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    if (auto Match = matchCFIntrinsicBranchUse(MI, MRI)) {
+      const SIRegisterInfo *TRI =
+          static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
 
-      MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
       Register Reg = MI.getOperand(2).getReg();
 
-      if (Negated)
-        std::swap(CondBrTarget, UncondBrTarget);
-
-      B.setInsertPt(B.getMBB(), BrCond->getIterator());
+      B.setInsertPt(B.getMBB(), Match->CondBr->getIterator());
       B.buildInstr(AMDGPU::SI_LOOP)
-        .addUse(Reg)
-        .addMBB(UncondBrTarget);
+          .addUse(Reg)
+          .addMBB(Match->ConditionFalseTarget);
 
-      if (Br)
-        Br->getOperand(0).setMBB(CondBrTarget);
-      else
-        B.buildBr(*CondBrTarget);
+      Match->redirectFallthroughEdge(B, *Match->ConditionTrueTarget);
 
+      Match->eraseDeadNegation(MRI);
       MI.eraseFromParent();
-      BrCond->eraseFromParent();
+      Match->CondBr->eraseFromParent();
       MRI.setRegClass(Reg, TRI->getWaveMaskRegClass());
       return true;
     }
