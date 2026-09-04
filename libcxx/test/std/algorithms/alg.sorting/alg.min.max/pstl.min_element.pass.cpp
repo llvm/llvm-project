@@ -61,6 +61,42 @@ struct Test {
       int a[] = {1, 0};
       assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
     }
+    { // Three elements, first min
+      int a[] = {0, 1, 2};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a)));
+    }
+    { // Three elements, middle min
+      int a[] = {1, 0, 2};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
+    }
+    { // Three elements, middle min and equal to last element
+      int a[] = {1, 0, 0};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
+    }
+    { // Three elements, last min
+      int a[] = {2, 1, 0};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 2));
+    }
+    { // Four elements, first min
+      int a[] = {0, 1, 2, 3};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a)));
+    }
+    { // Four elements, all equal
+      int a[] = {1, 1, 1, 1};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a)));
+    }
+    { // Four elements, middle min
+      int a[] = {3, 0, 2, 1};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
+    }
+    { // Four elements, middle min and equal to consequent elements
+      int a[] = {3, 0, 0, 0};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
+    }
+    { // Four elements, last min
+      int a[] = {3, 2, 1, 0};
+      assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 3));
+    }
     { // Check for minimum among iotaed and shuffled elements
       std::mt19937 randomness;
       auto verify_min = [&](Iter first, Iter last) {

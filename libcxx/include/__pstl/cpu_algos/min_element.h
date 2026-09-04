@@ -65,7 +65,11 @@ struct __cpu_parallel_min_element {
           [&__iter_reduce, &__comp](auto __brick_first, auto __brick_last, auto __brick_init) {
             // Reduction of an iterage range + init element: use the serial version to find the minimum among
             // the iterators and then reduce with the init element.
-            return __iter_reduce(__brick_init, std::min_element(__brick_first, __brick_last, __comp));
+            // Atm __transform_reduce can give empty bricks in edge cases, handle them explicitly until the contract is
+            // tightened.
+            return __brick_first == __brick_last
+                     ? __brick_init
+                     : __iter_reduce(__brick_init, std::min_element(__brick_first, __brick_last, __comp));
           });
     } else {
       // Non-random access iterators cannot be processed in parallel, fall back to the sequential implementation.

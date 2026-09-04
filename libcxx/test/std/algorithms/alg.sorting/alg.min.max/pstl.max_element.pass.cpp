@@ -61,6 +61,42 @@ struct Test {
       int a[] = {1, 0};
       assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a)));
     }
+    { // Three elements, first max
+      int a[] = {2, 1, 0};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a)));
+    }
+    { // Three elements, middle max
+      int a[] = {0, 2, 1};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
+    }
+    { // Three elements, last max
+      int a[] = {1, 0, 2};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 2));
+    }
+    { // Four elements, first max
+      int a[] = {3, 0, 2, 1};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a)));
+    }
+    { // Four elements, all equal
+      int a[] = {1, 1, 1, 1};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a)));
+    }
+    { // Four elements, middle max
+      int a[] = {0, 3, 2, 1};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
+    }
+    { // Four elements, middle max
+      int a[] = {0, 2, 3, 1};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 2));
+    }
+    { // Four elements, middle max and equal to consequent elements
+      int a[] = {0, 3, 3, 3};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
+    }
+    { // Four elements, last max
+      int a[] = {0, 1, 2, 3};
+      assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 3));
+    }
     { // Check for maximum among iotaed and shuffled elements
       std::mt19937 randomness;
       auto verify_max = [&](Iter first, Iter last) {
