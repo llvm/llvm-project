@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_CONCEPTS_H
-#define _LIBCPP___FORMAT_CONCEPTS_H
+#ifndef _LIBCPP___FORMAT_FORMATTABLE_H
+#define _LIBCPP___FORMAT_FORMATTABLE_H
 
 #include <__concepts/same_as.h>
 #include <__concepts/semiregular.h>
@@ -22,18 +22,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
 
-/// The character type specializations of \ref formatter.
-template <class _CharT>
-concept __fmt_char_type =
-    same_as<_CharT, char>
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-    || same_as<_CharT, wchar_t>
-#  endif
-    ;
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // The output iterator isn't specified. A formatter should accept any
 // output_iterator. This iterator is a minimal iterator to test the concept.
@@ -62,8 +53,9 @@ concept __formattable =
 template <class _Tp, class _CharT>
 concept formattable = __formattable<_Tp, _CharT>;
 #  endif // _LIBCPP_STD_VER >= 23
-#endif   // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_CONCEPTS_H
+#endif // _LIBCPP_STD_VER >= 20
+
+#endif // _LIBCPP___FORMAT_FORMATTABLE_H
