@@ -3,12 +3,16 @@
 
 ; VCVTNEPS2BF16 ignores MXCSR and treats input denormals as signed zero. Only
 ; use it when the function's f32 input denormal mode has the same behavior.
+; Otherwise round with integer arithmetic instead of calling __truncsfbf2.
 
 define bfloat @fptrunc_default(float %x) nounwind {
 ; CHECK-LABEL: fptrunc_default:
 ; CHECK-NOT:     vcvtneps2bf16
-; CHECK:         callq __truncsfbf2@PLT
+; CHECK-NOT:     __truncsfbf2
+; CHECK:         vucomiss %xmm0, %xmm0
+; CHECK:         shrl $16
 ; CHECK-NOT:     vcvtneps2bf16
+; CHECK-NOT:     __truncsfbf2
 ; CHECK:         retq
   %r = fptrunc float %x to bfloat
   ret bfloat %r
@@ -30,8 +34,11 @@ define bfloat @fptrunc_preservesign(float %x) nounwind denormal_fpenv(preservesi
 define bfloat @fptrunc_positivezero(float %x) nounwind denormal_fpenv(positivezero) {
 ; CHECK-LABEL: fptrunc_positivezero:
 ; CHECK-NOT:     vcvtneps2bf16
-; CHECK:         callq __truncsfbf2@PLT
+; CHECK-NOT:     __truncsfbf2
+; CHECK:         vucomiss %xmm0, %xmm0
+; CHECK:         shrl $16
 ; CHECK-NOT:     vcvtneps2bf16
+; CHECK-NOT:     __truncsfbf2
 ; CHECK:         retq
   %r = fptrunc float %x to bfloat
   ret bfloat %r
@@ -40,8 +47,11 @@ define bfloat @fptrunc_positivezero(float %x) nounwind denormal_fpenv(positiveze
 define bfloat @fptrunc_dynamic(float %x) nounwind denormal_fpenv(dynamic) {
 ; CHECK-LABEL: fptrunc_dynamic:
 ; CHECK-NOT:     vcvtneps2bf16
-; CHECK:         callq __truncsfbf2@PLT
+; CHECK-NOT:     __truncsfbf2
+; CHECK:         vucomiss %xmm0, %xmm0
+; CHECK:         shrl $16
 ; CHECK-NOT:     vcvtneps2bf16
+; CHECK-NOT:     __truncsfbf2
 ; CHECK:         retq
   %r = fptrunc float %x to bfloat
   ret bfloat %r
@@ -52,8 +62,11 @@ define bfloat @fptrunc_dynamic(float %x) nounwind denormal_fpenv(dynamic) {
 define bfloat @fptrunc_output_preservesign(float %x) nounwind denormal_fpenv(preservesign|ieee) {
 ; CHECK-LABEL: fptrunc_output_preservesign:
 ; CHECK-NOT:     vcvtneps2bf16
-; CHECK:         callq __truncsfbf2@PLT
+; CHECK-NOT:     __truncsfbf2
+; CHECK:         vucomiss %xmm0, %xmm0
+; CHECK:         shrl $16
 ; CHECK-NOT:     vcvtneps2bf16
+; CHECK-NOT:     __truncsfbf2
 ; CHECK:         retq
   %r = fptrunc float %x to bfloat
   ret bfloat %r
@@ -74,8 +87,11 @@ define bfloat @fptrunc_input_preservesign(float %x) nounwind denormal_fpenv(ieee
 define <8 x bfloat> @fptrunc_v8_default(<8 x float> %x) nounwind {
 ; CHECK-LABEL: fptrunc_v8_default:
 ; CHECK-NOT:     vcvtneps2bf16
-; CHECK:         callq __truncsfbf2@PLT
+; CHECK-NOT:     __truncsfbf2
+; CHECK:         vcmpunordps %ymm0, %ymm0
+; CHECK:         vpsrld $16
 ; CHECK-NOT:     vcvtneps2bf16
+; CHECK-NOT:     __truncsfbf2
 ; CHECK:         retq
   %r = fptrunc <8 x float> %x to <8 x bfloat>
   ret <8 x bfloat> %r
