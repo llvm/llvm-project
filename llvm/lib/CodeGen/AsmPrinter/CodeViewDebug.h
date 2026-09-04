@@ -50,6 +50,7 @@ class MCSectionCOFF;
 class MCStreamer;
 class MCSymbol;
 class MachineFunction;
+class MachineInstr;
 
 /// Collects and handles line tables information in a CodeView format.
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
@@ -129,6 +130,8 @@ private:
               SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1>>
         DefRanges;
     std::optional<APSInt> ConstantValue;
+
+    bool isSimpleImplicitThis() const;
   };
 
   struct CVGlobalVariable {
@@ -200,6 +203,15 @@ private:
 
     const MCSymbol *Begin = nullptr;
     const MCSymbol *End = nullptr;
+
+    const MCSymbol *DebugStart = nullptr;
+    const MCSymbol *DebugEnd = nullptr;
+
+    SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1>
+        EpilogueRanges;
+
+    const MachineInstr *PrologueEnd = nullptr;
+
     unsigned FuncId = 0;
     unsigned LastFileId = 0;
 

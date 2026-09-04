@@ -111,6 +111,12 @@ private:
 };
 } // namespace
 
+static bool isImplicitThisVariable(const DILocalVariable *Var,
+                                   const DISubprogram *SP = nullptr) {
+  return Var && (!SP || Var->getScope() == SP) && Var->isParameter() &&
+         Var->isObjectPointer() && Var->getName() == "this";
+}
+
 static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
   switch (Type) {
   case Triple::ArchType::x86:
@@ -1167,10 +1173,17 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     // code is located and what's its size:
     OS.AddComment("Code size");
     OS.emitAbsoluteSymbolDiff(FI.End, Fn, 4);
+    const bool HasDebugRange = FI.DebugStart && FI.DebugEnd;
     OS.AddComment("Offset after prologue");
-    OS.emitInt32(0);
+    if (HasDebugRange)
+      OS.emitAbsoluteSymbolDiff(FI.DebugStart, Fn, 4);
+    else
+      OS.emitInt32(0);
     OS.AddComment("Offset before epilogue");
-    OS.emitInt32(0);
+    if (HasDebugRange)
+      OS.emitAbsoluteSymbolDiff(FI.DebugEnd, Fn, 4);
+    else
+      OS.emitInt32(0);
     OS.AddComment("Function type index");
     OS.emitInt32(getFuncIdForSubprogram(GV->getSubprogram()).getIndex());
     OS.AddComment("Function section relative address");
@@ -1568,6 +1581,15 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   OS.emitCVFuncIdDirective(CurFn->FuncId);
 
+  const DISubprogram *SP = GV.getSubprogram();
+  const bool HasImplicitThis =
+      any_of(
+          MF->getVariableDbgInfo(),
+          [&](const auto &VI) { return isImplicitThisVariable(VI.Var, SP); }) ||
+      any_of(DbgValues, [&](const auto &I) {
+        return isImplicitThisVariable(cast<DILocalVariable>(I.first.first), SP);
+      });
+
   // Find the end of the function prolog.  First known non-DBG_VALUE and
   // non-frame setup location marks the beginning of the function body.
   // FIXME: is there a simpler a way to do this? Can we just search
@@ -1578,6 +1600,10 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
     for (const auto &MI : MBB) {
       if (!MI.isMetaInstruction() && !MI.getFlag(MachineInstr::FrameSetup) &&
           MI.getDebugLoc()) {
+        if (HasImplicitThis && !CurFn->PrologueEnd) {
+          CurFn->PrologueEnd = &MI;
+          requestLabelBeforeInsn(&MI);
+        }
         PrologEndLoc = MI.getDebugLoc();
         break;
       } else if (!MI.isMetaInstruction()) {
@@ -1599,6 +1625,25 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
         requestLabelBeforeInsn(&MI);
         requestLabelAfterInsn(&MI);
       }
+    }
+  }
+
+  if (HasImplicitThis) {
+    for (const auto &MBB : *MF) {
+      const MachineInstr *EpilogueBegin = nullptr;
+      for (const auto &MI : MBB) {
+        if (!MI.isMetaInstruction() && MI.getFlag(MachineInstr::FrameDestroy)) {
+          EpilogueBegin = &MI;
+          requestLabelBeforeInsn(EpilogueBegin);
+          break;
+        }
+      }
+      if (!EpilogueBegin)
+        continue;
+
+      MachineBasicBlock::const_iterator Last = MBB.getLastNonDebugInstr();
+      if (Last != MBB.end())
+        requestLabelAfterInsn(&*Last);
     }
   }
 
@@ -2845,8 +2890,32 @@ void CodeViewDebug::emitLocalVariableList(const FunctionInfo &FI,
   }
 }
 
+bool CodeViewDebug::LocalVariable::isSimpleImplicitThis() const {
+  if (!isImplicitThisVariable(DIVar) || DefRanges.empty())
+    return false;
+
+  const auto &DefRange = DefRanges.begin()->first;
+  return DefRange.InMemory && !DefRange.IsSubfield &&
+         DefRange.DerefOffset == LocalVarDef::NoDeref;
+}
+
 void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
                                       const LocalVariable &Var) {
+  if (FI.DebugStart && FI.DebugEnd && Var.isSimpleImplicitThis()) {
+    const auto &DefRange = Var.DefRanges.begin()->first;
+    MCSymbol *LocalEnd = beginSymbolRecord(SymbolKind::S_REGREL32);
+    OS.AddComment("Offset");
+    OS.emitInt32(DefRange.DataOffset);
+    OS.AddComment("TypeIndex");
+    OS.emitInt32(getCompleteTypeIndex(Var.DIVar->getType()).getIndex());
+    OS.AddComment("Register");
+    OS.emitInt16(DefRange.CVRegister);
+    OS.AddComment("Name");
+    emitNullTerminatedSymbolName(OS, Var.DIVar->getName());
+    endSymbolRecord(LocalEnd);
+    return;
+  }
+
   // LocalSym record, see SymbolRecord.h for more info.
   MCSymbol *LocalEnd = beginSymbolRecord(SymbolKind::S_LOCAL);
 
@@ -2871,7 +2940,26 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
   SmallString<20> BytePrefix;
   for (const auto &Pair : Var.DefRanges) {
     LocalVarDef DefRange = Pair.first;
-    const auto &Ranges = Pair.second;
+    using Range = std::pair<const MCSymbol *, const MCSymbol *>;
+    ArrayRef<Range> Ranges = Pair.second;
+    SmallVector<Range, 4> RangesWithoutEpilogues;
+
+    if (isImplicitThisVariable(Var.DIVar) && FI.EpilogueRanges.size() > 1 &&
+        DefRange.InMemory && !DefRange.IsSubfield &&
+        DefRange.DerefOffset == LocalVarDef::NoDeref && Ranges.size() == 1) {
+      const MCSymbol *Begin = Ranges.front().first;
+      const MCSymbol *End = Ranges.front().second;
+      for (const auto &Epilogue : FI.EpilogueRanges) {
+        if (Begin != Epilogue.first)
+          RangesWithoutEpilogues.emplace_back(Begin, Epilogue.first);
+        Begin = Epilogue.second;
+      }
+      if (Begin != End)
+        RangesWithoutEpilogues.emplace_back(Begin, End);
+      if (!RangesWithoutEpilogues.empty())
+        Ranges = RangesWithoutEpilogues;
+    }
+
     BytePrefix.clear();
     if (DefRange.InMemory) {
       int Offset = DefRange.DataOffset;
@@ -2900,7 +2988,8 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
         DRHdr.BasePointerOffset = Offset;
         DRHdr.OffsetInUdt = DefRange.DerefOffset;
         OS.emitCVDefRangeDirective(Ranges, DRHdr);
-      } else if (!DefRange.IsSubfield && EncFP != EncodedFramePtrReg::None &&
+      } else if (!isImplicitThisVariable(Var.DIVar) && !DefRange.IsSubfield &&
+                 EncFP != EncodedFramePtrReg::None &&
                  (bool(Flags & LocalSymFlags::IsParameter)
                       ? (EncFP == FI.EncodedParamFramePtrReg)
                       : (EncFP == FI.EncodedLocalFramePtrReg))) {
@@ -3082,8 +3171,53 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   const Function &GV = MF->getFunction();
   assert(FnDebugInfo.count(&GV));
   assert(CurFn == FnDebugInfo[&GV].get());
+  const MCSymbol *FunctionEnd = Asm->getFunctionEnd();
 
   collectVariableInfo(GV.getSubprogram());
+
+  const LocalVariable *ImplicitThis = nullptr;
+  for (const auto &ScopeVars : ScopeVariables) {
+    for (const LocalVariable &Var : ScopeVars.second) {
+      if (isImplicitThisVariable(Var.DIVar, GV.getSubprogram())) {
+        ImplicitThis = &Var;
+        break;
+      }
+    }
+    if (ImplicitThis)
+      break;
+  }
+  if (ImplicitThis) {
+    for (const auto &MBB : *MF) {
+      const MachineInstr *EpilogueBegin = nullptr;
+      for (const auto &MI : MBB) {
+        if (!MI.isMetaInstruction() && MI.getFlag(MachineInstr::FrameDestroy)) {
+          EpilogueBegin = &MI;
+          break;
+        }
+      }
+      if (!EpilogueBegin)
+        continue;
+
+      MachineBasicBlock::const_iterator Last = MBB.getLastNonDebugInstr();
+      if (Last == MBB.end())
+        continue;
+
+      MCSymbol *EpilogueEnd = getLabelAfterInsn(&*Last);
+      assert(EpilogueEnd && "missing label after epilogue");
+      CurFn->EpilogueRanges.emplace_back(getLabelBeforeInsn(EpilogueBegin),
+                                         EpilogueEnd);
+    }
+
+    CurFn->DebugStart =
+        CurFn->PrologueEnd
+            ? getLabelBeforeInsn(CurFn->PrologueEnd)
+            : (ImplicitThis->DefRanges.empty()
+                   ? nullptr
+                   : ImplicitThis->DefRanges.begin()->second.front().first);
+    CurFn->DebugEnd = CurFn->EpilogueRanges.empty()
+                          ? FunctionEnd
+                          : CurFn->EpilogueRanges.back().first;
+  }
 
   // Build the lexical block structure to emit for this routine.
   if (LexicalScope *CFS = LScopes.getCurrentFunctionScope())
@@ -3122,7 +3256,7 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
 
   CurFn->Annotations = MF->getCodeViewAnnotations();
 
-  CurFn->End = Asm->getFunctionEnd();
+  CurFn->End = FunctionEnd;
 
   CurFn = nullptr;
 }
