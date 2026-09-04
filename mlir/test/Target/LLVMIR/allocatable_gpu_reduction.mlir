@@ -110,7 +110,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // CHECK:   %[[WARP_RESULT:.*]] = load ptr, ptr %[[WARP_RESULT_PTR]], align 8
 // CHECK:   %[[ALLOC_MEM_PTR:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[WARP_RESULT]], i32 0, i32 0
 // CHECK:   %[[ALLOC_MEM:.*]] = load ptr, ptr %[[ALLOC_MEM_PTR]], align 8
-// CHECK:   %[[WARP_TRANSFER_SLOT:.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 %nvptx_warp_id
+// CHECK:   %[[WARP_TRANSFER_SLOT:.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 %nvptx_warp_id
 // CHECK:   %[[WARP_RED_RES:.*]] = load i32, ptr %[[ALLOC_MEM]], align 4
 // CHECK:   store volatile i32 %[[WARP_RED_RES]], ptr addrspace(3) %[[WARP_TRANSFER_SLOT]], align 4
 // CHECK: }

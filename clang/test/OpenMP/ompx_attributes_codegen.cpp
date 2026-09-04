@@ -35,17 +35,20 @@ void func() {
 }
 
 // SPIRV: attributes #0
-// SPIRV-SAME: "nvvm.maxntid"="20"
-// SPIRV-SAME: "omp_target_thread_limit"="20" 
+// SPIRV-SAME: "nvvm.maxntid"="84"
+// SPIRV-SAME: "omp_target_thread_limit"="84" 
 // SPIRV: attributes #4
 // SPIRV-SAME: "amdgpu-waves-per-eu"="3,7"
 // SPIRV-SAME: "nvvm.maxntid"="17"
 // SPIRV-SAME: "omp_target_thread_limit"="17"
 
+// The first two kernels are generic mode and reserve a warp for the main
+// thread on top of what the attribute asked for; the third is SPMD and does
+// not.
 // AMD: attributes #0
-// AMD-SAME: "amdgpu-flat-work-group-size"="10,20"
-// AMD-SAME: "omp_target_thread_limit"="20"
-// AMD: "omp_target_thread_limit"="45"
+// AMD-SAME: "amdgpu-flat-work-group-size"="10,{{52|84}}"
+// AMD-SAME: "omp_target_thread_limit"="{{52|84}}"
+// AMD: "omp_target_thread_limit"="{{77|109}}"
 // AMD: attributes #4
 // AMD-SAME: "amdgpu-flat-work-group-size"="3,17"
 // AMD-SAME: "amdgpu-waves-per-eu"="3,7"
@@ -53,11 +56,11 @@ void func() {
 
 // It is unclear if we should use the AMD annotations for other targets, we do for now.
 // NVIDIA: attributes #[[ATTR0]]
-// NVIDIA-SAME: "nvvm.maxntid"="20"
-// NVIDIA-SAME: "omp_target_thread_limit"="20"
+// NVIDIA-SAME: "nvvm.maxntid"="52"
+// NVIDIA-SAME: "omp_target_thread_limit"="52"
 // NVIDIA: attributes #[[ATTR1]]
-// NVIDIA-SAME: "nvvm.maxntid"="45"
-// NVIDIA-SAME: "omp_target_thread_limit"="45"
+// NVIDIA-SAME: "nvvm.maxntid"="77"
+// NVIDIA-SAME: "omp_target_thread_limit"="77"
 // NVIDIA: attributes #[[ATTR2]]
 // NVIDIA-SAME: "nvvm.maxntid"="17"
 // NVIDIA-SAME: "omp_target_thread_limit"="17"
