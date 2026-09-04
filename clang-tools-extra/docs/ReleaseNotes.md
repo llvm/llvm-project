@@ -216,6 +216,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Fixed invalid fixes when renaming parameter packs used in `sizeof...`
+    expressions.
+
   - Added the {option}`TypedefInheritAnonTagConfig`, which checks a
     typedef or type alias that provides the only name of an otherwise unnamed
     tag, such as `typedef enum {} MyEnum;`, against the style configured for

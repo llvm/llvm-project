@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64"
 
-define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_udiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -71,7 +71,7 @@ for.end:
   ret void
 }
 
-define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_sdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -135,7 +135,7 @@ for.end:
   ret void
 }
 
-define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_urem(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_urem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -199,7 +199,7 @@ for.end:
   ret void
 }
 
-define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_srem(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_srem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -263,7 +263,7 @@ for.end:
   ret void
 }
 
-define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @predicated_udiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -339,7 +339,7 @@ for.end:
   ret void
 }
 
-define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @predicated_sdiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -415,7 +415,7 @@ for.end:
   ret void
 }
 
-define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) {
+define void @predicated_udiv_by_constant(ptr noalias nocapture %a, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @predicated_udiv_by_constant(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -485,7 +485,7 @@ for.end:
   ret void
 }
 
-define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) {
+define void @predicated_sdiv_by_constant(ptr noalias nocapture %a, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @predicated_sdiv_by_constant(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -555,7 +555,7 @@ for.end:
   ret void
 }
 
-define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
+define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @predicated_sdiv_by_minus_one(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -628,7 +628,7 @@ for.end:
 ; Test for https://github.com/llvm/llvm-project/issues/159402. For invariant divisors,
 ; selects can be introduced outside the vector loop and their cost should not be
 ; considered for each loop iteration.
-define void @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c, ptr %p) {
+define void @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c, ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @udiv_sdiv_with_invariant_divisors(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

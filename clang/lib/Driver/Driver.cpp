@@ -3565,8 +3565,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
 }
 
 /// HIP non-RDC \c -S for AMDGCN: emit host and device assembly separately and
-/// bundle with \c clang-offload-bundler (new offload driver), instead of
-/// \c llvm-offload-binary / \c clang-linker-wrapper fatbin embedding.
+/// bundle with \c clang-offload-bundler, instead of \c llvm-offload-binary /
+/// \c clang-linker-wrapper fatbin embedding.
 static bool shouldBundleHIPAsm(const Compilation &C,
                                const llvm::opt::DerivedArgList &Args,
                                const Driver &D) {
@@ -3710,8 +3710,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         break;
     }
 
-    // HIP non-RDC -S (AMDGCN): bundle host and device assembly like the
-    // classic driver instead of embedding a fat binary in host asm.
+    // HIP non-RDC -S (AMDGCN): bundle host and device assembly instead of
+    // embedding a fat binary in host asm.
     if (Current && !HIPAsmDeviceActions.empty()) {
       ActionList BundleInputs;
       BundleInputs.append(HIPAsmDeviceActions);
@@ -4246,7 +4246,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       OffloadAction::DeviceDependences DDep;
       DDep.add(*A, *TCAndArch->first, TCAndArch->second, Kind);
 
-      // The legacy CUDA fatbinary path can include PTX alongside the cubin.
+      // The CUDA fatbinary path can include PTX alongside the cubin.
       // The LLVM offload wrapper path feeds these images through a device
       // linker first, and clang-nvlink-wrapper does not accept PTX as input.
       for (Action *Input : A->getInputs())
@@ -5404,57 +5404,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
 
   // Determine the place to write output to, if any.
   InputInfo Result;
-  InputInfoList UnbundlingResults;
-  if (auto *UA = dyn_cast<OffloadUnbundlingJobAction>(JA)) {
-    // If we have an unbundling job, we need to create results for all the
-    // outputs. We also update the results cache so that other actions using
-    // this unbundling action can get the right results.
-    for (auto &UI : UA->getDependentActionsInfo()) {
-      assert(UI.DependentOffloadKind != Action::OFK_None &&
-             "Unbundling with no offloading??");
-
-      // Unbundling actions are never at the top level. When we generate the
-      // offloading prefix, we also do that for the host file because the
-      // unbundling action does not change the type of the output which can
-      // cause a overwrite.
-      std::string OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-          UI.DependentOffloadKind, UI.DependentToolChain->getTripleString(),
-          /*CreatePrefixForHost=*/true);
-      auto CurI = InputInfo(
-          UA,
-          GetNamedOutputPath(C, *UA, BaseInput, UI.DependentBoundArch,
-                             /*AtTopLevel=*/false,
-                             MultipleArchs ||
-                                 UI.DependentOffloadKind == Action::OFK_HIP,
-                             OffloadingPrefix),
-          BaseInput);
-      // Save the unbundling result.
-      UnbundlingResults.push_back(CurI);
-
-      // Get the unique string identifier for this dependence and cache the
-      // result.
-      BoundArch Arch;
-      if (TargetDeviceOffloadKind == Action::OFK_HIP) {
-        if (UI.DependentOffloadKind == Action::OFK_Host)
-          Arch = BoundArch();
-        else
-          Arch = BoundArch(UI.DependentBoundArch);
-      } else
-        Arch = BA;
-
-      CachedResults[{A, GetTriplePlusArchString(UI.DependentToolChain, Arch,
-                                                UI.DependentOffloadKind)}] = {
-          CurI};
-    }
-
-    // Now that we have all the results generated, select the one that should be
-    // returned for the current depending action.
-    std::pair<const Action *, std::string> ActionTC = {
-        A, GetTriplePlusArchString(TC, BA, TargetDeviceOffloadKind)};
-    assert(CachedResults.find(ActionTC) != CachedResults.end() &&
-           "Result does not exist??");
-    Result = CachedResults[ActionTC].front();
-  } else if (JA->getType() == types::TY_Nothing)
+  if (JA->getType() == types::TY_Nothing)
     Result = {InputInfo(A, BaseInput)};
   else {
     // We only have to generate a prefix for the host if this is not a top-level
@@ -5480,23 +5430,9 @@ InputInfoList Driver::BuildJobsForActionNoCache(
       if (i + 1 != e)
         llvm::errs() << ", ";
     }
-    if (UnbundlingResults.empty())
-      llvm::errs() << "], output: " << Result.getAsString() << "\n";
-    else {
-      llvm::errs() << "], outputs: [";
-      for (unsigned i = 0, e = UnbundlingResults.size(); i != e; ++i) {
-        llvm::errs() << UnbundlingResults[i].getAsString();
-        if (i + 1 != e)
-          llvm::errs() << ", ";
-      }
-      llvm::errs() << "] \n";
-    }
+    llvm::errs() << "], output: " << Result.getAsString() << "\n";
   } else {
-    if (UnbundlingResults.empty())
-      T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);
-    else
-      T->ConstructJobMultipleOutputs(C, *JA, UnbundlingResults, InputInfos,
-                                     Args, LinkingOutput);
+    T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);
   }
   return {Result};
 }
