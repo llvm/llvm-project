@@ -1459,6 +1459,10 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
   if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
       M.getModuleFlag("wchar_size")))
     return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
+  return getDefaultWCharSize(M);
+}
+
+unsigned TargetLibraryInfoImpl::getDefaultWCharSize(const Module &M) const {
   return Triple(M.getTargetTriple()).getDefaultWCharSize();
 }
 
