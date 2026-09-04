@@ -18,6 +18,3 @@ int var_propagate = 102;
 // CHECK: attributes #0 = { "wasm-export-name"="global_g" }
 // CHECK: attributes #1 = { "wasm-export-name"="mem_g" }
 // CHECK: attributes #2 = { "wasm-export-name"="exported_propagate" }
-
-
-

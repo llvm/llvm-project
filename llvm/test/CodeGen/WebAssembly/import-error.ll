@@ -7,4 +7,3 @@ target triple = "wasm32-unknown-unknown"
 
 @g2 = external global i32 "wasm-import-module"="js"
 ; CHECK: error: imported global 'g2' must be in a wasm variable address space
-

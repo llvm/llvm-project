@@ -410,7 +410,8 @@ void SemaWasm::handleWebAssemblyImportModuleAttr(Decl *D,
     }
     FD->addAttr(::new (getASTContext())
                     WebAssemblyImportModuleAttr(getASTContext(), AL, Str));
-  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+  } else {
+    auto *VD = cast<VarDecl>(D);
     if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
       Diag(AL.getLoc(), diag::warn_import_on_definition) << 0 << 1;
       return;
@@ -433,7 +434,8 @@ void SemaWasm::handleWebAssemblyImportNameAttr(Decl *D, const ParsedAttr &AL) {
     }
     FD->addAttr(::new (getASTContext())
                     WebAssemblyImportNameAttr(getASTContext(), AL, Str));
-  } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+  } else {
+    auto *VD = cast<VarDecl>(D);
     if (VD->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
       Diag(AL.getLoc(), diag::warn_import_on_definition) << 1 << 1;
       return;

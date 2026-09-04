@@ -114,18 +114,14 @@ public:
           return;
         }
         llvm::Function *Fn = cast<llvm::Function>(GV);
-        llvm::AttrBuilder B(GV->getContext());
         if (ModuleAttr)
-          B.addAttribute("wasm-import-module", ModuleAttr->getImportModule());
+          Fn->addFnAttr("wasm-import-module", ModuleAttr->getImportModule());
         if (NameAttr)
-          B.addAttribute("wasm-import-name", NameAttr->getImportName());
-        Fn->addFnAttrs(B);
+          Fn->addFnAttr("wasm-import-name", NameAttr->getImportName());
       }
       if (const auto *Attr = FD->getAttr<WebAssemblyExportNameAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
-        llvm::AttrBuilder B(GV->getContext());
-        B.addAttribute("wasm-export-name", Attr->getExportName());
-        Fn->addFnAttrs(B);
+        Fn->addFnAttr("wasm-export-name", Attr->getExportName());
       }
     }
 
