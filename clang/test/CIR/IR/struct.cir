@@ -40,6 +40,11 @@
 // Bit-field access units
 !rec_P9 = !cir.struct<"P9" {bitfield !u8i, empty !u8i}>
 
+// One member per access unit, carrying what the source declared for each
+// bit-field packed into it.  A zero-width bit-field belongs to no unit, so it
+// is a member with no storage that ends the run before it.
+!rec_P10 = !cir.struct<"P10" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 27>]>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 8>]>}>
+
 // CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {data !s32i, data !s32i}>
 // CHECK-DAG: !rec_P2 = !cir.struct<"P2" {data !u8i, pad !u8i, data !u16i, data !u32i}>
 // CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed {data !u8i, pad !u8i, data !u16i, data !u32i}>
@@ -49,6 +54,7 @@
 // CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed {data !u8i, pad !u8i}>
 // CHECK-DAG: !rec_P8 = !cir.struct<"P8" {data !u16i, pad !u8i, pad !u8i}>
 // CHECK-DAG: !rec_P9 = !cir.struct<"P9" {bitfield !u8i, empty !u8i}>
+// CHECK-DAG: !rec_P10 = !cir.struct<"P10" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 27>]>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 8>]>}>
 
 // Records with identical member types, spelled apart by their kinds.
 !rec_M1 = !cir.struct<"M1" {data !u8i, pad !u8i}>
@@ -70,6 +76,9 @@
 // A unit-marked union with a tail-padding slot, which is the shape CIRGen emits
 // for a union of bit-fields.
 !rec_U5 = !cir.union<"U5" {bitfield !u8i, empty !u8i}, padding = {!cir.array<!u8i x 3>}>
+// Every variant starts at offset zero, so a bit-field variant is a unit of its
+// own, holding the one field.
+!rec_U6 = !cir.union<"U6" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>, data !s32i}>
 
 // CHECK-DAG: !rec_U1 = !cir.union<"U1" {data !s32i, data !u8i}, padding = {!u8i}>
 // CHECK-DAG: !rec_U2 = !cir.union<"U2" packed {data !s32i}, padding = {!cir.array<!u8i x 4>}>
@@ -78,6 +87,7 @@
 // CHECK-DAG: !rec_U3 = !cir.union<"U3" {empty !u8i}>
 // CHECK-DAG: !rec_U4 = !cir.union<"U4" {data !s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
 // CHECK-DAG: !rec_U5 = !cir.union<"U5" {bitfield !u8i, empty !u8i}, padding = {!cir.array<!u8i x 3>}>
+// CHECK-DAG: !rec_U6 = !cir.union<"U6" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>, data !s32i}>
 
 
 // Complete a previously incomplete record
@@ -137,7 +147,9 @@ module  {
                      %arg23: !rec_anon_u_plain,
                      %arg24: !rec_P8,
                      %arg25: !rec_P9,
-                     %arg26: !rec_U5) {
+                     %arg26: !rec_U5,
+                     %arg27: !rec_P10,
+                     %arg28: !rec_U6) {
     cir.return
   }
 

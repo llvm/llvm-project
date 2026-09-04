@@ -4310,7 +4310,11 @@ bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
                    .addUse(Ext0.getReg(0))
                    .addUse(Ext1.getReg(0))
                    .setMIFlags(Flags);
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul), Flags);
+    // The f32 product is finite whenever the original fpow was, but it can
+    // still be outside the f16 range. Drop ninf from the truncation and from
+    // the exp2, since neither can assume a finite value here.
+    unsigned FlagsNoNInf = Flags & ~MachineInstr::FmNoInfs;
+    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, FlagsNoNInf), FlagsNoNInf);
   } else
     return false;
 

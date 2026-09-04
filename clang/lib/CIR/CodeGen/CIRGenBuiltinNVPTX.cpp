@@ -16,6 +16,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -34,6 +35,25 @@ static mlir::Value makeLdu(CIRGenFunction &cgf, const CallExpr *expr,
              builder, loc, builder.getStringAttr(intrinsicName), elemTy,
              {ptr.emitRawPointer(), alignVal})
       .getResult();
+}
+
+static mlir::Value makeLdg(CIRGenFunction &cgf, const CallExpr *expr) {
+  auto &builder = cgf.getBuilder();
+  Address ptr = cgf.emitPointerWithAlignment(expr->getArg(0));
+  QualType argType = expr->getArg(0)->getType();
+  mlir::Type elemTy = cgf.convertTypeForMem(argType->getPointeeType());
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+
+  // Use addrspace(1) for NVPTX ADDRESS_SPACE_GLOBAL.
+  mlir::Type globalPtrTy = cir::PointerType::get(
+      elemTy, cir::TargetAddressSpaceAttr::get(
+                  builder.getContext(), llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL));
+  mlir::Value asc =
+      builder.createAddrSpaceCast(loc, ptr.getPointer(), globalPtrTy);
+  cir::LoadOp load =
+      builder.createAlignedLoad(loc, elemTy, asc, ptr.getAlignment());
+  load.setInvariant(true);
+  return load.getResult();
 }
 
 /// Emit a CIR LLVMIntrinsicCallOp for a unary NVVM intrinsic.
@@ -206,10 +226,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_ldg_f4:
   case NVPTX::BI__nvvm_ldg_d:
   case NVPTX::BI__nvvm_ldg_d2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeLdg(*this, expr);
   case NVPTX::BI__nvvm_ldu_c:
   case NVPTX::BI__nvvm_ldu_sc:
   case NVPTX::BI__nvvm_ldu_c2:
