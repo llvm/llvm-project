@@ -38,8 +38,6 @@ EXECUTION_POLICY_SFINAE_TEST(max_element);
 static_assert(sfinae_test_max_element<int, int*, int*, bool (*)(int, int)>);
 static_assert(!sfinae_test_max_element<std::execution::parallel_policy, int*, int*, bool (*)(int, int)>);
 
-std::mt19937 randomness;
-
 template <class Iter>
 struct Test {
   template <class ExecutionPolicy>
@@ -67,6 +65,7 @@ struct Test {
       assert(std::max_element(policy, Iter(std::begin(a)), Iter(std::end(a)), comp) == Iter(std::begin(a) + 1));
     }
     { // Check for maximum among iotaed and shuffled elements
+      std::mt19937 randomness;
       auto verify_max = [&](Iter first, Iter last) {
         Iter i = std::max_element(policy, first, last, comp);
         if (first != last) {

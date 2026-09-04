@@ -36,8 +36,6 @@ EXECUTION_POLICY_SFINAE_TEST(min_element);
 static_assert(sfinae_test_min_element<int, int*, int*>);
 static_assert(!sfinae_test_min_element<std::execution::parallel_policy, int*, int*>);
 
-std::mt19937 randomness;
-
 template <class Iter>
 struct Test {
   template <class ExecutionPolicy>
@@ -64,6 +62,7 @@ struct Test {
       assert(std::min_element(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 1));
     }
     { // Check for minimum among iotaed and shuffled elements
+      std::mt19937 randomness;
       auto verify_min = [&](Iter first, Iter last) {
         Iter i = std::min_element(policy, first, last);
         if (first != last) {
