@@ -90,18 +90,26 @@ private:
 
   // Emit the sorted per-predicate `setAvailable` tables/loops. The
   // always-available bucket emits at \p BaseIndent; each predicated bucket is
-  // wrapped in `if (pred)`. \p Receiver prefixes the calls ("Info." for the
-  // standalone library functions, empty otherwise).
+  // wrapped in `if (pred)`. All calls are emitted in member context (no
+  // receiver prefix).
   void
   emitPredicateGroups(raw_ostream &OS, const Record *R,
                       DenseMap<PredicateWithCC, LibcallsWithCC> &Pred2Funcs,
                       SetVector<PredicateWithCC> &PredicateSorter,
-                      unsigned BaseIndent, StringRef Receiver) const;
+                      unsigned BaseIndent) const;
 
-  // Emit a file-local `setAvailableLibFuncs_<name>` for all LibcallLibrary defs
-  // sharing \p Name, each gated by its own availability predicate.
+  // Emit a `setAvailableLibFuncs_<name>` member function for all LibcallLibrary
+  // defs sharing \p Name, each gated by its own availability predicate.
   void emitLibraryFunction(raw_ostream &OS, StringRef Name,
                            ArrayRef<const Record *> Libs) const;
+
+  // Group all LibcallLibrary defs by their shared LibraryName, preserving
+  // definition order. Both the member-declaration fragment and the definitions
+  // iterate this to stay in lockstep.
+  MapVector<StringRef, std::vector<const Record *>>
+  collectLibrariesByName() const;
+
+  void emitRuntimeLibcallsInfoMemberDecls(raw_ostream &OS) const;
 
   void emitSystemRuntimeLibrarySetCalls(raw_ostream &OS) const;
 
@@ -390,8 +398,7 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
 void RuntimeLibcallEmitter::emitPredicateGroups(
     raw_ostream &OS, const Record *R,
     DenseMap<PredicateWithCC, LibcallsWithCC> &Pred2Funcs,
-    SetVector<PredicateWithCC> &PredicateSorter, unsigned BaseIndent,
-    StringRef Receiver) const {
+    SetVector<PredicateWithCC> &PredicateSorter, unsigned BaseIndent) const {
   SmallVector<PredicateWithCC, 0> SortedPredicates =
       PredicateSorter.takeVector();
 
@@ -459,14 +466,13 @@ void RuntimeLibcallEmitter::emitPredicateGroups(
     if (FuncsWithCC.CallingConv)
       OS << '_' << FuncsWithCC.CallingConv->getName();
 
-    OS << ") {\n"
-       << indent(IndentDepth + 4) << Receiver << "setAvailable(Impl);\n";
+    OS << ") {\n" << indent(IndentDepth + 4) << "setAvailable(Impl);\n";
 
     if (FuncsWithCC.CallingConv) {
       StringRef CCEnum =
           FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-      OS << indent(IndentDepth + 4) << Receiver
-         << "setLibcallImplCallingConv(Impl, " << CCEnum << ");\n";
+      OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
+         << CCEnum << ");\n";
     }
 
     OS << indent(IndentDepth + 2) << "}\n";
@@ -489,10 +495,9 @@ static void emitLibFuncSuffix(raw_ostream &OS, StringRef Name) {
 
 void RuntimeLibcallEmitter::emitLibraryFunction(
     raw_ostream &OS, StringRef Name, ArrayRef<const Record *> Libs) const {
-  // File-local; referenced only from the driver in the same fragment.
-  OS << "static void setAvailableLibFuncs_";
+  OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_";
   emitLibFuncSuffix(OS, Name);
-  OS << "(llvm::RTLIB::RuntimeLibcallsInfo &Info, const llvm::Triple &TT, "
+  OS << "(const llvm::Triple &TT, "
         "ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, "
         "EABI EABIVersion, StringRef ABIName, "
         "LongDoubleFormat LongDoubleFormat) {\n";
@@ -574,7 +579,7 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
     for (const RuntimeLibcallImpl *Impl : SharedCore)
       CorePred2Funcs[PredicateWithCC()].LibcallImpls.push_back(Impl);
     emitPredicateGroups(OS, Libs.front(), CorePred2Funcs, CoreSorter,
-                        /*BaseIndent=*/0, /*Receiver=*/"Info.");
+                        /*BaseIndent=*/0);
 
     for (ExpandedLibrary &EL : Expanded) {
       auto &Funcs = EL.Pred2Funcs[PredicateWithCC()].LibcallImpls;
@@ -597,7 +602,7 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
     }
 
     emitPredicateGroups(OS, EL.Lib, EL.Pred2Funcs, EL.PredicateSorter,
-                        /*BaseIndent=*/2, /*Receiver=*/"Info.");
+                        /*BaseIndent=*/2);
 
     if (!LibPred.isAlwaysAvailable()) {
       OS << indent(2);
@@ -610,16 +615,30 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
   OS << "}\n\n";
 }
 
-void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
-    raw_ostream &OS) const {
-  // Emit one function per distinct library name; same-named defs merge.
-  //
-  // TODO: SystemRuntimeLibrary does not yet dispatch to these
+MapVector<StringRef, std::vector<const Record *>>
+RuntimeLibcallEmitter::collectLibrariesByName() const {
   MapVector<StringRef, std::vector<const Record *>> LibsByName;
   for (const Record *Lib : Records.getAllDerivedDefinitions("LibcallLibrary"))
     LibsByName[Lib->getValueAsString("LibraryName")].push_back(Lib);
+  return LibsByName;
+}
 
-  for (const auto &[Name, Libs] : LibsByName)
+void RuntimeLibcallEmitter::emitRuntimeLibcallsInfoMemberDecls(
+    raw_ostream &OS) const {
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO_MEMBER_DECLS");
+  for (const auto &[Name, Libs] : collectLibrariesByName()) {
+    OS << "void setAvailableLibFuncs_";
+    emitLibFuncSuffix(OS, Name);
+    OS << "(const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
+          "FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, "
+          "LongDoubleFormat LongDoubleFormat);\n";
+  }
+}
+
+void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
+    raw_ostream &OS) const {
+  // Emit one function per distinct library name; same-named defs merge.
+  for (const auto &[Name, Libs] : collectLibrariesByName())
     emitLibraryFunction(OS, Name, Libs);
 
   ArrayRef<const Record *> AllLibs =
@@ -754,14 +773,13 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       OS << indent(4) << "if (isLibraryAvailable(\"" << LibName << "\"))\n"
          << indent(6) << "setAvailableLibFuncs_";
       emitLibFuncSuffix(OS, LibName);
-      OS << "(*this, TT, ExceptionModel, FloatABI, EABIVersion, ABIName, "
+      OS << "(TT, ExceptionModel, FloatABI, EABIVersion, ABIName, "
             "LongDoubleFormat);\n";
     }
     if (!DispatchLibs.empty())
       OS << '\n';
 
-    emitPredicateGroups(OS, R, Pred2Funcs, PredicateSorter, /*BaseIndent=*/2,
-                        /*Receiver=*/"");
+    emitPredicateGroups(OS, R, Pred2Funcs, PredicateSorter, /*BaseIndent=*/2);
 
     OS << indent(4) << "return;\n" << indent(2);
     TopLevelPredicate.emitEndIf(OS);
@@ -937,6 +955,8 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
   emitGetRuntimeLibcallEnum(OS);
 
   emitGetInitRuntimeLibcallNames(OS);
+
+  emitRuntimeLibcallsInfoMemberDecls(OS);
 
   {
     IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO");
