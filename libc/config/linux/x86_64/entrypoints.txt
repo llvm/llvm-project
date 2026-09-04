@@ -52,6 +52,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
+    libc.src.fcntl.posix_fadvise
 
     # net/if.h entrypoints
     libc.src.net.if_indextoname
