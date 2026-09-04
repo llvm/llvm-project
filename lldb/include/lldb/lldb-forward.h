@@ -22,6 +22,7 @@ class AddressRange;
 class AddressRanges;
 class AddressRangeList;
 class AddressResolver;
+class ProcessAddress;
 class ArchSpec;
 class Architecture;
 class Args;

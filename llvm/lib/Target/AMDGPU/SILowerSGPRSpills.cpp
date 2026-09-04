@@ -18,7 +18,6 @@
 #include "SILowerSGPRSpills.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIPreAllocateWWMRegs.h"
 #include "SISpillUtils.h"
@@ -427,12 +426,11 @@ void SILowerSGPRSpills::assignWWMRegs(MachineFunction &MF,
         "cannot find enough VGPRs for wwm-regalloc");
   }
 
-  BitVector NonWwmRegMask(WwmRegMask);
-  NonWwmRegMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
+  BitVector PerLaneVGPRMask(WwmRegMask);
+  PerLaneVGPRMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
 
-  // The complement set will be the registers for non-wwm (per-thread) vgpr
-  // allocation.
-  FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
+  // The complement set will be the registers for per-lane VGPR allocation.
+  FuncInfo->updatePerLaneVGPRMask(PerLaneVGPRMask);
 }
 
 bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {

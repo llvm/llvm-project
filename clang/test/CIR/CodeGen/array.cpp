@@ -175,9 +175,9 @@ void func() {
 // CIR" cir.store %[[TMP]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z4funcv(){{.*}}
-// LLVM-NEXT: %[[ARR:.*]] = alloca [10 x i32], i64 1, align 16
-// LLVM-NEXT: %[[INIT:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT: %[[ARR:.*]] = alloca [10 x i32], align 16
+// LLVM-NEXT: %[[INIT:.*]] = alloca i32, align 4
+// LLVM-NEXT: %[[INIT_2:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR]], i32 0, i64 0
 // LLVM-NEXT: %[[TMP_1:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // LLVM-NEXT: store i32 %[[TMP_1]], ptr %[[INIT]], align 4
@@ -204,7 +204,7 @@ void func2() {
 // CIR: cir.copy %[[CONST]] to %[[ARR2]] : !cir.ptr<!cir.array<!s32i x 2>>
 
 // LLVM: define{{.*}} void @_Z5func2v(){{.*}}
-// LLVM:   %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
+// LLVM:   %[[ARR:.*]] = alloca [2 x i32], align 4
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC2_ARR:.*]], i64 8, i1 false)
 
 // OGCG: %[[ARR:.*]] = alloca [2 x i32], align 4
@@ -231,9 +231,9 @@ void func3() {
 // CIR: cir.store{{.*}} %[[ELE_TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z5func3v(){{.*}}
-// LLVM:  %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
-// LLVM:  %[[IDX:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[ARR:.*]] = alloca [2 x i32], align 4
+// LLVM:  %[[IDX:.*]] = alloca i32, align 4
+// LLVM:  %[[INIT:.*]] = alloca i32, align 4
 // LLVM:  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC3_ARR:.*]], i64 8, i1 false)
 // LLVM:  store i32 1, ptr %[[IDX]], align 4
 // LLVM:  %[[TMP1:.*]] = load i32, ptr %[[IDX]], align 4
@@ -270,8 +270,8 @@ void func4() {
 // CIR: cir.store{{.*}} %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z5func4v(){{.*}}
-// LLVM:  %[[ARR:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
-// LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
+// LLVM:  %[[INIT:.*]] = alloca i32, align 4
 // LLVM:  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC4_ARR:.*]], i64 8, i1 false)
 // LLVM:  %[[ARR_1:.*]] = getelementptr [2 x [1 x i32]], ptr %[[ARR]], i32 0, i64 1
 // LLVM:  %[[ELE_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
@@ -295,7 +295,7 @@ void func5() {
 // CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
 
 // LLVM: define{{.*}} void @_Z5func5v(){{.*}}
-// LLVM:   %[[ARR:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
+// LLVM:   %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC5_ARR:.*]], i64 8, i1 false)
 
 // OGCG: %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
@@ -319,8 +319,8 @@ void func6() {
 // CIR: cir.store{{.*}} %[[V1]], %[[ELE_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z5func6v(){{.*}}
-// LLVM:  %[[VAR:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
+// LLVM:  %[[VAR:.*]] = alloca i32, align 4
+// LLVM:  %[[ARR:.*]] = alloca [2 x i32], align 4
 // LLVM:  store i32 4, ptr %[[VAR]], align 4
 // LLVM:  %[[ELE_0:.*]] = getelementptr i32, ptr %[[ARR]], i32 0
 // LLVM:  %[[TMP:.*]] = load i32, ptr %[[VAR]], align 4
@@ -345,7 +345,7 @@ void func7() {
 // CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>>
 
 // LLVM: define{{.*}} void @_Z5func7v(){{.*}}
-// LLVM:   %[[ARR:.*]] = alloca [1 x ptr], i64 1, align 8
+// LLVM:   %[[ARR:.*]] = alloca [1 x ptr], align 8
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[ARR]], ptr align 8 @[[FUNC7_ARR:.*]], i64 8, i1 false)
 
 // OGCG: %[[ARR:.*]] = alloca [1 x ptr], align 8
@@ -373,9 +373,9 @@ void func8(int arr[10]) {
 // CIR:  cir.store{{.*}} %[[TMP_4]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z5func8Pi(ptr {{.*}} %[[ARG:.*]]){{.*}}
-// LLVM:  %[[ARR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
-// LLVM:  %[[INIT_2:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[ARR:.*]] = alloca ptr, align 8
+// LLVM:  %[[INIT:.*]] = alloca i32, align 4
+// LLVM:  %[[INIT_2:.*]] = alloca i32, align 4
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8
 // LLVM:  %[[TMP_1:.*]] = load ptr, ptr %[[ARR]], align 8
 // LLVM:  %[[ELE_0:.*]] = getelementptr i32, ptr %[[TMP_1]], i64 0
@@ -416,8 +416,8 @@ void func9(int arr[10][5]) {
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z5func9PA5_i(ptr {{.*}} %[[ARG:.*]]){{.*}}
-// LLVM:  %[[ARR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[ARR:.*]] = alloca ptr, align 8
+// LLVM:  %[[INIT:.*]] = alloca i32, align 4
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8
 // LLVM:  %[[TMP_1:.*]] = load ptr, ptr %[[ARR]], align 8
 // LLVM:  %[[ARR_1:.*]] = getelementptr [5 x i32], ptr %[[TMP_1]], i64 1
@@ -449,8 +449,8 @@ void func10(int *a) {
 // CIR: cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} void @_Z6func10Pi(ptr {{.*}} %[[ARG:.*]]){{.*}} {
-// LLVM:  %[[ARR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[ARR:.*]] = alloca ptr, align 8
+// LLVM:  %[[INIT:.*]] = alloca i32, align 4
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8
 // LLVM:  %[[TMP_1:.*]] = load ptr, ptr %[[ARR]], align 8
 // LLVM:  %[[ELE:.*]] = getelementptr i32, ptr %[[TMP_1]], i64 5
@@ -469,7 +469,7 @@ void func11() { int _Complex a[4]; }
 
 // CIR: %[[ARR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.array<!cir.complex<!s32i> x 4>>
 
-// LLVM: %[[ARR:.*]] = alloca [4 x { i32, i32 }], i64 1, align 16
+// LLVM: %[[ARR:.*]] = alloca [4 x { i32, i32 }], align 16
 
 // OGCG: %[[ARR:.*]] = alloca [4 x { i32, i32 }], align 16
 
@@ -484,7 +484,7 @@ void func12() {
 
 // CIR: %[[ARR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.array<!rec_Point x 4>>
 
-// LLVM: %[[ARR:.*]] = alloca [4 x %struct.Point], i64 1, align 16
+// LLVM: %[[ARR:.*]] = alloca [4 x %struct.Point], align 16
 
 // OGCG: %[[ARR:.*]] = alloca [4 x %struct.Point], align 16
 
@@ -496,7 +496,7 @@ void array_with_complex_elements() {
 // CIR: %[[CONST:.*]] = cir.get_global @[[COMPLEX_ARR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
 // CIR: cir.copy %[[CONST]] to %[[ARR_ADDR]] : !cir.ptr<!cir.array<!cir.complex<!cir.float> x 2>>
 
-// LLVM: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], i64 1, align 16
+// LLVM: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR_ADDR]], ptr align 4 @[[COMPLEX_ARR:.*]], i64 16, i1 false)
 
 // OGCG: %[[ARR_ADDR:.*]] = alloca [2 x { float, float }], align 16

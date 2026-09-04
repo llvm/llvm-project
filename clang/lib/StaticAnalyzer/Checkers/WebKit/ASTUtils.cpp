@@ -104,6 +104,9 @@ bool tryToFindPtrOrigin(
         }
       }
 
+      if (isSafePtrType(call->getType()))
+        return callback(E, true);
+
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);

@@ -33,6 +33,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2327,6 +2328,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
     config->prefetchInputs = true;
 
+  config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
+  config->optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
+  config->optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
+  config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
+  if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
+    auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
+    if (!resultOrErr)
+      Err(ctx) << arg->getSpelling() << ": invalid argument '"
+               << arg->getValue() << "', only integer or 'auto' is supported";
+    else
+      config->optRemarksHotnessThreshold = *resultOrErr;
+  }
+
   if (errCount(ctx))
     return;
 
@@ -2841,8 +2855,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (ctx.hybridSymtab) {
     // On ARM64X, merge tls chunks, there may be only one true _tls_start and
-    // _tls_end chunk. Additionally, both views use the same _tls_used and
-    // _tls_index.
+    // _tls_end chunk.
     auto maybeReplaceWithNative = [&](StringRef name) {
       auto nativeSym = dyn_cast_or_null<DefinedRegular>(
           ctx.hybridSymtab->findUnderscore(name));
@@ -2852,8 +2865,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
               dyn_cast_or_null<DefinedRegular>(ctx.symtab.findUnderscore(name)))
         nativeSym->getChunk()->replace(ecSym->getChunk());
     };
-    maybeReplaceWithNative("_tls_used");
-    maybeReplaceWithNative("_tls_index");
     maybeReplaceWithNative("_tls_start");
     maybeReplaceWithNative("_tls_end");
   }

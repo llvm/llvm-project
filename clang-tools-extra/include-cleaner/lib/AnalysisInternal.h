@@ -25,7 +25,9 @@
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include <vector>
@@ -38,36 +40,35 @@ class NamedDecl;
 class SourceLocation;
 namespace include_cleaner {
 
-/// Traverses part of the AST from \p Root, finding uses of symbols.
+/// Traverses part of the AST from \p Roots, finding uses of symbols.
 ///
 /// Each use is reported to the callback:
 /// - the SourceLocation describes where the symbol was used. This is usually
-///   the primary location of the AST node found under Root.
+///   the primary location of the AST node found under Roots.
 /// - the NamedDecl is the symbol referenced. It is canonical, rather than e.g.
 ///   the redecl actually found by lookup.
 /// - the RefType describes the relation between the SourceLocation and the
 ///   NamedDecl.
 ///
-/// walkAST is typically called once per top-level declaration in the file
+/// walkAST is typically passed all top-level declarations in the file
 /// being analyzed, in order to find all references within it.
-void walkAST(Decl &Root,
+void walkAST(ArrayRef<Decl *> Roots,
              llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>);
 
 /// Finds the headers that provide the symbol location.
-llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
-                                              const SourceManager &SM,
-                                              const PragmaIncludes *PI);
+SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
+                                        const SourceManager &SM,
+                                        const PragmaIncludes *PI);
 
 /// A set of locations that provides the declaration.
 std::vector<Hinted<SymbolLocation>> locateSymbol(const Symbol &S,
                                                  const LangOptions &LO);
 
 /// Write an HTML summary of the analysis to the given stream.
-void writeHTMLReport(FileID File, const Includes &,
-                     llvm::ArrayRef<Decl *> Roots,
-                     llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
+void writeHTMLReport(FileID File, const Includes &, ArrayRef<Decl *> Roots,
+                     ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
                      const Preprocessor &PP, PragmaIncludes *PI,
-                     llvm::raw_ostream &OS);
+                     raw_ostream &OS);
 
 } // namespace include_cleaner
 } // namespace clang

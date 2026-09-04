@@ -21,10 +21,10 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SCHEDULER_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SCHEDULER_H
 
+#include "llvm/ADT/PriorityQueue.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
-#include <queue>
 #include <variant>
 
 namespace llvm::sandboxir {
@@ -59,58 +59,69 @@ class ReadyListContainer {
   /// These have to be modeled in the ready list for correctness.
   /// This means that the list will hold back nodes that need to meet such
   /// unmodeled dependencies.
-  std::priority_queue<DGNode *, std::vector<DGNode *>, PriorityCmp> List;
+  PriorityQueue<DGNode *, SmallVector<DGNode *, 32>, PriorityCmp> List;
+  /// Helper set for O(1) lookups.
+  SmallDenseSet<DGNode *, 32> Set;
 
 public:
   ReadyListContainer() : List(Cmp) {}
   void insert(DGNode *N) {
 #ifndef NDEBUG
     assert(!N->scheduled() && "Don't insert a scheduled node!");
-    auto ListCopy = List;
-    while (!ListCopy.empty()) {
-      DGNode *Top = ListCopy.top();
-      ListCopy.pop();
-      assert(Top != N && "Node already exists in ready list!");
-    }
+    assert(!contains(N) && "Node already exists in ready list!");
 #endif
     List.push(N);
+    Set.insert(N);
+    assert(List.size() == Set.size() && "List and Set out-of-sync!");
   }
   DGNode *pop() {
     auto *Back = List.top();
     List.pop();
+    Set.erase(Back);
+    assert(List.size() == Set.size() && "List and Set out-of-sync!");
     return Back;
   }
-  bool empty() const { return List.empty(); }
-  void clear() { List = {}; }
-  /// \Removes \p N if found in the ready list.
+  bool empty() const {
+    assert(List.empty() == Set.empty() && "List and Set out-of-sync!");
+    return List.empty();
+  }
+  void clear() {
+    List.clear();
+    Set.clear();
+  }
+  bool contains(DGNode *N) const {
+#ifndef NDEBUG
+    // TODO: We should eventually remove this check.
+    auto ListContains = [this](DGNode *N) {
+      auto ListCopy = List;
+      while (!ListCopy.empty()) {
+        DGNode *Top = ListCopy.top();
+        if (Top == N)
+          return true;
+        ListCopy.pop();
+      }
+      return false;
+    };
+    assert(ListContains(N) == Set.contains(N) && "List and Set out-of-sync!");
+#endif
+    return Set.contains(N);
+  }
+  /// \Removes \p N if found in the ready list. Note: this is linear time!
   void remove(DGNode *N) {
-    // TODO: Use a more efficient data-structure for the ready list because the
-    // priority queue does not support fast removals.
-    SmallVector<DGNode *, 8> Keep;
-    Keep.reserve(List.size());
-    while (!List.empty()) {
-      auto *Top = List.top();
-      List.pop();
-      if (Top == N)
-        break;
-      Keep.push_back(Top);
+    auto It = Set.find(N);
+    if (It != Set.end()) {
+      Set.erase(It);
+      // TODO: Use a more efficient data-structure for the ready list because
+      // the priority queue does not support fast removals.
+      List.erase_one(N);
+      assert(List.size() == Set.size() && "List and Set out-of-sync!");
     }
-    for (auto *KeepN : Keep)
-      List.push(KeepN);
   }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG
 };
-
-enum class SchedDirection {
-  BottomUp,
-  TopDown,
-};
-#ifndef NDEBUG
-StringLiteral schedDirectionToStr(SchedDirection Dir);
-#endif
 
 /// The nodes that need to be scheduled back-to-back in a single scheduling
 /// cycle form a SchedBundle.
@@ -160,10 +171,7 @@ public:
   LLVM_ABI void cluster(BasicBlock::iterator Where);
   /// \Returns true if all nodes in the bundle are ready.
   bool ready(SchedDirection Dir) const {
-    return all_of(Nodes, [Dir](const auto *N) {
-      return Dir == SchedDirection::BottomUp ? N->readyBottomUp()
-                                             : N->readyTopDown();
-    });
+    return all_of(Nodes, [](const auto *N) { return N->ready(); });
   }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
@@ -269,6 +277,22 @@ public:
     return Where == Other.Where;
   }
 #ifndef NDEBUG
+  /// Returns true if the scheduling point is after \p I in program order.
+  bool comesBefore(Instruction &I) const {
+    if (BasicBlock *BB = atEndOrNull()) {
+      // All instructions are before BB end.
+      assert(BB == I.getParent() && "We don't support crossing BBs!");
+      return false;
+    }
+    if (BasicBlock *BB = atBeforeBeginOrNull()) {
+      // Before begin is always before any instruction.
+      assert(BB == I.getParent() && "We don't support crossing BBs!");
+      return true;
+    }
+    Instruction *SchedPointI = atInstrOrNull();
+    assert(SchedPointI != nullptr && "Should have been already handled!");
+    return SchedPointI->comesBefore(&I);
+  }
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
@@ -332,12 +356,16 @@ class Scheduler {
   Scheduler(const Scheduler &) = delete;
   Scheduler &operator=(const Scheduler &) = delete;
 
-private:
   SchedDirection Dir = SchedDirection::BottomUp;
+#ifndef NDEBUG
+  /// Asserts that \p Instrs are above the scheduling frontier if scheduling
+  /// bottom-up or below it if scheduling top-down.
+  void assertSameDirection(ArrayRef<Instruction *> Instrs) const;
+#endif
 
 public:
   Scheduler(AAResults &AA, Context &Ctx, SchedDirection Dir)
-      : DAG(AA, Ctx), Ctx(Ctx), Dir(Dir) {
+      : DAG(Dir, AA, Ctx), Ctx(Ctx), Dir(Dir) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
     CreateInstrCB = Ctx.registerCreateInstrCallback(

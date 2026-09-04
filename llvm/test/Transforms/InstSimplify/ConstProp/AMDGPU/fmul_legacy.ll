@@ -32,9 +32,9 @@ define void @test(ptr %p) {
   store volatile float %f, ptr %p
   %g = call float @llvm.amdgcn.fmul.legacy(float -0.0, float -0.0)
   store volatile float %g, ptr %p
-  %h = call float @llvm.amdgcn.fmul.legacy(float +0.0, float 0x7ff0000000000000) ; +inf
+  %h = call float @llvm.amdgcn.fmul.legacy(float +0.0, float +inf) ; +inf
   store volatile float %h, ptr %p
-  %i = call float @llvm.amdgcn.fmul.legacy(float 0xfff0000000000000, float +0.0) ; -inf
+  %i = call float @llvm.amdgcn.fmul.legacy(float -inf, float +0.0) ; -inf
   store volatile float %i, ptr %p
   %j = call float @llvm.amdgcn.fmul.legacy(float 0x7ff0001000000000, float -0.0) ; +nan
   store volatile float %j, ptr %p

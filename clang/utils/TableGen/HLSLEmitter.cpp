@@ -329,6 +329,14 @@ static void emitVectorOverload(const OverloadContext &Ctx, StringRef ElemType,
   });
 }
 
+/// Emit a dependent-size vector template overload for the given element type.
+static void emitLongVectorOverload(const OverloadContext &Ctx,
+                                   StringRef ElemType) {
+  emitOverload(Ctx, ElemType, [](StringRef ET) {
+    return ("vector<__detail::enable_if_t<(N > 4), " + ET + ">, N>").str();
+  });
+}
+
 /// Emit a matrix overload for the given element type and matrix dimensions.
 static void emitMatrixOverload(const OverloadContext &Ctx, StringRef ElemType,
                                unsigned Rows, unsigned Cols) {
@@ -459,6 +467,7 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
                                   ArrayRef<TypeWorkItem> Worklist,
                                   bool EmitScalarOverload,
                                   ArrayRef<int64_t> VectorSizes,
+                                  bool EmitLongVectorOverload,
                                   ArrayRef<const Record *> MatrixDimensions) {
   bool InIfdef = false;
   for (size_t I = 0, E = Worklist.size(); I != E; ++I) {
@@ -480,6 +489,11 @@ static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
     for (int64_t N : VectorSizes) {
       EmitAvail();
       emitVectorOverload(Ctx, Item.ElemType, N);
+    }
+    if (EmitLongVectorOverload) {
+      OS << "template <int N>\n";
+      EmitAvail();
+      emitLongVectorOverload(Ctx, Item.ElemType);
     }
     for (const Record *MD : MatrixDimensions) {
       EmitAvail();
@@ -517,6 +531,7 @@ static void emitBuiltinOverloads(raw_ostream &OS, const Record *R) {
                             R->getValueAsListOfDefs("VaryingTypes").empty();
 
   std::vector<int64_t> VectorSizes = R->getValueAsListOfInts("VaryingVecSizes");
+  bool EmitLongVectorOverload = R->getValueAsBit("VaryingLongVector");
   std::vector<const Record *> MatrixDimensions =
       R->getValueAsListOfDefs("VaryingMatDims");
 
@@ -530,7 +545,7 @@ static void emitBuiltinOverloads(raw_ostream &OS, const Record *R) {
   });
 
   emitWorklistOverloads(OS, Ctx, Worklist, EmitScalarOverload, VectorSizes,
-                        MatrixDimensions);
+                        EmitLongVectorOverload, MatrixDimensions);
 }
 
 /// Emit alias overloads for a single HLSLBuiltin record.

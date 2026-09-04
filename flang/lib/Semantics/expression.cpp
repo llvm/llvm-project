@@ -343,7 +343,7 @@ static bool FoldSubscripts(semantics::SemanticsContext &context,
   return !anyPossiblyEmptyDim;
 }
 
-static void ValidateSubscriptValue(parser::ContextualMessages &messages,
+static void ValidateSubscriptValue(semantics::SemanticsContext &context,
     const Symbol &symbol, ConstantSubscript val,
     std::optional<ConstantSubscript> lb, std::optional<ConstantSubscript> ub,
     int dim, const char *co = "") {
@@ -363,7 +363,32 @@ static void ValidateSubscriptValue(parser::ContextualMessages &messages,
       msg->set_severity(parser::Severity::Warning);
     }
   }
-  if (msg) {
+  if (!msg) {
+    return;
+  }
+  parser::ContextualMessages &messages{context.foldingContext().messages()};
+  if (msg->severity() == parser::Severity::ErrorUnlessDeadCode && *co == '\0' &&
+      context.IsEnabled(common::LanguageFeature::OutOfBoundsSubscripts)) {
+    // A subscript value is required to be within its bounds only when the
+    // reference is executed (F'2023 9.5.3.1 p2), so a reference that appears
+    // in code that never runs does not render the program nonconforming.
+    // That case can't be recognized in general -- consider a procedure whose
+    // only call site is in dead code, or one that is never called at all --
+    // so by default these references are accepted with a warning, and
+    // -fno-out-of-bounds-subscripts restores a hard error.  The endpoints of
+    // array sections are validated here too and get the same treatment.
+    //
+    // Cosubscripts (a nonempty 'co') are deliberately excluded: their
+    // requirement is F'2023 9.6 p2 rather than 9.5.3.1 p2, and a cosubscript
+    // list determines an image index, so an out-of-cobounds constant
+    // cosubscript remains a hard error.
+    msg->set_severity(parser::Severity::Warning);
+    AttachDeclaration(
+        context.Warn(messages, common::LanguageFeature::OutOfBoundsSubscripts,
+            std::move(*msg), co, static_cast<std::intmax_t>(val), co,
+            static_cast<std::intmax_t>(bound.value()), co, dim + 1),
+        symbol);
+  } else {
     AttachDeclaration(
         messages.Say(std::move(*msg), co, static_cast<std::intmax_t>(val), co,
             static_cast<std::intmax_t>(bound.value()), co, dim + 1),
@@ -416,8 +441,8 @@ static void ValidateSubscripts(semantics::SemanticsContext &context,
     }
     for (int j{0}; j < vals; ++j) {
       if (val[j]) {
-        ValidateSubscriptValue(context.foldingContext().messages(), arraySymbol,
-            *val[j], dimLB, dimUB, dim);
+        ValidateSubscriptValue(
+            context, arraySymbol, *val[j], dimLB, dimUB, dim);
       }
     }
     ++dim;
@@ -441,7 +466,7 @@ static void CheckCosubscripts(
   for (auto &expr : ref.cosubscript()) {
     expr = Fold(foldingContext, std::move(expr));
     if (auto val{ToInt64(expr)}) {
-      ValidateSubscriptValue(foldingContext.messages(), coarraySymbol, *val,
+      ValidateSubscriptValue(context, coarraySymbol, *val,
           ToInt64(GetLCOBOUND(coarraySymbol, dim)),
           ToInt64(GetUCOBOUND(coarraySymbol, dim)), dim, "co");
     }
@@ -2715,7 +2740,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
               latest{DEREF(dyType->GetDerivedTypeSpec().typeSymbol().scope())
                          .FindComponent(sym->name())}) {
             if (sym->attrs().test(semantics::Attr::PRIVATE)) {
-              const auto *bindingModule{FindModuleContaining(generic.owner())};
+              const auto *bindingModule{FindModuleContaining(sym->owner())};
               const Symbol *s{latest};
               while (s && FindModuleContaining(s->owner()) != bindingModule) {
                 if (const auto *parent{s->owner().GetDerivedTypeParent()}) {
@@ -3204,7 +3229,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *elemental{nullptr}; // matching elemental specific proc
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
-  if (genericDetails && !explicitIntrinsic) {
+  if (genericDetails) {
     std::optional<CudaMatchingDistance> crtMatchingDistance;
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
       const Symbol &specific1{BypassGeneric(specific0)};
@@ -3273,15 +3298,15 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
   }
 
-  // Return the right resolution, if there is one.  Explicit intrinsics
-  // are preferred, then non-elements specifics, then elementals, and
-  // lastly structure constructors.
-  if (explicitIntrinsic) {
-    return {explicitIntrinsic, false};
-  } else if (nonElemental) {
+  // Return the right resolution, if there is one. Non-elemental specifics
+  // are preferred, then elementals, then explicit intrinsics, and lastly
+  // structure constructors.
+  if (nonElemental) {
     return {&AccessSpecific(symbol, *nonElemental), false};
   } else if (elemental) {
     return {&AccessSpecific(symbol, *elemental), false};
+  } else if (explicitIntrinsic) {
+    return {explicitIntrinsic, false};
   }
   // Check parent derived type
   if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
@@ -3851,6 +3876,16 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             } else if (context_.langOptions().NoReallocateLHS) {
               Warn(common::UsageWarning::IgnoredNoReallocateLHS,
                   "-fno-realloc-lhs is ignored for assignment to polymorphic allocatable"_warn_en_US);
+            }
+            const Expr<SomeType> &rhs{analyzer.GetExpr(1)};
+            if (auto rhsType{rhs.GetType()}) {
+              if (const auto *rhsDerived{GetDerivedTypeSpec(*rhsType)}) {
+                if (rhsDerived->IsVectorType()) {
+                  Say(rhsExpr.source,
+                      "Vector type '%s' may not be used as the right-hand side of a polymorphic intrinsic assignment"_err_en_US,
+                      rhsType->AsFortran());
+                }
+              }
             }
           }
           if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
@@ -5581,7 +5616,40 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   bool isAmbiguous{false};
   if (std::optional<ProcedureRef> procRef{
           GetDefinedAssignmentProc(isAmbiguous)}) {
-    if (context_.inWhereBody() && !procRef->proc().IsElemental()) { // C1032
+    bool hasCUDADeviceRhs{false};
+    for (const semantics::Symbol &symbol : CollectCudaSymbols(rhs)) {
+      if (semantics::IsCUDADevice(symbol)) {
+        hasCUDADeviceRhs = true;
+        break;
+      }
+    }
+    const semantics::Symbol *rhsSymbol{UnwrapWholeSymbolDataRef(rhs)};
+    bool hasCUDADeviceAssociateRhs{false};
+    if (rhsSymbol) {
+      if (const auto *associate{
+              rhsSymbol->detailsIf<semantics::AssocEntityDetails>()}) {
+        if (const auto &selector{associate->expr()}) {
+          for (const semantics::Symbol &symbol :
+              CollectCudaSymbols(*selector)) {
+            if (semantics::IsCUDADevice(symbol)) {
+              hasCUDADeviceAssociateRhs = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (hasCUDADeviceRhs && context_.inWhereBody()) {
+      context_.Say(
+          "Defined assignment in WHERE with a CUDA DEVICE right-hand side is not yet implemented"_todo_en_US);
+    } else if (hasCUDADeviceRhs && procRef->proc().IsElemental()) {
+      context_.Say(
+          "Elemental defined assignment with a CUDA DEVICE right-hand side is not yet implemented"_todo_en_US);
+    } else if (hasCUDADeviceAssociateRhs) {
+      context_.Say(
+          "Defined assignment from an ASSOCIATE name with a CUDA DEVICE target is not yet implemented"_todo_en_US);
+    } else if (context_.inWhereBody() &&
+        !procRef->proc().IsElemental()) { // C1032
       context_.Say(
           "Defined assignment in WHERE must be elemental, but '%s' is not"_err_en_US,
           DEREF(procRef->proc().GetSymbol()).name());
@@ -5673,17 +5741,32 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
   }
   ActualArguments actualsCopy{actuals_};
   // Ensure that the RHS argument is not passed as a variable unless
-  // the dummy argument has the VALUE attribute.
-  if (evaluate::IsVariable(actualsCopy.at(1).value().UnwrapExpr())) {
+  // the dummy argument has the VALUE attribute, or the actual's own attributes
+  // already require reference semantics that must be preserved.
+  if (const auto *rhsExpr{actualsCopy.at(1).value().UnwrapExpr()};
+      evaluate::IsVariable(rhsExpr)) {
     auto chars{evaluate::characteristics::Procedure::Characterize(
         *proc, context_.GetFoldingContext())};
     const auto *rhsDummy{chars && chars->dummyArguments.size() == 2
             ? std::get_if<evaluate::characteristics::DummyDataObject>(
                   &chars->dummyArguments.at(1).u)
             : nullptr};
-    if (!rhsDummy ||
-        !rhsDummy->attrs.test(
-            evaluate::characteristics::DummyDataObject::Attr::Value)) {
+    std::optional<common::CUDADataAttr> rhsDataAttr;
+    for (const Symbol &symbol : evaluate::GetSymbolVector(*rhsExpr)) {
+      if (auto cudaAttr{GetCUDADataAttr(&symbol)}) {
+        rhsDataAttr = *cudaAttr;
+      }
+    }
+    const Symbol *rhsFirstSymbol{evaluate::GetFirstSymbol(*rhsExpr)};
+    // TODO: This DEVICE exception may need to be limited to device-to-host
+    // transfers or to RHS references that appear in unambiguous host code.
+    const bool preserveActualReference{
+        (rhsDataAttr && *rhsDataAttr == common::CUDADataAttr::Device) ||
+        (rhsFirstSymbol && IsValue(*rhsFirstSymbol))};
+    if (!preserveActualReference &&
+        (!rhsDummy ||
+            !rhsDummy->attrs.test(
+                evaluate::characteristics::DummyDataObject::Attr::Value))) {
       actualsCopy.at(1).value().Parenthesize();
     }
   }
@@ -5875,6 +5958,17 @@ void ArgumentAnalyzer::ConvertBOZAssignmentRHS(const DynamicType &lhsType) {
       lhsType.category() == TypeCategory::Unsigned ||
       lhsType.category() == TypeCategory::Real) {
     Expr<SomeType> rhs{MoveExpr(1)};
+    if (lhsType.category() == TypeCategory::Integer ||
+        lhsType.category() == TypeCategory::Unsigned) {
+      if (const auto *boz{std::get_if<BOZLiteralConstant>(&rhs.u)};
+          boz && boz->bits - boz->LEADZ() > lhsType.kind() * 8) {
+        context_.Warn(common::UsageWarning::BOZLiteralTruncation,
+            "BOZ literal constant is too large for %s(KIND=%d) assignment target; truncated"_warn_en_US,
+            lhsType.category() == TypeCategory::Unsigned ? "UNSIGNED"
+                                                         : "INTEGER",
+            lhsType.kind());
+      }
+    }
     if (MaybeExpr converted{ConvertToType(lhsType, std::move(rhs))}) {
       actuals_[1] = std::move(*converted);
     }

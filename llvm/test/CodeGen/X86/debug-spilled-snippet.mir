@@ -1,4 +1,4 @@
-# RUN: llc -mtriple i386 -start-before=greedy -stop-after=livedebugvars %s -o - | FileCheck %s
+# RUN: llc -mtriple i386 -start-before=greedy -stop-before=x86-asm-printer %s -o - | FileCheck %s
 
 # There should be multiple debug values for this variable after regalloc. The
 # value has been spilled, but we shouldn't lose track of the location because

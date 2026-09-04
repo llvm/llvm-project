@@ -26,11 +26,25 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// This function is separated from formatter<bool> to avoid pulling in a bunch of code from <format> that we aren't
+// These functions are separated from formatter<bool> to avoid pulling in a bunch of code from <format> that we aren't
 // required to provide in other headers where we need formatter<bool> itself to be complete.
+
+template <__fmt_char_type _CharT, class _ParseContext>
+_LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator
+__formatter_bool_parse(__format_spec::__parser_data<_CharT>& __parser_data, _ParseContext& __ctx) {
+  __format_spec::__parser<_CharT> __parser(__parser_data);
+
+  typename _ParseContext::iterator __result = __parser.__parse(__ctx, __format_spec::__fields_integral);
+  __format_spec::__process_parsed_bool(__parser, "a bool");
+  __parser_data = __parser;
+  return __result;
+}
+
 template <__fmt_char_type _CharT, class _FormatContext>
 _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
-__formatter_bool_format(bool __value, __format_spec::__parser<_CharT> __parser, _FormatContext& __ctx) {
+__formatter_bool_format(bool __value, __format_spec::__parser_data<_CharT> __parser_data, _FormatContext& __ctx) {
+  __format_spec::__parser<_CharT> __parser(__parser_data);
+
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__string:

@@ -11,9 +11,8 @@ end subroutine
 
 ! HLFIR-LABEL: func.func @_QPallocator_omitted
 ! HLFIR: %[[NULL_ALLOC:.*]] = arith.constant 0 : i32
-! HLFIR: omp.parallel allocate(%[[NULL_ALLOC]] : i32 -> %[[X:.*]]#0 : !fir.ref<i32>)
+! HLFIR: omp.parallel allocate(%[[NULL_ALLOC]] : i32 -> %[[X:.*]]#0 : !fir.ref<i32>) allocate_private_indices([0])
 ! HLFIR-SAME: private({{.*}} %[[X]]#0 -> %[[X_PRIVATE:.*]], {{.*}} -> %[[Y_PRIVATE:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-! HLFIR: } {allocate_private_indices = array<i64: 0>}
 
 subroutine allocator_explicit(x)
   use omp_lib
@@ -45,9 +44,8 @@ end subroutine
 
 ! HLFIR-LABEL: func.func @_QPallocator_dynamic
 ! HLFIR: %[[ALLOCATOR:.*]] = fir.load
-! HLFIR: omp.parallel allocate(%[[ALLOCATOR]] : i64 -> %[[X:.*]]#0 : !fir.ref<i32>)
+! HLFIR: omp.parallel allocate(%[[ALLOCATOR]] : i64 -> %[[X:.*]]#0 : !fir.ref<i32>) allocate_private_indices([0])
 ! HLFIR-SAME: private({{.*}} %[[X]]#0 -> %[[X_PRIVATE:.*]] : !fir.ref<i32>) {
-! HLFIR: } {allocate_private_indices = array<i64: 0>}
 
 function allocator_value() result(allocator)
   use omp_lib, only : omp_allocator_handle_kind, omp_default_mem_alloc
@@ -67,8 +65,7 @@ end subroutine
 
 ! HLFIR-LABEL: func.func @_QPallocator_expression
 ! HLFIR-COUNT-1: fir.call @_QPallocator_value()
-! HLFIR: omp.parallel allocate(%[[ALLOCATOR:.*]] : i64 -> %{{.*}}#0 : !fir.ref<i32>, %[[ALLOCATOR]] : i64 -> %{{.*}}#0 : !fir.ref<i32>)
-! HLFIR: } {allocate_private_indices = array<i64: 0, 1>}
+! HLFIR: omp.parallel allocate(%[[ALLOCATOR:.*]] : i64 -> %{{.*}}#0 : !fir.ref<i32>, %[[ALLOCATOR]] : i64 -> %{{.*}}#0 : !fir.ref<i32>) allocate_private_indices([0, 1])
 
 subroutine allocator_host_associated()
   integer :: x
@@ -81,9 +78,8 @@ contains
 end subroutine
 
 ! HLFIR-LABEL: func.func private @_QFallocator_host_associatedPinner
-! HLFIR: omp.parallel allocate({{.*}} -> %[[X:.*]]#0 : !fir.ref<i32>)
+! HLFIR: omp.parallel allocate({{.*}} -> %[[X:.*]]#0 : !fir.ref<i32>) allocate_private_indices([0])
 ! HLFIR-SAME: private({{.*}} %[[X]]#0 -> {{.*}} : !fir.ref<i32>) {
-! HLFIR: } {allocate_private_indices = array<i64: 0>}
 
 subroutine allocator_order(x, y, z)
   use omp_lib
@@ -99,8 +95,8 @@ end subroutine
 
 ! HLFIR-LABEL: func.func @_QPallocator_order
 ! HLFIR: omp.parallel allocate(
+! HLFIR-SAME: allocate_private_indices([1, 0, 2])
 ! HLFIR-SAME: private(
-! HLFIR: } {allocate_private_indices = array<i64: 1, 0, 2>}
 
 subroutine allocator_scalar_types(r, c, l, s)
   real :: r
@@ -116,7 +112,8 @@ subroutine allocator_scalar_types(r, c, l, s)
 end subroutine
 
 ! HLFIR-LABEL: func.func @_QPallocator_scalar_types
-! HLFIR: } {allocate_private_indices = array<i64: 0, 1, 2, 3>}
+! HLFIR: omp.parallel allocate(
+! HLFIR-SAME: allocate_private_indices([0, 1, 2, 3])
 
 subroutine allocator_common_block(y)
   integer :: x1, x2, y
@@ -131,7 +128,25 @@ end subroutine
 ! A privatized common block contributes one private operand per member, so the
 ! recorded index of an allocated item must account for that expansion.
 ! HLFIR-LABEL: func.func @_QPallocator_common_block
-! HLFIR: omp.parallel allocate({{.*}} -> %[[Y:.*]]#0 : !fir.ref<i32>)
+! HLFIR: omp.parallel allocate({{.*}} -> %[[Y:.*]]#0 : !fir.ref<i32>) allocate_private_indices([2])
 ! HLFIR-SAME: private({{.*}} -> %{{.*}}, {{.*}} -> %{{.*}}, {{.*}} %[[Y]]#0 -> %{{.*}} :
 ! HLFIR-SAME: !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
-! HLFIR: } {allocate_private_indices = array<i64: 2>}
+
+subroutine allocator_alignment(x, y, z, w)
+  use omp_lib
+  integer :: x, y, z, w
+  !$omp parallel private(x, y, z) firstprivate(w) &
+  !$omp& allocate(x) &
+  !$omp& allocate(align(64): y, z) &
+  !$omp& allocate(allocator(omp_default_mem_alloc), align(128): w)
+    x = 1
+    y = 2
+    z = 3
+    w = w + 1
+  !$omp end parallel
+end subroutine
+
+! HLFIR-LABEL: func.func @_QPallocator_alignment
+! HLFIR: omp.parallel allocate(
+! HLFIR-SAME: allocate_alignments([0, 64, 64, 128]) allocate_private_indices([0, 1, 2, 3])
+! HLFIR-SAME: private(

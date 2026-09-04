@@ -4,6 +4,7 @@
 // UNSUPPORTED: i386-darwin
 // XFAIL: ubsan
 // XFAIL: android && asan
+// UNSUPPORTED: rtsan
 
 // RUN: %clangxx -O0 %s -S -o - -emit-llvm -fsanitize-coverage=trace-pc,bb,no-prune 2>&1 | grep "call void @__sanitizer_cov_trace_pc" | count 3
 // RUN: %clangxx -O0 %s -S -o - -emit-llvm -fsanitize-coverage=trace-pc,bb          2>&1 | grep "call void @__sanitizer_cov_trace_pc" | count 2

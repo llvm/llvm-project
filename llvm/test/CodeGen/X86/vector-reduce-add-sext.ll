@@ -2411,11 +2411,10 @@ define i8 @test_v32i8_v32i1(<32 x i8> %a0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
@@ -2426,11 +2425,10 @@ define i8 @test_v32i8_v32i1(<32 x i8> %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; AVX512-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -2521,8 +2519,7 @@ define i8 @test_v64i8_v64i1(<64 x i8> %a0) nounwind {
 ; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    vzeroupper
@@ -2539,8 +2536,7 @@ define i8 @test_v64i8_v64i1(<64 x i8> %a0) nounwind {
 ; AVX512F-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512F-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512F-NEXT:    vzeroupper
@@ -2557,8 +2553,7 @@ define i8 @test_v64i8_v64i1(<64 x i8> %a0) nounwind {
 ; AVX512VL-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512VL-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512VL-NEXT:    vzeroupper
@@ -2759,8 +2754,7 @@ define i8 @test_v128i8_v128i1(<128 x i8> %a0) nounwind {
 ; X86-AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X86-AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpsadbw %xmm3, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-AVX2-NEXT:    movl %ebp, %esp
@@ -2782,8 +2776,7 @@ define i8 @test_v128i8_v128i1(<128 x i8> %a0) nounwind {
 ; X64-AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsadbw %xmm4, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    vzeroupper
@@ -2805,8 +2798,7 @@ define i8 @test_v128i8_v128i1(<128 x i8> %a0) nounwind {
 ; AVX512F-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512F-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512F-NEXT:    vzeroupper
@@ -2828,8 +2820,7 @@ define i8 @test_v128i8_v128i1(<128 x i8> %a0) nounwind {
 ; AVX512VL-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512VL-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512VL-NEXT:    vzeroupper
