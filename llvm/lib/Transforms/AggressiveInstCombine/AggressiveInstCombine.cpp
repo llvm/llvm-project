@@ -1462,8 +1462,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   IRBuilder<> Builder(&I);
   LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
 
-  // DL based checks if we want to proceed with wider load
-  bool Allowed = DL.isLegalInteger(LOps.LoadSize);
+  // Allow a power of 2 number of bytes that fit in a legal integer type.
+  bool Allowed = LOps.LoadSize >= 16 && isPowerOf2_64(LOps.LoadSize) &&
+                 DL.fitsInLegalInteger(LOps.LoadSize);
   if (!Allowed)
     return false;
 
@@ -1562,7 +1563,9 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
   unsigned Fast = 0;
-  if (!DL.isLegalInteger(Width) ||
+  bool Allowed = Width >= 16 && isPowerOf2_64(Width) &&
+                 DL.fitsInLegalInteger(Width);
+  if (!Allowed ||
       !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
                                           First.Store->getAlign(), &Fast) ||

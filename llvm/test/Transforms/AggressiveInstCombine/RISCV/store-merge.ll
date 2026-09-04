@@ -5,12 +5,7 @@
 define void @test_i16(i16 %x, ptr %p) {
 ; CHECK-LABEL: define void @test_i16(
 ; CHECK-SAME: i16 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[X_0:%.*]] = trunc i16 [[X]] to i8
-; CHECK-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
-; CHECK-NEXT:    [[SHR_1:%.*]] = lshr i16 [[X]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i16 [[SHR_1]] to i8
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 [[X_1]], ptr [[GEP_1]], align 1
+; CHECK-NEXT:    store i16 [[X]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %x.0 = trunc i16 %x to i8
