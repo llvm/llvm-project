@@ -26,8 +26,8 @@ func.func @transpose_fold_dense_resource() -> tensor<2x2xf32> {
 func.func @transpose_fold_dense_resource_f8e4m3fn() -> tensor<2x2xf8E4M3FN> {
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xf8E4M3FN>}> : () -> tensor<2x2xf8E4M3FN>
 
-  //               CHECK: %[[CST:.+]] = "tosa.const"() <{
-  // CHECK-SAME{LITERAL}: values = dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf8E4M3FN>
+  //               CHECK: %[[CST:.+]] = tosa.const values(
+  // CHECK-SAME{LITERAL}: dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf8E4M3FN>
   %1 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xf8E4M3FN>) -> tensor<2x2xf8E4M3FN>
   // CHECK: return %[[CST]]
   return %1 : tensor<2x2xf8E4M3FN>
@@ -46,8 +46,8 @@ func.func @transpose_fold_dense_resource_f8e4m3fn() -> tensor<2x2xf8E4M3FN> {
 func.func @transpose_fold_dense_resource_f8e5m2() -> tensor<2x2xf8E5M2> {
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xf8E5M2>}> : () -> tensor<2x2xf8E5M2>
 
-  //               CHECK: %[[CST:.+]] = "tosa.const"() <{
-  // CHECK-SAME{LITERAL}: values = dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf8E5M2>
+  //               CHECK: %[[CST:.+]] = tosa.const values(
+  // CHECK-SAME{LITERAL}: dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf8E5M2>
   %1 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xf8E5M2>) -> tensor<2x2xf8E5M2>
   // CHECK: return %[[CST]]
   return %1 : tensor<2x2xf8E5M2>
@@ -66,8 +66,8 @@ func.func @transpose_fold_dense_resource_f8e5m2() -> tensor<2x2xf8E5M2> {
 func.func @transpose_fold_dense_resource_f4e2m1fn() -> tensor<2x2xf4E2M1FN> {
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xf4E2M1FN>}> : () -> tensor<2x2xf4E2M1FN>
 
-  //               CHECK: %[[CST:.+]] = "tosa.const"() <{
-  // CHECK-SAME{LITERAL}: values = dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf4E2M1FN>
+  //               CHECK: %[[CST:.+]] = tosa.const values(
+  // CHECK-SAME{LITERAL}: dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf4E2M1FN>
   %1 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xf4E2M1FN>) -> tensor<2x2xf4E2M1FN>
   // CHECK: return %[[CST]]
   return %1 : tensor<2x2xf4E2M1FN>
@@ -86,8 +86,8 @@ func.func @transpose_fold_dense_resource_f4e2m1fn() -> tensor<2x2xf4E2M1FN> {
 func.func @transpose_fold_dense_resource_f16() -> tensor<2x2xf16> {
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xf16>}> : () -> tensor<2x2xf16>
 
-  //               CHECK: %[[CST:.+]] = "tosa.const"() <{
-  // CHECK-SAME{LITERAL}: values = dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf16>
+  //               CHECK: %[[CST:.+]] = tosa.const values(
+  // CHECK-SAME{LITERAL}: dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf16>
   %1 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xf16>) -> tensor<2x2xf16>
   // CHECK: return %[[CST]]
   return %1 : tensor<2x2xf16>
@@ -106,8 +106,8 @@ func.func @transpose_fold_dense_resource_f16() -> tensor<2x2xf16> {
 func.func @transpose_fold_dense_resource_bf16() -> tensor<2x2xbf16> {
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xbf16>}> : () -> tensor<2x2xbf16>
 
-  //               CHECK: %[[CST:.+]] = "tosa.const"() <{
-  // CHECK-SAME{LITERAL}: values = dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xbf16>
+  //               CHECK: %[[CST:.+]] = tosa.const values(
+  // CHECK-SAME{LITERAL}: dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xbf16>
   %1 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xbf16>) -> tensor<2x2xbf16>
   // CHECK: return %[[CST]]
   return %1 : tensor<2x2xbf16>
@@ -126,8 +126,8 @@ func.func @transpose_fold_dense_resource_bf16() -> tensor<2x2xbf16> {
 func.func @transpose_fold_dense_resource_f64() -> tensor<2x2xf64> {
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xf64>}> : () -> tensor<2x2xf64>
 
-  //               CHECK: %[[CST:.+]] = "tosa.const"() <{
-  // CHECK-SAME{LITERAL}: values = dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf64>
+  //               CHECK: %[[CST:.+]] = tosa.const values(
+  // CHECK-SAME{LITERAL}: dense<[[1.000000e+00, 3.000000e+00], [2.000000e+00, 4.000000e+00]]> : tensor<2x2xf64>
   %1 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xf64>) -> tensor<2x2xf64>
   // CHECK: return %[[CST]]
   return %1 : tensor<2x2xf64>

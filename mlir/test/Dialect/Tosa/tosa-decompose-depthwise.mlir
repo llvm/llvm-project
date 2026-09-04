@@ -32,12 +32,12 @@ func.func @depthwise_conv2d_as_mul(%arg0: tensor<4x10x10x2xf32>, %arg1: tensor<1
 // CHECK-LABEL: @depthwise_conv2d_as_mul_q
 func.func @depthwise_conv2d_as_mul_q(%arg0: tensor<4x10x10x2xi8>, %arg1: tensor<1x1x2x3xi8>, %arg2: tensor<6xi32>) -> tensor<4x10x10x6xi32> {
   // CHECK-DAG: %[[CONST0:.+]] = tosa.const_shape {values = dense<[4, 10, 10, 2, 1]> : tensor<5xindex>
-  // CHECK-DAG: %[[INPUT_ZP:.+]] = "tosa.const"() <{values = dense<7> : tensor<1x1x1x1x1xi32>}
-  // CHECK-DAG: %[[WEIGHT_ZP:.+]] = "tosa.const"() <{values = dense<11> : tensor<1x1x1x1xi32>}
+  // CHECK-DAG: %[[INPUT_ZP:.+]] = tosa.const values(dense<7> : tensor<1x1x1x1x1xi32>)
+  // CHECK-DAG: %[[WEIGHT_ZP:.+]] = tosa.const values(dense<11> : tensor<1x1x1x1xi32>)
   // CHECK-DAG: %[[CONST3:.+]] = tosa.const_shape {values = dense<[1, 1, 1, 2, 3]> : tensor<5xindex>
   // CHECK-DAG: %[[CONST4:.+]] = tosa.const_shape {values = dense<[4, 10, 10, 6]> : tensor<4xindex>
   // CHECK-DAG: %[[CONST5:.+]] = tosa.const_shape {values = dense<[1, 1, 1, 6]> : tensor<4xindex>
-  // CHECK-DAG: %[[SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK-DAG: %[[SHIFT:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
   // CHECK: %[[RESHAPE_I:.+]] = tosa.reshape %arg0, %[[CONST0]]
   // CHECK: %[[CAST_I:.+]] = tosa.cast %[[RESHAPE_I]] : (tensor<4x10x10x2x1xi8>) -> tensor<4x10x10x2x1xi32>
   // CHECK: %[[CAST_W:.+]] = tosa.cast %arg1 : (tensor<1x1x2x3xi8>) -> tensor<1x1x2x3xi32>
@@ -60,11 +60,11 @@ func.func @depthwise_conv2d_as_mul_q(%arg0: tensor<4x10x10x2xi8>, %arg1: tensor<
 func.func @depthwise_conv2d_as_mul_padded(%arg0: tensor<4x10x10x2xf32>, %arg1: tensor<1x1x2x3xf32>, %arg2: tensor<6xf32>) -> tensor<4x12x12x6xf32> {
   // CHECK-DAG: %[[CONST0:.+]] = tosa.const_shape {values = dense<[4, 10, 10, 2, 1]> : tensor<5xindex>}
   // CHECK-DAG: %[[PAD:.+]] = tosa.const_shape  {values = dense<[0, 0, 1, 1, 1, 1, 0, 0, 0, 0]> : tensor<10xindex>} : () -> !tosa.shape<10>
-  // CHECK-DAG: %[[ZERO:.+]] = "tosa.const"() <{values = dense<0.000000e+00> : tensor<1xf32>}
+  // CHECK-DAG: %[[ZERO:.+]] = tosa.const values(dense<0.000000e+00> : tensor<1xf32>)
   // CHECK-DAG: %[[CONST3:.+]] = tosa.const_shape {values = dense<[1, 1, 1, 2, 3]> : tensor<5xindex>}
   // CHECK-DAG: %[[CONST4:.+]] = tosa.const_shape {values = dense<[4, 12, 12, 6]> : tensor<4xindex>}
   // CHECK-DAG: %[[CONST5:.+]] = tosa.const_shape {values = dense<[1, 1, 1, 6]> : tensor<4xindex>}
-  // CHECK-DAG: %[[SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK-DAG: %[[SHIFT:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
   // CHECK: %[[RESHAPE_I:.+]] = tosa.reshape %arg0, %[[CONST0]]
   // CHECK: %[[PAD_I:.+]] = tosa.pad %[[RESHAPE_I]], %[[PAD]], %[[ZERO]] : (tensor<4x10x10x2x1xf32>, !tosa.shape<10>, tensor<1xf32>) -> tensor<4x12x12x2x1xf32>
   // CHECK: %[[RESHAPE_ARG1:.+]] = tosa.reshape %arg1, %[[CONST3]]
@@ -106,7 +106,7 @@ func.func @depthwise_conv2d_no_const_zero_point(%arg0: tensor<4x10x10x2xi8>, %ar
 // CHECK-SAME:      %[[BIAS:.*]]: tensor<?xf32>) -> tensor<?x10x10x6xf32> {
 // CHECK:           %[[BIAS_EXPANDED_SHAPE:.*]] = tosa.const_shape  {values = dense<[1, 1, 1, -1]> : tensor<4xindex>} : () -> !tosa.shape<4>
 // CHECK:           %[[RES_EXPANDED_SHAPE:.*]] = tosa.const_shape  {values = dense<[-1, 10, 10, 6]> : tensor<4xindex>} : () -> !tosa.shape<4>
-// CHECK:           %[[MUL_SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+// CHECK:           %[[MUL_SHIFT:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
 // CHECK:           %[[WTS_EXPANDED_SHAPE:.*]] = tosa.const_shape  {values = dense<[1, 1, 1, 2, 3]> : tensor<5xindex>} : () -> !tosa.shape<5>
 // CHECK:           %[[INP_EXPANDED_SHAPE:.*]] = tosa.const_shape  {values = dense<[-1, 10, 10, 2, 1]> : tensor<5xindex>} : () -> !tosa.shape<5>
 // CHECK:           %[[INP_RESHAPED:.*]] = tosa.reshape %[[INP]], %[[INP_EXPANDED_SHAPE]] : (tensor<?x10x10x2xf32>, !tosa.shape<5>) -> tensor<?x10x10x2x1xf32>

@@ -17,7 +17,7 @@ func.func @test_i64_argmax(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xi
 
 // CHECK-LABEL: test_i64_const
 func.func @test_i64_const() -> tensor<2xi64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi32>}> : () -> tensor<2xi32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense<[1, 2]> : tensor<2xi32>) : () -> tensor<2xi32>
   %0 = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi64>}> : () -> tensor<2xi64>
   // DEFAULT: %[[OUT:.*]] = tosa.cast %[[CONST]] : (tensor<2xi32>) -> tensor<2xi64>
   // DEFAULT: return %[[OUT]] : tensor<2xi64>
@@ -239,7 +239,7 @@ func.func @test_clamp_min_outside_i32_range(%arg0: tensor<100xi64>) -> tensor<10
 
 // CHECK-LABEL: test_dense_ressource_i64
 func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi32>}> : () -> tensor<1x2xi32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense_resource<resource> : tensor<1x2xi32>) : () -> tensor<1x2xi32>
   %1 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi64>}> : () -> tensor<1x2xi64>
   // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] : (tensor<1x2xi32>) -> tensor<1x2xi64>
   // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xi64>

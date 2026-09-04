@@ -114,7 +114,7 @@ func.func @test_torch_conv2d_with_elementwise_in_between(%arg0: tensor<3x3x10x10
 // -----
 
 // CHECK-LABEL: @test_mulop_conversion
-// CHECK-NEXT: %[[SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+// CHECK-NEXT: %[[SHIFT:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
 // CHECK-NEXT: %[[RES:.*]] = tosa.mul %arg0, %arg1, %[[SHIFT]]
 // CHECK-NEXT: return %[[RES]]
 func.func @test_mulop_conversion(%arg0: tensor<1x2x3x4xi32>, %arg1: tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32> {
@@ -157,7 +157,7 @@ func.func @test_dynamic_broadcasting_reshape(%arg0: tensor<?xi32>) -> tensor<1x1
 // -----
 
 // CHECK-LABEL: @test_reshape_for_broadcast
-// CHECK-DAG: %[[RESHAPE_INPUT:.*]] = "tosa.const"() <{values = dense<[1, 2, 3, 4]>
+// CHECK-DAG: %[[RESHAPE_INPUT:.*]] = tosa.const values(dense<[1, 2, 3, 4]>
 // CHECK-DAG: %[[SHAPE:.*]] = tosa.const_shape  {values = dense<[4, 1, 1]> : tensor<3xindex>}
 // CHECK: %[[RESHAPE:.*]] = tosa.reshape %[[RESHAPE_INPUT]], %[[SHAPE]] : (tensor<4xi32>, !tosa.shape<3>) -> tensor<4x1x1xi32>
 // CHECK: %[[ADD:.*]] = tosa.add %arg0, %[[RESHAPE]]
@@ -195,11 +195,11 @@ func.func @test_multi_dim_reshape_for_broadcast(%arg0: tensor<1x4x1xi32>, %arg1:
 
 // CHECK-LABEL: @test_resnet18_common_case
 // COM: note that %74 is now represented by %arg2
-// CHECK-DAG: %[[CONST0:.+]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
-// CHECK-DAG: %[[VAL_3:.*]] = "tosa.const"() <{values = dense_resource<torch_tensor_64_torch.float32_1> : tensor<64xf32>}> : () -> tensor<64xf32>
-// CHECK-DAG: %[[VAL_4:.*]] = "tosa.const"() <{values = dense_resource<torch_tensor_64_torch.float32> : tensor<64xf32>}> : () -> tensor<64xf32>
-// CHECK-DAG: %[[VAL_5:.*]] = "tosa.const"() <{values = dense<9.99999974E-6> : tensor<1xf32>}> : () -> tensor<1xf32>
-// CHECK-DAG: %[[VAL_6:.*]] = "tosa.const"() <{values = dense<5.000000e-01> : tensor<1xf32>}> : () -> tensor<1xf32>
+// CHECK-DAG: %[[CONST0:.+]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
+// CHECK-DAG: %[[VAL_3:.*]] = tosa.const values(dense_resource<torch_tensor_64_torch.float32_1> : tensor<64xf32>) : () -> tensor<64xf32>
+// CHECK-DAG: %[[VAL_4:.*]] = tosa.const values(dense_resource<torch_tensor_64_torch.float32> : tensor<64xf32>) : () -> tensor<64xf32>
+// CHECK-DAG: %[[VAL_5:.*]] = tosa.const values(dense<9.99999974E-6> : tensor<1xf32>) : () -> tensor<1xf32>
+// CHECK-DAG: %[[VAL_6:.*]] = tosa.const values(dense<5.000000e-01> : tensor<1xf32>) : () -> tensor<1xf32>
 // CHECK-DAG: %[[VAL_7:.*]] = tosa.add %arg1, %[[VAL_5]] : (tensor<64xf32>, tensor<1xf32>) -> tensor<64xf32>
 // CHECK-DAG: %[[VAL_8:.*]] = tosa.pow %[[VAL_7]], %[[VAL_6]] : (tensor<64xf32>, tensor<1xf32>) -> tensor<64xf32>
 // CHECK-DAG: %[[VAL_9:.*]] = tosa.reciprocal %[[VAL_8]] : (tensor<64xf32>) -> tensor<64xf32>
@@ -383,7 +383,7 @@ func.func @test_direct_use_in_other_transpose_with_same_perms(%arg0: tensor<3x3x
 // -----
 
 // CHECK-LABEL: @test_const_transpose
-// CHECK: %[[NEW:.*]] = "tosa.const"() <{values = dense<0> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
+// CHECK: %[[NEW:.*]] = tosa.const values(dense<0> : tensor<2x3xi32>) : () -> tensor<2x3xi32>
 // CHECK-NOT: tosa.transpose
 // CHECK: return %[[NEW]]
 func.func @test_const_transpose() -> tensor<2x3xi32> {
@@ -395,7 +395,7 @@ func.func @test_const_transpose() -> tensor<2x3xi32> {
 // -----
 
 // CHECK-LABEL: @test_transpose_tracks_to_const_single_step
-// CHECK: %[[NEW_CONST:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x2x3x4xi32>}> : () -> tensor<1x2x3x4xi32>
+// CHECK: %[[NEW_CONST:.*]] = tosa.const values(dense<0> : tensor<1x2x3x4xi32>) : () -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_CLAMP:.*]] = tosa.clamp %[[NEW_CONST]] {max_val = 2147483647 : i32, min_val = 0 : i32} : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
 // CHECK-NOT: tosa.transpose
 // CHECK: return %[[NEW_CLAMP]]
@@ -409,7 +409,7 @@ func.func @test_transpose_tracks_to_const_single_step() -> tensor<1x2x3x4xi32> {
 // -----
 
 // CHECK-LABEL: @test_static_unary_path_to_const
-// CHECK: %[[NEW_CONST:.*]] = "tosa.const"() <{values = dense<1> : tensor<1x2x3x4xi32>}> : () -> tensor<1x2x3x4xi32>
+// CHECK: %[[NEW_CONST:.*]] = tosa.const values(dense<1> : tensor<1x2x3x4xi32>) : () -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_CLAMP:.*]] = tosa.clamp %[[NEW_CONST]] {max_val = 2147483647 : i32, min_val = 0 : i32} : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_ABS:.*]] = tosa.abs %[[NEW_CLAMP]] : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_NOT:.*]] = tosa.bitwise_not %[[NEW_ABS]] : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
@@ -426,9 +426,9 @@ func.func @test_static_unary_path_to_const() -> tensor<1x2x3x4xi32> {
 // -----
 
 // CHECK-LABEL: @test_static_diverges_to_non_splat_const_and_nullifying
-// CHECK: %[[NEW_CONST:.*]] = "tosa.const"()
+// CHECK: %[[NEW_CONST:.*]] = tosa.const values(
 // CHECK-SAME{LITERAL}: dense<[[[[1, 3, 5, 7], [9, 11, 13, 15], [17, 19, 21, 23]], [[2, 4, 6, 8], [10, 12, 14, 16], [18, 20, 22, 24]]]]>
-// CHECK: tensor<1x2x3x4xi32>}> : () -> tensor<1x2x3x4xi32>
+// CHECK: tensor<1x2x3x4xi32>) : () -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_CLAMP:.*]] = tosa.clamp %arg0 {max_val = 2147483647 : i32, min_val = 0 : i32} : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_ABS:.*]] = tosa.abs %[[NEW_CONST]] : (tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
 // CHECK: %[[NEW_ADD:.*]] = tosa.add %[[NEW_ABS]], %[[NEW_CLAMP]] : (tensor<1x2x3x4xi32>, tensor<1x2x3x4xi32>) -> tensor<1x2x3x4xi32>
@@ -599,7 +599,7 @@ func.func @test_unimplemented_static_diverges_to_one_nullifying_one_non_nullifyi
 }
 
 // CHECK-LABEL: @test_transpose_bool
-// CHECK: %{{.*}} = "tosa.const"()
+// CHECK: %{{.*}} = tosa.const
 // CHECK-SAME{LITERAL}: dense<[[true, false], [false, false], [false, true]]>
 func.func @test_transpose_bool() -> tensor<3x2xi1> {
   %0 = "tosa.const"() <{values = dense<[[true, false, false], [false, false, true]]> : tensor<2x3xi1>}> : () -> tensor<2x3xi1>
@@ -608,7 +608,7 @@ func.func @test_transpose_bool() -> tensor<3x2xi1> {
 }
 
 // CHECK-LABEL: @test_transpose_i4
-// CHECK: %{{.*}} = "tosa.const"()
+// CHECK: %{{.*}} = tosa.const
 // CHECK-SAME{LITERAL}: dense<[[1, 4], [2, 5], [3, 6]]>
 func.func @test_transpose_i4() -> tensor<3x2xi4> {
   %0 = "tosa.const"() <{values = dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi4>}> : () -> tensor<2x3xi4>
