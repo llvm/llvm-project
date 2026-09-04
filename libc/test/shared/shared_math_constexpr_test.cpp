@@ -440,7 +440,7 @@ static_assert(LIBC_NAMESPACE::fputil::FPBits<Float128>::min_subnormal(
 static_assert(
     LIBC_NAMESPACE::fputil::FPBits<Float128>::min_subnormal().get_val() ==
     LIBC_NAMESPACE::shared::nextupf128(Float128(0.0)));
-static_assert(float128(0.0) ==
+static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::remainderf128(Float128(1.0),
                                                     Float128(1.0)));
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::rintf128(Float128(0.0)));
