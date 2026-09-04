@@ -87,6 +87,41 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
+def XeGPULegalizeVectorWidth : Pass<"xegpu-legalize-vector-width"> {
+  let summary = "Split elementwise vector ops that exceed the target vector width";
+  let description = [{
+    Unrolls elementwise operations whose vectors have more components than the
+    target can handle into a sequence of narrower operations, glued together
+    with `vector.extract_strided_slice` / `vector.insert_strided_slice`.
+
+    Only operations with `ElementwiseMappable` traits and a single result are
+    considered. Data movement operations (`vector.shuffle`, length-changing
+    `vector.bitcast`, `xegpu.load_nd`, `xegpu.store_nd`, `xegpu.dpas_mx`, ...)
+    are deliberately left alone: their vectors are *packed payloads* whose
+    component count is not a compute width. For example a
+    `vector<64xf4E2M1FN>` DPAS operand is only 256 bits and becomes a
+    `vector<8xi32>` once lowered, so splitting it would be a pessimization.
+    This distinction is exactly what the `ElementwiseMappable` traits express,
+    so no explicit op list is needed.
+
+    Note that a bit-width based threshold would not work here: a
+    `vector<32xbf16>` is exactly 512 bits yet is illegal as a compute operand,
+    while the 256-bit `vector<64xf4E2M1FN>` payload above must be preserved.
+    The limit is therefore expressed in vector components.
+
+    This runs after `arith-expand-ops`, which is what materializes the wide
+    arithmetic (for example the `f8E8M0FNU` scale expansion), and before the
+    XeVM conversions.
+  }];
+  let options = [
+    Option<"maxVectorComponents", "max-vector-components", "unsigned",
+           /*default=*/"0",
+           "Maximum number of components in a vector operand of an elementwise "
+           "op. A value of 0 selects the target default.">
+  ];
+  let dependentDialects = ["arith::ArithDialect", "vector::VectorDialect"];
+}
+
 def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
   let summary = "Optimize XeGPU block load operations";
   let description = [{

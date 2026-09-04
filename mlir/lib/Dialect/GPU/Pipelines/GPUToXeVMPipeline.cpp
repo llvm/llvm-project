@@ -116,6 +116,15 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(
         arith::createArithExpandOpsPass(std::move(arithExpandOptions)));
   }
+  // The expansions above build their arithmetic at whatever width the
+  // linearized tiles happen to have, which for micro-scaling kernels is wider
+  // than the target supports (e.g. `arith.divf` on `vector<32xbf16>`, or the
+  // `f8E8M0FNU` expansion working on `vector<32xi32>`). Split those back down
+  // to the target vector width. This has to run after `arith-expand-ops`,
+  // since the ops in question do not exist before it.
+  pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPULegalizeVectorWidth());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
   ConvertXeGPUToXeVMPassOptions xegpuToXeVMOptions;
   xegpuToXeVMOptions.use64bitIndex = options.use64bitIndex;
