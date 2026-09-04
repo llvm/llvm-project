@@ -311,8 +311,14 @@ cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
 
 cir::CoroPromiseOp
 CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
 
-  return {};
+  llvm::SmallVector<mlir::Value, 3> args;
+  for (const Expr *arg : e->arguments())
+    args.push_back(emitScalarExpr(arg));
+
+  auto coroPromise = cir::CoroPromiseOp::create(cgm.getBuilder(), loc, args);
+  return coroPromise;
 }
 
 static mlir::LogicalResult
