@@ -66,8 +66,10 @@ class LoopSafetyInfo {
   mutable DenseMap<const BasicBlock *, bool> GuaranteedToExecute;
 
 protected:
+  const Loop *CurLoop;
+
   /// Computes block colors.
-  LLVM_ABI void computeBlockColors(const Loop *CurLoop);
+  LLVM_ABI void computeBlockColors();
 
 public:
   /// Returns block colors map that is used to update funclet operand bundles.
@@ -85,13 +87,11 @@ public:
   virtual bool anyBlockMayThrow() const = 0;
 
   /// Return true if we must reach the block \p BB under assumption that the
-  /// loop \p CurLoop is entered.
-  LLVM_ABI bool allLoopPathsLeadToBlock(const Loop *CurLoop,
-                                        const BasicBlock *BB,
+  /// loop is entered.
+  LLVM_ABI bool allLoopPathsLeadToBlock(const BasicBlock *BB,
                                         const DominatorTree *DT) const;
 
-  LLVM_ABI bool allLoopPathsLeadToBlockImpl(const Loop *CurLoop,
-                                            const BasicBlock *BB,
+  LLVM_ABI bool allLoopPathsLeadToBlockImpl(const BasicBlock *BB,
                                             const DominatorTree *DT) const;
 
   /// Computes safety information for a loop checks loop body & header for
@@ -99,15 +99,14 @@ public:
   /// as argument. Updates safety information in LoopSafetyInfo argument.
   /// Note: This is defined to clear and reinitialize an already initialized
   /// LoopSafetyInfo.  Some callers rely on this fact.
-  virtual void computeLoopSafetyInfo(const Loop *CurLoop) = 0;
+  virtual void computeLoopSafetyInfo() = 0;
 
   /// Returns true if the instruction in a loop is guaranteed to execute at
   /// least once (under the assumption that the loop is entered).
   virtual bool isGuaranteedToExecute(const Instruction &Inst,
-                                     const DominatorTree *DT,
-                                     const Loop *CurLoop) const = 0;
+                                     const DominatorTree *DT) const = 0;
 
-  LoopSafetyInfo() = default;
+  LoopSafetyInfo(const Loop *CurLoop) : CurLoop(CurLoop) {}
 
   virtual ~LoopSafetyInfo() = default;
 };
@@ -122,15 +121,16 @@ class LLVM_ABI SimpleLoopSafetyInfo : public LoopSafetyInfo {
   bool HeaderMayThrow = false; // Same as previous, but specific to loop header
 
 public:
+  SimpleLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {}
+
   bool blockMayThrow(const BasicBlock *BB) const override;
 
   bool anyBlockMayThrow() const override;
 
-  void computeLoopSafetyInfo(const Loop *CurLoop) override;
+  void computeLoopSafetyInfo() override;
 
   bool isGuaranteedToExecute(const Instruction &Inst,
-                             const DominatorTree *DT,
-                             const Loop *CurLoop) const override;
+                             const DominatorTree *DT) const override;
 };
 
 /// This implementation of LoopSafetyInfo use ImplicitControlFlowTracking to
@@ -147,25 +147,24 @@ class LLVM_ABI ICFLoopSafetyInfo : public LoopSafetyInfo {
   mutable MemoryWriteTracking MW;
 
 public:
+  ICFLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {}
+
   bool blockMayThrow(const BasicBlock *BB) const override;
 
   bool anyBlockMayThrow() const override;
 
-  void computeLoopSafetyInfo(const Loop *CurLoop) override;
+  void computeLoopSafetyInfo() override;
 
   bool isGuaranteedToExecute(const Instruction &Inst,
-                             const DominatorTree *DT,
-                             const Loop *CurLoop) const override;
+                             const DominatorTree *DT) const override;
 
   /// Returns true if we could not execute a memory-modifying instruction before
-  /// we enter \p BB under assumption that \p CurLoop is entered.
-  bool doesNotWriteMemoryBefore(const BasicBlock *BB, const Loop *CurLoop)
-      const;
+  /// we enter \p BB under assumption that the loop is entered.
+  bool doesNotWriteMemoryBefore(const BasicBlock *BB) const;
 
   /// Returns true if we could not execute a memory-modifying instruction before
-  /// we execute \p I under assumption that \p CurLoop is entered.
-  bool doesNotWriteMemoryBefore(const Instruction &I, const Loop *CurLoop)
-      const;
+  /// we execute \p I under assumption that the loopis entered.
+  bool doesNotWriteMemoryBefore(const Instruction &I) const;
 
   /// Inform the safety info that we are planning to insert a new instruction
   /// \p Inst into the basic block \p BB. It will make all cache updates to keep
