@@ -40,10 +40,10 @@ Keyword Schema Classification:
      - Automatically learns custom option, single-value, and multi-value argument lists from `set(...)` calls using standard naming conventions (`*_OPTION_ARGS`, `*_SINGLE_VALUE_ARGS`, `*_MULTI_VALUE_ARGS`).
 
 Formatting Rules Enforced:
-  1. Command Casing: Built-in language commands cased in lowercase (`add_entrypoint_object`, `set`, `if`); module commands (like `ExternalProject_Add`) and custom functions retain canonical/declared casing.
+  1. Command Casing: Built-in language commands cased in lowercase (`add_library`, `set`, `if`); module commands (like `ExternalProject_Add`) and custom functions retain canonical/declared casing.
   2. Parenthesis Spacing: No space between command name and opening `(`. Collapses multiple spaces between arguments down to a single space.
   3. Quoted String Immutability: Quoted arguments (`"..."`) and bracket arguments (`[=[...]=]`) are single immutable AST tokens. Multi-line quoted strings are preserved 100% untouched.
-  4. Empty Closures: `endif()`, `else()`, `endfunction()`, `endmacro()`, `endforeach()`, `endwhile()`.
+  4. Empty Closures: `endif()`, `else()`, `endfunction()`, `endmacro()`, `endforeach()`, `endwhile()`. (Legacy CMake permitted repeating condition/block names in closing commands; modern CMake standardizes on empty parentheses).
   5. Schema-Aware Keyword Casing: Keywords in command schema upper-cased; positional args, function parameters & file paths untouched.
   6. Multi-line Argument Layout: Keywords and positional args indented +2 spaces relative to call base; multi-value list items indented +4 spaces; closing `)` at +0 spaces.
   7. Control Block Indentation: 2-space indentation inside `if`/`foreach`/`function`/`macro`.
@@ -192,13 +192,13 @@ RE_IDENTIFIER_TOKENS = re.compile(r"[A-Z0-9_]+")
 RE_IDENTIFIER_WORDS = re.compile(r"[a-zA-Z0-9_]+")
 
 RE_OPTION_ARGS = re.compile(
-    r"set\s*\(\s*([A-Za-z0-9_]*(?:OPTION|OPTIONAL)_ARGS)\s+([^)]+)\)", re.IGNORECASE
+    r"set\s*\(\s*([A-Z0-9_]*(?:OPTION|OPTIONAL)_ARGS)\s+([^)]+)\)", re.IGNORECASE
 )
 RE_SINGLE_VALUE_ARGS = re.compile(
-    r"set\s*\(\s*([A-Za-z0-9_]*(?:SINGLE|ONE)_VALUE_ARGS)\s+([^)]+)\)", re.IGNORECASE
+    r"set\s*\(\s*([A-Z0-9_]*(?:SINGLE|ONE)_VALUE_ARGS)\s+([^)]+)\)", re.IGNORECASE
 )
 RE_MULTI_VALUE_ARGS = re.compile(
-    r"set\s*\(\s*([A-Za-z0-9_]*(?:MULTI_VALUE|LIST)_ARGS)\s+([^)]+)\)", re.IGNORECASE
+    r"set\s*\(\s*([A-Z0-9_]*(?:MULTI_VALUE|LIST)_ARGS)\s+([^)]+)\)", re.IGNORECASE
 )
 
 RE_BRACKET_COMMENT_START = re.compile(r"#\[(=*)\[")
@@ -527,6 +527,35 @@ class KeywordType(str, Enum):
     OPTION = "OPTION"
 
 
+def _lex_bracket_span(
+    text: str,
+    pos: int,
+    eq_len: int,
+    line: int,
+    col: int,
+    line_start: int,
+    token_type: TokenType,
+    desc: str,
+) -> tuple[Token, int, int, int]:
+    """Extracts a bracket comment or bracket argument, updating line/col tracking."""
+    close_pat = "]" + "=" * eq_len + "]"
+    end_idx = text.find(close_pat, pos)
+    if end_idx == -1:
+        prefix = "#" if token_type == TokenType.BRACKET_COMMENT else ""
+        raise LexError(
+            f"unterminated {desc} '{prefix}[{'=' * eq_len}['",
+            line,
+            col,
+        )
+    end_pos = end_idx + len(close_pat)
+    span = text[pos:end_pos]
+    newlines = span.count("\n")
+    if newlines:
+        line += newlines
+        line_start = end_pos - len(span.rsplit("\n", 1)[-1])
+    return Token(token_type, span), end_pos, line, line_start
+
+
 def tokenize(text: str) -> list[Token]:
     """Formal Lexer based on cmake-language(7) EBNF specification.
 
@@ -548,23 +577,17 @@ def tokenize(text: str) -> list[Token]:
         if text[i] == "#":
             m = RE_BRACKET_COMMENT_START.match(text, pos=i)
             if m:
-                eq_len = len(m.group(1))
-                close_pat = "]" + "=" * eq_len + "]"
-                end_idx = text.find(close_pat, i)
-                if end_idx == -1:
-                    raise LexError(
-                        f"unterminated bracket comment '#[{'=' * eq_len}['",
-                        line,
-                        col,
-                    )
-                end_pos = end_idx + len(close_pat)
-                tokens.append(Token(TokenType.BRACKET_COMMENT, text[i:end_pos]))
-                # Advance line/col tracking over the consumed span.
-                newlines = text[i:end_pos].count("\n")
-                if newlines:
-                    line += newlines
-                    line_start = end_pos - len(text[i:end_pos].rsplit("\n", 1)[-1])
-                i = end_pos
+                tok, i, line, line_start = _lex_bracket_span(
+                    text,
+                    i,
+                    len(m.group(1)),
+                    line,
+                    col,
+                    line_start,
+                    TokenType.BRACKET_COMMENT,
+                    "bracket comment",
+                )
+                tokens.append(tok)
                 continue
 
             # Line comment: #...
@@ -579,22 +602,17 @@ def tokenize(text: str) -> list[Token]:
         if text[i] == "[":
             m = RE_BRACKET_ARG_START.match(text, pos=i)
             if m:
-                eq_len = len(m.group(1))
-                close_pat = "]" + "=" * eq_len + "]"
-                end_idx = text.find(close_pat, i)
-                if end_idx == -1:
-                    raise LexError(
-                        f"unterminated bracket argument '[{'=' * eq_len}['",
-                        line,
-                        col,
-                    )
-                end_pos = end_idx + len(close_pat)
-                tokens.append(Token(TokenType.BRACKET_ARG, text[i:end_pos]))
-                newlines = text[i:end_pos].count("\n")
-                if newlines:
-                    line += newlines
-                    line_start = end_pos - len(text[i:end_pos].rsplit("\n", 1)[-1])
-                i = end_pos
+                tok, i, line, line_start = _lex_bracket_span(
+                    text,
+                    i,
+                    len(m.group(1)),
+                    line,
+                    col,
+                    line_start,
+                    TokenType.BRACKET_ARG,
+                    "bracket argument",
+                )
+                tokens.append(tok)
                 continue
 
         # Quoted argument: "..." (Single immutable token!)
@@ -662,6 +680,23 @@ def tokenize(text: str) -> list[Token]:
     return tokens
 
 
+def _next_significant_token(
+    tokens: list[Token], start_idx: int
+) -> tuple[Token, int] | tuple[None, -1]:
+    """Finds the next non-whitespace, non-newline, non-comment token from start_idx."""
+    n = len(tokens)
+    for idx in range(start_idx, n):
+        tok = tokens[idx]
+        if tok.type not in (
+            TokenType.WHITESPACE,
+            TokenType.NEWLINE,
+            TokenType.LINE_COMMENT,
+            TokenType.BRACKET_COMMENT,
+        ):
+            return tok, idx
+    return None, -1
+
+
 def scan_dynamic_schemas(
     content: str,
     ctx: FormatterContext | None = None,
@@ -673,10 +708,7 @@ def scan_dynamic_schemas(
     ctx.learned_one_value, ctx.learned_multi_value, ctx.list_keywords, and
     ctx.dynamic_schemas. If ctx is None, mutates the module-level WORKSPACE_CONTEXT.
     """
-    if "_ARGS" not in content and "cmake_parse_arguments" not in content:
-        return
     context = ctx if ctx is not None else WORKSPACE_CONTEXT
-    # Any mutation of the context invalidates previously cached merged schemas.
     context._schema_cache.clear()
 
     # 1. Parse set(*_OPTION_ARGS ...), set(*_SINGLE_VALUE_ARGS ...), set(*_MULTI_VALUE_ARGS ...), etc.
@@ -708,29 +740,14 @@ def scan_dynamic_schemas(
 
         # Track function/macro start
         if cmd_lower in ("function", "macro"):
-            for j in range(i + 1, n):
-                tok_j = tokens[j]
-                if tok_j.type in (
-                    TokenType.WHITESPACE,
-                    TokenType.NEWLINE,
-                    TokenType.LINE_COMMENT,
-                    TokenType.BRACKET_COMMENT,
+            tok_lparen, j = _next_significant_token(tokens, i + 1)
+            if tok_lparen and tok_lparen.type == TokenType.LPAREN:
+                tok_name, _ = _next_significant_token(tokens, j + 1)
+                if tok_name and tok_name.type in (
+                    TokenType.UNQUOTED_ARG,
+                    TokenType.QUOTED_ARG,
                 ):
-                    continue
-                if tok_j.type == TokenType.LPAREN:
-                    for k in range(j + 1, n):
-                        tok_k = tokens[k]
-                        if tok_k.type in (
-                            TokenType.WHITESPACE,
-                            TokenType.NEWLINE,
-                            TokenType.LINE_COMMENT,
-                            TokenType.BRACKET_COMMENT,
-                        ):
-                            continue
-                        if tok_k.type in (TokenType.UNQUOTED_ARG, TokenType.QUOTED_ARG):
-                            current_fn_name = tok_k.value.strip('"')
-                        break
-                break
+                    current_fn_name = tok_name.value.strip('"')
 
         # Track function/macro end
         elif cmd_lower in ("endfunction", "endmacro"):
@@ -738,67 +755,67 @@ def scan_dynamic_schemas(
 
         # Parse cmake_parse_arguments(...) call inside function/macro
         elif cmd_lower == "cmake_parse_arguments" and current_fn_name:
-            arg_tokens = []
-            in_parens = False
-            paren_depth = 0
-            for j in range(i + 1, n):
-                tok_j = tokens[j]
-                if tok_j.type in (
-                    TokenType.WHITESPACE,
-                    TokenType.NEWLINE,
-                    TokenType.LINE_COMMENT,
-                    TokenType.BRACKET_COMMENT,
-                ):
-                    continue
-                if tok_j.type == TokenType.LPAREN:
-                    in_parens = True
-                    paren_depth += 1
-                    continue
-                if in_parens:
-                    if tok_j.type == TokenType.RPAREN:
+            tok_lparen, lparen_idx = _next_significant_token(tokens, i + 1)
+            if tok_lparen and tok_lparen.type == TokenType.LPAREN:
+                arg_tokens = []
+                paren_depth = 1
+                for j in range(lparen_idx + 1, n):
+                    tok_j = tokens[j]
+                    if tok_j.type in (
+                        TokenType.WHITESPACE,
+                        TokenType.NEWLINE,
+                        TokenType.LINE_COMMENT,
+                        TokenType.BRACKET_COMMENT,
+                    ):
+                        continue
+                    if tok_j.type == TokenType.LPAREN:
+                        paren_depth += 1
+                    elif tok_j.type == TokenType.RPAREN:
                         paren_depth -= 1
                         if paren_depth <= 0:
                             break
                     else:
                         arg_tokens.append(tok_j.value)
 
-            # cmake_parse_arguments positional layout:
-            #   cmake_parse_arguments(<prefix> <options> <one_value> <multi_value> <args>...)
-            #   cmake_parse_arguments(PARSE_ARGV <n> <prefix> <options> <one_value> <multi_value>)
-            # When PARSE_ARGV/PARSE_ARGN is present, the first two tokens are the
-            # mode keyword and the index argument; the prefix/options/... follow at +2.
-            _CPA_MIN_ARGS = 4  # prefix + options + one_value + multi_value
-            _CPA_PARSE_ARGV_EXTRA = 2  # extra tokens: mode keyword + integer index
-            _CPA_PARSE_ARGV_MIN_ARGS = _CPA_MIN_ARGS + _CPA_PARSE_ARGV_EXTRA
+                # cmake_parse_arguments positional layout:
+                #   cmake_parse_arguments(<prefix> <options> <one_value> <multi_value> <args>...)
+                #   cmake_parse_arguments(PARSE_ARGV <n> <prefix> <options> <one_value> <multi_value>)
+                # When PARSE_ARGV/PARSE_ARGN is present, the first two tokens are the
+                # mode keyword and the index argument; the prefix/options/... follow at +2.
+                _CPA_MIN_ARGS = 4  # prefix + options + one_value + multi_value
+                _CPA_PARSE_ARGV_EXTRA = 2  # extra tokens: mode keyword + integer index
+                _CPA_PARSE_ARGV_MIN_ARGS = _CPA_MIN_ARGS + _CPA_PARSE_ARGV_EXTRA
 
-            if len(arg_tokens) >= _CPA_MIN_ARGS:
-                offset = 0
-                if (
-                    arg_tokens[0].upper() in ("PARSE_ARGV", "PARSE_ARGN")
-                    and len(arg_tokens) >= _CPA_PARSE_ARGV_MIN_ARGS
-                ):
-                    offset = _CPA_PARSE_ARGV_EXTRA
+                if len(arg_tokens) >= _CPA_MIN_ARGS:
+                    offset = 0
+                    if (
+                        arg_tokens[0].upper() in ("PARSE_ARGV", "PARSE_ARGN")
+                        and len(arg_tokens) >= _CPA_PARSE_ARGV_MIN_ARGS
+                    ):
+                        offset = _CPA_PARSE_ARGV_EXTRA
 
-                if len(arg_tokens) >= offset + _CPA_MIN_ARGS:
-                    # arg_tokens[offset + 0] is the prefix — not needed for schema building
-                    opt_str = arg_tokens[offset + 1]
-                    one_str = arg_tokens[offset + 2]
-                    multi_str = arg_tokens[offset + 3]
+                    if len(arg_tokens) >= offset + _CPA_MIN_ARGS:
+                        # arg_tokens[offset + 0] is the prefix — not needed for schema building
+                        opt_str = arg_tokens[offset + 1]
+                        one_str = arg_tokens[offset + 2]
+                        multi_str = arg_tokens[offset + 3]
 
-                    def _extract_literal_kws(arg_s: str) -> set[str]:
-                        cleaned = arg_s.strip('"\t\r\n ')
-                        if cleaned.startswith("${") or cleaned.startswith("$"):
-                            return set()
-                        non_var = re.sub(r"\$\{[^}]*\}", "", cleaned)
-                        return set(RE_IDENTIFIER_WORDS.findall(non_var))
+                        def _extract_literal_kws(arg_s: str) -> set[str]:
+                            cleaned = arg_s.strip('"\t\r\n ')
+                            if cleaned.startswith("$"):
+                                return set()
+                            non_var = re.sub(r"\$\{[^}]*\}", "", cleaned)
+                            return set(RE_IDENTIFIER_WORDS.findall(non_var))
 
-                    opts = _extract_literal_kws(opt_str)
-                    ones = _extract_literal_kws(one_str)
-                    multis = _extract_literal_kws(multi_str)
-                    context.list_keywords.update(multis)
-                    context.dynamic_schemas[current_fn_name.lower()] = CommandSchema(
-                        options=opts, one_value=ones, multi_value=multis
-                    )
+                        opts = _extract_literal_kws(opt_str)
+                        ones = _extract_literal_kws(one_str)
+                        multis = _extract_literal_kws(multi_str)
+                        context.list_keywords.update(multis)
+                        context.dynamic_schemas[current_fn_name.lower()] = (
+                            CommandSchema(
+                                options=opts, one_value=ones, multi_value=multis
+                            )
+                        )
 
 
 # Filesystem markers that indicate a project root boundary. Used by pre_scan_workspace_modules
@@ -839,8 +856,9 @@ def pre_scan_workspace_modules(
         try:
             with open(mf, "r", encoding="utf-8") as f:
                 scan_dynamic_schemas(f.read(), ctx=context)
-        except (OSError, UnicodeDecodeError, LexError):
-            pass
+        except (OSError, UnicodeDecodeError, LexError) as e:
+            print(f"Error pre-scanning module {mf}: {e}", file=sys.stderr)
+            sys.exit(1)
 
 
 # Regex matching directive comments that should not have a space inserted after '#'
@@ -1163,17 +1181,16 @@ def _process_command_invocation_line(
     )
     rest_tokens = trimmed_line_toks[lparen_idx + 1 :] if lparen_idx != -1 else []
 
-    # Empty-closure commands (endif, else, …) have their arguments stripped while preserving line comments.
+    # Empty-closure commands (endif, else, ...) have their arguments stripped while preserving line comments.
     if lower_cmd in EMPTY_CLOSE_BLOCKS:
         rparen_seen = False
         filtered_tokens = []
         for rt in rest_tokens:
-            if not rparen_seen:
-                if rt.type == TokenType.RPAREN:
-                    filtered_tokens.append(rt)
-                    rparen_seen = True
-            else:
+            if rparen_seen:
                 filtered_tokens.append(rt)
+            elif rt.type == TokenType.RPAREN:
+                filtered_tokens.append(rt)
+                rparen_seen = True
         rest_tokens = filtered_tokens
 
     lparens = sum(1 for tok in rest_tokens if tok.type == TokenType.LPAREN)
@@ -1381,7 +1398,7 @@ def process_file(
 def find_cmake_files(paths: list[str]) -> list[str]:
     """Recursively discovers CMake files (CMakeLists.txt and *.cmake) under the given paths.
 
-    Directories starting with '.' and directories named 'build' are excluded from traversal.
+    Directories starting with '.' and directories starting with 'build' are excluded from traversal.
     Plain file paths are included directly without filtering.
     Returns files in sorted order for deterministic output across platforms and runs.
     """
@@ -1393,7 +1410,9 @@ def find_cmake_files(paths: list[str]) -> list[str]:
         elif path.is_dir():
             for root, dirs, files in path.walk():
                 dirs[:] = sorted(
-                    d for d in dirs if not d.startswith(".") and d != "build"
+                    d
+                    for d in dirs
+                    if not d.startswith(".") and not d.startswith("build")
                 )
                 for f in sorted(files):
                     if f == "CMakeLists.txt" or f.endswith(".cmake"):

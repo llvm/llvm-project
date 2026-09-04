@@ -402,6 +402,50 @@ class TestEdgeCasesAndIsolation(unittest.TestCase):
             self.assertIn("MOD_OPT1", ctx.learned_options)
             self.assertIn("MOD_OPT2", ctx.learned_options)
 
+    def test_pre_scan_workspace_modules_fails_fast_on_error(self):
+        """Verifies pre_scan_workspace_modules exits with code 1 if a module contains invalid syntax."""
+        import contextlib
+        import io
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mod_dir = os.path.join(tmpdir, "cmake", "modules")
+            os.makedirs(mod_dir, exist_ok=True)
+            mod_file = os.path.join(mod_dir, "BrokenModule.cmake")
+            with open(mod_file, "w", encoding="utf-8") as f:
+                f.write('message("unterminated string\n')
+
+            ctx = cmake_format.FormatterContext()
+            err_buf = io.StringIO()
+            with contextlib.redirect_stderr(err_buf):
+                with self.assertRaises(SystemExit) as cm:
+                    cmake_format.pre_scan_workspace_modules([tmpdir], ctx=ctx)
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("Error pre-scanning module", err_buf.getvalue())
+
+    def test_find_cmake_files_excludes_build_directories(self):
+        """Verifies find_cmake_files excludes directories starting with 'build' and '.'."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for d in [
+                "src",
+                "build",
+                "build-ninja",
+                "build_debug",
+                ".hidden",
+            ]:
+                sub = os.path.join(tmpdir, d)
+                os.makedirs(sub, exist_ok=True)
+                with open(
+                    os.path.join(sub, "CMakeLists.txt"), "w", encoding="utf-8"
+                ) as f:
+                    f.write("set(X 1)\n")
+
+            found = cmake_format.find_cmake_files([tmpdir])
+            rel_found = [os.path.relpath(p, tmpdir) for p in found]
+            self.assertEqual(rel_found, [os.path.join("src", "CMakeLists.txt")])
+
     def test_stdin_pipe_formatting(self):
         """Verifies formatting unformatted CMake code via stdin."""
         code = "add_library(\n foo\n   STATIC\n   s1.cpp\n )\n"
