@@ -144,7 +144,6 @@ BlockMass DitheringDistributer::takeMass(uint32_t Weight) {
 
 void Distribution::add(const BlockNode &Node, uint64_t Amount,
                        Weight::DistType Type) {
-  assert(Amount && "invalid weight of 0");
   uint64_t NewTotal = Total + Amount;
 
   // Check for overflow.  It should be impossible to overflow twice.
@@ -244,6 +243,8 @@ void Distribution::normalize() {
 
   // Early exit when combined into a single successor.
   if (Weights.size() == 1) {
+    assert(Weights.front().Amount > 0 &&
+           "Expected a non-zero branch weight for a single successor");
     Total = 1;
     Weights.front().Amount = 1;
     return;
@@ -277,6 +278,8 @@ void Distribution::normalize() {
 
   // Sum the weights to each node and shift right if necessary.
   for (Weight &W : Weights) {
+    if (W.Amount == 0)
+      continue;
     // Scale down below UINT32_MAX.  Since Shift is larger than necessary, we
     // can round here without concern about overflow.
     assert(W.TargetNode.isValid());
