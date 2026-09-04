@@ -1,4 +1,5 @@
 // RUN: fir-opt -unsafe-cray-pointers --fir-add-alias-tags %s | FileCheck %s
+// RUN: fir-opt --fir-add-alias-tags %s | FileCheck %s --check-prefix=DEFAULT
 
 // Fortran source:
 // subroutine test()
@@ -12,9 +13,17 @@
 // CHECK-NEXT: #[[ANY_ACCESS:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[TBAA_ROOT]], 0>}>
 // CHECK-NEXT: #[[ANY_DATA:.*]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY_ACCESS]], 0>}>
 // CHECK-NEXT: #[[ANY_DATA_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[ANY_DATA]], access_type = #[[ANY_DATA]], offset = 0>
-// CHECK-NEXT: #[[ALLOCATED_DATA:.*]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[ANY_DATA]], 0>}>
-// CHECK-NEXT: #[[B:.*]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtestEb", members = {<#[[ALLOCATED_DATA]], 0>}>
+// CHECK-NEXT: #[[TARGET_DATA:.*]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK-NEXT: #[[B:.*]] = #llvm.tbaa_type_desc<id = "target data/_QFtestEb", members = {<#[[TARGET_DATA]], 0>}>
 // CHECK-NEXT: #[[B_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[B]], access_type = #[[B]], offset = 0>
+
+// DEFAULT: #[[DEFAULT_ROOT:.*]] = #llvm.tbaa_root<id = "Flang function root _QPtest">
+// DEFAULT: #[[DEFAULT_ANY_ACCESS:.*]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[DEFAULT_ROOT]], 0>}>
+// DEFAULT: #[[DEFAULT_ANY_DATA:.*]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[DEFAULT_ANY_ACCESS]], 0>}>
+// DEFAULT: #[[DEFAULT_TARGET_DATA:.*]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[DEFAULT_ANY_DATA]], 0>}>
+// DEFAULT: #[[DEFAULT_TARGET_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[DEFAULT_TARGET_DATA]], access_type = #[[DEFAULT_TARGET_DATA]], offset = 0>
+// DEFAULT: #[[DEFAULT_B:.*]] = #llvm.tbaa_type_desc<id = "target data/_QFtestEb", members = {<#[[DEFAULT_TARGET_DATA]], 0>}>
+// DEFAULT: #[[DEFAULT_B_TAG:.*]] = #llvm.tbaa_tag<base_type = #[[DEFAULT_B]], access_type = #[[DEFAULT_B]], offset = 0>
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i8 = dense<[8, 32]> : vector<2xi64>, i16 = dense<[16, 32]> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.legal_int_widths" = array<i32: 32, 64>, "dlti.stack_alignment" = 128 : i64, "dlti.function_pointer_alignment" = #dlti.function_pointer_alignment<32, function_dependent = true>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"} {
 // CHECK-LABEL: func.func @_QPtest()
@@ -35,8 +44,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %9 = fir.convert %5 : (!fir.ref<f32>) -> i64
     fir.store %9 to %3 : !fir.ref<i64>
 // CHECK: fir.store {{.*}} to {{.*}} {tbaa = [#[[ANY_DATA_TAG]]]} : !fir.ref<i64>
+    %10 = fir.load %6 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+    %11 = fir.box_addr %10 : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+    fir.store %cst to %11 : !fir.ptr<f32>
+// DEFAULT: fir.store {{.*}} to {{.*}} {tbaa = [#[[DEFAULT_TARGET_TAG]]]} : !fir.ptr<f32>
     fir.store %cst to %5 : !fir.ref<f32>
 // CHECK: fir.store {{.*}} to {{.*}} {tbaa = [#[[B_TAG]]]} : !fir.ref<f32>
+// DEFAULT: fir.store {{.*}} to {{.*}} {tbaa = [#[[DEFAULT_B_TAG]]]} : !fir.ref<f32>
     return
   }
 }
