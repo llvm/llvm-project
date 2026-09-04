@@ -260,6 +260,21 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_join_main_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_join_main_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_exit
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.stdlib.exit
+)
+
+add_integration_test(
   pthread_create_test
   SUITE
     libc-pthread-integration-tests
