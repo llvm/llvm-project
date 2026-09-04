@@ -3836,8 +3836,10 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
       !EffectiveTriple.isRISCV() && !EffectiveTriple.isLoongArch())
     return;
 
-  Args.addOptInFlag(CmdArgs, options::OPT_fstack_clash_protection,
-                    options::OPT_fno_stack_clash_protection);
+  if (Args.hasFlag(options::OPT_fstack_clash_protection,
+                   options::OPT_fno_stack_clash_protection,
+                   EffectiveTriple.isAndroid()))
+    CmdArgs.push_back("-fstack-clash-protection");
 }
 
 static void RenderTrivialAutoVarInitOptions(const Driver &D,
@@ -5227,10 +5229,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsHostOffloadingAction =
       JA.isHostOffloading(Action::OFK_OpenMP) ||
       JA.isHostOffloading(Action::OFK_SYCL) ||
-      (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
-       Args.hasFlag(options::OPT_offload_new_driver,
-                    options::OPT_no_offload_new_driver,
-                    C.getActiveOffloadKinds() != Action::OFK_None));
+      (JA.isHostOffloading(C.getActiveOffloadKinds()));
 
   // SYCL defaults to RDC; CUDA/HIP default to non-RDC.
   bool IsRDCMode = Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
@@ -5593,16 +5592,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (IsUsingLTO) {
       const Arg *LTOArg = Args.getLastArg(options::OPT_foffload_lto,
                                           options::OPT_foffload_lto_EQ);
-      if (IsDeviceOffloadAction && !JA.isDeviceOffloading(Action::OFK_OpenMP) &&
-          !Args.hasFlag(options::OPT_offload_new_driver,
-                        options::OPT_no_offload_new_driver,
-                        C.getActiveOffloadKinds() != Action::OFK_None) &&
-          !Triple.isAMDGPU() && !Triple.isSPIRV()) {
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << (LTOArg ? LTOArg->getAsString(Args) : "-foffload-lto")
-            << Triple.getTriple();
-      } else if (Triple.isNVPTX() && !IsRDCMode &&
-                 JA.isDeviceOffloading(Action::OFK_Cuda)) {
+      if (Triple.isNVPTX() && !IsRDCMode &&
+          JA.isDeviceOffloading(Action::OFK_Cuda)) {
         D.Diag(diag::err_drv_unsupported_opt_for_language_mode)
             << (LTOArg ? LTOArg->getAsString(Args) : "-foffload-lto")
             << "-fno-gpu-rdc";
@@ -7210,17 +7201,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.addOptOutFlag(CmdArgs, options::OPT_fopenmp_extensions,
                        options::OPT_fno_openmp_extensions);
   }
-  // Forward the offload runtime change to code generation, liboffload implies
-  // new driver. Otherwise, check if we should forward the new driver to change
-  // offloading code generation.
+  // Forward '-foffload-via-llvm' to code generation to target the LLVM/Offload
+  // runtime.
   if (Args.hasFlag(options::OPT_foffload_via_llvm,
-                   options::OPT_fno_offload_via_llvm, false)) {
-    CmdArgs.append({"--offload-new-driver", "-foffload-via-llvm"});
-  } else if (Args.hasFlag(options::OPT_offload_new_driver,
-                          options::OPT_no_offload_new_driver,
-                          C.getActiveOffloadKinds() != Action::OFK_None)) {
-    CmdArgs.push_back("--offload-new-driver");
-  }
+                   options::OPT_fno_offload_via_llvm, false))
+    CmdArgs.push_back("-foffload-via-llvm");
 
   const XRayArgs &XRay = TC.getXRayArgs(Args);
   XRay.addArgs(TC, Args, CmdArgs, InputType);

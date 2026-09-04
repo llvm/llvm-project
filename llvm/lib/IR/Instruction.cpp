@@ -1039,6 +1039,7 @@ bool Instruction::isSameOperationAs(const Instruction *I,
   bool IgnoreAlignment = flags & CompareIgnoringAlignment;
   bool UseScalarTypes = flags & CompareUsingScalarTypes;
   bool IntersectAttrs = flags & CompareUsingIntersectedAttrs;
+  bool CheckCallTargets = flags & CompareCallTargets;
 
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
@@ -1055,6 +1056,11 @@ bool Instruction::isSameOperationAs(const Instruction *I,
           I->getOperand(i)->getType()->getScalarType() :
         getOperand(i)->getType() != I->getOperand(i)->getType())
       return false;
+
+  if (CheckCallTargets)
+    if (const auto *CB = dyn_cast<CallBase>(this))
+      if (CB->getCalledOperand() != cast<CallBase>(I)->getCalledOperand())
+        return false;
 
   return this->hasSameSpecialState(I, IgnoreAlignment, IntersectAttrs);
 }
