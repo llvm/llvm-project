@@ -38,6 +38,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -826,6 +827,11 @@ public:
     return !Info.has_value();
   }
 
+  bool VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+    RecordInfo = E->getType()->getAsCXXRecordDecl();
+    return true;
+  }
+
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     auto *Callee = E->getConstructor();
     if (Callee) {
@@ -859,6 +865,7 @@ public:
 
   // The output of this visitor
   std::optional<ForwardingInfo> Info;
+  const CXXRecordDecl *RecordInfo{};
 
 private:
   // inspects the given callee with the given args to check whether it
@@ -987,7 +994,7 @@ private:
 
 } // namespace
 
-SmallVector<const ParmVarDecl *>
+std::variant<SmallVector<const ParmVarDecl *>, const CXXRecordDecl *>
 resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
   auto Parameters = D->parameters();
   // If the function has a template parameter pack
@@ -1016,9 +1023,15 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
       // Find call expressions involving the pack
       ForwardingCallVisitor V{Pack};
       V.TraverseStmt(CurrentFunction->getBody());
+
+      // if fields are direct-initialized, then no more forwarding
+      if (V.RecordInfo)
+        return V.RecordInfo;
+
       if (!V.Info) {
         break;
       }
+
       // If we found something: Fill in non-pack parameters
       auto Info = *V.Info;
       HeadIt = std::copy(Info.Head.begin(), Info.Head.end(), HeadIt);
@@ -1032,7 +1045,8 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
         if (const auto *Template = CurrentFunction->getPrimaryTemplate()) {
           bool NewFunction = SeenTemplates.insert(Template).second;
           if (!NewFunction) {
-            return {Parameters.begin(), Parameters.end()};
+            return SmallVector<const ParmVarDecl *>{Parameters.begin(),
+                                                    Parameters.end()};
           }
         }
       }
@@ -1042,7 +1056,7 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
     assert(TailIt.base() == HeadIt);
     return Result;
   }
-  return {Parameters.begin(), Parameters.end()};
+  return SmallVector<const ParmVarDecl *>{Parameters.begin(), Parameters.end()};
 }
 
 bool isExpandedFromParameterPack(const ParmVarDecl *D) {
