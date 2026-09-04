@@ -69,7 +69,7 @@ public:
   constexpr ManagedStaticBase() = default;
 #endif
 
-  /// isConstructed - Return true if this object has not been created yet.
+  /// isConstructed - Return true if this object has already been created.
   bool isConstructed() const { return Ptr != nullptr; }
 
   LLVM_ABI void destroy() const;
