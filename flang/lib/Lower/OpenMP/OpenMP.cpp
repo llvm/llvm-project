@@ -6743,26 +6743,22 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const parser::OmpDirectiveSpecification &beginSpec = declareSimdConstruct.v;
 
   // A `declare simd` directive may appear in the specification part of an
-  // interface body. In that case the PFT records the directive as an
+  // interface body. In that case, the PFT records the directive as an
   // evaluation of the enclosing program unit rather than of the interface
-  // body's subprogram, and the clause operands (linear/aligned/uniform)
-  // reference dummy arguments that are local to the interface body and
-  // therefore have no address in the enclosing scope. Detect this by
-  // comparing the program unit lexically containing the directive with the
-  // procedure currently being lowered; if they differ, this evaluation is
-  // for a different procedure (the interface-body subprogram) and emitting
-  // an `omp.declare_simd` op here would create it with null operands. Skip
-  // emission: lowering for `declare simd` on an external procedure declared
-  // only via an interface body is not handled by this op-based form.
+  // body's subprogram. Consequently, to detect this case we need to check the
+  // program unit lexically containing the directive, rather than the current
+  // evaluation's owning procedure.
+  //
+  // Emitting an `omp.declare_simd` op in that case would be incorrect, as
+  // interface contents are lowered as external function declarations.
   const semantics::Scope &progUnitScope =
       semantics::GetProgramUnitContaining(semaCtx.FindScope(beginSpec.source));
-  lower::pft::FunctionLikeUnit *owningProc = eval.getOwningProcedure();
-  const semantics::Symbol *owningSym =
-      (owningProc && !owningProc->isMainProgram())
-          ? &owningProc->getSubprogramSymbol()
-          : (owningProc ? owningProc->getMainProgramSymbol() : nullptr);
-  if (progUnitScope.symbol() != owningSym)
-    return;
+  if (const semantics::Symbol *progUnitSym = progUnitScope.symbol()) {
+    if (const auto *subpDetails =
+            progUnitSym->detailsIf<semantics::SubprogramDetails>();
+        subpDetails && subpDetails->isInterface())
+      return;
+  }
 
   List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
 

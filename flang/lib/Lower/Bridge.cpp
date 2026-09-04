@@ -4043,6 +4043,26 @@ private:
     Fortran::lower::gatherOpenMPDeferredDeclareTargets(
         *this, bridge.getSemanticsContext(), getEval(), ompDecl,
         ompDeferredDeclareTarget);
+
+    // A declarative directive describes a property of that procedure or its
+    // symbols; it is not an executable statement. Any operation it creates must
+    // therefore be reachable from every ENTRY. However, emitting at the running
+    // insertion point would drop the op into the shared specification-part
+    // block, which an alternate ENTRY skips over. Use the end of the entry
+    // block in that case instead.
+    //
+    // If this is reached through the specification part of an executable BLOCK
+    // construct (activeConstructStack is non-empty) or if this is a
+    // MODULE-scope declarative (currentFunctionUnit == nullptr), then we don't
+    // have to handle the multiple ENTRY case.
+    if (currentFunctionUnit && activeConstructStack.empty()) {
+      mlir::Block *entryBlock = builder->getEntryBlock();
+      if (entryBlock->mightHaveTerminator())
+        builder->setInsertionPoint(entryBlock->getTerminator());
+      else
+        builder->setInsertionPointToEnd(entryBlock);
+    }
+
     genOpenMPDeclarativeConstruct(
         *this, localSymbols, bridge.getSemanticsContext(), getEval(), ompDecl);
     builder->restoreInsertionPoint(insertPt);
