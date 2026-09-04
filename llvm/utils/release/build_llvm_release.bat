@@ -284,6 +284,7 @@ ninja check-lld || exit /b 1
 REM ninja check-runtimes || exit /b 1
 REM ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
+call :verify_msi_upgrade_code || exit /b 1
 cd ..
 
 exit /b 0
@@ -377,6 +378,7 @@ REM ninja check-flang || exit /b 1
 REM ninja check-mlir || exit /b 1
 REM ninja check-lldb || exit /b 1
 ninja package || exit /b 1
+call :verify_msi_upgrade_code || exit /b 1
 
 :: generate tarball with install toolchain only off
 if "%arch%"=="amd64" (
@@ -415,6 +417,42 @@ set PATH=%PYTHONHOME%;%PATH%
 
 set "VSCMD_START_DIR=%build_dir%"
 
+exit /b 0
+
+::=============================================================================
+
+::==============================================================================
+:: Verify that the generated MSI has LLVM's permanent UpgradeCode.
+::==============================================================================
+:verify_msi_upgrade_code
+set "expected_upgrade_code=B08613CD-8BD0-4FB6-8937-621936604DE3"
+set "msi_path="
+for %%f in (*.msi) do (
+  if defined msi_path (
+    echo Found more than one MSI in %cd%; cannot determine which one to verify.
+    exit /b 1
+  )
+  set "msi_path=%%~ff"
+)
+if not defined msi_path (
+  echo No MSI found in %cd%.
+  exit /b 1
+)
+
+set "wix_source=%TEMP%\llvm-msi-%RANDOM%.wxs"
+dark.exe -nologo -o "%wix_source%" "%msi_path%"
+if errorlevel 1 (
+  echo Failed to decompile "%msi_path%".
+  exit /b 1
+)
+findstr /i /c:"%expected_upgrade_code%" "%wix_source%" >nul
+if errorlevel 1 (
+  echo "%msi_path%" does not have the expected UpgradeCode %expected_upgrade_code%.
+  del /q "%wix_source%"
+  exit /b 1
+)
+del /q "%wix_source%"
+echo Verified MSI UpgradeCode: %expected_upgrade_code%
 exit /b 0
 
 ::=============================================================================
