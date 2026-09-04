@@ -2446,6 +2446,9 @@ module std {
       module merge {
         header "__pstl/cpu_algos/merge.h"
       }
+      module min_element {
+        header "__pstl/cpu_algos/min_element.h"
+      }
       module mismatch {
         header "__pstl/cpu_algos/mismatch.h"
       }

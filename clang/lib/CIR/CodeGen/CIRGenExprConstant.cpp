@@ -39,6 +39,29 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+/// Collects the initializer elements for the members of \p recordTy that are
+/// stored, in order, taking a zero initializer for any member left unset.
+/// \p elements is indexed by member, which is not the same as being indexed by
+/// stored element. A zero-width bit-field owns no bytes and so takes no
+/// element at all.  Fails if a member has no zero initializer.
+static bool
+collectStoredInitializers(CIRGenBuilderTy &builder, cir::RecordType recordTy,
+                          llvm::ArrayRef<mlir::Attribute> elements,
+                          llvm::SmallVectorImpl<mlir::Attribute> &stored) {
+  for (auto [idx, memberTy] : llvm::enumerate(recordTy.getMembers())) {
+    if (!cir::memberOwnsBytes(memberTy))
+      continue;
+    mlir::Attribute elt = elements[idx];
+    if (!elt) {
+      elt = builder.getZeroInitAttr(memberTy);
+      if (!elt)
+        return false;
+    }
+    stored.push_back(elt);
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 //                            ConstantAggregateBuilder
 //===----------------------------------------------------------------------===//
@@ -373,6 +396,8 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
       continue;
     }
 
+    // A run of bit-fields shares one access unit, and every field of the run
+    // is numbered as that unit, so their bits pack into a single element.
     unsigned fieldIdx = cirLayout.getCIRFieldNo(field);
 
     mlir::Attribute eltAttr = inits.emit(emitter, field->getType());
@@ -392,15 +417,11 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
   // probably leave the padding as undef if !CGM.ZeroInitPadding, but that ends
   // up being quite an additional bit of complexity (but could be implemented in
   // the field searching above).
-  for (unsigned i = 0; i < elements.size(); ++i) {
-    if (!elements[i]) {
-      elements[i] = builder.getZeroInitAttr(recordTy.getElementType(i));
-      if (!elements[i])
-        return {};
-    }
-  }
+  llvm::SmallVector<mlir::Attribute> storedElements;
+  if (!collectStoredInitializers(builder, recordTy, elements, storedElements))
+    return {};
 
-  return builder.getConstRecordOrZeroAttr(builder.getArrayAttr(elements),
+  return builder.getConstRecordOrZeroAttr(builder.getArrayAttr(storedElements),
                                           recordTy);
 }
 
@@ -1159,16 +1180,26 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
     }
   }
 
-  // Now go through all other fields and zero them out.
-  for (unsigned i = 0; i != numElements; ++i) {
-    if (!elements[i])
-      elements[i] =
-          cgm.getBuilder().getZeroInitAttr(recordTy.getElementType(i));
+  mlir::MLIRContext *mlirContext = recordTy.getContext();
+
+  // A union takes a single element, for whichever member stands in for the
+  // active one.
+  if (rd->isUnion()) {
+    if (!elements[0])
+      elements[0] =
+          cgm.getBuilder().getZeroInitAttr(recordTy.getElementType(0));
+    return cir::ConstRecordAttr::get(
+        recordTy, mlir::ArrayAttr::get(mlirContext, elements));
   }
 
-  mlir::MLIRContext *mlirContext = recordTy.getContext();
-  return cir::ConstRecordAttr::get(recordTy,
-                                   mlir::ArrayAttr::get(mlirContext, elements));
+  // Now go through all other fields and zero them out.
+  llvm::SmallVector<mlir::Attribute> storedElements;
+  if (!collectStoredInitializers(cgm.getBuilder(), recordTy, elements,
+                                 storedElements))
+    return {};
+
+  return cir::ConstRecordAttr::get(
+      recordTy, mlir::ArrayAttr::get(mlirContext, storedElements));
 }
 
 /// Emit the null constant for a base subobject.

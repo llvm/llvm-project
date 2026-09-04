@@ -107,6 +107,14 @@ ErrorOr<void> close();
 // Reads the next entry from the password database.
 ErrorOr<struct passwd *> read_next();
 
+// Searches for a password entry matching the given username using the
+// static process-global buffer.
+ErrorOr<struct passwd *> find_by_name(cpp::string_view name);
+
+// Searches for a password entry matching the given user ID using the
+// static process-global buffer.
+ErrorOr<struct passwd *> find_by_uid(uid_t uid);
+
 // Searches for a password entry matching the given username.
 // The optional path parameter allows unit tests to direct lookups to hermetic
 // test database files without mutating global state.
