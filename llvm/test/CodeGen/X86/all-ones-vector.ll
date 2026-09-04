@@ -85,7 +85,7 @@ define <4 x float> @allones_v4f32() nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
-  ret <4 x float> <float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000>
+  ret <4 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>
 }
 
 define <32 x i8> @allones_v32i8() nounwind {
@@ -225,7 +225,7 @@ define <8 x float> @allones_v8f32() nounwind {
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX256-NEXT:    ret{{[l|q]}}
-  ret <8 x float> <float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000>
+  ret <8 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>
 }
 
 define <8 x float> @allones_v8f32_optsize() nounwind optsize {
@@ -245,7 +245,7 @@ define <8 x float> @allones_v8f32_optsize() nounwind optsize {
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX256-NEXT:    ret{{[l|q]}}
-  ret <8 x float> <float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000>
+  ret <8 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>
 }
 
 define <64 x i8> @allones_v64i8() nounwind {
@@ -419,5 +419,5 @@ define <16 x float> @allones_v16f32() nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    ret{{[l|q]}}
-  ret <16 x float> <float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000, float 0xffffffffe0000000>
+  ret <16 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>
 }

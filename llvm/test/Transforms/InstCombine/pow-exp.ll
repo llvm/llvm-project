@@ -443,7 +443,7 @@ define float @powf_nan_base(float %e) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float +qnan, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call afn nnan ninf float @powf(float 0x7FF8000000000000, float %e)
+  %call = tail call afn nnan ninf float @powf(float f0x7FC00000, float %e)
   ret float %call
 }
 

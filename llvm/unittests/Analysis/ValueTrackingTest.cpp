@@ -452,13 +452,13 @@ TEST_F(MatchSelectPatternTest, VectorNotFMinimum) {
   parseAssembly(
       "define <4 x float> @test(<4 x float> %a) {\n"
       "  %1 = fcmp ule <4 x float> %a, \n"
-      "    <float 5.0, float 0x7ff8000000000000, float 5.0, float 5.0>\n"
+      "    <float 5.0, float f0x7FC00000, float 5.0, float 5.0>\n"
       "  %A = select <4 x i1> %1, <4 x float> %a,\n"
-      "     <4 x float> <float 5.0, float 0x7ff8000000000000, float 5.0, float "
+      "     <4 x float> <float 5.0, float f0x7FC00000, float 5.0, float "
       "5.0>\n"
       "  ret <4 x float> %A\n"
       "}\n");
-  // The lane that contains a NaN (0x7ff80...) behaves like a
+  // The lane that contains a NaN (0x7FC0...) behaves like a
   // non-NaN-propagating min and the other lines behave like a NaN-propagating
   // min, so check that neither is returned.
   expectPattern({SPF_UNKNOWN, SPNB_NA, false});
@@ -3417,7 +3417,7 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
     },
     {
         "i8 -1",
-        "float 0xFFFFFFFFE0000000",
+        "float f0xFFFFFFFF",
     },
     {
         "i8 0",

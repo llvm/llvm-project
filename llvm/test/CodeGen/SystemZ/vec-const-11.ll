@@ -146,8 +146,8 @@ define <4 x float> @f16() {
 ; CHECK-LABEL: f16:
 ; CHECK: vrepig %v24, -32768
 ; CHECK: br %r14
-  ret <4 x float> <float 0xffffffffe0000000, float 0xfffff00000000000,
-                   float 0xffffffffe0000000, float 0xfffff00000000000>
+  ret <4 x float> <float f0xFFFFFFFF, float 0xfffff00000000000,
+                   float f0xFFFFFFFF, float 0xfffff00000000000>
 }
 
 ; Test a doubleword-granularity replicate with the next lowest value.
@@ -156,8 +156,8 @@ define <4 x float> @f17() {
 ; CHECK-LABEL: f17:
 ; CHECK-NOT: vrepig
 ; CHECK: br %r14
-  ret <4 x float> <float 0xffffffffe0000000, float 0xffffefffe0000000,
-                   float 0xffffffffe0000000, float 0xffffefffe0000000>
+  ret <4 x float> <float f0xFFFFFFFF, float 0xffffefffe0000000,
+                   float f0xFFFFFFFF, float 0xffffefffe0000000>
 }
 
 ; Test a doubleword-granularity replicate with the highest useful negative
@@ -166,8 +166,8 @@ define <4 x float> @f18() {
 ; CHECK-LABEL: f18:
 ; CHECK: vrepig %v24, -2
 ; CHECK: br %r14
-  ret <4 x float> <float 0xffffffffe0000000, float 0xffffffffc0000000,
-                   float 0xffffffffe0000000, float 0xffffffffc0000000>
+  ret <4 x float> <float f0xFFFFFFFF, float 0xffffffffc0000000,
+                   float f0xFFFFFFFF, float 0xffffffffc0000000>
 }
 
 ; Repeat f14 with undefs optimistically treated as 0, 32767.
@@ -184,6 +184,6 @@ define <4 x float> @f20() {
 ; CHECK-LABEL: f20:
 ; CHECK: vrepig %v24, -2
 ; CHECK: br %r14
-  ret <4 x float> <float 0xffffffffe0000000, float undef,
+  ret <4 x float> <float f0xFFFFFFFF, float undef,
                    float undef, float 0xffffffffc0000000>
 }

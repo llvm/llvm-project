@@ -417,7 +417,7 @@ define float @test_constant_fold_frexp_mant_f32_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_nan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.frexp.mant.f32(float 0x7FF8000000000000)
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float f0x7FC00000)
   ret float %val
 }
 
@@ -609,7 +609,7 @@ define i32 @test_constant_fold_frexp_exp_f32_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_nan(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float 0x7FF8000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float f0x7FC00000)
   ret i32 %val
 }
 
@@ -5507,7 +5507,7 @@ define float @test_constant_fold_log_f32_qnan() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_qnan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000)
+  %val = call float @llvm.amdgcn.log.f32(float f0x7FC00000)
   ret float %val
 }
 
@@ -5540,7 +5540,7 @@ define float @test_constant_fold_log_f32_qnan_strictfp() strictfp {
 ; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float +qnan) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000) strictfp
+  %val = call float @llvm.amdgcn.log.f32(float f0x7FC00000) strictfp
   ret float %val
 }
 
@@ -5752,7 +5752,7 @@ define float @test_constant_fold_exp2_f32_qnan() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_qnan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000)
+  %val = call float @llvm.amdgcn.exp2.f32(float f0x7FC00000)
   ret float %val
 }
 
@@ -5786,7 +5786,7 @@ define float @test_constant_fold_exp2_f32_qnan_strictfp() strictfp {
 ; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float +qnan) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000) strictfp
+  %val = call float @llvm.amdgcn.exp2.f32(float f0x7FC00000) strictfp
   ret float %val
 }
 

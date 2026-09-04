@@ -27,10 +27,10 @@ allocas:
   %vix = load <8 x i32>, ptr %vix.ptr, align 4
   %t1.ptr = getelementptr i8, ptr %arr.ptr, i8 4
 
-  %v1 = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr %arr.ptr, <8 x i32> %vix, <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, i8 1) #2
+  %v1 = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr %arr.ptr, <8 x i32> %vix, <8 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>, i8 1) #2
   store i8 1, ptr %t1.ptr, align 4
 
-  %v2 = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr %arr.ptr, <8 x i32> %vix, <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, i8 1) #2
+  %v2 = tail call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, ptr %arr.ptr, <8 x i32> %vix, <8 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>, i8 1) #2
   %res = fadd <8 x float> %v1, %v2
 
   ret <8 x float> %res

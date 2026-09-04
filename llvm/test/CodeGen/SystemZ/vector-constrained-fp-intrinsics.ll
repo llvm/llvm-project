@@ -811,8 +811,8 @@ define <3 x float> @constrained_vector_fadd_v3f32() #0 {
 ; SZ13-NEXT:    br %r14
 entry:
   %add = call <3 x float> @llvm.experimental.constrained.fadd.v3f32(
-           <3 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000,
-                        float 0xFFFFFFFFE0000000>,
+           <3 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF,
+                        float f0xFFFFFFFF>,
            <3 x float> <float 2.0, float 1.0, float 0.0>,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
@@ -983,8 +983,8 @@ define <3 x float> @constrained_vector_fsub_v3f32() #0 {
 ; SZ13-NEXT:    br %r14
 entry:
   %sub = call <3 x float> @llvm.experimental.constrained.fsub.v3f32(
-           <3 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000,
-                        float 0xFFFFFFFFE0000000>,
+           <3 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF,
+                        float f0xFFFFFFFF>,
            <3 x float> <float 2.0, float 1.0, float 0.0>,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0

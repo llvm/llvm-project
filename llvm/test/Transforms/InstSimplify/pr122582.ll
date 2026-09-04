@@ -96,7 +96,7 @@ define i32 @ilogbf_nan() {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float +qnan)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogbf(float 0x7FF8000000000000)
+  %r = call i32 @ilogbf(float f0x7FC00000)
   ret i32 %r
 }
 
@@ -168,7 +168,7 @@ define i32 @ilogbf_nan_readnone() {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float +qnan) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogbf(float 0x7FF8000000000000) readnone
+  %r = call i32 @ilogbf(float f0x7FC00000) readnone
   ret i32 %r
 }
 

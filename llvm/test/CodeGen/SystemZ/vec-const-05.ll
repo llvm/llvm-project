@@ -15,8 +15,8 @@ define <4 x float> @f2() {
 ; CHECK-LABEL: f2:
 ; CHECK: vgbm %v24, 65535
 ; CHECK: br %r14
-  ret <4 x float> <float 0xffffffffe0000000, float 0xffffffffe0000000,
-                   float 0xffffffffe0000000, float 0xffffffffe0000000>
+  ret <4 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF,
+                   float f0xFFFFFFFF, float f0xFFFFFFFF>
 }
 
 ; Test a mixed vector (mask 0xc731).

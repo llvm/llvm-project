@@ -3555,7 +3555,7 @@ define float @test_fmaximumnum_snan(float %x, float %y) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    retl
-  %1 = tail call float @llvm.maximumnum.f32(float 0x7ff4000000000000, float %y)
+  %1 = tail call float @llvm.maximumnum.f32(float f0x7FA00000, float %y)
   ret float %1
 }
 
@@ -3579,6 +3579,6 @@ define float @test_fminimumnum_snan(float %x, float %y) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    retl
-  %1 = tail call float @llvm.minimumnum.f32(float 0x7ff4000000000000, float %y)
+  %1 = tail call float @llvm.minimumnum.f32(float f0x7FA00000, float %y)
   ret float %1
 }

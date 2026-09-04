@@ -291,7 +291,7 @@ define float @fcmp_select_no_fold_oeq_f32_nan(float %arg, float %other) {
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = fcmp oeq float %arg, 0x7FF8000000000000
-  %sel = select i1 %cmp, float 0x7FF8000000000000, float %other
+  %sel = select i1 %cmp, float f0x7FC00000, float %other
   ret float %sel
 }
 
@@ -310,8 +310,8 @@ define float @fcmp_select_no_fold_one_f32_nan(float %arg, float %other) {
 ; GFX1010-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %cmp = fcmp one float 0x7FF8000000000000, %arg
-  %sel = select i1 %cmp, float %other, float 0x7FF8000000000000
+  %cmp = fcmp one float f0x7FC00000, %arg
+  %sel = select i1 %cmp, float %other, float f0x7FC00000
   ret float %sel
 }
 

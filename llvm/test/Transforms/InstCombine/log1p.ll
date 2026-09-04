@@ -222,7 +222,7 @@ define float @log1pf_nan() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +qnan)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @log1pf(float 0x7FF8000000000000)
+  %r = call float @log1pf(float f0x7FC00000)
   ret float %r
 }
 
@@ -240,7 +240,7 @@ define float @log1pf_nan_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @log1pf(float +qnan) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @log1pf(float 0x7FF8000000000000) readnone
+  %r = call float @log1pf(float f0x7FC00000) readnone
   ret float %r
 }
 

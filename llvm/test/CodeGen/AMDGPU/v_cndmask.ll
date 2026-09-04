@@ -116,7 +116,7 @@ define amdgpu_kernel void @v_cnd_nan_nosgpr(ptr addrspace(1) %out, i32 %c, ptr a
   %f.gep = getelementptr float, ptr addrspace(1) %fptr, i32 %idx
   %f = load float, ptr addrspace(1) %f.gep
   %setcc = icmp ne i32 %c, 0
-  %select = select i1 %setcc, float 0xFFFFFFFFE0000000, float %f
+  %select = select i1 %setcc, float f0xFFFFFFFF, float %f
   store float %select, ptr addrspace(1) %out
   ret void
 }
@@ -190,7 +190,7 @@ define amdgpu_kernel void @v_cnd_nan(ptr addrspace(1) %out, i32 %c, float %f) #0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %setcc = icmp ne i32 %c, 0
-  %select = select i1 %setcc, float 0xFFFFFFFFE0000000, float %f
+  %select = select i1 %setcc, float f0xFFFFFFFF, float %f
   store float %select, ptr addrspace(1) %out
   ret void
 }

@@ -2382,7 +2382,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f32(ptr addrspace(1) %out
 ; GFX1251-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-GISEL-FAKE16-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1251-GISEL-FAKE16-NEXT:    s_endpgm
-  %canonicalized = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+  %canonicalized = call float @llvm.canonicalize.f32(float f0x7FC00000)
   store float %canonicalized, ptr addrspace(1) %out
   ret void
 }

@@ -166,7 +166,7 @@ define <4 x float> @gather_global(<4 x i64>, ptr nocapture readnone) {
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %3 = tail call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> zeroinitializer, ptr @x, <4 x i64> %0, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, i8 4)
+  %3 = tail call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> zeroinitializer, ptr @x, <4 x i64> %0, <4 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>, i8 4)
   ret <4 x float> %3
 }
 declare <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float>, ptr, <4 x i64>, <4 x float>, i8)

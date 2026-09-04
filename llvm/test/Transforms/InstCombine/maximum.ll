@@ -28,7 +28,7 @@ define float @constant_fold_maximum_f32_nan0() {
 ; CHECK-LABEL: @constant_fold_maximum_f32_nan0(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %x = call float @llvm.maximum.f32(float 0x7FF8000000000000, float 2.0)
+  %x = call float @llvm.maximum.f32(float f0x7FC00000, float 2.0)
   ret float %x
 }
 
@@ -36,7 +36,7 @@ define float @constant_fold_maximum_f32_nan1() {
 ; CHECK-LABEL: @constant_fold_maximum_f32_nan1(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %x = call float @llvm.maximum.f32(float 2.0, float 0x7FF8000000000000)
+  %x = call float @llvm.maximum.f32(float 2.0, float f0x7FC00000)
   ret float %x
 }
 
@@ -44,7 +44,7 @@ define float @constant_fold_maximum_f32_nan_nan() {
 ; CHECK-LABEL: @constant_fold_maximum_f32_nan_nan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %x = call float @llvm.maximum.f32(float 0x7FF8000000000000, float 0x7FF8000000000000)
+  %x = call float @llvm.maximum.f32(float f0x7FC00000, float f0x7FC00000)
   ret float %x
 }
 
@@ -133,7 +133,7 @@ define float @maximum_f32_nan_val(float %x) {
 ; CHECK-LABEL: @maximum_f32_nan_val(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %y = call float @llvm.maximum.f32(float 0x7FF8000000000000, float %x)
+  %y = call float @llvm.maximum.f32(float f0x7FC00000, float %x)
   ret float %y
 }
 
@@ -141,7 +141,7 @@ define float @maximum_f32_val_nan(float %x) {
 ; CHECK-LABEL: @maximum_f32_val_nan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %y = call float @llvm.maximum.f32(float %x, float 0x7FF8000000000000)
+  %y = call float @llvm.maximum.f32(float %x, float f0x7FC00000)
   ret float %y
 }
 

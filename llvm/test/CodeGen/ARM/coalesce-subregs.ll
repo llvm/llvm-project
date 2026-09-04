@@ -218,7 +218,7 @@ bb3:                                              ; preds = %bb12, %bb
   %tmp6 = bitcast <4 x float> %tmp5 to <2 x i64>
   %tmp7 = shufflevector <2 x i64> %tmp6, <2 x i64> undef, <1 x i32> zeroinitializer
   %tmp8 = bitcast <1 x i64> %tmp7 to <2 x float>
-  %tmp9 = tail call <2 x float> @baz(<2 x float> <float 0xFFFFFFFFE0000000, float 0.000000e+00>, <2 x float> %tmp8, <2 x float> zeroinitializer) nounwind
+  %tmp9 = tail call <2 x float> @baz(<2 x float> <float f0xFFFFFFFF, float 0.000000e+00>, <2 x float> %tmp8, <2 x float> zeroinitializer) nounwind
   br i1 undef, label %bb10, label %bb12
 
 bb10:                                             ; preds = %bb3

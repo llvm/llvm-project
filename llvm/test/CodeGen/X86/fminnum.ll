@@ -669,6 +669,6 @@ define float @test_minnum_snan(float %x) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
-  %r = call float @llvm.minnum.f32(float 0x7ff4000000000000, float %x)
+  %r = call float @llvm.minnum.f32(float f0x7FA00000, float %x)
   ret float %r
 }

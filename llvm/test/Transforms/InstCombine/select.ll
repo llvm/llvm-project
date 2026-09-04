@@ -1646,7 +1646,7 @@ define <4 x float> @PR33721(<4 x float> %w) {
 ;
 entry:
   %0 = fcmp ole <4 x float> %w, zeroinitializer
-  %1 = select <4 x i1> %0, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, <4 x float> zeroinitializer
+  %1 = select <4 x i1> %0, <4 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF, float f0xFFFFFFFF>, <4 x float> zeroinitializer
   ret <4 x float> %1
 }
 

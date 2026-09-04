@@ -4,7 +4,7 @@ target triple = "wasm32-unknown-unknown"
 define float @float_sNaN() #0 {
 entry:
 ; CHECK: 00 00 a0 7f
-  ret float 0x7ff4000000000000
+  ret float f0x7FA00000
 }
 
 define float @float_qNaN() #0 {

@@ -202,7 +202,7 @@ body:             |
     ; CHECK-NEXT: STRQui [[MOVIv2d_ns]], [[COPY]], 0 :: (store (<4 x s32>))
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
-    %2:fpr(f32) = G_FCONSTANT float 0xFFFFFFFFE0000000
+    %2:fpr(f32) = G_FCONSTANT float f0xFFFFFFFF
     %1:fpr(<4 x f32>) = G_BUILD_VECTOR %2(f32), %2(f32), %2(f32), %2(f32)
     G_STORE %1(<4 x f32>), %0(p0) :: (store (<4 x s32>))
     RET_ReallyLR

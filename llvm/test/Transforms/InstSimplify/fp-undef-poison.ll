@@ -331,7 +331,7 @@ define float @sqrt_nnan_nan() {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float +qnan)
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = call nnan float @llvm.sqrt(float 0x7ff8000000000000)
+  %sqrt = call nnan float @llvm.sqrt(float f0x7FC00000)
   ret float %sqrt
 }
 

@@ -132,7 +132,7 @@ define float @erff_nan() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @erff(float 0x7FF8000000000000)
+  %r = call float @erff(float f0x7FC00000)
   ret float %r
 }
 
@@ -150,7 +150,7 @@ define float @erff_nan_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @erff(float 0x7FF8000000000000) readnone
+  %r = call float @erff(float f0x7FC00000) readnone
   ret float %r
 }
 
@@ -207,7 +207,7 @@ define float @erff_nan_strictfp() strictfp {
 ; CHECK-NEXT:    [[R:%.*]] = call float @erff(float +qnan) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @erff(float 0x7FF8000000000000) strictfp
+  %r = call float @erff(float f0x7FC00000) strictfp
   ret float %r
 }
 

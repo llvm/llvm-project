@@ -2919,7 +2919,7 @@ define float @test_fmaximum_snan(float %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    retl
-  %1 = tail call float @llvm.maximum.f32(float 0x7ff4000000000000, float %x)
+  %1 = tail call float @llvm.maximum.f32(float f0x7FA00000, float %x)
   ret float %1
 }
 
@@ -2943,7 +2943,7 @@ define float @test_fminimum_snan(float %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    retl
-  %1 = tail call float @llvm.minimum.f32(float 0x7ff4000000000000, float %x)
+  %1 = tail call float @llvm.minimum.f32(float f0x7FA00000, float %x)
   ret float %1
 }
 

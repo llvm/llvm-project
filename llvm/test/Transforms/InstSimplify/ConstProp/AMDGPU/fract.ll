@@ -80,7 +80,7 @@ define void @test_f32(ptr %p) {
   store volatile float %pinf, ptr %p
   %ninf = call float @llvm.amdgcn.fract.f32(float -inf) ; -inf
   store volatile float %ninf, ptr %p
-  %nan = call float @llvm.amdgcn.fract.f32(float 0x7FF8000000000000) ; nan
+  %nan = call float @llvm.amdgcn.fract.f32(float f0x7FC00000) ; nan
   store volatile float %nan, ptr %p
   ret void
 }

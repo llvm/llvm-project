@@ -74,7 +74,7 @@ body: |
     %4 = CVT_f32_f64 %3, 5
     %5 = CVT_f32_s32 %2, 5
   ; CHECK: %6:b32 = FADD_rnf32ri %5, float +qnan
-    %6 = FADD_rnf32ri %5, float 0x7FF8000000000000, 0
+    %6 = FADD_rnf32ri %5, float f0x7FC00000, 0
     %7 = FMUL_rnf32rr %6, %4, 0
     ST_i32 %7, 0, 0, 101, 32, 0, &func_retval0, 0, $noreg :: (store (s32), addrspace 101)
     Return

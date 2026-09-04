@@ -28,7 +28,7 @@ define float @frem_x_maybe_inf(float %x, float %y)  {
 ; OPT0: 2:
 ; OPT0: [[FABS:%.*]] = call float @llvm.fabs.f32(float %x)
 ; OPT0: [[FCMP:%.*]] = fcmp ult float [[FABS]], +inf
-; OPT0-NEXT: %ret = select i1 [[FCMP]], float %{{.*}}, float 0x7FF8000000000000
+; OPT0-NEXT: %ret = select i1 [[FCMP]], float %{{.*}}, float f0x7FC00000
 ; OPT0-NEXT: ret float %ret
 ; OPT0-LABEL: }
 define float @frem_x_assumed_non_inf(float %x, float %y)  {

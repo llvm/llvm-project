@@ -40,9 +40,9 @@ define void @ones(ptr nocapture %RET, ptr nocapture %aFOO) nounwind {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 allocas:
-  store <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float
-0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float
-0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, ptr %RET, align 32
+  store <8 x float> <float f0xFFFFFFFF, float f0xFFFFFFFF, float
+0xFFFFFFFFE0000000, float f0xFFFFFFFF, float f0xFFFFFFFF, float
+0xFFFFFFFFE0000000, float f0xFFFFFFFF, float f0xFFFFFFFF>, ptr %RET, align 32
   ret void
 }
 

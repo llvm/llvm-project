@@ -78,7 +78,7 @@ define float @logbf_nan() {
 ; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float +qnan)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @logbf(float 0x7FF8000000000000)
+  %r = call float @logbf(float f0x7FC00000)
   ret float %r
 }
 

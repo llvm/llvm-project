@@ -40,7 +40,7 @@ define <4 x float> @constant_blendvps(<4 x float> %xyzw, <4 x float> %abcd) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[XYZW:%.*]], <4 x float> [[ABCD:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
-  %1 = tail call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %xyzw, <4 x float> %abcd, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0xFFFFFFFFE0000000>)
+  %1 = tail call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %xyzw, <4 x float> %abcd, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float f0xFFFFFFFF>)
   ret <4 x float> %1
 }
 
@@ -139,7 +139,7 @@ define <8 x float> @constant_blendvps_avx(<8 x float> %xyzw, <8 x float> %abcd) 
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[XYZW:%.*]], <8 x float> [[ABCD:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 4, i32 5, i32 6, i32 15>
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
-  %1 = tail call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %xyzw, <8 x float> %abcd, <8 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0xFFFFFFFFE0000000, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0xFFFFFFFFE0000000>)
+  %1 = tail call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %xyzw, <8 x float> %abcd, <8 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float f0xFFFFFFFF, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float f0xFFFFFFFF>)
   ret <8 x float> %1
 }
 

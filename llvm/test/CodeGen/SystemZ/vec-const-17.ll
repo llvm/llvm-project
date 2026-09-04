@@ -72,8 +72,8 @@ define <4 x float> @f8() {
 ; CHECK-LABEL: f8:
 ; CHECK: vgmg %v24, 0, 44
 ; CHECK: br %r14
-  ret <4 x float> <float 0xffffffffe0000000, float 0xffff000000000000,
-                   float 0xffffffffe0000000, float 0xffff000000000000>
+  ret <4 x float> <float f0xFFFFFFFF, float 0xffff000000000000,
+                   float f0xFFFFFFFF, float 0xffff000000000000>
 }
 
 ; Test a doubleword-granularity replicate that has middle bits set.
@@ -90,6 +90,6 @@ define <4 x float> @f10() {
 ; CHECK-LABEL: f10:
 ; CHECK: vgmg %v24, 32, 0
 ; CHECK: br %r14
-  ret <4 x float> <float 0x8000000000000000, float 0xffffffffe0000000,
-                   float 0x8000000000000000, float 0xffffffffe0000000>
+  ret <4 x float> <float 0x8000000000000000, float f0xFFFFFFFF,
+                   float 0x8000000000000000, float f0xFFFFFFFF>
 }

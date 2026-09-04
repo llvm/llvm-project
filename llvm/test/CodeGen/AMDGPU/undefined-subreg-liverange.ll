@@ -31,7 +31,7 @@ B2:
   br i1 %cmp, label %B30.1, label %B30.2
 
 B30.1:
-  %sub = fsub <4 x float> %v0, splat (float 0x7FF8000000000000)
+  %sub = fsub <4 x float> %v0, splat (float f0x7FC00000)
   br label %B30.2
 
 B30.2:

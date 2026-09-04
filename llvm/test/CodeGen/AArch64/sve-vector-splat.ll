@@ -754,7 +754,7 @@ define <vscale x 2 x float> @splat_nan_nxv2f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0x7fc00000
 ; CHECK-NEXT:    ret
-  ret <vscale x 2 x float> splat (float 0x7FF8000000000000)
+  ret <vscale x 2 x float> splat (float f0x7FC00000)
 }
 
 define <vscale x 4 x float> @splat_nan_nxv4f32() {
@@ -762,7 +762,7 @@ define <vscale x 4 x float> @splat_nan_nxv4f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0x7fc00000
 ; CHECK-NEXT:    ret
-  ret <vscale x 4 x float> splat (float 0x7FF8000000000000)
+  ret <vscale x 4 x float> splat (float f0x7FC00000)
 }
 
 define <vscale x 2 x double> @splat_nan_nxv2f64() {
