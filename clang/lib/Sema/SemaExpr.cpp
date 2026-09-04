@@ -1779,7 +1779,8 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   if (LHSType->isFixedPointType() || RHSType->isFixedPointType()) {
     // N1169 4.1.4 only defines conversions between fixed point types and the
-    // standard integer types, so reject e.g. _BitInt or overflow behavior types.
+    // standard integer types, so reject e.g. _BitInt or overflow behavior
+    // types.
     if (!LHSType->getAs<BuiltinType>() || !RHSType->getAs<BuiltinType>())
       return QualType();
     return handleFixedPointConversion(*this, LHSType, RHSType);
