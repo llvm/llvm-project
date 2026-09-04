@@ -178,6 +178,7 @@
 ; CHECK-NEXT:   smepmp                           - 'Smepmp' (Enhanced Physical Memory Protection).
 ; CHECK-NEXT:   smmpm                            - 'Smmpm' (Machine-level Pointer Masking for M-mode).
 ; CHECK-NEXT:   smnpm                            - 'Smnpm' (Machine-level Pointer Masking for next lower privilege mode).
+; CHECK-NEXT:   smpmpdeleg                       - 'Smpmpdeleg' (Sharing Hardware Resources between PMP and SPMP).
 ; CHECK-NEXT:   smrnmi                           - 'Smrnmi' (Resumable Non-Maskable Interrupts).
 ; CHECK-NEXT:   smstateen                        - 'Smstateen' (Machine-mode view of the state-enable extension).
 ; CHECK-NEXT:   ssaia                            - 'Ssaia' (Advanced Interrupt Architecture Supervisor Level).
@@ -190,6 +191,8 @@
 ; CHECK-NEXT:   ssdbltrp                         - 'Ssdbltrp' (Double Trap Supervisor Level).
 ; CHECK-NEXT:   ssnpm                            - 'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode).
 ; CHECK-NEXT:   sspm                             - 'Sspm' (Indicates Supervisor-mode Pointer Masking).
+; CHECK-NEXT:   sspmp                            - 'Sspmp' (S-level Physical Memory Protection (SPMP)).
+; CHECK-NEXT:   sspmpen                          - 'Sspmpen' (Optimizing Context Switching of SPMP Entries).
 ; CHECK-NEXT:   ssqosid                          - 'Ssqosid' (Quality-of-Service (QoS) Identifiers).
 ; CHECK-NEXT:   ssstateen                        - 'Ssstateen' (Supervisor-mode view of the state-enable extension).
 ; CHECK-NEXT:   ssstrict                         - 'Ssstrict' (No non-conforming extensions are present).

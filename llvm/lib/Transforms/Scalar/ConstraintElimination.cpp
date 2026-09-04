@@ -1109,13 +1109,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (&BB == Latch && !IncStep)
     return;
 
-  BasicBlock *InLoopSucc = nullptr;
-  if (Pred == CmpInst::ICMP_NE)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(0);
-  else if (Pred == CmpInst::ICMP_EQ)
-    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(1);
-  else
-    return;
+  bool ContinueOnTrue =
+      Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+  CmpInst::Predicate ContinuePred =
+      ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
+  BasicBlock *InLoopSucc = cast<CondBrInst>(BB.getTerminator())
+                               ->getSuccessor(ContinueOnTrue ? 0 : 1);
 
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
     return;
@@ -1125,6 +1124,23 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
+  DomTreeNode *DTN = DT.getNode(InLoopSucc);
+
+  if (ICmpInst::isRelational(ContinuePred)) {
+    if (A != Backedge)
+      return;
+
+    // The latch condition ensures ContinuePred holds in the header on each
+    // iteration other than the first. Together with a precondition on the start
+    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+
+    // A relational latch steps past B rather than landing on it, so none of the
+    // reasoning below applies.
+    return;
+  }
+
   const APInt *StepOffset = nullptr;
   const SCEV *StartSCEV = nullptr;
   if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
@@ -1137,8 +1153,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
                                    m_SpecificLoop(L))))
       return;
   }
-
-  DomTreeNode *DTN = DT.getNode(InLoopSucc);
 
   // If we looked through `PN + C`, only derive facts when that add is
   // really the induction's post-increment or post-decrement.
@@ -1195,55 +1209,42 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
   }
 
-  Value *LowerBound = StartValue;
-  bool LowerBoundNUW = true, LowerBoundNSW = true;
-  if (IncStep) {
-    auto *StartC = dyn_cast<ConstantInt>(StartValue);
-    if (!StartC)
-      return;
-    bool UOverflow = false, SOverflow = false;
-    APInt Sum = StartC->getValue().uadd_ov(*StepOffset, UOverflow);
-    (void)StartC->getValue().sadd_ov(*StepOffset, SOverflow);
-    LowerBound = ConstantInt::get(StartValue->getType(), Sum);
-    LowerBoundNUW = !UOverflow;
-    LowerBoundNSW = !SOverflow;
-  }
+  // We already established that B - Start is a multiple of Step above. The loop
+  // exits once the compared value reaches B, that is at PN == B when comparing
+  // the phi, and at PN + Step == B for a post-increment. Together with the
+  // added precondition StartValue <= B for the former and the strict
+  // StartValue < B for the latter (which implies StartValue + Step <= B),
+  // neither PN nor the increment can wrap.
+  CmpInst::Predicate UPrecond = IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
+  ConditionTy StartBeforeBoundUnsigned = {UPrecond, StartValue, B};
+  ConditionTy StartBeforeBoundSigned = {ICmpInst::getSignedPredicate(UPrecond),
+                                        StartValue, B};
 
-  // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B, which
-  // guarantees that the loop exits before wrapping in combination with the
-  // restrictions on B and the step above.
-  ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, LowerBound, B};
-  ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, LowerBound, B};
-  if (!Info.Unsigned && LowerBoundNUW)
+  // Add PN >= StartValue, as the loop exits before wrapping.
+  if (!Info.Unsigned)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundULE));
-  if (!Info.Signed && LowerBoundNSW)
+        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundUnsigned));
+  if (!Info.Signed)
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSLE));
-
-  if (LowerBoundNSW)
-    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                     B, StartBeforeBoundSLE));
-
-  if (!LowerBoundNUW)
-    return;
-
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_ULT, PN,
-                                                   B, StartBeforeBoundULE));
+        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
+  // Add PN < B, as the loop exits once the compared value reaches B.
+  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
+                                                   B, StartBeforeBoundSigned));
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
   // must be u<= B, as other exits may only exit earlier.
   assert(!StepOffset->isNegative() && "induction must be increasing");
-  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-         "unsupported predicate");
+  assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
     // Bail out on non-dedicated exits.
     if (DT.dominates(&BB, EB)) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundULE));
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundUnsigned));
     }
   }
 }
