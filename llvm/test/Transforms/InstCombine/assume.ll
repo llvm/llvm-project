@@ -1124,10 +1124,11 @@ define void @canonicalize_assume(ptr %0) {
 
 define void @assume_makes_and_known_assume_on_arg(ptr %p, i32 %x) {
 ; CHECK-LABEL: @assume_makes_and_known_assume_on_arg(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 1
+; CHECK-NEXT:    store i32 [[AND2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %and = and i32 %x, 1
@@ -1141,10 +1142,11 @@ define void @assume_makes_and_known_assume_on_arg(ptr %p, i32 %x) {
 define void @assume_makes_and_known_assume_on_mul(ptr %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @assume_makes_and_known_assume_on_mul(
 ; CHECK-NEXT:    [[X:%.*]] = mul i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 1
+; CHECK-NEXT:    store i32 [[AND2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x = mul i32 %a, %b
@@ -1159,10 +1161,11 @@ define void @assume_makes_and_known_assume_on_mul(ptr %p, i32 %a, i32 %b) {
 define void @assume_makes_and_known_assume_on_bitwise(ptr %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @assume_makes_and_known_assume_on_bitwise(
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 1
+; CHECK-NEXT:    store i32 [[AND2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x = or i32 %a, %b

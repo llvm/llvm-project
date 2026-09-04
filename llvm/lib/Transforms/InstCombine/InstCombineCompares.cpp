@@ -1813,6 +1813,13 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                      const APInt &C1) {
   bool isICMP_NE = Cmp.getPredicate() == ICmpInst::ICMP_NE;
 
+  // icmp eq (and X, 1), 0 --> not (trunc X to i1)
+  if (Cmp.getPredicate() == ICmpInst::ICMP_EQ && C1.isZero() &&
+      And->hasOneUse() && match(And->getOperand(1), m_One())) {
+    Value *NewTrunc = Builder.CreateTrunc(And->getOperand(0), Cmp.getType());
+    return BinaryOperator::CreateNot(NewTrunc);
+  }
+
   // icmp ne (and X, 1), 0 --> trunc X to i1
   if (isICMP_NE && C1.isZero() && match(And->getOperand(1), m_One()))
     return new TruncInst(And->getOperand(0), Cmp.getType());

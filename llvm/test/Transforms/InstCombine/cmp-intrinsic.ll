@@ -284,8 +284,8 @@ define i1 @cttz_eq_zero_i33(i33 %x) {
 
 define <2 x i1> @cttz_ne_zero_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: @cttz_ne_zero_v2i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 1)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[A:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[CMP:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 false)
@@ -350,8 +350,8 @@ define i1 @cttz_eq_other_i33_multiuse(i33 %x, ptr %p) {
 
 define i1 @cttz_ugt_zero_i33(i33 %x) {
 ; CHECK-LABEL: @cttz_ugt_zero_i33(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i33 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i33 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i33 [[X:%.*]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %tz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)

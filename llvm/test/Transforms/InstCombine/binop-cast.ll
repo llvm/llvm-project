@@ -301,9 +301,8 @@ define i32 @and_add_bool_to_select(i1 %x, i32 %y) {
 
 define i32 @and_add_bool_no_fold(i32 %y) !prof !0 {
 ; CHECK-LABEL: @and_add_bool_no_fold(
-; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 0, !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y:%.*]] to i1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i32 0, i32 [[Y]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %x = and i32 %y, 1
