@@ -371,6 +371,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaxf
     libc.src.math.fmaxf128
     libc.src.math.fmaximum
+    libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_magf128
     libc.src.math.fmaximumf
     libc.src.math.fmaximumf128
@@ -390,6 +391,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminf
     libc.src.math.fminf128
     libc.src.math.fminimum
+    libc.src.math.fminimum_mag_numf128
     libc.src.math.fminimum_magf128
     libc.src.math.fminimumf
     libc.src.math.fminimumf128
