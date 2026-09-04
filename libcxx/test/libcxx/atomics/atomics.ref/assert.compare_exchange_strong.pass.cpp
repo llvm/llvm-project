@@ -8,8 +8,11 @@
 
 // REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// ADDITIONAL_COMPILE_FLAGS: -Wno-user-defined-warnings
 
+// Failing on linux: undefined reference to symbol '__atomic_compare_exchange@@LIBATOMIC_1.0'
+// XFAIL: target={{.*}}-linux{{.*}} && libcpp-hardening-mode={{extensive|debug}}
+
+// ADDITIONAL_COMPILE_FLAGS: -Wno-user-defined-warnings
 // <atomic>
 
 // bool compare_exchange_strong(T& expected, T desired, memory_order success, memory_order failure) const noexcept;
