@@ -36,6 +36,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -3275,30 +3276,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   }
 }
 
-/// Determines whether the language options require us to model
-/// unwind exceptions.  We treat -fexceptions as mandating this
-/// except under the fragile ObjC ABI with only ObjC exceptions
-/// enabled.  This means, for example, that C with -fexceptions
-/// enables this.
-static bool hasUnwindExceptions(const LangOptions &langOpts) {
-  // If exceptions are completely disabled, obviously this is false.
-  if (!langOpts.Exceptions)
-    return false;
-  // If C++ exceptions are enabled, this is true.
-  if (langOpts.CXXExceptions)
-    return true;
-  // If ObjC exceptions are enabled, this depends on the ABI.
-  if (langOpts.ObjCExceptions)
-    return langOpts.ObjCRuntime.hasUnwindExceptions();
-  return true;
-}
-
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
   assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
   assert(!cir::MissingFeatures::stackProtector());
 
-  if (!hasUnwindExceptions(langOpts))
+  if (!CodeGenUtils::hasUnwindExceptions(langOpts))
     f->setAttr(cir::CIRDialect::getNoThrowAttrName(),
                mlir::UnitAttr::get(&getMLIRContext()));
 
