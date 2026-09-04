@@ -82,7 +82,6 @@ define i64 @test3(i64 %x) nounwind {
 ; CHECK-NEXT:    move.l (8,%sp), %d0
 ; CHECK-NEXT:    or.l (4,%sp), %d0
 ; CHECK-NEXT:    seq %d0
-; CHECK-NEXT:    moveq #0, %d1
 ; CHECK-NEXT:    move.b %d0, %d1
 ; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    moveq #0, %d0
@@ -103,7 +102,6 @@ define i64 @test4(i64 %x) nounwind {
 ; CHECK-NEXT:    sub.l #1, %d2
 ; CHECK-NEXT:    subx.l %d0, %d1
 ; CHECK-NEXT:    slt %d1
-; CHECK-NEXT:    and.l #255, %d1
 ; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; CHECK-NEXT:    adda.l #4, %sp
@@ -145,7 +143,6 @@ define i32 @test7(i64 %res) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    cmpi.l #0, (4,%sp)
 ; CHECK-NEXT:    seq %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -159,7 +156,6 @@ define i32 @test8(i64 %res) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    cmpi.l #3, (4,%sp)
 ; CHECK-NEXT:    scs %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -175,7 +171,6 @@ define i32 @test11(i64 %l) nounwind {
 ; CHECK-NEXT:    and.l #-32768, %d0
 ; CHECK-NEXT:    cmpi.l #32768, %d0
 ; CHECK-NEXT:    seq %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -241,7 +236,6 @@ define zeroext i1 @test15(i32 %bf.load, i32 %n) {
 ; CHECK-NEXT:    cmpi.l #0, %d1
 ; CHECK-NEXT:    seq %d1
 ; CHECK-NEXT:    or.b %d0, %d1
-; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
@@ -296,7 +290,6 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 ; CHECK-NEXT:    move.l #16777215, %d0
 ; CHECK-NEXT:    and.l (8,%sp), %d0
 ; CHECK-NEXT:    sne %d1
-; CHECK-NEXT:    and.l #255, %d1
 ; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    moveq #0, %d2
 ; CHECK-NEXT:    move.b (15,%sp), %d2

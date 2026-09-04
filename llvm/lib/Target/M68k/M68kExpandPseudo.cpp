@@ -86,106 +86,179 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case M68k::MOVI32ri:
     return TII->ExpandMOVI(MIB, MVT::i32);
 
-  case M68k::MOVXd16d8:
-    return TII->ExpandMOVX_RR(MIB, MVT::i16, MVT::i8);
-  case M68k::MOVXd32d8:
-    return TII->ExpandMOVX_RR(MIB, MVT::i32, MVT::i8);
-  case M68k::MOVXd32d16:
-    return TII->ExpandMOVX_RR(MIB, MVT::i32, MVT::i16);
-
   case M68k::MOVSXd16d8:
     return TII->ExpandMOVSZX_RR(MIB, true, MVT::i16, MVT::i8);
   case M68k::MOVSXd32d8:
     return TII->ExpandMOVSZX_RR(MIB, true, MVT::i32, MVT::i8);
-  case M68k::MOVSXd32d16:
+  case M68k::MOVSXr32r16:
     return TII->ExpandMOVSZX_RR(MIB, true, MVT::i32, MVT::i16);
 
   case M68k::MOVZXd16d8:
     return TII->ExpandMOVSZX_RR(MIB, false, MVT::i16, MVT::i8);
   case M68k::MOVZXd32d8:
     return TII->ExpandMOVSZX_RR(MIB, false, MVT::i32, MVT::i8);
-  case M68k::MOVZXd32d16:
+  case M68k::MOVZXd32r16:
     return TII->ExpandMOVSZX_RR(MIB, false, MVT::i32, MVT::i16);
 
-  case M68k::MOVSXd16j8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dj), MVT::i16,
-                                MVT::i8);
-  case M68k::MOVSXd32j8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dj), MVT::i32,
-                                MVT::i8);
-  case M68k::MOVSXd32j16:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV16rj), MVT::i32,
-                                MVT::i16);
+  case M68k::MOVXd16d8:
+    return TII->ExpandMOVX_RR(MIB, MVT::i16, MVT::i8);
+  case M68k::MOVXd32d8:
+    return TII->ExpandMOVX_RR(MIB, MVT::i32, MVT::i8);
+  case M68k::MOVXr32r16:
+    return TII->ExpandMOVX_RR(MIB, MVT::i32, MVT::i16);
 
-  case M68k::MOVZXd16j8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dj), MVT::i16,
-                                MVT::i8);
-  case M68k::MOVZXd32j8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dj), MVT::i32,
-                                MVT::i8);
-  case M68k::MOVZXd32j16:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16rj), MVT::i32,
-                                MVT::i16);
-
-  case M68k::MOVSXd16p8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dp), MVT::i16,
-                                MVT::i8);
-  case M68k::MOVSXd32p8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dp), MVT::i32,
-                                MVT::i8);
-  case M68k::MOVSXd32p16:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV16rp), MVT::i32,
-                                MVT::i16);
-
-  case M68k::MOVZXd16p8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dp), MVT::i16,
-                                MVT::i8);
-  case M68k::MOVZXd32p8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dp), MVT::i32,
-                                MVT::i8);
-  case M68k::MOVZXd32p16:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16rp), MVT::i32,
-                                MVT::i16);
-
-  case M68k::MOVSXd16f8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8df), MVT::i16,
-                                MVT::i8);
-  case M68k::MOVSXd32f8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8df), MVT::i32,
-                                MVT::i8);
-  case M68k::MOVSXd32f16:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV16rf), MVT::i32,
-                                MVT::i16);
-
-  case M68k::MOVZXd16f8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8df), MVT::i16,
-                                MVT::i8);
-  case M68k::MOVZXd32f8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8df), MVT::i32,
-                                MVT::i8);
-  case M68k::MOVZXd32f16:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16rf), MVT::i32,
-                                MVT::i16);
-
+  case M68k::MOVSXd16o8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8do, MVT::i16, MVT::i8);
+  case M68k::MOVSXd16e8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8de, MVT::i16, MVT::i8);
+  case M68k::MOVSXd16k8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dk, MVT::i16, MVT::i8);
   case M68k::MOVSXd16q8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dq), MVT::i16,
-                                MVT::i8);
-  case M68k::MOVSXd32q8:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV8dq), MVT::i32,
-                                MVT::i8);
-  case M68k::MOVSXd32q16:
-    return TII->ExpandMOVSZX_RM(MIB, true, TII->get(M68k::MOV16dq), MVT::i32,
-                                MVT::i16);
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dq, MVT::i16, MVT::i8);
+  case M68k::MOVSXd16f8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8df, MVT::i16, MVT::i8);
+  case M68k::MOVSXd16p8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dp, MVT::i16, MVT::i8);
+  case M68k::MOVSXd16b8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8db, MVT::i16, MVT::i8);
+  case M68k::MOVSXd16j8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dj, MVT::i16, MVT::i8);
 
+  case M68k::MOVSXd32o8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8do, MVT::i32, MVT::i8);
+  case M68k::MOVSXd32e8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8de, MVT::i32, MVT::i8);
+  case M68k::MOVSXd32k8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dk, MVT::i32, MVT::i8);
+  case M68k::MOVSXd32q8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dq, MVT::i32, MVT::i8);
+  case M68k::MOVSXd32f8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8df, MVT::i32, MVT::i8);
+  case M68k::MOVSXd32p8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dp, MVT::i32, MVT::i8);
+  case M68k::MOVSXd32b8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8db, MVT::i32, MVT::i8);
+  case M68k::MOVSXd32j8:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV8dj, MVT::i32, MVT::i8);
+
+  case M68k::MOVSXr32o16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16ro, MVT::i32, MVT::i16);
+  case M68k::MOVSXr32e16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16re, MVT::i32, MVT::i16);
+  case M68k::MOVSXr32k16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16rk, MVT::i32, MVT::i16);
+  case M68k::MOVSXr32q16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16rq, MVT::i32, MVT::i16);
+  case M68k::MOVSXr32f16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16rf, MVT::i32, MVT::i16);
+  case M68k::MOVSXr32p16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16rp, MVT::i32, MVT::i16);
+  case M68k::MOVSXr32b16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16rb, MVT::i32, MVT::i16);
+  case M68k::MOVSXr32j16:
+    return TII->ExpandMOVSZX_RM(MIB, true, M68k::MOV16rj, MVT::i32, MVT::i16);
+
+  case M68k::MOVZXd16o8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8do, MVT::i16, MVT::i8);
+  case M68k::MOVZXd16e8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8de, MVT::i16, MVT::i8);
+  case M68k::MOVZXd16k8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dk, MVT::i16, MVT::i8);
   case M68k::MOVZXd16q8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i16,
-                                MVT::i8);
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dq, MVT::i16, MVT::i8);
+  case M68k::MOVZXd16f8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8df, MVT::i16, MVT::i8);
+  case M68k::MOVZXd16p8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dp, MVT::i16, MVT::i8);
+  case M68k::MOVZXd16b8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8db, MVT::i16, MVT::i8);
+  case M68k::MOVZXd16j8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dj, MVT::i16, MVT::i8);
+
+  case M68k::MOVZXd32o8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8do, MVT::i32, MVT::i8);
+  case M68k::MOVZXd32e8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8de, MVT::i32, MVT::i8);
+  case M68k::MOVZXd32k8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dk, MVT::i32, MVT::i8);
   case M68k::MOVZXd32q8:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i32,
-                                MVT::i8);
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dq, MVT::i32, MVT::i8);
+  case M68k::MOVZXd32f8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8df, MVT::i32, MVT::i8);
+  case M68k::MOVZXd32p8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dp, MVT::i32, MVT::i8);
+  case M68k::MOVZXd32b8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8db, MVT::i32, MVT::i8);
+  case M68k::MOVZXd32j8:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV8dj, MVT::i32, MVT::i8);
+
+  case M68k::MOVZXd32o16:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16ro, MVT::i32, MVT::i16);
+  case M68k::MOVZXd32e16:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16re, MVT::i32, MVT::i16);
+  case M68k::MOVZXd32k16:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16rk, MVT::i32, MVT::i16);
   case M68k::MOVZXd32q16:
-    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16dq), MVT::i32,
-                                MVT::i16);
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16rq, MVT::i32, MVT::i16);
+  case M68k::MOVZXd32f16:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16rf, MVT::i32, MVT::i16);
+  case M68k::MOVZXd32p16:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16rp, MVT::i32, MVT::i16);
+  case M68k::MOVZXd32b16:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16rb, MVT::i32, MVT::i16);
+  case M68k::MOVZXd32j16:
+    return TII->ExpandMOVSZX_RM(MIB, false, M68k::MOV16rj, MVT::i32, MVT::i16);
+
+  case M68k::MOVXd16o8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8do, MVT::i16, MVT::i8);
+  case M68k::MOVXd16e8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8de, MVT::i16, MVT::i8);
+  case M68k::MOVXd16k8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dk, MVT::i16, MVT::i8);
+  case M68k::MOVXd16q8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dq, MVT::i16, MVT::i8);
+  case M68k::MOVXd16f8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8df, MVT::i16, MVT::i8);
+  case M68k::MOVXd16p8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dp, MVT::i16, MVT::i8);
+  case M68k::MOVXd16b8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8db, MVT::i16, MVT::i8);
+  case M68k::MOVXd16j8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dj, MVT::i16, MVT::i8);
+
+  case M68k::MOVXd32o8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8do, MVT::i32, MVT::i8);
+  case M68k::MOVXd32e8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8de, MVT::i32, MVT::i8);
+  case M68k::MOVXd32k8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dk, MVT::i32, MVT::i8);
+  case M68k::MOVXd32q8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dq, MVT::i32, MVT::i8);
+  case M68k::MOVXd32f8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8df, MVT::i32, MVT::i8);
+  case M68k::MOVXd32p8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dp, MVT::i32, MVT::i8);
+  case M68k::MOVXd32b8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8db, MVT::i32, MVT::i8);
+  case M68k::MOVXd32j8:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV8dj, MVT::i32, MVT::i8);
+
+  case M68k::MOVXr32o16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16ro, MVT::i32, MVT::i16);
+  case M68k::MOVXr32e16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16re, MVT::i32, MVT::i16);
+  case M68k::MOVXr32k16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16rk, MVT::i32, MVT::i16);
+  case M68k::MOVXr32q16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16rq, MVT::i32, MVT::i16);
+  case M68k::MOVXr32f16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16rf, MVT::i32, MVT::i16);
+  case M68k::MOVXr32p16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16rp, MVT::i32, MVT::i16);
+  case M68k::MOVXr32b16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16rb, MVT::i32, MVT::i16);
+  case M68k::MOVXr32j16:
+    return TII->ExpandMOVX_RM(MIB, M68k::MOV16rj, MVT::i32, MVT::i16);
 
   case M68k::MOVM8jm_P:
   case M68k::MOVM16jm_P:
