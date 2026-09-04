@@ -28,10 +28,22 @@ using namespace llvm;
 
 const DenseMap<BasicBlock *, ColorVector> &
 LoopSafetyInfo::getBlockColors() const {
+  // Compute funclet colors if we might sink/hoist in a function with a funclet
+  // personality routine. This traverses the whole function, so it is done
+  // lazily, on first use, instead of once for every loop.
+  if (!BlockColorsComputed) {
+    BlockColorsComputed = true;
+    if (ColoredFunc && ColoredFunc->hasPersonalityFn())
+      if (Constant *PersonalityFn = ColoredFunc->getPersonalityFn())
+        if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
+          BlockColors = colorEHFunclets(*ColoredFunc);
+  }
   return BlockColors;
 }
 
 void LoopSafetyInfo::copyColors(BasicBlock *New, BasicBlock *Old) {
+  assert(BlockColorsComputed &&
+         "getBlockColors() must be queried before updating block colors");
   ColorVector &ColorsForNewBlock = BlockColors[New];
   ColorVector &ColorsForOldBlock = BlockColors[Old];
   ColorsForNewBlock = ColorsForOldBlock;
@@ -63,7 +75,7 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
       break;
   }
 
-  computeBlockColors(CurLoop);
+  recordColoringFunction(CurLoop);
 }
 
 bool ICFLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
@@ -85,7 +97,7 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
       MayThrow = true;
       break;
     }
-  computeBlockColors(CurLoop);
+  recordColoringFunction(CurLoop);
 }
 
 void ICFLoopSafetyInfo::insertInstructionTo(const Instruction *Inst,
@@ -99,14 +111,14 @@ void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
   MW.removeInstruction(Inst);
 }
 
-void LoopSafetyInfo::computeBlockColors(const Loop *CurLoop) {
-  // Compute funclet colors if we might sink/hoist in a function with a funclet
-  // personality routine.
-  Function *Fn = CurLoop->getHeader()->getParent();
-  if (Fn->hasPersonalityFn())
-    if (Constant *PersonalityFn = Fn->getPersonalityFn())
-      if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
-        BlockColors = colorEHFunclets(*Fn);
+void LoopSafetyInfo::recordColoringFunction(const Loop *CurLoop) {
+  // Remember the function that may need funclet colors; the colors themselves
+  // are computed by getBlockColors() on first use. Recomputing safety info
+  // invalidates any previously computed (or pending) colors, mirroring the
+  // eager recomputation this lazy scheme replaces.
+  ColoredFunc = CurLoop->getHeader()->getParent();
+  BlockColorsComputed = false;
+  BlockColors.clear();
 }
 
 /// Return true if we can prove that the given ExitBlock is not reached on the
