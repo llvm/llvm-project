@@ -3080,8 +3080,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FABS: {
     SDValue Op0 = Op.getOperand(0);
-    APInt SignMask = APInt::getSignMask(BitWidth);
+    EVT SVT = Op0.getValueType();
 
+    // The position of the sign bit for ppc_fp128 is endian-dependent.
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
+    APInt SignMask = APInt::getSignMask(BitWidth);
     if (!DemandedBits.intersects(SignMask))
       return TLO.CombineTo(Op, Op0);
 
@@ -3133,6 +3138,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FNEG: {
     SDValue Op0 = Op.getOperand(0);
+    EVT SVT = Op0.getValueType();
+
+    // The logic below assumes the sign bit is in the MSB.
+    // ppc_fp128 has two sign bits (at bits 127 and 63).
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
     APInt SignMask = APInt::getSignMask(BitWidth);
 
     if (!DemandedBits.intersects(SignMask))

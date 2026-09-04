@@ -303,6 +303,11 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
   if (FPClasses == fcNone)
     return Known;
 
+  // The code below assumes the sign bit is the MSB.
+  if (!APFloat::hasSignBitInMSB(FltSemantics) ||
+      &FltSemantics == &APFloat::PPCDoubleDouble())
+    return Known;
+
   if (isKnownNever(fcNormal | fcSubnormal | fcNan)) {
     Known.setAllConflict();
 

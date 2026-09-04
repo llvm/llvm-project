@@ -7,7 +7,8 @@
 define i1 @negative(ppc_fp128 nofpclass(nan pinf psub pnorm pzero) %x) {
 ; LE-LABEL: negative:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    li 3, 1
+; LE-NEXT:    mffprd 3, 2
+; LE-NEXT:    rldicl 3, 3, 1, 63
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: negative:
@@ -33,7 +34,8 @@ entry:
 define i1 @nonnegative(ppc_fp128 nofpclass(nan ninf nsub nnorm nzero) %x) {
 ; LE-LABEL: nonnegative:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    li 3, 0
+; LE-NEXT:    mffprd 3, 2
+; LE-NEXT:    rldicl 3, 3, 1, 63
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: nonnegative:
