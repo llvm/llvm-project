@@ -907,6 +907,45 @@ void CodeGenModule::checkAliases() {
 
     StringRef MangledName = getMangledName(GD);
     llvm::GlobalValue *Alias = GetGlobalValue(MangledName);
+    const llvm::GlobalValue *CurrentAliasee = getAliasedGlobal(Alias);
+    // A GNU C alias names its target by its unmodified symbol name. Resolve an
+    // internal variable to the name produced by unique internal linkage.
+    if (!IsIFunc && CurrentAliasee && CurrentAliasee->isDeclaration() &&
+        !getLangOpts().CPlusPlus && !getModuleNameHash().empty()) {
+      const VarDecl *Definition = nullptr;
+      std::string TargetName;
+      for (const auto &[Decl, Name] : MangledDeclNames) {
+        const auto *VD = dyn_cast<VarDecl>(Decl.getDecl());
+        if (!VD || !Name.ends_with(getModuleNameHash()) ||
+            VD->getName() != CurrentAliasee->getName() ||
+            getContext().GetGVALinkageForVariable(VD) != GVA_Internal)
+          continue;
+
+        Definition = VD->getDefinition();
+        if (!Definition)
+          Definition = VD->getActingDefinition();
+        if (Definition) {
+          TargetName = Name.str();
+          break;
+        }
+      }
+
+      if (Definition) {
+        llvm::GlobalValue *Target = GetGlobalValue(TargetName);
+        if (!Target || Target->isDeclaration()) {
+          EmitGlobalVarDefinition(Definition);
+          Target = GetGlobalValue(TargetName);
+        }
+        if (Target && !Target->isDeclaration()) {
+          cast<llvm::GlobalAlias>(Alias)->setAliasee(Target);
+          auto *OldAliasee = const_cast<llvm::GlobalValue *>(CurrentAliasee);
+          OldAliasee->removeDeadConstantUsers();
+          if (OldAliasee->use_empty())
+            OldAliasee->eraseFromParent();
+        }
+      }
+    }
+
     const llvm::GlobalValue *GV = nullptr;
     if (!checkAliasedGlobal(getContext(), Diags, Location, IsIFunc, Alias, GV,
                             MangledDeclNames, Range)) {
@@ -2467,14 +2506,17 @@ static void AppendCPUSpecificCPUDispatchMangling(const CodeGenModule &CGM,
     Out << ".resolver";
 }
 
-// Returns true if GD is a function decl with internal linkage and
+// Returns true if GD is a function/var decl with internal linkage and
 // needs a unique suffix after the mangled name.
 static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
                                         CodeGenModule &CGM) {
   const Decl *D = GD.getDecl();
-  return !CGM.getModuleNameHash().empty() && isa<FunctionDecl>(D) &&
-         !D->hasAttr<AsmLabelAttr>() &&
-         (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
+  if (CGM.getModuleNameHash().empty() || D->hasAttr<AsmLabelAttr>())
+    return false;
+  return (isa<FunctionDecl>(D) &&
+          CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage) ||
+         (isa<VarDecl>(D) && CGM.getContext().GetGVALinkageForVariable(
+                                 cast<VarDecl>(D)) == GVA_Internal);
 }
 
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
