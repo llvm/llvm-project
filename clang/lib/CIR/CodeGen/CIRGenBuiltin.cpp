@@ -52,6 +52,10 @@ static bool shouldEmitBuiltinAsIR(unsigned builtinID,
     case Builtin::BI__builtin_scalbnf:
     case Builtin::BIscalbn:
     case Builtin::BI__builtin_scalbn:
+    case Builtin::BI__builtin_ia32_vfmaddpd:
+    case Builtin::BI__builtin_ia32_vfmaddps:
+    case Builtin::BI__builtin_ia32_vfmaddsubpd:
+    case Builtin::BI__builtin_ia32_vfmaddsubps:
       return true;
     }
   }
