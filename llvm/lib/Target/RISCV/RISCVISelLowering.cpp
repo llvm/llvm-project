@@ -2003,7 +2003,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         ElementCount EC = VT.getVectorElementCount();
         unsigned Scale = VT.getVectorElementType() == MVT::i64 ? 8 : 4;
-        MVT ArgVT = MVT::getVectorVT(MVT::i8, EC.multiplyCoefficientBy(Scale));
+        MVT ArgVT = MVT::getVectorVT(MVT::i8, EC * Scale);
         setPartialReduceMLAAction(MLAOps, VT, ArgVT, Custom);
       }
     }
@@ -5968,8 +5968,7 @@ static SDValue getWideningSpread(SDValue V, unsigned Factor, unsigned Index,
     Result = DAG.getNode(ISD::SHL, DL, WideVT, Result,
                          DAG.getConstant(EltBits * Index, DL, WideVT));
   // Make sure to use original element type
-  MVT ResultVT = MVT::getVectorVT(VT.getVectorElementType(),
-                                  EC.multiplyCoefficientBy(Factor));
+  MVT ResultVT = MVT::getVectorVT(VT.getVectorElementType(), EC * Factor);
   return DAG.getBitcast(ResultVT, Result);
 }
 
@@ -6053,13 +6052,12 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   // Bitcast from <vscale x n * ty*2> to <vscale x 2*n x ty>
   MVT ResultContainerVT = MVT::getVectorVT(
       VecVT.getVectorElementType(), // Make sure to use original type
-      VecContainerVT.getVectorElementCount().multiplyCoefficientBy(2));
+      VecContainerVT.getVectorElementCount() * 2);
   Interleaved = DAG.getBitcast(ResultContainerVT, Interleaved);
 
   // Convert back to a fixed vector if needed
-  MVT ResultVT =
-      MVT::getVectorVT(VecVT.getVectorElementType(),
-                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+  MVT ResultVT = MVT::getVectorVT(VecVT.getVectorElementType(),
+                                  VecVT.getVectorElementCount() * 2);
   if (ResultVT.isFixedLengthVector())
     Interleaved =
         convertFromScalableVector(ResultVT, Interleaved, DAG, Subtarget);
@@ -14453,8 +14451,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   // Concatenate the vectors as one vector to deinterleave
   MVT ConcatVT =
       MVT::getVectorVT(VecVT.getVectorElementType(),
-                       VecVT.getVectorElementCount().multiplyCoefficientBy(
-                           PowerOf2Ceil(Factor)));
+                       VecVT.getVectorElementCount() * PowerOf2Ceil(Factor));
   if (Ops.size() < PowerOf2Ceil(Factor))
     Ops.append(PowerOf2Ceil(Factor) - Factor, DAG.getUNDEF(VecVT));
   SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Ops);
@@ -14507,8 +14504,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   MachinePointerInfo PtrInfo;
   if (IsFixedVector) {
     // Calculating the stack size.
-    ElementCount ActualConcatEC =
-        VecVT.getVectorElementCount().multiplyCoefficientBy(Factor);
+    ElementCount ActualConcatEC = VecVT.getVectorElementCount() * Factor;
     EVT ConcatEVT = EVT::getVectorVT(
         *DAG.getContext(), VecVT.getVectorElementType(), ActualConcatEC);
     StackPtr = DAG.CreateStackTemporary(ConcatEVT.getStoreSize(), Alignment);
@@ -14737,9 +14733,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
                                         DAG, Subtarget);
   } else {
     // Otherwise, fallback to using vrgathere16.vv
-    MVT ConcatVT =
-      MVT::getVectorVT(VecVT.getVectorElementType(),
-                       VecVT.getVectorElementCount().multiplyCoefficientBy(2));
+    MVT ConcatVT = MVT::getVectorVT(VecVT.getVectorElementType(),
+                                    VecVT.getVectorElementCount() * 2);
     SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT,
                                  Op.getOperand(0), Op.getOperand(1));
 

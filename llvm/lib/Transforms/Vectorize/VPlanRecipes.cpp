@@ -811,8 +811,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       return Builder.CreateCmp(CmpInst::Predicate::ICMP_ULT, VIVElem0, ScalarTC,
                                Name);
 
-    ElementCount EC = State.VF.multiplyCoefficientBy(Multiplier);
-    auto *PredTy = VectorType::get(Builder.getInt1Ty(), EC);
+    auto *PredTy = VectorType::get(Builder.getInt1Ty(), State.VF * Multiplier);
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);

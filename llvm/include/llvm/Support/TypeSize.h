@@ -253,26 +253,22 @@ public:
     return LeafTy::get(getKnownMinValue() / RHS, isScalable());
   }
 
-  constexpr LeafTy multiplyCoefficientBy(ScalarTy RHS) const {
-    return LeafTy::get(getKnownMinValue() * RHS, isScalable());
-  }
-
   constexpr LeafTy coefficientNextPowerOf2() const {
     return LeafTy::get(
         static_cast<ScalarTy>(llvm::NextPowerOf2(getKnownMinValue())),
         isScalable());
   }
 
-  /// Returns true if there exists a value X where RHS.multiplyCoefficientBy(X)
-  /// will result in a value whose quantity matches our own.
+  /// Returns true if there exists a value X where RHS*X will result in a value
+  /// whose quantity matches our own.
   constexpr bool
   hasKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     return isScalable() == RHS.isScalable() &&
            getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
-  /// Returns a value X where RHS.multiplyCoefficientBy(X) will result in a
-  /// value whose quantity matches our own.
+  /// Returns a value X where RHS*X will result in a value whose quantity
+  /// matches our own.
   constexpr ScalarTy
   getKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     assert(hasKnownScalarFactor(RHS) && "Expected RHS to be a known factor!");

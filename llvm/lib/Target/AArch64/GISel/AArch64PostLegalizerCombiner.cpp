@@ -459,9 +459,8 @@ void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B, Register &SrcReg) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  LLT HalfTy =
-      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
-          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  LLT HalfTy = DstTy.changeElementCount(DstTy.getElementCount() * 2)
+                   .changeElementSize(DstTy.getScalarSizeInBits() / 2);
 
   Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
   Register CastReg =

@@ -231,8 +231,7 @@ class SinkStoreInfo {
     ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
     if (MaxVF.isScalable())
       return false;
-    return Distance->abs().uge(
-        MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
+    return Distance->abs().uge(MaxVF.getFixedValue() * MaxStoreSize);
   }
 
 public:
@@ -2041,7 +2040,7 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   assert(!isa<SCEVCouldNotCompute>(VectorTripCount) &&
          "Trip count SCEV must be computable");
   ScalarEvolution &SE = *PSE.getSE();
-  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+  ElementCount NumElements = BestVF * BestUF;
   const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
   return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
@@ -2122,7 +2121,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     assert(!isa<SCEVCouldNotCompute>(VectorTripCount) &&
            "Trip count SCEV must be computable");
     ScalarEvolution &SE = *PSE.getSE();
-    ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+    ElementCount NumElements = BestVF * BestUF;
     const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
     if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, VectorTripCount, C))
       return false;
