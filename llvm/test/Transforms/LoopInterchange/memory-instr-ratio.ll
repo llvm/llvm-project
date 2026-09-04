@@ -3,6 +3,11 @@
 ; RUN:          -loop-interchange-max-mem-instr-ratio=1 | FileCheck %s --check-prefixes=CHECK,CHECK-RATIO-1
 ; RUN: opt < %s -passes=loop-interchange -S -loop-interchange-profitabilities=ignore \
 ; RUN:          -loop-interchange-max-mem-instr-ratio=100 | FileCheck %s --check-prefixes=CHECK,CHECK-RATIO-100
+; The outer loop's blocks contain 20 instructions. Keep that count even:
+; 2^31 times an even count wraps to zero in 32 bits and spuriously rejects this
+; otherwise eligible nest. An odd count would silently stop testing the wrap.
+; RUN: opt < %s -passes=loop-interchange -S -loop-interchange-profitabilities=ignore \
+; RUN:          -loop-interchange-max-mem-instr-ratio=2147483648 | FileCheck %s --check-prefixes=CHECK,CHECK-RATIO-100
 
 define void @f(ptr noalias %A) {
 ; CHECK-RATIO-1-LABEL: define void @f(

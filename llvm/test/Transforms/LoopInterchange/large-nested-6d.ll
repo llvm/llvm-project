@@ -1,5 +1,8 @@
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks='loop-interchange' -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -disable-output -S
-; RUN: FileCheck --input-file=%t %s
+; The whole nest is conservatively left unchanged: every eligible inner pair is
+; rejected (unknown surrounding context or dependences), so no `Interchanged`
+; (`!Passed`) record may appear anywhere in the remark stream.
+; RUN: FileCheck --input-file=%t %s --implicit-check-not=Interchanged --implicit-check-not='!Passed'
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 
@@ -43,10 +46,10 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i6
 ; There are a few issues that prevent loop-interchange to perform its
 ; transformation on this test case:
 ;
-; 1. LoopNest checks: the first check that is perform is whether loop 'L.header'
-;    and 'M.header' are perfectly nested, which they are not. It needs to be
-;    investigate why the whole loop nest rooted under L is rejected as a
-;    candidate.
+; 1. Candidate formation: the full breadth-first nest is non-linear. The
+;    inner-subnest fallback now considers direct inner pairs, but the relevant
+;    candidates are conservatively rejected because their surrounding
+;    dependence context is unknown.
 ;
 ; 2. DependenceAnalysis: it finds this dependency:
 ;
@@ -55,16 +58,27 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i6
 ;      Dst:  store double %46, ptr %48, align 8
 ;
 ;
+; CHECK-NOT:   --- !Analysis
 ; CHECK:       --- !Missed
 ; CHECK-NEXT:  Pass:            loop-interchange
-; CHECK-NEXT:  Name:            UnsupportedLoopNestDepth
+; CHECK-NEXT:  Name:            Dependence
 ; CHECK-NEXT:  Function:        test
 ; CHECK-NEXT:  Args:
-; CHECK-NEXT:    - String:          'Unsupported depth of loop nest, the supported range is ['
-; CHECK-NEXT:    - String:          '2'
-; CHECK-NEXT:    - String:          ', '
-; CHECK-NEXT:    - String:          '10'
-; CHECK-NEXT:    - String:          "].\n"
+; CHECK-NEXT:    - String:          All loops have dependencies in all directions.
+; CHECK-NEXT:  ...
+; CHECK-NEXT:  --- !Missed
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            FallbackUnknownContext
+; CHECK-NEXT:  Function:        test
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          'Cannot interchange inner subnest: the surrounding dependence context is unknown or unsafe.'
+; CHECK-NEXT:  ...
+; CHECK-NEXT:  --- !Missed
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            FallbackUnknownContext
+; CHECK-NEXT:  Function:        test
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          'Cannot interchange inner subnest: the surrounding dependence context is unknown or unsafe.'
 ; CHECK-NEXT:  ...
 ; CHECK-NEXT:  --- !Analysis
 ; CHECK-NEXT:  Pass:            loop-interchange

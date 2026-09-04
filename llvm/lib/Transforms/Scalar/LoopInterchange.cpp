@@ -101,6 +101,15 @@ static cl::opt<unsigned int> MaxLoopNestDepth(
     "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
     cl::desc("Maximum depth of loop nest considered for the transform"));
 
+static cl::opt<unsigned int> MaxInnerSubnestCandidates(
+    "loop-interchange-max-inner-subnest-candidates", cl::init(10), cl::Hidden,
+    cl::desc("Maximum number of inner-subnest fallback candidates attempted"));
+
+static cl::opt<bool> EnableInnerSubnestFallback(
+    "loop-interchange-enable-inner-subnest-fallback", cl::init(true),
+    cl::Hidden,
+    cl::desc("Enable fallback interchange of eligible inner subnests"));
+
 // We prefer cache cost to vectorization by default.
 static cl::list<RuleTy> Profitabilities(
     "loop-interchange-profitabilities", cl::MiscFlags::CommaSeparated,
@@ -174,7 +183,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   using ValueVector = SmallVector<Value *, 16>;
 
   ValueVector MemInstr;
-  unsigned NumInsts = 0;
+  uint64_t NumInsts = 0;
 
   // For each block.
   for (BasicBlock *BB : L->blocks()) {
@@ -200,10 +209,13 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   // instructions. On the other hand, if the number of memory instructions is
   // not small, but the loop is large (i.e., it contains many non-memory
   // instructions), the analysis can still be affordable.
-  unsigned NumMemInstr = MemInstr.size();
+  uint64_t NumMemInstr = MemInstr.size();
   LLVM_DEBUG(dbgs() << "Found " << NumMemInstr
                     << " Loads and Stores to analyze\n");
-  if (MaxMemInstrRatio * NumInsts < NumMemInstr * NumMemInstr) {
+  // Compare in 64 bits: in 32-bit arithmetic the ratio product could wrap and
+  // spuriously reject, while the squared memory count could bypass this guard.
+  if (static_cast<uint64_t>(MaxMemInstrRatio) * NumInsts <
+      NumMemInstr * NumMemInstr) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
                                       L->getStartLoc(), L->getHeader())
@@ -264,6 +276,18 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         if (D->isConfused()) {
           assert(Dep.empty() && "Expected empty dependency vector");
           Dep.assign(Level, '*');
+        }
+
+        // A direction vector longer than the analyzed nesting depth cannot be
+        // represented in this matrix. The invariant is asserted because both
+        // callers analyze complete chains. Retain a conservative release-mode
+        // bail for any future caller that violates it.
+        assert(Dep.size() <= Level &&
+               "Direction vector is deeper than the analyzed nest");
+        if (Dep.size() > Level) {
+          LLVM_DEBUG(dbgs() << "Direction vector is longer than the analyzed "
+                               "nesting depth; rejecting.\n");
+          return false;
         }
 
         while (Dep.size() != Level) {
@@ -385,6 +409,23 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
   return true;
 }
 
+// For an inner-subnest fallback candidate, the columns strictly outside the
+// selected pair (indices [0, OuterLoopId)) describe the surrounding ancestor
+// context. The fallback accepts a pair only when every row's prefix is either
+// lexicographically forward -- a '<' before any '>'/'*', which is decisive --
+// or entirely equal/independent, which delegates to the candidate columns. A
+// prefix whose leftmost non-equal/independent direction is unknown ('*') or
+// backward ('>') is rejected; an earlier '<' makes later columns irrelevant.
+// This is a conservative fallback policy, not a soundness requirement. The
+// standard multi-swap path accepts cases such as '* = <' and is unchanged.
+static bool hasDecisiveOrEqualAncestorPrefix(const CharMatrix &DepMatrix,
+                                             unsigned OuterLoopId) {
+  for (const std::vector<char> &Row : DepMatrix)
+    if (isLexicographicallyPositive(Row, 0, OuterLoopId) == false)
+      return false;
+  return true;
+}
+
 static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LLVM_DEBUG(dbgs() << "Calling populateWorklist on Func: "
                     << L.getHeader()->getParent()->getName() << " Loop: %"
@@ -408,22 +449,22 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
-static bool hasSupportedLoopDepth(ArrayRef<Loop *> LoopList,
-                                  OptimizationRemarkEmitter &ORE) {
-  unsigned LoopNestDepth = LoopList.size();
-  if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
-    LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
+// Check the *true* nesting depth of the loop nest against the supported range.
+// \p NestDepth is LoopNest::getNestDepth(), i.e. the depth of the deepest loop,
+// not the breadth-first descendant count LoopNest::getLoops().size(), which
+// also counts sibling loops and is therefore not a nesting depth. \p
+// DescendantCount is reported only for diagnostics.
+//
+// The caller emits the missed remark only after any fallback attempt fails.
+static bool hasSupportedLoopDepth(unsigned NestDepth,
+                                  unsigned DescendantCount) {
+  if (NestDepth < MinLoopNestDepth || NestDepth > MaxLoopNestDepth) {
+    LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << NestDepth
                       << ", the supported range is [" << MinLoopNestDepth
                       << ", " << MaxLoopNestDepth << "].\n");
-    Loop *OuterLoop = LoopList.front();
-    ORE.emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
-                                      OuterLoop->getStartLoc(),
-                                      OuterLoop->getHeader())
-             << "Unsupported depth of loop nest, the supported range is ["
-             << std::to_string(MinLoopNestDepth) << ", "
-             << std::to_string(MaxLoopNestDepth) << "].\n";
-    });
+    LLVM_DEBUG(dbgs() << "  true nesting depth = " << NestDepth
+                      << ", breadth-first descendant count = "
+                      << DescendantCount << "\n");
     return false;
   }
   return true;
@@ -446,6 +487,17 @@ static bool isComputableLoopNest(ScalarEvolution *SE,
       return false;
     }
   }
+  return true;
+}
+
+// The breadth-first LoopNest list is a single linear chain when each loop is
+// the parent of the next. Only such a list is a standard multi-swap candidate;
+// a non-linear list (a loop with sibling subloops) is handled by the
+// inner-subnest fallback instead of being silently dropped.
+static bool isLinearLoopList(ArrayRef<Loop *> LoopList) {
+  for (unsigned I = 1; I < LoopList.size(); ++I)
+    if (LoopList[I]->getParentLoop() != LoopList[I - 1])
+      return false;
   return true;
 }
 
@@ -567,11 +619,12 @@ private:
 /// actually needed.
 class CacheCostManager {
   Loop *OutermostLoop;
+  std::optional<LoopVectorTy> ExplicitLoopNest;
   LoopStandardAnalysisResults *AR;
   DependenceInfo *DI;
 
-  /// CacheCost for \ref OutermostLoop. Once it is computed, it is cached. Note
-  /// that the result can be nullptr.
+  /// CacheCost for \ref OutermostLoop or \ref ExplicitLoopNest. Once it is
+  /// computed, it is cached. Note that the result can be nullptr.
   std::optional<std::unique_ptr<CacheCost>> CC;
 
   /// Maps each loop to an index representing the optimal position within the
@@ -584,6 +637,18 @@ public:
   CacheCostManager(Loop *OutermostLoop, LoopStandardAnalysisResults *AR,
                    DependenceInfo *DI)
       : OutermostLoop(OutermostLoop), AR(AR), DI(DI) {}
+  CacheCostManager(ArrayRef<Loop *> LoopNest, LoopStandardAnalysisResults *AR,
+                   DependenceInfo *DI)
+      : OutermostLoop(LoopNest.empty() ? nullptr : LoopNest.front()),
+        ExplicitLoopNest(LoopVectorTy(LoopNest.begin(), LoopNest.end())),
+        AR(AR), DI(DI) {
+    assert(!ExplicitLoopNest->empty() &&
+           "Explicit cache-cost nest must be non-empty");
+    for (unsigned I = 1; I < ExplicitLoopNest->size(); ++I)
+      assert((*ExplicitLoopNest)[I]->getParentLoop() ==
+                 (*ExplicitLoopNest)[I - 1] &&
+             "Explicit cache-cost nest must be a parent-child chain");
+  }
   CacheCost *getCacheCost();
   const DenseMap<const Loop *, unsigned> &getCostMap();
 };
@@ -651,6 +716,16 @@ private:
   const LoopInterchangeLegality &LIL;
 };
 
+/// A direct parent/child loop pair considered by the inner-subnest fallback:
+/// \p Outer has exactly one child \p Inner, and \p Inner is a leaf loop.
+struct InnerSubnestCandidate {
+  Loop *Outer;
+  Loop *Inner;
+  /// Absolute depth of \p Inner, carried by the enumeration walk. This is also
+  /// the length of the Root..Inner chain because Root is outermost.
+  unsigned Depth;
+};
+
 struct LoopInterchange {
   ScalarEvolution *SE = nullptr;
   LoopInfo *LI = nullptr;
@@ -676,9 +751,8 @@ struct LoopInterchange {
 
   bool run(LoopNest &LN) {
     SmallVector<Loop *, 8> LoopList(LN.getLoops());
-    for (unsigned I = 1; I < LoopList.size(); ++I)
-      if (LoopList[I]->getParentLoop() != LoopList[I - 1])
-        return false;
+    assert(isLinearLoopList(LoopList) &&
+           "Standard interchange path expects a linear nest");
     return processLoopList(LoopList);
   }
 
@@ -691,8 +765,9 @@ struct LoopInterchange {
   bool processLoopList(SmallVectorImpl<Loop *> &LoopList) {
     bool Changed = false;
 
-    // Ensure proper loop nest depth.
-    assert(hasSupportedLoopDepth(LoopList, *ORE) &&
+    // Ensure proper loop nest depth. On this standard path the breadth-first
+    // list is a single linear chain, so its size equals the nesting depth.
+    assert(hasSupportedLoopDepth(LoopList.size(), LoopList.size()) &&
            "Unsupported depth of loop nest.");
 
     unsigned LoopNestDepth = LoopList.size();
@@ -799,6 +874,179 @@ struct LoopInterchange {
                printDepMatrix(DependencyMatrix));
 
     return true;
+  }
+
+  /// When the complete breadth-first LoopNest is unsuitable for the standard
+  /// path -- because it is non-linear, a loop in its linear chain is
+  /// uncomputable or unsupported, or it exceeds the depth policy -- consider
+  /// one sound, profitable adjacent inner pair. Enumerate direct single-child
+  /// parent/child edges whose inner loop is a leaf, try them deepest-first, and
+  /// perform at most one interchange through this fallback. The standard
+  /// multi-swap path and its behavior are unchanged.
+  bool tryInnerSubnestFallback(LoopNest &LN) {
+    Loop &Root = LN.getOutermostLoop();
+    assert(!Root.getParentLoop() &&
+           "Fallback root is expected to be an outermost loop");
+    if (!EnableInnerSubnestFallback)
+      return false;
+
+    LLVM_DEBUG(
+        dbgs() << "Considering inner-subnest fallback for loop nest '"
+               << Root.getName()
+               << "': breadth-first descendant count = " << LN.getNumLoops()
+               << ", true nesting depth = " << LN.getNestDepth() << "\n");
+
+    // Enumerate candidate pairs: Outer has exactly one child Inner and Inner is
+    // a leaf loop. Carry depth through this breadth-first walk instead of
+    // repeatedly walking parent chains. Do not filter with
+    // getPerfectLoops/arePerfectlyNested, which reject reduction nests that
+    // this pass's own legality accepts. Retain only the globally deepest
+    // MaxInnerSubnestCandidates candidates while scanning once: the vector is
+    // kept sorted by inner-loop depth (deepest first), and because a new
+    // candidate is inserted after all equal-depth entries, ties keep a stable
+    // breadth-first order. One extra slot is kept so that, when more eligible
+    // candidates exist than the budget allows, the deepest unattempted pair
+    // can anchor a stable budget-exhaustion remark. This bounds work to
+    // O(descendants * (MaxInnerSubnestCandidates + 1)) and auxiliary storage
+    // to O(descendants).
+    const unsigned Budget = MaxInnerSubnestCandidates;
+    SmallVector<InnerSubnestCandidate, 8> Candidates;
+    SmallVector<std::pair<Loop *, unsigned>, 16> Worklist;
+    Worklist.push_back({&Root, 1});
+    for (unsigned I = 0; I != Worklist.size(); ++I) {
+      auto [Outer, OuterDepth] = Worklist[I];
+      ArrayRef<Loop *> SubLoops = Outer->getSubLoops();
+      for (Loop *Child : SubLoops)
+        Worklist.push_back({Child, OuterDepth + 1});
+      if (SubLoops.size() != 1)
+        continue;
+      Loop *Inner = SubLoops.front();
+      if (!Inner->isInnermost())
+        continue;
+      unsigned Depth = OuterDepth + 1;
+      if (Depth < MinLoopNestDepth || Depth > MaxLoopNestDepth)
+        continue;
+      auto Pos = Candidates.begin();
+      while (Pos != Candidates.end() && Pos->Depth >= Depth)
+        ++Pos;
+      Candidates.insert(Pos, {Outer, Inner, Depth});
+      // Keep at most Budget pairs to attempt, plus one overflow marker; drop
+      // the shallowest surplus. Compare the surplus instead of Budget + 1
+      // because the unsigned addition wraps when Budget is UINT_MAX.
+      if (Candidates.size() > Budget && Candidates.size() - Budget > 1)
+        Candidates.pop_back();
+    }
+
+    // Attempt at most Budget pairs, deepest first. Any retained pair beyond the
+    // budget is kept only to anchor the budget-exhaustion remark.
+    bool BudgetExhausted = Candidates.size() > Budget;
+    for (unsigned Idx = 0; Idx < Candidates.size() && Idx < Budget; ++Idx) {
+      const InnerSubnestCandidate &Cand = Candidates[Idx];
+
+      // Require pair-local canonical form, a computable trip count, a single
+      // backedge, and a unique exit for both loops of the pair.
+      SmallVector<Loop *, 2> Pair = {Cand.Outer, Cand.Inner};
+      if (!Cand.Outer->isLoopSimplifyForm() ||
+          !Cand.Inner->isLoopSimplifyForm() ||
+          !isComputableLoopNest(SE, Pair)) {
+        LLVM_DEBUG(dbgs() << "Inner-subnest candidate is not a supported, "
+                             "computable inner pair.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "FallbackUnsupportedPair",
+                                          Cand.Inner->getStartLoc(),
+                                          Cand.Inner->getHeader())
+                 << "Inner-subnest candidate is not a supported, computable "
+                    "inner pair.";
+        });
+        continue;
+      }
+
+      // Build the ancestor chain from the true LoopNest root down to Inner.
+      // Because Inner is a leaf and Outer is its only parent, the selected
+      // Outer/Inner are the two innermost (adjacent) columns of that chain.
+      SmallVector<Loop *, 8> ChainInnerFirst;
+      ChainInnerFirst.reserve(Cand.Depth);
+      for (Loop *L = Cand.Inner;; L = L->getParentLoop()) {
+        ChainInnerFirst.push_back(L);
+        if (L == &Root)
+          break;
+      }
+      SmallVector<Loop *, 8> Ancestors(ChainInnerFirst.rbegin(),
+                                       ChainInnerFirst.rend());
+      unsigned InnerLoopId = Ancestors.size() - 1;
+      unsigned OuterLoopId = InnerLoopId - 1;
+      assert(Ancestors.size() == Cand.Depth && Ancestors.front() == &Root &&
+             Ancestors[InnerLoopId] == Cand.Inner &&
+             Ancestors[OuterLoopId] == Cand.Outer &&
+             "Unexpected inner-subnest ancestor chain");
+
+      // Build the dependence direction matrix over the *full* ancestor chain.
+      // Collect memory only from the candidate Outer's subtree so that
+      // breadth-first sibling loops are neither dependence inputs nor matrix
+      // columns. DependenceInfo reports absolute loop-depth levels. Because the
+      // LoopNest pass root has depth 1, level N maps to ancestor column N - 1.
+      // Deeper non-common levels are padded with independence as on the
+      // standard path.
+      CharMatrix DependencyMatrix;
+      if (!populateDependencyMatrix(DependencyMatrix, Ancestors.size(),
+                                    Cand.Outer, DI, SE, ORE)) {
+        LLVM_DEBUG(
+            dbgs() << "Populating inner-subnest dependency matrix failed.\n");
+        continue;
+      }
+      LLVM_DEBUG(
+          dbgs() << "Inner-subnest dependency matrix (ancestor chain):\n";
+          printDepMatrix(DependencyMatrix));
+
+      // Conservative surrounding-context gate: a known-forward ancestor prefix
+      // is decisive, while an all-equal/independent prefix delegates to the
+      // candidate columns. A leading unknown/confused/backward direction
+      // rejects.
+      if (!hasDecisiveOrEqualAncestorPrefix(DependencyMatrix, OuterLoopId)) {
+        LLVM_DEBUG(dbgs() << "Unknown or unsafe surrounding dependence context "
+                             "for inner-subnest candidate.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "FallbackUnknownContext",
+                                          Cand.Inner->getStartLoc(),
+                                          Cand.Inner->getHeader())
+                 << "Cannot interchange inner subnest: the surrounding "
+                    "dependence context is unknown or unsafe.";
+        });
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "Selected inner-subnest candidate: Outer '"
+                        << Cand.Outer->getName() << "' (loop id " << OuterLoopId
+                        << ") and Inner '" << Cand.Inner->getName()
+                        << "' (loop id " << InnerLoopId << ").\n");
+
+      // Reuse the existing per-pair legality, default profitability, transform,
+      // and analysis updates. processLoop swaps only the selected absolute
+      // ancestor columns. Build lazy cache analysis from that same linear chain
+      // so its reference groups come from the candidate leaf and exclude
+      // disjoint siblings. Perform at most one interchange through the
+      // fallback.
+      CacheCostManager CCM(Ancestors, AR, DI);
+      if (processLoop(Ancestors, InnerLoopId, OuterLoopId, DependencyMatrix,
+                      CCM))
+        return true;
+    }
+
+    // Every attempted candidate failed. If eligible candidates remained beyond
+    // the attempt budget, emit a stable missed remark and leave the IR
+    // unchanged. This point is never reached after a successful transform,
+    // which returns above, so the remark cannot follow an applied interchange.
+    if (BudgetExhausted) {
+      const InnerSubnestCandidate &Overflow = Candidates.back();
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "FallbackCandidateBudget",
+                                        Overflow.Inner->getStartLoc(),
+                                        Overflow.Inner->getHeader())
+               << "Inner-subnest candidate budget exhausted; the loop nest is "
+                  "left unchanged.";
+      });
+    }
+    return false;
   }
 };
 
@@ -1528,7 +1776,8 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
         continue;
 
       // The incoming value is defined in the outer loop latch. Currently we
-      // only support that in case the outer loop latch has a single predecessor.
+      // only support that in case the outer loop latch has a single
+      // predecessor.
       // This guarantees that the outer loop latch is executed if and only if
       // the inner loop is executed (because tightlyNested() guarantees that the
       // outer loop header only branches to the inner loop or the outer loop
@@ -1752,7 +2001,13 @@ void CacheCostManager::computeIfUnitinialized() {
     return;
 
   LLVM_DEBUG(dbgs() << "Compute CacheCost.\n");
-  CC = CacheCost::getCacheCost(*OutermostLoop, *AR, *DI);
+  if (!ExplicitLoopNest)
+    CC = CacheCost::getCacheCost(*OutermostLoop, *AR, *DI);
+  else if (ExplicitLoopNest->empty())
+    CC = nullptr;
+  else
+    CC = std::make_unique<CacheCost>(*ExplicitLoopNest, AR->LI, AR->SE, AR->TTI,
+                                     AR->AA, *DI);
   // Obtain the loop vector returned from loop cache analysis beforehand,
   // and put each <Loop, index> pair into a map for constant time query
   // later. Indices in loop vector reprsent the optimal order of the
@@ -2073,10 +2328,17 @@ void LoopInterchangeTransform::restructureLoops(
 
   // Switch the loop levels.
   if (OuterLoopParent) {
-    // Remove the loop from its parent loop.
-    removeChildLoop(OuterLoopParent, NewInner);
+    // Detach the new outer loop (original inner) from the new inner loop
+    // (original outer), then replace the new inner loop with the new outer
+    // loop *in place* in the parent's subloop list. Replacing in place --
+    // rather than removing the old child and appending the replacement --
+    // preserves the parent's sibling program order in LoopInfo. That order is
+    // observable (e.g. by a following loop-nest pass) and matters when the
+    // interchanged pair is nested beneath a parent with other sibling loops, as
+    // in the inner-subnest fallback. On the standard multi-swap path the parent
+    // has a single child, so this matches the previous remove/append.
     removeChildLoop(NewInner, NewOuter);
-    OuterLoopParent->addChildLoop(NewOuter);
+    OuterLoopParent->replaceChildLoopWith(NewInner, NewOuter);
   } else {
     removeChildLoop(NewInner, NewOuter);
     LI->changeTopLevelLoop(NewInner, NewOuter);
@@ -2676,24 +2938,57 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
 
   OptimizationRemarkEmitter ORE(&F);
 
-  // Ensure minimum depth of the loop nest to do the interchange.
-  if (!hasSupportedLoopDepth(LoopList, ORE))
-    return PreservedAnalyses::all();
-  // Ensure computable loop nest.
-  if (!isComputableLoopNest(&AR.SE, LoopList)) {
-    LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
-    return PreservedAnalyses::all();
-  }
-
-  ORE.emit([&]() {
-    return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
-                                      LN.getOutermostLoop().getStartLoc(),
-                                      LN.getOutermostLoop().getHeader())
-           << "Computed dependence info, invoking the transform.";
-  });
+  // LoopNest::getLoops() is a breadth-first walk over *all* descendant loops
+  // (siblings included), so its size is the descendant count, not the nesting
+  // depth. Use the true nesting depth for the depth policy; keep the descendant
+  // count for diagnostics only.
+  unsigned DescendantCount = LoopList.size();
+  unsigned NestDepth = LN.getNestDepth();
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
-  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE).run(LN))
+  LoopInterchange Interchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE);
+
+  bool Changed = false;
+  if (!hasSupportedLoopDepth(NestDepth, DescendantCount)) {
+    // The whole nest is outside the supported depth range. A genuinely too-deep
+    // nest may still contain an eligible inner pair; a too-shallow one cannot.
+    if (NestDepth > MaxLoopNestDepth)
+      Changed = Interchange.tryInnerSubnestFallback(LN);
+    // A successful fallback handles the nest despite its total depth.
+    if (!Changed) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
+                                        LN.getOutermostLoop().getStartLoc(),
+                                        LN.getOutermostLoop().getHeader())
+               << "Unsupported depth of loop nest, the supported range is ["
+               << std::to_string(MinLoopNestDepth) << ", "
+               << std::to_string(MaxLoopNestDepth) << "].\n";
+      });
+    }
+  } else if (!isLinearLoopList(LoopList)) {
+    // A non-linear nest always takes the fallback, so avoid whole-list SCEV
+    // work that cannot change the dispatch decision.
+    Changed = Interchange.tryInnerSubnestFallback(LN);
+  } else if (!isComputableLoopNest(&AR.SE, LoopList)) {
+    LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
+    // A loop in the linear chain has an uncomputable backedge count or an
+    // unsupported backedge/exit structure. Try the fallback on eligible,
+    // computable inner pairs.
+    Changed = Interchange.tryInnerSubnestFallback(LN);
+  } else {
+    ORE.emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
+                                        LN.getOutermostLoop().getStartLoc(),
+                                        LN.getOutermostLoop().getHeader())
+             << "Computed dependence info, invoking the transform.";
+    });
+
+    // The caller dispatches non-linear nests to the fallback above, so run()
+    // handles only the standard multi-swap path for a linear chain.
+    Changed = Interchange.run(LN);
+  }
+
+  if (!Changed)
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);
   return getLoopPassPreservedAnalyses();
