@@ -290,6 +290,16 @@ public:
   }
 };
 
+class RLDRecord : public Record {
+public:
+  LLVM_ABI static Error getData(const uint8_t *Record,
+                                SmallString<256> &CompleteData);
+
+  static void getDataLength(const uint8_t *Record, uint16_t &Length) {
+    get<uint16_t>(Record, 4, Length);
+  }
+};
+
 class ENDRecord : public Record {
 public:
   LLVM_ABI static Error getData(const uint8_t *Record,
