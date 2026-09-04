@@ -353,10 +353,16 @@ bool hasNegativeStaticStride(MemRefType memRefTy) {
 }
 
 namespace {
-/// Static footprint of a memref value resolved through a chain of
+// TODO: This static footprint modelling and its logic overlap with
+// `SubsetOpInterface`, which is unfortunately tensor-only today; if it gains
+// memref support, look into unifying with it to improve code reuse.
+//
+/// Fully static footprint of a memref value resolved through a chain of
 /// rank-preserving, unit-stride `memref.subview` ops: the underlying root
 /// memref and, per root dimension, the `[offset, offset + size)` interval it
-/// covers.
+/// covers. Every offset and size should be static; a chain with any dynamic
+/// offset or size (or that otherwise cannot be modelled) has no footprint at
+/// all and should be reported as `std::nullopt`.
 struct SubviewFootprint {
   Value root;
   SmallVector<int64_t> offsets;
@@ -408,8 +414,8 @@ static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
 
 /// True if two footprints provably cover disjoint memory: they must share the
 /// same root and be separated along at least one dimension.
-static bool footprintsDisjoint(const SubviewFootprint &a,
-                               const SubviewFootprint &b) {
+static bool areFootprintDisjoint(const SubviewFootprint &a,
+                                 const SubviewFootprint &b) {
   if (a.root != b.root)
     return false;
   for (unsigned d = 0, e = a.offsets.size(); d < e; ++d) {
@@ -421,10 +427,9 @@ static bool footprintsDisjoint(const SubviewFootprint &a,
   return false;
 }
 
-bool hasNoAliasingAccessInScope(
-    Value base, Operation *scope,
-    function_ref<Value(Operation *)> getAccessedMemref,
-    ArrayRef<Operation *> excludedOps, bool readsAreSafe) {
+bool hasNoAliasingAccessInScope(Value base, Operation *scope,
+                                ArrayRef<Operation *> excludedOps,
+                                bool readsAreSafe) {
   auto baseMemref = dyn_cast<MemrefValue>(base);
   if (!baseMemref)
     return false;
@@ -450,19 +455,24 @@ bool hasNoAliasingAccessInScope(
       continue;
     if (!scope->isAncestor(user))
       continue;
-    // In-`scope`, memory-effecting access to the buffer: it conflicts unless it
-    // is a provably-disjoint slice or (when allowed) a read.
-    Value accessed = getAccessedMemref(user);
-    if (baseFp && accessed) {
-      std::optional<SubviewFootprint> userFp =
-          resolveSubviewFootprint(accessed);
-      if (userFp && footprintsDisjoint(*baseFp, *userFp))
+    // In-`scope`, memory-effecting op: each of its operands that resolves to
+    // the buffer conflicts unless it is a provably-disjoint slice or (when
+    // allowed) is only read.
+    for (Value operand : user->getOperands()) {
+      auto slice = dyn_cast<MemrefValue>(operand);
+      if (!slice || skipViewLikeOps(slice) != buffer)
         continue;
+      if (baseFp) {
+        std::optional<SubviewFootprint> sliceFp =
+            resolveSubviewFootprint(slice);
+        if (sliceFp && areFootprintDisjoint(*baseFp, *sliceFp))
+          continue;
+      }
+      if (readsAreSafe && isa<MemoryEffectOpInterface>(user) &&
+          !hasEffect<MemoryEffects::Write>(user, slice))
+        continue;
+      return false;
     }
-    if (readsAreSafe && accessed &&
-        !hasEffect<MemoryEffects::Write>(user, accessed))
-      continue;
-    return false;
   }
   return true;
 }
