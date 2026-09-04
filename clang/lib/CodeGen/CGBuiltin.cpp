@@ -2816,8 +2816,6 @@ static std::string getPtrAddrSpaceSuffix(llvm::Type *PtrTy) {
   }
 }
 
-} // namespace
-
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
