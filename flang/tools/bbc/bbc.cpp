@@ -658,6 +658,7 @@ int main(int argc, char **argv) {
   }
 
   Fortran::parser::Options options;
+  options.preprocessingEnabled = true;
   options.predefinitions.emplace_back("__flang__"s, "1"s);
   options.predefinitions.emplace_back("__flang_major__"s,
                                       std::string{FLANG_VERSION_MAJOR_STRING});

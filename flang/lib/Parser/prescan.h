@@ -48,6 +48,10 @@ public:
   Preprocessor &preprocessor() { return preprocessor_; }
   common::LanguageFeatureControl &features() { return features_; }
 
+  Prescanner &set_preprocessingEnabled(bool yes) {
+    preprocessingEnabled_ = yes;
+    return *this;
+  }
   Prescanner &set_preprocessingOnly(bool yes) {
     preprocessingOnly_ = yes;
     return *this;
@@ -228,7 +232,7 @@ private:
   void NextChar();
   // True when input flowed to a continuation line
   bool SkipToNextSignificantCharacter();
-  void SkipCComments();
+  void SkipCComments(bool noError);
   void WarnCComment(const char *at);
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
@@ -250,7 +254,8 @@ private:
   std::optional<std::size_t> IsIncludeLine(const char *) const;
   void FortranInclude(const char *quote);
   const char *IsPreprocessorDirectiveLine(const char *) const;
-  const char *FixedFormContinuationLine(bool atNewline);
+  const char *FixedFormContinuationLine(
+      bool atNewline, const char *&cComment, const char *&unterminatedCComment);
   const char *GetFreeFormContinuationLine(bool ampersand, const char *p);
   const char *FreeFormContinuationLine(bool ampersand);
   bool IsImplicitContinuation() const;
@@ -275,6 +280,7 @@ private:
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool preprocessingEnabled_{false};
   bool preprocessingOnly_{false};
   bool expandIncludeLines_{true};
   bool isNestedInIncludeDirective_{false};

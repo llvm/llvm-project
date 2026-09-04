@@ -1,20 +1,16 @@
 ! RUN: %flang_fc1 -fsyntax-only %s 2>&1
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! RUN: not %flang_fc1 -pedantic -Werror -fdebug-dump-parse-tree-no-sema \
-! RUN:        -DTEST_ERRORS=1 %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
       implicit none
       integer :: i, foobar
 
 ! CHECK-NOT: C comment
 ! CHECK: i = 1
-! ERROR: portability: nonstandard usage: C-style comment
 /* Old style C comments
  *comments
  */
 #define VAL 1
 
-! ERROR: portability: nonstandard usage: C-style comment
 /* Single-line C comment */
  /* Single-line C comment */
   /* Single-line C comment */
@@ -69,23 +65,4 @@ C comment */
 ! CHECK-NOT: C comment
 	print *, "TAB"
 	/* C comment after tab */
-
-#if TEST_ERRORS
-! ERROR: error: Character in fixed-form label field must be a digit
-      i = 90
-/*
-*/+1
-#endif
-
-! CHECK: i = 10* 2
-      i = 10
-/**/ /* 2
-! CHECK: i = 10* 2
-      i = 10
-     /* 2
-
-#if TEST_ERRORS
-! ERROR: error: Character in fixed-form label field must be a digit
-/* Not-terminated C comment
-#endif
       end

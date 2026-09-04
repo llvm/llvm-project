@@ -35,6 +35,7 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
     bool isNestedInIncludeDirective)
     : messages_{that.messages_}, cooked_{that.cooked_}, preprocessor_{prepro},
       allSources_{that.allSources_}, features_{that.features_},
+      preprocessingEnabled_{that.preprocessingEnabled_},
       preprocessingOnly_{that.preprocessingOnly_},
       expandIncludeLines_{that.expandIncludeLines_},
       isNestedInIncludeDirective_{isNestedInIncludeDirective},
@@ -449,29 +450,28 @@ void Prescanner::LabelField(TokenSequence &token) {
   std::optional<int> badColumn;
 
   // Skip C-style comments.
-  const char *p{SkipWhiteSpace(start)};
-  std::uint64_t spaces{HasTabInLabelField(start - colOffset, limit_)
-          ? 6
-          : static_cast<std::uint64_t>(p - start)};
-  if (spaces < 6 && IsCComment(p)) {
-    at_ += spaces;
-    column_ += spaces;
-    SkipCComments();
-    if (at_ > start + spaces) {
-      if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
-        Say(LanguageFeature::ClassicCComments, GetCurrentProvenance(),
-            "nonstandard usage: C-style comment"_port_en_US);
+  if (preprocessingEnabled_) {
+    const char *p{SkipWhiteSpace(start)};
+    std::uint64_t spaces{HasTabInLabelField(start - colOffset, limit_)
+            ? 6
+            : static_cast<std::uint64_t>(p - start)};
+    if (spaces < 6 && IsCComment(p)) {
+      at_ += spaces;
+      column_ += spaces;
+      SkipCComments(/*noError=*/false);
+      if (at_ > start + spaces) {
+        WarnCComment(p);
+        // Fix `column_`, which may be incorrect after multi-line comments.
+        p = at_ - 1;
+        while (p > start && *p != '\n') {
+          --p;
+        }
+        if (*p == '\n') {
+          column_ = at_ - p;
+        }
+        colOffset = column_ - 1;
+        start = at_;
       }
-      // Fix `column_`, which may be incorrect after multi-line comments.
-      p = at_ - 1;
-      while (p > start && *p != '\n') {
-        --p;
-      }
-      if (*p == '\n') {
-        column_ = at_ - p;
-      }
-      colOffset = column_ - 1;
-      start = at_;
     }
   }
 
@@ -641,7 +641,7 @@ void Prescanner::NextChar() {
 // fixed form, and all forms of line continuation.
 bool Prescanner::SkipToNextSignificantCharacter() {
   if (inPreprocessorDirective_) {
-    SkipCComments();
+    SkipCComments(/*noError=*/true);
     return false;
   } else {
     auto anyContinuationLine{false};
@@ -665,15 +665,22 @@ bool Prescanner::SkipToNextSignificantCharacter() {
   }
 }
 
-void Prescanner::SkipCComments() {
+void Prescanner::SkipCComments(bool noError) {
   while (true) {
     if (IsCComment(at_)) {
       if (const char *after{SkipCComment(at_)}) {
         UpdateSourcePositionAfterSkip(after);
       } else {
-        // Don't emit any messages about unclosed C-style comments, because
-        // the sequence /* can appear legally in a FORMAT statement.  There's
-        // no ambiguity, since the sequence */ cannot appear legally.
+        // Error messages for unterminated C-style comments should be emitted
+        // only when preprocessing is enabled, since the sequence /* can
+        // appear legally in a FORMAT statement.
+        // At the moment, errors are emitted only for some code paths, such as
+        // when processing label fields, while others keep the old behavior of
+        // ignoring unterminated C-style comments.
+        // TODO Always emit an error when preprocessing is enabled.
+        if (preprocessingEnabled_ && !noError) {
+          Say(GetProvenance(at_), "unterminated C-style comment"_err_en_US);
+        }
         break;
       }
     } else if (inPreprocessorDirective_ && at_[0] == '\\' && at_ + 2 < limit_ &&
@@ -813,7 +820,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     // Recognize and skip over classic C style /*comments*/ when
     // outside a character literal.
     WarnCComment(at_);
-    SkipCComments();
+    SkipCComments(/*noError=*/true);
     if (compilingFixedForm) {
       SkipSpaces();
     }
@@ -1466,15 +1473,25 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
   return false;
 }
 
-const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
+const char *Prescanner::FixedFormContinuationLine(
+    bool atNewline, const char *&cComment, const char *&unterminatedCComment) {
+  cComment = nullptr;
+  unterminatedCComment = nullptr;
   if (IsAtEnd()) {
     return nullptr;
   }
   tabInCurrentLine_ = false;
   char col1{*nextLine_};
   const char *afterWhiteSpace{SkipWhiteSpace(nextLine_)};
-  const char *afterCComment{
-      IsCComment(afterWhiteSpace) ? SkipCComment(afterWhiteSpace) : nullptr};
+  const char *afterCComment{nullptr};
+  if (preprocessingEnabled_ && IsCComment(afterWhiteSpace)) {
+    afterCComment = SkipCComment(afterWhiteSpace);
+    if (afterCComment == nullptr) {
+      unterminatedCComment = afterWhiteSpace;
+    } else {
+      cComment = afterWhiteSpace;
+    }
+  }
   std::uint64_t maxLineLength{static_cast<std::uint64_t>(limit_ - nextLine_)};
   std::uint64_t n{maxLineLength < 5 ? maxLineLength - 1 : 4};
   int trailingSpaces{0};
@@ -1556,12 +1573,23 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
     }
     if (canBeNonDirectiveContinuation) {
       const char *col6{nextLine_ + 5};
-      if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6) &&
-          !(IsCComment(col6) && SkipCComment(col6) > col6)) {
-        if ((*col6 == 'i' || *col6 == 'I') && IsIncludeLine(nextLine_)) {
-          // It's an INCLUDE line, not a continuation
-        } else {
-          return nextLine_ + 6;
+      if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {
+        const char *afterCol6CComment{nullptr};
+        if (preprocessingEnabled_ && IsCComment(col6) &&
+            !unterminatedCComment) {
+          afterCol6CComment = SkipCComment(col6);
+          if (afterCol6CComment == nullptr) {
+            unterminatedCComment = col6;
+          } else if (!cComment) {
+            cComment = col6;
+          }
+        }
+        if (afterCol6CComment == nullptr) {
+          if ((*col6 == 'i' || *col6 == 'I') && IsIncludeLine(nextLine_)) {
+            // It's an INCLUDE line, not a continuation
+          } else {
+            return nextLine_ + 6;
+          }
         }
       }
     }
@@ -1691,7 +1719,17 @@ bool Prescanner::FixedFormContinuation(bool atNewline) {
     return false;
   }
   do {
-    if (const char *cont{FixedFormContinuationLine(atNewline)}) {
+    const char *cComment;
+    const char *unterminatedCComment;
+    if (const char *cont{FixedFormContinuationLine(
+            atNewline, cComment, unterminatedCComment)}) {
+      if (cComment) {
+        WarnCComment(cComment);
+      }
+      if (unterminatedCComment) {
+        Say(GetProvenance(unterminatedCComment),
+            "unterminated C-style comment"_err_en_US);
+      }
       BeginSourceLine(cont);
       column_ = 7;
       NextLine();
