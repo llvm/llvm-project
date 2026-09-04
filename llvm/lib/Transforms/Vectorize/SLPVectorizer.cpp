@@ -18949,10 +18949,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       Outermost = L;
       L = L->getParentLoop();
     }
-    if (Outermost && LoopBodyHasCall(Outermost)) {
-      return Outermost;
-    }
-    return nullptr;
+    return (Outermost && LoopBodyHasCall(Outermost)) ? Outermost : nullptr;
   };
   auto CheckPredecessors = [&](BasicBlock *Root, BasicBlock *Pred,
                                BasicBlock *OpParent) {
@@ -19073,9 +19070,14 @@ InstructionCost BoUpSLP::getSpillCost() {
 
     // Only permit an ordinary vectorized user.
     const TreeEntry *UserTE = SameTE->UserTreeIndex.UserTE;
-    if (!UserTE || UserTE->State != TreeEntry::Vectorize ||
+    assert(UserTE && "Expected a user tree entry.");
+    if (UserTE->State != TreeEntry::Vectorize ||
         ScalarOrPseudoEntries.contains(UserTE) ||
         UserTE->getOpcode() == Instruction::PHI)
+      return false;
+
+    // Different demotion state would make the two edge costs unequal.
+    if (MinBWs.contains(SameTE) != MinBWs.contains(Gather))
       return false;
 
     // The spill walk does not descend through gather entries; if any ancestor
