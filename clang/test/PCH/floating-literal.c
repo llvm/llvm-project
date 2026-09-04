@@ -8,12 +8,12 @@
 // targets with 128-bit IEEE long doubles.
 
 long double foo = 1.0E4000L;
-// CHECK: long double foo = 1.00000000000000000000000000000000004E+4000L;
+// CHECK: long double foo = 1.0E+4000L;
 
 // Just as well check the others are still sane while we're here...
 
 double bar = 1.0E300;
-// CHECK: double bar = 1.0000000000000001E+300;
+// CHECK: double bar = 1.0E+300;
 
 float wibble = 1.0E40;
 // CHECK: float wibble = 1.0E+40;
