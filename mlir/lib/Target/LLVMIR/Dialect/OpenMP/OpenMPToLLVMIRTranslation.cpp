@@ -548,10 +548,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkPrivate(op, result);
         checkReduction(op, result);
       })
-      .Case([&](omp::ScopeOp op) {
-        checkAllocate(op, result);
-        checkReduction(op, result);
-      })
+      .Case([&](omp::ScopeOp op) { checkReduction(op, result); })
       .Case([&](omp::SingleOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
@@ -1935,16 +1932,44 @@ initPrivateVars(llvm::IRBuilderBase &builder,
   return llvm::Error::success();
 }
 
+static LogicalResult
+convertAllocatorVars(Operation &op, ValueRange allocatorVars,
+                     llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation,
+                     PrivateVarsInfo &privateVarsInfo) {
+  for (Value allocatorVar : allocatorVars) {
+    if (privateVarsInfo.convertedAllocators.contains(allocatorVar))
+      continue;
+
+    llvm::Value *allocator = moduleTranslation.lookupValue(allocatorVar);
+    if (!allocator)
+      return op.emitError("failed to translate OpenMP allocator operand");
+    if (allocator->getType()->isIntegerTy())
+      allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
+    else if (allocator->getType()->isPointerTy())
+      allocator = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocator, builder.getPtrTy());
+    else
+      return op.emitError(
+          "OpenMP allocator operand must have integer or pointer type");
+
+    privateVarsInfo.convertedAllocators.try_emplace(allocatorVar, allocator);
+  }
+  return success();
+}
+
 /// Allocate and initialize delayed private variables. Returns the basic block
 /// which comes after all of these allocations. llvm::Value * for each of these
 /// private variables are populated in llvmPrivateVars.
 template <typename T>
-static llvm::Expected<llvm::BasicBlock *>
-allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation,
-                    PrivateVarsInfo &privateVarsInfo,
-                    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
-                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
+    T op, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation,
+    PrivateVarsInfo &privateVarsInfo,
+    const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr,
+    std::optional<llvm::OpenMPIRBuilder::InsertPointTy> allocatorIP =
+        std::nullopt) {
   // Allocate private vars
   llvm::Instruction *allocaTerminator = allocaIP.getBlock()->getTerminator();
   splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
@@ -1952,13 +1977,31 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
           true, allocaTerminator->getStableDebugLoc(),
           "omp.region.after_alloca");
 
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+  llvm::Instruction *allocatorTerminator = nullptr;
+  llvm::BasicBlock *afterAllocatorAllocations = nullptr;
+  if (allocatorIP) {
+    allocatorTerminator = allocatorIP->getBlock()->getTerminator();
+    afterAllocatorAllocations = splitBB(
+        llvm::OpenMPIRBuilder::InsertPointTy(
+            allocatorIP->getBlock(), allocatorTerminator->getIterator()),
+        true, allocatorTerminator->getStableDebugLoc(),
+        "omp.region.after_allocate");
+  }
+
+  std::optional<llvm::IRBuilderBase::InsertPointGuard> guard;
+  if (!allocatorIP)
+    guard.emplace(builder);
   // Update the allocaTerminator since the alloca block was split above.
   allocaTerminator = allocaIP.getBlock()->getTerminator();
   builder.SetInsertPoint(allocaTerminator);
   // The new terminator is an uncondition branch created by the splitBB above.
   assert(allocaTerminator->getNumSuccessors() == 1 &&
          "This is an unconditional branch created by splitBB");
+  if (allocatorIP) {
+    allocatorTerminator = allocatorIP->getBlock()->getTerminator();
+    assert(allocatorTerminator->getNumSuccessors() == 1 &&
+           "This is an unconditional branch created by splitBB");
+  }
 
   llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
@@ -1975,7 +2018,8 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
                                               -1);
   ValueRange allocatorVars;
   DenseI64ArrayAttr allocateAlignments;
-  if constexpr (std::is_same_v<T, omp::ParallelOp>) {
+  if constexpr (std::is_same_v<T, omp::ParallelOp> ||
+                std::is_same_v<T, omp::ScopeOp>) {
     allocatorVars = op.getAllocatorVars();
     allocateAlignments = op.getAllocateAlignmentsAttr();
     if (auto privateIndices = op.getAllocatePrivateIndicesAttr())
@@ -1990,14 +2034,16 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
     auto [privDecl, mlirPrivVar, blockArg] = tuple;
     llvm::Type *llvmAllocType =
         moduleTranslation.convertType(privDecl.getType());
-    builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
     llvm::Value *llvmPrivateVar = nullptr;
     int64_t allocateIndex = allocateItemForPrivate[privateIndex];
+    builder.SetInsertPoint(allocateIndex >= 0 && allocatorTerminator
+                               ? allocatorTerminator
+                               : allocaTerminator);
     if (allocateIndex >= 0) {
-      if (mightUseDeviceSharedMem ||
+      if (ompBuilder->Config.isTargetDevice() ||
           op->template getParentOfType<omp::TargetOp>())
         return llvm::createStringError(
-            "allocate clause on a device parallel region is not supported");
+            "allocate clause in an OpenMP device context is not supported");
       if (!llvmAllocType->isSized())
         return llvm::createStringError(
             "allocate clause private type must have a fixed size");
@@ -2060,7 +2106,7 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
     privateVarsInfo.llvmVars.push_back(llvmPrivateVar);
   }
 
-  return afterAllocas;
+  return afterAllocatorAllocations ? afterAllocatorAllocations : afterAllocas;
 }
 
 /// This can't always be determined statically, but when we can, it is good to
@@ -2384,10 +2430,14 @@ convertOmpScope(omp::ScopeOp &scopeOp, llvm::IRBuilderBase &builder,
   assert(isByRef.size() == scopeOp.getNumReductionVars());
 
   PrivateVarsInfo privateVarsInfo(scopeOp);
+  if (failed(convertAllocatorVars(*scopeOp, scopeOp.getAllocatorVars(), builder,
+                                  moduleTranslation, privateVarsInfo)))
+    return failure();
 
   SmallVector<omp::DeclareReductionOp> reductionDecls;
   collectReductionDecls(scopeOp, reductionDecls);
-  InsertPointTy allocaIP = findAllocInsertPoints(builder, moduleTranslation);
+  InsertPointTy privateAllocaIP =
+      findAllocInsertPoints(builder, moduleTranslation);
 
   SmallVector<llvm::Value *> privateReductionVariables(
       scopeOp.getNumReductionVars());
@@ -2396,14 +2446,15 @@ convertOmpScope(omp::ScopeOp &scopeOp, llvm::IRBuilderBase &builder,
   MutableArrayRef<BlockArgument> reductionArgs =
       cast<omp::BlockArgOpenMPOpInterface>(*scopeOp).getReductionBlockArgs();
 
-  // Allocate private vars before the scope body
-  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-      scopeOp, builder, moduleTranslation, privateVarsInfo, allocaIP);
-  if (failed(handleError(afterAllocas, *scopeOp)))
-    return failure();
+  if (scopeOp.getAllocateVars().empty()) {
+    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+        scopeOp, builder, moduleTranslation, privateVarsInfo, privateAllocaIP);
+    if (failed(handleError(afterAllocas, *scopeOp)))
+      return failure();
+  }
 
   if (failed(allocAndInitializeReductionVars(
-          scopeOp, reductionArgs, builder, moduleTranslation, allocaIP,
+          scopeOp, reductionArgs, builder, moduleTranslation, privateAllocaIP,
           reductionDecls, privateReductionVariables, reductionVariableMap,
           isByRef)))
     return failure();
@@ -2411,7 +2462,18 @@ convertOmpScope(omp::ScopeOp &scopeOp, llvm::IRBuilderBase &builder,
   auto bodyCB =
       [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
           llvm::ArrayRef<llvm::BasicBlock *> deallocBlocks) -> llvm::Error {
-    builder.restoreIP(codeGenIP);
+    if (!scopeOp.getAllocateVars().empty()) {
+      // Runtime storage must be allocated on each dynamic Scope entry. Ordinary
+      // private allocas still use the enclosing alloca insertion point.
+      llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+          scopeOp, builder, moduleTranslation, privateVarsInfo, privateAllocaIP,
+          /*mappedPrivateVars=*/nullptr, codeGenIP);
+      if (handleError(afterAllocas, *scopeOp).failed())
+        return llvm::make_error<PreviouslyReportedError>();
+      builder.SetInsertPoint(afterAllocas.get()->getTerminator());
+    } else {
+      builder.restoreIP(codeGenIP);
+    }
 
     if (handleError(
             initPrivateVars(builder, moduleTranslation, privateVarsInfo),
@@ -2451,7 +2513,7 @@ convertOmpScope(omp::ScopeOp &scopeOp, llvm::IRBuilderBase &builder,
 
   // Process the reductions if required.
   return createReductionsAndCleanup(
-      scopeOp, builder, moduleTranslation, allocaIP, reductionDecls,
+      scopeOp, builder, moduleTranslation, privateAllocaIP, reductionDecls,
       privateReductionVariables, isByRef, scopeOp.getNowait(),
       /*isTeamsReduction=*/false);
 }
@@ -4866,24 +4928,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   PrivateVarsInfo privateVarsInfo(opInst);
-  for (Value allocatorVar : opInst.getAllocatorVars()) {
-    if (privateVarsInfo.convertedAllocators.contains(allocatorVar))
-      continue;
-
-    llvm::Value *allocator = moduleTranslation.lookupValue(allocatorVar);
-    if (!allocator)
-      return opInst.emitError("failed to translate OpenMP allocator operand");
-    if (allocator->getType()->isIntegerTy())
-      allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
-    else if (allocator->getType()->isPointerTy())
-      allocator = builder.CreatePointerBitCastOrAddrSpaceCast(
-          allocator, builder.getPtrTy());
-    else
-      return opInst.emitError(
-          "OpenMP allocator operand must have integer or pointer type");
-
-    privateVarsInfo.convertedAllocators.try_emplace(allocatorVar, allocator);
-  }
+  if (failed(convertAllocatorVars(*opInst, opInst.getAllocatorVars(), builder,
+                                  moduleTranslation, privateVarsInfo)))
+    return failure();
 
   // Collect reduction declarations
   SmallVector<omp::DeclareReductionOp> reductionDecls;

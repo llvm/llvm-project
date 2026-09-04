@@ -103,7 +103,7 @@ subroutine omp_scope_allocate()
   ! CHECK: hlfir.declare %{{.*}} {uniq_name = "_QFomp_scope_allocateEi"}
   i = 0
 
-  ! CHECK: omp.scope allocate(%{{.*}} : i32 -> %{{.*}}#0 : !fir.ref<i32>) private(@_QFomp_scope_allocateEi_private_i32 %{{.*}}#0 -> %[[APRIV:.*]] : !fir.ref<i32>) {
+  ! CHECK: omp.scope allocate(%{{.*}} : i32 -> %{{.*}}#0 : !fir.ref<i32>) allocate_private_indices([0]) private(@_QFomp_scope_allocateEi_private_i32 %{{.*}}#0 -> %[[APRIV:.*]] : !fir.ref<i32>) {
   ! CHECK: %[[ADECL:.*]]:2 = hlfir.declare %[[APRIV]] {uniq_name = "_QFomp_scope_allocateEi"}
   !$omp scope private(i) allocate(i)
   ! CHECK: hlfir.assign %{{.*}} to %[[ADECL]]#0 : i32, !fir.ref<i32>

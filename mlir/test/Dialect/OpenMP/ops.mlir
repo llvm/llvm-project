@@ -157,6 +157,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
 }
 
 omp.private {type = private} @parallel_allocate_private : memref<i32>
+omp.private {type = private} @parallel_allocate_associated_private : memref<i32>
 
 func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %allocator : si32) -> () {
  // CHECK: omp.parallel
@@ -201,6 +202,16 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
+ // CHECK: omp.parallel allocate(
+ // CHECK-SAME: allocate_private_indices([0, 1])
+ // CHECK-SAME: private(@parallel_allocate_private %[[STORAGE:.*]] -> {{.*}}, @parallel_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+ omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>,
+                       %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+     private(@parallel_allocate_private %data_var -> %private.x,
+             @parallel_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+   omp.terminator
+ }
+
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})
  omp.parallel {
@@ -214,6 +225,32 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
  omp.parallel num_threads(%num_threads : i32) if(%if_cond) proc_bind(close) {
    omp.terminator
  }
+
+  return
+}
+
+omp.private {type = private} @scope_allocate_private : memref<i32>
+omp.private {type = private} @scope_allocate_associated_private : memref<i32>
+
+// CHECK-LABEL: omp_scope_pretty
+func.func @omp_scope_pretty(%data_var : memref<i32>, %allocator : si32) -> () {
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_alignments([64]) allocate_private_indices([0])
+  // CHECK-SAME: private(
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>) allocate_alignments([64]) allocate_private_indices([0])
+      private(@scope_allocate_private %data_var -> %private : memref<i32>) {
+    omp.terminator
+  }
+
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_private_indices([0, 1])
+  // CHECK-SAME: private(@scope_allocate_private %[[STORAGE:.*]] -> {{.*}}, @scope_allocate_associated_private %[[STORAGE]] -> {{.*}} : memref<i32>, memref<i32>)
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>,
+                     %allocator : si32 -> %data_var : memref<i32>) allocate_private_indices([0, 1])
+      private(@scope_allocate_private %data_var -> %private.x,
+              @scope_allocate_associated_private %data_var -> %private.y : memref<i32>, memref<i32>) {
+    omp.terminator
+  }
 
   return
 }
