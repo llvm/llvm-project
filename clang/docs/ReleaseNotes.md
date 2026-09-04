@@ -808,6 +808,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Sanitizers
 
+- `-ffile-compilation-dir=` now also makes absolute paths relative in
+  sanitizer metadata (UBSan diagnostics and ASan module names) for
+  reproducible builds.
+
 ### Python Binding Changes
 
 ### OpenMP Support

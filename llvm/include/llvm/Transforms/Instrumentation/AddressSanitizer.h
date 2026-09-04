@@ -16,6 +16,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include <string>
 
 namespace llvm {
 class Module;
@@ -30,6 +31,7 @@ struct AddressSanitizerOptions {
   int InstrumentationWithCallsThreshold = 7000;
   uint32_t MaxInlinePoisoningSize = 64;
   bool InsertVersionCheck = true;
+  std::string CompilationDir;
 };
 
 /// Public interface to the address sanitizer module pass for instrumenting code

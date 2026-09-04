@@ -4065,6 +4065,19 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
   if (PLoc.isValid()) {
     StringRef FilenameString = PLoc.getFilename();
 
+    // If a sanitize compilation dir is set, make absolute paths relative to it.
+    llvm::SmallString<256> FileBuf(FilenameString);
+    if (!CGM.getCodeGenOpts().SanitizeCompilationDir.empty() &&
+        llvm::sys::path::is_absolute(FilenameString)) {
+      llvm::SmallString<256> CompDir(
+          CGM.getCodeGenOpts().SanitizeCompilationDir);
+      // Ensure trailing separator so "/foo" doesn't match "/foobar/x.c".
+      if (!llvm::sys::path::is_separator(CompDir.back()))
+        CompDir += llvm::sys::path::get_separator();
+      if (llvm::sys::path::replace_path_prefix(FileBuf, CompDir, ""))
+        FilenameString = FileBuf;
+    }
+
     int PathComponentsToStrip =
         CGM.getCodeGenOpts().EmitCheckPathComponentsToStrip;
     if (PathComponentsToStrip < 0) {
