@@ -17,6 +17,12 @@ namespace clang::CodeGenUtils {
 bool canSkipVTablePointerInitialization(ASTContext &Ctx,
                                         const CXXDestructorDecl *Dtor);
 
+/// Check whether destructing \p Field has no observable behaviors, and thus can
+/// be skipped when creating a destructor body. So non-record types, anonymous
+/// structs/unions, or record types where the destructor doesnt DO anything are
+/// considered as this version of 'trivial'.
+/// Note: this concept of 'trivial' doesn't match the standard definition, and
+/// cannot be used as a substitute.
 bool fieldHasTrivialDestructorBody(ASTContext &Context, const FieldDecl *Field);
 
 /// Determines whether the language options require us to model
