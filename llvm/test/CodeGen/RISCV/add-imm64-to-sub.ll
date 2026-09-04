@@ -140,3 +140,33 @@ define i64 @reuse_neg_const_chain(i64 %ctrl, i8 zeroext %h) {
   %and1 = and i64 %and, %sub
   ret i64 %and1
 }
+
+; C is anchored by the multiply, and it is added on one operand and subtracted
+; (via add of -C) on another. Only C needs to be materialized: the add of C
+; reuses it directly and the add of -C should become (sub X, C). It must not
+; instead flip the add of C to (sub X, -C), which would materialize -C too.
+define i64 @add_pos_and_neg_const(i64 %x, i64 %a, i64 %b) {
+; CHECK-LABEL: add_pos_and_neg_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a3, 4112
+; CHECK-NEXT:    addi a3, a3, 257
+; CHECK-NEXT:    slli a4, a3, 32
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    mul a0, a0, a3
+; CHECK-NEXT:    lui a4, 1044464
+; CHECK-NEXT:    addi a4, a4, -257
+; CHECK-NEXT:    slli a5, a4, 32
+; CHECK-NEXT:    sub a1, a1, a4
+; CHECK-NEXT:    sub a1, a1, a5
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    xor a1, a1, a2
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    ret
+  %mul = mul i64 %x, 72340172838076673
+  %pa = add i64 %a, 72340172838076673
+  %na = add i64 %b, -72340172838076673
+  %o1 = xor i64 %mul, %pa
+  %o2 = xor i64 %o1, %na
+  ret i64 %o2
+}
+
