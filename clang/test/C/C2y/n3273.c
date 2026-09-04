@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c2y -Wall -pedantic -Wpre-c2y-compat %s
+// RUN: %clang_cc1 -verify -std=c2y -Wall -pedantic -Wpre-c2y-compat-pedantic %s
 // RUN: %clang_cc1 -verify=pre-c2y -std=c23 -Wall -pedantic %s
 
 /* WG14 N3273: Clang 3.5
@@ -11,4 +11,3 @@ static_assert(
                      */
   alignof(int)
 );
-

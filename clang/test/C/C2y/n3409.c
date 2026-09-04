@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -std=c2y -pedantic -Wno-unused %s
-// RUN: %clang_cc1 -verify=expected,pre-c2y -std=c2y -Wpre-c2y-compat -Wno-unused %s
+// RUN: %clang_cc1 -verify=expected,pre-c2y -std=c2y -Wpre-c2y-compat-pedantic -Wno-unused %s
 // RUN: %clang_cc1 -verify=expected,ext -std=c23 -pedantic -Wno-unused %s
 
 /* WG14 N3409: Clang 21

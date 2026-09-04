@@ -2319,7 +2319,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
       if (!ConvertedSize.isInvalid() && (*ArraySize)->getType()->isRecordType())
         // Diagnose the compatibility of this conversion.
-        Diag(StartLoc, diag::warn_cxx98_compat_array_size_conversion)
+        Diag(StartLoc, diag::compat_cxx11_array_size_conversion)
           << (*ArraySize)->getType() << 0 << "'size_t'";
     } else {
       class SizeConvertDiagnoser : public ICEConvertDiagnoser {
@@ -2368,11 +2368,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         SemaDiagnosticBuilder diagnoseConversion(Sema &S, SourceLocation Loc,
                                                  QualType T,
                                                  QualType ConvTy) override {
-          return S.Diag(Loc,
-                        S.getLangOpts().CPlusPlus11
-                          ? diag::warn_cxx98_compat_array_size_conversion
-                          : diag::ext_array_size_conversion)
-                   << T << ConvTy->isEnumeralType() << ConvTy;
+          return S.DiagCompat(Loc, diag_compat::array_size_conversion)
+                 << T << ConvTy->isEnumeralType() << ConvTy;
         }
       } SizeDiagnoser(*ArraySize);
 
