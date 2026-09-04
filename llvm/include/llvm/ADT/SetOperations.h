@@ -133,16 +133,42 @@ template <class S1Ty, class S2Ty> void set_subtract(S1Ty &S1, const S2Ty &S2) {
     S1.erase(E);
 }
 
-/// set_subtract(A, B, C, D) - Compute A := A - B, set C to the elements of B
-/// removed from A (A ^ B), and D to the elements of B not found in and removed
-/// from A (B - A).
+/// set_subtract(A, B, C) - Compute A := A - B, and set C to the elements of B
+/// removed from A (A ^ B).
+///
+/// Selects the set to iterate based on the relative sizes of A and B for better
+/// efficiency.
 template <class S1Ty, class S2Ty>
-void set_subtract(S1Ty &S1, const S2Ty &S2, S1Ty &Removed, S1Ty &Remaining) {
+void set_subtract(S1Ty &S1, const S2Ty &S2, S1Ty &Removed) {
+  // If S1 is smaller than S2, iterate on S1 provided that S2 supports efficient
+  // lookups via contains() and S1 supports remove_if().
+  using ElemTy = decltype(*S1.begin());
+  if constexpr (detail::HasMemberContains<S2Ty, ElemTy>) {
+    auto Pred = [&S2, &Removed](const auto &E) {
+      if (S2.contains(E)) {
+        Removed.insert(E);
+        return true;
+      }
+      return false;
+    };
+    if constexpr (detail::HasMemberRemoveIf<S1Ty, decltype(Pred)>) {
+      // Place the runtime size check inside HasMemberRemoveIf so that for
+      // container types that do not support remove_if, the size check is
+      // eliminated at compile time and execution falls directly through to
+      // the fallback loop below.
+      if (S1.size() < S2.size()) {
+        S1.remove_if(Pred);
+        return;
+      }
+    }
+  }
+
+  // Fallback when S1 is not smaller, S2 doesn't support contains() (e.g. S2
+  // is a vector), or S1 doesn't support remove_if(). Iterate over S2 and
+  // erase from S1.
   for (const auto &E : S2)
     if (S1.erase(E))
       Removed.insert(E);
-    else
-      Remaining.insert(E);
 }
 
 /// set_is_subset(A, B) - Return true iff A in B
