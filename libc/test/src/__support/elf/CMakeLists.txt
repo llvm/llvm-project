@@ -39,3 +39,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.elf.relocation
 )
+
+add_libc_test(
+  module_test
+  SUITE
+    libc-support-tests
+  SRCS
+    module_test.cpp
+  DEPENDS
+    libc.src.__support.elf.module
+)

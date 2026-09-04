@@ -61,3 +61,21 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.architectures
 )
+
+add_header_library(
+  module
+  HDRS
+    module.h
+  DEPENDS
+    libc.src.__support.elf.elf_types
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.elf.dynamic
+    libc.src.__support.elf.relocation
+    libc.src.__support.elf.symbol
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
