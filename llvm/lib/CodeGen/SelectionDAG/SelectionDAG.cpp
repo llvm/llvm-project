@@ -14446,30 +14446,44 @@ std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
                         getBuildVector(NewOvVT, dl, OvScalars));
 }
 
+static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
+                                                   LSBaseSDNode *Base,
+                                                   unsigned Bytes, int Dist,
+                                                   const SelectionDAG &DAG) {
+  if (LS->isVolatile() || Base->isVolatile())
+    return false;
+  // TODO: probably too restrictive for atomics, revisit
+  if (!LS->isSimple())
+    return false;
+  if (LS->isIndexed() || Base->isIndexed())
+    return false;
+  if (LS->getChain() != Base->getChain())
+    return false;
+  EVT VT = LS->getMemoryVT();
+  if (VT.getSizeInBits() / 8 != Bytes)
+    return false;
+
+  auto BaseLocDecomp = BaseIndexOffset::match(Base, DAG);
+  auto LocDecomp = BaseIndexOffset::match(LS, DAG);
+
+  int64_t Offset = 0;
+  if (BaseLocDecomp.equalBaseIndex(LocDecomp, DAG, Offset))
+    return (Dist * (int64_t)Bytes == Offset);
+  return false;
+}
+
 bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
                                                   LoadSDNode *Base,
                                                   unsigned Bytes,
                                                   int Dist) const {
-  if (LD->isVolatile() || Base->isVolatile())
-    return false;
-  // TODO: probably too restrictive for atomics, revisit
-  if (!LD->isSimple())
-    return false;
-  if (LD->isIndexed() || Base->isIndexed())
-    return false;
-  if (LD->getChain() != Base->getChain())
-    return false;
-  EVT VT = LD->getMemoryVT();
-  if (VT.getSizeInBits() / 8 != Bytes)
-    return false;
+  return areNonVolatileConsecutiveLoadsOrStores(LD, Base, Bytes, Dist, *this);
+}
 
-  auto BaseLocDecomp = BaseIndexOffset::match(Base, *this);
-  auto LocDecomp = BaseIndexOffset::match(LD, *this);
-
-  int64_t Offset = 0;
-  if (BaseLocDecomp.equalBaseIndex(LocDecomp, *this, Offset))
-    return (Dist * (int64_t)Bytes == Offset);
-  return false;
+bool SelectionDAG::areNonVolatileConsecutiveStores(StoreSDNode *ST,
+                                                   StoreSDNode *Base,
+                                                   unsigned Bytes,
+                                                   int Dist) const {
+  return areNonVolatileConsecutiveLoadsOrStores(ST, Base, Bytes, Dist, *this);
 }
 
 /// InferPtrAlignment - Infer alignment of a load / store address. Return
