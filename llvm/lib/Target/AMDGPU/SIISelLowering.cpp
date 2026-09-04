@@ -8549,6 +8549,72 @@ static SDNode *findUser(SDValue Value, unsigned Opcode) {
   return nullptr;
 }
 
+namespace {
+struct BRCONDMatch {
+  SDValue CondBr;
+  SDValue Condition;
+  SDValue ConditionWrapper;
+  SDNode *UncondBr = nullptr;
+
+  SDValue ConditionTrueTarget;
+  SDValue ConditionFalseTarget;
+
+  void redirectFallthroughEdge(SelectionDAG &DAG, SDValue Target) const {
+    if (UncondBr->getOperand(1) == Target)
+      return;
+
+    SDValue NewBr = DAG.getNode(ISD::BR, SDLoc(CondBr), UncondBr->getVTList(),
+                                {UncondBr->getOperand(0), Target});
+    DAG.ReplaceAllUsesWith(UncondBr, NewBr.getNode());
+  }
+};
+} // namespace
+
+static std::optional<BRCONDMatch> matchBRCOND(SDValue CondBr) {
+  if (CondBr.getOpcode() != ISD::BRCOND)
+    return std::nullopt;
+
+  SDValue Condition = CondBr.getOperand(1);
+  SDValue ConditionWrapper;
+  bool IsNegated = false;
+
+  switch (Condition.getOpcode()) {
+  case ISD::SETCC: {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Condition.getOperand(2))->get();
+    if (auto *C = dyn_cast<ConstantSDNode>(Condition.getOperand(1));
+        C && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+      IsNegated = (CC == ISD::SETEQ) == (C->getZExtValue() == 0);
+      ConditionWrapper = Condition;
+      Condition = Condition.getOperand(0);
+    }
+    break;
+  }
+  case ISD::XOR:
+    if (auto *C = dyn_cast<ConstantSDNode>(Condition.getOperand(1));
+        C && C->getZExtValue()) {
+      ConditionWrapper = Condition;
+      Condition = Condition.getOperand(0);
+      IsNegated = true;
+    }
+    break;
+  default:
+    break;
+  }
+
+  SDNode *UncondBr = findUser(CondBr, ISD::BR);
+  if (!UncondBr)
+    return std::nullopt;
+
+  SDValue TakenTarget = CondBr.getOperand(2);
+  SDValue OtherTarget = UncondBr->getOperand(1);
+  return BRCONDMatch{CondBr,
+                     Condition,
+                     ConditionWrapper,
+                     UncondBr,
+                     IsNegated ? OtherTarget : TakenTarget,
+                     IsNegated ? TakenTarget : OtherTarget};
+}
+
 unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   if (Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
     switch (Intr->getConstantOperandVal(1)) {
@@ -8615,37 +8681,12 @@ bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
 /// This transforms the control flow intrinsics to get the branch destination as
 /// last parameter, also switches branch target with BR if the need arise
 SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
-  SDLoc DL(BRCOND);
+  auto Match = matchBRCOND(BRCOND);
+  if (!Match)
+    return BRCOND;
 
-  SDNode *Intr = BRCOND.getOperand(1).getNode();
-  SDValue Target = BRCOND.getOperand(2);
-  SDNode *BR = nullptr;
-  SDNode *SetCC = nullptr;
-
-  switch (Intr->getOpcode()) {
-  case ISD::SETCC: {
-    // As long as we negate the condition everything is fine
-    SetCC = Intr;
-    Intr = SetCC->getOperand(0).getNode();
-    break;
-  }
-  case ISD::XOR: {
-    // Similar to SETCC, if we have (xor c, -1), we will be fine.
-    SDValue LHS = Intr->getOperand(0);
-    SDValue RHS = Intr->getOperand(1);
-    if (auto *C = dyn_cast<ConstantSDNode>(RHS); C && C->getZExtValue()) {
-      Intr = LHS.getNode();
-      break;
-    }
-    [[fallthrough]];
-  }
-  default: {
-    // Get the target from BR if we don't negate the condition
-    BR = findUser(BRCOND, ISD::BR);
-    assert(BR && "brcond missing unconditional branch user");
-    Target = BR->getOperand(1);
-  }
-  }
+  SDLoc DL(Match->CondBr);
+  SDNode *Intr = Match->Condition.getNode();
 
   unsigned CFNode = isCFIntrinsic(Intr);
   if (CFNode == 0) {
@@ -8656,18 +8697,20 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   bool HaveChain = Intr->getOpcode() == ISD::INTRINSIC_VOID ||
                    Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN;
 
-  assert(!SetCC ||
-         (SetCC->getConstantOperandVal(1) == 1 &&
-          cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get() ==
-              ISD::SETNE));
+  assert((!Match->ConditionWrapper ||
+          Match->ConditionWrapper.getOpcode() != ISD::SETCC ||
+          (Match->ConditionWrapper.getConstantOperandVal(1) == 1 &&
+           cast<CondCodeSDNode>(Match->ConditionWrapper.getOperand(2).getNode())
+                   ->get() == ISD::SETNE)) &&
+         "unexpected control flow intrinsic condition wrapper");
 
   // operands of the new intrinsic call
   SmallVector<SDValue, 4> Ops;
   if (HaveChain)
-    Ops.push_back(BRCOND.getOperand(0));
+    Ops.push_back(Match->CondBr.getOperand(0));
 
   Ops.append(Intr->op_begin() + (HaveChain ? 2 : 1), Intr->op_end());
-  Ops.push_back(Target);
+  Ops.push_back(Match->ConditionFalseTarget);
 
   ArrayRef<EVT> Res(Intr->value_begin() + 1, Intr->value_end());
 
@@ -8675,17 +8718,12 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   SDNode *Result = DAG.getNode(CFNode, DL, DAG.getVTList(Res), Ops).getNode();
 
   if (!HaveChain) {
-    SDValue Ops[] = {SDValue(Result, 0), BRCOND.getOperand(0)};
+    SDValue Ops[] = {SDValue(Result, 0), Match->CondBr.getOperand(0)};
 
     Result = DAG.getMergeValues(Ops, DL).getNode();
   }
 
-  if (BR) {
-    // Give the branch instruction our target
-    SDValue Ops[] = {BR->getOperand(0), BRCOND.getOperand(2)};
-    SDValue NewBR = DAG.getNode(ISD::BR, DL, BR->getVTList(), Ops);
-    DAG.ReplaceAllUsesWith(BR, NewBR.getNode());
-  }
+  Match->redirectFallthroughEdge(DAG, Match->ConditionTrueTarget);
 
   SDValue Chain = SDValue(Result, Result->getNumValues() - 1);
 

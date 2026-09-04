@@ -815,6 +815,14 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::protected_field_ptr:
       Changed |= expandProtectedFieldPtr(F);
       break;
+    case Intrinsic::is_debugging_enabled:
+      if (!TM || !TM->canLowerIsDebuggingEnabled())
+        Changed |= forEachCall(F, [](CallInst *CI) {
+          CI->replaceAllUsesWith(ConstantInt::getFalse(CI->getContext()));
+          CI->eraseFromParent();
+          return true;
+        });
+      break;
     case Intrinsic::cond_loop:
       if (!TM->canLowerCondLoop())
         Changed |= expandCondLoop(F);

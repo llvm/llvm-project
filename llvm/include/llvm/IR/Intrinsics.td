@@ -2078,6 +2078,12 @@ def int_trap : Intrinsic<[], [],
                ClangBuiltin<"__builtin_trap">;
 def int_debugtrap : Intrinsic<[]>,
                     ClangBuiltin<"__builtin_debugtrap">;
+// Query whether debugging is enabled for the current execution context.
+def int_is_debugging_enabled :
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                        [IntrInaccessibleMemOnly,
+                         IntrNoMerge,
+                         NoUndef<RetIndex>]>;
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
                               [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>,
                                IntrInaccessibleMemOnly, IntrWriteMem]>;

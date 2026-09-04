@@ -567,6 +567,13 @@ public:
   /// this function returns false, the intrinsic will be supported generically
   /// but without loop detection support.
   virtual bool canLowerCondLoop() const { return false; }
+
+  /// Returns whether this target takes responsibility for lowering
+  /// llvm.is.debugging.enabled. If false, generic lowering replaces the
+  /// intrinsic with false. If true, the target must handle every supported
+  /// subtarget, including replacing the intrinsic with false on subtargets
+  /// without native lowering.
+  virtual bool canLowerIsDebuggingEnabled() const { return false; }
 };
 
 } // end namespace llvm
