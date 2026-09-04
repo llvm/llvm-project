@@ -234,6 +234,8 @@ features cannot lower the translation-unit ABI level;
 
 - Added support for the `__builtin_strlcat` builtin.
 
+- Added support for the `__builtin_strlcpy` builtin.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -270,6 +272,9 @@ features cannot lower the translation-unit ABI level;
 ### Improvements to Clang's diagnostics
 
 - `-Wfortify-source` now diagnoses when `strlcat` or `__builtin_strlcat` is called with a size
+  argument larger than the destination buffer.
+
+- `-Wfortify-source` now diagnoses when `strlcpy` or `__builtin_strlcpy` is called with a size
   argument larger than the destination buffer.
 
 - The `cannot overload a member function` diagnostic now describes the previous
