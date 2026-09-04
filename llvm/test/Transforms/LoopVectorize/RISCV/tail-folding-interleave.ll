@@ -104,7 +104,7 @@ for.cond.cleanup:
 ; E.g.
 ; int (*a)[4];
 ; int rdx = 0;
-; for (int i = 0; i < n; i++) vscale_range(2, 1024) {
+; for (int i = 0; i < n; i++) {
 ;   rdx += a[i][0];
 ;   rdx += a[i][1];
 ;   // No access a[i][2]
@@ -222,7 +222,7 @@ exit:
 ; Interleaved group with gap but without tail gap
 ; E.g.
 ; int (*a)[4];
-; for (int i = 0; i < n; i++) vscale_range(2, 1024) {
+; for (int i = 0; i < n; i++) {
 ;   a[i][0] = i;
 ;   a[i][1] = i;
 ;   // No access a[i][2]
@@ -336,7 +336,7 @@ exit:
 ; E.g.
 ; int (*a)[4];
 ; int rdx = 0;
-; for (int i = 0; i < n; i++) vscale_range(2, 1024) {
+; for (int i = 0; i < n; i++) {
 ;   rdx += a[i][0];
 ;   rdx += a[i][1];
 ;   rdx += a[i][2];
@@ -458,7 +458,7 @@ exit:
 ; E.g.
 ; int (*a)[4];
 ; int rdx = 0;
-; for (int i = 0; i < n; i++) vscale_range(2, 1024) {
+; for (int i = 0; i < n; i++) {
 ;   a[i][0] = i;
 ;   a[i][1] = i;
 ;   a[i][2] = i;
