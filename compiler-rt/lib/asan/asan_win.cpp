@@ -231,17 +231,7 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 // ---------------------- TSD ---------------- {{{
 static bool tsd_key_inited = false;
 
-#  if !defined(__GNUC__) || defined(__clang__)
-static __declspec(thread) void *fake_tsd = 0;
-#  else
-struct TlsVoidPtr {
-  operator void*() { return TlsGetValue(tls_index); }
-  void operator=(void* v) { TlsSetValue(tls_index, v); }
-
-  DWORD tls_index;
-};
-static TlsVoidPtr fake_tsd;
-#  endif
+static THREADLOCAL void* fake_tsd = 0;
 
 // https://docs.microsoft.com/en-us/windows/desktop/api/winternl/ns-winternl-_teb
 // "[This structure may be altered in future versions of Windows. Applications
@@ -274,7 +264,7 @@ void AsanTSDInit(void (*destructor)(void *tsd)) {
 
 void *AsanTSDGet() {
   CHECK(tsd_key_inited);
-  return IsTlsInitialized() ? (void*)fake_tsd : nullptr;
+  return IsTlsInitialized() ? fake_tsd : nullptr;
 }
 
 void AsanTSDSet(void *tsd) {
@@ -345,11 +335,6 @@ ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
 #endif
 
 void InitializePlatformExceptionHandlers() {
-#  if defined(__GNUC__) && !defined(__clang__)
-  fake_tsd.tls_index = TlsAlloc();
-  CHECK(fake_tsd.tls_index != TLS_OUT_OF_INDEXES);
-#  endif
-
 #  if SANITIZER_WINDOWS64
   // On Win64, we map memory on demand with access violation handler.
   // Install our exception handler.
