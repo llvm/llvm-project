@@ -73,6 +73,8 @@ static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
     return OpNo != 0;
   case Instruction::PHI:
     return true;
+  case Instruction::ShuffleVector:
+    return true;
   default:
     llvm_unreachable("Unreachable!");
   }
@@ -147,7 +149,8 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
     case Instruction::URem:
     case Instruction::InsertElement:
     case Instruction::ExtractElement:
-    case Instruction::Select: {
+    case Instruction::Select:
+    case Instruction::ShuffleVector: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
       append_range(Worklist, Operands);
@@ -164,8 +167,7 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
     }
     default:
       // TODO: Can handle more cases here:
-      // 1. shufflevector
-      // 2. sdiv, srem
+      // 1. sdiv, srem
       // ...
       return false;
     }
@@ -352,7 +354,6 @@ Type *TruncInstCombine::getBestTruncatedType() {
   if (MinBitWidth >= OrigBitWidth ||
       (DesiredBitWidth && DesiredBitWidth != MinBitWidth))
     return nullptr;
-
   return IntegerType::get(CurrentTruncInst->getContext(), MinBitWidth);
 }
 
@@ -464,6 +465,13 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       Value *LHS = getReducedOperand(I->getOperand(1), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(2), SclTy);
       Res = Builder.CreateSelect(Op0, LHS, RHS, "", I);
+      break;
+    }
+    case Instruction::ShuffleVector: {
+      Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
+      Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
+      auto *SI = cast<ShuffleVectorInst>(I);
+      Res = Builder.CreateShuffleVector(LHS, RHS, SI->getShuffleMask());
       break;
     }
     case Instruction::PHI: {
