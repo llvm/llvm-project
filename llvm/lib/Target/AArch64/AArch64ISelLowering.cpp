@@ -31593,6 +31593,53 @@ static SDValue performPredicateLoadCombine(SDNode *N,
   DAG.makeEquivalentMemoryOrdering(Load, LoadPred);
   return LoadPred;
 }
+static SDValue performFPToIntToDivCombine(SDNode *N, SelectionDAG &DAG) {
+  unsigned Opc = N->getOpcode();
+  bool IsSigned = (Opc == ISD::FP_TO_SINT);
+
+  SDValue FDiv = N->getOperand(0);
+  if (FDiv.getOpcode() != ISD::FDIV)
+    return SDValue();
+
+  EVT IntVT = N->getValueType(0);
+  EVT FPVT = FDiv.getValueType();
+
+  if (!IntVT.isVector() || !FPVT.isVector())
+    return SDValue();
+  if (IntVT.getVectorElementType() != MVT::i32 ||
+      FPVT.getVectorElementType() != MVT::f64)
+    return SDValue();
+
+  unsigned CastOpc = IsSigned ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+  SDValue Op0 = FDiv.getOperand(0);
+  SDValue Op1 = FDiv.getOperand(1);
+  if (Op0.getOpcode() != CastOpc || Op1.getOpcode() != CastOpc)
+    return SDValue();
+
+  if (Op0.getOperand(0).getValueType() != IntVT ||
+      Op1.getOperand(0).getValueType() != IntVT)
+    return SDValue();
+
+  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
+  SDValue N0 = Op0.getOperand(0);
+  SDValue N1 = Op1.getOperand(0);
+
+  if (IntVT == MVT::nxv2i32) {
+    EVT WideVT = MVT::nxv4i32;
+    SDValue Undef = DAG.getUNDEF(WideVT);
+    SDValue ZeroIdx = DAG.getConstant(0, SDLoc(N), MVT::i64);
+
+    N0 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WideVT, Undef, N0,
+                     ZeroIdx);
+    N1 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WideVT, Undef, N1,
+                     ZeroIdx);
+
+    SDValue Div = DAG.getNode(DivOpc, SDLoc(N), WideVT, N0, N1);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), IntVT, Div, ZeroIdx);
+  }
+
+  return DAG.getNode(DivOpc, SDLoc(N), IntVT, N0, N1);
+}
 
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
@@ -31661,6 +31708,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performIntToFpCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    if (SDValue V = performFPToIntToDivCombine(N, DAG))
+      return V;
+    return performFpToIntCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
