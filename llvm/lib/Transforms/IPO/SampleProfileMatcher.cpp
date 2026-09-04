@@ -190,9 +190,12 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
 
 bool SampleProfileMatcher::anchorsMatch(const FunctionId &IRAnchor,
                                         const FunctionId &ProfileAnchor) const {
-  // An indirect IR call has no statically known callee, so any profiled
-  // target is compatible. The reverse is not true: multiple sampled profile
-  // targets cannot match a direct IR call.
+  // Check whether the callees at an already-aligned location are compatible.
+  // An indirect IR call has no statically known callee, so any profiled target
+  // is compatible. The reverse is not true: multiple sampled profile targets
+  // cannot match a direct IR call. This is only a compatibility test; an
+  // indirect anchor carries no callee identity and must not be used to
+  // establish the location alignment itself.
   return IRAnchor == ProfileAnchor ||
          IRAnchor == FunctionId(UnknownIndirectCallee);
 }
@@ -245,8 +248,6 @@ SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
   llvm::longestCommonSequence<LineLocation, FunctionId>(
       AnchorList1, AnchorList2,
       [&](const FunctionId &A, const FunctionId &B) {
-        if (anchorsMatch(A, B))
-          return true;
         return functionMatchesProfile(
             A, B,
             !MatchUnusedFunction // Find matched function only
