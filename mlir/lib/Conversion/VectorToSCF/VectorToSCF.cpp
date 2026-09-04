@@ -553,6 +553,9 @@ static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
   if (xferOp->hasAttr(kPassLabel))
     return rewriter.notifyMatchFailure(
         xferOp, "kPassLabel is present (vector-to-scf lowering in progress)");
+  if (xferOp.isMasked())
+    return rewriter.notifyMatchFailure(
+        xferOp, "masked by vector.mask, lower the mask first");
   if (xferOp.getVectorType().getRank() <= options.targetRank)
     return rewriter.notifyMatchFailure(
         xferOp, "xferOp vector rank <= transformation target rank");
@@ -1078,6 +1081,9 @@ struct ScalableTransposeTransferWriteConversion
                                 PatternRewriter &rewriter) const override {
     if (failed(checkLowerTensors(writeOp, rewriter)))
       return failure();
+    if (writeOp.isMasked())
+      return rewriter.notifyMatchFailure(
+          writeOp, "masked by vector.mask, lower the mask first");
 
     VectorType vectorType = writeOp.getVectorType();
 
@@ -1304,6 +1310,9 @@ struct UnrollTransferReadConversion
           xferOp, "vector rank is less or equal to target rank");
     if (failed(checkLowerTensors(xferOp, rewriter)))
       return failure();
+    if (xferOp.isMasked())
+      return rewriter.notifyMatchFailure(
+          xferOp, "masked by vector.mask, lower the mask first");
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
       return rewriter.notifyMatchFailure(
@@ -1450,6 +1459,9 @@ struct UnrollTransferWriteConversion
 
     if (failed(checkLowerTensors(xferOp, rewriter)))
       return failure();
+    if (xferOp.isMasked())
+      return rewriter.notifyMatchFailure(
+          xferOp, "masked by vector.mask, lower the mask first");
     // Transfer ops that modify the element type are not supported atm.
     if (inputVectorTy.getElementType() !=
         xferOp.getShapedType().getElementType())
@@ -1660,6 +1672,9 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
     // TODO: support 0-d corner case.
     if (xferOp.getTransferRank() == 0)
       return failure();
+    if (xferOp.isMasked())
+      return rewriter.notifyMatchFailure(
+          xferOp, "masked by vector.mask, lower the mask first");
     auto map = xferOp.getPermutationMap();
     auto memRefType = dyn_cast<MemRefType>(xferOp.getShapedType());
 
