@@ -165,25 +165,45 @@ define i16 @andnot_rotl_i16(i16 %a0, i16 %a1, i16 %a2) nounwind {
 }
 
 define i8 @andnot_rotl_i8(i8 %a0, i8 %a1, i8 %a2) nounwind {
-; X86-LABEL: andnot_rotl_i8:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rolb %cl, %al
-; X86-NEXT:    notb %al
-; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: andnot_rotl_i8:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    rolb %cl, %al
+; X86-NOBMI-NEXT:    notb %al
+; X86-NOBMI-NEXT:    andb {{[0-9]+}}(%esp), %al
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: andnot_rotl_i8:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    rolb %cl, %al
-; X64-NEXT:    notb %al
-; X64-NEXT:    andb %dil, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq
+; X86-BMI-LABEL: andnot_rotl_i8:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    rolb %cl, %al
+; X86-BMI-NEXT:    movzbl %al, %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: andnot_rotl_i8:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edx, %ecx
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NOBMI-NEXT:    rolb %cl, %al
+; X64-NOBMI-NEXT:    notb %al
+; X64-NOBMI-NEXT:    andb %dil, %al
+; X64-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: andnot_rotl_i8:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    movl %edx, %ecx
+; X64-BMI-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-BMI-NEXT:    rolb %cl, %sil
+; X64-BMI-NEXT:    movzbl %sil, %eax
+; X64-BMI-NEXT:    andnl %edi, %eax, %eax
+; X64-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X64-BMI-NEXT:    retq
   %not = xor i8 %a1, -1
   %rot = tail call i8 @llvm.fshl.i8(i8 %not, i8 %not, i8 %a2)
   %and = and i8 %rot, %a0
@@ -406,25 +426,45 @@ define i16 @andnot_rotr_i16(i16 %a0, i16 %a1, i16 %a2) nounwind {
 }
 
 define i8 @andnot_rotr_i8(i8 %a0, i8 %a1, i8 %a2) nounwind {
-; X86-LABEL: andnot_rotr_i8:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rorb %cl, %al
-; X86-NEXT:    notb %al
-; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: andnot_rotr_i8:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    rorb %cl, %al
+; X86-NOBMI-NEXT:    notb %al
+; X86-NOBMI-NEXT:    andb {{[0-9]+}}(%esp), %al
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: andnot_rotr_i8:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    rorb %cl, %al
-; X64-NEXT:    notb %al
-; X64-NEXT:    andb %dil, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq
+; X86-BMI-LABEL: andnot_rotr_i8:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    rorb %cl, %al
+; X86-BMI-NEXT:    movzbl %al, %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: andnot_rotr_i8:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %edx, %ecx
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NOBMI-NEXT:    rorb %cl, %al
+; X64-NOBMI-NEXT:    notb %al
+; X64-NOBMI-NEXT:    andb %dil, %al
+; X64-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: andnot_rotr_i8:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    movl %edx, %ecx
+; X64-BMI-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-BMI-NEXT:    rorb %cl, %sil
+; X64-BMI-NEXT:    movzbl %sil, %eax
+; X64-BMI-NEXT:    andnl %edi, %eax, %eax
+; X64-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X64-BMI-NEXT:    retq
   %not = xor i8 %a1, -1
   %rot = tail call i8 @llvm.fshr.i8(i8 %not, i8 %not, i8 %a2)
   %and = and i8 %rot, %a0
@@ -1038,46 +1078,125 @@ define i16 @andnot_bitreverse_i16(i16 %a0, i16 %a1) nounwind {
 }
 
 define i8 @andnot_bitreverse_i8(i8 %a0, i8 %a1) nounwind {
-; X86-LABEL: andnot_bitreverse_i8:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rolb $4, %al
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andb $51, %cl
-; X86-NEXT:    shlb $2, %cl
-; X86-NEXT:    shrb $2, %al
-; X86-NEXT:    andb $51, %al
-; X86-NEXT:    orb %cl, %al
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andb $85, %cl
-; X86-NEXT:    addb %cl, %cl
-; X86-NEXT:    shrb %al
-; X86-NEXT:    andb $85, %al
-; X86-NEXT:    orb %cl, %al
-; X86-NEXT:    notb %al
-; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: andnot_bitreverse_i8:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    rolb $4, %al
+; X86-NOBMI-NEXT:    movl %eax, %ecx
+; X86-NOBMI-NEXT:    andb $51, %cl
+; X86-NOBMI-NEXT:    shlb $2, %cl
+; X86-NOBMI-NEXT:    shrb $2, %al
+; X86-NOBMI-NEXT:    andb $51, %al
+; X86-NOBMI-NEXT:    orb %cl, %al
+; X86-NOBMI-NEXT:    movl %eax, %ecx
+; X86-NOBMI-NEXT:    andb $85, %cl
+; X86-NOBMI-NEXT:    addb %cl, %cl
+; X86-NOBMI-NEXT:    shrb %al
+; X86-NOBMI-NEXT:    andb $85, %al
+; X86-NOBMI-NEXT:    orb %cl, %al
+; X86-NOBMI-NEXT:    notb %al
+; X86-NOBMI-NEXT:    andb {{[0-9]+}}(%esp), %al
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: andnot_bitreverse_i8:
-; X64:       # %bb.0:
-; X64-NEXT:    rolb $4, %sil
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    andb $51, %al
-; X64-NEXT:    shlb $2, %al
-; X64-NEXT:    shrb $2, %sil
-; X64-NEXT:    andb $51, %sil
-; X64-NEXT:    orb %sil, %al
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    andb $85, %cl
-; X64-NEXT:    addb %cl, %cl
-; X64-NEXT:    shrb %al
-; X64-NEXT:    andb $85, %al
-; X64-NEXT:    orb %cl, %al
-; X64-NEXT:    notb %al
-; X64-NEXT:    andb %dil, %al
-; X64-NEXT:    retq
+; X86-BMI-LABEL: andnot_bitreverse_i8:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    rolb $4, %al
+; X86-BMI-NEXT:    movl %eax, %ecx
+; X86-BMI-NEXT:    andb $51, %cl
+; X86-BMI-NEXT:    shlb $2, %cl
+; X86-BMI-NEXT:    shrb $2, %al
+; X86-BMI-NEXT:    andb $51, %al
+; X86-BMI-NEXT:    orb %cl, %al
+; X86-BMI-NEXT:    movl %eax, %ecx
+; X86-BMI-NEXT:    andb $85, %cl
+; X86-BMI-NEXT:    addb %cl, %cl
+; X86-BMI-NEXT:    shrb %al
+; X86-BMI-NEXT:    andb $85, %al
+; X86-BMI-NEXT:    orb %cl, %al
+; X86-BMI-NEXT:    movzbl %al, %eax
+; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: andnot_bitreverse_i8:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    rolb $4, %sil
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    andb $51, %al
+; X64-NOBMI-NEXT:    shlb $2, %al
+; X64-NOBMI-NEXT:    shrb $2, %sil
+; X64-NOBMI-NEXT:    andb $51, %sil
+; X64-NOBMI-NEXT:    orb %sil, %al
+; X64-NOBMI-NEXT:    movl %eax, %ecx
+; X64-NOBMI-NEXT:    andb $85, %cl
+; X64-NOBMI-NEXT:    addb %cl, %cl
+; X64-NOBMI-NEXT:    shrb %al
+; X64-NOBMI-NEXT:    andb $85, %al
+; X64-NOBMI-NEXT:    orb %cl, %al
+; X64-NOBMI-NEXT:    notb %al
+; X64-NOBMI-NEXT:    andb %dil, %al
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: andnot_bitreverse_i8:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    rolb $4, %sil
+; X64-BMI-NEXT:    movl %esi, %eax
+; X64-BMI-NEXT:    andb $51, %al
+; X64-BMI-NEXT:    shlb $2, %al
+; X64-BMI-NEXT:    shrb $2, %sil
+; X64-BMI-NEXT:    andb $51, %sil
+; X64-BMI-NEXT:    orb %al, %sil
+; X64-BMI-NEXT:    movl %esi, %eax
+; X64-BMI-NEXT:    andb $85, %al
+; X64-BMI-NEXT:    addb %al, %al
+; X64-BMI-NEXT:    shrb %sil
+; X64-BMI-NEXT:    andb $85, %sil
+; X64-BMI-NEXT:    orb %al, %sil
+; X64-BMI-NEXT:    movzbl %sil, %eax
+; X64-BMI-NEXT:    andnl %edi, %eax, %eax
+; X64-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X64-BMI-NEXT:    retq
   %not = xor i8 %a1, -1
   %bitrev = tail call i8 @llvm.bitreverse.i8(i8 %not)
   %and = and i8 %bitrev, %a0
+  ret i8 %and
+}
+
+define i8 @andnot_load_i8(ptr %p, i8 %x) nounwind {
+; X86-NOBMI-LABEL: andnot_load_i8:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    notb %al
+; X86-NOBMI-NEXT:    andb (%ecx), %al
+; X86-NOBMI-NEXT:    retl
+;
+; X86-BMI-LABEL: andnot_load_i8:
+; X86-BMI:       # %bb.0:
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI-NEXT:    movzbl (%eax), %eax
+; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI-NEXT:    andnl %eax, %ecx, %eax
+; X86-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X86-BMI-NEXT:    retl
+;
+; X64-NOBMI-LABEL: andnot_load_i8:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    notb %al
+; X64-NOBMI-NEXT:    andb (%rdi), %al
+; X64-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI-LABEL: andnot_load_i8:
+; X64-BMI:       # %bb.0:
+; X64-BMI-NEXT:    movzbl (%rdi), %eax
+; X64-BMI-NEXT:    andnl %eax, %esi, %eax
+; X64-BMI-NEXT:    # kill: def $al killed $al killed $eax
+; X64-BMI-NEXT:    retq
+  %load = load i8, ptr %p, align 1
+  %not = xor i8 %x, -1
+  %and = and i8 %not, %load
   ret i8 %and
 }

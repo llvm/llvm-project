@@ -576,8 +576,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
-; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
-; VF2-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; VF2-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[WIDE_LOAD]]
 ; VF2-NEXT:    [[TMP14:%.*]] = or disjoint i64 [[TMP6]], 1
 ; VF2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP14]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP15]], align 8
@@ -607,8 +606,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP10]]
-; VF4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
-; VF4-NEXT:    [[TMP12:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; VF4-NEXT:    [[TMP12:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD]]
 ; VF4-NEXT:    [[TMP24:%.*]] = or disjoint i64 [[TMP10]], 1
 ; VF4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP24]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP25]], align 8
@@ -1521,9 +1519,8 @@ define void @test_2xdouble_same_fcmp_predicate(ptr noalias %data) {
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; VF2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD]], zeroinitializer
+; VF2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD1]], zeroinitializer
 ; VF2-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[WIDE_LOAD1]]
 ; VF2-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1

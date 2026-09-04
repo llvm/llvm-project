@@ -1208,10 +1208,6 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
     }]>
   ];
 
-  let assemblyFormat = [{
-    `(` custom<AddressSpaceValue>($value) `)`
-  }];
-
   let defaultValue = "cir::LangAddressSpace::Default";
 
   let extraClassDeclaration = [{
