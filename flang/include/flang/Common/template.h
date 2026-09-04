@@ -289,6 +289,33 @@ std::optional<R> MapOptional(R (*f)(A &&...), std::optional<A> &&...x) {
   return MapOptional(std::function<R(A && ...)>{f}, std::move(x)...);
 }
 
+template <typename Target, typename List> struct type_index;
+
+template <typename Target, template <typename...> class List, typename... Ts>
+struct type_index<Target, List<Ts...>> {
+private:
+  template <typename Current, typename... Rest>
+  static constexpr std::size_t find_index(std::size_t current_idx) {
+    if constexpr (std::is_same_v<Target, Current>) {
+      return current_idx;
+    } else if constexpr (sizeof...(Rest) > 0) {
+      return find_index<Rest...>(current_idx + 1);
+    } else {
+      static_assert(std::is_same_v<Target, Current>,
+          "Target type not found in type list!");
+      return 0;
+    }
+  }
+
+public:
+  static constexpr std::size_t value = find_index<Ts...>(0);
+};
+
+/// Get the index in an (typically variadic) template list. Eg.
+/// type_index_v<MyClass, std::tuple<char, int, MyClass, long>> == 2
+template <typename Target, typename List>
+inline constexpr std::size_t type_index_v = type_index<Target, List>::value;
+
 // Given a VISITOR class of the general form
 //   struct VISITOR {
 //     using Result = ...;
