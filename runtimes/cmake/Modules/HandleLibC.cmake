@@ -57,6 +57,16 @@ elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
     target_link_options(runtimes-libc-static INTERFACE "-nolibc")
   endif()
 
-  # TODO: There's no support for building LLVM libc as a shared library yet.
+  # LLVM libc only builds shared objects when LIBC_ENABLE_SHARED is set, so
+  # this stays empty otherwise and the runtimes fall back to a static link.
   add_library(runtimes-libc-shared INTERFACE)
+  if (TARGET libc-shared)
+    target_link_libraries(runtimes-libc-shared INTERFACE libc-shared)
+  endif()
+  if (TARGET libm-shared)
+    target_link_libraries(runtimes-libc-shared INTERFACE libm-shared)
+  endif()
+  if (CXX_SUPPORTS_NOLIBC_FLAG AND (TARGET libc-shared OR TARGET libm-shared))
+    target_link_options(runtimes-libc-shared INTERFACE "-nolibc")
+  endif()
 endif()
