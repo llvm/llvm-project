@@ -198,19 +198,17 @@ LogicalResult resolveSourceIndicesRankReducingSubview(
 /// negative.
 bool hasNegativeStaticStride(MemRefType memRefTy);
 
-/// Return "true" when no other access nested in `scope` can alias `base`, so
-/// relocating it is safe with respect to aliasing.
+/// Return "true" when no other access nested in `scope` can alias `base`.
 ///
-/// `getAccessedMemref` maps an op to the memref it accesses (null if
-/// unmodelled). Visiting the in-`scope` users of `base`'s underlying buffer, a
-/// user conflicts unless it is effect-free, in `excludedOps`, touches a slice
-/// disjoint from `base`'s static footprint, or only reads when `readsAreSafe`
-/// is true. `excludedOps` are left out of the analysis, typically because the
-/// caller intends to relocate them.
-bool hasNoAliasingAccessInScope(
-    Value base, Operation *scope,
-    function_ref<Value(Operation *)> getAccessedMemref,
-    ArrayRef<Operation *> excludedOps = {}, bool readsAreSafe = false);
+/// The underlying buffer is found by looking through the view ops defining
+/// `base`, and its transitive in-`scope` users are visited. A user conflicts
+/// unless it is effect-free, in `excludedOps`, or each of its memref operands
+/// that resolves to the buffer touches a slice disjoint from `base`'s static
+/// footprint (or, when `readsAreSafe`, is only read). `excludedOps` are left
+/// out of the analysis, typically because the caller intends to relocate them.
+bool hasNoAliasingAccessInScope(Value base, Operation *scope,
+                                ArrayRef<Operation *> excludedOps = {},
+                                bool readsAreSafe = false);
 
 } // namespace memref
 } // namespace mlir

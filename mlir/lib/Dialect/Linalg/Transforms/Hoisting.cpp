@@ -163,13 +163,6 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
   }
 }
 
-/// The memref a vector transfer accesses (a null `Value` for any other op).
-static Value vectorTransferBase(Operation *op) {
-  if (auto xfer = dyn_cast<VectorTransferOpInterface>(op))
-    return xfer.getBase();
-  return {};
-}
-
 void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
                                                  bool verifyNonZeroTrip) {
   bool changed = true;
@@ -264,7 +257,6 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
         // Hoisting a lone read is safe as long as no aliasing write remains in
         // the loop; other reads never conflict.
         if (memref::hasNoAliasingAccessInScope(transferRead.getBase(), loop,
-                                               vectorTransferBase,
                                                /*excludedOps=*/{},
                                                /*readsAreSafe=*/true))
           loop.moveOutOfLoop(transferRead);
@@ -298,8 +290,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       auto viewAliasingIsSafe = [&]() {
         if (!viewAliasingIsSafeCache) {
           Operation *hoistedPair[] = {transferRead, transferWrite};
-          viewAliasingIsSafeCache = memref::hasNoAliasingAccessInScope(
-              base, loop, vectorTransferBase, hoistedPair);
+          viewAliasingIsSafeCache =
+              memref::hasNoAliasingAccessInScope(base, loop, hoistedPair);
         }
         return *viewAliasingIsSafeCache;
       };
