@@ -1898,9 +1898,10 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar HasConstraint = !ne(dataEEW, idxEEW);
-          defvar TypeConstraints = 
-            !if(!eq(dataEEW, idxEEW), 1, !if(!gt(dataEEW, idxEEW), !if(!ge(idxEMULOctuple, 8), 3, 1), 2));
+          // Don't allow overlapping registers even though it's allowed by the
+          // spec due to hardware issue on some CPUs.
+          defvar HasConstraint = true;
+          defvar TypeConstraints = 1;
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint, TypeConstraints>,
