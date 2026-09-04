@@ -19,3 +19,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.elf.hash
 )
+
+add_libc_test(
+  symbol_test
+  SUITE
+    libc-support-tests
+  SRCS
+    symbol_test.cpp
+  DEPENDS
+    libc.src.__support.elf.symbol
+)

@@ -31,3 +31,17 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  symbol
+  HDRS
+    symbol.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.elf.hash
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
