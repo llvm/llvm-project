@@ -67,10 +67,12 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include <string>
 
@@ -224,14 +226,48 @@ static LogicalResult processCallsInRoutines(
   return success();
 }
 
+/// Rewrite symbol uses of uniqued specialized names back to the original
+/// routine names. One walk of the module body instead of
+/// replaceAllSymbolUses per routine (which walks all of the IR each time).
+static void
+rewriteSpecializedSymbolUses(ModuleOp mod,
+                             const DenseMap<StringAttr, StringAttr> &renames) {
+  if (renames.empty())
+    return;
+
+  AttrTypeReplacer replacer;
+  replacer.addReplacement(
+      [&](SymbolRefAttr attr) -> std::pair<Attribute, WalkResult> {
+        auto it = renames.find(attr.getRootReference());
+        if (it == renames.end())
+          return {attr, WalkResult::skip()};
+        if (isa<FlatSymbolRefAttr>(attr))
+          return {FlatSymbolRefAttr::get(it->second), WalkResult::skip()};
+        return {SymbolRefAttr::get(it->second, attr.getNestedReferences()),
+                WalkResult::skip()};
+      });
+
+  // Match SymbolTable::replaceAllSymbolUses: walk the module body and do
+  // not enter nested symbol tables (e.g. gpu.module).
+  for (Region &region : mod->getRegions()) {
+    region.walk([&](Operation *op) {
+      if (op->hasTrait<OpTrait::SymbolTable>())
+        return WalkResult::skip();
+      replacer.replaceElementsIn(op);
+      return WalkResult::advance();
+    });
+  }
+}
+
 /// Clone each function in funcsToClone into the GPU module (declaration or
 /// full body). Fix up symbol names and specialized_routine attr for ACC
 /// routines.
 static LogicalResult cloneFuncsToGPUModule(
-    ModuleOp mod, OpenACCSupport &accSupport, SymbolTable &gpuSymTab,
+    ModuleOp mod, SymbolTable &gpuSymTab,
     const llvm::SmallSetVector<CloneCandidate, 4> &funcsToClone) {
-  MLIRContext *ctx = mod.getContext();
-  OpBuilder builder(ctx);
+  OpBuilder builder(mod.getContext());
+  DenseMap<StringAttr, StringAttr> specializedRenames;
+  SmallVector<gpu::GPUFuncOp> deviceFuncs;
 
   for (CloneCandidate candidate : funcsToClone) {
     func::FuncOp srcFunc = candidate.first;
@@ -244,26 +280,25 @@ static LogicalResult cloneFuncsToGPUModule(
 
     gpu::GPUFuncOp deviceFuncOp = createGPUFuncFromFunc(builder, srcFunc);
 
-    if (auto specRoutineAttr =
-            srcFunc->getDiscardableAttrOfType<SpecializedRoutineAttr>(
-                getSpecializedRoutineAttrName())) {
-      StringAttr funcName = specRoutineAttr.getFuncName();
-      if (failed(SymbolTable::replaceAllSymbolUses(
-              StringAttr::get(ctx, deviceFuncOp.getName()), funcName, mod))) {
-        accSupport.emitNYI(deviceFuncOp.getLoc(),
-                           "cannot replace symbol for acc routine");
-        return failure();
-      }
-      deviceFuncOp.setName(funcName);
-    }
     if (auto specAttr =
             srcFunc->getDiscardableAttrOfType<SpecializedRoutineAttr>(
-                getSpecializedRoutineAttrName()))
+                getSpecializedRoutineAttrName())) {
+      StringAttr destName = specAttr.getFuncName();
+      StringAttr srcName = deviceFuncOp.getNameAttr();
+      if (srcName != destName)
+        specializedRenames.try_emplace(srcName, destName);
+      deviceFuncOp.setName(destName);
       deviceFuncOp->setDiscardableAttr(getSpecializedRoutineAttrName(),
                                        specAttr);
+    }
 
-    gpuSymTab.insert(deviceFuncOp);
+    deviceFuncs.push_back(deviceFuncOp);
   }
+
+  rewriteSpecializedSymbolUses(mod, specializedRenames);
+
+  for (gpu::GPUFuncOp deviceFuncOp : deviceFuncs)
+    gpuSymTab.insert(deviceFuncOp);
   return success();
 }
 
@@ -319,7 +354,7 @@ public:
                                       materializedAccRoutines, funcsToClone)))
       return signalPassFailure();
 
-    if (failed(cloneFuncsToGPUModule(mod, accSupport, gpuSymTab, funcsToClone)))
+    if (failed(cloneFuncsToGPUModule(mod, gpuSymTab, funcsToClone)))
       return signalPassFailure();
 
     cleanupHostModule(funcsToClone);
