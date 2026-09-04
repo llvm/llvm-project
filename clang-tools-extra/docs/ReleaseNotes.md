@@ -125,6 +125,12 @@ infrastructure are described first, followed by tool-specific sections.
   Finds uses of `#pragma comment` and, for `lib` or `linker` comments, suggests
   using the build system for improved portability.
 
+- New {doc}`readability-block-size
+  <clang-tidy/checks/readability/block-size>` check.
+
+  Warns on `if`, `else`, `for` and `while` blocks which exceed a given number
+  of lines of code.
+
 - New {doc}`readability-redundant-zero-initializer
   <clang-tidy/checks/readability/redundant-zero-initializer>` check.
 
