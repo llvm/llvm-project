@@ -11074,7 +11074,7 @@ def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this s
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<
-  "%0 aliases the storage of %1 because %select{parameter %3|the implicit object parameter}2 is lifetimebound">;
+  "%0 aliases the storage of %1 because %select{parameter %3|the implicit object parameter}2 is %select{marked as|inferred as}4 lifetimebound">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "

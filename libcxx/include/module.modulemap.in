@@ -2439,6 +2439,9 @@ module std {
         header "__pstl/cpu_algos/for_each.h"
         export std_core.utility_core.empty
       }
+      module is_heap_until {
+        header "__pstl/cpu_algos/is_heap_until.h"
+      }
       module merge {
         header "__pstl/cpu_algos/merge.h"
       }

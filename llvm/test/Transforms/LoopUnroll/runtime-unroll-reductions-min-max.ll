@@ -618,7 +618,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %rdx = phi <4 x float> [ splat (float 0xFFF0000000000000), %entry ], [ %rdx.next, %loop ]
+  %rdx = phi <4 x float> [ splat (float -inf), %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds nuw <4 x float>, ptr %a, i64 %iv
   %0 = load <4 x float>, ptr %gep.a, align 16
   %rdx.next = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %rdx, <4 x float> %0)
@@ -685,7 +685,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %rdx = phi <4 x float> [ <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>, %entry ], [ %rdx.next, %loop ]
+  %rdx = phi <4 x float> [ <float +inf, float +inf, float +inf, float +inf>, %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds nuw <4 x float>, ptr %a, i64 %iv
   %1 = load <4 x float>, ptr %gep.a, align 16
   %rdx.next = call <4 x float> @llvm.minnum.v4f32(<4 x float> %rdx, <4 x float> %1)

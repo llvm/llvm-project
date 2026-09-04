@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 typedef struct __attribute__((packed)) { char c; int i; } CharInt;
 typedef struct __attribute__((packed)) { char c; int i : 32; } CharIntBF;
@@ -59,12 +59,9 @@ typedef struct { char c; int i; } PragmaPacked;
 int take_char_int(CharInt v) { return v.i; }
 CharInt ret_char_int(int x) { CharInt v = {0, x}; return v; }
 
-// CIR: cir.func{{.*}} @take_char_int(%arg0: !cir.ptr<!rec_CharInt> {llvm.align = 8 : i64, llvm.byval = !rec_CharInt, llvm.noalias, llvm.noundef}{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @take_char_int(%arg0: !cir.ptr<!rec_CharInt> {llvm.align = 8 : i64, llvm.byval = !rec_CharInt, llvm.noundef}{{.*}}) -> !s32i
 // CIR: cir.func{{.*}} @ret_char_int(%arg0: !cir.ptr<!rec_CharInt> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_CharInt, llvm.writable}{{.*}}, %arg1: !s32i {llvm.noundef}{{.*}})
-// CIR emits noalias on a byval argument where classic does not, here and
-// wherever else this file splits a byval line by backend.
-// LLVM-CIR: define dso_local i32 @take_char_int(ptr noalias noundef byval(%struct.CharInt) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_char_int(ptr noundef byval(%struct.CharInt) align 8 %{{.+}})
+// LLVM: define dso_local i32 @take_char_int(ptr noundef byval(%struct.CharInt) align 8 %{{.+}})
 // LLVM: define dso_local void @ret_char_int(ptr dead_on_unwind noalias writable sret(%struct.CharInt) align 1 %{{.+}}, i32 noundef %{{.+}})
 
 // The same record with the int declared as a bit-field.  A bit-field may sit
@@ -165,17 +162,15 @@ TwoFloatChar ret_two_float_char(float x) { TwoFloatChar v = {x, x, 0}; return v;
 // two eightbytes that decides.
 int take_seventeen(Seventeen v) { return v.a[3]; }
 
-// CIR: cir.func{{.*}} @take_seventeen(%arg0: !cir.ptr<!rec_Seventeen> {llvm.align = 8 : i64, llvm.byval = !rec_Seventeen, llvm.noalias, llvm.noundef}{{.*}}) -> !s32i
-// LLVM-CIR: define dso_local i32 @take_seventeen(ptr noalias noundef byval(%struct.Seventeen) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_seventeen(ptr noundef byval(%struct.Seventeen) align 8 %{{.+}})
+// CIR: cir.func{{.*}} @take_seventeen(%arg0: !cir.ptr<!rec_Seventeen> {llvm.align = 8 : i64, llvm.byval = !rec_Seventeen, llvm.noundef}{{.*}}) -> !s32i
+// LLVM: define dso_local i32 @take_seventeen(ptr noundef byval(%struct.Seventeen) align 8 %{{.+}})
 
 // Packed and over-aligned at once, so the record carries a pad member and the
 // packed mark together.  The misaligned int still decides it.
 int take_packed_ov(PackedOv v) { return v.i; }
 
-// CIR: cir.func{{.*}} @take_packed_ov(%arg0: !cir.ptr<!rec_PackedOv> {llvm.align = 8 : i64, llvm.byval = !rec_PackedOv, llvm.noalias, llvm.noundef}{{.*}}) -> !s32i
-// LLVM-CIR: define dso_local i32 @take_packed_ov(ptr noalias noundef byval(%struct.PackedOv) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_packed_ov(ptr noundef byval(%struct.PackedOv) align 8 %{{.+}})
+// CIR: cir.func{{.*}} @take_packed_ov(%arg0: !cir.ptr<!rec_PackedOv> {llvm.align = 8 : i64, llvm.byval = !rec_PackedOv, llvm.noundef}{{.*}}) -> !s32i
+// LLVM: define dso_local i32 @take_packed_ov(ptr noundef byval(%struct.PackedOv) align 8 %{{.+}})
 
 // A packed member reaches the classifier through an enclosing record and
 // through an array element, neither of which is packed itself.  The member
@@ -185,14 +180,12 @@ int take_arr_packed(ArrPacked v) { return v.a[1].i; }
 int take_nest_nine(NestNine v) { return v.n.b; }
 int take_arr_nine(ArrNine v) { return v.n[0].b; }
 
-// CIR: cir.func{{.*}} @take_nest_packed(%arg0: !cir.ptr<!rec_NestPacked> {llvm.align = 8 : i64, llvm.byval = !rec_NestPacked, llvm.noalias, llvm.noundef}{{.*}}) -> !s32i
-// CIR: cir.func{{.*}} @take_arr_packed(%arg0: !cir.ptr<!rec_ArrPacked> {llvm.align = 8 : i64, llvm.byval = !rec_ArrPacked, llvm.noalias, llvm.noundef}{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @take_nest_packed(%arg0: !cir.ptr<!rec_NestPacked> {llvm.align = 8 : i64, llvm.byval = !rec_NestPacked, llvm.noundef}{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @take_arr_packed(%arg0: !cir.ptr<!rec_ArrPacked> {llvm.align = 8 : i64, llvm.byval = !rec_ArrPacked, llvm.noundef}{{.*}}) -> !s32i
 // CIR: cir.func{{.*}} @take_nest_nine(%arg0: !u64i{{.*}}, %arg1: !s8i{{.*}}) -> !s32i
 // CIR: cir.func{{.*}} @take_arr_nine(%arg0: !u64i{{.*}}, %arg1: !s8i{{.*}}) -> !s32i
-// LLVM-CIR: define dso_local i32 @take_nest_packed(ptr noalias noundef byval(%struct.NestPacked) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_nest_packed(ptr noundef byval(%struct.NestPacked) align 8 %{{.+}})
-// LLVM-CIR: define dso_local i32 @take_arr_packed(ptr noalias noundef byval(%struct.ArrPacked) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_arr_packed(ptr noundef byval(%struct.ArrPacked) align 8 %{{.+}})
+// LLVM: define dso_local i32 @take_nest_packed(ptr noundef byval(%struct.NestPacked) align 8 %{{.+}})
+// LLVM: define dso_local i32 @take_arr_packed(ptr noundef byval(%struct.ArrPacked) align 8 %{{.+}})
 // LLVM: define dso_local i32 @take_nest_nine(i64 %{{.+}}, i8 %{{.+}})
 // LLVM: define dso_local i32 @take_arr_nine(i64 %{{.+}}, i8 %{{.+}})
 
@@ -206,6 +199,5 @@ int take_upacked(UPacked v) { return v.i; }
 // #pragma pack reaches the same layout as the attribute.
 int take_pragma_packed(PragmaPacked v) { return v.i; }
 
-// CIR: cir.func{{.*}} @take_pragma_packed(%arg0: !cir.ptr<!rec_PragmaPacked> {llvm.align = 8 : i64, llvm.byval = !rec_PragmaPacked, llvm.noalias, llvm.noundef}{{.*}}) -> !s32i
-// LLVM-CIR: define dso_local i32 @take_pragma_packed(ptr noalias noundef byval(%struct.PragmaPacked) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_pragma_packed(ptr noundef byval(%struct.PragmaPacked) align 8 %{{.+}})
+// CIR: cir.func{{.*}} @take_pragma_packed(%arg0: !cir.ptr<!rec_PragmaPacked> {llvm.align = 8 : i64, llvm.byval = !rec_PragmaPacked, llvm.noundef}{{.*}}) -> !s32i
+// LLVM: define dso_local i32 @take_pragma_packed(ptr noundef byval(%struct.PragmaPacked) align 8 %{{.+}})
