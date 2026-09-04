@@ -419,7 +419,7 @@ static_assert(Float128(0.0) ==
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_numf128(Float128(0.0),
                                                        Float128(0.0)));
-static_assert(0 ==
+static_assert(Float128(0) ==
               LIBC_NAMESPACE::shared::fmodf128(Float128(4.0), Float128(2.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(Float128(0.0)));
 static_assert(0 == LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
