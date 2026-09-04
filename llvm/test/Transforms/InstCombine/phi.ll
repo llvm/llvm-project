@@ -809,7 +809,7 @@ true:
 false:
   br label %ret
 ret:
-  %p = phi double [ %x, %true ], [ 0x7FF0000000000000, %false ]; RHS = +infty
+  %p = phi double [ %x, %true ], [ +inf, %false ]; RHS = +infty
   %cmp = fcmp ule double %x, %p
   ret i1 %cmp
 }

@@ -1,8 +1,8 @@
 // Verifies the omp-host-op-filtering pass runs in the CIR-to-LLVM device
 // pipeline.//
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgpu9.00-amd-amdhsa \
 // RUN:   -fclangir -emit-llvm-bc %s -o %t-cir-host.bc
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -fopenmp-host-ir-file-path %t-cir-host.bc \
 // RUN:   -fclangir -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=LLVM

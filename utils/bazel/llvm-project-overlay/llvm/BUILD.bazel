@@ -1909,6 +1909,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":Core",
         ":InstCombine",
@@ -2234,6 +2235,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
@@ -4554,16 +4556,12 @@ cc_library(
 
 cc_library(
     name = "OrcTargetProcess",
-    srcs = glob(
-        [
-            "lib/ExecutionEngine/Orc/TargetProcess/*.cpp",
-            "lib/ExecutionEngine/Orc/TargetProcess/*.h",
-        ],
-        exclude = ["lib/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"],
-    ),
+    srcs = glob([
+        "lib/ExecutionEngine/Orc/TargetProcess/*.cpp",
+    ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/TargetProcess/*.h",
-    ]) + ["lib/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"],
+    ]),
     copts = llvm_copts,
     linkopts = select({
         "@platforms//os:android": [],

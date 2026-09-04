@@ -7738,6 +7738,17 @@ public:
   ///
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
 
+  /// ParseFunctionBody - Parse the body of a function definition. The
+  /// '= default' and '= delete' forms are handled by the caller.
+  ///
+  /// \verbatim
+  ///       function-body:
+  ///         ctor-initializer[opt] compound-statement
+  ///         function-try-block
+  /// \endverbatim
+  ///
+  Decl *ParseFunctionBody(Decl *D, ParseScope &BodyScope);
+
   /// When in code-completion, skip parsing of the function/method body
   /// unless the body contains the code-completion point.
   ///

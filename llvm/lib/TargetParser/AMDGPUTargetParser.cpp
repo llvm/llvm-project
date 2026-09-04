@@ -494,10 +494,12 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
 // FIXME: This is hacky, we shouldn't have mismatches between the bitset and
 // feature string map.
 static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
-    FEAT_FAST_FMAF,          FEAT_FAST_DENORMAL_F32,  FEAT_SUPPORTS_WAVE32,
-    FEAT_SUPPORTS_WGP,       FEAT_XNACK_SUPPORT,      FEAT_SRAMECC_SUPPORT,
-    FEAT_XNACK_ON_OFF_MODES, FEAT_APERTURE_REGS,      FEAT_GET_DOORBELL_ID,
-    FEAT_AGPR_ALLOC,         FEAT_1536_PHYSICAL_VGPRS};
+    FEAT_FAST_FMAF,           FEAT_FAST_DENORMAL_F32,
+    FEAT_SUPPORTS_WAVE32,     FEAT_SUPPORTS_WGP,
+    FEAT_XNACK_SUPPORT,       FEAT_SRAMECC_SUPPORT,
+    FEAT_XNACK_ON_OFF_MODES,  FEAT_APERTURE_REGS,
+    FEAT_GET_DOORBELL_ID,     FEAT_AGPR_ALLOC,
+    FEAT_1536_PHYSICAL_VGPRS, FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY};
 
 // Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.

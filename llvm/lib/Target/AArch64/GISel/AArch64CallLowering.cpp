@@ -20,6 +20,7 @@
 #include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -57,6 +58,58 @@ using namespace llvm;
 using namespace AArch64GISelUtils;
 
 extern cl::opt<bool> EnableSVEGISel;
+
+static bool isSimpleGPRCallValue(const CallLowering::ArgInfo &Arg) {
+  if (Arg.Regs.size() != 1 || any_of(Arg.Flags, [](ISD::ArgFlagsTy Flags) {
+        auto FlagVals = Flags.getFlags();
+        return FlagVals != ISD::ArgFlagsTy::NoFlags &&
+               FlagVals != ISD::ArgFlagsTy::Pointer;
+      }))
+    return false;
+
+  Type *Ty = Arg.Ty;
+  return Ty->isPointerTy() || Ty->isIntegerTy(32) || Ty->isIntegerTy(64);
+}
+
+// Avoid the generic assignment machinery when every argument maps directly to
+// w0-w7/x0-x7. Fast path for compile-time.
+static bool tryAssignSimpleGPRCallArgs(MachineIRBuilder &MIRBuilder,
+                                       MachineInstrBuilder MIB,
+                                       ArrayRef<CallLowering::ArgInfo> Args) {
+  if (Args.size() > 8)
+    return false;
+
+  for (const CallLowering::ArgInfo &Arg : Args)
+    if (!isSimpleGPRCallValue(Arg))
+      return false;
+
+  for (unsigned I = 0, E = Args.size(); I != E; ++I) {
+    const CallLowering::ArgInfo &Arg = Args[I];
+    MCRegister XReg = AArch64::getGPRArgRegs()[I];
+    Register PhysReg = Arg.Ty->isIntegerTy(32) ? getWRegFromXReg(XReg) : XReg;
+    MIB.addUse(PhysReg, RegState::Implicit);
+    MIRBuilder.buildCopy(PhysReg, Arg.Regs[0]);
+  }
+  return true;
+}
+
+// Avoid the generic assignment machinery when the return value maps directly
+// to w0/x0. Fast path for compile-time.
+static bool tryAssignSimpleGPRCallReturn(MachineIRBuilder &MIRBuilder,
+                                         MachineInstrBuilder MIB,
+                                         ArrayRef<CallLowering::ArgInfo> Rets) {
+  if (Rets.size() != 1)
+    return false;
+
+  const CallLowering::ArgInfo &Ret = Rets[0];
+  if (!isSimpleGPRCallValue(Ret))
+    return false;
+
+  Register PhysReg = Ret.Ty->isIntegerTy(32) ? AArch64::W0 : AArch64::X0;
+  MIB.addDef(PhysReg, RegState::Implicit);
+  MIRBuilder.buildCopy(Ret.Regs[0], PhysReg);
+  return true;
+}
 
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
@@ -1444,7 +1497,10 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                         Subtarget, /*IsReturn*/ false);
   // Do the actual argument marshalling.
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, /*IsReturn*/ false);
-  if (!determineAndHandleAssignments(Handler, Assigner, OutArgs, MIRBuilder,
+  bool AssignedCallArgs = Info.CallConv == CallingConv::C &&
+                          tryAssignSimpleGPRCallArgs(MIRBuilder, MIB, OutArgs);
+  if (!AssignedCallArgs &&
+      !determineAndHandleAssignments(Handler, Assigner, OutArgs, MIRBuilder,
                                      Info.CallConv, Info.IsVarArg))
     return false;
 
@@ -1513,7 +1569,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     AArch64OutgoingValueAssigner Assigner(RetAssignFn, RetAssignFn, Subtarget,
                                           /*IsReturn*/ false);
     ReturnedArgCallReturnHandler ReturnedArgHandler(MIRBuilder, MRI, MIB);
-    if (!determineAndHandleAssignments(
+    bool AssignedCallReturn =
+        Info.CallConv == CallingConv::C && !UsingReturnedArg &&
+        tryAssignSimpleGPRCallReturn(MIRBuilder, MIB, InArgs);
+    if (!AssignedCallReturn &&
+        !determineAndHandleAssignments(
             UsingReturnedArg ? ReturnedArgHandler : Handler, Assigner, InArgs,
             MIRBuilder, Info.CallConv, Info.IsVarArg,
             UsingReturnedArg ? ArrayRef(OutArgs[0].Regs)

@@ -52,7 +52,7 @@ define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, f
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %cmp = fcmp oeq float %fabs, 0x7FF0000000000000
+  %cmp = fcmp oeq float %fabs, +inf
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
@@ -103,7 +103,7 @@ define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %cmp = fcmp ueq float %fabs, 0x7FF0000000000000
+  %cmp = fcmp ueq float %fabs, +inf
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
@@ -138,7 +138,7 @@ define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %
 ; GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %cmp = fcmp oeq float %fabs, 0xFFF0000000000000
+  %cmp = fcmp oeq float %fabs, -inf
   %ext = zext i1 %cmp to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
@@ -190,7 +190,7 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %ninf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %ninf = fcmp une float %x.fabs, +inf
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
@@ -242,7 +242,7 @@ define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #3
-  %cmpinf = fcmp one float %x.fabs, 0x7FF0000000000000
+  %cmpinf = fcmp one float %x.fabs, +inf
   %ext = zext i1 %cmpinf to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
   ret void
@@ -293,7 +293,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %ninf = fcmp une float %x.fabs, 0xFFF0000000000000
+  %ninf = fcmp une float %x.fabs, -inf
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
@@ -352,7 +352,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
-  %ninf = fcmp une float %x, 0x7FF0000000000000
+  %ninf = fcmp une float %x, +inf
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
@@ -410,7 +410,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
   %x.fabs = tail call float @llvm.fabs.f32(float %y) #1
-  %ninf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %ninf = fcmp une float %x.fabs, +inf
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
@@ -470,7 +470,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp uno float %x, 0.000000e+00
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %ninf = fcmp une float %x.fabs, 0x7FF0000000000000
+  %ninf = fcmp une float %x.fabs, +inf
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
@@ -523,7 +523,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %ninf = fcmp one float %x.fabs, 0x7FF0000000000000
+  %ninf = fcmp one float %x.fabs, +inf
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
@@ -576,7 +576,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %ninf = fcmp one float %x.fabs, 0x7FF0000000000000
+  %ninf = fcmp one float %x.fabs, +inf
   %and = and i1 %ninf, %ord
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4
@@ -640,7 +640,7 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, %y
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #1
-  %ninf = fcmp one float %x.fabs, 0x7FF0000000000000
+  %ninf = fcmp one float %x.fabs, +inf
   %and = and i1 %ord, %ninf
   %ext = zext i1 %and to i32
   store i32 %ext, ptr addrspace(1) %out, align 4

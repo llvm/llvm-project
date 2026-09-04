@@ -7,15 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPCostAnalysis.h"
+#include "SLPTypeUtils.h"
+#include "SLPUtils.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
 
+#include <cassert>
 #include <utility>
 
 using namespace llvm;
@@ -139,6 +146,98 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
          TTI.getArithmeticInstrCost(Instruction::Xor, CmpTy, CostKind) +
          TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+}
+
+InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,
+                                    unsigned Opcode, Type *ScalarTy,
+                                    unsigned NumElts,
+                                    const TTI::TargetCostKind CostKind,
+                                    FixedVectorType **PaddedTy) {
+  FixedVectorType *PaddedVecTy =
+      getMaskedDivRemType(TTI, Opcode, ScalarTy, NumElts, ReVec);
+  if (!PaddedVecTy)
+    return InstructionCost::getInvalid();
+  // One mask bit per element of the padded vector, not per padded lane.
+  auto *MaskTy =
+      FixedVectorType::get(IntegerType::getInt1Ty(ScalarTy->getContext()),
+                           PaddedVecTy->getNumElements());
+  InstructionCost DirectCost = TTI.getArithmeticInstrCost(
+      Opcode, getWidenedType(ScalarTy, NumElts), CostKind);
+  IntrinsicCostAttributes ICA(getMaskedDivRemIntrinsic(Opcode), PaddedVecTy,
+                              {PaddedVecTy, PaddedVecTy, MaskTy});
+  InstructionCost MaskedCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+  if (!MaskedCost.isValid() || MaskedCost >= DirectCost)
+    return InstructionCost::getInvalid();
+  if (PaddedTy)
+    *PaddedTy = PaddedVecTy;
+  return MaskedCost;
+}
+
+InstructionCost
+getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
+                         Type *ScalarTy, VectorType *Ty,
+                         const APInt &DemandedElts, bool Insert, bool Extract,
+                         const TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+                         ArrayRef<Value *> VL, TTI::VectorInstrContext VIC) {
+  assert(!isa<ScalableVectorType>(Ty) &&
+         "ScalableVectorType is not supported.");
+  assert(getNumElements(ScalarTy) * DemandedElts.getBitWidth() ==
+             getNumElements(Ty) &&
+         "Incorrect usage.");
+  if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+    assert(ReVec && "Only supported by REVEC.");
+    // If ScalarTy is FixedVectorType, we should use CreateInsertVector instead
+    // of CreateInsertElement.
+    unsigned ScalarTyNumElements = VecTy->getNumElements();
+    InstructionCost Cost = 0;
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      if (Insert)
+        Cost += getShuffleCost(TTI, TTI::SK_InsertSubvector, Ty, CostKind, {},
+                               I * ScalarTyNumElements, VecTy);
+      if (Extract)
+        Cost += getShuffleCost(TTI, TTI::SK_ExtractSubvector, Ty, CostKind, {},
+                               I * ScalarTyNumElements, VecTy);
+    }
+    return Cost;
+  }
+  return TTI.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                      CostKind, ForPoisonSrc, VL, VIC);
+}
+
+InstructionCost getVectorInstrCost(
+    const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy, unsigned Opcode,
+    Type *Val, const TTI::TargetCostKind CostKind, unsigned Index,
+    Value *Scalar,
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+  if (Opcode == Instruction::ExtractElement) {
+    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+      assert(ReVec && "Only supported by REVEC.");
+      assert(isa<VectorType>(Val) && "Val must be a vector type.");
+      return getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                            cast<VectorType>(Val), CostKind, {},
+                            Index * VecTy->getNumElements(), VecTy);
+    }
+  }
+  return TTI.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
+                                ScalarUserAndIdx);
+}
+
+InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
+                                         bool ReVec, unsigned Opcode, Type *Dst,
+                                         VectorType *VecTy, unsigned Index,
+                                         const TTI::TargetCostKind CostKind) {
+  if (isVectorizedTy(Dst)) {
+    assert(ReVec && "Only supported by REVEC.");
+    auto *SubTp = cast<FixedVectorType>(
+        getWidenedType(toScalarizedTy(VecTy), getNumElements(Dst)));
+    return getShuffleCost(TTI, TTI::SK_ExtractSubvector, VecTy, CostKind, {},
+                          Index * getNumElements(Dst), SubTp) +
+           TTI.getCastInstrCost(Opcode, Dst, SubTp, TTI::CastContextHint::None,
+                                CostKind);
+  }
+  return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
 }
 
 } // namespace llvm::slpvectorizer
