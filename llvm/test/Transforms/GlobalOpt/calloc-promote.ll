@@ -6,7 +6,7 @@
 define signext i32 @f() local_unnamed_addr {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr @g.body, i8 0, i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 @g.body, i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    store i16 -1, ptr @g.body, align 2
 ; CHECK-NEXT:    ret i32 0
 ;

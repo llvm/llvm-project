@@ -937,6 +937,15 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       UndefValue::get(GlobalType), GV->getName() + ".body", nullptr,
       GV->getThreadLocalMode());
 
+  // Alignment of the return value of the allocator call.
+  Align GVAlign = CI->getPointerAlignment(DL);
+
+  // Only specify the global alignment if it increases the preferred alignment.
+  // Otherwise leave it unset to allow other optimizations to increase it.
+  if (GVAlign > DL.getPreferredAlign(NewGV)) {
+    NewGV->setAlignment(GVAlign);
+  }
+
   // Initialize the global at the point of the original call.  Note that this
   // is a different point from the initialization referred to below for the
   // nullability handling.  Sublety: We have not proven the original global was
@@ -944,8 +953,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   // of the new global as may need to re-init the storage multiple times.
   if (!isa<UndefValue>(InitVal)) {
     IRBuilder<> Builder(CI->getNextNode());
-    // TODO: Use alignment above if align!=1
-    Builder.CreateMemSet(NewGV, InitVal, AllocSize, std::nullopt);
+    Builder.CreateMemSet(NewGV, InitVal, AllocSize, NewGV->getAlign());
   }
 
   // Update users of the allocation to use the new global instead.
