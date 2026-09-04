@@ -21,13 +21,14 @@ entry:
 ;; Due to -fno-omit-frame-pointer.
 !1 = !{i32 7, !"frame-pointer", i32 2}
 
-!llvm.module.flags = !{!2, !3, !4}
+!llvm.module.flags = !{!2, !3, !4, !5}
 
 !2 = !{i32 8, !"branch-target-enforcement", i32 1}
 !3 = !{i32 8, !"sign-return-address", i32 1}
 !4 = !{i32 8, !"sign-return-address-all", i32 0}
+!5 = !{i32 8, !"sign-return-address-harden-load-return-address", i32 1}
 
 ;; Set the uwtable attribute on ctor/dtor.
 ; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]]
 ; CHECK: define internal void @asan.module_dtor() #[[#ATTR]]
-; CHECK: attributes #[[#ATTR]] = { nounwind uwtable "branch-target-enforcement" "frame-pointer"="all" "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" }
+; CHECK: attributes #[[#ATTR]] = { nounwind uwtable "branch-target-enforcement" "frame-pointer"="all" "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" }
