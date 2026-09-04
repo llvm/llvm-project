@@ -1,13 +1,26 @@
 ## Verify that BOLT detects fixed destination of indirect jump for PIC
 ## case.
 
-RUN: %clang %cflags -no-pie %S/Inputs/jump-table-fixed-ref-pic.s -Wl,-q -o %t
+RUN: %clang %cflags -no-pie %S/Inputs/jump-table-fixed-ref-pic.s -Wl,-q -o %t \
+RUN:    -Wa,--defsym,JT_ENTRY_OFFSET=8
 RUN: llvm-bolt %t --relocs -o %t.null -print-cfg 2>&1 | FileCheck %s
 
 CHECK: BOLT-INFO: fixed PIC indirect branch detected in main {{.*}} the destination value is 0x[[#TGT:]]
 CHECK: Binary Function "main" after building cfg
 
-CHECK:      movslq ".rodata/1"+8(%rip), %rax
+CHECK:      movslq ".rodata/1"+[[#OFFSET:8]](%rip), %rax
 CHECK-NEXT: leaq ".rodata/1"(%rip), %rdx
 CHECK-NEXT: addq %rdx, %rax
-CHECK-NEXT: jmpq *%rax # UNKNOWN CONTROL FLOW
+CHECK-NEXT: jmpq *%rax # JUMPTABLE
+
+RUN: %clang %cflags -no-pie %S/Inputs/jump-table-fixed-ref-pic.s -Wl,-q -o %t.exe \
+RUN:    -Wa,--defsym,JT_ENTRY_OFFSET=0
+RUN: llvm-bolt %t.exe --relocs -o %t.bolt -print-cfg 2>&1 | FileCheck %s --check-prefix=CHECK-ENTRY
+
+CHECK-ENTRY: BOLT-INFO: fixed PIC indirect branch detected in main {{.*}} the destination value is 0x[[#TGT:]]
+CHECK-ENTRY: Binary Function "main" after building cfg
+
+CHECK-ENTRY:      movslq ".rodata/1"(%rip), %rax
+CHECK-ENTRY-NEXT: leaq ".rodata/1"(%rip), %rdx
+CHECK-ENTRY-NEXT: addq %rdx, %rax
+CHECK-ENTRY-NEXT: jmpq *%rax # JUMPTABLE
