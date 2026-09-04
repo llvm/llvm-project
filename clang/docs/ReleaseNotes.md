@@ -484,6 +484,14 @@ features cannot lower the translation-unit ABI level;
   guide (here `Key` becomes the iterator's value type), instead of being
   undeducible.
 
+- Fixed a crash in class template argument deduction through an alias template
+  when the alias fixes a non-type template parameter of the underlying template
+  to a constant (e.g. `template <class T> using A = S<T, false>;`) and a
+  non-deduced template parameter of a constructor or deduction guide refers to
+  it in its type, such as `std::enable_if_t<!B, int> = 0`. If that type becomes
+  invalid with the constant substituted, the deduction guide is now silently
+  not synthesized for the alias instead of crashing, matching GCC.
+
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)

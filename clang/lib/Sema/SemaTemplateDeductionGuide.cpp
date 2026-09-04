@@ -337,6 +337,8 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
   return NewTTP;
 }
 
+// Transform a given non-type template parameter `TTP`. Returns null if its type
+// becomes invalid after substitution.
 NonTypeTemplateParmDecl *
 transformTemplateParam(Sema &SemaRef, DeclContext *DC,
                        NonTypeTemplateParmDecl *TTP, unsigned NewDepth,
@@ -351,11 +353,13 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
       TypeSourceInfo *NewTSI =
           SemaRef.SubstType(TTP->getExpansionTypeSourceInfo(I), Args,
                             TTP->getLocation(), TTP->getDeclName());
-      assert(NewTSI);
+      if (!NewTSI)
+        return nullptr;
 
       QualType NewT =
           SemaRef.CheckNonTypeTemplateParameterType(NewTSI, TTP->getLocation());
-      assert(!NewT.isNull());
+      if (NewT.isNull())
+        return nullptr;
 
       ExpandedTypeSourceInfos[I] = NewTSI;
       ExpandedTypes[I] = NewT;
@@ -367,11 +371,13 @@ transformTemplateParam(Sema &SemaRef, DeclContext *DC,
   } else {
     TypeSourceInfo *NewTSI = SemaRef.SubstType(
         TTP->getTypeSourceInfo(), Args, TTP->getLocation(), TTP->getDeclName());
-    assert(NewTSI);
+    if (!NewTSI)
+      return nullptr;
 
     QualType NewT =
         SemaRef.CheckNonTypeTemplateParameterType(NewTSI, TTP->getLocation());
-    assert(!NewT.isNull());
+    if (NewT.isNull())
+      return nullptr;
 
     NewTTP = NonTypeTemplateParmDecl::Create(
         SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(), NewDepth,
@@ -1642,6 +1648,16 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
   // All template arguments null by default.
   SmallVector<TemplateArgument> TemplateArgsForBuildingFPrime(
       F->getTemplateParameters()->size());
+  // The same template arguments, but with the deduced non-type template
+  // arguments as (not yet converted) expressions, for rewriting the template
+  // parameters of f in terms of those of f'. The rewrite requires expressions,
+  // while instantiating f requires converted template arguments, e.g. a
+  // template parameter `bool B` of f deduced as `false` from the alias must be
+  // rewritten as the expression `false` in the type of a template parameter
+  // `std::enable_if_t<!B, int> = 0` of f, but instantiated as the integral
+  // value.
+  SmallVector<TemplateArgument> TemplateArgsForRewritingFPrime(
+      F->getTemplateParameters()->size());
 
   TemplateParameterList *AliasParams = AliasTemplate->getTemplateParameters();
   TemplateParameterList *FParams = F->getTemplateParameters();
@@ -1704,6 +1720,8 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
         /*NewIndex=*/FPrimeTemplateParams.size(), getDepthAndIndex(TP).first);
+    if (!NewParam)
+      return false;
     if (const TemplateArgument &Default =
             SynthesizedDefaultArgs[AliasTemplateParamIdx];
         !Default.isNull()) {
@@ -1715,7 +1733,7 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
         NTTPType = NTTP->getType();
       MultiLevelTemplateArgumentList FArgs;
       FArgs.setKind(TemplateSubstitutionKind::Rewrite);
-      FArgs.addOuterTemplateArguments(TemplateArgsForBuildingFPrime);
+      FArgs.addOuterTemplateArguments(TemplateArgsForRewritingFPrime);
       TemplateArgumentLoc Output;
       if (SemaRef.SubstTemplateArgument(
               SemaRef.getTrivialTemplateArgumentLoc(Default, NTTPType, Loc),
@@ -1774,30 +1792,42 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
               /*ArgumentPackIndex=*/-1, CTAI,
               Sema::CheckTemplateArgumentKind::CTAK_Specified))
         return false;
+    SmallVector<TemplateArgument> OutputArgs;
+    for (const TemplateArgumentLoc &TA : Output.arguments())
+      OutputArgs.push_back(TA.getArgument());
     if (Input.getArgument().getKind() == TemplateArgument::Pack) {
       // We will substitute the non-deduced template arguments with these
       // transformed (unpacked at this point) arguments, where that substitution
       // requires a pack for the corresponding parameter packs.
       TemplateArgsForBuildingFPrime[Index] =
           TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted);
+      TemplateArgsForRewritingFPrime[Index] =
+          TemplateArgument::CreatePackCopy(Context, OutputArgs);
     } else {
       assert(Output.arguments().size() == 1);
       TemplateArgsForBuildingFPrime[Index] = CTAI.SugaredConverted[0];
+      TemplateArgsForRewritingFPrime[Index] = OutputArgs[0];
     }
     return true;
   };
 
   // Add the non-deduced template parameter of f at the given index to f' (2).
-  auto AddFTemplateParam = [&](unsigned FTemplateParamIdx) {
+  auto AddFTemplateParam = [&](unsigned FTemplateParamIdx) -> bool {
     auto *TP = FParams->getParam(FTemplateParamIdx);
     MultiLevelTemplateArgumentList Args;
     Args.setKind(TemplateSubstitutionKind::Rewrite);
-    // We take a shortcut here, it is ok to reuse the
-    // TemplateArgsForBuildingFPrime.
-    Args.addOuterTemplateArguments(TemplateArgsForBuildingFPrime);
+    Args.addOuterTemplateArguments(TemplateArgsForRewritingFPrime);
+    // Substituting the deduced template arguments into the template parameter
+    // may fail, e.g. for a template parameter `std::enable_if_t<!B, int> = 0`
+    // of f whose template parameter B was deduced as `true` from the alias.
+    // Then f' can't be formed; it is not viable, but forming it is not an
+    // error either. Don't diagnose the failure and don't form f'.
+    Sema::SFINAETrap Trap(SemaRef);
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, F->getDeclContext(), TP, Args, FPrimeTemplateParams.size(),
         getDepthAndIndex(TP).first);
+    if (!NewParam || Trap.hasErrorOccurred())
+      return false;
     FParamFPrimeIndex[FTemplateParamIdx] = FPrimeTemplateParams.size();
     FPrimeTemplateParams.push_back(NewParam);
 
@@ -1805,6 +1835,9 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
            "The argument must be null before setting");
     TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
         Context.getInjectedTemplateArg(NewParam);
+    TemplateArgsForRewritingFPrime[FTemplateParamIdx] =
+        TemplateArgsForBuildingFPrime[FTemplateParamIdx];
+    return true;
   };
 
   if (FPrimeParamOrder.empty()) {
@@ -1818,7 +1851,8 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
           !SubstDeducedTemplateArg(Index))
         return nullptr;
     for (unsigned FTemplateParamIdx : NonDeducedTemplateParamsInFIndex)
-      AddFTemplateParam(FTemplateParamIdx);
+      if (!AddFTemplateParam(FTemplateParamIdx))
+        return nullptr;
   } else {
     for (const FPrimeTemplateParamRef &P : FPrimeParamOrder) {
       if (P.IsAliasParam) {
@@ -1833,7 +1867,8 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
         if (TemplateArgsForBuildingFPrime[Index].isNull() &&
             !SubstDeducedTemplateArg(Index))
           return nullptr;
-      AddFTemplateParam(P.Index);
+      if (!AddFTemplateParam(P.Index))
+        return nullptr;
     }
     for (unsigned Index = 0; Index < DeduceResults.size(); ++Index)
       if (!IsNonDeducedArgument(DeduceResults[Index]) &&

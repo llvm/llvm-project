@@ -731,3 +731,50 @@ template <class U> void h2(Iter b, Iter e) {
 }
 template void h2<char>(Iter, Iter);
 } // namespace synthesized_default_args
+
+namespace nttp_deduced_from_alias_in_nondeduced_param_type {
+// The template parameter B of the deduction guide of basic_fn is deduced as
+// the constant `false` from the alias fn_ref, while the type of the
+// non-deduced template parameter `enable_if_t<!bool_constant<B>::value, int>`
+// refers to it; this used to crash when rewriting that type for the deduction
+// guide of fn_ref.
+template <bool B> struct bool_constant { static constexpr bool value = B; };
+using false_type = bool_constant<false>;
+using true_type = bool_constant<true>;
+template <bool, class T = void> struct enable_if {};
+template <class T> struct enable_if<true, T> { using type = T; };
+template <bool B, class T = void> using enable_if_t = typename enable_if<B, T>::type;
+
+template <class T, class C> struct function {
+  template <class U, enable_if_t<!C::value, int> = 0>
+  function(U) noexcept {}
+};
+
+template <class T> function(T) -> function<T, false_type>;
+
+template <class T, bool B> using basic_fn = function<T, bool_constant<B>>;
+
+template <class T> using fn_ref = basic_fn<T, false>;
+template <class T> using fn_disabled = basic_fn<T, true>;
+// expected-note@-1 {{candidate template ignored: could not match 'nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>' against 'int'}}
+// expected-note@-2 {{implicit deduction guide declared as 'template <class T> requires __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::basic_fn, nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>) && __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::fn_disabled, nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>) fn_disabled(nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>) -> nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>'}}
+// expected-note@-3 {{candidate template ignored: constraints not satisfied [with T = int]}}
+// expected-note@-4 {{cannot deduce template arguments for 'nttp_deduced_from_alias_in_nondeduced_param_type::fn_disabled' from 'function<int, false_type>' (aka 'function<int, bool_constant<false>>')}}
+// expected-note@-5 {{implicit deduction guide declared as 'template <class T> requires __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::basic_fn, function<T, false_type>) && __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::fn_disabled, function<T, false_type>) fn_disabled(T) -> function<T, false_type>'}}
+
+fn_ref f = 0;
+static_assert(__is_same(decltype(f), function<int, false_type>));
+
+// The deduction guide derived from the constructor is not formed, as
+// substituting B = true into `enable_if_t<!bool_constant<B>::value, int>` fails.
+fn_disabled g = 0; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'fn_disabled'}}
+
+template <class T, int N> struct Arr {
+  template <class U, int M = N, enable_if_t<(M > 0), int> = 0>
+  Arr(T (&)[M], U = {}) {}
+};
+template <class T> using Arr3 = Arr<T, 3>;
+int arr3[3];
+Arr3 a3(arr3, 0);
+static_assert(__is_same(decltype(a3), Arr<int, 3>));
+} // namespace nttp_deduced_from_alias_in_nondeduced_param_type
