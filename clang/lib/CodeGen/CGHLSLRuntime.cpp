@@ -1073,15 +1073,20 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
 }
 
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
-                                      unsigned BuiltIn) {
+                                      unsigned BuiltIn,
+                                      bool NeedsFlat = false) {
   LLVMContext &Ctx = GV->getContext();
   IRBuilder<> B(GV->getContext());
-  MDNode *Operands = MDNode::get(
+  SmallVector<Metadata *, 2> Decorations;
+  Decorations.push_back(MDNode::get(
       Ctx,
       {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
-       ConstantAsMetadata::get(B.getInt32(BuiltIn))});
-  MDNode *Decoration = MDNode::get(Ctx, {Operands});
-  GV->addMetadata("spirv.Decorations", *Decoration);
+       ConstantAsMetadata::get(B.getInt32(BuiltIn))}));
+  if (NeedsFlat)
+    Decorations.push_back(
+        MDNode::get(Ctx, {ConstantAsMetadata::get(
+                             B.getInt32(/* Spirv::Decoration::Flat */ 14))}));
+  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
 }
 
 static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
@@ -1116,13 +1121,13 @@ static bool inputRequiresFlatDecoration(llvm::Type *Ty) {
 
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
-                                           unsigned BuiltInID) {
+                                           unsigned BuiltInID, bool NeedsFlat) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
-  addSPIRVBuiltinDecoration(GV, BuiltInID);
+  addSPIRVBuiltinDecoration(GV, BuiltInID, NeedsFlat);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
@@ -1476,13 +1481,16 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
   const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
+  // PSIn non-float BuiltIns must be Flat; only floats can interpolate
+  bool NeedsFlat =
+      ST == Triple::EnvironmentType::Pixel && inputRequiresFlatDecoration(Type);
 
   if (SemanticName == "SV_POSITION") {
     if (ST == Triple::EnvironmentType::Pixel) {
       if (CGM.getTarget().getTriple().isSPIRV())
         return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                       Semantic->getAttrName()->getName(),
-                                      /* BuiltIn::FragCoord */ 15);
+                                      /* BuiltIn::FragCoord */ 15, NeedsFlat);
       if (CGM.getTarget().getTriple().isDXIL())
         return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                         Signature);
@@ -1499,8 +1507,20 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       if (CGM.getTarget().getTriple().isSPIRV())
         return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                       Semantic->getAttrName()->getName(),
-                                      /* BuiltIn::VertexIndex */ 42);
+                                      /* BuiltIn::VertexIndex */ 42, NeedsFlat);
       else
+        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                        Signature);
+    }
+  }
+
+  if (SemanticName == "SV_ISFRONTFACE") {
+    if (ST == Triple::EnvironmentType::Pixel) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::FrontFacing */ 17, NeedsFlat);
+      if (CGM.getTarget().getTriple().isDXIL())
         return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                         Signature);
     }

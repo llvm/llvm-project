@@ -883,6 +883,9 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
   if (SemanticName == "SV_VERTEXID")
     return true;
 
+  if (SemanticName == "SV_ISFRONTFACE")
+    return ST == llvm::Triple::Pixel && IsInput;
+
   return false;
 }
 
@@ -1108,6 +1111,12 @@ void SemaHLSL::checkSemanticAnnotation(
   if (SemanticName == "SV_VERTEXID") {
     diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                   {{llvm::Triple::Vertex, IOType::In}});
+    return;
+  }
+
+  if (SemanticName == "SV_ISFRONTFACE") {
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Pixel, IOType::In}});
     return;
   }
 
@@ -1992,6 +2001,17 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
     uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
     if (!ValueType->isUnsignedIntegerType() || SizeInBits != 32)
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "uint";
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_ISFRONTFACE") {
+    if (!ValueType->isBooleanType())
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "bool";
+    if (IsOutput)
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
+    if (Index.has_value())
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_indexing_not_supported) << AL;
     D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
     return;
   }
