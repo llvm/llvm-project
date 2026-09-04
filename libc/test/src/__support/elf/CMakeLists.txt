@@ -131,3 +131,18 @@ if(LIBC_ENABLE_SHARED)
       libc.src.__support.elf.tls_block
   )
 endif()
+
+if(LIBC_ENABLE_SHARED)
+  add_libc_test(
+    registry_test
+    SUITE
+      libc-support-tests
+    SRCS
+      registry_test.cpp
+    COMPILE_OPTIONS
+      -DLIBC_TEST_SHARED_OBJECT="$<TARGET_FILE:libc-shared>"
+      -DLIBM_TEST_SHARED_OBJECT="$<TARGET_FILE:libm-shared>"
+    DEPENDS
+      libc.src.__support.elf.registry
+  )
+endif()

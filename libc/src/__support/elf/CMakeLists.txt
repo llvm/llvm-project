@@ -190,3 +190,20 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.string.memory_utils.inline_memcpy
 )
+
+add_header_library(
+  registry
+  HDRS
+    registry.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.elf.bind
+    libc.src.__support.elf.load_module
+    libc.src.__support.elf.module
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
