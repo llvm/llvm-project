@@ -7150,6 +7150,12 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
                                          MaxItersWithoutWrap))
     return ConstantRange::getFull(BitWidth);
 
+  // Collecting loop guards below queries ranges of other expressions, which can
+  // recursively end up back here for the same AddRec.
+  if (!PendingRangeSharpening.insert(AddRec).second)
+    return ConstantRange::getFull(BitWidth);
+  llvm::scope_exit ClearOnExit([&]() { PendingRangeSharpening.erase(AddRec); });
+
   ICmpInst::Predicate LEPred =
       IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
   ICmpInst::Predicate GEPred =
@@ -14079,6 +14085,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       ValueExprMap(std::move(Arg.ValueExprMap)),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
       PendingMerges(std::move(Arg.PendingMerges)),
+      PendingRangeSharpening(std::move(Arg.PendingRangeSharpening)),
       ConstantMultipleCache(std::move(Arg.ConstantMultipleCache)),
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
@@ -14122,6 +14129,8 @@ ScalarEvolution::~ScalarEvolution() {
 
   assert(PendingLoopPredicates.empty() && "isImpliedCond garbage");
   assert(PendingMerges.empty() && "isImpliedViaMerge garbage");
+  assert(PendingRangeSharpening.empty() &&
+         "getRangeForAffineNoSelfWrappingAR garbage");
   assert(!WalkingBEDominatingConds && "isLoopBackedgeGuardedByCond garbage!");
   assert(!ProvingSplitPredicate && "ProvingSplitPredicate garbage!");
 }

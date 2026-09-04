@@ -1728,6 +1728,10 @@ private:
   // Mark SCEVUnknown Phis currently being processed by isImpliedViaMerge.
   SmallPtrSet<const PHINode *, 6> PendingMerges;
 
+  /// Mark AddRecs currently being processed by
+  /// getRangeForAffineNoSelfWrappingAR.
+  SmallPtrSet<const SCEVAddRecExpr *, 4> PendingRangeSharpening;
+
   /// Set to true by isLoopBackedgeGuardedByCond when we're walking the set of
   /// conditions dominating the backedge of a loop.
   bool WalkingBEDominatingConds = false;
