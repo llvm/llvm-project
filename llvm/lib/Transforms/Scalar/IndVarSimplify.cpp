@@ -1273,7 +1273,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     MadeAnyChanges = true;
   }
 
-  if (MadeAnyChanges)
+  if (!SunkInsts.empty())
     SE->forgetValues(SunkInsts);
 
   return MadeAnyChanges;
