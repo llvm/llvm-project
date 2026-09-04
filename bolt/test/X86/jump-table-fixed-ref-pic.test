@@ -11,3 +11,8 @@ CHECK:      movslq ".rodata/1"+8(%rip), %rax
 CHECK-NEXT: leaq ".rodata/1"(%rip), %rdx
 CHECK-NEXT: addq %rdx, %rax
 CHECK-NEXT: jmpq *%rax # UNKNOWN CONTROL FLOW
+
+CHECK:      movslq ".rodata/1"(%rip), %rax
+CHECK-NEXT: leaq ".rodata/1"(%rip), %rdx
+CHECK-NEXT: addq %rdx, %rax
+CHECK-NEXT: jmpq *%rax # UNKNOWN CONTROL FLOW
