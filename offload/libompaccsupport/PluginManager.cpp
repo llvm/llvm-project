@@ -28,6 +28,7 @@ PluginManager *PM = nullptr;
 
 extern "C" GenericPluginTy *
 __ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
+extern "C" int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 
 void PluginManager::init() {
   TIMESCOPE();
@@ -60,48 +61,35 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  for (auto &Plugin : Plugins) {
-    if (!Plugin->is_initialized())
-      continue;
-
-    if (auto Err = Plugin->deinit()) {
-      std::string InfoMsg = toString(std::move(Err));
-      ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
-    }
-  }
+  Plugins.clear();
+  if (auto Res = olShutDown())
+    REPORT() << "Failed to deinitialize liboffload: " << Res->Details;
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
 
-bool PluginManager::initializePlugin(GenericPluginTy &Plugin) {
-  if (Plugin.is_initialized())
-    return true;
-
-  if (auto Err = Plugin.init()) {
-    std::string InfoMsg = toString(std::move(Err));
-    ODBG(ODT_Init) << "Failed to init plugin: " << InfoMsg;
-    return false;
-  }
-
-  ODBG(ODT_Init) << "Registered plugin " << Plugin.getName() << " with "
-                 << Plugin.number_of_devices() << " visible device(s)";
-
-  return true;
-}
-
-bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
-                                     int32_t DeviceId) {
-  if (Plugin.is_device_initialized(DeviceId)) {
+bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
+  if (PM->DeviceIds.find(DeviceHandle) != PM->DeviceIds.end()) {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
-    (*ExclusiveDevicesAccessor)[PM->DeviceIds[std::make_pair(&Plugin,
-                                                             DeviceId)]]
+    (*ExclusiveDevicesAccessor)[PM->DeviceIds[DeviceHandle]]
         ->setHasPendingImages(true);
     return true;
   }
 
-  // Initialize the device information for the RTL we are about to use.
-  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  ol_platform_handle_t PlatformHandle;
+  if (auto Ret = olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
+                                 sizeof(PlatformHandle), &PlatformHandle);
+      Ret != OL_SUCCESS) {
+    REPORT() << "Failed to get platform while initializing device "
+             << DeviceHandle;
+    return false;
+  }
 
+  GenericPluginTy &Plugin = *__ol_tgt_GetPluginFromPlatform(PlatformHandle);
+  int32_t DeviceId = __ol_tgt_GetPluginDeviceId(DeviceHandle);
+
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  // Initialize the device information for the RTL we are about to use.
   int32_t UserId = ExclusiveDevicesAccessor->size();
 
   // Set the device identifier offset in the plugin.
@@ -109,7 +97,8 @@ bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
   Plugin.set_device_identifier(UserId, DeviceId);
 #endif
 
-  auto Device = std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId);
+  auto Device =
+      std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId, DeviceHandle);
   if (auto Err = Device->init()) {
     std::string InfoMsg = toString(std::move(Err));
     ODBG(ODT_Init) << "Failed to init device " << DeviceId << ": " << InfoMsg;
@@ -120,21 +109,18 @@ bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
 
   // We need to map between the plugin's device identifier and the one
   // that OpenMP will use.
-  PM->DeviceIds[std::make_pair(&Plugin, DeviceId)] = UserId;
+  PM->DeviceIds[DeviceHandle] = UserId;
 
   return true;
 }
 
 void PluginManager::initializeAllDevices() {
-  for (auto &Plugin : plugins()) {
-    if (!initializePlugin(Plugin))
-      continue;
-
-    for (int32_t DeviceId = 0; DeviceId < Plugin.number_of_devices();
-         ++DeviceId) {
-      initializeDevice(Plugin, DeviceId);
-    }
-  }
+  olIterateDevices(
+      [](ol_device_handle_t Device, void *UserData) {
+        PM->initializeDevice(Device);
+        return true;
+      },
+      nullptr);
   // After all plugins are initialized, register atExit cleanup handlers
   std::atexit([]() {
     // Interop cleanup should be done before the plugins are deinitialized as
@@ -216,91 +202,115 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
     PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
   // Register the images with the RTLs that understand them, if any.
-  llvm::DenseMap<GenericPluginTy *, llvm::DenseSet<int32_t>> UsedDevices;
+  llvm::SmallVector<ol_device_handle_t> UsedDevices;
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &Desc->DeviceImages[i];
 
-    GenericPluginTy *FoundRTL = nullptr;
+    struct RegisterImageState {
+      __tgt_bin_desc *Desc;
+      __tgt_device_image *Img;
+      llvm::SmallVector<ol_device_handle_t> &UsedDevices;
+      bool FoundRTL = false;
+    } State{Desc, Img, UsedDevices, false};
 
-    // Scan the RTLs that have associated images until we find one that supports
-    // the current image.
-    for (auto &R : plugins()) {
-      StringRef Buffer(reinterpret_cast<const char *>(Img->ImageStart),
-                       utils::getPtrDiff(Img->ImageEnd, Img->ImageStart));
+    if (ol_result_t Res = olIterateCompatibleDevices(
+            Img->ImageStart, utils::getPtrDiff(Img->ImageEnd, Img->ImageStart),
+            [](ol_device_handle_t DeviceHandle, void *Data) {
+              auto &State = *static_cast<RegisterImageState *>(Data);
 
-      if (!R.isPluginCompatible(Buffer))
-        continue;
+              ol_platform_handle_t PlatformHandle;
+              if (auto Res =
+                      olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
+                                      sizeof(PlatformHandle), &PlatformHandle);
+                  Res != OL_SUCCESS) {
+                REPORT() << "Failed to get platform info for device "
+                         << DeviceHandle << ":" << Res->Details;
+                PlatformHandle = nullptr;
+              }
 
-      if (!initializePlugin(R))
-        continue;
+              llvm::SmallString<256> PlatformName("Unknown");
+              if (PlatformHandle) {
+                size_t PlatformNameSize = 0;
+                if (auto Res = olGetPlatformInfoSize(PlatformHandle,
+                                                     OL_PLATFORM_INFO_NAME,
+                                                     &PlatformNameSize);
+                    Res != OL_SUCCESS)
+                  PlatformNameSize = 0;
 
-      if (!R.number_of_devices()) {
-        ODBG(ODT_Init) << "Skipping plugin " << R.getName()
-                       << " with no visible devices";
-        continue;
-      }
+                PlatformName.resize(PlatformNameSize);
+                if (PlatformNameSize > 0) {
+                  if (auto Res = olGetPlatformInfo(
+                          PlatformHandle, OL_PLATFORM_INFO_NAME,
+                          PlatformNameSize, PlatformName.data());
+                      Res != OL_SUCCESS)
+                    PlatformName = "Unknown";
+                } else
+                  PlatformName = "Unknown";
+              }
 
-      for (int32_t DeviceId = 0; DeviceId < R.number_of_devices(); ++DeviceId) {
-        // We only want a single matching image to be registered for each binary
-        // descriptor. This prevents multiple of the same image from being
-        // registered for the same device in the case that they are mutually
-        // compatible, such as sm_80 and sm_89.
-        if (UsedDevices[&R].contains(DeviceId)) {
-          ODBG(ODT_Init) << "Image " << Img->ImageStart
-                         << " is a duplicate, not loaded on RTL " << R.getName()
-                         << " device " << DeviceId;
-          continue;
-        }
+              // We only want a single matching image to be registered for each
+              // binary descriptor. This prevents multiple of the same image
+              // from being registered for the same device in the case that
+              // they are mutually compatible, such as sm_80 and sm_89.
+              if (llvm::is_contained(State.UsedDevices, DeviceHandle)) {
+                ODBG(ODT_Init) << "Image " << State.Img->ImageStart
+                               << " is a duplicate, not loaded on RTL "
+                               << PlatformName << " on device " << DeviceHandle;
+                return true;
+              }
 
-        if (!R.isDeviceCompatible(DeviceId, Buffer))
-          continue;
+              ODBG(ODT_Init)
+                  << "Image " << State.Img->ImageStart << " with RTL "
+                  << PlatformName << " on device " << DeviceHandle;
 
-        ODBG(ODT_Init) << "Image " << Img->ImageStart
-                       << " is compatible with RTL " << R.getName()
-                       << " device " << DeviceId;
+              PM->initializeDevice(DeviceHandle);
 
-        if (!initializeDevice(R, DeviceId))
-          continue;
+              // Initialize (if necessary) translation table for this library.
+              PM->TrlTblMtx.lock();
+              if (!PM->HostEntriesBeginToTransTable.count(
+                      State.Desc->HostEntriesBegin)) {
+                PM->HostEntriesBeginRegistrationOrder.push_back(
+                    State.Desc->HostEntriesBegin);
+                TranslationTable &TT =
+                    (PM->HostEntriesBeginToTransTable)[State.Desc
+                                                           ->HostEntriesBegin];
+                TT.HostTable.EntriesBegin = State.Desc->HostEntriesBegin;
+                TT.HostTable.EntriesEnd = State.Desc->HostEntriesEnd;
+              }
 
-        // Initialize (if necessary) translation table for this library.
-        PM->TrlTblMtx.lock();
-        if (!PM->HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
-          PM->HostEntriesBeginRegistrationOrder.push_back(
-              Desc->HostEntriesBegin);
-          TranslationTable &TT =
-              (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
-          TT.HostTable.EntriesBegin = Desc->HostEntriesBegin;
-          TT.HostTable.EntriesEnd = Desc->HostEntriesEnd;
-        }
+              // Retrieve translation table for this library.
+              TranslationTable &TT =
+                  (PM->HostEntriesBeginToTransTable)[State.Desc
+                                                         ->HostEntriesBegin];
 
-        // Retrieve translation table for this library.
-        TranslationTable &TT =
-            (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
+              ODBG(ODT_Init) << "Registering image " << State.Img->ImageStart
+                             << " with RTL " << PlatformName;
 
-        ODBG(ODT_Init) << "Registering image " << Img->ImageStart
-                       << " with RTL " << R.getName();
+              auto UserId = PM->DeviceIds[DeviceHandle];
+              if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
+                TT.DeviceTables.resize(UserId + 1, {});
+                TT.TargetsImages.resize(UserId + 1, nullptr);
+                TT.TargetsEntries.resize(UserId + 1, {});
+                TT.TargetsTable.resize(UserId + 1, nullptr);
+              }
 
-        auto UserId = PM->DeviceIds[std::make_pair(&R, DeviceId)];
-        if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
-          TT.DeviceTables.resize(UserId + 1, {});
-          TT.TargetsImages.resize(UserId + 1, nullptr);
-          TT.TargetsEntries.resize(UserId + 1, {});
-          TT.TargetsTable.resize(UserId + 1, nullptr);
-        }
+              // Register the image for this target type and invalidate the
+              // table.
+              TT.TargetsImages[UserId] = State.Img;
+              TT.TargetsTable[UserId] = nullptr;
 
-        // Register the image for this target type and invalidate the table.
-        TT.TargetsImages[UserId] = Img;
-        TT.TargetsTable[UserId] = nullptr;
+              State.UsedDevices.push_back(DeviceHandle);
+              PM->UsedImages.insert(State.Img);
+              State.FoundRTL = true;
 
-        UsedDevices[&R].insert(DeviceId);
-        PM->UsedImages.insert(Img);
-        FoundRTL = &R;
+              PM->TrlTblMtx.unlock();
+              return true;
+            },
+            &State))
+      REPORT() << "Failed to iterate compatible devices: " << Res->Details;
 
-        PM->TrlTblMtx.unlock();
-      }
-    }
-    if (!FoundRTL)
+    if (!State.FoundRTL)
       ODBG(ODT_Init) << "No RTL found for image " << Img->ImageStart << "!";
   }
   PM->RTLsMtx.unlock();
