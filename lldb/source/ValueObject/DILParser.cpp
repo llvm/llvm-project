@@ -16,7 +16,6 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
@@ -61,7 +60,7 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
 }
 
 CompilerType ResolveTypeByName(const std::string &name,
-                               ExecutionContextScope &ctx_scope) {
+                               ExecutionContext &exe_ctx) {
   // Internally types don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   llvm::StringRef name_ref(name);
@@ -70,7 +69,7 @@ CompilerType ResolveTypeByName(const std::string &name,
     name_ref = name_ref.drop_front(2);
 
   std::vector<CompilerType> result_type_list;
-  lldb::TargetSP target_sp = ctx_scope.CalculateTarget();
+  lldb::TargetSP target_sp = exe_ctx.GetTargetSP();
   if (!name_ref.empty() && target_sp) {
     ModuleList &images = target_sp->GetImages();
     TypeQuery query{ConstString(name_ref), TypeQueryOptions::e_exact_match |
@@ -91,14 +90,13 @@ CompilerType ResolveTypeByName(const std::string &name,
   return {};
 }
 
-llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
+llvm::Expected<ASTNodeUP> DILParser::Parse(ExecutionContext &exe_ctx,
+                                           llvm::StringRef dil_input_expr,
                                            DILLexer lexer,
-                                           StackFrame &stack_frame,
                                            lldb::DynamicValueType use_dynamic,
                                            lldb::DILMode mode) {
   llvm::Error error = llvm::Error::success();
-  DILParser parser(dil_input_expr, lexer, stack_frame, use_dynamic, error,
-                   mode);
+  DILParser parser(exe_ctx, dil_input_expr, lexer, use_dynamic, error, mode);
 
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
@@ -113,11 +111,10 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
   return node_up;
 }
 
-DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     StackFrame &stack_frame,
-                     lldb::DynamicValueType use_dynamic, llvm::Error &error,
-                     lldb::DILMode mode)
-    : m_stack_frame(stack_frame), m_input_expr(dil_input_expr),
+DILParser::DILParser(ExecutionContext &exe_ctx, llvm::StringRef dil_input_expr,
+                     DILLexer lexer, lldb::DynamicValueType use_dynamic,
+                     llvm::Error &error, lldb::DILMode mode)
+    : m_exe_ctx(exe_ctx), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
       m_mode(mode) {}
 
@@ -767,18 +764,17 @@ std::optional<CompilerType> DILParser::ParseTypeId() {
 
     if (type_name.empty())
       return {};
-    type = ResolveTypeByName(type_name, m_stack_frame);
+    type = ResolveTypeByName(type_name, m_exe_ctx);
     if (!type.IsValid())
       return {};
 
     // Same-name identifiers should be preferred over typenames.
-    if (LookupIdentifier(type_name, m_stack_frame, m_use_dynamic))
+    if (LookupIdentifier(type_name, m_exe_ctx, m_use_dynamic))
       // TODO: Make type accessible with 'class', 'struct' and 'union' keywords.
       return {};
 
     // Same-name identifiers should be preferred over typenames.
-    if (LookupGlobalIdentifier(type_name, m_stack_frame,
-                               m_stack_frame.CalculateTarget(), m_use_dynamic))
+    if (LookupGlobalIdentifier(type_name, m_exe_ctx, m_use_dynamic))
       // TODO: Make type accessible with 'class', 'struct' and 'union' keywords
       return {};
   }
@@ -827,7 +823,9 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
   }
 
   if (type_name.size() > 0) {
-    lldb::TargetSP target_sp = m_stack_frame.CalculateTarget();
+    lldb::TargetSP target_sp = m_exe_ctx.GetTargetSP();
+    if (!target_sp)
+      return {};
     ConstString const_type_name(type_name);
     for (auto type_system_sp : target_sp->GetScratchTypeSystems())
       if (auto compiler_type =

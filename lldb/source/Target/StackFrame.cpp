@@ -557,16 +557,17 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   }
 
   // Parse the expression.
-  auto tree_or_error = dil::DILParser::Parse(var_expr, std::move(*lex_or_err),
-                                             *this, use_dynamic, mode);
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  auto tree_or_error = dil::DILParser::Parse(
+      exe_ctx, var_expr, std::move(*lex_or_err), use_dynamic, mode);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
     return ValueObjectConstResult::Create(nullptr, error.Clone());
   }
 
   // Evaluate the parsed expression.
-  lldb::TargetSP target = this->CalculateTarget();
-  dil::Interpreter interpreter(target, var_expr, *this, use_dynamic, options);
+  dil::Interpreter interpreter(exe_ctx, var_expr, use_dynamic, options);
 
   auto valobj_or_error = interpreter.EvaluateTree(*tree_or_error);
   if (!valobj_or_error) {
