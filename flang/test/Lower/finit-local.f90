@@ -264,6 +264,7 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_charn
 ! ZERO:       fir.do_loop
 ! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:         arith.constant 0 : i8
 ! ZERO:         fir.store {{.*}} : !fir.ref<i8>
 
 
@@ -529,6 +530,7 @@ end subroutine
 ! ZERO:       arith.muli {{.*}}, %[[C2]] : index
 ! ZERO:       fir.do_loop
 ! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:         arith.constant 0 : i8
 ! ZERO:         fir.store {{.*}} : !fir.ref<i8>
 
 ! HEX-LABEL:  func.func @_QPtest_char2_runtime
