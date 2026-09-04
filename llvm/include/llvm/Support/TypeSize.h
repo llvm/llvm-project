@@ -385,6 +385,11 @@ public:
   friend constexpr TypeSize operator*(const TypeSize &LHS, const unsigned RHS) {
     return LHS * (ScalarTy)RHS;
   }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const TypeSize &LHS, const unsigned long RHS) {
+    return LHS * (ScalarTy)RHS;
+  }
   friend constexpr TypeSize operator*(const TypeSize &LHS, const int64_t RHS) {
     return LHS * (ScalarTy)RHS;
   }
@@ -395,6 +400,11 @@ public:
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const int64_t LHS, const TypeSize &RHS) {
+    return RHS * LHS;
+  }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const unsigned long LHS, const TypeSize &RHS) {
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const uint64_t LHS, const TypeSize &RHS) {
