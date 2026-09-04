@@ -485,7 +485,7 @@ define i1 @i32_cast_cmp_oeq_int_inf_uitofp(i32 %i) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %f = uitofp i32 %i to float
-  %cmp = fcmp oeq float %f, 0x7FF0000000000000
+  %cmp = fcmp oeq float %f, +inf
   ret i1 %cmp
 }
 
@@ -494,7 +494,7 @@ define i1 @i32_cast_cmp_oeq_int_inf_sitofp(i32 %i) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %f = sitofp i32 %i to float
-  %cmp = fcmp oeq float %f, 0x7FF0000000000000
+  %cmp = fcmp oeq float %f, +inf
   ret i1 %cmp
 }
 
@@ -506,7 +506,7 @@ define i1 @i128_cast_cmp_oeq_int_inf_uitofp(i128 %i) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = uitofp i128 %i to float
-  %cmp = fcmp oeq float %f, 0x7FF0000000000000
+  %cmp = fcmp oeq float %f, +inf
   ret i1 %cmp
 }
 

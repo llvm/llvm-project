@@ -221,6 +221,22 @@ inline bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
   return true;
 }
 
+/// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
+inline bool isTRN_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
+                               unsigned &WhichResult) {
+  if (NumElts % 2 != 0)
+    return false;
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
+        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + WhichResult))
+      return false;
+  }
+  return true;
+}
+
 /// isREVMask - Check if a vector shuffle corresponds to a REV
 /// instruction with the specified blocksize.  (The order of the elements
 /// within each block of the vector is reversed.)

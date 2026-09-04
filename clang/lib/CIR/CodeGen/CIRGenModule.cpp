@@ -1061,10 +1061,10 @@ static bool isViewOnGlobal(cir::GlobalOp glob, cir::GlobalViewAttr view) {
   return view.getSymbol().getValue() == glob.getSymName();
 }
 
-static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
-                                               cir::GlobalOp newGlob,
-                                               cir::GlobalViewAttr attr,
-                                               mlir::Type oldTy) {
+static mlir::Attribute createNewGlobalView(CIRGenModule &cgm,
+                                           cir::GlobalOp newGlob,
+                                           cir::GlobalViewAttr attr,
+                                           mlir::Type oldTy) {
   // If the attribute does not require indexes or it is not a global view on
   // the global we're replacing, keep the original attribute.
   if (!attr.getIndices() || !isViewOnGlobal(newGlob, attr))
@@ -1078,7 +1078,11 @@ static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
 
   uint64_t offset =
       bld.computeOffsetFromGlobalViewIndices(layout, oldTy, oldInds);
-  bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout, newInds);
+  if (!bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout,
+                                                  newInds))
+    return cir::GlobalOffsetAttr::get(attr.getType(), attr.getSymbol(),
+                                      static_cast<int64_t>(offset));
+
   cir::PointerType newPtrTy;
 
   if (isa<cir::RecordType>(oldTy))
@@ -1100,6 +1104,11 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
                                        mlir::Attribute oldInit) {
   if (auto oldView = mlir::dyn_cast<cir::GlobalViewAttr>(oldInit))
     return createNewGlobalView(cgm, newGlob, oldView, oldTy);
+
+  // A byte offset from a symbol doesn't depend on the symbol's type, so it
+  // remains valid when the global is replaced.
+  if (mlir::isa<cir::GlobalOffsetAttr>(oldInit))
+    return oldInit;
 
   auto getNewInitElements =
       [&](mlir::ArrayAttr oldElements) -> mlir::ArrayAttr {
