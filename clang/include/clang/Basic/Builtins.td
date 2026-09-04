@@ -5561,7 +5561,8 @@ def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLInterlockedExchange : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_exchange"];
-  let Attributes = [NoThrow];
+  // Prevent inadvertent float -> double arg promotion.
+  let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void (...)";
 }
 

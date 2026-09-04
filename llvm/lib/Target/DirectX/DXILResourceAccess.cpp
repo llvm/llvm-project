@@ -383,17 +383,31 @@ static void emitAtomicBinOp(IRBuilder<> &Builder, AtomicRMWInst *AI,
     return;
   }
 
+  // DXIL has no floating-point atomic op. A float exchange only moves the bit
+  // pattern, so cast the value to an integer of the same width, exchange, and
+  // cast the result back. This matches what DXC emits.
+  Value *Val = AI->getValOperand();
+  Type *ValTy = Val->getType();
+  Type *OpTy = ValTy;
+  if (ValTy->isFloatingPointTy()) {
+    OpTy = Builder.getIntNTy(ValTy->getPrimitiveSizeInBits());
+    Val = Builder.CreateBitCast(Val, OpTy);
+  }
+
   SmallVector<Value *, 6> Args{
       Handle, Builder.getInt32(static_cast<uint32_t>(*BinOpCode))};
   append_range(Args, Coords);
   Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
-  Args.push_back(AI->getValOperand());
+  Args.push_back(Val);
 
   // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
   // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
   // its `createTmpHandleCast` bookkeeping.
-  Value *Result = Builder.CreateIntrinsic(
-      AI->getType(), Intrinsic::dx_resource_atomic_binop, Args);
+  Value *Result =
+      Builder.CreateIntrinsic(OpTy, Intrinsic::dx_resource_atomic_binop, Args);
+
+  if (OpTy != ValTy)
+    Result = Builder.CreateBitCast(Result, ValTy);
 
   AI->replaceAllUsesWith(Result);
 }
