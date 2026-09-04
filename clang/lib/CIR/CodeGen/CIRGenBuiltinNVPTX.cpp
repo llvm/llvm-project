@@ -97,8 +97,6 @@ static mlir::Value makeScopedAtomicXchg(CIRGenFunction &cgf,
   return xchg.getResult();
 }
 
-/// Lower __nvvm_atom{,_cta,_sys}_cas_gen_* like classic codegen:
-/// cmpxchg monotonic monotonic, return the old value (not the success flag).
 static mlir::Value makeScopedAtomicCAS(CIRGenFunction &cgf,
                                        const CallExpr *expr,
                                        cir::SyncScopeKind scope) {
