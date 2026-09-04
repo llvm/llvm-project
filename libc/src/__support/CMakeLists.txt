@@ -497,6 +497,7 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_subdirectory(elf)
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)

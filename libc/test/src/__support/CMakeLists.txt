@@ -362,6 +362,9 @@ add_libc_test(
     libc.src.__support.macros.properties.os
 )
 
+if(LIBC_TARGET_OS_IS_LINUX)
+  add_subdirectory(elf)
+endif()
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(pwd)
