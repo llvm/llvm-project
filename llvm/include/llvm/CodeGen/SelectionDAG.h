@@ -2581,6 +2581,13 @@ public:
   LLVM_ABI bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
                                                unsigned Bytes, int Dist) const;
 
+  /// Return true if stores are next to each other and can be merged. Check that
+  /// both are nonvolatile and if \p ST is storing \p Bytes bytes to a location
+  /// that is \p Dist units away from the location that \p Base is storing to.
+  LLVM_ABI bool areNonVolatileConsecutiveStores(StoreSDNode *ST,
+                                                StoreSDNode *Base,
+                                                unsigned Bytes, int Dist) const;
+
   /// Infer alignment of a load / store address. Return std::nullopt if it
   /// cannot be inferred.
   LLVM_ABI MaybeAlign InferPtrAlign(SDValue Ptr) const;
