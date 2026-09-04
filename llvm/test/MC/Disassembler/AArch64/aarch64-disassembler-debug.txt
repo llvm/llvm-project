@@ -1,0 +1,16 @@
+# REQUIRES: asserts
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8a -disassemble -debug-only=aarch64-disassembler < %s 2>&1 | FileCheck %s
+#
+# Exercises LLVM_DEBUG output from DecoderEmitter for dynamic bits like instruction operand.
+
+# blr x0 — valid; reaches per-operand checks and succeeds.
+# CHECK: OPC_Decode: opcode {{[0-9]+}}, using decoder {{[0-9]+}}: PASS, decoding complete
+
+# Malformed `add (imm)` with `shift` field = 2 (only 0 and 1 are legal). The
+# whole-instruction decoder DecodeAddSubImmShift returns Fail, so the generated
+# table emits LLVM_DEBUG(reportInsnDecodeFailure("ADDXri", "DecodeAddSubImmShift")).
+# CHECK: OPC_Decode for ADDXri: insn using DecodeAddSubImmShift : FAIL
+# CHECK-NEXT: OPC_Decode: opcode {{[0-9]+}}, using decoder {{[0-9]+}}: FAIL, decoding complete
+
+0x0 0x0 0x3f 0xd6
+0xe5 0x98 0x99 0x91
