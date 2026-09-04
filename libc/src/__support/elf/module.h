@@ -142,6 +142,19 @@ private:
   DynamicTable dynamic_;
 };
 
+// Runs a module's DT_FINI_ARRAY, in reverse of the order it was built, which
+// is what the ABI requires.
+LIBC_INLINE void run_fini_array(const Module &module) {
+  auto array = module.dynamic().address(DT_FINI_ARRAY);
+  auto size = module.dynamic().value(DT_FINI_ARRAYSZ);
+  if (!array || !size)
+    return;
+  auto **functions = reinterpret_cast<void (**)()>(*array);
+  for (size_t i = *size / sizeof(void *); i > 0; --i)
+    if (functions[i - 1] != nullptr)
+      functions[i - 1]();
+}
+
 } // namespace elf
 } // namespace LIBC_NAMESPACE_DECL
 

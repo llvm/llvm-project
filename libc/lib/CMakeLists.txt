@@ -65,7 +65,8 @@ foreach(archive IN ZIP_LISTS
   if(LIBC_ENABLE_SHARED AND archive_1 STREQUAL "libc"
     AND TARGET libc.startup.${LIBC_TARGET_OS}.app)
     target_sources(${archive_1} PRIVATE
-      $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.app>)
+      $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.app>
+      $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.passive_abi>)
   endif()
   list(APPEND added_archive_targets ${archive_1})
 
@@ -90,7 +91,8 @@ foreach(archive IN ZIP_LISTS
     if(archive_1 STREQUAL "libc")
       if(TARGET ${app_object})
         target_sources(${archive_1}-shared
-          PRIVATE $<TARGET_OBJECTS:${app_object}>)
+          PRIVATE $<TARGET_OBJECTS:${app_object}>
+          $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.passive_abi>)
       endif()
     else()
       # libm and libmvec reference errno and other libc internals.

@@ -22,6 +22,7 @@
 #include "src/__support/elf/bind.h"
 #include "src/__support/elf/load_module.h"
 #include "src/__support/elf/module.h"
+#include "src/__support/elf/passive_abi.h"
 #include "src/__support/elf/startup_stack.h"
 #include "src/__support/elf/thread_pointer.h"
 #include "src/__support/elf/tls_block.h"
@@ -32,7 +33,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace elf {
 
 // How many objects one process may load at startup.
-constexpr size_t MAX_STARTUP_MODULES = 64;
+constexpr size_t MAX_STARTUP_MODULES = MAX_PROCESS_MODULES;
 // Where a bare SONAME is looked for. There is no ld.so.cache: musl manages
 // without one and a glibc compatible cache format would buy nothing here.
 constexpr const char *DEFAULT_SEARCH_PATHS[] = {"/lib", "/usr/lib"};
@@ -104,6 +105,8 @@ public:
       return false;
 
     run_initialisers();
+
+    publish(order);
     return true;
   }
 
@@ -302,6 +305,26 @@ private:
 
   LIBC_INLINE static void report(const char *message) {
     write_to_stderr(message);
+  }
+
+  // Copies what was loaded into libc's storage, found by symbol lookup since
+  // the loader cannot link against the thing it loads. From here the loader
+  // is finished and anything that wants to know reads that instead.
+  LIBC_INLINE void publish(const SearchOrder &order) {
+    auto address = order.resolve(MODULE_SET_SYMBOL);
+    if (!address)
+      return; // Nothing in the process wants to know.
+    auto *set = reinterpret_cast<ModuleSet *>(*address);
+    const size_t n = count_ < set->capacity ? count_ : set->capacity;
+    for (size_t i = 0; i < n; ++i) {
+      set->modules[i] = modules_[i];
+      set->mappings[i] = mappings_[i];
+      set->tls_offsets[i] = tls_offsets_[i];
+      set->references[i] = 1;
+    }
+    set->count = n;
+    set->page_size = page_size_;
+    set->linked = true;
   }
 
   size_t page_size_;

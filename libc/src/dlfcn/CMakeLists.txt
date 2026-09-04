@@ -1,9 +1,28 @@
+add_object_library(
+  dl_internal
+  SRCS
+    dl_internal.cpp
+  HDRS
+    dl_internal.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.threads.mutex
+)
+
 add_entrypoint_object(
   dlclose
   SRCS
     dlclose.cpp
   HDRS
     dlclose.h
+  DEPENDS
+    libc.include.dlfcn
+    libc.src.__support.CPP.mutex
+    libc.src.__support.elf.map_segments
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.threads.mutex
+    libc.src.dlfcn.dl_internal
 )
 
 add_entrypoint_object(
@@ -13,6 +32,15 @@ add_entrypoint_object(
   HDRS
     dlerror.h
   DEPENDS
+    libc.src.__support.CPP.mutex
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.threads.mutex
+    libc.src.dlfcn.dl_internal
+    libc.src.__support.CPP.mutex
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.threads.mutex
+    libc.src.dlfcn.dl_internal
+    libc.src.__support.elf.map_segments
     libc.include.dlfcn
 )
 
@@ -23,6 +51,12 @@ add_entrypoint_object(
   HDRS
     dlopen.h
   DEPENDS
+    libc.src.__support.CPP.mutex
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.threads.mutex
+    libc.src.dlfcn.dl_internal
+    libc.src.__support.elf.bind
+    libc.src.__support.elf.load_module
     libc.include.dlfcn
 )
 
@@ -33,6 +67,11 @@ add_entrypoint_object(
   HDRS
     dlsym.h
   DEPENDS
+    libc.src.__support.CPP.mutex
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.threads.mutex
+    libc.src.dlfcn.dl_internal
+    libc.src.__support.elf.bind
     libc.include.dlfcn
 )
 

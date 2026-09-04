@@ -222,3 +222,16 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  passive_abi
+  HDRS
+    passive_abi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.elf.map_segments
+    libc.src.__support.elf.module
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
