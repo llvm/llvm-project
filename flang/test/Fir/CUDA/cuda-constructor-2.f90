@@ -351,3 +351,65 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 // CHECK-NOT: cuf.register_module
 // CHECK-NOT: fir.call @_FortranACUFRegisterVariable
 // CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor]
+
+// -----
+
+// Tail-padded device global: a record type {i32, i8} has 5 typed bytes but
+// 8 allocation bytes (3 bytes of tail padding for i32 alignment).
+// CUFAddConstructor must register the full allocation size (8), not the raw
+// typed size (5), so the CUDA runtime maps the correct number of bytes.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  fir.global @_QMtestEtp_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp{a:i32,b:i8}> {
+    %0 = fir.zero_bits !fir.type<tp{a:i32,b:i8}>
+    fir.has_value %0 : !fir.type<tp{a:i32,b:i8}>
+  }
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMtestPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMtestEtp_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp{a:i32,b:i8}> {
+      %0 = fir.zero_bits !fir.type<tp{a:i32,b:i8}>
+      fir.has_value %0 : !fir.type<tp{a:i32,b:i8}>
+    }
+  }
+}
+
+// Registered size must be 8 (allocation size including tail padding), not 5
+// (raw typed size).  A wrong value of 5 would cause the CUDA runtime to map
+// too few bytes and leave the 3 tail-padding bytes unmapped.
+// NOUNIFIED: arith.constant 8 : index
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable
+// UNIFIED: cuf.register_variable_static @_QMtestEtp_dev("_QMtestEtp_dev", 8) {deviceResident}
+
+// -----
+
+// Packed device global: a packed record type <{i32, f64}> has no alignment
+// gaps and no tail padding; its size is 4+8=12 bytes (not 16, which would be
+// the aligned size of an unpacked {i32, f64}).
+// CUFAddConstructor must register size 12, not 16.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  fir.global @_QMtestEtp_packed_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp<{i:i32,d:f64}>> {
+    %0 = fir.zero_bits !fir.type<tp<{i:i32,d:f64}>>
+    fir.has_value %0 : !fir.type<tp<{i:i32,d:f64}>>
+  }
+
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMtestPkernel() kernel {
+      gpu.return
+    }
+    fir.global @_QMtestEtp_packed_dev {data_attr = #cuf.cuda<device>} : !fir.type<tp<{i:i32,d:f64}>> {
+      %0 = fir.zero_bits !fir.type<tp<{i:i32,d:f64}>>
+      fir.has_value %0 : !fir.type<tp<{i:i32,d:f64}>>
+    }
+  }
+}
+
+// Registered size must be 12 (packed: 4+8), not 16 (aligned unpacked size).
+// NOUNIFIED: arith.constant 12 : index
+// NOUNIFIED: fir.call @_FortranACUFRegisterVariable
+// UNIFIED: cuf.register_variable_static @_QMtestEtp_packed_dev("_QMtestEtp_packed_dev", 12) {deviceResident}

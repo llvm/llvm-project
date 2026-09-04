@@ -555,12 +555,51 @@ inline bool isRefOfConstantSizeAggregateType(mlir::Type t) {
 std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
                             llvm::StringRef prefix = "");
 
-/// Return the size and alignment of FIR types.
+/// Return the allocation extent and ABI alignment of a FIR type.
+///
+/// The returned size includes padding required for allocation and array
+/// element strides. For unpacked RecordType it may differ from the
+/// stored-representation width returned by getTypeStoreSizeAndAlignment
+/// and from the Fortran STORAGE_SIZE result.
+///
+/// - **Trivial scalars** (integer, real, complex, logical, character):
+///   size = dl.getTypeSize(), which is the *store* size (data bytes only,
+///   no tail padding).  For example, x86 f80 has store size 10 and ABI
+///   alignment 16; the returned size is 10, not 16.  Callers that need
+///   the allocation size (e.g. FoldBoxEleSize, array element strides)
+///   must round up: llvm::alignTo(size, alignment).
+///
+/// - **Sequences (fir::SequenceType)**:
+///   Each element size is rounded to its alignment boundary before
+///   multiplying by the element count (allocation-size stride). This
+///   rounding is part of the allocation extent and includes per-element
+///   allocation padding.
+///
+/// - **Packed records (fir::RecordType with isPacked)**:
+///   Fields are laid out back-to-back using each field's allocation size
+///   (llvm::alignTo(fieldStoreSize, fieldAlign)), matching LLVM's packed
+///   StructLayout. No inter-field or tail padding is added.
+///
+/// - **Unpacked records (fir::RecordType, not packed)**:
+///   Fields are laid out with inter-field alignment padding; each field
+///   occupies llvm::alignTo(fieldSize, fieldAlign) bytes. The allocation
+///   extent is rounded up to the record's own alignment (tail-padded).
+///
 /// TODO: consider moving this to a DataLayoutTypeInterface implementation
 /// for FIR types. It should first be ensured that it is OK to open the gate of
 /// target dependent type size inquiries in lowering. It would also not be
 /// straightforward given the need for a kind map that would need to be
 /// converted in terms of mlir::DataLayoutEntryKey.
+
+/// Return the stored-representation width and ABI alignment of a FIR type.
+/// The width excludes trailing padding from the outermost object, but
+/// preserves padding within the representation. It can differ from the
+/// Fortran STORAGE_SIZE intrinsic result and is distinct from descriptor
+/// element extent and runtime TRANSFER copy width.
+std::optional<std::pair<uint64_t, unsigned short>>
+getTypeStoreSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                             const mlir::DataLayout &dl,
+                             const fir::KindMapping &kindMap);
 
 /// This variant terminates the compilation if an unsupported type is passed.
 std::pair<std::uint64_t, unsigned short>

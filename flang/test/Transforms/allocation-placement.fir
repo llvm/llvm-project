@@ -102,4 +102,48 @@ func.func @small_temp_in_acc_parallel() {
   return
 }
 
+// Tail-padded record array: !fir.array<3x!fir.type<tpad{a:i32,b:i8}>>
+// Each element is 8 bytes (5 store + 3 tail padding), total = 24 bytes.
+// SequenceType rounds each element to its alignment boundary (alignTo(5,4)=8)
+// before multiplying by the element count, so both the pre-fix and post-fix
+// code produce 24 bytes.  This case verifies that per-element SequenceType
+// rounding is correct, not that the tail-padding fix changes the total.
+// With the default 64-byte threshold the 24-byte array is promoted to stack.
+// CHECK-LABEL: func.func @tail_padded_record_placement
+// CHECK: fir.alloca !fir.array<3x!fir.type<tpad{a:i32,b:i8}>>
+// CHECK-NOT: fir.allocmem
+func.func @tail_padded_record_placement() {
+  %0 = fir.allocmem !fir.array<3x!fir.type<tpad{a:i32,b:i8}>>
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 0 : i32
+  %r = fir.convert %0 : (!fir.heap<!fir.array<3x!fir.type<tpad{a:i32,b:i8}>>>) -> !fir.ref<!fir.array<3x!fir.type<tpad{a:i32,b:i8}>>>
+  %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<3x!fir.type<tpad{a:i32,b:i8}>>>, index) -> !fir.ref<!fir.type<tpad{a:i32,b:i8}>>
+  %f = fir.coordinate_of %e, %c0 : (!fir.ref<!fir.type<tpad{a:i32,b:i8}>>, index) -> !fir.ref<i32>
+  fir.store %v to %f : !fir.ref<i32>
+  fir.freemem %0 : !fir.heap<!fir.array<3x!fir.type<tpad{a:i32,b:i8}>>>
+  return
+}
+
+// Packed record array: !fir.array<5x!fir.type<tpk<{i:i32,d:f64}>>>
+// Each element is 12 bytes (packed: 4+8, no gaps or tail padding), total=60B.
+// Without the isPacked fix, getTypeSizeAndAlignment returns 16 per element
+// (aligned like an unpacked struct), giving a wrong total of 80 bytes which
+// exceeds the 64-byte threshold and would select heap placement.  With the
+// fix the correct total of 60 bytes is below the threshold and the array
+// must be promoted to stack.
+// CHECK-LABEL: func.func @packed_record_placement
+// CHECK: fir.alloca !fir.array<5x!fir.type<tpk<{i:i32,d:f64}>>>
+// CHECK-NOT: fir.allocmem
+func.func @packed_record_placement() {
+  %0 = fir.allocmem !fir.array<5x!fir.type<tpk<{i:i32,d:f64}>>>
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 0 : i32
+  %r = fir.convert %0 : (!fir.heap<!fir.array<5x!fir.type<tpk<{i:i32,d:f64}>>>>) -> !fir.ref<!fir.array<5x!fir.type<tpk<{i:i32,d:f64}>>>>
+  %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<5x!fir.type<tpk<{i:i32,d:f64}>>>>, index) -> !fir.ref<!fir.type<tpk<{i:i32,d:f64}>>>
+  %f = fir.coordinate_of %e, %c0 : (!fir.ref<!fir.type<tpk<{i:i32,d:f64}>>>, index) -> !fir.ref<i32>
+  fir.store %v to %f : !fir.ref<i32>
+  fir.freemem %0 : !fir.heap<!fir.array<5x!fir.type<tpk<{i:i32,d:f64}>>>>
+  return
+}
+
 }
