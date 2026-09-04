@@ -9,10 +9,10 @@ define i32 @noGaps(ptr %in) {
 ; CHECK-LABEL: define i32 @noGaps(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[IN]], align 16, !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP01:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    [[SUM01:%.*]] = add i32 [[TMP01]], [[TMP12]]
 ; CHECK-NEXT:    [[SUM012:%.*]] = add i32 [[SUM01]], [[TMP23]]
 ; CHECK-NEXT:    [[SUM0123:%.*]] = add i32 [[SUM012]], [[TMP34]]
@@ -36,10 +36,10 @@ define i32 @noGapsMissingInvariant(ptr %in) {
 ; CHECK-LABEL: define i32 @noGapsMissingInvariant(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[IN]], align 16
-; CHECK-NEXT:    [[TMP01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP01:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    [[SUM01:%.*]] = add i32 [[TMP01]], [[TMP12]]
 ; CHECK-NEXT:    [[SUM012:%.*]] = add i32 [[SUM01]], [[TMP23]]
 ; CHECK-NEXT:    [[SUM0123:%.*]] = add i32 [[SUM012]], [[TMP34]]
@@ -63,10 +63,10 @@ define i32 @twoGaps(ptr %in) {
 ; CHECK-LABEL: define i32 @twoGaps(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[IN]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison), !invariant.load [[META0]]
-; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD36:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD36:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[LOAD03]], [[LOAD36]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;

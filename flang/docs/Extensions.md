@@ -159,11 +159,6 @@ end
   to be constant will generate a compilation error. `ieee_support_standard`
   depends in part on `ieee_support_halting`, so this also applies to
   `ieee_support_standard` calls.
-* F'2023 constraint C7108 prohibits the use of a structure constructor
-  that could also be interpreted as a generic function reference.
-  No other Fortran compiler enforces C7108 (to our knowledge);
-  they all resolve the ambiguity by interpreting the call as a function
-  reference.  We do the same, with a portability warning.
 * An override for an inaccessible procedure binding works only within
   the same module; other apparent overrides of inaccessible bindings
   are actually new bindings of the same name.
@@ -181,7 +176,9 @@ end
 ```
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
-  may make a difference in testing/debugging.
+  may make a difference in testing. It is not visible in the debug
+  information, which spells the main program name in lowercase like every
+  other name.
 * A `PROCEDURE()` with no interface name or type may be called as an
   subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
   C1525 notwithstanding.
@@ -208,6 +205,10 @@ end
 ## Extensions, deletions, and legacy features supported by default
 
 * Tabs in source
+* A bare carriage return (CR, 0x0d) in the interior of a source line -- e.g.
+  from a file with Windows line endings that has been mishandled -- is treated
+  as a blank, except within a character or Hollerith literal where it is
+  retained.
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
@@ -229,6 +230,16 @@ end
 * `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
 * When kind-param is used for REAL literals, allow a matching exponent letter
 * Quad precision REAL literals with `Q`
+* The `ISO_C_BINDING` module exports the named constants `c_float128` and
+  `c_float128_complex` (both with the value 16), the kind parameter for
+  128-bit (quad precision) real and complex C interoperable types. These
+  extensions are gfortran-compatible.
+* The `ISO_C_BINDING` module exports the named constants `c_float16` and
+  `c_float16_complex` (both with the value 2), the kind parameter for
+  16-bit (half precision) real and complex C interoperable types,
+  corresponding to C `_Float16` (ISO/IEC TS 18661-3). `REAL(KIND=2)` and
+  `COMPLEX(KIND=2)` are accordingly accepted as interoperable types. These
+  extensions are gfortran-compatible.
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Support for using bare `L` in FORMAT statement
@@ -243,6 +254,7 @@ end
 * `ASSIGN` statement, assigned `GO TO`, and assigned format
 * `PAUSE` statement
 * Hollerith literals and edit descriptors
+* Binary logical edit descriptor B (1/0 vs T/F)
 * `NAMELIST` allowed in the execution part
 * Omitted colons on type declaration statements with attributes
 * COMPLEX constructor expression, e.g. `(x+y,z)`
@@ -284,6 +296,7 @@ end
   not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
   `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
   the type resolution of such BOZ literals usages is highly non portable).
+  A warning is emitted when the BOZ literal is too large for the target.
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate
@@ -341,6 +354,10 @@ end
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
+* A named constant defined by a `PARAMETER` statement is permitted to appear
+  before its explicit type declaration in a scope with IMPLICIT NONE(TYPE);
+  it acquires the type it would have had under implicit typing rules (F2023 8.7),
+  and a later explicit declaration must specify that same type (F2023 8.6.11 p2).
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
@@ -350,6 +367,19 @@ end
   with bounds remapping.
 * The `CONTIGUOUS` attribute can be redundantly applied to simply
   contiguous objects, including scalars, with a portability warning.
+* `IS_CONTIGUOUS` is always true when its argument is a named constant
+  (`PARAMETER`) or a subobject of a named constant, even when the standard's
+  rules in F2023 8.5.7 would otherwise classify the subobject as non-contiguous
+  (for example, a strided section like `a(::2)`).  This happens because Flang
+  constant-folds an array section of a named constant into a fresh constant array
+  containing only the selected elements, and that fresh array is trivially
+  contiguous.  When `-pedantic` is enabled, Flang emits the
+  `-Wconstant-is-contiguous` warning at each such call.  For example:
+```fortran
+integer, parameter :: a(5) = [1,2,3,4,5]
+print *, is_contiguous(a(::2))                   ! prints T in Flang
+```
+  Other compilers may report `a(::2)` as non-contiguous.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.
@@ -361,6 +391,20 @@ end
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 * Objects in blank COMMON may be initialized.
 * Initialization of COMMON blocks outside of BLOCK DATA subprograms.
+* A named COMMON block may be redundantly initialized (via `DATA`
+  statements or declaration initializers) in more than one program
+  unit, with a portability warning, provided that every appearance
+  that initializes the block does so identically: the same members
+  are initialized to the same values everywhere the block appears. A
+  first initialized appearance that leaves some members uninitialized
+  while a later appearance initializes them (or vice versa) is a
+  conflict, not a duplicate, and remains a hard error, as does any
+  appearance that initializes a shared member to a different value.
+  A member that is only indirectly initialized via an object
+  equivalenced with it, rather than directly by a `DATA` statement or
+  declaration initializer, is conservatively treated as a conflict at
+  every appearance, since the equivalenced objects are not compared
+  for agreement.
 * Multiple specifications of the SAVE attribute on the same object
   are allowed, with a warning.
 * Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.
@@ -442,6 +486,29 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
+* In `NAMELIST` input, an assignment to a scalar item may omit its
+  value (e.g. `l=`, immediately followed by the next name-value pair,
+  the group terminator, or end-of-record).  F2023 13.11.2 p1 requires
+  one or more values to follow the `=`, but classic nvfortran and
+  gfortran accept the empty form and leave the item's current value
+  unchanged.  Flang follows the same convention.  For example, given
+  a namelist group `nml` with a `LOGICAL` scalar `l`, an `INTEGER`
+  scalar `i_count`, and a `REAL` scalar `r_value`, the input record
+  ```
+  &nml l= i_count=7 r_value=2.72/
+  ```
+  leaves `l` unchanged and assigns `7` and `2.72` to `i_count` and
+  `r_value` respectively.  Without this extension, the runtime would
+  abort with `Bad character 'i' in LOGICAL input field`.
+* In `NAMELIST` input, a `!` character is accepted as terminating the
+  current value and introducing a comment even when it is not preceded
+  by a value separator.  For example, `name=0.01!comment` is accepted
+  as if it had been written `name=0.01 !comment`.  F2023 13.11.3.6 p.1
+  requires a value separator (blank, comma, slash, or end of record)
+  before a `!` comment introducer in namelist input, but gfortran,
+  ifx, and classic nvfortran all accept this form as a widely-used
+  extension.  Inside a character literal constant the `!` is taken
+  literally as required by the standard.
 * A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
   fixed-width numeric input field terminates the field rather than
   signaling an invalid character error.
@@ -483,6 +550,9 @@ end
   are to the same value.  Distinct initializations remain errors.
 * A pointer component that has no default initialization or explicit value
   in a structure constructor is defaulted to `NULL()`.
+* Multiple specifications of a prefix-spec on the same procedure are allowed,
+  with a warning.  C1552 (F2023) specifies that at most one of each shall be
+  present.
 * An assumed-rank entity is an acceptable `NAMELIST` group item.
 * A named constant (`PARAMETER`) may appear as a `namelist-group-object` in a
   `NAMELIST` statement.  The Fortran standard requires namelist group objects
@@ -496,6 +566,9 @@ program p
   namelist /g/ k
 end program
 ```
+* When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
+  rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
+  stern warning.
 
 ### Extensions supported when enabled by options
 
@@ -526,6 +599,16 @@ end program
 * Default exponent of zero, e.g. `3.14159E`, on a READ from a
   fixed-width input field.  Includes the case with only an
   exponent letter for compatibility with other compilers.
+* Allow a data object or function pointer as the `C_LOC()`
+  argument (not just pointers/targets). The compiler will not
+  reason about aliases created through non-target non-pointer
+  arguments and code generated using such aliases may exhibit
+  unexpected behavior. This is for compatibility with
+  legacy code; legacy code should be updated to be correct.
+  This could be removed at any time.
+  Use `-Wrelaxed-c-loc-checks` (alongside `-frelaxed-c-loc-checks`) to
+  enable a diagnostic warning for affected call sites.
+  [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported
 
@@ -997,6 +1080,26 @@ print *, [(j,j=1,10)]
 * Some expression errors, like out-of-range known subscript values,
   are noted only as warnings when they appear in code known to be
   dead anyway at compilation time.
+
+* A reference with a constant subscript that is out of range is accepted
+  with a warning rather than rejected with an error.  A subscript value is
+  required to be within its bounds only when the reference is executed
+  (F'2023 9.5.3.1 paragraph 2), so a reference that never runs does not
+  render a program nonconforming; that case cannot be recognized in general
+  -- consider a procedure whose only call site is in dead code, or one that
+  is never called at all.  Note that the warning, not an error, is also what
+  appears when the reference *is* executed.  The endpoints of array sections
+  get the same treatment.  Cosubscripts do not: their requirement is F'2023
+  9.6 paragraph 2 and a cosubscript list determines an image index, so an
+  out-of-cobounds constant cosubscript remains an error.  Neither do an
+  out-of-range subscript in a reference to a named constant array, an
+  out-of-range `DATA` statement designator, or an out-of-range substring;
+  those remain errors as well.
+  Use `-fno-out-of-bounds-subscripts` to make these references errors again,
+  or `-Wno-out-of-bounds-subscripts` to silence the warning entirely.
+  Note that a module file compiled with the warning may produce errors in a
+  dependent compilation that uses `-fno-out-of-bounds-subscripts`, since the
+  interface is re-analyzed there; those errors point into the module file.
 
 ## Behavior in cases where the standard is clear but disputed
 

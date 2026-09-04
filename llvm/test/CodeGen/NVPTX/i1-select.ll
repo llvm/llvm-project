@@ -70,9 +70,9 @@ define i32 @test_select_i1_trunc_2(i64 %a, i16 %b, i32 %c, i32 %true, i32 %false
 define i32 @test_select_i1_basic(i32 %v1, i32 %v2, i32 %v3, i32 %true, i32 %false) {
 ; CHECK-LABEL: test_select_i1_basic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<4>;
+; CHECK-NEXT:    .reg .pred %p<6>;
 ; CHECK-NEXT:    .reg .b32 %r<6>;
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_i1_basic_param_0];
@@ -81,13 +81,13 @@ define i32 @test_select_i1_basic(i32 %v1, i32 %v2, i32 %v3, i32 %true, i32 %fals
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r4, [test_select_i1_basic_param_2];
 ; CHECK-NEXT:    setp.eq.b32 %p2, %r4, 0;
-; CHECK-NEXT:    setp.eq.b32 %p3, %r3, 0;
+; CHECK-NEXT:    and.pred %p3, %p1, %p2;
+; CHECK-NEXT:    setp.eq.b32 %p4, %r3, 0;
+; CHECK-NEXT:    or.pred %p5, %p4, %p3;
 ; CHECK-NEXT:    mov.b64 %rd1, test_select_i1_basic_param_4;
 ; CHECK-NEXT:    mov.b64 %rd2, test_select_i1_basic_param_3;
-; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p2;
-; CHECK-NEXT:    selp.b64 %rd4, %rd3, %rd1, %p1;
-; CHECK-NEXT:    selp.b64 %rd5, %rd2, %rd4, %p3;
-; CHECK-NEXT:    ld.param.b32 %r5, [%rd5];
+; CHECK-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p5;
+; CHECK-NEXT:    ld.param.b32 %r5, [%rd3];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %b1 = icmp eq i32 %v1, 0

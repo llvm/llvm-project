@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_DWARFLINKER_PARALLEL_DWARFLINKERGLOBALDATA_H
 #define LLVM_LIB_DWARFLINKER_PARALLEL_DWARFLINKERGLOBALDATA_H
 
+#include "ModulePool.h"
 #include "TypePool.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DWARFLinker/StringPool.h"
@@ -47,9 +48,6 @@ struct DWARFLinkerOptions {
   /// Whether we want a static variable to force us to keep its enclosing
   /// function.
   bool KeepFunctionForStatic = false;
-
-  /// Allow to generate valid, but non deterministic output.
-  bool AllowNonDeterministicOutput = false;
 
   /// Number of threads.
   unsigned Threads = 1;
@@ -93,6 +91,8 @@ public:
 
   /// Returns global string pool.
   StringPool &getStringPool() { return Strings; }
+
+  ModulePool &getModulePool() { return Modules; }
 
   /// Returns linking options.
   const DWARFLinkerOptions &getOptions() const { return Options; }
@@ -147,6 +147,7 @@ public:
 protected:
   llvm::parallel::PerThreadBumpPtrAllocator Allocator;
   StringPool Strings;
+  ModulePool Modules;
   DWARFLinkerOptions Options;
   MessageHandlerTy WarningHandler;
   MessageHandlerTy ErrorHandler;

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Support/LangOptions.h"
-#include <string.h>
 
 namespace Fortran::common {
 

@@ -49,6 +49,7 @@ defm string_dump : Eq<"string-dump", "Display the specified section(s) as a list
 def string_table : FF<"string-table", "Display the string table (only for XCOFF/COFF now)">;
 def symbols : FF<"symbols", "Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF">;
 def unwind : FF<"unwind", "Display unwind information">;
+def unwind_show_wod_pool : FF<"unwind-show-wod-pool", "Also display the raw Windows x64 unwind V3 WOD pool with byte offsets (requires --unwind)">;
 
 // ELF specific options.
 def grp_elf : OptionGroup<"kind">, HelpText<"OPTIONS (ELF specific)">;
@@ -75,6 +76,7 @@ def macho_dysymtab : FF<"macho-dysymtab", "Display Dysymtab command">, Group<grp
 def macho_indirect_symbols : FF<"macho-indirect-symbols", "Display indirect symbols">, Group<grp_mach_o>;
 def macho_linker_options : FF<"macho-linker-options", "Display linker options">, Group<grp_mach_o>;
 def macho_segment : FF<"macho-segment", "Display Segment command">, Group<grp_mach_o>;
+def macho_target_triple : FF<"macho-target-triple", "Display target triple command">, Group<grp_mach_o>;
 def macho_version_min : FF<"macho-version-min", "Display version min command">, Group<grp_mach_o>;
 
 // PE/COFF specific options.

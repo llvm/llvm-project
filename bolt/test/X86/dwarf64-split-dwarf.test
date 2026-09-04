@@ -1,0 +1,56 @@
+# REQUIRES: system-linux
+
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: %clang %cflags -gdwarf-5 -gdwarf64 -gsplit-dwarf=split -c \
+# RUN:   %t/main.c -o %t/main.o
+# RUN: %clang %cflags -Wl,-q -Wl,-e,main %t/main.o -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --debug-info --debug-str-offsets --dwo %t.bolt | \
+# RUN:   FileCheck --check-prefix=BOLT %s
+# RUN: llvm-dwarfdump --debug-str-offsets %t/main.dwo.dwo | \
+# RUN:   FileCheck --check-prefix=DWO %s
+# RUN: llvm-dwarfdump --verify %t.bolt %t/main.dwo.dwo
+
+## Check DWARF64 split-DWARF rewriting.
+
+# BOLT-LABEL: .debug_info contents:
+# BOLT: Compile Unit: length = 0x{{[0-9a-f]+}}, format = DWARF64, version = 0x0005, unit_type = DW_UT_skeleton
+# BOLT: DW_TAG_skeleton_unit
+# BOLT: DW_AT_dwo_name{{.*}}"{{.*}}main.dwo.dwo"
+# BOLT: DW_AT_ranges
+# BOLT: DW_AT_rnglists_base
+
+# BOLT: DW_TAG_compile_unit
+# BOLT: DW_TAG_subprogram
+# BOLT: DW_AT_low_pc{{.*}}0x{{[0-9a-f]+}}
+# BOLT: DW_AT_name{{.*}}"helper"
+# BOLT: DW_TAG_subprogram
+# BOLT: DW_AT_name{{.*}}"main"
+# BOLT: DW_AT_low_pc{{.*}}0x{{[0-9a-f]+}}
+# BOLT: DW_TAG_variable
+# BOLT: DW_AT_name{{.*}}"global"
+# BOLT: DW_TAG_base_type
+# BOLT: DW_AT_name{{.*}}"int"
+
+# BOLT-LABEL: .debug_str_offsets contents:
+# BOLT: Contribution size = {{[0-9]+}}, Format = DWARF64, Version = 5
+# BOLT: "{{.*}}main.dwo.dwo"
+
+# DWO-LABEL: .debug_str_offsets.dwo contents:
+# DWO: Contribution size = {{[0-9]+}}, Format = DWARF64, Version = 5
+# DWO: "global"
+# DWO: "int"
+# DWO: "helper"
+# DWO: "main"
+
+#--- main.c
+int global;
+
+int helper(int x) {
+  return global + x;
+}
+
+int main(void) {
+  return helper(1);
+}

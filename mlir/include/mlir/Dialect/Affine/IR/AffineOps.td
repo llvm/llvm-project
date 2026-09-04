@@ -15,7 +15,9 @@
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
+include "mlir/Interfaces/AlignmentAttrInterface.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferIntDivisibilityOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -23,6 +25,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Affine_Dialect : Dialect {
   let name = "affine";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
@@ -32,12 +35,20 @@ def Affine_Dialect : Dialect {
 class Affine_Op<string mnemonic, list<Trait> traits = []> :
     Op<Affine_Dialect, mnemonic, traits>;
 
+// Type constraint for index-like types: index or vector of index.
+def Affine_IndexOrVectorOfIndex :
+    Type<Or<[Index.predicate,
+             VectorOfAnyRankOf<[Index]>.predicate]>,
+         "index or vector of index">;
+
 // Require regions to have affine.yield.
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
 def AffineApplyOp : Affine_Op<"apply",
-    [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+    [Pure,
+     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "affine apply operation";
   let description = [{
     The `affine.apply` operation applies an [affine mapping](#affine-maps)
@@ -126,7 +137,7 @@ def AffineForOp : Affine_Op<"for",
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
       "getLoopUpperBounds", "getYieldedValuesMutable",
-      "replaceWithAdditionalYields"]>,
+      "replaceWithAdditionalYields", "getStaticTripCount"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "for operation";
@@ -334,6 +345,7 @@ def AffineForOp : Affine_Op<"for",
 
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
   let hasRegionVerifier = 1;
 }
 
@@ -470,11 +482,13 @@ class AffineLoadOpBase<string mnemonic, list<Trait> traits = []> :
     Affine_Op<mnemonic, !listconcat(traits,
         [DeclareOpInterfaceMethods<AffineReadOpInterface>,
         DeclareOpInterfaceMethods<AffineMapAccessInterface>,
+        DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
         MemRefsNormalizable])> {
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$memref,
       Variadic<Index>:$indices,
-      AffineMapAttr:$map);
+      AffineMapAttr:$map,
+      OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   code extraClassDeclarationBase = [{
     /// Returns the operand index of the memref.
@@ -518,18 +532,27 @@ def AffineLoadOp : AffineLoadOpBase<"load"> {
     ```mlir
     %1 = affine.load %0[%i0 + symbol(%n), %i1 + symbol(%m)] : memref<100x100xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of
+    the load operation. It must be a positive power of 2. The operation must
+    access memory at an address aligned to this boundary. Violations may lead
+    to architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
 
   let results = (outs AnyType:$result);
 
   let builders = [
     /// Builds an affine load op with the specified map and operands.
-    OpBuilder<(ins "AffineMap":$map, "ValueRange":$operands)>,
+    OpBuilder<(ins "AffineMap":$map, "ValueRange":$operands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine load op with an identity map and operands.
-    OpBuilder<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices)>,
+    OpBuilder<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine load op with the specified map and its operands.
     OpBuilder<(ins "Value":$memref, "AffineMap":$map,
-      "ValueRange":$mapOperands)>
+      "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -564,7 +587,8 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
-def AffineMinOp : AffineMinMaxOpBase<"min", [Pure]> {
+def AffineMinOp : AffineMinMaxOpBase<"min",
+    [Pure, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "min operation";
   let description = [{
     Syntax:
@@ -588,7 +612,8 @@ def AffineMinOp : AffineMinMaxOpBase<"min", [Pure]> {
   }];
 }
 
-def AffineMaxOp : AffineMinMaxOpBase<"max", [Pure]> {
+def AffineMaxOp : AffineMinMaxOpBase<"max",
+    [Pure, DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "max operation";
   let description = [{
     The `affine.max` operation computes the maximum value result from a multi-result
@@ -835,6 +860,7 @@ class AffineStoreOpBase<string mnemonic, list<Trait> traits = []> :
     Affine_Op<mnemonic, !listconcat(traits,
     [DeclareOpInterfaceMethods<AffineWriteOpInterface>,
     DeclareOpInterfaceMethods<AffineMapAccessInterface>,
+    DeclareOpInterfaceMethods<AlignmentAttrOpInterface>,
     MemRefsNormalizable])> {
   code extraClassDeclarationBase = [{
     /// Returns the operand index of the value to be stored.
@@ -881,19 +907,28 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
     ```mlir
     affine.store %v0, %0[%i0 + symbol(%n), %i1 + symbol(%m)] : memref<100x100xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of
+    the store operation. It must be a positive power of 2. The operation must
+    access memory at an address aligned to this boundary. Violations may lead
+    to architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let arguments = (ins AnyType:$value,
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$memref,
       Variadic<Index>:$indices,
-      AffineMapAttr:$map);
+      AffineMapAttr:$map,
+      OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref,
-      "ValueRange":$indices)>,
+      "ValueRange":$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
-      "ValueRange":$mapOperands)>
+      "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -972,13 +1007,16 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
   let builders = [
     /// Builds an affine vector load op with the specified map and operands.
     OpBuilder<(ins "VectorType":$resultType, "AffineMap":$map,
-      "ValueRange":$operands)>,
+      "ValueRange":$operands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine vector load op with an identity map and operands.
     OpBuilder<(ins "VectorType":$resultType, "Value":$memref,
-      CArg<"ValueRange", "{}">:$indices)>,
+      CArg<"ValueRange", "{}">:$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine vector load op with the specified map and its operands.
     OpBuilder<(ins "VectorType":$resultType, "Value":$memref,
-      "AffineMap":$map, "ValueRange":$mapOperands)>
+      "AffineMap":$map, "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
@@ -1038,14 +1076,17 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$memref,
       Variadic<Index>:$indices,
-      AffineMapAttr:$map);
+      AffineMapAttr:$map,
+      OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref,
-      "ValueRange":$indices)>,
+      "ValueRange":$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
-      "ValueRange":$mapOperands)>
+      "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
@@ -1063,7 +1104,13 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 // AffineDelinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
-def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
+def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
+    [Pure, Elementwise,
+     DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>,
+     // Infer linear_index type from the first result type during parsing.
+     TypesMatchWith<"linear_index type must match result types",
+                    "multi_index", "linear_index", "$_self[0]">
+    ]> {
   let summary = "delinearize an index";
   let description = [{
     The `affine.delinearize_index` operation takes a single index value and
@@ -1118,10 +1165,10 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     - that is, the product of all basis elements is positive as an `index` as well.
   }];
 
-  let arguments = (ins Index:$linear_index,
+  let arguments = (ins Affine_IndexOrVectorOfIndex:$linear_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis);
-  let results = (outs Variadic<Index>:$multi_index);
+  let results = (outs Variadic<Affine_IndexOrVectorOfIndex>:$multi_index);
 
   let assemblyFormat = [{
     $linear_index `into`
@@ -1167,7 +1214,13 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
 // AffineLinearizeIndexOp
 //===----------------------------------------------------------------------===//
 def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
-    [Pure, AttrSizedOperandSegments]> {
+    [Pure, AttrSizedOperandSegments, Elementwise,
+     // Infer multi_index types from result type during parsing.
+     TypesMatchWith<"multi_index types must match result type",
+                    "linear_index", "multi_index", "$_self",
+                    "[](::mlir::Type a, ::mlir::TypeRange b) { "
+                    "return llvm::all_of(b, [a](::mlir::Type t) { "
+                    "return t == a; }); }">]> {
   let summary = "linearize an index";
   let description = [{
     The `affine.linearize_index` operation takes a sequence of index values and a
@@ -1221,11 +1274,11 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     ```
   }];
 
-  let arguments = (ins Variadic<Index>:$multi_index,
+  let arguments = (ins Variadic<Affine_IndexOrVectorOfIndex>:$multi_index,
     Variadic<Index>:$dynamic_basis,
     DenseI64ArrayAttr:$static_basis,
     UnitProp:$disjoint);
-  let results = (outs Index:$linear_index);
+  let results = (outs Affine_IndexOrVectorOfIndex:$linear_index);
 
   let assemblyFormat = [{
     (`disjoint` $disjoint^)? ` `

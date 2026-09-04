@@ -219,8 +219,7 @@ define i64 @test_or_fast(float %a, float %b) {
 ; CHECK-SD-NEXT:    movi d2, #0000000000000000
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
 ; CHECK-SD-NEXT:    fccmp s0, s2, #0, eq
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    tbnz w8, #0, .LBB4_2
+; CHECK-SD-NEXT:    b.eq .LBB4_2
 ; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    ret
@@ -320,8 +319,7 @@ define i64 @test_and_fast(float %a, float %b) {
 ; CHECK-SD-NEXT:    movi d2, #0000000000000000
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
 ; CHECK-SD-NEXT:    fccmp s0, s2, #0, eq
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    tbz w8, #0, .LBB6_2
+; CHECK-SD-NEXT:    b.ne .LBB6_2
 ; CHECK-SD-NEXT:  // %bb.1: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16

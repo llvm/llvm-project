@@ -21,7 +21,9 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -29,6 +31,16 @@
 namespace llvm {
 
 class GCNTargetMachine;
+
+/// Module flag names controlling out-of-bounds buffer access semantics.
+/// Each flag is an i32 with Module::Max merge behaviour and tri-state values:
+///   0 = any (absent/default - backend currently treats as strict)
+///   1 = relaxed
+///   2 = strict
+namespace AMDGPUOOBMode {
+inline constexpr StringLiteral BufferFlag("amdgpu.buffer.oob.mode");
+inline constexpr StringLiteral TBufferFlag("amdgpu.tbuffer.oob.mode");
+} // namespace AMDGPUOOBMode
 
 class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
                            public AMDGPUSubtarget {
@@ -38,12 +50,12 @@ public:
   // Following 2 enums are documented at:
   //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
   enum class TrapHandlerAbi {
-    NONE   = 0x00,
+    NONE = 0x00,
     AMDHSA = 0x01,
   };
 
   enum class TrapID {
-    LLVMAMDHSATrap      = 0x02,
+    LLVMAMDHSATrap = 0x02,
     LLVMAMDHSADebugTrap = 0x03,
   };
 
@@ -60,16 +72,26 @@ private:
 
 protected:
   // Basic subtarget description.
-  AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
+  AMDGPU::TargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;
   int LDSBankCount = 0;
   unsigned MaxPrivateElementSize = 0;
 
+  // Instruction cache line size in bytes; set from TableGen subtarget features.
+  unsigned InstCacheLineSize = 0;
+
+  // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
+  unsigned DataCacheLineSize = 0;
+
+  /// The width, in bits, of the num_records field of a buffer resource (V#),
+  /// set from tablegen subtarget features, 0 is unknown.
+  unsigned BufferResourceNumRecordsWidth = 0;
+
   // Dynamically set bits that enable features.
-  bool DynamicVGPR = false;
-  bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
+  const bool BufferOOBRelaxed;
+  const bool TBufferOOBRelaxed;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -85,9 +107,21 @@ private:
   SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
 
+  /// Get the register that represents the actual dependency between the
+  /// definition and the use. The definition might only affect a subregister
+  /// that is not actually used. Works for both virtual and physical registers.
+  /// Note: Currently supports VOP3P instructions (without WMMA an SWMMAC).
+  /// Returns the definition register if there is a real dependency and no
+  /// better match is found.
+  Register getRealSchedDependency(const MachineInstr &DefI, int DefOpIdx,
+                                  const MachineInstr &UseI, int UseOpIdx) const;
+
 public:
-  GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-               const GCNTargetMachine &TM);
+  GCNSubtarget(
+      const Triple &TT, StringRef GPU, StringRef FS, const GCNTargetMachine &TM,
+      bool BufferOOBRelaxed = false, bool TBufferOOBRelaxed = false,
+      AMDGPU::TargetIDSetting XnackSetting = AMDGPU::TargetIDSetting::Any,
+      AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
@@ -131,9 +165,7 @@ public:
     return RegBankInfo.get();
   }
 
-  const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
-    return TargetID;
-  }
+  const AMDGPU::TargetID &getTargetID() const { return TargetID; }
 
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
@@ -170,6 +202,13 @@ public:
 
   int getLDSBankCount() const { return LDSBankCount; }
 
+  /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
+  unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
+
+  /// Data (VMEM) cache line size in bytes (128 for gfx12), has no use before
+  /// GFX12.
+  unsigned getDataCacheLineSize() const { return DataCacheLineSize; }
+
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
                                                        : 16;
@@ -181,12 +220,6 @@ public:
   /// a 32-bit register implicitly zeroes the high 16-bits, rather than preserve
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
-
-  bool supportsWGP() const {
-    if (HasGFX1250Insts)
-      return false;
-    return getGeneration() >= GFX10;
-  }
 
   bool hasHWFP64() const { return HasFP64; }
 
@@ -219,6 +252,8 @@ public:
   bool hasScalarMulHiInsts() const { return HasGFX9Insts; }
 
   bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
+
+  bool hasAsyncMark() const { return hasVMemToLDSLoad() || HasAsynccnt; }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
@@ -314,9 +349,20 @@ public:
     return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
 
-  bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
+  bool isXNACKEnabled() const {
+    return enableXNACK() || TargetID.isXnackOnOrAny();
+  }
 
-  bool isTgSplitEnabled() const { return EnableTgSplit; }
+  bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
+  bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
+
+  /// Return the width, in bits, of the num_records field of a buffer resource
+  /// (V#) on this subtarget, or std::nullopt if not yet known.
+  std::optional<unsigned> getBufferResourceNumRecordsWidth() const {
+    if (BufferResourceNumRecordsWidth == 0)
+      return std::nullopt;
+    return BufferResourceNumRecordsWidth;
+  }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 
@@ -342,21 +388,12 @@ public:
 
   bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
-  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
-
-  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
-
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
   }
 
   bool hasVINTERPEncoding() const {
     return HasGFX11Insts && !hasGFX1250Insts();
-  }
-
-  // DS_ADD_F64/DS_ADD_RTN_F64
-  bool hasLdsAtomicAddF64() const {
-    return hasGFX90AInsts() || hasGFX1250Insts();
   }
 
   bool hasMultiDwordFlatScratchAddressing() const {
@@ -396,10 +433,6 @@ public:
     return isMesa3DOS() && AMDGPU::isShader(F.getCallingConv());
   }
 
-  bool isGFX1170() const {
-    return getGeneration() == GFX11 && hasWMMA128bInsts();
-  }
-
   bool hasMad64_32() const { return getGeneration() >= SEA_ISLANDS; }
 
   bool hasAtomicFaddInsts() const {
@@ -415,6 +448,23 @@ public:
   }
 
   bool hasPrefetch() const { return HasGFX12Insts; }
+
+  bool hasInstPrefSize() const { return isGFX11Plus(); }
+
+  void getInstPrefSizeArgs(uint32_t &Mask, uint32_t &Shift, uint32_t &Width,
+                           uint32_t &CacheLineSize) const {
+    assert(isGFX11Plus());
+    CacheLineSize = getInstCacheLineSize();
+    if (getGeneration() == GFX11) {
+      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+    } else {
+      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+    }
+  }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -438,9 +488,6 @@ public:
   void setScalarizeGlobalBehavior(bool b) { ScalarizeGlobal = b; }
   bool getScalarizeGlobalBehavior() const { return ScalarizeGlobal; }
 
-  // static wrappers
-  static bool hasHalfRate64Ops(const TargetSubtargetInfo &STI);
-
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
@@ -449,6 +496,8 @@ public:
 
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                  const SchedRegion &Region) const override;
+
+  void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -467,11 +516,12 @@ public:
     return HasGFX90AInsts || HasGFX1250Insts;
   }
 
-  /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
-  bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
-
   /// \returns true if the subtarget has the v_permlane64_b32 instruction.
   bool hasPermLane64() const { return getGeneration() >= GFX11; }
+
+  /// \returns true if the subtarget supports the ds_swizzle rotate and FFT
+  /// swizzle modes (GFX9+).
+  bool hasDsSwizzleRotateMode() const { return getGeneration() >= GFX9; }
 
   bool hasDPPRowShare() const {
     return HasDPP && (HasGFX90AInsts || getGeneration() >= GFX10);
@@ -493,8 +543,6 @@ public:
   }
 
   bool hasMadF16() const;
-
-  bool hasMovB64() const { return HasGFX940Insts || HasGFX1250Insts; }
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return HasGFX1250Insts; }
@@ -539,6 +587,12 @@ public:
   // Shift amount of a 64 bit shift cannot be a highest allocated register
   // if also at the end of the allocation block.
   bool hasShift64HighRegBug() const { return HasGFX90AInsts; }
+
+  // v_dot2c_f32_f16 unconditionally flushes f16 subnormal inputs to zero
+  // regardless of the MODE register, unlike v_fma_mix_f32 which respects it.
+  bool dot2UnconditionalFlush() const {
+    return HasGFX90AInsts && !HasGFX940Insts;
+  }
 
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
@@ -598,9 +652,9 @@ public:
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return HasGFX11Insts; }
 
-  /// Return true if the target's EXP instruction has the COMPR flag, which
-  /// affects the meaning of the EN (enable) bits.
-  bool hasCompressedExport() const { return !HasGFX11Insts; }
+  /// Return true if the target has the V_CVT_PK_I16_F32/V_CVT_PK_U16_F32
+  /// instructions.
+  bool hasVCvtPkIU16F32() const { return HasGFX11Insts; }
 
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
@@ -619,12 +673,6 @@ public:
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
   bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
-
-  /// \returns true if inline constants are not supported for F16 pseudo
-  /// scalar transcendentals.
-  bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
-  }
 
   /// \returns true if the target has packed f32 instructions that only read 32
   /// bits from a scalar operand (SGPR or literal) and replicates the bits to
@@ -694,16 +742,6 @@ public:
 
   bool hasVOPD3() const { return HasGFX1250Insts; }
 
-  // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
-  // instructions.
-  bool hasMadU64U32NoCarry() const { return HasGFX1250Insts; }
-
-  // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return HasGFX1250Insts; }
-
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return HasGFX1250Insts; }
 
@@ -727,36 +765,44 @@ public:
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
+  bool hasAnyPackedFP32Ops() const {
+    return hasPackedFP32Ops() || hasPackedFP32SingleSGPROps();
+  };
+
+  bool hasAnyPackedFP64Ops() const { return hasPackedFP64SingleSGPROps(); };
+
+  bool hasAnyPackedU64Ops() const { return hasPackedU64SingleSGPROps(); };
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getSGPRAllocGranule(this);
+    return AMDGPU::getSGPRAllocGranule(getTargetID().getGPUKind());
   }
 
   /// \returns SGPR encoding granularity supported by the subtarget.
   unsigned getSGPREncodingGranule() const {
-    return AMDGPU::IsaInfo::getSGPREncodingGranule(this);
+    return AMDGPU::IsaInfo::getSGPREncodingGranule(*this);
   }
 
   /// \returns Total number of SGPRs supported by the subtarget.
   unsigned getTotalNumSGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumSGPRs(this);
+    return AMDGPU::getTotalNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Addressable number of SGPRs supported by the subtarget.
   unsigned getAddressableNumSGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumSGPRs(this);
+    return AMDGPU::getAddressableNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Minimum number of SGPRs that meets the given number of waves per
   /// execution unit requirement supported by the subtarget.
   unsigned getMinNumSGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMinNumSGPRs(this, WavesPerEU);
+    return AMDGPU::IsaInfo::getMinNumSGPRs(*this, WavesPerEU);
   }
 
   /// \returns Maximum number of SGPRs that meets the given number of waves per
   /// execution unit requirement supported by the subtarget.
   unsigned getMaxNumSGPRs(unsigned WavesPerEU, bool Addressable) const {
-    return AMDGPU::IsaInfo::getMaxNumSGPRs(this, WavesPerEU, Addressable);
+    return AMDGPU::IsaInfo::getMaxNumSGPRs(*this, WavesPerEU, Addressable);
   }
 
   /// \returns Reserved number of SGPRs. This is common
@@ -802,35 +848,35 @@ public:
 
   /// \returns VGPR allocation granularity supported by the subtarget.
   unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(this, DynamicVGPRBlockSize);
+    return AMDGPU::IsaInfo::getVGPRAllocGranule(*this, DynamicVGPRBlockSize);
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.
   unsigned getVGPREncodingGranule() const {
-    return AMDGPU::IsaInfo::getVGPREncodingGranule(this);
+    return AMDGPU::IsaInfo::getVGPREncodingGranule(*this);
   }
 
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumVGPRs(this);
+    return AMDGPU::IsaInfo::getTotalNumVGPRs(*this);
   }
 
   /// \returns Addressable number of architectural VGPRs supported by the
   /// subtarget.
   unsigned getAddressableNumArchVGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(this);
+    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(*this);
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, DynamicVGPRBlockSize);
+    return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this, DynamicVGPRBlockSize);
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
   unsigned getMinNumVGPRs(unsigned WavesPerEU,
                           unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU,
+    return AMDGPU::IsaInfo::getMinNumVGPRs(*this, WavesPerEU,
                                            DynamicVGPRBlockSize);
   }
 
@@ -838,7 +884,7 @@ public:
   /// at least the specified number of waves \p WavesPerEU.
   unsigned getMaxNumVGPRs(unsigned WavesPerEU,
                           unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU,
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(*this, WavesPerEU,
                                            DynamicVGPRBlockSize);
   }
 
@@ -874,10 +920,6 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
-  bool supportsWave32() const { return getGeneration() >= GFX10; }
-
-  bool supportsWave64() const { return !hasGFX1250Insts(); }
-
   bool isWave32() const { return getWavefrontSize() == 32; }
 
   bool isWave64() const { return getWavefrontSize() == 64; }
@@ -897,30 +939,30 @@ public:
   /// \returns Maximum number of work groups per compute unit supported by the
   /// subtarget and limited by given \p FlatWorkGroupSize.
   unsigned getMaxWorkGroupsPerCU(unsigned FlatWorkGroupSize) const override {
-    return AMDGPU::IsaInfo::getMaxWorkGroupsPerCU(this, FlatWorkGroupSize);
+    return AMDGPU::IsaInfo::getMaxWorkGroupsPerCU(*this, FlatWorkGroupSize);
   }
 
   /// \returns Minimum flat work group size supported by the subtarget.
   unsigned getMinFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(this);
+    return AMDGPU::getMinFlatWorkGroupSize();
   }
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize(this);
+    return AMDGPU::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given
   /// \p FlatWorkGroupSize.
   unsigned
   getWavesPerEUForWorkGroup(unsigned FlatWorkGroupSize) const override {
-    return AMDGPU::IsaInfo::getWavesPerEUForWorkGroup(this, FlatWorkGroupSize);
+    return AMDGPU::IsaInfo::getWavesPerEUForWorkGroup(*this, FlatWorkGroupSize);
   }
 
   /// \returns Minimum number of waves per execution unit supported by the
   /// subtarget.
   unsigned getMinWavesPerEU() const override {
-    return AMDGPU::IsaInfo::getMinWavesPerEU(this);
+    return AMDGPU::getMinWavesPerEU();
   }
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
@@ -942,11 +984,6 @@ public:
   // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
   bool requiresWaitIdleBeforeGetReg() const { return HasGFX1250Insts; }
-
-  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
-  unsigned getDynamicVGPRBlockSize() const {
-    return DynamicVGPRBlockSize32 ? 32 : 16;
-  }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
@@ -1009,8 +1046,24 @@ public:
     return hasTrue16BitInsts() && EnableRealTrue16Insts;
   }
 
-  bool requiresWaitOnWorkgroupReleaseFence() const {
-    return getGeneration() >= GFX10 || isTgSplitEnabled();
+  bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
+    return getGeneration() >= GFX10 || TgSplit;
+  }
+
+  bool useDFAforSMS() const override { return false; }
+
+  bool enableWindowScheduler() const override { return false; }
+
+  // \returns true if ISel should select the native i64 min/max instructions
+  // (V_MIN/MAX_{I|U}64).
+  bool useMinMaxI64Insts() const {
+    return hasMinMaxI64Insts() && !hasSlowMaxMinMulI64Insts();
+  }
+
+  // \returns true if ISel should select the native i64 mul instruction
+  // V_MUL_U64.
+  bool useVMulU64Inst() const {
+    return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
   }
 };
 

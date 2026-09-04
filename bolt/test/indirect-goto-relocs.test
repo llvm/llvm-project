@@ -1,12 +1,14 @@
-// This test checks that BOLT creates entry points from sources
-// that use indirect goto.
+// This test checks that BOLT recognizes unknown control flow from sources that
+// use indirect goto.
 
 REQUIRES: system-linux
 
 RUN: %clang %cflags -pie %S/Inputs/indirect_goto.c -o %t.exe -Wl,-q
-RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck --check-prefix=CHECK-PIE %s
+RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --print-only=main \
+RUN:   | FileCheck --check-prefix=CHECK-PIE %s
 
-// Check that BOLT registers extra entry points for dynamic relocations with PIE.
+// Check that BOLT discovers basic blocks for dynamic relocations with PIE.
 CHECK-PIE: Binary Function "main" after building cfg {
-CHECK-PIE: IsMultiEntry: 1
-CHECK-PIE: Secondary Entry Points : {{.*}}
+CHECK-PIE: IsMultiEntry: 0
+CHECK-PIE: BB Count    : {{5|6}}
+// BB Count can vary across architectures.

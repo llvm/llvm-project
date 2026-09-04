@@ -29,6 +29,55 @@ def CCtoRISCVBCC : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(BccOpcode, SDLoc(N), MVT::i32);
 }]>;
 
+// cond -> bcc_opcode (QC_E_BccI)
+def CCtoQC_E_BccI : SDNodeXForm<cond, [{
+  ISD::CondCode CC = N->get();
+  RISCVCC::CondCode RvCC = getRISCVCCForIntCC(CC);
+  RvCC = RISCVCC::getInverseBranchCondition(RvCC);
+  unsigned SelectOpc;
+  switch (RvCC) {
+  case RISCVCC::COND_LTU:
+  case RISCVCC::COND_GEU:
+    SelectOpc = RISCV::Select_GPRNoX0_Using_CC_UImm16NonZero_QC;
+    break;
+  default:
+    // EQ/NE/LT/GE treated as signed condition codes
+    SelectOpc = RISCV::Select_GPRNoX0_Using_CC_SImm16NonZero_QC;
+    break;
+  }
+  unsigned BccOpcode = RISCVCC::getBrCond(RvCC, SelectOpc);
+  return CurDAG->getTargetConstant(BccOpcode, SDLoc(N), MVT::i32);
+}]>;
+
+// cond -> bcc_opcode (QC_BeqI)
+def CCtoQC_BccI : SDNodeXForm<cond, [{
+  ISD::CondCode CC = N->get();
+  RISCVCC::CondCode RvCC = getRISCVCCForIntCC(CC);
+  RvCC = RISCVCC::getInverseBranchCondition(RvCC);
+  unsigned SelectOpc;
+  switch (RvCC) {
+  case RISCVCC::COND_LTU:
+  case RISCVCC::COND_GEU:
+    SelectOpc = RISCV::Select_GPRNoX0_Using_CC_UImm5NonZero_QC;
+    break;
+  default:
+    // EQ/NE/LT/GE treated as signed condition codes
+    SelectOpc = RISCV::Select_GPRNoX0_Using_CC_SImm5NonZero_QC;
+    break;
+  }
+  unsigned BccOpcode = RISCVCC::getBrCond(RvCC, SelectOpc);
+  return CurDAG->getTargetConstant(BccOpcode, SDLoc(N), MVT::i32);
+}]>;
+
+// cond -> bcc_opcode (BEQI/BNEI)
+def CCtoZibiBCC : SDNodeXForm<cond, [{
+  ISD::CondCode CC = N->get();
+  RISCVCC::CondCode RvCC = getRISCVCCForIntCC(CC);
+  RvCC = RISCVCC::getInverseBranchCondition(RvCC);
+  unsigned BccOpcode = RISCVCC::getBrCond(RvCC, RISCV::Select_GPR_Using_CC_Imm5_Zibi);
+  return CurDAG->getTargetConstant(BccOpcode, SDLoc(N), MVT::i32);
+}]>;
+
 // For each of the short forward branch pseudos, corresponding code for
 // getting correct size of the pseduo is needed in getInstSizeInBytes.
 let Predicates = [HasShortForwardBranchIALU], isSelect = 1,
@@ -211,3 +260,14 @@ def PseudoCCLBU : SFBLoad;
 def PseudoCCLWU : SFBLoad;
 def PseudoCCLD : SFBLoad;
 }
+
+// Zibi: select with immediate comparison folded into SFB.
+// imm5_zibi and ZibiCond are defined in RISCVInstrInfoZibi.td (included before
+// this file).
+let Predicates = [HasStdExtZibi, HasShortForwardBranchIALU] in
+def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
+          (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;
+
+let Predicates = [HasStdExtZibi, HasConditionalMoveFusion, NoShortForwardBranch] in
+def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPRNoX0:$truev), GPRNoX0:$falsev),
+          (PseudoCCMOVGPRNoX0 GPRNoX0:$falsev, GPRNoX0:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;

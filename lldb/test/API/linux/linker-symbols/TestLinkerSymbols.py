@@ -13,8 +13,9 @@ class TestLinkerSymbols(TestBase):
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_linker_symbols(self):
         build_dict = dict(LD_EXTRAS="-Wl,-T," + self.getSourcePath("linker.script"))
         self.build(dictionary=build_dict)

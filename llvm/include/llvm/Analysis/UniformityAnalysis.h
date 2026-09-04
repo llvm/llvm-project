@@ -35,36 +35,34 @@ public:
   using Result = UniformityInfo;
 
   /// Run the analysis pass over a function and produce a dominator tree.
-  UniformityInfo run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI UniformityInfo run(Function &F, FunctionAnalysisManager &);
 
   // TODO: verify analysis
 };
 
 /// Printer pass for the \c UniformityInfo.
 class UniformityInfoPrinterPass
-    : public PassInfoMixin<UniformityInfoPrinterPass> {
+    : public RequiredPassInfoMixin<UniformityInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit UniformityInfoPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit UniformityInfoPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Legacy analysis pass which computes a \ref CycleInfo.
-class UniformityInfoWrapperPass : public FunctionPass {
-  Function *m_function = nullptr;
-  UniformityInfo m_uniformityInfo;
+class LLVM_ABI UniformityInfoWrapperPass : public FunctionPass {
+  Function *Fn = nullptr;
+  UniformityInfo UI;
 
 public:
   static char ID;
 
   UniformityInfoWrapperPass();
 
-  UniformityInfo &getUniformityInfo() { return m_uniformityInfo; }
-  const UniformityInfo &getUniformityInfo() const { return m_uniformityInfo; }
+  UniformityInfo &getUniformityInfo() { return UI; }
+  const UniformityInfo &getUniformityInfo() const { return UI; }
 
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

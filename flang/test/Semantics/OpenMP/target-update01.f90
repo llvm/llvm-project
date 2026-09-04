@@ -10,7 +10,7 @@ subroutine foo(x)
 
   !$omp target update to(x) nowait
 
-  !ERROR: At most one NOWAIT clause can appear on the TARGET UPDATE directive
+  !ERROR: At most one NOWAIT clause can appear on TARGET UPDATE directive
   !$omp target update to(x) nowait nowait
 
   !ERROR: A list item ('x') can only appear in a TO or FROM clause, but not in both.

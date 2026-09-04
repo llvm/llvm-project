@@ -9,8 +9,8 @@ define i32 @crash() {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[ADD]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[SHUFFLE]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[SHUFFLE]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd double [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = fmul double [[ADD1]], 0.000000e+00
 ; CHECK-NEXT:    store double [[MUL1]], ptr null, align 16

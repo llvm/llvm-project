@@ -31,7 +31,7 @@ void ArraySectionAnalyzer::SectionDesc::normalize() {
     stride = nullptr;
   if (stride)
     if (auto val = fir::getIntIfConstant(stride))
-      if (*val == 1)
+      if (val->isOne())
         stride = nullptr;
 }
 
@@ -56,7 +56,7 @@ ArraySectionAnalyzer::getOrderedBounds(const SectionDesc &desc) {
     return {desc.lb, desc.ub};
   // Reverse the bounds, if stride is negative.
   if (auto val = fir::getIntIfConstant(stride)) {
-    if (*val >= 0)
+    if (!val->isNegative())
       return {desc.lb, desc.ub};
     else
       return {desc.ub, desc.lb};
@@ -79,15 +79,29 @@ bool ArraySectionAnalyzer::areDisjointSections(const SectionDesc &desc1,
   return false;
 }
 
-bool ArraySectionAnalyzer::areIdenticalSections(const SectionDesc &desc1,
-                                                const SectionDesc &desc2) {
+bool ArraySectionAnalyzer::areIdenticalSections(
+    const SectionDesc &desc1, const SectionDesc &desc2,
+    ValueEquivalenceCallback areKnownEquivalent) {
   if (desc1 == desc2)
     return true;
-  return false;
+  if (!areKnownEquivalent)
+    return false;
+  // Compare each component, falling back on the user-provided callback when
+  // the SSA values differ. Null values must compare equal to null only.
+  auto valuesMatch = [&](mlir::Value v1, mlir::Value v2) {
+    if (v1 == v2)
+      return true;
+    if (!v1 || !v2)
+      return false;
+    return areKnownEquivalent(v1, v2);
+  };
+  return valuesMatch(desc1.lb, desc2.lb) && valuesMatch(desc1.ub, desc2.ub) &&
+         valuesMatch(desc1.stride, desc2.stride);
 }
 
 ArraySectionAnalyzer::SlicesOverlapKind
-ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2) {
+ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2,
+                              ValueEquivalenceCallback areKnownEquivalent) {
   if (ref1 == ref2)
     return SlicesOverlapKind::DefinitelyIdentical;
 
@@ -97,7 +111,9 @@ ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2) {
   if (!des1 || !des2)
     return SlicesOverlapKind::Unknown;
 
-  if (des1.getMemref() != des2.getMemref()) {
+  if (des1.getMemref() != des2.getMemref() &&
+      (!areKnownEquivalent ||
+       !areKnownEquivalent(des1.getMemref(), des2.getMemref()))) {
     // If the bases are different, then there is unknown overlap.
     LLVM_DEBUG(llvm::dbgs() << "No identical base for:\n"
                             << des1 << "and:\n"
@@ -138,7 +154,7 @@ ArraySectionAnalyzer::analyze(mlir::Value ref1, mlir::Value ref2) {
     if (areDisjointSections(desc1, desc2))
       return SlicesOverlapKind::DefinitelyDisjoint;
 
-    if (!areIdenticalSections(desc1, desc2)) {
+    if (!areIdenticalSections(desc1, desc2, areKnownEquivalent)) {
       if (isTriplet1 || isTriplet2) {
         // For example:
         //   hlfir.designate %6#0 (%c2:%c7999:%c1, %c1:%c120:%c1, %0)
@@ -187,7 +203,7 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
 
   auto isPositiveConstant = [](mlir::Value v) -> bool {
     if (auto val = fir::getIntIfConstant(v))
-      return *val > 0;
+      return val->isStrictlyPositive();
     return false;
   };
 
@@ -197,9 +213,12 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
     return false;
 
   // Check if they are both constants.
-  if (auto val1 = fir::getIntIfConstant(op1->getResult(0)))
-    if (auto val2 = fir::getIntIfConstant(op2->getResult(0)))
-      return *val1 < *val2;
+  std::optional<llvm::APInt> val1 = fir::getIntIfConstant(op1->getResult(0));
+  std::optional<llvm::APInt> val2 = fir::getIntIfConstant(op2->getResult(0));
+  if (val1 && val2) {
+    unsigned width = std::max(val1->getBitWidth(), val2->getBitWidth());
+    return val1->sext(width).slt(val2->sext(width));
+  }
 
   // Handle some variable cases (C > 0):
   //   v2 = v1 + C
@@ -247,7 +266,7 @@ getDesignatorIndices(hlfir::DesignateOp designate) {
       if (auto subOp =
               mlir::dyn_cast_or_null<mlir::arith::SubIOp>(v.getDefiningOp())) {
         auto cst = fir::getIntIfConstant(subOp.getRhs());
-        if (!cst || *cst != 1)
+        if (!cst || !cst->isOne())
           return false;
         if (auto dimsOp = mlir::dyn_cast_or_null<fir::BoxDimsOp>(
                 subOp.getLhs().getDefiningOp())) {
@@ -255,7 +274,7 @@ getDesignatorIndices(hlfir::DesignateOp designate) {
               dimsOp.getResult(0) != subOp.getLhs())
             return false;
           auto dimsOpDim = fir::getIntIfConstant(dimsOp.getDim());
-          return dimsOpDim && dimsOpDim == dim;
+          return dimsOpDim && *dimsOpDim == dim;
         }
       }
       return false;

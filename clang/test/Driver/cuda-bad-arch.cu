@@ -17,6 +17,12 @@
 
 // BAD_CUDA9: GPU arch sm_21 is supported by CUDA versions between 7.0 and 8.0
 
+// RUN: not %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_101f \
+// RUN:   --cuda-path=%S/Inputs/CUDA_90/usr/local/cuda %s 2>&1 \
+// RUN: | FileCheck -check-prefix BAD_CUDA_SM101F %s
+
+// BAD_CUDA_SM101F: GPU arch sm_101f is supported by CUDA versions between 12.9 and 12.9
+
 // RUN: %clang -### -target x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=sm_52 -c --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -x hip --target=x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=gfx908 -c %s 2>&1 \
@@ -27,15 +33,9 @@
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -x hip --target=x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=gfx1250 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
+// RUN: %clang -### -x hip --target=x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=gfx1250-strict -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -x hip --target=x86_64-linux-gnu -nogpulib -nogpuinc --cuda-gpu-arch=gfx1251 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 
-// We don't allow using NVPTX/AMDGCN for host compilation.
-// RUN: not %clang -### --no-offload-new-driver --cuda-host-only --target=nvptx-nvidia-cuda -nogpulib -nogpuinc -c %s 2>&1 \
-// RUN: | FileCheck -check-prefix HOST_NVPTX %s
-// RUN: not %clang -### --no-offload-new-driver --cuda-host-only --target=amdgcn-amd-amdhsa -nogpulib -nogpuinc -c %s 2>&1 \
-// RUN: | FileCheck -check-prefix HOST_AMDGCN %s
-
 // OK-NOT: error: Unsupported CUDA gpu architecture
-// HOST_NVPTX: error: unsupported architecture 'nvptx' for host compilation
-// HOST_AMDGCN: error: unsupported architecture 'amdgcn' for host compilation

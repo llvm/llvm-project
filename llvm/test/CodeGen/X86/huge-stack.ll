@@ -50,7 +50,6 @@ define ptr @scavenge_spill() unnamed_addr #0 {
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 46(%rsp), %rdi
 ; CHECK-NEXT:    callq baz@PLT
-; CHECK-NEXT:    # kill: def $rcx killed $rax
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-NEXT:    movabsq $25769803816, %rcx # imm = 0x600000028
 ; CHECK-NEXT:    addq %rcx, %rsp

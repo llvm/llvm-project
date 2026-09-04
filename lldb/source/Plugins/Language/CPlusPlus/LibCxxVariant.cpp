@@ -267,7 +267,7 @@ ValueObjectSP VariantFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!head_value)
     return {};
 
-  return head_value->Clone(ConstString("Value"));
+  return head_value->Clone("Value");
 }
 
 SyntheticChildrenFrontEnd *

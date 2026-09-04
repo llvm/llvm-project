@@ -436,7 +436,7 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   if (RemovedArgs.getNumOccurrences() > 0)
     OverrideOptions.RemovedArgs = RemovedArgs;
 
-  auto LoadConfig =
+  const auto LoadConfig =
       [&](StringRef Configuration,
           StringRef Source) -> std::unique_ptr<ClangTidyOptionsProvider> {
     llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
@@ -501,7 +501,7 @@ getVfsFromFile(const std::string &OverlayFile, vfs::FileSystem &BaseFS) {
 static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
   unsigned MaxEdit = 5U;
   StringRef Closest;
-  for (auto Item : Allowed.keys()) {
+  for (const auto Item : Allowed.keys()) {
     const unsigned Cur = Value.edit_distance_insensitive(Item, true, MaxEdit);
     if (Cur < MaxEdit) {
       Closest = Item;
@@ -531,7 +531,7 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
         llvm::raw_ostream &Output =
             llvm::WithColor::warning(llvm::errs(), Source)
             << "unknown check '" << Item.Text << '\'';
-        const llvm::StringRef Closest = closest(Item.Text, AllChecks);
+        const StringRef Closest = closest(Item.Text, AllChecks);
         if (!Closest.empty())
           Output << "; did you mean '" << Closest << '\'';
         Output << VerifyConfigWarningEnd;
@@ -565,13 +565,13 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
                           const ClangTidyOptions::OptionMap &OptionMap,
                           StringRef Source) {
   bool AnyInvalid = false;
-  for (auto Key : OptionMap.keys()) {
+  for (const auto Key : OptionMap.keys()) {
     if (ValidOptions.contains(Key))
       continue;
     AnyInvalid = true;
     auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
                    << "unknown check option '" << Key << '\'';
-    const llvm::StringRef Closest = closest(Key, ValidOptions);
+    const StringRef Closest = closest(Key, ValidOptions);
     if (!Closest.empty())
       Output << "; did you mean '" << Closest << '\'';
     Output << VerifyConfigWarningEnd;
@@ -579,7 +579,7 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
   return AnyInvalid;
 }
 
-static SmallString<256> makeAbsolute(llvm::StringRef Input) {
+static SmallString<256> makeAbsolute(StringRef Input) {
   if (Input.empty())
     return {};
   SmallString<256> AbsolutePath(Input);
@@ -660,8 +660,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
-    std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
-        RawOptions = OptionsProvider->getRawOptions(FilePath);
+    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
+        OptionsProvider->getRawOptions(FilePath);
     for (const std::string &Check : EnabledChecks) {
       for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
         if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
@@ -718,11 +718,7 @@ int clangTidyMain(int argc, const char **argv) {
     return 0;
   }
 
-  if (EnabledChecks.empty()) {
-    if (AllowNoChecks) {
-      llvm::outs() << "No checks enabled.\n";
-      return 0;
-    }
+  if (EnabledChecks.empty() && !AllowNoChecks) {
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return 1;

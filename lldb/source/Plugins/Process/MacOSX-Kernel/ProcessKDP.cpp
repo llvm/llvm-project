@@ -495,7 +495,7 @@ bool ProcessKDP::DoUpdateThreadList(ThreadList &old_thread_list,
                                     ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log = GetLog(KDPLog::Thread);
-  LLDB_LOGV(log, "pid = {0}", GetID());
+  LLDB_LOG_VERBOSE(log, "pid = {0}", GetID());
 
   // Even though there is a CPU mask, it doesn't mean we can see each CPU
   // individually, there is really only one. Lets call this thread 1.
@@ -577,8 +577,9 @@ bool ProcessKDP::IsAlive() {
 }
 
 // Process Memory
-size_t ProcessKDP::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                Status &error) {
+size_t ProcessKDP::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   uint8_t *data_buffer = (uint8_t *)buf;
   if (m_comm.IsConnected()) {
     const size_t max_read_size = 512;
@@ -633,9 +634,9 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (!bp_site->IsEnabled()) {
+    if (!IsBreakpointSitePhysicallyEnabled(*bp_site)) {
       if (m_comm.SendRequestBreakpoint(true, bp_site->GetLoadAddress())) {
-        bp_site->SetEnabled(true);
+        SetBreakpointSiteEnabled(*bp_site);
         bp_site->SetType(BreakpointSite::eExternal);
       } else {
         return Status::FromErrorString("KDP set breakpoint failed");
@@ -649,15 +650,15 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (bp_site->IsEnabled()) {
+    if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
       BreakpointSite::Type bp_type = bp_site->GetType();
       if (bp_type == BreakpointSite::eExternal) {
         if (m_destroy_in_process && m_comm.IsRunning()) {
           // We are trying to destroy our connection and we are running
-          bp_site->SetEnabled(false);
+          SetBreakpointSiteEnabled(*bp_site, false);
         } else {
           if (m_comm.SendRequestBreakpoint(false, bp_site->GetLoadAddress()))
-            bp_site->SetEnabled(false);
+            SetBreakpointSiteEnabled(*bp_site, false);
           else
             return Status::FromErrorString("KDP remove breakpoint failed");
         }

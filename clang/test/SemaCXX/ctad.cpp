@@ -74,7 +74,7 @@ template <int>
 using AstNode = variant<>;
 // expected-note@-1 {{couldn't infer template argument ''}} \
 // expected-note@-1 2{{implicit deduction guide declared as}} \
-// expected-note@-1 {{candidate function template not viable}}
+// expected-note@-1 {{candidate function not viable}}
 
 
 AstNode tree; // expected-error {{no viable constructor or deduction guide}}

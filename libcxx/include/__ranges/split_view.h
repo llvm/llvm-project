@@ -78,32 +78,31 @@ public:
     requires default_initializable<_View> && default_initializable<_Pattern>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 split_view(_View __base, _Pattern __pattern)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit split_view(_View __base, _Pattern __pattern)
       : __base_(std::move(__base)), __pattern_(std::move((__pattern))) {}
 
   template <forward_range _Range>
     requires constructible_from<_View, views::all_t<_Range>> &&
                  constructible_from<_Pattern, single_view<range_value_t<_Range>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23
-  split_view(_Range&& __range, range_value_t<_Range> __elem)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit split_view(_Range&& __range, range_value_t<_Range> __elem)
       : __base_(views::all(std::forward<_Range>(__range))), __pattern_(views::single(std::move(__elem))) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
     if (!__cached_begin_.__has_value()) {
       __cached_begin_.__emplace(__find_next(ranges::begin(__base_)));
     }
     return {*this, ranges::begin(__base_), *__cached_begin_};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_View>) {
       return __iterator{*this, ranges::end(__base_), {}};
     } else {
@@ -128,6 +127,12 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS subrange<iterator_t<_View>> __next_ = subrange<iterator_t<_View>>();
   bool __trailing_empty_                                        = false;
 
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
+      split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, subrange<iterator_t<_View>> __next)
+      : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __next_(std::move(__next)) {}
+
+  friend class split_view<_View, _Pattern>;
+
   friend struct __sentinel;
 
 public:
@@ -138,13 +143,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
-      split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, subrange<iterator_t<_View>> __next)
-      : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __next_(std::move(__next)) {}
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return {__cur_, __next_.begin()}; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return {__cur_, __next_.begin()}; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     __cur_ = __next_.begin();
@@ -180,15 +181,17 @@ struct split_view<_View, _Pattern>::__sentinel {
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_View> __end_ = sentinel_t<_View>();
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(split_view<_View, _Pattern>& __parent)
+      : __end_(ranges::end(__parent.__base_)) {}
+
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __equals(const __iterator& __x, const __sentinel& __y) {
     return __x.__cur_ == __y.__end_ && !__x.__trailing_empty_;
   }
 
+  friend class split_view<_View, _Pattern>;
+
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(split_view<_View, _Pattern>& __parent)
-      : __end_(ranges::end(__parent.__base_)) {}
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
     return __equals(__x, __y);

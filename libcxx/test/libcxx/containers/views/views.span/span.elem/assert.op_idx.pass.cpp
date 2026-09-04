@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
@@ -12,10 +13,6 @@
 // constexpr reference operator[](size_type idx) const;
 
 // Make sure that accessing a span out-of-bounds triggers an assertion.
-
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <array>
 #include <span>

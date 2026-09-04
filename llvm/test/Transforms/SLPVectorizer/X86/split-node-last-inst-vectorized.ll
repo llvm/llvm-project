@@ -11,8 +11,8 @@ define void @test(ptr %0, <8 x i8> %1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 13544
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i64 13536
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i8>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> poison, i8 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i8> poison, i8 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i8> [[TMP9]], <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i8> [[TMP10]], [[TMP7]]
 ; CHECK-NEXT:    store <8 x i8> [[TMP13]], ptr [[TMP11]], align 4

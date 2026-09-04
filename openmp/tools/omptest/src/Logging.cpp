@@ -12,12 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "Logging.h"
+#include "EnvHelper.h"
 
 using namespace omptest;
 using namespace logging;
 
 Logger::Logger(Level LogLevel, std::ostream &OutStream, bool FormatOutput)
     : LoggingLevel(LogLevel), OutStream(OutStream), FormatOutput(FormatOutput) {
+  if (auto EnvVal = getBoolEnvironmentVariable("OMPTEST_LOG_COLORED");
+      EnvVal.has_value())
+    FormatOutput = EnvVal.value();
   // Flush any buffered output
   OutStream << std::flush;
 }

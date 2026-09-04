@@ -100,8 +100,9 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
     // innermost nested lambda are dependent (otherwise we wouldn't have
     // arrived here) - so we don't yet have a lambda that can capture the
     // variable.
-    if (IsCapturingVariable &&
-        VarToCapture->getDeclContext()->Equals(EnclosingDC))
+    if (IsCapturingVariable && VarToCapture->getDeclContext()
+                                   ->getEnclosingNonExpansionStatementContext()
+                                   ->Equals(EnclosingDC))
       return NoLambdaIsCaptureReady;
 
     // For an enclosing lambda to be capture ready for an entity, all
@@ -126,7 +127,8 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
       if (IsCapturingThis && !LSI->isCXXThisCaptured())
         return NoLambdaIsCaptureReady;
     }
-    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC);
+    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC)
+                      ->getEnclosingNonExpansionStatementContext();
 
     assert(CurScopeIndex);
     --CurScopeIndex;
@@ -190,11 +192,6 @@ UnsignedOrNone clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     return NoLambdaIsCaptureCapable;
 
   const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
-  assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
-          S.getCurGenericLambda()) &&
-         "The capture ready lambda for a potential capture can only be the "
-         "current lambda if it is a generic lambda");
-
   const sema::LambdaScopeInfo *const CaptureReadyLambdaLSI =
       cast<sema::LambdaScopeInfo>(FunctionScopes[IndexOfCaptureReadyLambda]);
 
@@ -248,7 +245,7 @@ CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
                               unsigned LambdaDependencyKind,
                               LambdaCaptureDefault CaptureDefault) {
-  DeclContext *DC = CurContext;
+  DeclContext *DC = CurContext->getEnclosingNonExpansionStatementContext();
 
   bool IsGenericLambda =
       Info && getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -327,7 +324,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       return DataMember;
-    } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
+    } else if (isa<ImplicitConceptSpecializationDecl, ConceptDecl>(
+                   ManglingContextDecl)) {
       return Concept;
     }
 
@@ -518,10 +516,6 @@ void Sema::handleLambdaNumbering(
   // numbering state before final numbering is assigned below.
   if (ContextDecl)
     Class->setLambdaContextDecl(ContextDecl);
-  if (NumberingOverride) {
-    Class->setLambdaNumbering(*NumberingOverride);
-    return;
-  }
 
   CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
@@ -537,15 +531,41 @@ void Sema::handleLambdaNumbering(
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
   }
-  if (MCtx) {
+
+  if (!MCtx) {
+    // This lambda doesn't need a mangle numbering.
+    return;
+  }
+
+  if (NumberingOverride) {
+    Numbering = *NumberingOverride;
+  } else {
     Numbering.IndexInContext = MCtx->getNextLambdaIndex();
     Numbering.ManglingNumber = MCtx->getManglingNumber(Method);
     Numbering.DeviceManglingNumber = MCtx->getDeviceManglingNumber(Method);
-    Class->setLambdaNumbering(Numbering);
+  }
 
-    if (auto *Source =
-            dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
-      Source->AssignedLambdaNumbering(Class);
+  Class->setLambdaNumbering(Numbering);
+
+  // If there is no context declaration (e.g. this lambda is defined at the
+  // top-level in the global namespace), there is no need to register it for
+  // merging.
+  if (!ContextDecl) {
+    return;
+  }
+
+  // This lambda might redeclare a previous lambda if this is not the first
+  // definition of the context declaration. We might have a definition from
+  // another translation unit.
+  auto *&Slot = Context.getLambdaDeclarationSlotForMerging(
+      ContextDecl, Numbering.IndexInContext);
+  if (auto *Previous = Slot) {
+    Class->setPreviousDecl(Previous);
+    makeMergedDefinitionVisible(Previous);
+  } else {
+    // Keep track of this lambda so it can be merged with another lambda that is
+    // parsed or loaded later.
+    Slot = Class;
   }
 }
 
@@ -840,9 +860,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(
   }
   if (EllipsisLoc.isValid()) {
     if (Init->containsUnexpandedParameterPack()) {
-      Diag(EllipsisLoc, getLangOpts().CPlusPlus20
-                            ? diag::warn_cxx17_compat_init_capture_pack
-                            : diag::ext_init_capture_pack);
+      DiagCompat(EllipsisLoc, diag_compat::init_capture_pack);
       DeductType = Context.getPackExpansionType(DeductType, NumExpansions,
                                                 /*ExpectPackInType=*/false);
       TLB.push<PackExpansionTypeLoc>(DeductType).setEllipsisLoc(EllipsisLoc);
@@ -1100,6 +1118,9 @@ void Sema::CompleteLambdaCallOperator(
   }
 
   buildLambdaScopeReturnType(*this, LSI, Method, HasExplicitResultType);
+
+  // Not built by ActOnFunctionDeclarator, so tag it here.
+  addImplicitCallingConvAbiTag(Method);
 }
 
 void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
@@ -1173,9 +1194,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
        PrevCaptureLoc = C->Loc, ++C) {
     if (C->Kind == LCK_This || C->Kind == LCK_StarThis) {
       if (C->Kind == LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus17
-                         ? diag::ext_star_this_lambda_capture_cxx17
-                         : diag::warn_cxx14_compat_star_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::star_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p8:
       //   An identifier or this shall not appear more than once in a
@@ -1194,9 +1213,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       //  "&identifier", "this", or "* this". [ Note: The form [&,this] is
       //  redundant but accepted for compatibility with ISO C++14. --end note ]
       if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus20
-                         ? diag::ext_equals_this_lambda_capture_cxx20
-                         : diag::warn_cxx17_compat_equals_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:
       //   If this is captured by a local lambda expression, its nearest
@@ -1222,9 +1239,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
-      Diag(C->Loc, getLangOpts().CPlusPlus14
-                       ? diag::warn_cxx11_compat_init_capture
-                       : diag::ext_init_capture);
+      DiagCompat(C->Loc, diag_compat::init_capture);
 
       // If the initializer expression is usable, but the InitCaptureType
       // is not, then an error has occurred - so ignore the capture for now.
@@ -1403,7 +1418,9 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
   // odr-use 'this' (in particular, in a default initializer for a non-static
   // data member).
   if (Intro.Default != LCD_None &&
-      !LSI->Lambda->getParent()->isFunctionOrMethod() &&
+      !LSI->Lambda->getParent()
+           ->getEnclosingNonExpansionStatementContext()
+           ->isFunctionOrMethod() &&
       (getCurrentThisType().isNull() ||
        CheckCXXThisCapture(SourceLocation(), /*Explicit=*/true,
                            /*BuildAndDiagnose=*/false)))
@@ -1444,6 +1461,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   LambdaScopeInfo *LSI = getCurrentLambdaScopeUnsafe(*this);
   LSI->CallOperator->setConstexprKind(DS.getConstexprSpecifier());
+  LSI->BeforeCompoundStatement = false;
 
   SmallVector<ParmVarDecl *, 8> Params;
   bool ExplicitResultType;
@@ -1490,10 +1508,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CheckCXXDefaultArguments(Method);
 
-  // This represents the function body for the lambda function, check if we
-  // have to apply optnone due to a pragma.
-  AddRangeBasedOptnone(Method);
-
   // code_seg attribute on lambda apply to the method.
   if (Attr *A = getImplicitCodeSegOrSectionAttrForFunction(
           Method, /*IsDefinition=*/true))
@@ -1501,6 +1515,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+
+  // This represents the function body for the lambda function, check if we
+  // have to apply optnone due to a pragma.
+  AddRangeBasedOptnone(Method);
 
   if (Context.getTargetInfo().getTriple().isAArch64())
     ARM().CheckSMEFunctionDefAttributes(Method);
@@ -2551,9 +2569,12 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   while (FDPattern && FD) {
     InstantiationAndPatterns.emplace_back(FDPattern, FD);
 
-    FDPattern =
-        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
-    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
+    FDPattern = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FDPattern)
+            ->getEnclosingNonExpansionStatementContext());
+    FD = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FD)
+            ->getEnclosingNonExpansionStatementContext());
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the

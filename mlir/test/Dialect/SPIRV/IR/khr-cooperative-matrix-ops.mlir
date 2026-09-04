@@ -573,7 +573,7 @@ spirv.func @fadd(%a: !spirv.coopmatrix<2x2xf32, Subgroup, MatrixA>,
 // -----
 
 spirv.func @matrix_times_scalar(%a: !spirv.coopmatrix<2x2xf32, Workgroup, MatrixA>, %b: f16) "None" {
-  // expected-error @+1 {{input matrix components' type and scaling value must have the same type}}
+  // expected-error @+1 {{op failed to verify that all of {matrix, scalar} have same element type}}
   %p = spirv.MatrixTimesScalar %a, %b : !spirv.coopmatrix<2x2xf32, Workgroup, MatrixA>, f16
   spirv.Return
 }

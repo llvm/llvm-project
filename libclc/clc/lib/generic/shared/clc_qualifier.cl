@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/address_space/qualifier.h>
+#include "clc/address_space/clc_qualifier.h"
 
 #if _CLC_GENERIC_AS_SUPPORTED
 

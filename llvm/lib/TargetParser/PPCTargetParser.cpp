@@ -145,5 +145,12 @@ std::optional<StringMap<bool>> getPPCDefaultTargetFeatures(const Triple &T,
   }
   return Features;
 }
+
+bool isValidFeatureName(StringRef Name) {
+  ArrayRef<BasicSubtargetFeatureKV> A = BasicPPCFeatureKV;
+  // Binary search the array
+  const BasicSubtargetFeatureKV *F = llvm::lower_bound(A, Name);
+  return F != A.end() && StringRef(F->Key) == Name;
+}
 } // namespace PPC
 } // namespace llvm

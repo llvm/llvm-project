@@ -24,7 +24,7 @@ class Module;
 class raw_ostream;
 
 class ThinLTOBitcodeWriterPass
-    : public PassInfoMixin<ThinLTOBitcodeWriterPass> {
+    : public RequiredPassInfoMixin<ThinLTOBitcodeWriterPass> {
   raw_ostream &OS;
   raw_ostream *ThinLinkOS;
   const bool ShouldPreserveUseListOrder;
@@ -38,8 +38,6 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

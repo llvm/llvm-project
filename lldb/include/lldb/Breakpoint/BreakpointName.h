@@ -137,18 +137,17 @@ public:
     }
   };
 
-  BreakpointName(ConstString name, const char *help = nullptr) :
-      m_name(name), m_options(false)
-   {
-     SetHelp(help);
-   }
+  BreakpointName(std::string name, const char *help = nullptr)
+      : m_name(std::move(name)), m_options(false) {
+    SetHelp(help);
+  }
 
   BreakpointName(const BreakpointName &rhs) :
       m_name(rhs.m_name), m_options(rhs.m_options),
       m_permissions(rhs.m_permissions), m_help(rhs.m_help)
   {}
 
-  ConstString GetName() const { return m_name; }
+  llvm::StringRef GetName() const { return m_name; }
   BreakpointOptions &GetOptions() { return m_options; }
   const BreakpointOptions &GetOptions() const { return m_options; }
 
@@ -186,10 +185,10 @@ public:
   void ConfigureBreakpoint(lldb::BreakpointSP bp_sp);
 
 private:
-  ConstString        m_name;
-  BreakpointOptions  m_options;
-  Permissions        m_permissions;
-  std::string        m_help;
+  std::string m_name;
+  BreakpointOptions m_options;
+  Permissions m_permissions;
+  std::string m_help;
 };
 
 } // namespace lldb_private

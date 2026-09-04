@@ -26,6 +26,17 @@ class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
   let cppNamespace = "::cir";
 }
 
+class CIR_I32BitEnumAttr<string name, string summary,
+                         list<BitEnumCaseBase> cases>
+    : I32BitEnumAttr<name, summary, cases> {
+  let cppNamespace = "::cir";
+}
+
+// Upstream `EnumAttr` defaults to a bare `$value`, so a standalone attribute
+// falls back to the generic `#cir<cleanup all>` form. Keeping the `<` `>`
+// delimiters gets the dialect's own `#cir.cleanup<all>` instead. Operations
+// that want the bare keyword wrap the argument in the `enum` directive, as in
+// `enum($cleanupKind)`. Naming the argument directly prints `<all>`.
 class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
     : EnumAttr<CIR_Dialect, info, name, traits> {
   let assemblyFormat = "`<` $value `>`";
@@ -43,7 +54,9 @@ def CIR_LangAddressSpace : CIR_I32EnumAttr<
   I32EnumAttrCase<"OffloadLocal", 2, "offload_local">,
   I32EnumAttrCase<"OffloadGlobal", 3, "offload_global">,
   I32EnumAttrCase<"OffloadConstant", 4, "offload_constant">,
-  I32EnumAttrCase<"OffloadGeneric", 5, "offload_generic">
+  I32EnumAttrCase<"OffloadGeneric", 5, "offload_generic">,
+  I32EnumAttrCase<"OffloadGlobalDevice", 6, "offload_global_device">,
+  I32EnumAttrCase<"OffloadGlobalHost", 7, "offload_global_host">
 ]> {
   let description = [{
     Enumerates language-specific address spaces used by CIR. These represent

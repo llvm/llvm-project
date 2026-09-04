@@ -20,17 +20,21 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Conversion/XeGPUToXeVM/XeGPUToXeVM.h"
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
 #include "mlir/Target/LLVM/XeVM/Target.h"
 #include "mlir/Transforms/Passes.h"
+
+#include <utility>
 
 using namespace mlir;
 
@@ -42,7 +46,6 @@ void buildPreGPUCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes.
   pm.addPass(createCSEPass());
-  pm.addPass(createConvertVectorToSCFPass());
   {
     GpuXeVMAttachTargetOptions xevmTargetOptions;
     xevmTargetOptions.moduleMatcher = options.xevmModuleMatcher;
@@ -50,7 +53,7 @@ void buildPreGPUCommonPassPipeline(
     xevmTargetOptions.chip = options.zebinChip;
     xevmTargetOptions.optLevel = options.optLevel;
     xevmTargetOptions.cmdOptions = options.cmdOptions;
-    pm.addPass(createGpuXeVMAttachTarget(xevmTargetOptions));
+    pm.addPass(createGpuXeVMAttachTarget(std::move(xevmTargetOptions)));
   }
   pm.addPass(createLowerAffinePass());
   pm.addNestedPass<func::FuncOp>(createGpuAsyncRegionPass());
@@ -62,13 +65,16 @@ void buildPreGPUCommonPassPipeline(
 void buildGPUPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   xegpu::XeGPUPropagateLayoutOptions laneLayoutOptions;
+  laneLayoutOptions.indexBitWidth = options.use64bitIndex ? 64 : 32;
   laneLayoutOptions.layoutKind = "lane";
   pm.addNestedPass<ModuleOp>(createCSEPass());
+  if (options.enableVectorToXeGPU)
+    pm.addNestedPass<gpu::GPUModuleOp>(createConvertVectorToXeGPU());
   if (options.xegpuOpLevel == "workgroup") {
     xegpu::XeGPUPropagateLayoutOptions sgLayoutOptions;
     sgLayoutOptions.layoutKind = "subgroup";
     pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUPropagateLayout(sgLayoutOptions));
+        xegpu::createXeGPUPropagateLayout(std::move(sgLayoutOptions)));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUWgToSgDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
@@ -76,9 +82,8 @@ void buildGPUPassPipeline(OpPassManager &pm,
     xegpu::XeGPUPropagateLayoutOptions instDataOptions;
     instDataOptions.layoutKind = "inst";
     pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUPropagateLayout(instDataOptions));
+        xegpu::createXeGPUPropagateLayout(std::move(instDataOptions)));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
-    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   if (options.xegpuOpLevel == "subgroup" ||
@@ -86,24 +91,62 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPeepHoleOptimizer());
-    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(
-        xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
-    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSubgroupDistribute());
+        xegpu::createXeGPUPropagateLayout(std::move(laneLayoutOptions)));
+    pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUSgToLaneDistribute());
     pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createLoopInvariantCodeMotionPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUVectorLinearize());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+    pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  }
+  // Break down high-level micro-scaling (MX) ops (arith.scaling_extf and
+  // arith.scaling_truncf) into standard arith ops (extf/truncf + mulf), and
+  // expand extf/truncf on f8E8M0FNU into integer bit manipulation. This runs
+  // before the XeVM/LLVM conversions. The f4E2M1FN expansion patterns are
+  // intentionally left disabled: f4E2M1FN extf/truncf are lowered by the XeVM
+  // conversions (xevm.extf), whereas f8E8M0FNU is not supported there and so
+  // must be expanded here.
+  {
+    arith::ArithExpandOpsPassOptions arithExpandOptions;
+    arithExpandOptions.includeF8E8M0 = true;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        arith::createArithExpandOpsPass(std::move(arithExpandOptions)));
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToXeVM());
-  pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeGPUToXeVMPass());
+  ConvertXeGPUToXeVMPassOptions xegpuToXeVMOptions;
+  xegpuToXeVMOptions.use64bitIndex = options.use64bitIndex;
+  pm.addNestedPass<gpu::GPUModuleOp>(
+      createConvertXeGPUToXeVMPass(std::move(xegpuToXeVMOptions)));
   {
     ConvertGpuOpsToLLVMSPVOpsOptions gpuToLLVMSPVOptions;
     gpuToLLVMSPVOptions.use64bitIndex = options.use64bitIndex;
     pm.addNestedPass<gpu::GPUModuleOp>(
-        createConvertGpuOpsToLLVMSPVOps(gpuToLLVMSPVOptions));
+        createConvertGpuOpsToLLVMSPVOps(std::move(gpuToLLVMSPVOptions)));
+  }
+  // Legalize math/arith ops on floating-point types that the XeVM target
+  // cannot handle natively (e.g. bf16) by wrapping them with extf/truncf
+  // around a supported type (defaulting to f32).
+  {
+    math::MathExtendToSupportedTypesOptions mathExtendOptions;
+    mathExtendOptions.extraTypeStrs.assign(options.mathExtendExtraTypes.begin(),
+                                           options.mathExtendExtraTypes.end());
+    mathExtendOptions.targetTypeStr = options.supportedTargetTypes;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        math::createMathExtendToSupportedTypes(std::move(mathExtendOptions)));
+  }
+  {
+    arith::ArithEmulateUnsupportedFloatsOptions arithEmulateOptions;
+    arithEmulateOptions.sourceTypeStrs.assign(
+        options.unsupportedSourceTypes.begin(),
+        options.unsupportedSourceTypes.end());
+    arithEmulateOptions.targetTypeStr = options.supportedTargetTypes;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        arith::createArithEmulateUnsupportedFloats(
+            std::move(arithEmulateOptions)));
   }
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
@@ -115,13 +158,14 @@ void buildGPUPassPipeline(OpPassManager &pm,
 void buildPostGPUCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   // builtin.module scope passes.
+  pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   {
     GpuToLLVMConversionPassOptions gpuToLLVMOptions;
     gpuToLLVMOptions.hostBarePtrCallConv = options.hostBarePtrCallConv;
     gpuToLLVMOptions.kernelBarePtrCallConv = options.kernelBarePtrCallConv;
-    pm.addPass(createGpuToLLVMConversionPass(gpuToLLVMOptions));
+    pm.addPass(createGpuToLLVMConversionPass(std::move(gpuToLLVMOptions)));
   }
   pm.addPass(createLowerAffinePass());
   pm.addPass(createConvertVectorToLLVMPass());
@@ -136,7 +180,7 @@ void buildPostGPUCommonPassPipeline(
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;
     gpuToModuleBinOptions.compilationTarget = options.binaryFormat;
     gpuToModuleBinOptions.cmdOptions = options.cmdOptions;
-    pm.addPass(createGpuModuleToBinaryPass(gpuToModuleBinOptions));
+    pm.addPass(createGpuModuleToBinaryPass(std::move(gpuToModuleBinOptions)));
   }
 }
 } // namespace

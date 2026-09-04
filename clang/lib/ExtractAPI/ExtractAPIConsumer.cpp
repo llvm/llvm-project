@@ -30,12 +30,12 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -60,7 +60,7 @@ std::optional<std::string> getRelativeIncludeName(const CompilerInstance &CI,
                                                   StringRef File,
                                                   bool *IsQuoted = nullptr) {
   assert(CI.hasFileManager() &&
-         "CompilerInstance does not have a FileNamager!");
+         "CompilerInstance does not have a FileManager!");
 
   using namespace llvm::sys;
   const auto &FS = CI.getVirtualFileSystem();
@@ -282,12 +282,20 @@ private:
 
 class MacroCallback : public PPCallbacks {
 public:
-  MacroCallback(const SourceManager &SM, APISet &API, Preprocessor &PP)
-      : SM(SM), API(API), PP(PP) {}
+  MacroCallback(ASTContext &Ctx, const SourceManager &SM, APISet &API,
+                Preprocessor &PP)
+      : Ctx(Ctx), SM(SM), API(API), PP(PP) {}
 
   void EndOfMainFile() override {
-    for (const auto &M : PP.macros()) {
-      auto *II = M.getFirst();
+    SmallVector<const IdentifierInfo *> Macros;
+    for (const auto &M : PP.macros())
+      Macros.push_back(M.getFirst());
+    llvm::sort(Macros,
+               [](const IdentifierInfo *LHS, const IdentifierInfo *RHS) {
+                 return LHS->getName() < RHS->getName();
+               });
+
+    for (const auto *II : Macros) {
       auto MD = PP.getMacroDefinition(II);
       auto *MI = MD.getMacroInfo();
 
@@ -321,8 +329,13 @@ public:
       PresumedLoc Loc = SM.getPresumedLoc(DefLoc);
       SmallString<128> USR;
       index::generateUSRForMacro(Name, DefLoc, SM, USR);
+
+      DocComment Comment;
+      if (const auto *RC = Ctx.getRawCommentForAnyRedecl(MI))
+        Comment = RC->getFormattedLines(SM, Ctx.getDiagnostics());
+
       API.createRecord<extractapi::MacroDefinitionRecord>(
-          USR, Name, SymbolReference(), Loc,
+          USR, Name, SymbolReference(), Loc, Comment,
           DeclarationFragmentsBuilder::getFragmentsForMacro(Name, MI),
           DeclarationFragmentsBuilder::getSubHeadingForMacro(Name),
           SM.isInSystemHeader(DefLoc));
@@ -334,6 +347,7 @@ public:
     return true;
   }
 
+  ASTContext &Ctx;
   const SourceManager &SM;
   APISet &API;
   Preprocessor &PP;
@@ -341,9 +355,9 @@ public:
 
 class APIMacroCallback : public MacroCallback {
 public:
-  APIMacroCallback(const SourceManager &SM, APISet &API, Preprocessor &PP,
-                   LocationFileChecker &LCF)
-      : MacroCallback(SM, API, PP), LCF(LCF) {}
+  APIMacroCallback(ASTContext &Ctx, const SourceManager &SM, APISet &API,
+                   Preprocessor &PP, LocationFileChecker &LCF)
+      : MacroCallback(Ctx, SM, API, PP), LCF(LCF) {}
 
   bool shouldMacroBeIncluded(const SourceLocation &MacroLoc,
                              StringRef ModuleName) override {
@@ -415,7 +429,8 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   auto LCF = std::make_unique<LocationFileChecker>(CI, KnownInputFiles);
 
   CI.getPreprocessor().addPPCallbacks(std::make_unique<APIMacroCallback>(
-      CI.getSourceManager(), *API, CI.getPreprocessor(), *LCF));
+      CI.getASTContext(), CI.getSourceManager(), *API, CI.getPreprocessor(),
+      *LCF));
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
@@ -440,6 +455,9 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
+  // Public API can never be inside function bodies, so skip parsing them.
+  CI.getFrontendOpts().SkipFunctionBodies = true;
+
   auto &Inputs = CI.getFrontendOpts().Inputs;
   if (Inputs.empty())
     return true;
@@ -519,7 +537,7 @@ WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
       CI.getFrontendOpts().Inputs.back().getKind().getLanguage(), ProductName);
 
   CI.getPreprocessor().addPPCallbacks(std::make_unique<MacroCallback>(
-      CI.getSourceManager(), *API, CI.getPreprocessor()));
+      CI.getASTContext(), CI.getSourceManager(), *API, CI.getPreprocessor()));
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();

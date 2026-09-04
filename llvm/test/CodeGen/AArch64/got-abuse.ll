@@ -21,3 +21,5 @@ entry:
   ret void
 }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 0}

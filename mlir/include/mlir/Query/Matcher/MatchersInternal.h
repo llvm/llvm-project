@@ -102,13 +102,11 @@ using VariadicOperatorFunction = bool (*)(Operation *op,
 template <VariadicOperatorFunction Func>
 class VariadicMatcher : public MatcherInterface {
 public:
-  VariadicMatcher(std::vector<DynMatcher> matchers)
-      : matchers(std::move(matchers)) {}
+  VariadicMatcher(std::vector<DynMatcher> matchers);
+  ~VariadicMatcher() override;
 
-  bool match(Operation *op) override { return Func(op, nullptr, matchers); }
-  bool match(Operation *op, SetVector<Operation *> &matchedOps) override {
-    return Func(op, &matchedOps, matchers);
-  }
+  bool match(Operation *op) override;
+  bool match(Operation *op, SetVector<Operation *> &matchedOps) override;
 
 private:
   std::vector<DynMatcher> matchers;
@@ -167,6 +165,25 @@ private:
   llvm::IntrusiveRefCntPtr<MatcherInterface> implementation;
   std::string functionName;
 };
+
+// Implementation of VariadicMatcher functions after DynMatcher is defined
+template <VariadicOperatorFunction Func>
+VariadicMatcher<Func>::VariadicMatcher(std::vector<DynMatcher> matchers)
+    : matchers(std::move(matchers)) {}
+
+template <VariadicOperatorFunction Func>
+VariadicMatcher<Func>::~VariadicMatcher() = default;
+
+template <VariadicOperatorFunction Func>
+bool VariadicMatcher<Func>::match(Operation *op) {
+  return Func(op, nullptr, matchers);
+}
+
+template <VariadicOperatorFunction Func>
+bool VariadicMatcher<Func>::match(Operation *op,
+                                  SetVector<Operation *> &matchedOps) {
+  return Func(op, &matchedOps, matchers);
+}
 
 // VariadicOperatorMatcher related types.
 template <typename... Ps>

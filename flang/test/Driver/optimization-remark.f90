@@ -82,3 +82,19 @@ subroutine swap_real(a1, a2)
     end do
 
 end subroutine swap_real
+
+! Check that the file path is displayed as it was presented on the command
+! line, matching how Clang prints optimization remarks: an absolute path is
+! shown in full and relative paths are kept relative.
+! The RUN and CHECK lines are placed at the end of the file so that adding them
+! does not shift the source line numbers referenced by the checks above.
+
+! Absolute path: %s is an absolute path, so the full path is displayed.
+! RUN: %flang %s -O2 -Rpass -S %{output} 2>&1 | FileCheck %s -DFILE=%s --check-prefix=ABSPATH
+! ABSPATH: {{^}}[[FILE]]:{{[0-9]+}}:{{[0-9]+}}: remark:
+
+! Relative path in a subdirectory: the relative path is displayed as given.
+! RUN: rm -rf %t && mkdir -p %t/sub
+! RUN: cp %s %t/sub/vec.f90
+! RUN: cd %t && %flang sub/vec.f90 -O2 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=SUBDIR
+! SUBDIR: {{^}}sub{{[/\\]}}vec.f90:{{[0-9]+}}:{{[0-9]+}}: remark:

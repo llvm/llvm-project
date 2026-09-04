@@ -127,6 +127,10 @@ public:
                              CompletionRequest &request,
                              SearchFilter *searcher);
 
+  static void ScriptedExtensions(CommandInterpreter &interpreter,
+                                 CompletionRequest &request,
+                                 SearchFilter *searcher);
+
   /// This completer works for commands whose only arguments are a command path.
   /// It isn't tied to an argument type because it completes not on a single
   /// argument but on the sequence of arguments, so you have to invoke it by

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64- -x86-asm-syntax=intel --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64- -x86-asm-syntax=intel --output-asm-variant=0 --show-encoding %s | FileCheck %s
 
 // These should map mov -> movabs
 

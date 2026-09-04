@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-stop.h"
-#include "flang/Evaluate/expression.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"

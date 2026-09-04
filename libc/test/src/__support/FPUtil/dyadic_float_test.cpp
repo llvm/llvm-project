@@ -13,22 +13,22 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
+using DFloat128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
 using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
 using LIBC_NAMESPACE::Sign;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
-  Float128 x(Sign::POS, /*exponent*/ 0,
-             /*mantissa*/ Float128::MantissaType(1));
+  DFloat128 x(Sign::POS, /*exponent*/ 0,
+              /*mantissa*/ DFloat128::MantissaType(1));
   ASSERT_FP_EQ(1.0f, float(x));
   ASSERT_FP_EQ(1.0, double(x));
 
-  Float128 y(0x1.0p-53);
+  DFloat128 y(0x1.0p-53);
   ASSERT_FP_EQ(0x1.0p-53f, float(y));
   ASSERT_FP_EQ(0x1.0p-53, double(y));
 
-  Float128 z = quick_add(x, y);
+  DFloat128 z = quick_add(x, y);
 
   EXPECT_FP_EQ_ALL_ROUNDING(float(x) + float(y), float(z));
   EXPECT_FP_EQ_ALL_ROUNDING(double(x) + double(y), double(z));
@@ -44,6 +44,18 @@ TEST(LlvmLibcDyadicFloatTest, QuickAdd) {
 
   Float192 z = quick_add(x, y);
   EXPECT_FP_EQ_ALL_ROUNDING(double(x) + double(y), double(z));
+
+  DFloat128 a(0x1.0p0);
+  ASSERT_FP_EQ(0x1.0p0, double(a));
+
+  DFloat128 b(0x1.0p128);
+  ASSERT_FP_EQ(0x1.0p128, double(b));
+
+  DFloat128 c1 = quick_add(a, b);
+  EXPECT_FP_EQ(double(a) + double(b), double(c1));
+
+  DFloat128 c2 = quick_add(b, a);
+  EXPECT_FP_EQ(double(b) + double(a), double(c2));
 }
 
 TEST(LlvmLibcDyadicFloatTest, QuickMul) {

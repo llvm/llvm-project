@@ -8,7 +8,7 @@ define void @fun(float %__b, i1 %arg) minsize {
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.fabs.f32(float [[__B:%.*]])
-; CHECK-NEXT:    [[CMPINF7:%.*]] = fcmp oeq float [[TMP0]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMPINF7:%.*]] = fcmp oeq float [[TMP0]], +inf
 ; CHECK-NEXT:    br i1 %arg, label [[IF_THEN8:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    unreachable
@@ -23,12 +23,12 @@ if.then:                                          ; preds = %entry
 
 lor.lhs.false:                                    ; preds = %if.then
   %0 = call float @llvm.fabs.f32(float %__b) #2
-  %cmpinf7 = fcmp oeq float %0, 0x7FF0000000000000
+  %cmpinf7 = fcmp oeq float %0, +inf
   unreachable
 
 if.then8:                                         ; preds = %if.then
   %1 = call float @llvm.fabs.f32(float %__b) #2
-  %cmpinf10 = fcmp oeq float %1, 0x7FF0000000000000
+  %cmpinf10 = fcmp oeq float %1, +inf
   ret void
 }
 

@@ -1,4 +1,4 @@
-#RUN: llc -mtriple=aarch64-- -run-pass prologepilog %s -o - | FileCheck %s
+#RUN: llc -mtriple=aarch64-- -run-pass prolog-epilog %s -o - | FileCheck %s
 # Check that we spill a scratch register, but not also an additional
 # emergency spill slot.
 ---

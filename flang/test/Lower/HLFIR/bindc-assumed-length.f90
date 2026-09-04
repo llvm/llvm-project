@@ -1,7 +1,7 @@
 ! Test that assumed length character scalars and explicit shape arrays are passed via
 ! CFI descriptor (fir.box) in BIND(C) procedures. They are passed only by address
 ! and length  in non BIND(C) procedures. See Fortran 2018 standard 18.3.6 point 2(5).
-! RUN: bbc -hlfir -emit-fir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-fir -o - %s 2>&1 | FileCheck %s
 
 module bindcchar
 contains

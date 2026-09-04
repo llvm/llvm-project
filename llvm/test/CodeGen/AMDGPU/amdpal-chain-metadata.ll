@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s
+; RUN: llc -mtriple=amdgpu11.00--amdpal <%s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}amdgpu_cs_chain_func:
 ; CHECK:           .amdgpu_pal_metadata

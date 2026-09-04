@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu hawaii -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu fiji -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx900 -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx908 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu6.00-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu7.01-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu8.03-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.00-- -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.08-- -verify -S -o - %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 

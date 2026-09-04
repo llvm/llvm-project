@@ -4,9 +4,12 @@ TypeIdMap:
     TTRes:
       Kind:            AllOnes
 CfiFunctionDefs:
-  - internal_default_def
-  - internal_hidden_def
-  - dsolocal_default_def
+- Name: internal_default_def
+  GUID: 2377677245844927262
+- Name: internal_hidden_def
+  GUID: 12222722662536945321
+- Name: dsolocal_default_def
+  GUID: 11010557671720506420
 CfiFunctionDecls:
-  - external_decl
-...
+- Name: external_decl
+  GUID: 2828901536631366483

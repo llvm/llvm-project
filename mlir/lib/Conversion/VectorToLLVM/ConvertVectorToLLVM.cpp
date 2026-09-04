@@ -18,6 +18,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -44,10 +45,9 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
                        int64_t pos) {
   assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::InsertElementOp::create(rewriter, loc, llvmType, val1, val2,
                                          constant);
   }
@@ -59,10 +59,9 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
                         const LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
   if (rank <= 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::ExtractElementOp::create(rewriter, loc, llvmType, val,
                                           constant);
   }
@@ -229,10 +228,11 @@ template <class LoadOrStoreOp>
 class VectorLoadStoreConversion : public ConvertOpToLLVMPattern<LoadOrStoreOp> {
 public:
   explicit VectorLoadStoreConversion(const LLVMTypeConverter &typeConv,
-                                     bool useVectorAlign)
+                                     bool useVectorAlign,
+                                     bool enableGEPInboundsNuw)
       : ConvertOpToLLVMPattern<LoadOrStoreOp>(typeConv),
-        useVectorAlignment(useVectorAlign) {}
-  using ConvertOpToLLVMPattern<LoadOrStoreOp>::ConvertOpToLLVMPattern;
+        useVectorAlignment(useVectorAlign),
+        enableGEPInboundsNuw(enableGEPInboundsNuw) {}
 
   LogicalResult
   matchAndRewrite(LoadOrStoreOp loadOrStoreOp,
@@ -256,10 +256,35 @@ public:
                                          "could not resolve alignment");
 
     // Resolve address.
+    // When --enable-gep-inbounds-nuw is set, emit inbounds|nuw on the GEP so
+    // LLVM can apply no-wrap optimizations on the index arithmetic. This
+    // assumes 0 <= idx < dim_size and non-negative strides; the caller is
+    // responsible for ensuring those conditions hold. Masked variants are
+    // designed for near-boundary access and never receive these flags.
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
+    if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
+                  std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
+      // The verifier (verifyLoadStoreMemRefLayout) guarantees that the
+      // trailing (most minor) stride of the memref is 1. Assert to make
+      // the invariant explicit in the lowering code.
+      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      assert((strides.empty() || strides.back() == 1) &&
+             "vector.load/store requires unit trailing memref stride");
+      if (enableGEPInboundsNuw) {
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
+
+        // `nuw` additionally requires non-negative strides.
+        assert(
+            !(memref::hasNegativeStaticStride(memRefTy)) &&
+            "Invalid MemRef type - should have been rejected by Op verifier.");
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+      }
+    }
     auto vtype = cast<VectorType>(
         this->typeConverter->convertType(loadOrStoreOp.getVectorType()));
-    Value dataPtr = this->getStridedElementPtr(
-        rewriter, loc, memRefTy, adaptor.getBase(), adaptor.getIndices());
+    Value dataPtr =
+        this->getStridedElementPtr(rewriter, loc, memRefTy, adaptor.getBase(),
+                                   adaptor.getIndices(), noWrapFlags);
     replaceLoadOrStoreOp(loadOrStoreOp, adaptor, vtype, dataPtr, align,
                          rewriter);
     return success();
@@ -271,6 +296,7 @@ private:
   // of the memref. This flag is intended for use with hardware
   // backends that require alignment of vector operations.
   const bool useVectorAlignment;
+  const bool enableGEPInboundsNuw;
 };
 
 /// Conversion pattern for a vector.gather.
@@ -290,6 +316,7 @@ public:
     MemRefType memRefType = dyn_cast<MemRefType>(gather.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(gather, "memref type not supported");
 
@@ -348,6 +375,7 @@ public:
     auto memRefType = dyn_cast<MemRefType>(scatter.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(scatter, "memref type not supported");
 
@@ -1449,7 +1477,9 @@ public:
     if (llvm::any_of(*targetStrides, ShapedType::isDynamic))
       return failure();
 
-    auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
+    // The offset, size and stride fields of a memref descriptor use the
+    // converted index type.
+    Type indexTy = getTypeConverter()->getIndexType();
 
     // Create descriptor.
     auto desc = MemRefDescriptor::poison(rewriter, loc, llvmTargetDescriptorTy);
@@ -1461,23 +1491,19 @@ public:
     Value ptr = sourceMemRef.alignedPtr(rewriter, loc);
     desc.setAlignedPtr(rewriter, loc, ptr);
     // Fill offset 0.
-    auto attr = rewriter.getIntegerAttr(rewriter.getIndexType(), 0);
-    auto zero = LLVM::ConstantOp::create(rewriter, loc, int64Ty, attr);
-    desc.setOffset(rewriter, loc, zero);
+    desc.setOffset(rewriter, loc,
+                   LLVM::createIndexAttrConstant(rewriter, loc, indexTy, 0));
 
     // Fill size and stride descriptors in memref.
     for (const auto &indexedSize :
          llvm::enumerate(targetMemRefType.getShape())) {
       int64_t index = indexedSize.index();
-      auto sizeAttr =
-          rewriter.getIntegerAttr(rewriter.getIndexType(), indexedSize.value());
-      auto size = LLVM::ConstantOp::create(rewriter, loc, int64Ty, sizeAttr);
-      desc.setSize(rewriter, loc, index, size);
-      auto strideAttr = rewriter.getIntegerAttr(rewriter.getIndexType(),
-                                                (*targetStrides)[index]);
-      auto stride =
-          LLVM::ConstantOp::create(rewriter, loc, int64Ty, strideAttr);
-      desc.setStride(rewriter, loc, index, stride);
+      desc.setSize(rewriter, loc, index,
+                   LLVM::createIndexAttrConstant(rewriter, loc, indexTy,
+                                                 indexedSize.value()));
+      desc.setStride(rewriter, loc, index,
+                     LLVM::createIndexAttrConstant(rewriter, loc, indexTy,
+                                                   (*targetStrides)[index]));
     }
 
     rewriter.replaceOp(castOp, {desc});
@@ -1508,8 +1534,20 @@ public:
         rewriter, loc,
         LLVM::getVectorType(idxType, dstType.getShape()[0],
                             /*isScalable=*/true));
-    auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
-                                                 adaptor.getOperands()[0]);
+    Value maskBound = adaptor.getOperands()[0];
+    // When using 32-bit indices, cap the bound at INT32_MAX in index type
+    // before casting. For scalable vectors the runtime size (vscale * dim) is
+    // unknown at compile time, so we can't clamp to `dim` as in the fixed-size
+    // path. Clamping to INT32_MAX is safe because any realistic scalable vector
+    // size fits well below this limit, so a bound >= vscale*dim still produces
+    // an all-true mask after the comparison.
+    if (force32BitVectorIndices) {
+      Value maxBound =
+          arith::ConstantIndexOp::create(rewriter, loc, (1LL << 31) - 1);
+      maskBound = arith::MinSIOp::create(rewriter, loc, maskBound, maxBound);
+    }
+    auto bound =
+        getValueOrCreateCastToIndexLike(rewriter, loc, idxType, maskBound);
     Value bounds = BroadcastOp::create(rewriter, loc, indices.getType(), bound);
     Value comp = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
                                        indices, bounds);
@@ -1779,7 +1817,7 @@ struct VectorBroadcastScalarToNdLowering
       return rewriter.notifyMatchFailure(
           broadcast, "broadcast to 1-d or 0-d handled elsewhere");
 
-    // First insert it into an undef vector so we can shuffle it.
+    // First insert it into a poison vector so we can shuffle it.
     auto loc = broadcast.getLoc();
     auto vectorTypeInfo =
         LLVM::detail::extractNDVectorTypeInfo(resultType, *getTypeConverter());
@@ -1981,17 +2019,12 @@ struct VectorToElementsLowering
 };
 
 /// Conversion pattern for vector.step.
-struct VectorScalableStepOpLowering
-    : public ConvertOpToLLVMPattern<vector::StepOp> {
+struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resultType = cast<VectorType>(stepOp.getType());
-    if (!resultType.isScalable()) {
-      return failure();
-    }
     Type llvmType = typeConverter->convertType(stepOp.getType());
     rewriter.replaceOpWithNewOp<LLVM::StepVectorOp>(stepOp, llvmType);
     return success();
@@ -2204,7 +2237,7 @@ void mlir::vector::populateVectorTransposeToFlatTranspose(
 void mlir::populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices,
-    bool useVectorAlignment) {
+    bool useVectorAlignment, bool enableGEPInboundsNuw) {
   // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
@@ -2212,8 +2245,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
   patterns.add<VectorLoadStoreConversion<vector::LoadOp>,
                VectorLoadStoreConversion<vector::MaskedLoadOp>,
                VectorLoadStoreConversion<vector::StoreOp>,
-               VectorLoadStoreConversion<vector::MaskedStoreOp>,
-               VectorGatherOpConversion, VectorScatterOpConversion>(
+               VectorLoadStoreConversion<vector::MaskedStoreOp>>(
+      converter, useVectorAlignment, enableGEPInboundsNuw);
+  patterns.add<VectorGatherOpConversion, VectorScatterOpConversion>(
       converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractOpConversion, VectorFMAOp1DConversion,
@@ -2225,12 +2259,14 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
-               VectorToElementsLowering, VectorScalableStepOpLowering>(
-      converter);
+               VectorToElementsLowering, VectorStepOpLowering>(converter);
 }
 
 namespace {
 struct VectorToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  VectorToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();

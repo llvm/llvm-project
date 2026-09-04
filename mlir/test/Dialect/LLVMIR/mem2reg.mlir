@@ -613,24 +613,20 @@ llvm.func @use(i64)
 
 // -----
 
-// This test should no longer be an issue once promotion within subregions
-// is supported.
 // CHECK-LABEL: llvm.func @subregion_block_promotion
 // CHECK-SAME: (%[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64) -> i64
 llvm.func @subregion_block_promotion(%arg0: i64, %arg1: i64) -> i64 {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCA:.*]] = llvm.alloca
+  // CHECK-NOT: = llvm.alloca
   %1 = llvm.alloca %0 x i64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %[[ARG1]], %[[ALLOCA]]
   llvm.store %arg1, %1 {alignment = 4 : i64} : i64, !llvm.ptr
-  // CHECK: scf.execute_region {
+  // CHECK: %[[RES:.*]] = scf.execute_region -> i64 {
   scf.execute_region {
-    // CHECK: llvm.store %[[ARG0]], %[[ALLOCA]]
     llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
     scf.yield
   }
+  // CHECK:   scf.yield %[[ARG0]] : i64
   // CHECK: }
-  // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]]
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i64
   // CHECK: llvm.return %[[RES]] : i64
   llvm.return %2 : i64
@@ -1039,6 +1035,20 @@ llvm.func @scalable_llvm_vector() -> i16 {
 
 // -----
 
+// CHECK-LABEL: @scalable_vector_matching_store_load
+// CHECK-SAME: %[[ARG:.+]]: vector<[4]xi1>
+llvm.func @scalable_vector_matching_store_load(%arg: vector<[4]xi1>) -> vector<[4]xi1> {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<[4]xi1> : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 : vector<[4]xi1>, !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> vector<[4]xi1>
+  // CHECK: llvm.return %[[ARG]] : vector<[4]xi1>
+  llvm.return %2 : vector<[4]xi1>
+}
+
+// -----
+
 // CHECK-LABEL: @smaller_store_forwarding
 // CHECK-SAME: %[[ARG:.+]]: i16
 llvm.func @smaller_store_forwarding(%arg : i16) {
@@ -1166,5 +1176,35 @@ llvm.func @store_out_of_bounds(%arg : i64) {
   // CHECK: llvm.alloca
   %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
   llvm.store %arg, %1 : i64, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// Verify that a dead direct use is properly deleted by mem2reg.
+
+// CHECK-LABEL: @dead_direct_use
+llvm.func @dead_direct_use(%arg0 : i1) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  scf.if %arg0 {
+    // CHECK-NOT: llvm.addrspacecast
+    %2 = llvm.addrspacecast %1 : !llvm.ptr to !llvm.ptr<5>
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @indirect_blocking_use_in_different_region
+llvm.func @indirect_blocking_use_in_different_region(%arg0 : i1) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.addrspacecast %1 : !llvm.ptr to !llvm.ptr<5>
+  scf.if %arg0 {
+    %3 = llvm.addrspacecast %2 : !llvm.ptr<5> to !llvm.ptr
+  }
   llvm.return
 }

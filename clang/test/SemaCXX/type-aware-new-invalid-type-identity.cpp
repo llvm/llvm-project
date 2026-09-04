@@ -3,11 +3,11 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=2
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=3
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=4
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -DINVALID_TYPE_IDENTITY_VERSION=5
 // RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26
 
 namespace std {
 #if !defined(INVALID_TYPE_IDENTITY_VERSION)
-  // expected-no-diagnostics
   template <class T> struct type_identity {
   };
   #define TYPE_IDENTITY(T) std::type_identity<T>
@@ -30,6 +30,11 @@ namespace std {
   template <class T> struct inner {};
   template <class T> using type_identity = inner<T>;
   #define TYPE_IDENTITY(T) std::type_identity<T>
+#elif INVALID_TYPE_IDENTITY_VERSION==5 
+template <class T> struct type_identity { // #reentrant_type_identity_decl
+  using type = decltype(new T); // #reentrant_type_identity_type_decl
+};
+#define TYPE_IDENTITY(T) std::type_identity<T>
 #endif
   using size_t = __SIZE_TYPE__;
   enum class align_val_t : long {};
@@ -37,6 +42,14 @@ namespace std {
 
 template <class T> void *operator new(TYPE_IDENTITY(T), std::size_t, std::align_val_t); // #operator_new
 template <class T> void operator delete(TYPE_IDENTITY(T), void*, std::size_t, std::align_val_t); // #operator_delete
+
+using size_t = __SIZE_TYPE__;
+struct TestType {};
+
+void reentrant_type_identity() {
+  TestType *t = new TestType; // #reentrant_new
+  delete t;
+}
 
 // These error messages aren't great, but they fall out of the way we model
 // alias types. Getting them in this way requires extremely unlikely code to be
@@ -48,12 +61,24 @@ template <class T> void operator delete(TYPE_IDENTITY(T), void*, std::size_t, st
 #elif INVALID_TYPE_IDENTITY_VERSION==4
 // expected-error@#operator_new {{'operator new' cannot take a dependent type as its 1st parameter; use size_t ('unsigned long') instead}}
 // expected-error@#operator_delete {{'operator delete' cannot take a dependent type as its 1st parameter; use 'void *' instead}}
+#elif INVALID_TYPE_IDENTITY_VERSION==5
+// expected-error@#reentrant_type_identity_type_decl {{incomplete type 'std::type_identity<TestType>' where a complete type is required}}
+// expected-note@#reentrant_type_identity_decl {{definition of 'std::type_identity<TestType>' is not complete until the closing '}'}}
+// expected-note@#reentrant_new {{in instantiation of template class 'std::type_identity<TestType>' requested here}}
 #endif
 
-using size_t = __SIZE_TYPE__;
-struct TestType {};
+#if !defined(INVALID_TYPE_IDENTITY_VERSION)
+struct Bad {};
+template <> struct std::type_identity<Bad>; // #incomplete_specialization
 
-void f() {
-  TestType *t = new TestType;
-  delete t;
+// This is a pure implementation test to ensure correct caching behavior if
+// constructing the type_identity argument fails.
+void failedTypeIdentitySpecialization() {
+  Bad *a = new Bad;
+  // expected-error@-1 {{incomplete type 'std::type_identity<Bad>' where a complete type is required}}
+  // expected-note@#incomplete_specialization {{forward declaration of 'std::type_identity<Bad>'}}
+  Bad *b = new Bad;
+  // expected-error@-1 {{incomplete type 'std::type_identity<Bad>' where a complete type is required}}
+  // expected-note@#incomplete_specialization {{forward declaration of 'std::type_identity<Bad>'}}
 }
+#endif

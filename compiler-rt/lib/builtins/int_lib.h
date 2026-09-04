@@ -64,7 +64,7 @@
   COMPILER_RT_ALIAS_VISIBILITY(aliasname) \
   __asm__(SYMBOL_NAME(aliasname) " = " SYMBOL_NAME(name)); \
   COMPILER_RT_ABI __typeof(name) aliasname;
-#elif defined(_WIN32) || defined(__UEFI__)
+#elif defined(_WIN32) || defined(__UEFI__) || defined(__SPIRV__)
 #define COMPILER_RT_ALIAS(name, aliasname)
 #else
 #error Unsupported target

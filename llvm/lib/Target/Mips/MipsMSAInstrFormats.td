@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class MSAInst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther>,
+class MSAInst : MipsInst<(outs), (ins), "", [], FrmOther>,
                 ASE_MSA {
   let EncodingPredicates = [HasStdEnc];
   let Inst{31-26} = 0b011110;
@@ -20,9 +20,8 @@ class MSASpecial : MSAInst {
   let Inst{31-26} = 0b000000;
 }
 
-class MSAPseudo<dag outs, dag ins, list<dag> pattern,
-                InstrItinClass itin = IIPseudo>:
-  MipsPseudo<outs, ins, pattern, itin> {
+class MSAPseudo<dag outs, dag ins, list<dag> pattern>:
+  MipsPseudo<outs, ins, pattern> {
   let EncodingPredicates = [HasStdEnc];
   let ASEPredicate = [HasMSA];
 }

@@ -109,8 +109,8 @@ struct Polymorphic {
 };
 
 template struct __declspec(dllexport) Polymorphic<WithExportTag>;
-// MSC-DAG: @"??_7?$Polymorphic@UWithExportTag@@@@6B@" = dllexport unnamed_addr
-// GNU-DAG: @_ZTV11PolymorphicI13WithExportTagE = weak_odr dso_local dllexport unnamed_addr
+// MSC-DAG: @"??_7?$Polymorphic@UWithExportTag@@@@6B@" = dllexport
+// GNU-DAG: @_ZTV11PolymorphicI13WithExportTagE = weak_odr dso_local dllexport
 
 // MSC-DAG: define weak_odr dso_local dllexport void @"?noAttrVirtualMethod@?$Polymorphic@UWithExportTag@@@@UEAAXXZ"
 // GNU-DAG: define weak_odr dso_local dllexport void @_ZN11PolymorphicI13WithExportTagE19noAttrVirtualMethodEv
@@ -122,8 +122,8 @@ template struct __declspec(dllexport) Polymorphic<WithExportTag>;
 // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI13WithExportTagE29excludedExportedVirtualMethodEv
 
 template struct Polymorphic<NoAttrTag>;
-// MSC-DAG: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" = unnamed_addr
-// GNU-DAG: @_ZTV11PolymorphicI9NoAttrTagE = weak_odr dso_local unnamed_addr
+// MSC-DAG: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" =
+// GNU-DAG: @_ZTV11PolymorphicI9NoAttrTagE = weak_odr dso_local
 
 // MSC-DAG: define weak_odr dso_local void @"?noAttrVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
 // GNU-DAG: define weak_odr dso_local void @_ZN11PolymorphicI9NoAttrTagE19noAttrVirtualMethodEv
@@ -136,8 +136,8 @@ template struct Polymorphic<NoAttrTag>;
 
 void usePolymorphic() {
   new Polymorphic<ImplicitTag>();
-  // MSC-DAG: @"??_7?$Polymorphic@UImplicitTag@@@@6B@" = unnamed_addr
-  // GNU-DAG: @_ZTV11PolymorphicI11ImplicitTagE = linkonce_odr dso_local unnamed_addr
+  // MSC-DAG: @"??_7?$Polymorphic@UImplicitTag@@@@6B@" =
+  // GNU-DAG: @_ZTV11PolymorphicI11ImplicitTagE = linkonce_odr dso_local
 
   // MSC-DAG: define linkonce_odr dso_local void @"?noAttrVirtualMethod@?$Polymorphic@UImplicitTag@@@@UEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI11ImplicitTagE19noAttrVirtualMethodEv
@@ -149,15 +149,15 @@ void usePolymorphic() {
   // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI11ImplicitTagE29excludedExportedVirtualMethodEv
 }
 
-/// Test that the DLL attrribute wins over the exclude attribute on a
-/// non-template context.
+/// Test that the exclude attibute takes precedence over the DLL attrribute in
+/// a non-template context also.
 struct NonTemplateClass {
   EXCLUDE_ATTR __declspec(dllexport) void excludedExportedMethod();
 };
 
 void NonTemplateClass::excludedExportedMethod() {}
-// MSC-DAG: define dso_local dllexport void @"?excludedExportedMethod@NonTemplateClass@@QEAAXXZ"
-// GNU-DAG: define dso_local dllexport void @_ZN16NonTemplateClass22excludedExportedMethodEv
+// MSC-DAG: define dso_local void @"?excludedExportedMethod@NonTemplateClass@@QEAAXXZ"
+// GNU-DAG: define dso_local void @_ZN16NonTemplateClass22excludedExportedMethodEv
 
 /// The same, but exporting whole class.
 struct __declspec(dllexport) NonTemplateExportedClass {
@@ -165,5 +165,5 @@ struct __declspec(dllexport) NonTemplateExportedClass {
 };
 
 void NonTemplateExportedClass::excludedMethod() {}
-// MSC-DAG: define dso_local dllexport void @"?excludedMethod@NonTemplateExportedClass@@QEAAXXZ"
-// GNU-DAG: define dso_local dllexport void @_ZN24NonTemplateExportedClass14excludedMethodEv
+// MSC-DAG: define dso_local void @"?excludedMethod@NonTemplateExportedClass@@QEAAXXZ"
+// GNU-DAG: define dso_local void @_ZN24NonTemplateExportedClass14excludedMethodEv

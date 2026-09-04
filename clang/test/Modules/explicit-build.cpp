@@ -170,7 +170,7 @@
 // RUN:            -fmodule-file=%t/nonexistent.pcm \
 // RUN:            %s 2>&1 | FileCheck --check-prefix=CHECK-NO-FILE %s
 //
-// CHECK-NO-FILE: fatal error: module file '{{.*}}nonexistent.pcm' not found: module file not found
+// CHECK-NO-FILE: fatal error: module file '{{.*}}nonexistent.pcm' not found
 
 // RUN: mv %t/a.pcm %t/a-tmp.pcm
 // RUN: not %clang_cc1 -triple=x86_64-linux-gnu -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
@@ -202,6 +202,8 @@
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            %s -DHAVE_A -DHAVE_B -DHAVE_C 2>&1 | FileCheck --check-prefix=CHECK-MISMATCHED-B %s
 //
-// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}b.pcm' is out of date and needs to be rebuilt: module file has a different size than expected
+// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}b.pcm' is out of date and needs to be rebuilt
+// CHECK-MISMATCHED-B-NEXT: note: size changed from expected {{[0-9]+}} to {{[0-9]+}}
+// CHECK-MISMATCHED-B-NEXT: note: earlier input file validation was disabled for this kind of precompiled file
 // CHECK-MISMATCHED-B-NEXT: note: imported by module 'c'
 // CHECK-MISMATCHED-B-NOT:  note:

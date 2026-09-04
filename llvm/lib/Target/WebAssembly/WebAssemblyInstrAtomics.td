@@ -11,6 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+def AtomicAddrOps32 : ComplexPattern<i32, 3, "SelectAtomicAddrOperands32"> {
+  let WantsRoot = 1;
+}
+def AtomicAddrOps64 : ComplexPattern<i64, 3, "SelectAtomicAddrOperands64"> {
+  let WantsRoot = 1;
+}
+
 let UseNamedOperandTable = 1 in
 multiclass ATOMIC_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                     list<dag> pattern_r, string asmstr_r,
@@ -150,11 +157,11 @@ multiclass AtomicLoad<WebAssemblyRegClass rc, string name, int atomic_op> {
 }
 
 multiclass AtomicLoadPat<ValueType ty, SDPatternOperator kind, string Name> {
-  def : Pat<(ty (kind (AddrOps32 offset32_op:$offset, I32:$addr))),
-            (!cast<NI>(Name # "_A32") 0, 0, offset32_op:$offset, I32:$addr)>,
+  def : Pat<(ty (kind (AtomicAddrOps32 offset32_op:$offset, I32:$addr, i32imm:$order))),
+            (!cast<NI>(Name # "_A32") $order, 0, offset32_op:$offset, I32:$addr)>,
         Requires<[HasAddr32, HasAtomics]>;
-  def : Pat<(ty (kind (AddrOps64 offset64_op:$offset, I64:$addr))),
-            (!cast<NI>(Name # "_A64") 0, 0, offset64_op:$offset, I64:$addr)>,
+  def : Pat<(ty (kind (AtomicAddrOps64 offset64_op:$offset, I64:$addr, i32imm:$order))),
+            (!cast<NI>(Name # "_A64") $order, 0, offset64_op:$offset, I64:$addr)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 
@@ -245,18 +252,12 @@ multiclass AtomicStore<WebAssemblyRegClass rc, string name, int atomic_op> {
 defm ATOMIC_STORE_I32 : AtomicStore<I32, "i32.atomic.store", 0x17>;
 defm ATOMIC_STORE_I64 : AtomicStore<I64, "i64.atomic.store", 0x18>;
 
-// We used to need an 'atomic' version of store patterns because store and atomic_store
-// nodes have different operand orders.
-//
-// TODO: This is no longer true and atomic_store and store patterns
-// can be unified.
-
 multiclass AStorePat<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind ty:$val, (AddrOps32 offset32_op:$offset, I32:$addr)),
-            (!cast<NI>(inst#_A32) 0, 0, $offset, $addr, $val)>,
+  def : Pat<(kind ty:$val, (AtomicAddrOps32 offset32_op:$offset, I32:$addr, i32imm:$order)),
+            (!cast<NI>(inst#_A32) $order, 0, $offset, $addr, $val)>,
         Requires<[HasAddr32, HasAtomics]>;
-  def : Pat<(kind ty:$val, (AddrOps64 offset64_op:$offset, I64:$addr)),
-            (!cast<NI>(inst#_A64) 0, 0, $offset, $addr, $val)>,
+  def : Pat<(kind ty:$val, (AtomicAddrOps64 offset64_op:$offset, I64:$addr, i32imm:$order)),
+            (!cast<NI>(inst#_A64) $order, 0, $offset, $addr, $val)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 defm : AStorePat<i32, atomic_store_32, "ATOMIC_STORE_I32">;
@@ -393,11 +394,13 @@ defm ATOMIC_RMW32_U_XCHG_I64 :
   WebAssemblyBinRMW<I64, "i64.atomic.rmw32.xchg_u", 0x47>;
 
 multiclass BinRMWPat<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(ty (kind (AddrOps32 offset32_op:$offset, I32:$addr), ty:$val)),
-            (!cast<NI>(inst#_A32) 0, 0, $offset, $addr, $val)>,
+  def : Pat<(ty (kind (AtomicAddrOps32 offset32_op:$offset, I32:$addr,
+                       i32imm:$order), ty:$val)),
+            (!cast<NI>(inst#_A32) $order, 0, $offset, $addr, $val)>,
         Requires<[HasAddr32, HasAtomics]>;
-  def : Pat<(ty (kind (AddrOps64 offset64_op:$offset, I64:$addr), ty:$val)),
-            (!cast<NI>(inst#_A64) 0, 0, $offset, $addr, $val)>,
+  def : Pat<(ty (kind (AtomicAddrOps64 offset64_op:$offset, I64:$addr,
+                       i32imm:$order), ty:$val)),
+            (!cast<NI>(inst#_A64) $order, 0, $offset, $addr, $val)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 
@@ -536,11 +539,11 @@ defm ATOMIC_RMW32_U_CMPXCHG_I64 :
   WebAssemblyTerRMW<I64, "i64.atomic.rmw32.cmpxchg_u", 0x4e>;
 
 multiclass TerRMWPat<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(ty (kind (AddrOps32 offset32_op:$offset, I32:$addr), ty:$exp, ty:$new)),
-            (!cast<NI>(inst#_A32) 0, 0, $offset, $addr, $exp, $new)>,
+  def : Pat<(ty (kind (AtomicAddrOps32 offset32_op:$offset, I32:$addr, i32imm:$order), ty:$exp, ty:$new)),
+            (!cast<NI>(inst#_A32) $order, 0, $offset, $addr, $exp, $new)>,
         Requires<[HasAddr32, HasAtomics]>;
-  def : Pat<(ty (kind (AddrOps64 offset64_op:$offset, I64:$addr), ty:$exp, ty:$new)),
-            (!cast<NI>(inst#_A64) 0, 0, $offset, $addr, $exp, $new)>,
+  def : Pat<(ty (kind (AtomicAddrOps64 offset64_op:$offset, I64:$addr, i32imm:$order), ty:$exp, ty:$new)),
+            (!cast<NI>(inst#_A64) $order, 0, $offset, $addr, $exp, $new)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 

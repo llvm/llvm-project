@@ -724,7 +724,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(rax_id,
                                                                       0);
     return_valobj_sp = ValueObjectMemory::Create(
-        &thread, "", Address(storage_addr, nullptr), return_compiler_type);
+        &thread, "", Address(storage_addr), return_compiler_type);
   }
   return return_valobj_sp;
 }
@@ -751,21 +751,15 @@ UnwindPlanSP ABIWindows_x86_64::CreateFunctionEntryUnwindPlan() {
 
 // Windows-x86_64 doesn't use %rbp
 // No available Unwind information for Windows-x86_64 (section .pdata)
-// Let's use SysV-x86_64 one for now
 UnwindPlanSP ABIWindows_x86_64::CreateDefaultUnwindPlan() {
-  uint32_t fp_reg_num = dwarf_rbp;
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
   UnwindPlan::Row row;
-
-  const int32_t ptr_size = 8;
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
   row.SetOffset(0);
   row.SetUnspecifiedRegistersAreUndefined(true);
-
-  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
   row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s -check-prefix=LINUX -check-prefix=CHECK
 ; RUN: llc < %s -mtriple=i686-apple-darwin | FileCheck %s -check-prefix=DARWIN -check-prefix=CHECK
-; RUN: llc < %s -mtriple=i686-pc-linux -stop-after=prologepilog | FileCheck %s --check-prefix=PEI
+; RUN: llc < %s -mtriple=i686-pc-linux -stop-after=prolog-epilog | FileCheck %s --check-prefix=PEI
 
 declare i32 @__gxx_personality_v0(...)
 declare void @good(i32 %a, i32 %b, i32 %c, i32 %d)

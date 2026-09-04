@@ -4,9 +4,9 @@
 // involve standard substitutions.
 
 
-// CHECK: @_ZTVSd = linkonce_odr unnamed_addr constant 
+// CHECK: @_ZTVSd = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTTSd = linkonce_odr unnamed_addr constant
-// CHECK: @_ZTCSd0_Si = linkonce_odr unnamed_addr constant 
+// CHECK: @_ZTCSd0_Si = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTCSd16_So = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTVSi = linkonce_odr unnamed_addr constant
 // CHECK: @_ZTTSi = linkonce_odr unnamed_addr constant

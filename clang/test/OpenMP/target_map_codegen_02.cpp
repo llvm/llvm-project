@@ -35,9 +35,9 @@
 
 // CK3-LABEL: @.__omp_offloading_{{.*}}implicit_maps_parameter{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK3-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK3-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK3-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK3-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 
 // CK3-LABEL: implicit_maps_parameter{{.*}}(
 void implicit_maps_parameter (int a){
@@ -56,14 +56,14 @@ void implicit_maps_parameter (int a){
 // CK3-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
 // CK3-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-// CK3: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
+// CK3: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
 #pragma omp target
   {
    ++a;
   }
 }
 
-// CK3: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK3: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK3: [[ADDR:%.+]] = alloca i[[sz]],
 // CK3: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK3-64: {{.+}} = load i32, ptr [[ADDR]],

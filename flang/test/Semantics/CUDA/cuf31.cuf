@@ -1,0 +1,38 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Regression test for a compiler crash on CUDA Fortran LAUNCH_BOUNDS() /
+! CLUSTER_DIMS() when the operand list is rejected: the diagnostic dereferenced
+! an empty currStmtSource() during ResolveSpecificationParts and aborted.  The
+! crash only reproduces when the offending construct is the first program unit
+! processed (a later unit leaves currStmtSource() set, masking it), so an
+! invalid module leads here.  m_lb_ok is the valid case -- the second and third
+! LAUNCH_BOUNDS operands are optional; the rest are invalid and must diagnose
+! cleanly rather than crash.
+
+module m_lb_dup
+ contains
+  !ERROR: LAUNCH_BOUNDS() may only appear once
+  attributes(global) launch_bounds(1,2) launch_bounds(3,4) subroutine s; end
+end module
+
+module m_lb_ok
+ contains
+  attributes(global) launch_bounds(32) subroutine s; end
+end module
+
+module m_lb_toomany
+ contains
+  !ERROR: Operands of LAUNCH_BOUNDS() must be 1, 2, or 3 integer constants
+  attributes(global) launch_bounds(1,2,3,4) subroutine s; end
+end module
+
+module m_cd_wrongcount
+ contains
+  !ERROR: Operands of CLUSTER_DIMS() must be three integer constants
+  attributes(global) cluster_dims(1) subroutine s; end
+end module
+
+module m_cd_dup
+ contains
+  !ERROR: CLUSTER_DIMS() may only appear once
+  attributes(global) cluster_dims(1,2,3) cluster_dims(4,5,6) subroutine s; end
+end module

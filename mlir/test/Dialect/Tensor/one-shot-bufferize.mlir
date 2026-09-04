@@ -114,7 +114,7 @@ func.func @insert_slice_fun_not_inplace(
     %t : tensor<4xf32> {bufferization.writable = false})
   -> tensor<?xf32>
 {
-  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) {alignment = 64 : i64} : memref<?xf32>
+  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) alignment = 64 : memref<?xf32>
   //      CHECK: memref.copy %[[A]], %[[ALLOC]] : memref<?xf32{{.*}} to memref<?xf32>
   //      CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][0] [4] [1] : memref<?xf32> to memref<4xf32, strided<[1]>>
   //      CHECK: memref.copy %[[t]], %[[SV]] : memref<4xf32, strided{{.*}}> to memref<4xf32, strided<[1]>>
@@ -251,7 +251,7 @@ func.func @pad_memory_space(%t: tensor<?xf32>, %h1: index, %f: f32, %pos: index)
   // CHECK: %[[alloc_tensor:.*]] = memref.alloc{{.*}} : memref<?xf32, 3>
   // CHECK: memref.copy %[[t]], %[[alloc_tensor]]
   %0 = bufferization.alloc_tensor() copy(%t)
-      {memory_space = 3 : i64} : tensor<?xf32>
+      <{memory_space = 3 : i64}> : tensor<?xf32>
   // CHECK: %[[padded_alloc:.*]] = memref.alloc() {{.*}} : memref<15xf32, 3>
   // CHECK: linalg.map
   // CHECK:     outs(%[[padded_alloc]] : memref<15xf32, 3>)

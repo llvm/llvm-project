@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t/Frameworks/
-; RUN: cp -r %S/Inputs/Zippered/Zippered.framework %t/Frameworks/
+; RUN: cp -R %S/Inputs/Zippered/Zippered.framework %t/Frameworks/
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 ; RUN: yaml2obj %S/Inputs/Zippered/Zippered.yaml -o %t/Frameworks/Zippered.framework/Zippered
 

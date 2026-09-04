@@ -114,8 +114,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   if (!Content)
     reportError(Content.takeError(), ObjF.getFileName());
 
-  DataExtractor DE(*Content, ELFT::Endianness == llvm::endianness::little,
-                   ELFT::Is64Bits ? 8 : 4);
+  DataExtractor DE(*Content, ELFT::Endianness == llvm::endianness::little);
 
   DictScope D(W, "Header");
   uint64_t Offset = 0;

@@ -52,15 +52,15 @@ void TestConstantNotExactlyRepresentable() {
 
   // Float to half with values that lose precision - should warn
   TakesHalf2x2(F_inexact);
-  // expected-warning@-1{{implicit conversion loses floating-point precision: 'const float2x2' (aka 'matrix<float const, 2, 2>') to 'matrix<half, 2, 2>'}}
+  // expected-warning@-1{{implicit conversion loses floating-point precision: 'const float2x2' (aka 'matrix<float, 2, 2> const') to 'matrix<half, 2, 2>'}}
 
   // Double to half with values that lose precision - should warn
   TakesHalf2x2(D_inexact);
-  // expected-warning@-1{{implicit conversion loses floating-point precision: 'const double2x2' (aka 'matrix<double const, 2, 2>') to 'matrix<half, 2, 2>'}}
+  // expected-warning@-1{{implicit conversion loses floating-point precision: 'const double2x2' (aka 'matrix<double, 2, 2> const') to 'matrix<half, 2, 2>'}}
 
   // Double to float with values that lose precision - should warn
   TakesFloat2x2(D_inexact);
-  // expected-warning@-1{{implicit conversion loses floating-point precision: 'const double2x2' (aka 'matrix<double const, 2, 2>') to 'matrix<float, 2, 2>'}}
+  // expected-warning@-1{{implicit conversion loses floating-point precision: 'const double2x2' (aka 'matrix<double, 2, 2> const') to 'matrix<float, 2, 2>'}}
 
   // Double to float, where the doubles are float literals that were upcast to double - should not warn
   TakesFloat2x2(D_inexact2);

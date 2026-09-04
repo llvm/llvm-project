@@ -61,7 +61,7 @@ constexpr long double foo() {
 static_assert(foo() == ld);
 
 constexpr bool f(bool read_uninit) {
-  bytes b = bit_cast<bytes>(ld);
+  bytes b = bit_cast<bytes>(ld); // both-note {{declared here}}
   unsigned char ld_bytes[10] = {
     0x0,  0x48, 0x9f, 0x49, 0xf0,
     0x3c, 0x20, 0xc9, 0x0,  0x40,

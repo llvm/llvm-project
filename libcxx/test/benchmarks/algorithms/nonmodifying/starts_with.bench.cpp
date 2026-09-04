@@ -17,14 +17,11 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto ranges_starts_with_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::starts_with(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::ranges::starts_with(first1, last1, first2, last2, [](auto x, auto y) { return x == y; });
   };
 
   // Benchmark ranges::starts_with where we find the mismatching element at the very end (worst case).
@@ -32,7 +29,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto starts_with) {
       benchmark::RegisterBenchmark(
           name,
-          [starts_with](auto& st) {
+          [starts_with](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

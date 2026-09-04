@@ -37,16 +37,16 @@
 // CK29: [[SSB:%.+]]  = type { ptr, ptr }
 
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK29: [[SIZE00:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}]
-// CK29: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]]]
+// CK29: [[SIZE00:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}, i64 0]
+// CK29: [[MTYPE00:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]], i64 288]
 
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK29: [[SIZE01:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}]
-// CK29: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]]]
+// CK29: [[SIZE01:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}, i64 0]
+// CK29: [[MTYPE01:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]], i64 288]
 
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK29: [[SIZE02:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}]
-// CK29: [[MTYPE02:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]]]
+// CK29: [[SIZE02:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}, i64 0]
+// CK29: [[MTYPE02:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]], i64 288]
 
 struct SSA{
   double *p;
@@ -105,7 +105,7 @@ struct SSB{
 // CK29-DAG: store ptr [[PR_DEREF:%.+]], ptr [[BP2]]
 // CK29-DAG: store ptr [[SEC1:%.+]], ptr [[P2]]
 
-// CK29: call void [[CALL00:@.+]](ptr {{[^,]+}})
+// CK29: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(p->pr[:10])
     {
       p->pr++;
@@ -154,7 +154,7 @@ struct SSB{
 // CK29-DAG: store ptr [[PR_P]], ptr [[BP2]]
 // CK29-DAG: store ptr [[SEC1:%.+]], ptr [[P2]]
 
-// CK29: call void [[CALL00:@.+]](ptr {{[^,]+}})
+// CK29: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(pr->p[:10])
     {
       pr->p++;
@@ -205,7 +205,7 @@ struct SSB{
 // CK29-DAG: store ptr [[PR_PR_DEREF:%.+]], ptr [[BP2]]
 // CK29-DAG: store ptr [[SEC1:%.+]], ptr [[P2]]
 
-// CK29: call void [[CALL00:@.+]](ptr {{[^,]+}})
+// CK29: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(pr->pr[:10])
     {
       pr->pr++;

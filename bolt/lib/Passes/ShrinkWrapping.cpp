@@ -1887,13 +1887,16 @@ Expected<bool> ShrinkWrapping::processInsertions() {
 void ShrinkWrapping::processDeletions() {
   LivenessAnalysis &LA = Info.getLivenessAnalysis();
   for (BinaryBasicBlock &BB : BF) {
-    for (auto II = BB.begin(); II != BB.end(); ++II) {
+    for (auto II = BB.begin(); II != BB.end();) {
       MCInst &Inst = *II;
       auto TodoList = BC.MIB->tryGetAnnotationAs<std::vector<WorklistItem>>(
           Inst, getAnnotationIndex());
-      if (!TodoList)
+      if (!TodoList) {
+        ++II;
         continue;
+      }
       // Process all deletions
+      bool Erased = false;
       for (WorklistItem &Item : *TodoList) {
         if (Item.Action != WorklistItem::Erase &&
             Item.Action != WorklistItem::ChangeToAdjustment)
@@ -1916,9 +1919,12 @@ void ShrinkWrapping::processDeletions() {
           dbgs() << "Erasing: ";
           BC.printInstruction(dbgs(), Inst);
         });
-        II = std::prev(BB.eraseInstruction(II));
+        II = BB.eraseInstruction(II);
+        Erased = true;
         break;
       }
+      if (!Erased)
+        ++II;
     }
   }
 }

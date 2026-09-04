@@ -1285,10 +1285,10 @@ define <2 x double> @test_v2f64_f128(fp128 %p) {
 ; SOFT-NEXT:    sub sp, sp, #16
 ; SOFT-NEXT:    stm sp, {r0, r1, r2, r3}
 ; SOFT-NEXT:    bl __addtf3
-; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[0], r0
-; SOFT-NEXT:    vmov.32 d17[1], r3
+; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[1], r1
+; SOFT-NEXT:    vmov.32 d17[1], r3
 ; SOFT-NEXT:    vrev64.32 q8, q8
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
 ; SOFT-NEXT:    vadd.f64 d16, d17, d17
@@ -1305,10 +1305,10 @@ define <2 x double> @test_v2f64_f128(fp128 %p) {
 ; HARD-NEXT:    sub sp, sp, #16
 ; HARD-NEXT:    stm sp, {r0, r1, r2, r3}
 ; HARD-NEXT:    bl __addtf3
-; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[0], r0
-; HARD-NEXT:    vmov.32 d17[1], r3
+; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[1], r1
+; HARD-NEXT:    vmov.32 d17[1], r3
 ; HARD-NEXT:    vrev64.32 q8, q8
 ; HARD-NEXT:    vadd.f64 d1, d17, d17
 ; HARD-NEXT:    vadd.f64 d0, d16, d16
@@ -1465,10 +1465,10 @@ define <2 x i64> @test_v2i64_f128(fp128 %p) {
 ; SOFT-NEXT:    sub sp, sp, #16
 ; SOFT-NEXT:    stm sp, {r0, r1, r2, r3}
 ; SOFT-NEXT:    bl __addtf3
-; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[0], r0
-; SOFT-NEXT:    vmov.32 d17[1], r3
+; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[1], r1
+; SOFT-NEXT:    vmov.32 d17[1], r3
 ; SOFT-NEXT:    vrev64.32 q8, q8
 ; SOFT-NEXT:    vadd.i64 q8, q8, q8
 ; SOFT-NEXT:    vmov r1, r0, d16
@@ -1484,10 +1484,10 @@ define <2 x i64> @test_v2i64_f128(fp128 %p) {
 ; HARD-NEXT:    sub sp, sp, #16
 ; HARD-NEXT:    stm sp, {r0, r1, r2, r3}
 ; HARD-NEXT:    bl __addtf3
-; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[0], r0
-; HARD-NEXT:    vmov.32 d17[1], r3
+; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[1], r1
+; HARD-NEXT:    vmov.32 d17[1], r3
 ; HARD-NEXT:    vrev64.32 q8, q8
 ; HARD-NEXT:    vadd.i64 q0, q8, q8
 ; HARD-NEXT:    add sp, sp, #16
@@ -1635,10 +1635,10 @@ define <4 x float> @test_v4f32_f128(fp128 %p) {
 ; SOFT-NEXT:    sub sp, sp, #16
 ; SOFT-NEXT:    stm sp, {r0, r1, r2, r3}
 ; SOFT-NEXT:    bl __addtf3
-; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[0], r0
-; SOFT-NEXT:    vmov.32 d17[1], r3
+; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[1], r1
+; SOFT-NEXT:    vmov.32 d17[1], r3
 ; SOFT-NEXT:    vadd.f32 q8, q8, q8
 ; SOFT-NEXT:    vrev64.32 q8, q8
 ; SOFT-NEXT:    vmov r1, r0, d16
@@ -1654,10 +1654,10 @@ define <4 x float> @test_v4f32_f128(fp128 %p) {
 ; HARD-NEXT:    sub sp, sp, #16
 ; HARD-NEXT:    stm sp, {r0, r1, r2, r3}
 ; HARD-NEXT:    bl __addtf3
-; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[0], r0
-; HARD-NEXT:    vmov.32 d17[1], r3
+; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[1], r1
+; HARD-NEXT:    vmov.32 d17[1], r3
 ; HARD-NEXT:    vadd.f32 q8, q8, q8
 ; HARD-NEXT:    vrev64.32 q0, q8
 ; HARD-NEXT:    add sp, sp, #16
@@ -1813,10 +1813,10 @@ define <4 x i32> @test_v4i32_f128(fp128 %p) {
 ; SOFT-NEXT:    sub sp, sp, #16
 ; SOFT-NEXT:    stm sp, {r0, r1, r2, r3}
 ; SOFT-NEXT:    bl __addtf3
-; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[0], r0
-; SOFT-NEXT:    vmov.32 d17[1], r3
+; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[1], r1
+; SOFT-NEXT:    vmov.32 d17[1], r3
 ; SOFT-NEXT:    vadd.i32 q8, q8, q8
 ; SOFT-NEXT:    vrev64.32 q8, q8
 ; SOFT-NEXT:    vmov r1, r0, d16
@@ -1832,10 +1832,10 @@ define <4 x i32> @test_v4i32_f128(fp128 %p) {
 ; HARD-NEXT:    sub sp, sp, #16
 ; HARD-NEXT:    stm sp, {r0, r1, r2, r3}
 ; HARD-NEXT:    bl __addtf3
-; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[0], r0
-; HARD-NEXT:    vmov.32 d17[1], r3
+; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[1], r1
+; HARD-NEXT:    vmov.32 d17[1], r3
 ; HARD-NEXT:    vadd.i32 q8, q8, q8
 ; HARD-NEXT:    vrev64.32 q0, q8
 ; HARD-NEXT:    add sp, sp, #16
@@ -1991,10 +1991,10 @@ define <8 x i16> @test_v8i16_f128(fp128 %p) {
 ; SOFT-NEXT:    sub sp, sp, #16
 ; SOFT-NEXT:    stm sp, {r0, r1, r2, r3}
 ; SOFT-NEXT:    bl __addtf3
-; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[0], r0
-; SOFT-NEXT:    vmov.32 d17[1], r3
+; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[1], r1
+; SOFT-NEXT:    vmov.32 d17[1], r3
 ; SOFT-NEXT:    vrev32.16 q8, q8
 ; SOFT-NEXT:    vadd.i16 q8, q8, q8
 ; SOFT-NEXT:    vrev64.16 q8, q8
@@ -2011,10 +2011,10 @@ define <8 x i16> @test_v8i16_f128(fp128 %p) {
 ; HARD-NEXT:    sub sp, sp, #16
 ; HARD-NEXT:    stm sp, {r0, r1, r2, r3}
 ; HARD-NEXT:    bl __addtf3
-; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[0], r0
-; HARD-NEXT:    vmov.32 d17[1], r3
+; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[1], r1
+; HARD-NEXT:    vmov.32 d17[1], r3
 ; HARD-NEXT:    vrev32.16 q8, q8
 ; HARD-NEXT:    vadd.i16 q8, q8, q8
 ; HARD-NEXT:    vrev64.16 q0, q8
@@ -2173,10 +2173,10 @@ define <16 x i8> @test_v16i8_f128(fp128 %p) {
 ; SOFT-NEXT:    sub sp, sp, #16
 ; SOFT-NEXT:    stm sp, {r0, r1, r2, r3}
 ; SOFT-NEXT:    bl __addtf3
-; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[0], r0
-; SOFT-NEXT:    vmov.32 d17[1], r3
+; SOFT-NEXT:    vmov.32 d17[0], r2
 ; SOFT-NEXT:    vmov.32 d16[1], r1
+; SOFT-NEXT:    vmov.32 d17[1], r3
 ; SOFT-NEXT:    vrev32.8 q8, q8
 ; SOFT-NEXT:    vadd.i8 q8, q8, q8
 ; SOFT-NEXT:    vrev64.8 q8, q8
@@ -2193,10 +2193,10 @@ define <16 x i8> @test_v16i8_f128(fp128 %p) {
 ; HARD-NEXT:    sub sp, sp, #16
 ; HARD-NEXT:    stm sp, {r0, r1, r2, r3}
 ; HARD-NEXT:    bl __addtf3
-; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[0], r0
-; HARD-NEXT:    vmov.32 d17[1], r3
+; HARD-NEXT:    vmov.32 d17[0], r2
 ; HARD-NEXT:    vmov.32 d16[1], r1
+; HARD-NEXT:    vmov.32 d17[1], r3
 ; HARD-NEXT:    vrev32.8 q8, q8
 ; HARD-NEXT:    vadd.i8 q8, q8, q8
 ; HARD-NEXT:    vrev64.8 q0, q8

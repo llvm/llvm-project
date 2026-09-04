@@ -178,7 +178,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
@@ -229,6 +228,15 @@ class InferAddressSpacesImpl {
   bool updateAddressSpace(const Value &V,
                           ValueToAddrSpaceMapTy &InferredAddrSpace,
                           PredicatedAddrSpaceMapTy &PredicatedAS) const;
+
+  // Adds the users of V whose address space may still change to Worklist.
+  void enqueueUsers(Value &V, const ValueToAddrSpaceMapTy &InferredAddrSpace,
+                    SetVector<Value *> &Worklist) const;
+
+  // Propagates address spaces out of Worklist until nothing changes.
+  void runToFixPoint(SetVector<Value *> &Worklist,
+                     ValueToAddrSpaceMapTy &InferredAddrSpace,
+                     PredicatedAddrSpaceMapTy &PredicatedAS) const;
 
   // Tries to infer the specific address space of each address expression in
   // Postorder.
@@ -1134,6 +1142,45 @@ bool InferAddressSpacesImpl::run(Function &CurFn) {
                                      PredicatedAS);
 }
 
+void InferAddressSpacesImpl::enqueueUsers(
+    Value &V, const ValueToAddrSpaceMapTy &InferredAddrSpace,
+    SetVector<Value *> &Worklist) const {
+  for (Value *User : V.users()) {
+    // Skip if User is already in the worklist.
+    if (Worklist.count(User))
+      continue;
+
+    ValueToAddrSpaceMapTy::const_iterator Pos = InferredAddrSpace.find(User);
+    // Our algorithm only updates the address spaces of flat address
+    // expressions, which are those in InferredAddrSpace.
+    if (Pos == InferredAddrSpace.end())
+      continue;
+
+    // Function updateAddressSpace moves the address space down a lattice path.
+    // Therefore, nothing to do if User is already inferred as flat (the bottom
+    // element in the lattice).
+    if (Pos->second == FlatAddrSpace)
+      continue;
+
+    Worklist.insert(User);
+  }
+}
+
+void InferAddressSpacesImpl::runToFixPoint(
+    SetVector<Value *> &Worklist, ValueToAddrSpaceMapTy &InferredAddrSpace,
+    PredicatedAddrSpaceMapTy &PredicatedAS) const {
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+
+    // Try to update the address space of the stack top according to the
+    // address spaces of its operands.
+    if (!updateAddressSpace(*V, InferredAddrSpace, PredicatedAS))
+      continue;
+
+    enqueueUsers(*V, InferredAddrSpace, Worklist);
+  }
+}
+
 // Constants need to be tracked through RAUW to handle cases with nested
 // constant expressions, so wrap values in WeakTrackingVH.
 void InferAddressSpacesImpl::inferAddressSpaces(
@@ -1145,34 +1192,25 @@ void InferAddressSpacesImpl::inferAddressSpaces(
   for (Value *V : Postorder)
     InferredAddrSpace[V] = UninitializedAddressSpace;
 
-  while (!Worklist.empty()) {
-    Value *V = Worklist.pop_back_val();
+  runToFixPoint(Worklist, InferredAddrSpace, PredicatedAS);
 
-    // Try to update the address space of the stack top according to the
-    // address spaces of its operands.
-    if (!updateAddressSpace(*V, InferredAddrSpace, PredicatedAS))
-      continue;
-
-    for (Value *User : V->users()) {
-      // Skip if User is already in the worklist.
-      if (Worklist.count(User))
-        continue;
-
-      auto Pos = InferredAddrSpace.find(User);
-      // Our algorithm only updates the address spaces of flat address
-      // expressions, which are those in InferredAddrSpace.
-      if (Pos == InferredAddrSpace.end())
-        continue;
-
-      // Function updateAddressSpace moves the address space down a lattice
-      // path. Therefore, nothing to do if User is already inferred as flat (the
-      // bottom element in the lattice).
-      if (Pos->second == FlatAddrSpace)
-        continue;
-
-      Worklist.insert(User);
+  // A value still uninitialized here is stuck in a cycle of uninitialized
+  // values and carries no address space information. Lower it to flat so its
+  // users join to flat, instead of being rewritten to reference an operand
+  // that rewriteWithNewAddressSpaces() never converts.
+  SmallVector<Value *, 4> Lowered;
+  for (Value *V : Postorder) {
+    ValueToAddrSpaceMapTy::iterator I = InferredAddrSpace.find(V);
+    if (I->second == UninitializedAddressSpace) {
+      I->second = FlatAddrSpace;
+      Lowered.push_back(V);
     }
   }
+
+  for (Value *V : Lowered)
+    enqueueUsers(*V, InferredAddrSpace, Worklist);
+
+  runToFixPoint(Worklist, InferredAddrSpace, PredicatedAS);
 }
 
 unsigned
@@ -1661,7 +1699,6 @@ PreservedAnalyses InferAddressSpacesPass::run(Function &F,
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
-    PA.preserve<DominatorTreeAnalysis>();
     return PA;
   }
   return PreservedAnalyses::all();

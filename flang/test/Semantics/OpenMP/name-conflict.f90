@@ -5,7 +5,7 @@ contains
 
 subroutine foo1()
   integer :: baz1
-!ERROR: 'baz1' must be a variable
+!ERROR: 'baz1' must be a variable list item
 !$omp parallel do shared(baz1)
   baz1: do i = 1, 100
   enddo baz1
@@ -14,7 +14,7 @@ end subroutine
 
 subroutine foo2()
   !implicit baz2
-!ERROR: 'baz2' must be a variable
+!ERROR: 'baz2' must be a variable list item
 !$omp parallel do shared(baz2)
   baz2: do i = 1, 100
   enddo baz2

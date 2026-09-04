@@ -1,10 +1,10 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: not llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgpu7.04 -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck -check-prefix=VI %s
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s  -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s   -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,VI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu6.00 %s  -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu7.04 %s -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 %s   -filetype=null 2>&1 | FileCheck -check-prefixes=GCN-ERR,VI-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Positive tests for legacy dfmt/nfmt syntax.

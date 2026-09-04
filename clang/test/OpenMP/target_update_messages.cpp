@@ -241,7 +241,7 @@ void f() {
 
 #pragma omp target update to(test[1])
 
-#pragma omp target update to(test[1, 2]) // cxx23-error {{type 'int[10]' does not provide a subscript operator}} \
+#pragma omp target update to(test[1, 2]) // cxx23-error {{built-in subscript operator for type 'int[10]' expects exactly one argument}} \
                                          // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 
 #pragma omp target update to(test [1:1:1])
@@ -255,7 +255,7 @@ void f() {
 #pragma omp target update to(test[1, 2 ::]) // cxx23-error {{expected ']'}} // expected-note {{'['}} \
                                             // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 
-#pragma omp target update to(test[]) // cxx23-error {{type 'int[10]' does not provide a subscript operator}} \
+#pragma omp target update to(test[]) // cxx23-error {{built-in subscript operator for type 'int[10]' expects exactly one argument}} \
                                             // cxx23-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
   S s;
   (void)s[0];

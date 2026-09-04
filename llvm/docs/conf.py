@@ -14,52 +14,27 @@ from __future__ import print_function
 import sys, os, re
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath("."))
+from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
+
+globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
 
 # -- General configuration -----------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-# needs_sphinx = '1.0'
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
+extensions += ["sphinx.ext.intersphinx", "sphinx.ext.todo", "llvm_sphinx.ext.checks"]
 
-# When building man pages, we do not use the markdown pages,
-# So, we can continue without the myst_parser dependencies.
-# Doing so reduces dependencies of some packaged llvm distributions.
-try:
-    import myst_parser
-
-    extensions.append("myst_parser")
-except ImportError:
-    if not tags.has("builder-man"):
-        raise
-else:
-    myst_enable_extensions = ["substitution"]
-
-# Automatic anchors for markdown titles
-myst_heading_anchors = 6
-myst_heading_slug_func = "llvm_slug.make_slug"
-
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-source_suffix = [".rst", ".md"]
+myst_enable_extensions += ["deflist"]
+myst_url_schemes = {
+    "http": None,
+    "https": None,
+    "mailto": None,
+    "ftp": None,
+    "doxygen": {"url": "/doxygen/{{path}}"},
+}
 
 import sphinx
 
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
-
-# General information about the project.
 project = "LLVM"
 copyright = "2003-%d, LLVM Project" % date.today().year
 
@@ -102,26 +77,30 @@ pygments_style = "friendly"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "llvm-theme"
+html_theme = "furo"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {"nosidebar": False}
+html_theme_options = {
+    "source_repository": "https://github.com/llvm/llvm-project",
+    "source_branch": "main",
+    "source_directory": "llvm/docs/",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["_themes"]
+# html_theme_path = ["_themes"]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-# html_title = None
+html_title = "LLVM"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-# html_logo = None
+html_logo = "_static/LLVMWyvernSmall.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -133,6 +112,13 @@ html_theme_path = ["_themes"]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
+html_js_files = ["copybutton.js"]
+
+html_css_files = [
+    "copybutton.css",
+    "custom.css",
+]
+
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 html_last_updated_fmt = "%Y-%m-%d"
@@ -140,16 +126,6 @@ html_last_updated_fmt = "%Y-%m-%d"
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
 # html_use_smartypants = True
-
-# Custom sidebar templates, maps document names to template names.
-
-html_sidebars = {
-    "**": [
-        "indexsidebar.html",
-        "sourcelink.html",
-        "searchbox.html",
-    ]
-}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -222,10 +198,6 @@ latex_documents = [
 # If false, no module index is generated.
 # latex_domain_indices = True
 
-# If true, figures, tables and code-blocks are automatically numbered if they
-# have a caption. 
-numfig = True
-
 # -- Options for manual page output --------------------------------------------
 
 # One entry per manual page. List of tuples
@@ -292,7 +264,7 @@ def process_rst(name):
 
 for name in os.listdir(command_guide_path):
     # Process Markdown files
-    if name.endswith(".md"):
+    if name.endswith(".md") and name != "index.md":
         process_md(name)
     # Process ReST files apart from the index page.
     elif name.endswith(".rst") and name != "index.rst":

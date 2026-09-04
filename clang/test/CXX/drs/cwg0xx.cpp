@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98,cxx98-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11,cxx98-14,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,cxx98-14,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify-directives -verify=expected,cxx98,cxx98-14
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify-directives -verify=expected,since-cxx11,cxx98-14,cxx11-14
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify-directives -verify=expected,since-cxx11,cxx98-14,cxx11-14
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify-directives -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify-directives -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify-directives -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify-directives -verify=expected,since-cxx11,since-cxx17
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -451,11 +451,11 @@ namespace cwg30 { // cwg30: sup 468 c++11
   } a, *p = &a;
   // FIXME: It's not clear whether CWG468 applies to C++98 too.
   int x = A::template f<0>();
-  // cxx98-error@-1 {{'template' keyword outside of a template}}
+  // cxx98-error@-1 {{use of 'template' keyword outside of a template is a C++11 extension}}
   int y = a.template f<0>();
-  // cxx98-error@-1 {{'template' keyword outside of a template}}
+  // cxx98-error@-1 {{use of 'template' keyword outside of a template is a C++11 extension}}
   int z = p->template f<0>();
-  // cxx98-error@-1 {{'template' keyword outside of a template}}
+  // cxx98-error@-1 {{use of 'template' keyword outside of a template is a C++11 extension}}
 } // namespace cwg30
 
 namespace cwg31 { // cwg31: 2.8
@@ -1115,12 +1115,12 @@ namespace cwg68 { // cwg68: 2.8
   template<typename T> struct X {};
   struct ::cwg68::X<int> x1;
   struct ::cwg68::template X<int> x2;
-  // cxx98-error@-1 {{'template' keyword outside of a template}}
+  // cxx98-error@-1 {{use of 'template' keyword outside of a template is a C++11 extension}}
   struct Y {
     friend struct X<int>;
     friend struct ::cwg68::X<char>;
     friend struct ::cwg68::template X<double>;
-    // cxx98-error@-1 {{'template' keyword outside of a template}}
+    // cxx98-error@-1 {{use of 'template' keyword outside of a template is a C++11 extension}}
   };
   template<typename>
   struct Z {

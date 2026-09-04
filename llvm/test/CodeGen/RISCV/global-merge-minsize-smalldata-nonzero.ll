@@ -18,13 +18,13 @@ define void @f1(i32 %a) nounwind {
 ; SMALL-DATA-LABEL: f1:
 ; SMALL-DATA:       # %bb.0:
 ; SMALL-DATA-NEXT:    lui a1, %hi(ig1)
+; SMALL-DATA-NEXT:    lui a2, %hi(ig2)
 ; SMALL-DATA-NEXT:    sw a0, %lo(ig1)(a1)
-; SMALL-DATA-NEXT:    lui a1, %hi(ig2)
-; SMALL-DATA-NEXT:    sw a0, %lo(ig2)(a1)
+; SMALL-DATA-NEXT:    sw a0, %lo(ig2)(a2)
 ; SMALL-DATA-NEXT:    lui a1, %hi(eg1)
+; SMALL-DATA-NEXT:    lui a2, %hi(eg2)
 ; SMALL-DATA-NEXT:    sw a0, %lo(eg1)(a1)
-; SMALL-DATA-NEXT:    lui a1, %hi(eg2)
-; SMALL-DATA-NEXT:    sw a0, %lo(eg2)(a1)
+; SMALL-DATA-NEXT:    sw a0, %lo(eg2)(a2)
 ; SMALL-DATA-NEXT:    ret
 ;
 ; MINSIZE-LABEL: f1:

@@ -41,8 +41,9 @@ using testing::ElementsAre;
 //   Referencing: int x = ^foo();
 // There must be exactly one referencing location marked.
 // Returns target decls.
-std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
-                                 llvm::StringRef ReferencingCode) {
+std::vector<Decl::Kind>
+testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode,
+         std::vector<std::string> ExtraArgs = {"-std=c++20"}) {
   llvm::Annotations Target(TargetCode);
   llvm::Annotations Referencing(ReferencingCode);
 
@@ -50,7 +51,8 @@ std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
   Inputs.ExtraFiles["target.h"] = Target.code().str();
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
-  Inputs.ExtraArgs.push_back("-std=c++20");
+  for (const auto &Arg : ExtraArgs)
+    Inputs.ExtraArgs.push_back(Arg);
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -65,19 +67,20 @@ std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
   std::vector<Decl::Kind> TargetDecls;
   // Perform the walk, and capture the offsets of the referenced targets.
   std::unordered_map<RefType, std::vector<size_t>> ReferencedOffsets;
+  llvm::SmallVector<Decl *> TopLevelDecls;
   for (Decl *D : AST.context().getTranslationUnitDecl()->decls()) {
-    if (ReferencingFile != SM.getDecomposedExpansionLoc(D->getLocation()).first)
-      continue;
-    walkAST(*D, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-      if (SM.getFileLoc(Loc) != ReferencingLoc)
-        return;
-      auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
-      if (NDLoc.first != TargetFile)
-        return;
-      ReferencedOffsets[RT].push_back(NDLoc.second);
-      TargetDecls.push_back(ND.getKind());
-    });
+    if (ReferencingFile == SM.getDecomposedExpansionLoc(D->getLocation()).first)
+      TopLevelDecls.push_back(D);
   }
+  walkAST(TopLevelDecls, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
+    if (SM.getFileLoc(Loc) != ReferencingLoc)
+      return;
+    auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
+    if (NDLoc.first != TargetFile)
+      return;
+    ReferencedOffsets[RT].push_back(NDLoc.second);
+    TargetDecls.push_back(ND.getKind());
+  });
   for (auto &Entry : ReferencedOffsets)
     llvm::sort(Entry.second);
 
@@ -574,6 +577,855 @@ TEST(WalkAST, OperatorNewDelete) {
 TEST(WalkAST, CleanupAttr) {
   testWalk("void* $explicit^freep(void *p);",
            "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
+}
+
+TEST(WalkAST, ObjCInterfaceTypeLoc) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      ^MyClass *obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCImplementationDeclDependsOnInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    @implementation ^MyClass
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorLoc) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    $explicit^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      [obj ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorLocProtocol) {
+  testWalk(R"objc(
+    @protocol $implicit^MyProtocol
+    $explicit^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test(id<MyProtocol> obj) {
+      [obj ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorLocNestedProtocol) {
+  testWalk(R"objc(
+    @protocol FirstProtocol
+        $explicit^- (void)doSomething;
+    @end
+    @protocol $implicit^SecondProtocol <FirstProtocol>
+    @end
+  )objc",
+           R"objc(
+    void test(id<SecondProtocol> obj) {
+      [obj ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorLocMultipleProtocol) {
+  testWalk(R"objc(
+    @protocol $implicit^FirstProtocol
+    @end
+    @protocol $implicit^SecondProtocol
+      $explicit^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test(id<FirstProtocol, SecondProtocol> obj) {
+      [obj ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprSelectorMessageChaining) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    $explicit^- (void)doSomething;
+    @end
+    @interface WrapperClass
+    - (MyClass *)myClass;
+    @end
+  )objc",
+           R"objc(
+    void test(WrapperClass *obj) {
+      // Weird space avoids Annotations thinking this is a range.
+      [ [obj myClass] ^doSomething];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCMessageExprClassReceiver) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    + (void)classMethod;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      [^MyClass classMethod];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprExplicit) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprImplicitGetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    $explicit^- (int)foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprImplicitSetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    $explicit^- (void)setFoo:(int)val;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      obj.^foo = 42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprExplicitSetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      obj.^foo = 42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprDesugaredSetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      [obj ^setFoo:42];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprDesugaredGetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      [obj ^foo];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprDesugaredClassSetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(class) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      [MyClass ^setFoo:42];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprDesugaredClassGetter) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(class) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      [MyClass ^foo];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprProtocol) {
+  testWalk(R"objc(
+    @protocol $implicit^MyProtocol
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(id<MyProtocol> obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprNestedProtocol) {
+  testWalk(R"objc(
+    @protocol FirstProtocol
+    @property(nonatomic) int $explicit^foo;
+    @end
+    @protocol $implicit^SecondProtocol <FirstProtocol>
+    @end
+  )objc",
+           R"objc(
+    void test(id<SecondProtocol> obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprMultipleProtocol) {
+  testWalk(R"objc(
+    @protocol $implicit^FirstProtocol
+    @end
+    @protocol $implicit^SecondProtocol
+    @property(nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(id<FirstProtocol, SecondProtocol> obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassReceiver) {
+  testWalk(R"objc(
+    @interface MyClass
+    @property(class, nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      int x = MyClass.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassReceiverInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @property(class, nonatomic) int foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      int x = ^MyClass.foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprSuperReceiver) {
+  testWalk(R"objc(
+    @interface $implicit^ParentClass
+    @property(nonatomic) int $explicit^foo;
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassSuperReceiver) {
+  testWalk(R"objc(
+    @interface $implicit^ParentClass
+    @property(class, nonatomic) int $explicit^foo;
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    + (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassSuperSetter) {
+  testWalk(R"objc(
+    @interface $implicit^ParentClass
+    @property(class, nonatomic) int $explicit^foo;
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    + (void)testSummary {
+      super.^foo = 1;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassSuperProtocolReceiver) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @property(class) int $explicit^foo;
+    @end
+    @interface $implicit^ParentClass <MyProtocol>
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    + (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprSuperMultipleProtocolReceiver) {
+  testWalk(R"objc(
+    @protocol FirstProtocol
+    @end
+    @protocol SecondProtocol
+    @property(nonatomic) int $explicit^foo;
+    @end
+    @interface $implicit^ParentClass <FirstProtocol, SecondProtocol>
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprSuperNestedProtocolReceiver) {
+  testWalk(R"objc(
+    @protocol FirstProtocol
+    @property(nonatomic) int $explicit^foo;
+    @end
+    @protocol SecondProtocol <FirstProtocol>
+    @end
+    @interface $implicit^ParentClass <SecondProtocol>
+    @end
+    @interface MyClass : ParentClass
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)testSummary {
+      int x = super.^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolInType) {
+  testWalk(R"objc(
+    @protocol $explicit^MyProtocol
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id<^MyProtocol> obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolInClassInterface) {
+  testWalk(R"objc(
+    @protocol $explicit^MyProtocol
+    @end
+  )objc",
+           R"objc(
+    @interface MyClass <^MyProtocol>
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolInProtocolInheritance) {
+  testWalk(R"objc(
+    @protocol $explicit^ParentProtocol
+    @end
+  )objc",
+           R"objc(
+    @protocol MyProtocol <^ParentProtocol>
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCProtocolExpr) {
+  testWalk(R"objc(
+    @protocol $explicit^MyProtocol
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      Protocol* p = @protocol(^MyProtocol);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCategoryDeclDependsOnInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    @interface ^MyClass (Category)
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCategoryImplDependsOnInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    @interface MyClass (Category)
+    @end
+    @implementation ^MyClass (Category)
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCategoryImplDependsOnCategoryDecl) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+    @interface $explicit^MyClass (Category)
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass (^Category)
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCImplicitCastToProtocolConformingCategory) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @end
+    @interface MyClass
+    @end
+    @interface $implicit^MyClass (MyCategory) <MyProtocol>
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      id<MyProtocol> p = ^obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCompatibleAliasDecl) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    ^@compatibility_alias AliasName MyClass;
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCCompatibleAliasUsage) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+    @compatibility_alias AliasName MyClass;
+  )objc",
+           R"objc(
+    void test() {
+      ^AliasName *obj;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefExprExplicit) {
+  testWalk(R"objc(
+    @interface MyClass {
+      @public
+      int $explicit^foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj->^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefExprFree) {
+  testWalk(R"objc(
+    @interface MyClass {
+      int $explicit^foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)test {
+      int x = ^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExpr) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^doSomething);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprPropertyGetter) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    @property(nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+                        R"objc(
+    void test() {
+      SEL s = @selector(^foo);
+    }
+  )objc",
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
+}
+
+TEST(WalkAST, ObjCSelectorExprPropertySetter) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    @property(nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+                        R"objc(
+    void test() {
+      SEL s = @selector(^setFoo:);
+    }
+  )objc",
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
+}
+
+TEST(WalkAST, ObjCSelectorExprReadOnlyPropertySetter) {
+  // Read-only properties do not generate setter selectors.
+  testWalk(R"objc(
+    @interface MyClass
+    @property(readonly, nonatomic) int foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^setFoo:);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprMultipleMatches) {
+  testWalk(R"objc(
+    @interface MyClass1
+    $ambiguous^- (void)doSomething;
+    @end
+
+    @interface MyClass2
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^doSomething);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprInProtocol) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    $ambiguous^- (void)protocolMethod;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^protocolMethod);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprMultiColon) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doA:(int)a withB:(int)b;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^doA:withB:);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprCustomGetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      int x = obj.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprCustomSetter) {
+  testWalk(R"objc(
+    @interface $implicit^MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $explicit^foo;
+    @end
+  )objc",
+           R"objc(
+    void test(MyClass *obj) {
+      obj.^foo = 42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCSelectorExprCustomPropertyGetter) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+                        R"objc(
+    void test() {
+      SEL s = @selector(^isFoo);
+    }
+  )objc",
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
+}
+
+TEST(WalkAST, ObjCSelectorExprCustomPropertySetter) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    @property(getter=isFoo, setter=setTheFoo:, nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+                        R"objc(
+    void test() {
+      SEL s = @selector(^setTheFoo:);
+    }
+  )objc",
+                        {"-x", "objective-c"});
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
+}
+
+TEST(WalkAST, ObjcSelectorDeclarationAndDefinition) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+                        R"objc(
+    @implementation MyClass
+    - (void)doSomething {}
+    @end
+    void test() { SEL s = @selector(^doSomething); }
+  )objc",
+                        {"-x", "objective-c"});
+
+  // This here: v
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCMethod));
+}
+
+TEST(WalkAST, ObjcSelectorMultipleIdenticalCalls) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void testA() { SEL s1 = @selector(^doSomething); }
+    void testB() { SEL s2 = @selector(doSomething); }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjcSelectorInstanceAndClassMethodDisambiguation) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    $ambiguous^+ (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test() { SEL s = @selector(^doSomething); }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjcSelectorCustomGetterClashWithMethod) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    $ambiguous^- (void)isFoo;
+    @end
+
+    @interface MyClass
+    @property(getter=isFoo, nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() { SEL s = @selector(^isFoo); }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCAtCatchStmt) {
+  testWalk(R"objc(
+    @interface $explicit^CustomException
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      @try {}
+      @catch (^CustomException *e) {}
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-exceptions"});
+}
+
+TEST(WalkAST, ObjCAtSynchronizedStmt) {
+  testWalk(R"objc(
+    @interface $explicit^LockObject
+    + (id)sharedLock;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      @synchronized([^LockObject sharedLock]) {}
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCEncodeExpr) {
+  testWalk(R"objc(
+    struct $explicit^MyStruct { int x; };
+  )objc",
+           R"objc(
+    void test() {
+      const char *enc = @encode(struct ^MyStruct);
+    }
+  )objc",
+           {"-x", "objective-c"});
 }
 
 } // namespace

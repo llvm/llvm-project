@@ -96,11 +96,19 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   // This code avoids CallLowering fail inside getVectorTypeBreakdown
   // on v3i1 arguments. Maybe we need to return i32 for all types.
   // TODO: remove it once this case is supported by the default implementation.
-  if (VT.isVector() && VT.getVectorNumElements() == 3) {
-    if (VT.getVectorElementType() == MVT::i1)
-      return MVT::v4i1;
-    else if (VT.getVectorElementType() == MVT::i8)
-      return MVT::v4i8;
+  if (VT.isVector()) {
+    if (VT.getVectorNumElements() == 3) {
+      if (VT.getVectorElementType() == MVT::i1)
+        return MVT::v4i1;
+      else if (VT.getVectorElementType() == MVT::i8)
+        return MVT::v4i8;
+    } else if (!isPowerOf2_32(VT.getVectorNumElements()) &&
+               STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)) {
+      // Non POT element counts are not yet supported by GISEL.
+      return MVT::getVectorVT(
+          VT.getVectorElementType().getSimpleVT(),
+          ElementCount::getFixed(VT.getVectorNumElements()));
+    }
   }
   return getRegisterType(Context, VT);
 }
@@ -109,27 +117,61 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
     SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
     MachineFunction &MF, unsigned Intrinsic) const {
   IntrinsicInfo Info;
-  unsigned AlignIdx = 3;
+
+  unsigned AlignIdx = 0;
+  unsigned OrderingIdx = 0;
+  unsigned FlagsIdx;
+
   switch (Intrinsic) {
   case Intrinsic::spv_load:
+    FlagsIdx = 1;
     AlignIdx = 2;
-    [[fallthrough]];
-  case Intrinsic::spv_store: {
-    if (I.getNumOperands() >= AlignIdx + 1) {
-      auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
-      Info.align = Align(AlignOp->getZExtValue());
-    }
-    Info.flags = static_cast<MachineMemOperand::Flags>(
-        cast<ConstantInt>(I.getOperand(AlignIdx - 1))->getZExtValue());
-    Info.memVT = MVT::i64;
-    // TODO: take into account opaque pointers (don't use getElementType).
-    // MVT::getVT(PtrTy->getElementType());
-    Infos.push_back(Info);
+    break;
+  case Intrinsic::spv_store:
+    FlagsIdx = 2;
+    AlignIdx = 3;
+    break;
+  case Intrinsic::spv_atomic_load:
+    FlagsIdx = 1;
+    OrderingIdx = 2;
+    break;
+  case Intrinsic::spv_atomic_store:
+    FlagsIdx = 2;
+    OrderingIdx = 3;
+    break;
+  default:
     return;
   }
-  default:
-    break;
+
+  Info.flags = static_cast<MachineMemOperand::Flags>(
+      cast<ConstantInt>(I.getOperand(FlagsIdx))->getZExtValue());
+  Info.memVT = MVT::i64;
+  // TODO: take into account opaque pointers (don't use getElementType).
+  // MVT::getVT(PtrTy->getElementType());
+
+  if (AlignIdx) {
+    auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
+    Info.align = Align(AlignOp->getZExtValue());
   }
+
+  if (OrderingIdx) {
+    Info.order = static_cast<AtomicOrdering>(
+        cast<ConstantInt>(I.getOperand(OrderingIdx))->getZExtValue());
+  }
+  Infos.push_back(Info);
+}
+
+TargetLowering::ConstraintType
+SPIRVTargetLowering::getConstraintType(StringRef Constraint) const {
+  // SPIR-V represents inline assembly via OpAsmINTEL where constraints are
+  // passed through as literals defined by client API. Return C_RegisterClass
+  // for non-memory constraints since SPIR-V does not distinguish between
+  // register, immediate, or memory operands at this level. We do have to return
+  // C_Memory for memory constraints as otherwise IRTranslator gets confused
+  // trying to allocate registers for them.
+  if (Constraint == "m")
+    return C_Memory;
+  return C_RegisterClass;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
@@ -143,7 +185,7 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (VT.isFloatingPoint())
     RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
   else if (VT.isInteger())
-    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
+    RC = VT.isVector() ? &SPIRV::viIDRegClass : &SPIRV::iIDRegClass;
   else
     RC = &SPIRV::iIDRegClass;
 
@@ -291,7 +333,7 @@ static void validatePtrUnwrapStructField(const SPIRVSubtarget &STI,
   if (!MemberType)
     return;
   unsigned MemberTypeOp = MemberType->getOpcode();
-  if (MemberTypeOp != SPIRV::OpTypeVector && MemberTypeOp != SPIRV::OpTypeInt &&
+  if (!isVectorType(MemberType) && MemberTypeOp != SPIRV::OpTypeInt &&
       MemberTypeOp != SPIRV::OpTypeFloat && MemberTypeOp != SPIRV::OpTypeBool)
     return;
   // It's a structure-wrapper around a valid type. Insert a bitcast before the
@@ -390,12 +432,100 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
   }
 }
 
+static void validateVec1Ops(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
+                            SPIRVGlobalRegistry &GR, MachineInstr &MI) {
+  // IRTranslator does not believe that rank-1 vectors exist, unlike upstream
+  // LLVM which happily creates <1 x T> vectors. This leads to operations over
+  // <1 x T> vectors getting translated as their scalar counterparts, which is
+  // wrong if we used SPV_EXT_long_vector to preserve the actual vector-ness.
+  switch (MI.getOpcode()) {
+  case SPIRV::OpBitwiseAndS:
+  case SPIRV::OpBitwiseOrS:
+  case SPIRV::OpBitwiseXorS:
+  case SPIRV::OpFAddS:
+  case SPIRV::OpFDivS:
+  case SPIRV::OpFMulS:
+  case SPIRV::OpFNegate:
+  case SPIRV::OpFRemS:
+  case SPIRV::OpFSubS:
+  case SPIRV::OpIAddCarryS:
+  case SPIRV::OpIAddS:
+  case SPIRV::OpIMulS:
+  case SPIRV::OpISubBorrowS:
+  case SPIRV::OpISubS:
+  case SPIRV::OpSDivS:
+  case SPIRV::OpSRemS:
+  case SPIRV::OpShiftLeftLogicalS:
+  case SPIRV::OpShiftRightArithmeticS:
+  case SPIRV::OpShiftRightLogicalS:
+  case SPIRV::OpStrictFAddS:
+  case SPIRV::OpStrictFDivS:
+  case SPIRV::OpStrictFMulS:
+  case SPIRV::OpStrictFRemS:
+  case SPIRV::OpStrictFSubS:
+  case SPIRV::OpUDivS:
+  case SPIRV::OpUModS: {
+    SPIRVTypeInst ResTy = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+
+    if (!isVectorType(ResTy))
+      return;
+
+    // Restore original Vec1 type.
+    Register NewResultReg = createVirtualRegister(ResTy, &GR, MRI, *MI.getMF());
+    MRI->replaceRegWith(MI.getOperand(0).getReg(), NewResultReg);
+    // Vector opcodes are always next after scalar (if this ceases to hold we
+    // will have to adapt).
+    MI.setDesc(STI.getInstrInfo()->get(MI.getOpcode() + 1));
+    // IRTranslator would've inserted COPYs from the vector into a scalar, which
+    // are spurious and have to be walked through.
+    for (unsigned I = 2; I != MI.getNumOperands(); ++I) {
+      MachineOperand &Op = MI.getOperand(I);
+      if (!Op.isReg())
+        continue;
+
+      SPIRVTypeInst OpTy = GR.getSPIRVTypeForVReg(Op.getReg());
+      if (OpTy == ResTy)
+        continue;
+
+      MachineInstr *OpDef = getDef(Op, MRI);
+      assert(OpDef &&
+             GR.getSPIRVTypeForVReg(OpDef->getOperand(0).getReg()) == ResTy &&
+             "Expected to find Result Type (Vec1)!");
+      MI.substituteRegister(Op.getReg(), OpDef->getOperand(0).getReg(), 0,
+                            *STI.getRegisterInfo());
+    }
+    break;
+  }
+  case TargetOpcode::COPY: {
+    Register ResVReg = MI.getOperand(0).getReg();
+    SPIRVTypeInst SrcTy = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+    SPIRVTypeInst DstTy = GR.getSPIRVTypeForVReg(ResVReg);
+
+    if (!SrcTy || !DstTy || isVectorType(DstTy) || !isVectorType(SrcTy))
+      return;
+
+    Register ExtractReg = createVirtualRegister(DstTy, &GR, MRI, *MI.getMF());
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+            STI.getInstrInfo()->get(SPIRV::OpCompositeExtract))
+        .addDef(ExtractReg)
+        .addUse(GR.getSPIRVTypeID(DstTy))
+        .addUse(MI.getOperand(1).getReg())
+        .addImm(0);
+    for (auto &&U : MRI->use_instructions(ResVReg))
+      U.substituteRegister(ResVReg, ExtractReg, 0, *STI.getRegisterInfo());
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
   // We'd like to avoid the needless second processing pass.
-  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+  if (MF.getRegInfo().reservedRegsFrozen())
     return;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
@@ -406,6 +536,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
+      validateVec1Ops(STI, MRI, GR, MI);
       switch (MI.getOpcode()) {
       case SPIRV::OpAtomicLoad:
       case SPIRV::OpAtomicExchange:
@@ -478,6 +609,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
+      // multiplication of bool operands is equivalent to a logical AND
+      case SPIRV::OpIMulS:
+      case SPIRV::OpIMulV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalAnd));
+        break;
 
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
       // instructions when applied to bool type
@@ -537,12 +675,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
           SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
           SPIRVTypeInst RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
           assert(RetType && "Expected return type");
-          validatePtrTypes(STI, MRI, GR, MI, MI.getNumOperands() - 1,
-                           RetType->getOpcode() != SPIRV::OpTypeVector
-                               ? Int32Type
-                               : GR.getOrCreateSPIRVVectorType(
-                                     Int32Type, RetType->getOperand(2).getImm(),
-                                     MIB, false));
+          validatePtrTypes(
+              STI, MRI, GR, MI, MI.getNumOperands() - 1,
+              (!isVectorType(RetType))
+                  ? Int32Type
+                  : GR.getOrCreateSPIRVVectorType(
+                        Int32Type, GR.getScalarOrVectorComponentCount(RetType),
+                        MIB, false));
         } break;
         case SPIRV::OpenCLExtInst::fract:
         case SPIRV::OpenCLExtInst::modf:
@@ -569,7 +708,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       }
     }
   }
-  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }
 
@@ -580,13 +718,22 @@ bool SPIRVTargetLowering::enforcePtrTypeCompatibility(
     MachineInstr &I, unsigned int PtrOpIdx, unsigned int OpIdx) const {
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   SPIRVTypeInst PtrType = GR.getResultType(I.getOperand(PtrOpIdx).getReg());
+
+  if (PtrType && PtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR)
+    return true;
+
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
   SPIRVTypeInst OpType = GR.getResultType(I.getOperand(OpIdx).getReg());
 
   if (PointeeType == OpType)
     return true;
 
-  if (typesLogicallyMatch(PointeeType, OpType, GR)) {
+  // getPointeeType yields nullptr for anything that is not an OpTypePointer.
+  // The early return above does not cover an untyped pointer nested in another
+  // type, such as a vector of pointers built for a scalarized vector GEP.
+  // typesLogicallyMatch dereferences both of its arguments, so bail out before
+  // calling it.
+  if (PointeeType && OpType && typesLogicallyMatch(PointeeType, OpType, GR)) {
     // Apply OpCopyLogical to OpIdx.
     if (I.getOperand(OpIdx).isDef() &&
         insertLogicalCopyOnResult(I, PointeeType)) {
@@ -638,6 +785,7 @@ SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return AtomicExpansionKind::None;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::Nand:
     return AtomicExpansionKind::CmpXChg;
   default:
     return TargetLowering::shouldExpandAtomicRMWInIR(RMW);
@@ -648,5 +796,20 @@ TargetLowering::AtomicExpansionKind
 SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
   // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
   // SPIR-V only supports atomic exchange for integer and floating-point types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  // TODO: pointer load should return CastToInteger, but
+  // convertAtomicLoadToIntegerType uses BitCast which asserts on pointer types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  // TODO: pointer store should return CastToInteger, but
+  // convertAtomicStoreToIntegerType uses BitCast which asserts on pointer
+  // types.
   return AtomicExpansionKind::None;
 }

@@ -616,7 +616,7 @@ void WasmObjectWriter::recordRelocation(const MCFragment &F,
 // Compute a value to write into the code at the location covered
 // by RelEntry. This value isn't used by the static linker; it just serves
 // to make the object format more readable and more likely to be directly
-// useable.
+// usable.
 uint64_t
 WasmObjectWriter::getProvisionalValue(const MCAssembler &Asm,
                                       const WasmRelocationEntry &RelEntry) {
@@ -676,7 +676,8 @@ WasmObjectWriter::getProvisionalValue(const MCAssembler &Asm,
   case wasm::R_WASM_MEMORY_ADDR_I64:
   case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB:
   case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
-  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32: {
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64: {
     // Provisional value is address of the global plus the offset
     // For undefined symbols, use zero
     if (!RelEntry.Symbol->isDefined())
@@ -778,6 +779,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_TABLE_INDEX_I64:
     case wasm::R_WASM_MEMORY_ADDR_I64:
     case wasm::R_WASM_FUNCTION_OFFSET_I64:
+    case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
       patchI64(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB:
@@ -1161,9 +1163,15 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
       case wasm::WASM_SYMBOL_TYPE_DATA:
         writeString(Sym.Name);
         if ((Sym.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-          encodeULEB128(Sym.DataRef.Segment, W->OS);
-          encodeULEB128(Sym.DataRef.Offset, W->OS);
-          encodeULEB128(Sym.DataRef.Size, W->OS);
+          if ((Sym.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+              wasm::WASM_SYMBOL_BINDING_COMMON) {
+            encodeULEB128(Sym.CommonRef.Size, W->OS);
+            W->OS << char(Sym.CommonRef.Alignment);
+          } else {
+            encodeULEB128(Sym.DataRef.Segment, W->OS);
+            encodeULEB128(Sym.DataRef.Offset, W->OS);
+            encodeULEB128(Sym.DataRef.Size, W->OS);
+          }
         }
         break;
       case wasm::WASM_SYMBOL_TYPE_SECTION: {
@@ -1273,7 +1281,7 @@ void WasmObjectWriter::registerTagType(const MCSymbolWasm &Symbol) {
   assert(Symbol.isTag());
 
   // TODO Currently we don't generate imported exceptions, but if we do, we
-  // should have a way of infering types of imported exceptions.
+  // should have a way of inferring types of imported exceptions.
   wasm::WasmSignature S;
   if (auto *Sig = Symbol.getSignature()) {
     S.Returns = Sig->Returns;
@@ -1789,9 +1797,11 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       Flags |= wasm::WASM_SYMBOL_BINDING_WEAK;
     if (WS.isHidden())
       Flags |= wasm::WASM_SYMBOL_VISIBILITY_HIDDEN;
-    if (!WS.isExternal() && WS.isDefined())
+    if (WS.isCommon())
+      Flags |= wasm::WASM_SYMBOL_BINDING_COMMON;
+    else if (!WS.isExternal() && WS.isDefined())
       Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
-    if (WS.isUndefined())
+    if (WS.isUndefined() && !WS.isCommon())
       Flags |= wasm::WASM_SYMBOL_UNDEFINED;
     if (WS.isNoStrip()) {
       Flags |= wasm::WASM_SYMBOL_NO_STRIP;
@@ -1813,6 +1823,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     if (!WS.isData()) {
       assert(WasmIndices.contains(&WS));
       Info.ElementIndex = WasmIndices.find(&WS)->second;
+    } else if (WS.isCommon()) {
+      Info.CommonRef.Size = WS.getCommonSize();
+      Info.CommonRef.Alignment = Log2(WS.getCommonAlignment().valueOrOne());
     } else if (WS.isDefined()) {
       assert(DataLocations.contains(&WS));
       Info.DataRef = DataLocations.find(&WS)->second;

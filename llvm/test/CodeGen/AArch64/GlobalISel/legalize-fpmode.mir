@@ -40,11 +40,11 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
     ; CHECK-NEXT: BL &fegetmode, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %stack.0)
-    ; CHECK-NEXT: $w0 = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (i32) from %stack.0)
+    ; CHECK-NEXT: $w0 = COPY [[LOAD]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:_(s32) = G_GET_FPMODE
-    $w0 = COPY %0(s32)
+    %0:_(i32) = G_GET_FPMODE
+    $w0 = COPY %0(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -58,16 +58,16 @@ body:             |
     ; CHECK-LABEL: name: func_set_fpmode
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-    ; CHECK-NEXT: G_STORE [[COPY]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0)
+    ; CHECK-NEXT: G_STORE [[COPY]](i32), [[FRAME_INDEX]](p0) :: (store (i32) into %stack.0)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[FRAME_INDEX]](p0)
     ; CHECK-NEXT: BL &fesetmode, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR
-    %0:_(s32) = COPY $w0
-    G_SET_FPMODE %0(s32)
+    %0:_(i32) = COPY $w0
+    G_SET_FPMODE %0(i32)
     RET_ReallyLR
 
 ...
@@ -77,8 +77,8 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: func_reset
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](i64)
     ; CHECK-NEXT: $x0 = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: TCRETURNdi &fesetmode, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0
     G_RESET_FPMODE

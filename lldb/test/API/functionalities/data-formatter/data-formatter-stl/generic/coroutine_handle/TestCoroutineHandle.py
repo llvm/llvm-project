@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCoroutineHandle(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         """Test std::coroutine_handle is displayed correctly."""
         is_clang = self.expectedCompiler(["clang"])

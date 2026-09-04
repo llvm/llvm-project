@@ -20,7 +20,7 @@
 ; RUN:	-r z.bc,_ZTV2D1,pl \
 ; RUN:	-r z.bc,_ZTV1B,pl \
 ; RUN:	-r z.bc,_ZTV2D2,pl \
-; RUN:	-print-after=lowertypetests -filter-print-funcs=main 2>&1 | FileCheck %s
+; RUN:	-print-after=lowertypetests -print-after=drop-type-tests -filter-print-funcs=main 2>&1 | FileCheck %s
 
 ; The first LTT should leave the type tests as is (instead of lowering
 ; them to false incorrectly).
@@ -35,7 +35,7 @@
 ; CHECK:   %13 = phi i1 [ %11, %8 ], [ %7, %4 ]
 
 ; The second LTT should lower them to true.
-; CHECK: *** IR Dump After LowerTypeTestsPass on [module] ***
+; CHECK: *** IR Dump After DropTypeTestsPass on [module] ***
 ; CHECK-NOT: @llvm.type.test
 ; CHECK: 10:
 ; CHECK:   %11 = phi i1 [ true, %7 ], [ true, %4 ]

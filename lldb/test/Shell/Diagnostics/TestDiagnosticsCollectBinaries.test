@@ -1,0 +1,44 @@
+# Verify that a diagnostics bundle collects the core file, gated by the
+# diagnostics.collect-binaries setting.
+
+# RUN: yaml2obj %s -o %t.core
+
+# The setting is off by default.
+# RUN: %lldb -x -b -o 'settings show diagnostics.collect-binaries' 2>/dev/null \
+# RUN:   | FileCheck %s --check-prefix SETTING
+# SETTING: diagnostics.collect-binaries (boolean) = false
+
+# When enabled, the core file is copied into the bundle.
+# RUN: rm -rf %t.on && mkdir -p %t.on
+# RUN: %lldb -x -b -c %t.core \
+# RUN:   -o 'settings set diagnostics.collect-binaries true' \
+# RUN:   -o 'diagnostics dump -d %t.on' 2>/dev/null
+# RUN: ls %t.on | FileCheck %s --check-prefix COLLECT
+# COLLECT: {{.*}}.core
+
+# By default (setting off) the core file is left out while the textual
+# artifacts are still written.
+# RUN: rm -rf %t.off && mkdir -p %t.off
+# RUN: %lldb -x -b -c %t.core -o 'diagnostics dump -d %t.off' 2>/dev/null
+# RUN: ls %t.off | FileCheck %s --check-prefix NOCOLLECT
+# NOCOLLECT-DAG: commands.txt
+# NOCOLLECT-DAG: diagnostics.log
+# NOCOLLECT-NOT: core
+
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Platform ID:     Linux
+    CSD Version:     'Linux 3.13'
+    CPU:
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            ModuleList
+    Modules:
+      - Base of Image:   0x0000000000400000
+        Size of Image:   0x00017000
+        Module Name:     'a.out'
+        CodeView Record: ''
+...

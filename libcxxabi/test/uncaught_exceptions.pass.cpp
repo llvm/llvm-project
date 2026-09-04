@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: no-exceptions
 
-// __cxa_uncaught_exceptions is not re-exported from libc++ until LLVM 9.
-// XFAIL: using-built-library-before-llvm-9
-
 #include <cxxabi.h>
 #include <cassert>
 

@@ -66,6 +66,8 @@ void SectionDescriptor::clearAllSectionData() {
   ListDebugDieRefPatch.erase();
   ListDebugULEB128DieRefPatch.erase();
   ListDebugOffsetPatch.erase();
+  ListDebugDieTypeRefPatch.erase();
+  ListDebugDieModuleRefPatch.erase();
   ListDebugType2TypeDieRefPatch.erase();
   ListDebugTypeDeclFilePatch.erase();
   ListDebugTypeLineStrPatch.erase();
@@ -430,6 +432,34 @@ void OutputSections::applyPatches(
                   TypeEntry->getFinalDie().getOffset());
   });
 
+  Section.ListDebugDieModuleRefPatch.forEach(
+      [&](DebugDieModuleRefPatch &Patch) {
+        const ModuleAnchor &Anchor = *Patch.Anchor;
+
+        uint64_t FinalOffset;
+        if (Anchor.TypeName) {
+          assert(TypeUnitPtr != nullptr);
+          TypeEntryBody *TypeEntry = Anchor.TypeName->getValue().load();
+          assert(TypeEntry &&
+                 formatv("No data for type {0}", Anchor.TypeName->getKey())
+                     .str()
+                     .c_str());
+
+          FinalOffset = TypeEntry->getFinalDie().getOffset();
+        } else if (Anchor.Section) {
+          FinalOffset = Anchor.Section->StartOffset + Anchor.LocalOffset;
+        } else {
+          // No unit describes this module in full, so the importer's own
+          // skeleton is all the output has.
+          FinalOffset = Patch.RefDieIdxOrClonedOffset +
+                        Patch.RefCU.getPointer()
+                            ->getSectionDescriptor(DebugSectionKind::DebugInfo)
+                            .StartOffset;
+        }
+
+        Section.apply(Patch.PatchOffset, dwarf::DW_FORM_ref_addr, FinalOffset);
+      });
+
   Section.ListDebugType2TypeDieRefPatch.forEach(
       [&](DebugType2TypeDieRefPatch &Patch) {
         assert(TypeUnitPtr != nullptr);
@@ -460,9 +490,21 @@ void OutputSections::applyPatches(
     uint64_t FinalValue = Patch.SectionPtr.getPointer()->StartOffset;
 
     // Check whether we need to read value from the original location.
-    if (Patch.SectionPtr.getInt())
-      FinalValue +=
+    if (Patch.SectionPtr.getInt()) {
+      uint64_t LocalValue =
           Section.getIntVal(Patch.PatchOffset, Format.getDwarfOffsetByteSize());
+      // DebugOffsetPatch treats the DWARF "invalid offset" sentinel
+      // (0xffffffff for DWARF32) as pass-through: callers that can't
+      // resolve the target write that value and expect it to survive
+      // section combination unchanged. Adding StartOffset would turn it
+      // into a plausible-looking but meaningless offset. Callers that
+      // genuinely want `StartOffset + MaxOffset` don't exist today and
+      // would need a different patch type.
+      if (LocalValue == Format.getDwarfMaxOffset())
+        FinalValue = LocalValue;
+      else
+        FinalValue += LocalValue;
+    }
 
     Section.apply(Patch.PatchOffset, dwarf::DW_FORM_sec_offset, FinalValue);
   });

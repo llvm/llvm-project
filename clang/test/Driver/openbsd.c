@@ -4,11 +4,11 @@
 // CHECK-LD-STATIC-EH: "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-LD-STATIC-EH: ld{{.*}}" "{{.*}}" "--eh-frame-hdr" "-Bstatic"
 
-// Check for profiling variants of libraries when linking and -nopie
+// Check for profiling variants of libraries when linking and -no-pie
 // RUN: %clang --target=i686-pc-openbsd -pg -pthread -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG %s
 // CHECK-PG: "-cc1" "-triple" "i686-pc-openbsd"
-// CHECK-PG: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-nopie" "-o" "a.out" "{{.*}}gcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread_p" "-lc_p" "-lcompiler_rt" "{{.*}}crtend.o"
+// CHECK-PG: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-no-pie" "-o" "a.out" "{{.*}}gcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread_p" "-lc_p" "-lcompiler_rt" "{{.*}}crtend.o"
 
 // Check for variants of crt* when creating shared libs
 // RUN: %clang --target=i686-pc-openbsd -pthread -shared -### %s 2>&1 \
@@ -102,11 +102,12 @@
 // RUN: %clang --target=i686-pc-openbsd -fno-pie -static -nopie -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-NOPIE %s
 // CHECK-PIE: "{{.*}}crt0.o"
-// CHECK-PIE-NOT: "-nopie"
+// CHECK-PIE-NOT: "-no-pie"
 // CHECK-PIE-FLAG: "-pie"
+// CHECK-STATIC-PIE: "-pie"
 // CHECK-STATIC-PIE: "{{.*}}rcrt0.o"
-// CHECK-STATIC-PIE-NOT: "-nopie"
-// CHECK-NOPIE: "-nopie" "{{.*}}crt0.o"
+// CHECK-STATIC-PIE-NOT: "-no-pie"
+// CHECK-NOPIE: "-no-pie" "{{.*}}crt0.o"
 
 // Check ARM float ABI
 // RUN: %clang --target=arm-unknown-openbsd -### -c %s 2>&1 \

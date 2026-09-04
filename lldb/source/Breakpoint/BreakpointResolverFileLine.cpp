@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -238,9 +239,8 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
     if (FileSpec::Equal(sc_file, request_file, /*full*/ true))
       continue;
 
-    llvm::StringRef sc_file_dir = sc_file.GetDirectory().GetStringRef();
-    llvm::StringRef request_file_dir =
-        request_file.GetDirectory().GetStringRef();
+    llvm::StringRef sc_file_dir = sc_file.GetDirectory();
+    llvm::StringRef request_file_dir = request_file.GetDirectory();
 
     llvm::StringRef new_mapping_from;
     llvm::SmallString<256> new_mapping_to;
@@ -302,13 +302,15 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   Target &target = GetBreakpoint()->GetTarget();
   RealpathPrefixes realpath_prefixes = target.GetSourceRealpathPrefixes();
 
-  const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
-  for (size_t i = 0; i < num_comp_units; i++) {
-    CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
-    if (cu_sp) {
-      if (filter.CompUnitPasses(*cu_sp))
+  if (const auto sym_file = context.module_sp->GetSymbolFileLocked()) {
+    const size_t num_comp_units = sym_file->GetNumCompileUnits();
+    for (size_t i = 0; i < num_comp_units; i++) {
+
+      if (const auto cu_sp = sym_file->GetCompileUnitAtIndex(i);
+          cu_sp && filter.CompUnitPasses(*cu_sp)) {
         cu_sp->ResolveSymbolContext(m_location_spec, eSymbolContextEverything,
                                     sc_list, &realpath_prefixes);
+      }
     }
   }
 
@@ -323,8 +325,8 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   DeduceSourceMapping(sc_list);
 
   StreamString s;
-  s.Printf("for %s:%d ",
-           m_location_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"),
+  s.Format("for {0}:{1} ",
+           m_location_spec.GetFileSpec().GetFilename().nonEmptyOr("<Unknown>"),
            line);
 
   SetSCMatchesByLine(filter, sc_list, m_skip_prologue, s.GetString(), line,

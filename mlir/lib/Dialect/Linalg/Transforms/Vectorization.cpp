@@ -1093,6 +1093,11 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   if (inputShape.getShape().empty())
     return VectorMemoryAccessKind::ScalarBroadcast;
 
+  // 0a. Is the result a 0-D vector? If yes, there are no iteration dimensions
+  // so the tensor.extract is a single scalar load regardless of the index.
+  if (resType.getRank() == 0)
+    return VectorMemoryAccessKind::ScalarBroadcast;
+
   // True for vectors that are effectively 1D, e.g. `vector<1x4x1xi32>`, false
   // otherwise.
   bool isOutput1DVector =
@@ -1254,19 +1259,22 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
         rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
         /*padding=*/std::nullopt, permutationMap, inBounds);
 
-    // Mask this broadcasting xfer_read here rather than relying on the generic
-    // path (the generic path assumes identity masking map, which wouldn't be
-    // valid here).
-    SmallVector<int64_t> readMaskShape = {1};
-    auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
-    auto allTrue = vector::ConstantMaskOp::create(
-        rewriter, loc, readMaskType, vector::ConstantMaskKind::AllTrue);
-    auto *maskedReadOp =
-        mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+    Operation *readOrMaskedReadOp = transferReadOp;
+    if (dstRank > 0) {
+      // Mask this broadcasting xfer_read here rather than relying on the
+      // generic path (the generic path assumes identity masking map, which
+      // wouldn't be valid here).
+      SmallVector<int64_t> readMaskShape = {1};
+      auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
+      auto allTrue = vector::ConstantMaskOp::create(
+          rewriter, loc, readMaskType, vector::ConstantMaskKind::AllTrue);
+      readOrMaskedReadOp =
+          mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+    }
 
     LDBG() << "Vectorised as scalar broadcast load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp,
-                                   maskedReadOp};
+                                   readOrMaskedReadOp};
   }
 
   // 2b. Handle contiguous access.
@@ -1291,9 +1299,21 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
       /*padding=*/std::nullopt, permutationMap, inBounds);
 
+  // Mask this contiguous xfer_read here rather than relying on the generic
+  // path (the generic path assumes an identity masking map over all the loop
+  // dims, which wouldn't be valid here). A contiguous load only reads the
+  // trailing `min(dstRank, srcRank)` dims of the iteration space - the leading
+  // dims are broadcast via `permutationMap` above - so its inferred mask is
+  // rank-reduced. Build a masking map that projects the iteration space onto
+  // exactly those trailing dims so the created mask matches the xfer_read.
+  int64_t numReadDims = std::min(dstRank, srcRank);
+  auto maskingMap = AffineMap::getMinorIdentityMap(
+      linalgOp.getNumLoops(), numReadDims, rewriter.getContext());
+  Operation *maskedReadOp =
+      state.maskOperation(rewriter, transferReadOp, linalgOp, maskingMap);
+
   LDBG() << "Vectorised as contiguous load: " << extractOp;
-  return VectorizationHookResult{VectorizationHookStatus::NewOp,
-                                 transferReadOp};
+  return VectorizationHookResult{VectorizationHookStatus::NewOp, maskedReadOp};
 }
 
 /// Emit reduction operations if the shapes of the value to reduce is different
@@ -1422,10 +1442,12 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
             : resultType);
   }
   //   d. Build and return the new op.
-  return VectorizationHookResult{
-      VectorizationHookStatus::NewOp,
-      rewriter.create(op->getLoc(), op->getName().getIdentifier(), vecOperands,
-                      resultTypes, op->getAttrs())};
+  Operation *newOp = Operation::create(
+      op->getLoc(), op->getName(), resultTypes, vecOperands,
+      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+      /*successors=*/{}, /*numRegions=*/0);
+  return VectorizationHookResult{VectorizationHookStatus::NewOp,
+                                 rewriter.insert(newOp)};
 }
 
 /// Generic vectorization function that rewrites the body of a `linalgOp` into
@@ -1564,211 +1586,6 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   }
 
   return success();
-}
-
-/// Determines whether a mask for xfer_write is trivially "all true"
-///
-/// Given all the inputs required to generate a mask (mask sizes and shapes),
-/// and an xfer_write operation (write indices and the destination tensor
-/// shape), determines whether the corresponding mask would be trivially
-/// foldable (i.e., trivially "all true").
-///
-/// Use this method to avoid generating spurious masks and relaying on
-/// vectorization post-processing to remove them.
-///
-/// Pre-conditions for a mask to be trivially foldable:
-///   * All involved shapes (mask + destination tensor) are static.
-///   * All write indices are constant.
-///   * All mask sizes are constant (including `arith.constant`).
-///
-/// If the pre-conditions are met, the method checks for each destination
-/// dimension `d`:
-///   (1) destDimSize[rankDiff + d] <= maskShape[d]
-///   (2) destDimSize[rankDiff + d] <= writeIndex[d] + maskSize[d]
-///
-/// rankDiff = rank(dest) - rank(mask).
-///
-/// This method takes a conservative view: it may return false even if the mask
-/// is technically foldable.
-///
-/// EXAMPLE 1 (trivially foldable, all shapes match, mask sizes match the shape
-/// of the dest tensor):
-///   %c0 = arith.constant 0 : index
-///   %mask = vector.create_mask 5, 1
-///   vector.mask %mask {
-///     vector.transfer_write %vecToStore_1, %dest{[%c0, %c0]
-///       {in_bounds = [true, true]}
-///     : vector<5x1xi32>, tensor<5x1xi32>
-///   }
-///
-/// EXAMPLE 2 (not trivially foldable - vector shape exceeds the tensor shape,
-/// mask is required to avoid out-of-bounds write):
-///   %c0 = arith.constant 0 : index
-///   %mask = vector.create_mask 5, 1
-///   vector.mask %mask {
-///     vector.transfer_write %vecToStore_2, %dest[%c0, %c0]
-///      {in_bounds = [true, true]}
-///     : vector<8x1xi32>, tensor<5x1xi32>
-///   }
-///
-/// TODO: Re-use in createReadOrMaskedRead
-static bool isMaskTriviallyFoldable(SmallVector<OpFoldResult> &maskSizes,
-                                    SmallVector<Value> &writeIdxs,
-                                    ArrayRef<int64_t> destShape,
-                                    ArrayRef<int64_t> maskShape) {
-  // Masking is unavoidable in the case of dynamic tensors.
-  if (ShapedType::isDynamicShape(destShape))
-    return false;
-
-  // Collect all constant mask sizes.
-  SmallVector<int64_t, 4> cstMaskSizes;
-  for (auto [i, dimSize] : llvm::enumerate(maskSizes)) {
-    if (auto intSize = getConstantIntValue(dimSize)) {
-      cstMaskSizes.push_back(*intSize);
-    }
-  }
-
-  // If any of the mask sizes is non-constant, bail out.
-  if (cstMaskSizes.size() != maskShape.size())
-    return false;
-
-  // Collect all constant write indices.
-  SmallVector<int64_t, 4> cstWriteIdxs;
-  for (auto [i, idx] : llvm::enumerate(writeIdxs)) {
-    APSInt intVal;
-    if (matchPattern(idx, m_ConstantInt(&intVal))) {
-      cstWriteIdxs.push_back(intVal.getSExtValue());
-    }
-  }
-
-  // If any of the write indices is non-constant, bail out.
-  if (cstWriteIdxs.size() != destShape.size())
-    return false;
-
-  // Go over all destination dims and check (1) and (2). Take into account that:
-  //  * The number of mask sizes will match the rank of the vector to store.
-  //    This could be lower than the rank of the destination tensor.
-  //  * Mask sizes could be larger than the corresponding mask shape (hence
-  //  `clamp`).
-  // TODO: The 2nd item should be rejected by the verifier.
-  int64_t rankDiff = destShape.size() - cstMaskSizes.size();
-  for (auto [i, idx] : llvm::enumerate(cstMaskSizes)) {
-    if (/*(1)*/ maskShape[i] > destShape[rankDiff + i] ||
-        /*(2)*/ destShape[rankDiff + i] <
-            (std::clamp(cstMaskSizes[i], int64_t(0), maskShape[i]) +
-             cstWriteIdxs[i]))
-      return false;
-  }
-
-  return true;
-}
-
-/// Creates an optionally masked TransferWriteOp
-///
-/// Generates the following operation:
-///   %res = vector.transfer_write %vecToStore into %dest
-///
-/// If shape(vecToStore) != shape(dest), masking is used to ensure correctness:
-///
-///   %mask = vector.create_mask(%destShape) : %vecToStoreShape
-///   %res = vector.mask %mask {
-///     vector.transfer_write %vecToStore into %dest
-///   }
-///
-/// The mask shape is identical to `vecToStore` (with the element type ==
-/// i1), and the mask values are based on the shape of the `dest` tensor.
-///
-/// If `useInBoundsInsteadOfMasking` is set to `true`, the `in_bounds` attribute
-/// is used instead of masking:
-///
-///   %write = vector.transfer_write %vecToStore into %dest
-///   in_bounds_flags = (...)
-///   %res = vector.transfer_write %input into %dest
-///       {in_bounds = in_bounds_flags}
-///
-/// Finally, `writeIndices` specifies the offsets to use. If empty, all indices
-/// are set to 0.
-static Operation *
-createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
-                         Value dest, SmallVector<Value> writeIndices = {},
-                         bool useInBoundsInsteadOfMasking = false) {
-
-  ShapedType destType = cast<ShapedType>(dest.getType());
-  int64_t destRank = destType.getRank();
-  auto destShape = destType.getShape();
-
-  VectorType vecToStoreType = cast<VectorType>(vecToStore.getType());
-  int64_t vecToStoreRank = vecToStoreType.getRank();
-  auto vecToStoreShape = vecToStoreType.getShape();
-
-  // Compute the in_bounds attribute
-  SmallVector<bool> inBoundsVal(vecToStoreRank, true);
-  if (useInBoundsInsteadOfMasking) {
-    // Update the inBounds attribute.
-    // FIXME: This computation is too weak - it ignores the write indices.
-    for (unsigned i = 0; i < vecToStoreRank; i++)
-      inBoundsVal[i] =
-          (destShape[destRank - vecToStoreRank + i] >= vecToStoreShape[i]) &&
-          ShapedType::isStatic(destShape[destRank - vecToStoreRank + i]);
-  }
-
-  // If missing, initialize the write indices to 0.
-  bool useDefaultWriteIdxs = writeIndices.empty();
-  assert((useDefaultWriteIdxs ||
-          writeIndices.size() == static_cast<size_t>(destRank)) &&
-         "Invalid number of write indices!");
-  if (writeIndices.empty()) {
-    auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
-    writeIndices.assign(destRank, zero);
-  }
-
-  // Generate the xfer_write Op
-  Operation *write = vector::TransferWriteOp::create(builder, loc,
-                                                     /*vector=*/vecToStore,
-                                                     /*source=*/dest,
-                                                     /*indices=*/writeIndices,
-                                                     /*inBounds=*/inBoundsVal);
-
-  // If masking is disabled, exit.
-  if (useInBoundsInsteadOfMasking)
-    return write;
-
-  // Check if masking is needed. If not, exit.
-  if (llvm::equal(vecToStoreShape, destShape.take_back(vecToStoreRank)))
-    return write;
-
-  // Compute the mask and mask the write Op.
-  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type(),
-                                       vecToStoreType.getScalableDims());
-
-  SmallVector<OpFoldResult> destSizes =
-      isa<MemRefType>(dest.getType())
-          ? memref::getMixedSizes(builder, loc, dest)
-          : tensor::getMixedSizes(builder, loc, dest);
-
-  // Compute sizes for write-mask
-  SmallVector<OpFoldResult> maskSizes;
-  if (useDefaultWriteIdxs) {
-    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
-                                          destSizes.end());
-  } else {
-    size_t diff = destShape.size() - vecToStoreRank;
-    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
-      auto value =
-          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
-      auto neg =
-          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
-      maskSizes.push_back(OpFoldResult(neg));
-    }
-  }
-
-  if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
-                              vecToStoreShape))
-    return write;
-
-  Value maskForWrite =
-      builder.createOrFold<vector::CreateMaskOp>(loc, writeMaskType, maskSizes);
-  return mlir::vector::maskOperation(builder, write, maskForWrite);
 }
 
 /// Given the re-associations, "collapses" the input Vector type
@@ -1921,7 +1738,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
       rewriter, loc, shapeCastOp.getResult(), destPermutation);
 
   // Create TransferWriteOp.
-  Operation *write = createWriteOrMaskedWrite(
+  Operation *write = vector::createWriteOrMaskedWrite(
       rewriter, loc, transposeOp.getResult(), packOp.getDest());
   newResults.push_back(write->getResult(0));
   return success();
@@ -2017,7 +1834,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
       rewriter, loc, collapsedVecType, transposeOp->getResult(0));
 
   // -- Generate the write operation --
-  Operation *write = createWriteOrMaskedWrite(
+  Operation *write = vector::createWriteOrMaskedWrite(
       rewriter, loc, shapeCastOp.getResult(), unpackOp.getDest(),
       /*writeIndices=*/{}, useInBoundsInsteadOfMasking);
 
@@ -2053,7 +1870,8 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
   // Create Xfer write Op
   Value dest = tensor::EmptyOp::create(rewriter, loc, reifiedReturnShapes[0],
                                        padOp.getResultType().getElementType());
-  Operation *write = createWriteOrMaskedWrite(rewriter, loc, maskedRead, dest);
+  Operation *write =
+      vector::createWriteOrMaskedWrite(rewriter, loc, maskedRead, dest);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -2110,7 +1928,7 @@ vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
 static LogicalResult
 vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
                                      bool flatten1DDepthwiseConv) {
-  if (isa<ConvolutionOpInterface>(op.getOperation()))
+  if (isaConvolutionOpInterface(op))
     return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
 
   if (hasReductionIterator(op))
@@ -2253,6 +2071,45 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
     vecOperands.push_back(read);
   }
 
+  // Preserve the contraction's cast semantics when converting operands to the
+  // integer accumulator type. vector.contract provides an implicit signed
+  // integer promotion; the cases below materialize explicit casts as needed.
+  auto castAttr = linalgOp->getAttrOfType<TypeFnAttr>("cast");
+  bool hasUnsignedCast =
+      castAttr && castAttr.getValue() == TypeFn::cast_unsigned;
+  auto accType = dyn_cast<VectorType>(vecOperands[2].getType());
+  auto accElementType =
+      accType ? dyn_cast<IntegerType>(accType.getElementType()) : nullptr;
+  if (accElementType && accElementType.isSignless()) {
+    for (Value &operand : MutableArrayRef(vecOperands).take_front(2)) {
+      auto operandType = cast<VectorType>(operand.getType());
+      Type operandElementType = operandType.getElementType();
+      VectorType castType = operandType.clone(accElementType);
+
+      if (isa<FloatType>(operandElementType)) {
+        operand =
+            hasUnsignedCast
+                ? arith::FPToUIOp::create(rewriter, loc, castType, operand)
+                      .getResult()
+                : arith::FPToSIOp::create(rewriter, loc, castType, operand)
+                      .getResult();
+        continue;
+      }
+
+      auto operandIntegerType = dyn_cast<IntegerType>(operandElementType);
+      if (!operandIntegerType || !operandIntegerType.isSignless())
+        continue;
+      if (operandIntegerType.getWidth() >= accElementType.getWidth())
+        continue;
+      if (!hasUnsignedCast)
+        continue;
+
+      // vector.contract implicitly sign-extends integer operands. Unsigned
+      // promotion therefore requires an explicit zero extension.
+      operand = arith::ExtUIOp::create(rewriter, loc, castType, operand);
+    }
+  }
+
   // Remap iterators from linalg to vector.
   SmallVector<Attribute> iterAttrs;
   auto iterators = linalgOp.getIteratorTypesArray();
@@ -2271,7 +2128,7 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   contractOp = state.maskOperation(rewriter, contractOp, linalgOp);
 
   // Store result.
-  Operation *write = createWriteOrMaskedWrite(
+  Operation *write = vector::createWriteOrMaskedWrite(
       rewriter, loc, contractOp->getResult(0), outOperand->get());
 
   // Finalize.
@@ -2917,8 +2774,8 @@ struct PadOpVectorizationWithTransferReadPattern
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
-      xferOp->setAttr(xferOp.getInBoundsAttrName(),
-                      rewriter.getBoolArrayAttr(inBounds));
+      xferOp->setInherentAttr(xferOp.getInBoundsAttrName(),
+                              rewriter.getBoolArrayAttr(inBounds));
       xferOp.getBaseMutable().assign(padOp.getSource());
       xferOp.getPaddingMutable().assign(padValue);
     });
@@ -3199,8 +3056,8 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
   Operation *write =
-      createWriteOrMaskedWrite(rewriter, loc, read, sliceOp.getDest(),
-                               writeIndices, inputVectorSizes.empty());
+      vector::createWriteOrMaskedWrite(rewriter, loc, read, sliceOp.getDest(),
+                                       writeIndices, inputVectorSizes.empty());
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));
@@ -3838,16 +3695,15 @@ public:
         .getOperation();
   }
 
-  // Take a value and widen to have the same element type as `ty`.
-  Value promote(RewriterBase &rewriter, Location loc, Value val, Type ty) {
-    const Type srcElementType = getElementTypeOrSelf(val.getType());
+  // Promote `val` to the element type of `ty` using `castOp`.
+  Value promote(RewriterBase &rewriter, Location loc, Value val, Type ty,
+                Operation *castOp) {
     const Type dstElementType = getElementTypeOrSelf(ty);
-    assert(isa<IntegerType>(dstElementType) || isa<FloatType>(dstElementType));
-    if (srcElementType == dstElementType)
+    if (getElementTypeOrSelf(val.getType()) == dstElementType)
       return val;
 
-    const int64_t srcWidth = srcElementType.getIntOrFloatBitWidth();
-    const int64_t dstWidth = dstElementType.getIntOrFloatBitWidth();
+    assert(castOp && "expected a payload cast for promoted operand");
+
     // Handle both shaped as well as scalar types.
     Type dstType;
     if (auto shapedType = dyn_cast<ShapedType>(val.getType()))
@@ -3855,20 +3711,10 @@ public:
     else
       dstType = dstElementType;
 
-    if (isa<IntegerType>(srcElementType) && isa<FloatType>(dstElementType)) {
-      return arith::SIToFPOp::create(rewriter, loc, dstType, val);
-    }
-
-    if (isa<FloatType>(srcElementType) && isa<FloatType>(dstElementType) &&
-        srcWidth < dstWidth)
-      return arith::ExtFOp::create(rewriter, loc, dstType, val);
-
-    if (isa<IntegerType>(srcElementType) && isa<IntegerType>(dstElementType) &&
-        srcWidth < dstWidth)
-      return arith::ExtSIOp::create(rewriter, loc, dstType, val);
-
-    assert(false && "unhandled promotion case");
-    return nullptr;
+    return rewriter
+        .create(loc, castOp->getName().getIdentifier(), val, dstType,
+                castOp->getAttrs())
+        ->getResult(0);
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
@@ -3878,8 +3724,8 @@ public:
     vector::IteratorType red = vector::IteratorType::reduction;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
-    lhs = promote(rewriter, loc, lhs, res.getType());
-    rhs = promote(rewriter, loc, rhs, res.getType());
+    lhs = promote(rewriter, loc, lhs, res.getType(), lhsCastOp);
+    rhs = promote(rewriter, loc, rhs, res.getType(), rhsCastOp);
     auto contrationOp = vector::ContractionOp::create(
         rewriter, loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
@@ -3892,8 +3738,8 @@ public:
   // convolution.
   Value conv1dSliceAsOuterProduct(RewriterBase &rewriter, Location loc,
                                   Value lhs, Value rhs, Value res) {
-    lhs = promote(rewriter, loc, lhs, res.getType());
-    rhs = promote(rewriter, loc, rhs, res.getType());
+    lhs = promote(rewriter, loc, lhs, res.getType(), lhsCastOp);
+    rhs = promote(rewriter, loc, rhs, res.getType(), rhsCastOp);
     return vector::OuterProductOp::create(rewriter, loc, res.getType(), lhs,
                                           rhs, res, vector::CombiningKind::ADD);
   }
@@ -3978,8 +3824,9 @@ public:
 
       SmallVector<bool> inBounds(maskShape.size(), true);
       auto xferOp = cast<VectorTransferOpInterface>(opToMask);
-      xferOp->setAttr(xferOp.getInBoundsAttrName(),
-                      rewriter.getBoolArrayAttr(inBounds));
+      xferOp->setInherentAttr(
+          rewriter.getStringAttr(xferOp.getInBoundsAttrName()),
+          rewriter.getBoolArrayAttr(inBounds));
 
       SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
           cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
@@ -4122,7 +3969,7 @@ public:
     auto resTy = cast<ShapedType>(res.getType());
 
     // TODO(suderman): Change this to use a vector.ima intrinsic.
-    lhs = promote(rewriter, loc, lhs, resTy);
+    lhs = promote(rewriter, loc, lhs, resTy, lhsCastOp);
 
     if (flatten) {
       // NOTE: This following logic won't work for scalable vectors. For this
@@ -4148,7 +3995,7 @@ public:
     rhs = vector::BroadcastOp::create(rewriter, loc,
                                       resTy.clone(rhsTy.getElementType()), rhs);
 
-    rhs = promote(rewriter, loc, rhs, resTy);
+    rhs = promote(rewriter, loc, rhs, resTy, rhsCastOp);
 
     if (!lhs || !rhs)
       return nullptr;
@@ -4273,12 +4120,17 @@ private:
   StringAttr redOp;
   StringAttr poolExtOp;
   bool isPoolExt = false;
+  // Casts used to widen the convolution payload's lhs and rhs. These are null
+  // only when the corresponding operand already has the accumulator type.
+  Operation *lhsCastOp = nullptr;
+  Operation *rhsCastOp = nullptr;
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;
   vector::CombiningKind reductionKind;
 
-  // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
+  // Sets oper, poolExtOp, isPoolExt and the conv operand casts for valid
+  // conv/pooling ops.
   void setConvOperationKind(Operation *reduceOp) {
     int numBlockArguments =
         llvm::count_if(reduceOp->getOperands(), llvm::IsaPred<BlockArgument>);
@@ -4297,11 +4149,18 @@ private:
         return;
       }
       oper = ConvOperationKind::Conv;
+      setConvCastOps(feedOp);
       return;
     }
     // numBlockArugments == 2 and this is a pooling op.
     oper = ConvOperationKind::Pool;
     isPoolExt = false;
+  }
+
+  // Record the casts applied to the input and filter.
+  void setConvCastOps(Operation *feedOp) {
+    lhsCastOp = feedOp->getOperand(0).getDefiningOp();
+    rhsCastOp = feedOp->getOperand(1).getDefiningOp();
   }
 };
 } // namespace

@@ -46,14 +46,14 @@ define double @fmul_double_8_factors_nonseq(ptr nocapture noundef readonly %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX10]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds double, ptr [[X]], i64 14
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[ARRAYIDX12]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x double> poison, double [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x double> [[TMP8]], double [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x double> [[TMP9]], double [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x double> [[TMP10]], double [[TMP3]], i32 3
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x double> [[TMP11]], double [[TMP4]], i32 4
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x double> [[TMP12]], double [[TMP5]], i32 5
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x double> [[TMP13]], double [[TMP6]], i32 6
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x double> [[TMP14]], double [[TMP7]], i32 7
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x double> poison, double [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x double> [[TMP8]], double [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x double> [[TMP9]], double [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x double> [[TMP10]], double [[TMP3]], i64 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x double> [[TMP11]], double [[TMP4]], i64 4
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x double> [[TMP12]], double [[TMP5]], i64 5
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x double> [[TMP13]], double [[TMP6]], i64 6
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x double> [[TMP14]], double [[TMP7]], i64 7
 ; CHECK-NEXT:    [[TMP16:%.*]] = call reassoc nsz arcp contract afn double @llvm.vector.reduce.fmul.v8f64(double 1.000000e+00, <8 x double> [[TMP15]])
 ; CHECK-NEXT:    ret double [[TMP16]]
 ;
@@ -118,22 +118,22 @@ define float @fmul_float_16_factors_nonseq(float noundef %m, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX26]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX28:%.*]] = getelementptr inbounds float, ptr [[X]], i64 30
 ; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX28]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <16 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x float> [[TMP16]], float [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <16 x float> [[TMP17]], float [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <16 x float> [[TMP18]], float [[TMP3]], i32 3
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <16 x float> [[TMP19]], float [[TMP4]], i32 4
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <16 x float> [[TMP20]], float [[TMP5]], i32 5
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <16 x float> [[TMP21]], float [[TMP6]], i32 6
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <16 x float> [[TMP22]], float [[TMP7]], i32 7
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <16 x float> [[TMP23]], float [[TMP8]], i32 8
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <16 x float> [[TMP24]], float [[TMP9]], i32 9
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <16 x float> [[TMP25]], float [[TMP10]], i32 10
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <16 x float> [[TMP26]], float [[TMP11]], i32 11
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <16 x float> [[TMP27]], float [[TMP12]], i32 12
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <16 x float> [[TMP28]], float [[TMP13]], i32 13
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <16 x float> [[TMP29]], float [[TMP14]], i32 14
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <16 x float> [[TMP30]], float [[TMP15]], i32 15
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <16 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x float> [[TMP16]], float [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <16 x float> [[TMP17]], float [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <16 x float> [[TMP18]], float [[TMP3]], i64 3
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <16 x float> [[TMP19]], float [[TMP4]], i64 4
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <16 x float> [[TMP20]], float [[TMP5]], i64 5
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <16 x float> [[TMP21]], float [[TMP6]], i64 6
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <16 x float> [[TMP22]], float [[TMP7]], i64 7
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <16 x float> [[TMP23]], float [[TMP8]], i64 8
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <16 x float> [[TMP24]], float [[TMP9]], i64 9
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <16 x float> [[TMP25]], float [[TMP10]], i64 10
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <16 x float> [[TMP26]], float [[TMP11]], i64 11
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <16 x float> [[TMP27]], float [[TMP12]], i64 12
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <16 x float> [[TMP28]], float [[TMP13]], i64 13
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <16 x float> [[TMP29]], float [[TMP14]], i64 14
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <16 x float> [[TMP30]], float [[TMP15]], i64 15
 ; CHECK-NEXT:    [[TMP32:%.*]] = call reassoc nsz arcp contract afn float @llvm.vector.reduce.fmul.v16f32(float 1.000000e+00, <16 x float> [[TMP31]])
 ; CHECK-NEXT:    ret float [[TMP32]]
 ;

@@ -51,7 +51,6 @@ define <2 x i128> @flag_copy_2(<2 x i128> %x, <2 x i128> %y) nounwind {
   ret <2 x i128> %z
 }
 
-; TODO: Remove the 2nd cmpl by using NF imul.
 define void @flag_copy_3(i32 %x, i32 %y, ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; CHECK-LABEL: flag_copy_3:
 ; CHECK:       # %bb.0: # %entry
@@ -60,14 +59,13 @@ define void @flag_copy_3(i32 %x, i32 %y, ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; CHECK-NEXT:    jl .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    imull %esi, %eax
+; CHECK-NEXT:    {nf} imull %esi, %eax
 ; CHECK-NEXT:    movl %eax, (%rdx)
 ; CHECK-NEXT:    jmp .LBB2_3
 ; CHECK-NEXT:  .LBB2_2: # %bb2
 ; CHECK-NEXT:    leal -2(%rsi), %eax
 ; CHECK-NEXT:    movl %eax, (%rcx)
 ; CHECK-NEXT:  .LBB2_3: # %bb3
-; CHECK-NEXT:    cmpl $2, %edi
 ; CHECK-NEXT:    cmovgel %edi, %esi
 ; CHECK-NEXT:    movl %esi, (%r8)
 ; CHECK-NEXT:    retq

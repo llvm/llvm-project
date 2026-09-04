@@ -51,7 +51,7 @@ entry:
 }
 
 ; CHECK-LABEL: all_half
-; CHECK: fcmp une half %{{.*}}, 0xH0000
+; CHECK: fcmp une half %{{.*}}, 0.000000e+00
 define noundef i1 @all_half(half noundef %p0) {
 entry:
   %dx.all = call i1 @llvm.dx.all.f16(half %p0)

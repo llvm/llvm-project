@@ -88,33 +88,6 @@ template <auto Func>
 using KernelSignatureOf_t = typename KernelSignatureOf<Func>::type;
 
 //===----------------------------------------------------------------------===//
-// Kernel Argument Packing
-//===----------------------------------------------------------------------===//
-
-template <typename... ArgTypes> struct KernelArgsPack;
-
-template <typename ArgType> struct KernelArgsPack<ArgType> {
-  std::decay_t<ArgType> Arg;
-
-  constexpr KernelArgsPack(ArgType &&Arg) : Arg(std::forward<ArgType>(Arg)) {}
-};
-
-template <typename ArgType0, typename ArgType1, typename... ArgTypes>
-struct KernelArgsPack<ArgType0, ArgType1, ArgTypes...> {
-  std::decay_t<ArgType0> Arg0;
-  KernelArgsPack<ArgType1, ArgTypes...> Args;
-
-  constexpr KernelArgsPack(ArgType0 &&Arg0, ArgType1 &&Arg1, ArgTypes &&...Args)
-      : Arg0(std::forward<ArgType0>(Arg0)),
-        Args(std::forward<ArgType1>(Arg1), std::forward<ArgTypes>(Args)...) {}
-};
-
-template <typename... ArgTypes>
-KernelArgsPack<ArgTypes...> makeKernelArgsPack(ArgTypes &&...Args) {
-  return KernelArgsPack<ArgTypes...>(std::forward<ArgTypes>(Args)...);
-}
-
-//===----------------------------------------------------------------------===//
 // Configuration Helpers
 //===----------------------------------------------------------------------===//
 

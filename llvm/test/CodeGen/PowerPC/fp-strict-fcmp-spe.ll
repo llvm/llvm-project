@@ -4,10 +4,27 @@
 define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_oeq_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r5, r6
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    cmplwi r3, 0
+; SPE-NEXT:    beq cr0, .LBB0_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB0_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"oeq", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -17,10 +34,27 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ogt_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    bl __gtsf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    bgt cr0, .LBB1_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB1_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ogt", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -30,16 +64,46 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_oge_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    bc 4, gt, .LBB2_3
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 52(r1)
+; SPE-NEXT:    stw r12, 24(r1)
+; SPE-NEXT:    stw r29, 36(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __gesf2
+; SPE-NEXT:    cmpwi cr2, r3, -1
+; SPE-NEXT:    mr r3, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr2+gt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB2_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    bc 4, gt, .LBB2_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  .LBB2_3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB2_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r12, 24(r1)
+; SPE-NEXT:    lwz r27, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 52(r1)
+; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"oge", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -49,10 +113,27 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_olt_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    bl __ltsf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    blt cr0, .LBB3_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB3_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"olt", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -62,16 +143,46 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ole_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    bc 4, gt, .LBB4_3
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 52(r1)
+; SPE-NEXT:    stw r12, 24(r1)
+; SPE-NEXT:    stw r29, 36(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __lesf2
+; SPE-NEXT:    cmpwi cr2, r3, 1
+; SPE-NEXT:    mr r3, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr2+lt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB4_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    bc 4, gt, .LBB4_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  .LBB4_3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB4_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r12, 24(r1)
+; SPE-NEXT:    lwz r27, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 52(r1)
+; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ole", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -81,13 +192,43 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_one_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 52(r1)
+; SPE-NEXT:    stw r12, 24(r1)
+; SPE-NEXT:    stw r29, 36(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __ltsf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __gtsf2
+; SPE-NEXT:    bc 12, 4*cr2+lt, .LBB5_3
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    bc 12, gt, .LBB5_3
 ; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB5_3:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r12, 24(r1)
+; SPE-NEXT:    lwz r27, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 52(r1)
+; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"one", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -97,13 +238,36 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ord_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    bc 4, gt, .LBB6_2
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r6
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r5
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r3, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __eqsf2
+; SPE-NEXT:    or. r3, r3, r27
+; SPE-NEXT:    beq cr0, .LBB6_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB6_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 16(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 12(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ord", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -113,15 +277,43 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ueq_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    bc 12, gt, .LBB7_3
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 52(r1)
+; SPE-NEXT:    stw r12, 24(r1)
+; SPE-NEXT:    stw r29, 36(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __ltsf2
+; SPE-NEXT:    cmpwi cr2, r3, -1
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __gtsf2
+; SPE-NEXT:    bc 4, 4*cr2+gt, .LBB7_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    bc 12, gt, .LBB7_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    cmpwi r3, 1
+; SPE-NEXT:    bc 12, lt, .LBB7_3
+; SPE-NEXT:  .LBB7_2:
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB7_3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r12, 24(r1)
+; SPE-NEXT:    lwz r27, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 52(r1)
+; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ueq", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -131,16 +323,46 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ugt_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 52(r1)
+; SPE-NEXT:    stw r12, 24(r1)
+; SPE-NEXT:    stw r29, 36(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __gtsf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    mr r3, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crorc 4*cr5+lt, 4*cr2+gt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB8_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    bclr 12, gt, 0
-; SPE-NEXT:  # %bb.3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB8_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r12, 24(r1)
+; SPE-NEXT:    lwz r27, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 52(r1)
+; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ugt", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -150,12 +372,27 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_uge_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    bc 12, gt, .LBB9_2
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    bl __ltsf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    bge cr0, .LBB9_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB9_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"uge", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -165,16 +402,46 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ult_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -48(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 52(r1)
+; SPE-NEXT:    stw r12, 24(r1)
+; SPE-NEXT:    stw r29, 36(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 40(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r27, r5
+; SPE-NEXT:    stw r28, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r6
+; SPE-NEXT:    bl __ltsf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    mr r3, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r27
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crorc 4*cr5+lt, 4*cr2+lt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB10_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efscmplt cr0, r5, r6
-; SPE-NEXT:    bclr 12, gt, 0
-; SPE-NEXT:  # %bb.3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB10_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r12, 24(r1)
+; SPE-NEXT:    lwz r27, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 52(r1)
+; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ult", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -184,12 +451,27 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_ule_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpgt cr0, r5, r6
-; SPE-NEXT:    bc 12, gt, .LBB11_2
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    bl __gtsf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    ble cr0, .LBB11_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB11_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"ule", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -199,12 +481,27 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_une_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r5, r6
-; SPE-NEXT:    bc 12, gt, .LBB12_2
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r5
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    cmplwi r3, 0
+; SPE-NEXT:    bne cr0, .LBB12_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB12_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"une", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -214,13 +511,36 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; SPE-LABEL: test_f32_uno_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    efscmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    mr r3, r6
+; SPE-NEXT:    mr r4, r6
+; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r28, r5
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    mr r3, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    bl __nesf2
+; SPE-NEXT:    or. r3, r3, r27
+; SPE-NEXT:    bne cr0, .LBB13_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efscmpeq cr0, r6, r6
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB13_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 16(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 12(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f32(float %f1, float %f2, metadata !"uno", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -230,12 +550,30 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_oeq_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpeq cr0, r5, r7
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    evmergehi r5, r7, r7
+; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    cmplwi r3, 0
+; SPE-NEXT:    beq cr0, .LBB14_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB14_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"oeq", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -245,12 +583,30 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ogt_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    evmergehi r5, r7, r7
+; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    bl __gtdf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    bgt cr0, .LBB15_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB15_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ogt", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -260,18 +616,58 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_oge_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    evmergelo r6, r7, r8
-; SPE-NEXT:    efdcmpeq cr0, r6, r6
-; SPE-NEXT:    bc 4, gt, .LBB16_3
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 100(r1)
+; SPE-NEXT:    stw r12, 80(r1)
+; SPE-NEXT:    evstdd r25, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __gedf2
+; SPE-NEXT:    cmpwi cr2, r3, -1
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr2+gt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB16_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpeq cr0, r5, r5
-; SPE-NEXT:    bc 4, gt, .LBB16_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efdcmplt cr0, r5, r6
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  .LBB16_3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB16_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 88(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 84(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 40(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r12, 80(r1)
+; SPE-NEXT:    evldd r25, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 100(r1)
+; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"oge", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -281,12 +677,30 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_olt_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    evmergehi r5, r7, r7
+; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    bl __ltdf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    blt cr0, .LBB17_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB17_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"olt", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -296,18 +710,58 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ole_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    evmergelo r6, r7, r8
-; SPE-NEXT:    efdcmpeq cr0, r6, r6
-; SPE-NEXT:    bc 4, gt, .LBB18_3
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 100(r1)
+; SPE-NEXT:    stw r12, 80(r1)
+; SPE-NEXT:    evstdd r25, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ledf2
+; SPE-NEXT:    cmpwi cr2, r3, 1
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crand 4*cr5+lt, 4*cr2+lt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB18_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpeq cr0, r5, r5
-; SPE-NEXT:    bc 4, gt, .LBB18_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efdcmpgt cr0, r5, r6
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  .LBB18_3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB18_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 88(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 84(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 40(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r12, 80(r1)
+; SPE-NEXT:    evldd r25, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 100(r1)
+; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ole", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -317,15 +771,53 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_one_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 100(r1)
+; SPE-NEXT:    stw r12, 80(r1)
+; SPE-NEXT:    evstdd r25, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ltdf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __gtdf2
+; SPE-NEXT:    bc 12, 4*cr2+lt, .LBB19_3
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    bc 12, gt, .LBB19_3
 ; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB19_3:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 88(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 84(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 40(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r12, 80(r1)
+; SPE-NEXT:    evldd r25, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 100(r1)
+; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"one", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -335,15 +827,40 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ord_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    evmergelo r6, r7, r8
-; SPE-NEXT:    efdcmpeq cr0, r6, r6
-; SPE-NEXT:    bc 4, gt, .LBB20_2
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r5, r6
+; SPE-NEXT:    evmergelo r4, r7, r8
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    mr r6, r4
+; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    evmergehi r3, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __eqdf2
+; SPE-NEXT:    or. r3, r3, r27
+; SPE-NEXT:    beq cr0, .LBB20_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 12, gt, 0
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB20_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 16(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ord", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -353,17 +870,53 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ueq_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    bc 12, gt, .LBB21_3
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 100(r1)
+; SPE-NEXT:    stw r12, 80(r1)
+; SPE-NEXT:    evstdd r25, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ltdf2
+; SPE-NEXT:    cmpwi cr2, r3, -1
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __gtdf2
+; SPE-NEXT:    bc 4, 4*cr2+gt, .LBB21_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    bc 12, gt, .LBB21_3
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    cmpwi r3, 1
+; SPE-NEXT:    bc 12, lt, .LBB21_3
+; SPE-NEXT:  .LBB21_2:
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB21_3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 88(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 84(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 40(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r12, 80(r1)
+; SPE-NEXT:    evldd r25, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 100(r1)
+; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ueq", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -373,18 +926,58 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ugt_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 100(r1)
+; SPE-NEXT:    stw r12, 80(r1)
+; SPE-NEXT:    evstdd r25, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __gtdf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crorc 4*cr5+lt, 4*cr2+gt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB22_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpeq cr0, r7, r7
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    bclr 12, gt, 0
-; SPE-NEXT:  # %bb.3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB22_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 88(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 84(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 40(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r12, 80(r1)
+; SPE-NEXT:    evldd r25, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 100(r1)
+; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ugt", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -394,14 +987,30 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_uge_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    bc 12, gt, .LBB23_2
+; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    evmergehi r5, r7, r7
+; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    bl __ltdf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    bge cr0, .LBB23_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB23_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"uge", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -411,18 +1020,58 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ult_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -96(r1)
+; SPE-NEXT:    mfcr r12
+; SPE-NEXT:    stw r0, 100(r1)
+; SPE-NEXT:    stw r12, 80(r1)
+; SPE-NEXT:    evstdd r25, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r26, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r27, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 84(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 88(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r7, r8
+; SPE-NEXT:    evmergelo r27, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r26, r27, r27
+; SPE-NEXT:    evmergehi r25, r28, r28
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __ltdf2
+; SPE-NEXT:    cmpwi cr2, r3, 0
+; SPE-NEXT:    mr r3, r25
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r25
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    mr r28, r3
+; SPE-NEXT:    mr r3, r26
+; SPE-NEXT:    mr r4, r27
+; SPE-NEXT:    mr r5, r26
+; SPE-NEXT:    mr r6, r27
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    or. r3, r3, r28
+; SPE-NEXT:    crorc 4*cr5+lt, 4*cr2+lt, eq
+; SPE-NEXT:    bc 12, 4*cr5+lt, .LBB24_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpeq cr0, r7, r7
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    efdcmplt cr0, r5, r7
-; SPE-NEXT:    bclr 12, gt, 0
-; SPE-NEXT:  # %bb.3:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB24_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 88(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 84(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r27, 40(r1) # 8-byte Folded Reload
+; SPE-NEXT:    evldd r26, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r12, 80(r1)
+; SPE-NEXT:    evldd r25, 24(r1) # 8-byte Folded Reload
+; SPE-NEXT:    mtcrf 32, r12 # cr2
+; SPE-NEXT:    lwz r0, 100(r1)
+; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ult", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -432,14 +1081,30 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_ule_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpgt cr0, r5, r7
-; SPE-NEXT:    bc 12, gt, .LBB25_2
+; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    evmergehi r5, r7, r7
+; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    bl __gtdf2
+; SPE-NEXT:    cmpwi r3, 0
+; SPE-NEXT:    ble cr0, .LBB25_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB25_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"ule", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -449,14 +1114,30 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_une_s:
 ; SPE:       # %bb.0:
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpeq cr0, r5, r7
-; SPE-NEXT:    bc 12, gt, .LBB26_2
+; SPE-NEXT:    evmergelo r4, r5, r6
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    evmergehi r5, r7, r7
+; SPE-NEXT:    mr r6, r7
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    cmplwi r3, 0
+; SPE-NEXT:    bne cr0, .LBB26_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    mr r4, r3
+; SPE-NEXT:    mr r30, r29
 ; SPE-NEXT:  .LBB26_2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"une", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b
@@ -466,15 +1147,40 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; SPE-LABEL: test_f64_uno_s:
 ; SPE:       # %bb.0:
-; SPE-NEXT:    evmergelo r7, r7, r8
-; SPE-NEXT:    evmergelo r5, r5, r6
-; SPE-NEXT:    efdcmpeq cr0, r5, r5
-; SPE-NEXT:    bclr 4, gt, 0
+; SPE-NEXT:    mflr r0
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    stw r27, 60(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evstdd r28, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 68(r1) # 4-byte Folded Spill
+; SPE-NEXT:    mr r29, r4
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
+; SPE-NEXT:    evmergelo r28, r5, r6
+; SPE-NEXT:    evmergelo r4, r7, r8
+; SPE-NEXT:    mr r30, r3
+; SPE-NEXT:    evmergehi r3, r4, r4
+; SPE-NEXT:    mr r6, r4
+; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    mr r27, r3
+; SPE-NEXT:    evmergehi r3, r28, r28
+; SPE-NEXT:    mr r4, r28
+; SPE-NEXT:    mr r5, r3
+; SPE-NEXT:    mr r6, r28
+; SPE-NEXT:    bl __nedf2
+; SPE-NEXT:    or. r3, r3, r27
+; SPE-NEXT:    bne cr0, .LBB27_2
 ; SPE-NEXT:  # %bb.1:
-; SPE-NEXT:    efdcmpeq cr0, r7, r7
-; SPE-NEXT:    bclr 4, gt, 0
-; SPE-NEXT:  # %bb.2:
-; SPE-NEXT:    mr r3, r4
+; SPE-NEXT:    mr r30, r29
+; SPE-NEXT:  .LBB27_2:
+; SPE-NEXT:    mr r3, r30
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 68(r1) # 4-byte Folded Reload
+; SPE-NEXT:    evldd r28, 16(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r27, 60(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
+; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f64(double %f1, double %f2, metadata !"uno", metadata !"fpexcept.strict") #0
   %res = select i1 %cond, i32 %a, i32 %b

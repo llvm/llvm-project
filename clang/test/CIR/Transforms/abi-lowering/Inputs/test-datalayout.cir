@@ -1,0 +1,17 @@
+// Shared fixture: minimal x86_64 dlti.dl_spec used by every abi-lowering
+// test below.  Test files include this verbatim inside their `module
+// attributes { ... }` declaration so that CallConvLowering's DataLayout
+// queries return sensible sizes and alignments.
+//
+// Copy this attribute into a test like so:
+//
+//   module attributes {
+//     dlti.dl_spec = #dlti.dl_spec<
+//       #dlti.dl_entry<i1, dense<8>: vector<2xi64>>,
+//       #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+//       #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+//       #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+//       #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+//       #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
+//       #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+//   } { ... }

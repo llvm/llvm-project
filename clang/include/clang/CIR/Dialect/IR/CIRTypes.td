@@ -49,20 +49,35 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     Those integer types that are directly available in C/C++ standard are called
     fundamental integer types. Said types are: `signed char`, `short`, `int`,
     `long`, `long long`, and their unsigned variations.
+
+    Examples: `!cir.int<s, 32>`, `!cir.int<u, 64>`, `!cir.int<s, 128, bitint>`
   }];
-  let parameters = (ins "unsigned":$width, "bool":$isSigned);
+  let parameters = (ins "unsigned":$width, "bool":$is_signed,
+                        DefaultValuedParameter<"bool", "false">:$is_bit_int);
+  let builders = [
+    TypeBuilder<(ins "unsigned":$width, "bool":$is_signed), [{
+      return $_get($_ctxt, width, is_signed, /*is_bit_int=*/false);
+    }]>,
+  ];
   let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
     /// Return true if this is a signed integer type.
     bool isSigned() const { return getIsSigned(); }
     /// Return true if this is an unsigned integer type.
     bool isUnsigned() const { return !getIsSigned(); }
+    /// Return true if this is a _BitInt type.
+    bool isBitInt() const { return getIsBitInt(); }
     /// Return type alias.
     std::string getAlias() const {
-      return (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
+      std::string alias =
+          (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
+      if (isBitInt())
+        alias += "_bitint";
+      return alias;
     }
     /// Return true if this is a fundamental integer type (i.e. signed or
     /// unsigned integer types whose bit width is 8, 16, 32, or 64).
+    /// _BitInt types are never fundamental even if their width matches.
     bool isFundamental() const {
       return isFundamentalIntType(*this);
     }
@@ -75,8 +90,20 @@ def CIR_IntType : CIR_Type<"Int", "int", [
 
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
-    /// Returns a maximum bitwidth of cir::IntType
-    static unsigned maxBitwidth() { return 128; }
+    /// Returns a maximum bitwidth of cir::IntType.
+    /// Matches llvm::IntegerType::MAX_INT_BITS (1 << 23).
+    static unsigned maxBitwidth() { return (1 << 23); }
+
+    /// The bit-width of this integer type when stored via LLVM-IR. This
+    /// is just sizeof(ty)*CHAR_BIT for all but _BitInt, which is represented as
+    /// widened for layout.
+    unsigned getStorageTypeWidth(const mlir::DataLayout &dataLayout) const;
+
+    /// Like getStorageTypeWidth, this gets the alignment of the type when
+    /// lowered to LLVM-IR for the purposes of ensuring we get layout correct
+    /// for record types (particularly around _BitInt, which has a different
+    /// alignment in LLVM-IR vs the FE).
+    uint64_t getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const;
   }];
   let genVerifyDecl = 1;
 }
@@ -189,7 +216,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
     the complex number. `elementType` must be either a CIR integer type or a CIR
     floating-point type.
 
-    ```mlir
+    ```
     !cir.complex<!s32i>
     !cir.complex<!cir.float>
     ```
@@ -223,7 +250,9 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
 //===----------------------------------------------------------------------===//
 
 def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["getPreferredAlignment", "getIndexBitwidth", "areCompatible",
+         "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
 ]> {
   let summary = "CIR pointer type";
@@ -240,7 +269,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 
     Examples:
 
-    ```mlir
+    ```
     !cir.ptr<!cir.int<u, 8>>
     !cir.ptr<!cir.float>
     !cir.ptr<!cir.record<struct "MyStruct">>
@@ -276,7 +305,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let assemblyFormat = [{
     `<`
       $pointee
-      ( `,` ` ` custom<AddressSpaceValue>($addrSpace)^ )?
+      ( `,` ` ` custom<MemorySpace>($addrSpace)^ )?
     `>`
   }];
 
@@ -315,9 +344,10 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
 // CIR_DataMemberType
 //===----------------------------------------------------------------------===//
 
-def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
-    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]
-> {
+def CIR_DataMemberType : CIR_Type<"DataMember", "data_member", [
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+  DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
   let summary = "CIR type that represents a pointer-to-data-member in C++";
   let description = [{
     `cir.data_member` models a pointer-to-data-member in C++. Values of this
@@ -346,6 +376,7 @@ def CIR_DataMemberType : CIR_Type<"DataMember", "data_member",
 //===----------------------------------------------------------------------===//
 
 def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface>
 ]> {
   let summary = "CIR type that is used for the vptr member of C++ objects";
@@ -367,6 +398,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     the base object offset value from the vtable, or the type information
     entry for an object.
     TODO: We should have special operations to do that too.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CUDADeviceTextureType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceTextureType :
+    CIR_Type<"CUDADeviceTexture", "cuda_texture"> {
+  let summary = "CUDA device texture reference type";
+  let description = [{
+    `!cir.cuda_texture` represents a CUDA built-in texture reference in CIR.
+    The type preserves texture semantics at the CIR level and is lowered to
+    the target device representation during lowering to LLVM IR.
   }];
 }
 
@@ -434,7 +479,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Syntax:
 
-    ```mlir
+    ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
@@ -445,7 +490,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     Examples:
 
-    ```mlir
+    ```
     !cir.vector<4 x !cir.int<u, 8>>
     !cir.vector<2 x !cir.float>
     ```
@@ -453,7 +498,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     Scalable vectors are indicated by enclosing size in square brackets.
 
     Example:
-    ```mlir
+    ```
     !cir.vector<[4] x !cir.int<u, 8>>
     ```
   }];
@@ -496,7 +541,7 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 
     Example:
 
-    ```mlir
+    ```
     !cir.func<()>
     !cir.func<() -> bool>
     !cir.func<(!s8i, !s8i)>
@@ -561,8 +606,10 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 // MethodType
 //===----------------------------------------------------------------------===//
 
-def CIR_MethodType : CIR_Type<"Method", "method",
-    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+def CIR_MethodType : CIR_Type<"Method", "method", [
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+  DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
   let summary = "CIR type that represents C++ pointer-to-member-function type";
   let description = [{
     `cir.method` models the pointer-to-member-function type in C++. The layout
@@ -600,59 +647,198 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 }
 
 //===----------------------------------------------------------------------===//
-// RecordType
+// BitFieldType
 //
-// The base type for all RecordDecls.
+// The member type of a bit-field access unit.
 //===----------------------------------------------------------------------===//
 
-def CIR_RecordType : CIR_Type<"Record", "record", [
+def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let summary = "CIR bit-field access unit member type";
+  let description = [{
+    A run of bit-fields shares one access unit. A record has one member per
+    access unit, and that member has this type. The `storage_type` is the unit
+    the record stores, and `fields` says which bit-fields the source packed into
+    it, in declaration order.
+
+    The unit answers where the bits live, and `fields` answers how the fields
+    were declared in the user's source code. The storage type can be narrower
+    than the declared type of a bit-field within it, and the fields in it need
+    not agree on a declared type.
+
+    A zero-width bit-field belongs to no unit.  It is spelled as a member with
+    no `storage_type` and a single zero-width field, which occupies no bytes of
+    the record and becomes no field of the lowered LLVM struct.  Every other
+    member of this type owns the bytes of its unit.
+
+    Examples:
+
+    ```
+        // struct S { int a : 4; int b : 27; };
+        !rec_S = !cir.struct<"S"
+            {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 4>,
+                                            #cir.bitfield_decl<!s32i, 27>]>}>
+
+        // struct M { int a : 2; long long b : 30; };
+        !rec_M = !cir.struct<"M"
+            {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 2>,
+                                            #cir.bitfield_decl<!s64i, 30>]>,
+             pad !cir.array<!u8i x 4>}>
+
+        // struct Tail { int x; unsigned : 0; };
+        !rec_Tail = !cir.struct<"Tail"
+            {data !s32i,
+             empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>}>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"mlir::Type">:$storage_type,
+    OptionalArrayRefParameter<"cir::BitFieldDeclAttr">:$fields
+  );
+
+  // Storage comes first when there is any.  A zero-width bit-field has none,
+  // and is spelled as the list on its own.  An empty list parses so that the
+  // verifier is the one to reject it.
+  let assemblyFormat = [{
+    `<` (`[`) : ($storage_type^ `,` `[`)?
+        (`]`) : (qualified($fields)^ `]`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Whether this member owns the bytes of an access unit.  Only a
+    /// zero-width bit-field does not, and it is the only member of this type
+    /// that contributes neither size nor alignment to its record and becomes
+    /// no field of the lowered LLVM struct.
+    bool ownsBytes() const { return static_cast<bool>(getStorageType()); }
+
+    /// Whether this member is a zero-width bit-field, which holds no bits and
+    /// exists only to end the run of bit-fields before it.
+    bool isZeroWidth() const { return !ownsBytes(); }
+
+    /// Whether the source can read any of the bit-fields in this unit.
+    bool holdsNamedField() const {
+      return llvm::any_of(getFields(), [](cir::BitFieldDeclAttr decl) {
+        return !decl.getIsUnnamed();
+      });
+    }
+
+    /// Where the bit-field at \p idx starts within the unit, counted from the
+    /// unit's first bit.  The fields of a unit are contiguous and in
+    /// declaration order, so this is the widths of the fields ahead of it.
+    uint64_t getFieldBitOffset(unsigned idx) const {
+      uint64_t offset = 0;
+      for (cir::BitFieldDeclAttr decl : getFields().take_front(idx))
+        offset += decl.getWidth();
+      return offset;
+    }
+  }];
+
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// RecordMemberKind
+//
+// What a record member holds, and whether its extent is a declared one.
+//===----------------------------------------------------------------------===//
+
+def CIR_RecordMemberKind : CIR_I32EnumAttr<
+    "RecordMemberKind", "what a record member holds", [
+  I32EnumAttrCase<"Data", 0, "data">,
+  I32EnumAttrCase<"Pad", 1, "pad">,
+  I32EnumAttrCase<"Empty", 2, "empty">,
+  I32EnumAttrCase<"BitField", 3, "bitfield">
+]> {
+  let description = [{
+    `pad` is storage the compiler inserted to place a later member at its
+    required offset, and is reusable tail padding when it trails the record.
+
+    `data` and `empty` both span something whose extent the source fixed: a
+    field, a vtable pointer, or a base subobject.  They differ only on whether
+    it holds data for argument passing.
+
+    `bitfield` is a bit-field access unit the source can read at least one
+    bit-field of, and its member type is `!cir.bitfield`.  The mark is needed
+    because a unit can be narrower than the declared type of a bit-field in it:
+    without it, a 32-bit unit holding a bit-field of `long long` would be
+    indistinguishable from an `unsigned` field, and clang's x86-64 lowering
+    coerces two records that differ only in that to `i64` and `i32`.
+
+    A unit of nothing but unnamed bit-fields is `empty`, since no field of the
+    source reads it, even though it still holds data for argument passing.  A
+    zero-width bit-field is unnamed by definition, so it is always `empty`, and
+    it is the only bit-field member that holds no such data.
+
+    A union's base subobject is the one exception to all of this: a single
+    member stands in for every variant, and it takes a bit-field mark as soon
+    as any variant is one, whatever its own storage type came from.
+
+    A record is empty for the ABI when no member is `data` or `bitfield`, which
+    is trivially true for a record with no members, and when no `empty` member
+    is an access unit of unnamed bit-fields.  The distinction between `pad` and
+    the rest is load-bearing beyond that: only `pad` is reusable, so a record
+    whose trailing member is a unit of unnamed bit-fields keeps that unit in
+    its data size.
+  }];
+
+  let genSpecializedAttr = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// StructType
+//
+// The CIR type for C/C++ struct and class declarations.
+//===----------------------------------------------------------------------===//
+
+def CIR_StructType : CIR_Type<"Struct", "struct", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     MutableType,
 ]> {
-  let summary = "CIR record type";
+  let summary = "CIR struct/class type";
   let description = [{
-    Each unique clang::RecordDecl is mapped to a `cir.record` and any object in
-    C/C++ that has a struct or class type will have a `cir.record` in CIR.
+    Each unique clang::RecordDecl with struct or class kind is mapped to a
+    `cir.struct` type.  Any object in C/C++ that has a struct or class type
+    will have a `!cir.struct` in CIR.
 
-    There are three possible formats for this type:
+    There are three possible formats:
 
-     - Identified and complete records: unique name and a known body.
-     - Identified and incomplete records: unique name and unknown body.
-     - Anonymous records: no name and a known body.
+     - Identified and complete: unique name and a known body.
+     - Identified and incomplete: unique name and unknown body.
+     - Anonymous: no name and a known body.
 
-    Identified records are uniqued by their name, and anonymous records are
-    uniqued by their body. This means that two anonymous records with the same
-    body will be the same type, and two identified records with the same name
-    will be the same type. Attempting to build a record with an existing name,
-    but a different body will result in an error.
+    Typically, the full data size of a struct object is that which is calculated
+    by adding the aligned sizes of all the members. However, note that there is
+    one exception to this Flexible Array Members. When the last element is an
+    array type of size zero(in CIR), this represents the C/C++ concept of
+    'flexible array member', where as long as the type is allocated properly (or
+    a global constant), an access through the array member may access outside of
+    its bounds. This is necessary to represent C/C++ semantics.
 
-    Each record type will have a `RecordKind` that is either `Class`, `Struct`,
-    or `Union`, depending on the C/C++ type that it is representing. Note that
-    `Class` and `Struct` are semantically identical, but the kind preserves the
-    keyword that was used to declare the type in the original source code.
+    The optional `class` keyword distinguishes C++ class declarations from
+    plain struct declarations.  Both are semantically identical; the keyword
+    preserves the original source spelling.
 
-    A few examples:
+    Every member has a kind, described by `CIR_RecordMemberKind`, saying what
+    it holds, and every member is spelled with its mark.
 
-    ```mlir
-        !rec_complete = !cir.record<struct "complete" {!u8i}>
-        !rec_incomplete = !cir.record<struct "incomplete" incomplete>
-        !anonymous_struct = !cir.record<struct {!u8i}>
-        !rec_p1 = !cir.record<struct "p1" packed {!u8i, !u8i}>
-        !rec_p2 = !cir.record<struct "p2" padded {!u8i, !u8i}>
-        !rec_p3 = !cir.record<struct "p3" packed padded {!s32i, !u8i, !u8i}>
+    Examples:
+
     ```
-
-    Incomplete records are mutable, meaning they can be later completed with a
-    body automatically updating in place every type in the code that uses the
-    incomplete record. Mutability allows for recursive types to be represented,
-    meaning the record can have members that refer to itself. This is useful for
-    representing recursive records and is implemented through a special syntax.
-    In the example below, the `Node` record has a member that is a pointer to a
-    `Node` record:
-
-    ```mlir
-        !s = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
+        !rec_complete = !cir.struct<"complete" {data !u8i}>
+        !rec_class    = !cir.struct<class "MyClass" {data !s32i}>
+        !rec_incomplete = !cir.struct<"incomplete" incomplete>
+        !anonymous    = !cir.struct<{data !u8i}>
+        !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
+        !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
+        !rec_empty    = !cir.struct<"e" {empty !u8i}>
+        !rec_bits     = !cir.struct<"b"
+            {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>,
+             empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>}>
+        !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
 
@@ -661,91 +847,113 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     OptionalParameter<"mlir::StringAttr">:$name,
     "bool":$incomplete,
     "bool":$packed,
-    "bool":$padded,
-    "RecordType::RecordKind":$kind
+    ArrayRefParameter<"cir::RecordMemberKind">:$member_kinds,
+    "bool":$is_class
   );
 
   // StorageClass is defined in C++ for mutability.
-  let storageClass = "RecordTypeStorage";
+  let storageClass = "StructTypeStorage";
   let genStorageClass = 0;
 
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 
   let builders = [
-    // Create an identified and complete record type.
+    // Create an identified and complete struct/class type.
     TypeBuilder<(ins
       "llvm::ArrayRef<mlir::Type>":$members,
       "mlir::StringAttr":$name,
       "bool":$packed,
-      "bool":$padded,
-      "RecordKind":$kind
+      "bool":$is_class,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
-      return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
-                   kind);
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
+                   member_kinds, is_class);
     }]>,
 
-    // Create an identified and incomplete record type.
+    // Create an identified and incomplete struct/class type.
     TypeBuilder<(ins
       "mlir::StringAttr":$name,
-      "RecordKind":$kind
+      "bool":$is_class
     ), [{
-      return $_get($_ctxt, /*members=*/llvm::ArrayRef<Type>{}, name,
-                         /*incomplete=*/true, /*packed=*/false,
-                         /*padded=*/false, kind);
+      return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
+                   /*incomplete=*/true, /*packed=*/false,
+                   /*member_kinds=*/llvm::ArrayRef<cir::RecordMemberKind>{},
+                   is_class);
     }]>,
 
-    // Create an anonymous record type (always complete).
+    // Create an anonymous struct/class type (always complete).
     TypeBuilder<(ins
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
-      "bool":$padded,
-      "RecordKind":$kind
+      "bool":$is_class,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                      packed, padded, kind);
-    }]>];
+                   packed, member_kinds, is_class);
+    }]>
+  ];
 
   let extraClassDeclaration = [{
     using Base::verifyInvariants;
 
-    enum RecordKind : uint32_t { Class, Struct, Union };
-
-    bool isClass() const { return getKind() == RecordKind::Class; };
-    bool isStruct() const { return getKind() == RecordKind::Struct; };
-    bool isUnion() const { return getKind() == RecordKind::Union; };
-    bool isComplete() const { return !isIncomplete(); };
+    bool isClass() const { return getIsClass(); }
+    bool isStruct() const { return !getIsClass(); }
+    bool isComplete() const { return !isIncomplete(); }
     bool isIncomplete() const;
 
-    mlir::Type getLargestMember(const mlir::DataLayout &dataLayout) const;
-    size_t getNumElements() const { return getMembers().size(); };
-    std::string getKindAsStr() {
-      switch (getKind()) {
-      case RecordKind::Class:
-        return "class";
-      case RecordKind::Union:
-        return "union";
-      case RecordKind::Struct:
-        return "struct";
-      }
-      llvm_unreachable("Invalid value for RecordType::getKind()");
+    size_t getNumElements() const { return getMembers().size(); }
+    std::string getKindAsStr() const {
+      return getIsClass() ? "class" : "struct";
     }
-    mlir::Type getElementType(size_t idx) {
+    mlir::Type getElementType(size_t idx) const {
       return getMembers()[idx];
     }
-    std::string getPrefixedName() {
+    std::string getPrefixedName() const {
       return getKindAsStr() + "." + getName().getValue().str();
     }
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded);
+                  llvm::ArrayRef<cir::RecordMemberKind> memberKinds);
+
+    /// Whether any member is marked pad.
+    bool getPadded() const;
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
-              unsigned idx) const;
+                              unsigned idx) const;
 
-    bool isLayoutIdentical(const RecordType &other);
+    /// The field of the lowered LLVM struct that member \p idx is stored in.
+    /// A zero-width bit-field owns no bytes and is left out of the LLVM body,
+    /// so the two numberings differ from there on.
+    unsigned getLLVMFieldIndex(unsigned idx) const;
+
+    /// Marks are provenance rather than layout, so two records that differ
+    /// only in how their members were produced are layout-identical.
+    bool isLayoutIdentical(const StructType &other);
+
+    // Checks the name of this record to check if it is a 'after' (or during)
+    // ABI conversion.
+    bool isABIConvertedRecord() const;
+
+    // Get the version of this record's name for use during cxx-abi conversion.
+    mlir::StringAttr getABIConvertedName() const;
+
+    // This function should only be called after the CXXABILowering pass. It is
+    // intended to do a 'fixup' of the name so that we don't end up with messy
+    // looking CIR after CXXABI lowering. This should only be called if all uses
+    // of the pre-CXXABILowering version have been removed, otherwise we'll have
+    // a conflict in RecordStorage because two types will have the same hash.
+    void removeABIConversionNamePrefix();
+
+    bool isSized() const { return isComplete(); }
+
+    /// Returns the data size for this struct type.  Tail padding is the
+    /// trailing run of pad members, so interior padding and a trailing member
+    /// of any other kind stay inside the data size.
+    unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
 
   private:
+    static constexpr char abi_conversion_prefix[] = "__post_abi_";
     unsigned computeStructSize(const mlir::DataLayout &dataLayout) const;
     uint64_t computeStructAlignment(const mlir::DataLayout &dataLayout) const;
   public:
@@ -754,8 +962,158 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
   let hasCustomAssemblyFormat = 1;
 }
 
-// Note CIRRecordType is used instead of CIR_RecordType
-// because of tablegen conflicts.
+//===----------------------------------------------------------------------===//
+// UnionType
+//
+// The CIR type for C/C++ union declarations.
+//===----------------------------------------------------------------------===//
+
+def CIR_UnionType : CIR_Type<"Union", "union", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
+    MutableType,
+]> {
+  let summary = "CIR union type";
+  let description = [{
+    Each unique clang::RecordDecl with union kind is mapped to a `cir.union`
+    type.  Any object in C/C++ that has a union type will have a `!cir.union`
+    in CIR.
+
+    There are three possible formats:
+
+     - Identified and complete: unique name and a known body.
+     - Identified and incomplete: unique name and unknown body.
+     - Anonymous: no name and a known body.
+
+    Padded unions carry an explicit tail-padding type to ensure the LLVM struct
+    that models the union has the correct byte size.  That slot is separate
+    from the per-member kinds described by `CIR_RecordMemberKind`, which say
+    what each variant holds.  The parser rejects a mark on that slot.
+
+    Examples:
+
+    ```
+        !u_complete   = !cir.union<"U" {data !s32i, data !u8i}>
+        !u_incomplete = !cir.union<"U" incomplete>
+        !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
+        !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
+        !u_empty      = !cir.union<"U" {empty !u8i}>
+        !u_bits       = !cir.union<"U"
+            {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>,
+             empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3, unnamed>]>}>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalArrayRefParameter<"mlir::Type">:$members,
+    OptionalParameter<"mlir::StringAttr">:$name,
+    "bool":$incomplete,
+    "bool":$packed,
+    OptionalParameter<"mlir::Type">:$padding,
+    ArrayRefParameter<"cir::RecordMemberKind">:$member_kinds
+  );
+
+  // StorageClass is defined in C++ for mutability.
+  let storageClass = "UnionTypeStorage";
+  let genStorageClass = 0;
+
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+
+  let builders = [
+    // Create an identified and complete union type.
+    TypeBuilder<(ins
+      "llvm::ArrayRef<mlir::Type>":$members,
+      "mlir::StringAttr":$name,
+      "bool":$packed,
+      "mlir::Type":$padding,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
+    ), [{
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
+                   padding, member_kinds);
+    }]>,
+
+    // Create an identified and incomplete union type.
+    TypeBuilder<(ins "mlir::StringAttr":$name), [{
+      return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
+                   /*incomplete=*/true, /*packed=*/false,
+                   /*padding=*/mlir::Type{},
+                   /*member_kinds=*/llvm::ArrayRef<cir::RecordMemberKind>{});
+    }]>,
+
+    // Create an anonymous union type (always complete).
+    TypeBuilder<(ins
+      "llvm::ArrayRef<mlir::Type>":$members,
+      "bool":$packed,
+      "mlir::Type":$padding,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
+    ), [{
+      return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
+                   packed, padding, member_kinds);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    using Base::verifyInvariants;
+
+    bool isUnion() const { return true; }
+    bool isComplete() const { return !isIncomplete(); }
+    bool isIncomplete() const;
+
+    /// Whether this union carries a tail-padding type.
+    bool getPadded() const;
+
+    size_t getNumElements() const { return getMembers().size(); }
+    std::string getKindAsStr() const { return "union"; }
+    mlir::Type getElementType(size_t idx) const {
+      return getMembers()[idx];
+    }
+    std::string getPrefixedName() const {
+      return "union." + getName().getValue().str();
+    }
+
+    /// Returns the highest-alignment variant of the union (the member used as
+    /// the storage type when lowering to LLVM IR).  Returns a null type for
+    /// empty unions.
+    mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout) const;
+    static mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout,
+                                          llvm::ArrayRef<mlir::Type> members);
+
+    void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
+                  mlir::Type padding,
+                  llvm::ArrayRef<cir::RecordMemberKind> memberKinds);
+
+    uint64_t getElementOffset(const mlir::DataLayout &, unsigned) const {
+      return 0;
+    }
+
+    /// Marks are provenance rather than layout, so two unions that differ only
+    /// in how their members were produced are layout-identical.
+    bool isLayoutIdentical(const UnionType &other);
+
+    // Checks the name of this record to check if it is a 'after' (or during)
+    // ABI conversion.
+    bool isABIConvertedRecord() const;
+
+    // Get the version of this record's name for use during cxx-abi conversion.
+    mlir::StringAttr getABIConvertedName() const;
+
+    // This function should only be called after the CXXABILowering pass.
+    void removeABIConversionNamePrefix();
+
+    bool isSized() const { return isComplete(); }
+
+  private:
+    static constexpr char abi_conversion_prefix[] = "__post_abi_";
+  public:
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+// CIRRecordType: tablegen constraint matching either !cir.struct or !cir.union.
+// Note: CIRRecordType is used instead of CIR_StructType / CIR_UnionType in op
+// definitions so a single constraint covers both record kinds.
 def CIRRecordType : Type<
   CPred<"::mlir::isa<::cir::RecordType>($_self)">, "CIR record type">;
 
@@ -805,8 +1163,10 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
-  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_RecordType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
+  CIR_UnionType, CIR_BitFieldType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 

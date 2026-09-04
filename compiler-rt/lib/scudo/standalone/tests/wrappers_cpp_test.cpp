@@ -84,10 +84,10 @@ protected:
     verifyAllocHookPtr(P);
     verifyAllocHookSize(sizeof(T));
     memset(P, 0x42, sizeof(T));
-    EXPECT_DEATH(delete[] P, "");
+    SCUDO_EXPECT_DEATH(delete[] P, "");
     delete P;
     verifyDeallocHookPtr(P);
-    EXPECT_DEATH(delete P, "");
+    SCUDO_EXPECT_DEATH(delete P, "");
 
     P = new T;
     EXPECT_NE(P, nullptr);
@@ -109,10 +109,10 @@ protected:
     verifyAllocHookPtr(A);
     verifyAllocHookSize(sizeof(T) * N);
     memset(A, 0x42, sizeof(T) * N);
-    EXPECT_DEATH(delete A, "");
+    SCUDO_EXPECT_DEATH(delete A, "");
     delete[] A;
     verifyDeallocHookPtr(A);
-    EXPECT_DEATH(delete[] A, "");
+    SCUDO_EXPECT_DEATH(delete[] A, "");
 
     A = new T[N];
     EXPECT_NE(A, nullptr);

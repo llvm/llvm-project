@@ -49,7 +49,6 @@
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -237,8 +236,8 @@ INITIALIZE_PASS_BEGIN(MachinePipeliner, DEBUG_TYPE,
                       "Modulo Software Pipelining", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
                     "Modulo Software Pipelining", false, false)
 
@@ -384,10 +383,9 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
 
   MF = &mf;
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   TII = MF->getSubtarget().getInstrInfo();
-  RegClassInfo.runOnMachineFunction(*MF);
 
   for (const auto &L : *MLI)
     scheduleLoop(*L);
@@ -672,7 +670,7 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
 
   AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   SwingSchedulerDAG SMS(
-      *this, L, getAnalysis<LiveIntervalsWrapperPass>().getLIS(), RegClassInfo,
+      *this, L, getAnalysis<LiveIntervalsWrapperPass>().getLIS(), *RegClassInfo,
       II_setByPragma, LI.LoopPipelinerInfo.get(), AA);
 
   MachineBasicBlock *MBB = L.getHeader();
@@ -700,9 +698,10 @@ void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -711,11 +710,11 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   MachineSchedContext Context;
   Context.MF = MF;
   Context.MLI = MLI;
-  Context.MDT = MDT;
   Context.TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   Context.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  Context.RegClassInfo->runOnMachineFunction(*MF);
+  Context.RegClassInfo =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   WindowScheduler WS(&Context, L);
   return WS.run();
 }
@@ -1653,7 +1652,7 @@ private:
   }
 
   bool isDefinedInThisLoop(Register Reg) const {
-    return Reg.isVirtual() && MRI.getVRegDef(Reg)->getParent() == OrigMBB;
+    return Reg.isVirtual() && MRI.getDefBlock(Reg) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -1969,13 +1968,13 @@ unsigned SwingSchedulerDAG::calculateRecMII(NodeSetType &NodeSets) {
 
 /// Create the adjacency structure of the nodes in the graph.
 void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
-    SwingSchedulerDAG *DAG) {
+    SwingSchedulerDDG *DDG) {
   BitVector Added(SUnits.size());
   DenseMap<int, int> OutputDeps;
   for (int i = 0, e = SUnits.size(); i != e; ++i) {
     Added.reset();
     // Add any successor to the adjacency matrix and exclude duplicates.
-    for (auto &OE : DAG->DDG->getOutEdges(&SUnits[i])) {
+    for (auto &OE : DDG->getOutEdges(&SUnits[i])) {
       // Only create a back-edge on the first and last nodes of a dependence
       // chain. This records any chains and adds them later.
       if (OE.isOutputDep()) {
@@ -2007,22 +2006,17 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
         Added.set(N);
       }
     }
-    // A chain edge between a store and a load is treated as a back-edge in the
-    // adjacency matrix.
-    for (auto &IE : DAG->DDG->getInEdges(&SUnits[i])) {
-      SUnit *Src = IE.getSrc();
-      SUnit *Dst = IE.getDst();
-      if (!Dst->getInstr()->mayStore() || !DAG->isLoopCarriedDep(IE))
-        continue;
-      if (IE.isOrderDep() && Src->getInstr()->mayLoad()) {
-        int N = Src->NodeNum;
-        if (!Added.test(N)) {
-          AdjK[i].push_back(N);
-          Added.set(N);
-        }
+
+    // Also add any extra out edges to the adjacency matrix.
+    for (const SUnit *Dst : DDG->getExtraOutEdges(&SUnits[i])) {
+      int N = Dst->NodeNum;
+      if (!Added.test(N)) {
+        AdjK[i].push_back(N);
+        Added.set(N);
       }
     }
   }
+
   // Add back-edges in the adjacency matrix for the output dependences.
   for (auto &OD : OutputDeps)
     if (!Added.test(OD.second)) {
@@ -2092,7 +2086,7 @@ void SwingSchedulerDAG::Circuits::unblock(int U) {
 void SwingSchedulerDAG::findCircuits(NodeSetType &NodeSets) {
   Circuits Cir(SUnits, Topo);
   // Create the adjacency structure.
-  Cir.createAdjacencyStructure(this);
+  Cir.createAdjacencyStructure(&*DDG);
   for (int I = 0, E = SUnits.size(); I != E; ++I) {
     Cir.reset();
     Cir.circuit(I, I, NodeSets, this);
@@ -2783,6 +2777,15 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
   });
 }
 
+/// Set the policy for this loop, allowing the target to override it.
+void SwingSchedulerDAG::initPolicy() {
+  MF.getSubtarget().overridePipelinerPolicy(Policy);
+
+  // After subtarget overrides, apply command line options.
+  if (LimitRegPressure.getNumOccurrences())
+    Policy.ShouldLimitRegPressure = LimitRegPressure;
+}
+
 /// Process the nodes in the computed order and create the pipelined schedule
 /// of the instructions, if possible. Return true if a schedule is found.
 bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
@@ -2794,7 +2797,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
   bool scheduleFound = false;
   std::unique_ptr<HighRegisterPressureDetector> HRPDetector;
-  if (LimitRegPressure) {
+  if (Policy.ShouldLimitRegPressure) {
     HRPDetector =
         std::make_unique<HighRegisterPressureDetector>(Loop.getHeader(), MF);
     HRPDetector->init(RegClassInfo);
@@ -2878,9 +2881,9 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
     if (scheduleFound)
       scheduleFound = Schedule.isValidSchedule(this);
 
-    // If a schedule was found and the option is enabled, check if the schedule
-    // might generate additional register spills/fills.
-    if (scheduleFound && LimitRegPressure)
+    // If a schedule was found and the detector is enabled, check if the
+    // schedule might generate additional register spills/fills.
+    if (scheduleFound && HRPDetector)
       scheduleFound =
           !HRPDetector->detect(this, Schedule, Schedule.getMaxStageCount());
   }
@@ -2918,7 +2921,7 @@ static Register findUniqueOperandDefinedInLoop(const MachineInstr &MI) {
     Register Reg = Use.getReg();
     if (!Reg.isVirtual())
       return Register();
-    if (MRI.getVRegDef(Reg)->getParent() != MI.getParent())
+    if (MRI.getDefBlock(Reg) != MI.getParent())
       continue;
     if (Result)
       return Register();
@@ -2929,13 +2932,14 @@ static Register findUniqueOperandDefinedInLoop(const MachineInstr &MI) {
 
 /// When Op is a value that is incremented recursively in a loop and there is a
 /// unique instruction that increments it, returns true and sets Value.
-static bool findLoopIncrementValue(const MachineOperand &Op, int &Value) {
+static bool findLoopIncrementValue(const MachineInstr &MI,
+                                   const MachineOperand &Op, int &Value) {
   if (!Op.isReg() || !Op.getReg().isVirtual())
     return false;
 
   Register OrgReg = Op.getReg();
   Register CurReg = OrgReg;
-  const MachineBasicBlock *LoopBB = Op.getParent()->getParent();
+  const MachineBasicBlock *LoopBB = MI.getParent();
   const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
 
   const TargetInstrInfo *TII =
@@ -3023,7 +3027,7 @@ bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
   if (!BaseOp->isReg())
     return false;
 
-  return findLoopIncrementValue(*BaseOp, Delta);
+  return findLoopIncrementValue(MI, *BaseOp, Delta);
 }
 
 /// Check if we can change the instruction to use an offset value from the
@@ -3233,40 +3237,6 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
   }
   LLVM_DEBUG(dbgs() << "  Result: Overlap\n");
   return true;
-}
-
-/// Return true for an order or output dependence that is loop carried
-/// potentially. A dependence is loop carried if the destination defines a value
-/// that may be used or defined by the source in a subsequent iteration.
-bool SwingSchedulerDAG::isLoopCarriedDep(
-    const SwingSchedulerDDGEdge &Edge) const {
-  if ((!Edge.isOrderDep() && !Edge.isOutputDep()) || Edge.isArtificial() ||
-      Edge.getDst()->isBoundaryNode())
-    return false;
-
-  if (!SwpPruneLoopCarried)
-    return true;
-
-  if (Edge.isOutputDep())
-    return true;
-
-  MachineInstr *SI = Edge.getSrc()->getInstr();
-  MachineInstr *DI = Edge.getDst()->getInstr();
-  assert(SI != nullptr && DI != nullptr && "Expecting SUnit with an MI.");
-
-  // Assume ordered loads and stores may have a loop carried dependence.
-  if (SI->hasUnmodeledSideEffects() || DI->hasUnmodeledSideEffects() ||
-      SI->mayRaiseFPException() || DI->mayRaiseFPException() ||
-      SI->hasOrderedMemoryRef() || DI->hasOrderedMemoryRef())
-    return true;
-
-  if (!DI->mayLoadOrStore() || !SI->mayLoadOrStore())
-    return false;
-
-  // The conservative assumption is that a dependence between memory operations
-  // may be loop carried. The following code checks when it can be proved that
-  // there is no loop carried dependence.
-  return mayOverlapInLaterIter(DI, SI);
 }
 
 void SwingSchedulerDAG::postProcessDAG() {
@@ -4253,6 +4223,7 @@ void SwingSchedulerDDG::addEdge(const SUnit *SU,
                                 const SwingSchedulerDDGEdge &Edge) {
   assert(!Edge.isValidationOnly() &&
          "Validation-only edges are not expected here.");
+
   auto &Edges = getEdges(SU);
   if (Edge.getSrc() == SU)
     Edges.Succs.push_back(Edge);
@@ -4296,6 +4267,32 @@ SwingSchedulerDDG::SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU,
                                    /*IsValidationOnly=*/true);
         Edge.setDistance(1);
         ValidationOnlyEdges.push_back(Edge);
+
+        // Store the edge as an extra edge if it meets the following conditions:
+        //
+        //  - The edge is a loop-carried order dependency.
+        //  - The edge is a back edge in terms of the original instruction
+        //    order.
+        //  - The destination instruction may load.
+        //  - The source instruction may store but does not load.
+        //
+        // These conditions are inherited from a previous implementation to
+        // preserve the existing behavior and avoid regressions.
+        bool UseAsExtraEdge = [&]() {
+          if (Edge.getDistance() == 0 || !Edge.isOrderDep())
+            return false;
+
+          SUnit *Src = Edge.getSrc();
+          SUnit *Dst = Edge.getDst();
+          if (Src->NodeNum < Dst->NodeNum)
+            return false;
+
+          MachineInstr *SrcMI = Src->getInstr();
+          MachineInstr *DstMI = Dst->getInstr();
+          return DstMI->mayLoad() && !SrcMI->mayLoad() && SrcMI->mayStore();
+        }();
+        if (UseAsExtraEdge)
+          getEdges(Edge.getSrc()).ExtraSuccs.push_back(Edge.getDst());
       }
     }
   }
@@ -4309,6 +4306,10 @@ SwingSchedulerDDG::getInEdges(const SUnit *SU) const {
 const SwingSchedulerDDG::EdgesType &
 SwingSchedulerDDG::getOutEdges(const SUnit *SU) const {
   return getEdges(SU).Succs;
+}
+
+ArrayRef<SUnit *> SwingSchedulerDDG::getExtraOutEdges(const SUnit *SU) const {
+  return getEdges(SU).ExtraSuccs;
 }
 
 /// Check if \p Schedule doesn't violate the validation-only dependencies.

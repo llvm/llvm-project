@@ -8,7 +8,9 @@
 
 #include "Plugins/Platform/WebAssembly/PlatformWasm.h"
 #include "Plugins/Platform/WebAssembly/PlatformWasmRemoteGDBServer.h"
+#include "Plugins/Platform/WebAssembly/PlatformWebInspectorWasm.h"
 #include "Plugins/Process/wasm/ProcessWasm.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -16,6 +18,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Environment.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
@@ -57,6 +60,10 @@ public:
   llvm::StringRef GetPortArg() const {
     return GetPropertyAtIndexAs<llvm::StringRef>(ePropertyPortArg, {});
   }
+
+  llvm::StringRef GetEnvArg() const {
+    return GetPropertyAtIndexAs<llvm::StringRef>(ePropertyEnvArg, {});
+  }
 };
 
 } // namespace
@@ -71,6 +78,7 @@ llvm::StringRef PlatformWasm::GetPluginDescriptionStatic() {
 }
 
 void PlatformWasm::Initialize() {
+  PlatformWebInspectorWasm::Initialize();
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(),
       PlatformWasm::CreateInstance, PlatformWasm::DebuggerInitialize);
@@ -78,6 +86,7 @@ void PlatformWasm::Initialize() {
 
 void PlatformWasm::Terminate() {
   PluginManager::UnregisterPlugin(PlatformWasm::CreateInstance);
+  PlatformWebInspectorWasm::Terminate();
 }
 
 void PlatformWasm::DebuggerInitialize(Debugger &debugger) {
@@ -113,15 +122,17 @@ PlatformSP PlatformWasm::CreateInstance(bool force, const ArchSpec *arch) {
   return create ? PlatformSP(new PlatformWasm()) : PlatformSP();
 }
 
-std::vector<ArchSpec>
-PlatformWasm::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
-  return {ArchSpec("wasm32-unknown-unknown-wasm"),
-          ArchSpec("wasm64-unknown-unknown-wasm")};
+llvm::Expected<uint16_t> PlatformWasm::FindFreeTCPPort() {
+  TCPSocket sock(/*should_close=*/true);
+  Status status = sock.Listen("localhost:0", /*backlog=*/5);
+  if (status.Fail())
+    return status.takeError();
+  return sock.GetLocalPortNumber();
 }
 
-static auto get_arg_range(const Args &args) {
-  return llvm::make_range(args.GetArgumentArrayRef().begin(),
-                          args.GetArgumentArrayRef().end());
+std::vector<ArchSpec>
+PlatformWasm::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
+  return {ArchSpec("wasm32"), ArchSpec("wasm64")};
 }
 
 lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,
@@ -133,6 +144,36 @@ lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,
   status = Status::FromErrorString(
       "attaching is only supported when connected to a remote Wasm platform");
   return nullptr;
+}
+
+Args PlatformWasm::MakeRuntimeCommand(llvm::StringRef runtime_path,
+                                      const Args &runtime_args,
+                                      llvm::StringRef port_arg, uint16_t port,
+                                      llvm::StringRef env_arg,
+                                      const Environment &env,
+                                      llvm::StringRef module_path,
+                                      const Args &inferior_args) {
+  Args args({runtime_path});
+  args.AppendArguments(runtime_args);
+  args.AppendArgument(llvm::formatv("{0}{1}", port_arg, port).str());
+
+  if (!env_arg.empty())
+    for (const auto &kv : env)
+      args.AppendArgument(
+          llvm::formatv("{0}{1}", env_arg, Environment::compose(kv)).str());
+
+  // The runtime resolves the module as a host path, while arg0 is the name the
+  // platform reports for the executable and need not resolve here.
+  Args module_args = inferior_args;
+  if (!module_path.empty()) {
+    if (module_args.GetArgumentCount() > 0)
+      module_args.ReplaceArgumentAtIndex(0, module_path);
+    else
+      module_args.AppendArgument(module_path);
+  }
+  args.AppendArguments(module_args);
+
+  return args;
 }
 
 lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
@@ -155,27 +196,29 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
   }
 
-  uint16_t port = 0;
-  {
-    // Get the next available port by binding a socket to port 0.
-    TCPSocket listen_socket(true);
-    error = listen_socket.Listen("localhost:0", /*backlog=*/5);
-    if (error.Fail())
-      return nullptr;
-    port = listen_socket.GetLocalPortNumber();
-  }
-
-  if (error.Fail())
+  llvm::Expected<uint16_t> expected_port = FindFreeTCPPort();
+  if (!expected_port) {
+    error = Status::FromError(expected_port.takeError());
     return nullptr;
+  }
+  uint16_t port = *expected_port;
 
-  Args args({runtime.GetPath(),
-             llvm::formatv("{0}{1}", properties.GetPortArg(), port).str()});
-  args.AppendArguments(properties.GetRuntimeArgs());
-  args.AppendArguments(launch_info.GetArguments());
+  std::string module_path;
+  if (ModuleSP exe_module_sp = target.GetExecutableModule())
+    module_path = exe_module_sp->GetFileSpec().GetPath();
+
+  Args args = MakeRuntimeCommand(
+      runtime.GetPath(), properties.GetRuntimeArgs(), properties.GetPortArg(),
+      port, properties.GetEnvArg(), launch_info.GetEnvironment(), module_path,
+      launch_info.GetArguments());
 
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);
-  launch_info.GetFlags().Clear(eLaunchFlagDebug);
+  // We're launching the Wasm runtime (a native host binary), not the target
+  // being debugged. Clear flags that don't apply to the runtime process.
+  launch_info.GetFlags().Clear(eLaunchFlagDebug | eLaunchFlagDisableASLR);
+  // The runtime itself runs with the host environment.
+  launch_info.GetEnvironment() = Host::GetEnvironment();
 
   auto exit_code = std::make_shared<std::optional<int>>();
   launch_info.SetMonitorProcessCallback(
@@ -192,7 +235,7 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
   llvm::Error Err = launch_info.SetUpPtyRedirection();
   LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
 
-  LLDB_LOG(log, "{0}", get_arg_range(launch_info.GetArguments()));
+  LLDB_LOG(log, "{0}", GetArgRange(launch_info.GetArguments()));
   error = Host::LaunchProcess(launch_info);
   if (error.Fail())
     return nullptr;

@@ -7,8 +7,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; This test has UB but the crash in #95016 only happens with it
 define void @uselistorder_test() {
 ; CHECK-LABEL: @uselistorder_test(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double 0.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double 0.000000e+00, i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double 0.000000e+00, i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> zeroinitializer, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], zeroinitializer

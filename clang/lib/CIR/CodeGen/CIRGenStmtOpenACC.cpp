@@ -39,7 +39,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
-    res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
+    if (associatedStmt)
+      res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
 
     TermOp::create(builder, end);
   }
@@ -95,7 +96,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       LexicalScope ls{*this, start, builder.getInsertionBlock()};
       ActiveOpenACCLoopRAII activeLoop{*this, &loopOp};
 
-      res = emitStmt(loopStmt, /*useCurrentScope=*/true);
+      if (loopStmt)
+        res = emitStmt(loopStmt, /*useCurrentScope=*/true);
 
       mlir::acc::YieldOp::create(builder, end);
     }
@@ -187,9 +189,7 @@ CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
             ? mlir::IntegerType::SignednessSemantics::Signed
             : mlir::IntegerType::SignednessSemantics::Unsigned);
 
-    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
-        builder, exprLoc, targetType, expr);
-    return conversionOp.getResult(0);
+    return builder.createBuiltinIntCast(exprLoc, expr, targetType);
   };
 
   // Emit the correct 'wait' clauses.
@@ -347,7 +347,7 @@ emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     // nodes to worry about, so we can just count on opt to remove the extra
     // alloca/load/store set.
     auto alloca = cir::AllocaOp::create(
-        builder, start, x.getType(), argTy, "x_var",
+        builder, start, x.getType(), "x_var",
         cgf.cgm.getSize(
             cgf.getContext().getTypeAlignInChars(inf.X->getType())));
 
@@ -360,7 +360,8 @@ emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     cgf.replaceAddrOfLocalVar(
         xval, Address{alloca, argTy, cgf.getContext().getDeclAlign(xval)});
 
-    res = cgf.emitStmt(inf.WholeExpr, /*useCurrentScope=*/true);
+    if (inf.WholeExpr)
+      res = cgf.emitStmt(inf.WholeExpr, /*useCurrentScope=*/true);
 
     auto load = cir::LoadOp::create(builder, start, {alloca});
     mlir::acc::YieldOp::create(builder, end, {load});

@@ -1,20 +1,6 @@
 // RUN: %check_clang_tidy %s performance-for-range-copy %t -- -- -fno-delayed-template-parsing
 
-namespace std {
-
-template <typename _Tp>
-struct remove_reference { typedef _Tp type; };
-template <typename _Tp>
-struct remove_reference<_Tp&> { typedef _Tp type; };
-template <typename _Tp>
-struct remove_reference<_Tp&&> { typedef _Tp type; };
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
-  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
-}
-
-} // std
+#include <utility>
 
 template <typename T>
 struct Iterator {

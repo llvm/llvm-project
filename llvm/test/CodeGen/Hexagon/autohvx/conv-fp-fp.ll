@@ -57,7 +57,7 @@ define <64 x half> @f2(<64 x float> %a0) #1 {
 ; CHECK-LABEL: f2:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.hf = vcvt(v1.sf,v0.sf)
+; CHECK-NEXT:     v0.hf = vcvt(v0.sf,v1.sf)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0.h = vdeal(v0.h)

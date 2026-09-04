@@ -44,3 +44,24 @@ func.func @block_arg_boxed_array(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           memref.store {{%.+}}, {{%.+}}[{{%.+}}] : memref<?xi32, strided<[?], offset: ?>>
 // CHECK-NOT:       fir.array_coor
 
+// Verify fir.array_coor lowering keeps descriptor stride semantics when the
+// box element type has static extent. A boxed section may still be strided.
+func.func @block_arg_boxed_static_array(%arg0: !fir.box<!fir.array<5xi32>>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i64 = arith.constant 2 : i64
+  %elt = fir.array_coor %arg0 %c2_i64 : (!fir.box<!fir.array<5xi32>>, i64) -> !fir.ref<i32>
+  fir.store %c1_i32 to %elt : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: func.func @block_arg_boxed_static_array
+// CHECK:         [[BOXADDR:%.+]] = fir.box_addr %arg0
+// CHECK:         [[BASE:%.+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<5xi32>>) -> memref<5xi32>
+// CHECK:         [[ELE:%.+]] = fir.box_elesize
+// CHECK:         [[DIMS:%.+]]:3 = fir.box_dims
+// CHECK:         [[DIV:%.+]] = arith.divsi {{%.+}}, [[ELE]] : index
+// CHECK:         [[REINT:%.+]] = memref.reinterpret_cast [[BASE]]
+// CHECK-SAME:     : memref<5xi32> to memref<?xi32, strided<[?], offset: ?>>
+// CHECK:         memref.store {{%.+}}, [[REINT]][{{%.+}}] : memref<?xi32, strided<[?], offset: ?>>
+// CHECK-NOT:     fir.array_coor
+

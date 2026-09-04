@@ -1,0 +1,71 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Calls to host procedures, and interface bodies for them, are allowed in a
+! host,device subprogram because it is also compiled for the host.
+
+module m
+contains
+  ! A host,device subprogram may declare an interface body for a host procedure
+  ! and call it; such a call is typically guarded at run time.
+  attributes(host,device) subroutine reduce_max(x, y)
+    interface
+      double precision function hostmaxxy(x, y)
+        double precision, intent(in) :: x, y
+      end function
+    end interface
+    double precision, intent(in) :: y
+    double precision, intent(inout) :: x
+    if (on_device()) then
+      x = atomicmax(x, y)
+    else
+      x = hostmaxxy(x, y)
+    end if
+  end subroutine
+
+  ! Interface bodies for both a host and a device procedure are accepted.
+  attributes(host,device) subroutine reduce_max2(x, y)
+    interface
+      double precision function hostmaxxy(x, y)
+        double precision, intent(in) :: x, y
+      end function
+    end interface
+    interface
+      attributes(device) double precision function devicemaxxy(x, y)
+        double precision, intent(in) :: x, y
+      end function
+    end interface
+    double precision, intent(in) :: y
+    double precision, intent(inout) :: x
+    if (on_device()) then
+      x = devicemaxxy(x, y)
+    else
+      x = hostmaxxy(x, y)
+    end if
+  end subroutine
+
+  ! A pure device subprogram may not call a host procedure.
+  attributes(device) subroutine devsub(x)
+    interface
+      double precision function hostfunc()
+      end function
+    end interface
+    double precision, intent(inout) :: x
+    !ERROR: 'hostfunc' may not be called in device code
+    x = hostfunc()
+  end subroutine
+
+  ! A real internal procedure of a device subprogram is still rejected.
+  attributes(device) subroutine devsub2
+   contains
+    !ERROR: 'inner' may not be an internal procedure of CUDA device subprogram 'devsub2'
+    subroutine inner
+    end
+  end subroutine
+
+  ! A real internal procedure of a host,device subprogram is still rejected.
+  attributes(host,device) subroutine hdsub
+   contains
+    !ERROR: 'inner2' may not be an internal procedure of CUDA device subprogram 'hdsub'
+    subroutine inner2
+    end
+  end subroutine
+end module

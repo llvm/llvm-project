@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti  -show-encoding %s | FileCheck %s --check-prefix=SICI
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire  -show-encoding %s | FileCheck %s --check-prefixes=CI,SICI
-// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: not llvm-mc -triple=amdgpu6.00  -show-encoding %s | FileCheck %s --check-prefix=SICI
+// RUN: not llvm-mc -triple=amdgpu7.04  -show-encoding %s | FileCheck %s --check-prefixes=CI,SICI
+// RUN: llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck %s --check-prefix=VI
 
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=NOSI,NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgpu7.04 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Checks for 16-bit Offsets

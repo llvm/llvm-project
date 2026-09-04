@@ -60,6 +60,17 @@ constexpr void test_iterators() {
     assert(base(ret.in) == in.data());
     assert(base(ret.out) == out.data());
   }
+
+  { // A negative count is a no-op that returns the unchanged iterators.
+    // Regression test for https://llvm.org/PR193613.
+    std::array in{1, 2, 3};
+    std::array out{-1, -2, -3};
+    std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
+        std::ranges::copy_n(In(in.data()), -5, Out(out.data()));
+    assert(base(ret.in) == in.data());
+    assert(base(ret.out) == out.data());
+    assert((out == std::array{-1, -2, -3}));
+  }
 }
 
 #if TEST_STD_VER >= 23
@@ -78,6 +89,13 @@ constexpr bool test_vector_bool(std::size_t N) {
     std::ranges::copy_n(in.begin(), N, out.begin() + 4);
     for (std::size_t i = 0; i < N; ++i)
       assert(out[i + 4] == in[i]);
+  }
+  { // Negative count test
+    std::vector<bool> source(N, true);
+    std::vector<bool> dest(N, false);
+    auto ret = std::ranges::copy_n(source.begin(), -5, dest.begin());
+    assert(ret.out == dest.begin());
+    assert(dest == std::vector<bool>(N, false));
   }
 
   return true;

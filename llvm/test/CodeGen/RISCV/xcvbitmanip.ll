@@ -116,7 +116,48 @@ define i32 @test.cv.fl1(i32 %a) {
 ; CHECK-LABEL: test.cv.fl1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.fl1 a0, a0
+; CHECK-NEXT:    xori a0, a0, 31
 ; CHECK-NEXT:    ret
+  %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 1)
+  ret i32 %1
+}
+
+; Verifies that ctlz with defined-on-zero behavior is lowered
+; correctly: a zero-check guard branches around the cv.fl1 + xori 31
+; sequence and returns 32 directly when the input is zero. This
+; relies on ISD::CTLZ being Expand and ISD::CTLZ_ZERO_POISON being
+; Legal for XCVbitmanip; the LegalizeDAG framework synthesises the
+; branch-guarded form automatically.
+define i32 @test.ctlz.zero.defined(i32 %a) {
+; CHECK-O0-LABEL: test.ctlz.zero.defined:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    addi sp, sp, -16
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-O0-NEXT:    cv.fl1 a1, a0
+; CHECK-O0-NEXT:    xori a1, a1, 31
+; CHECK-O0-NEXT:    li a2, 32
+; CHECK-O0-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
+; CHECK-O0-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-O0-NEXT:    bnez a0, .LBB13_2
+; CHECK-O0-NEXT:  # %bb.1:
+; CHECK-O0-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK-O0-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK-O0-NEXT:  .LBB13_2:
+; CHECK-O0-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-O0-NEXT:    addi sp, sp, 16
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-O0-NEXT:    ret
+;
+; CHECK-O3-LABEL: test.ctlz.zero.defined:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    beqz a0, .LBB13_2
+; CHECK-O3-NEXT:  # %bb.1: # %cond.false
+; CHECK-O3-NEXT:    cv.fl1 a0, a0
+; CHECK-O3-NEXT:    xori a0, a0, 31
+; CHECK-O3-NEXT:    ret
+; CHECK-O3-NEXT:  .LBB13_2:
+; CHECK-O3-NEXT:    li a0, 32
+; CHECK-O3-NEXT:    ret
   %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 0)
   ret i32 %1
 }

@@ -9,6 +9,7 @@
 #include "Watchpoint.h"
 #include "DAP.h"
 #include "Protocol/ProtocolTypes.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +46,7 @@ protocol::Breakpoint Watchpoint::ToProtocolBreakpoint() {
       breakpoint.message = m_error.GetCString();
   } else {
     breakpoint.verified = true;
-    breakpoint.id = m_wp.GetID();
+    breakpoint.id = ApplyWatchpointMask(m_wp.GetID());
   }
 
   return breakpoint;
@@ -58,5 +59,16 @@ void Watchpoint::SetWatchpoint() {
     SetCondition();
   if (!m_hit_condition.empty())
     SetHitCondition();
+}
+
+bool Watchpoint::HasSameSizeAndType(const Watchpoint &wp) const {
+  if (m_size != wp.m_size)
+    return false;
+  if (m_options.GetWatchpointTypeRead() != wp.m_options.GetWatchpointTypeRead())
+    return false;
+  if (m_options.GetWatchpointTypeWrite() !=
+      wp.m_options.GetWatchpointTypeWrite())
+    return false;
+  return true;
 }
 } // namespace lldb_dap

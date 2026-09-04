@@ -109,10 +109,8 @@ define <8 x float> @sitofp_insert_constants_v8i32(<8 x i32> %a0) {
 ; X64-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5],xmm1[6,7]
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-NEXT:    movl $2, %eax
-; X64-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
-; X64-NEXT:    movl $-3, %eax
-; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X64-NEXT:    movabsq $-12884901886, %rax # imm = 0xFFFFFFFD00000002
+; X64-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm0
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; X64-NEXT:    retq

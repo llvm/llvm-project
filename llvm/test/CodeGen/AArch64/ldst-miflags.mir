@@ -78,7 +78,7 @@ name:            case4
 # CHECK-LABEL: name: case4
 body:             |
   bb.0:
-    $x26, $x25 = frame-setup LDPXi $sp, 0
+    $x26, $x25 = frame-setup LDPXi $sp, 0 :: (load (s128))
     $sp = frame-destroy ADDXri $sp, 64, 0
 
   ; CHECK: = frame-setup frame-destroy LDPXpost
@@ -90,7 +90,7 @@ name:            case41
 # CHECK-LABEL: name: case41
 body:             |
   bb.0:
-    $x26 = frame-setup LDRXui $sp, 0
+    $x26 = frame-setup LDRXui $sp, 0 :: (load (s64))
     $sp = frame-destroy ADDXri $sp, 64, 0
 
   ; CHECK: = frame-setup frame-destroy LDRXpost

@@ -29,6 +29,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -42,6 +43,15 @@ using namespace mlir;
 static inline bool isFnEntryBlock(Block *block) {
   return block->isEntryBlock() &&
          isa_and_nonnull<spirv::FuncOp>(block->getParentOp());
+}
+
+static void setInherentOrDiscardableAttr(Operation *op, StringAttr name,
+                                         Attribute value) {
+  if (op->getName().getInherentAttr(op, name).has_value()) {
+    op->getName().setInherentAttr(op, name, value);
+    return;
+  }
+  op->setDiscardableAttr(name, value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,6 +101,9 @@ LogicalResult spirv::Deserializer::deserialize() {
       return failure();
     }
   }
+
+  if (failed(resolveDeferredIdDecorations()))
+    return failure();
 
   attachVCETriple();
 
@@ -205,10 +218,8 @@ spirv::Deserializer::processExtInstImport(ArrayRef<uint32_t> words) {
 }
 
 void spirv::Deserializer::attachVCETriple() {
-  (*module)->setAttr(
-      spirv::ModuleOp::getVCETripleAttrName(),
-      spirv::VerCapExtAttr::get(version, capabilities.getArrayRef(),
-                                extensions.getArrayRef(), context));
+  module->setVceTripleAttr(spirv::VerCapExtAttr::get(
+      version, capabilities.getArrayRef(), extensions.getArrayRef(), context));
 }
 
 LogicalResult
@@ -216,14 +227,10 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc, "OpMemoryModel must have two operands");
 
-  (*module)->setAttr(
-      module->getAddressingModelAttrName(),
-      opBuilder.getAttr<spirv::AddressingModelAttr>(
-          static_cast<spirv::AddressingModel>(operands.front())));
+  module->setAddressingModel(
+      static_cast<spirv::AddressingModel>(operands.front()));
 
-  (*module)->setAttr(module->getMemoryModelAttrName(),
-                     opBuilder.getAttr<spirv::MemoryModelAttr>(
-                         static_cast<spirv::MemoryModel>(operands.back())));
+  module->setMemoryModel(static_cast<spirv::MemoryModel>(operands.back()));
 
   return success();
 }
@@ -353,6 +360,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
+  case spirv::Decoration::Volatile:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single target <id>";
@@ -377,8 +385,64 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
       return res;
     break;
   }
+  case spirv::Decoration::AlignmentId:
+  case spirv::Decoration::MaxByteOffsetId:
+  case spirv::Decoration::CounterBuffer:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorateId with ")
+             << decorationName << " needs a single <id> operand";
+    }
+    pendingIdDecorations.push_back({words[0],
+                                    static_cast<spirv::Decoration>(words[1]),
+                                    words[2], unknownLoc});
+    break;
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
+  }
+  return success();
+}
+
+LogicalResult spirv::Deserializer::resolveDeferredIdDecorations() {
+  for (const DeferredIdDecoration &entry : pendingIdDecorations) {
+    StringRef decorationName = stringifyDecoration(entry.decoration);
+    StringAttr symbol = getSymbolDecoration(decorationName);
+
+    // Resolve the operand <id> to a symbol name. The operand must reference a
+    // module-scope symbol op (global variable or specialization constant).
+    StringRef operandSymName;
+    if (spirv::GlobalVariableOp varOp =
+            globalVariableMap.lookup(entry.operandID))
+      operandSymName = varOp.getSymName();
+    else if (spirv::SpecConstantOp specOp =
+                 specConstMap.lookup(entry.operandID))
+      operandSymName = specOp.getSymName();
+    else
+      return emitError(entry.loc, "OpDecorateId with ")
+             << decorationName << " references <id> " << entry.operandID
+             << " which is not a global variable or specialization constant";
+
+    auto symRef = FlatSymbolRefAttr::get(context, operandSymName);
+
+    // Resolve the decoration target. By the time this method runs, all
+    // instructions have been processed, so every defined <id> must appear in
+    // one of these maps; an unresolved target indicates malformed input.
+    Operation *targetOp = nullptr;
+    if (spirv::GlobalVariableOp varOp =
+            globalVariableMap.lookup(entry.targetID))
+      targetOp = varOp;
+    else if (spirv::SpecConstantOp specOp = specConstMap.lookup(entry.targetID))
+      targetOp = specOp;
+    else if (spirv::FuncOp fnOp = funcMap.lookup(entry.targetID))
+      targetOp = fnOp;
+    else if (Value v = valueMap.lookup(entry.targetID))
+      targetOp = v.getDefiningOp();
+
+    if (!targetOp)
+      return emitError(entry.loc, "OpDecorateId with ")
+             << decorationName << " references unknown target <id> "
+             << entry.targetID;
+
+    setInherentOrDiscardableAttr(targetOp, symbol, symRef);
   }
   return success();
 }
@@ -520,7 +584,7 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   // Processing other function attributes.
   if (decorations.count(fnID)) {
     for (auto attr : decorations[fnID].getAttrs()) {
-      funcOp->setAttr(attr.getName(), attr.getValue());
+      setInherentOrDiscardableAttr(funcOp, attr.getName(), attr.getValue());
     }
   }
   curFunction = funcMap[fnID] = funcOp;
@@ -864,9 +928,18 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
 std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
-  if (constIt == constantMap.end())
+  if (constIt != constantMap.end())
+    return constIt->getSecond();
+
+  auto replicatedConstIt = constantCompositeReplicateMap.find(id);
+  if (replicatedConstIt == constantCompositeReplicateMap.end())
     return std::nullopt;
-  return constIt->getSecond();
+
+  auto [value, type] = replicatedConstIt->getSecond();
+  auto shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return std::nullopt;
+  return std::make_pair(SplatElementsAttr::get(shapedType, value), type);
 }
 
 std::optional<std::pair<Attribute, Type>>
@@ -914,10 +987,11 @@ spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                         TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   auto op = spirv::SpecConstantOp::create(opBuilder, unknownLoc, symName,
-                                          defaultValue);
+                                          defaultValue,
+                                          /*sym_visibility=*/nullptr);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
-      op->setAttr(attr.getName(), attr.getValue());
+      setInherentOrDiscardableAttr(op, attr.getName(), attr.getValue());
   }
   specConstMap[resultID] = op;
   return op;
@@ -1004,7 +1078,7 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   // Decorations.
   if (decorations.count(variableID)) {
     for (auto attr : decorations[variableID].getAttrs())
-      varOp->setAttr(attr.getName(), attr.getValue());
+      setInherentOrDiscardableAttr(varOp, attr.getName(), attr.getValue());
   }
   globalVariableMap[variableID] = varOp;
   return success();
@@ -1022,17 +1096,18 @@ LogicalResult spirv::Deserializer::processName(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
     return emitError(unknownLoc, "OpName needs at least 2 operands");
   }
-  if (!nameMap.lookup(operands[0]).empty()) {
-    return emitError(unknownLoc, "duplicate name found for result <id> ")
-           << operands[0];
-  }
+
   unsigned wordIndex = 1;
   StringRef name = decodeStringLiteral(operands, wordIndex);
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,
                      "unexpected trailing words in OpName instruction");
   }
-  nameMap[operands[0]] = name;
+
+  // In SPIRV it's valid for multiple OpName instructions to refer to the same
+  // <id>. Use a "last one wins" approach to resolve such cases.
+  nameMap.emplace_or_assign(operands[0], name);
+
   return success();
 }
 
@@ -1150,6 +1225,10 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processFunctionType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
+  case spirv::Opcode::OpTypeSampler:
+    return processSamplerType(operands);
+  case spirv::Opcode::OpTypeNamedBarrier:
+    return processNamedBarrierType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1447,8 +1526,9 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
 
     if (!unresolvedMemberTypes.empty())
       deferredStructTypesInfos.push_back(
-          {structTy, unresolvedMemberTypes, memberTypes, offsetInfo,
-           memberDecorationsInfo, structDecorationsInfo});
+          {structTy, std::move(unresolvedMemberTypes), std::move(memberTypes),
+           std::move(offsetInfo), std::move(memberDecorationsInfo),
+           std::move(structDecorationsInfo)});
     else if (failed(structTy.trySetBody(memberTypes, offsetInfo,
                                         memberDecorationsInfo,
                                         structDecorationsInfo)))
@@ -1631,6 +1711,24 @@ spirv::Deserializer::processSampledImageType(ArrayRef<uint32_t> operands) {
            << operands[1];
 
   typeMap[operands[0]] = spirv::SampledImageType::get(elementTy);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processSamplerType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeSampler must have no parameters");
+
+  typeMap[operands[0]] = spirv::SamplerType::get(context);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processNamedBarrierType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeNamedBarrier must have no parameters");
+
+  typeMap[operands[0]] = spirv::NamedBarrierType::get(context);
   return success();
 }
 
@@ -1830,7 +1928,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, shapedType);
-  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
+  } else if (isa<spirv::ArrayType, spirv::StructType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {
@@ -1866,19 +1964,19 @@ LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
   uint32_t resultID = operands[1];
   uint32_t constantID = operands[2];
 
-  std::optional<std::pair<Attribute, Type>> constantInfo =
-      getConstant(constantID);
-  if (constantInfo.has_value()) {
-    constantCompositeReplicateMap.try_emplace(
-        resultID, constantInfo.value().first, resultType);
-    return success();
-  }
-
   std::optional<std::pair<Attribute, Type>> replicatedConstantCompositeInfo =
       getConstantCompositeReplicate(constantID);
   if (replicatedConstantCompositeInfo.has_value()) {
     constantCompositeReplicateMap.try_emplace(
         resultID, replicatedConstantCompositeInfo.value().first, resultType);
+    return success();
+  }
+
+  std::optional<std::pair<Attribute, Type>> constantInfo =
+      getConstant(constantID);
+  if (constantInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, constantInfo.value().first, resultType);
     return success();
   }
 
@@ -1918,7 +2016,7 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
 
   auto op = spirv::SpecConstantCompositeOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
-      opBuilder.getArrayAttr(elements));
+      opBuilder.getArrayAttr(elements), /*sym_visibility=*/nullptr);
   specConstCompositeMap[resultID] = op;
 
   return success();
@@ -1952,7 +2050,8 @@ LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
       getSpecConstant(operands[2]);
   auto op = spirv::EXTSpecConstantCompositeReplicateOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
-      SymbolRefAttr::get(constituentSpecConstantOp));
+      SymbolRefAttr::get(constituentSpecConstantOp),
+      /*sym_visibility=*/nullptr);
 
   specConstCompositeReplicateMap[resultID] = op;
 
@@ -2883,10 +2982,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
-  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
-       it != e; ++it) {
-    auto &[block, mergeInfo] = *it;
-
+  for (auto [block, mergeInfo] : blockMergeInfoCopy) {
     // Skip processing loop regions. For loop regions continueBlock is non-null.
     if (mergeInfo.continueBlock)
       continue;

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-replace-random-shuffle %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s modernize-replace-random-shuffle %t
 #include <vector>
 
 //CHECK-FIXES: #include <random>

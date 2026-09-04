@@ -311,7 +311,9 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
+  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
+                                       llvm::jitlink::JITLinkMemoryManager
+                                           &IgnoredMemMgr) {
     // Needed to respect AArch64 ABI requirements on the distance between
     // TEXT and GOT sections.
     bool reserveAlloc = llvmModule->getTargetTriple().isAArch64();

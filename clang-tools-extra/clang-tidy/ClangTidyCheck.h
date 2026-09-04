@@ -480,6 +480,16 @@ public:
     ClangTidyContext *Context;
   };
 
+  /// Returns the list of header file extensions from the context.
+  const FileExtensionsSet &getHeaderFileExtensions() const {
+    return Context->getHeaderFileExtensions();
+  }
+
+  /// Returns the list of implementation file extensions from the context.
+  const FileExtensionsSet &getImplementationFileExtensions() const {
+    return Context->getImplementationFileExtensions();
+  }
+
 private:
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
   std::string CheckName;

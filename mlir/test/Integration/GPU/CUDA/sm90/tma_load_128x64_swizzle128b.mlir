@@ -73,8 +73,8 @@ module @mymod {
 
     // Step 5. Launch a GPU kernel
     gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c128, %arg10 = %c1, %arg11 = %c1) {
-      %5 = gpu.block_dim  x
-      %6 = gpu.thread_id  x
+      %5 = gpu.block_dim x
+      %6 = gpu.thread_id x
       %7 = memref.get_global @bufferLhsGlobal : !shmemlhs
     
       // Step 6. Initialize the mbarrier

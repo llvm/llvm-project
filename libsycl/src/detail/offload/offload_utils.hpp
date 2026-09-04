@@ -5,14 +5,22 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of helpers for libsycl-to-liboffload
+/// communication and data conversion.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_OFFLOAD_UTILS
 #define _LIBSYCL_OFFLOAD_UTILS
 
 #include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/detail/unified_range_view.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/device_type.hpp>
+#include <sycl/__impl/usm_alloc_type.hpp>
 
 #include <OffloadAPI.h>
 
@@ -102,6 +110,13 @@ ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
 /// \returns SYCL device type matching specified liboffload device type.
 info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
 
+/// Converts a SYCL USM kind to a liboffload type.
+///
+/// \param USMKind a SYCL USM kind.
+///
+/// \returns ol_alloc_type_t matching the specified SYCL USM kind.
+ol_alloc_type_t getOlAllocType(usm::alloc USMKind);
+
 /// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>.
 ///
 /// Typical usage:
@@ -124,6 +139,10 @@ constexpr To map_info_desc(typename info_ol_mapping<To>::template M<Ts>... ms) {
              std::tuple{ms...})
       .value;
 }
+
+/// Converts a UnifiedRangeView into the liboffload
+/// ol_kernel_launch_size_args_t format.
+ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range);
 
 } // namespace detail
 

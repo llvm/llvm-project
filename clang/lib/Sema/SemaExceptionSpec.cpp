@@ -655,7 +655,8 @@ static bool CheckEquivalentExceptionSpecImpl(
     return true;
   }
 
-  S.Diag(NewLoc, DiagID);
+  if (DiagID.getDiagID() != 0)
+    S.Diag(NewLoc, DiagID);
   if (NoteID.getDiagID() != 0 && OldLoc.isValid())
     S.Diag(OldLoc, NoteID);
   return true;
@@ -667,7 +668,7 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
                                         SourceLocation OldLoc,
                                         const FunctionProtoType *New,
                                         SourceLocation NewLoc) {
-  if (!getLangOpts().CXXExceptions)
+  if (!getLangOpts().CXXExceptions && !getLangOpts().CPlusPlus17)
     return false;
   return CheckEquivalentExceptionSpecImpl(*this, DiagID, NoteID, Old, OldLoc,
                                           New, NewLoc);
@@ -1302,6 +1303,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ConvertVectorExprClass:
   case Expr::VAArgExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::CXXExpansionSelectExprClass:
     return canSubStmtsThrow(*this, S);
 
   case Expr::CompoundLiteralExprClass:
@@ -1383,6 +1385,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::UnaryExprOrTypeTraitExprClass:
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
+  case Expr::DependentTemplateIdExprClass:
     // FIXME: Many of the above can throw.
     return CT_Cannot;
 
@@ -1488,7 +1491,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPMaskedTaskLoopDirectiveClass:
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
   case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
-  case Stmt::OMPOrderedDirectiveClass:
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
   case Stmt::OMPCanonicalLoopClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPParallelForDirectiveClass:
@@ -1508,6 +1512,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPUnrollDirectiveClass:
   case Stmt::OMPReverseDirectiveClass:
   case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPSplitDirectiveClass:
   case Stmt::OMPFuseDirectiveClass:
   case Stmt::OMPSingleDirectiveClass:
   case Stmt::OMPTargetDataDirectiveClass:
@@ -1554,6 +1559,13 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::SwitchStmtClass:
   case Stmt::WhileStmtClass:
   case Stmt::DeferStmtClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
+    return canSubStmtsThrow(*this, S);
+
+  case Stmt::CXXExpansionStmtPatternClass:
+    if (auto *Pattern = cast<CXXExpansionStmtPattern>(S);
+        Pattern->isDependent())
+      return CT_Dependent;
     return canSubStmtsThrow(*this, S);
 
   case Stmt::DeclStmtClass: {

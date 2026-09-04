@@ -28,7 +28,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <vector>
 
@@ -68,15 +67,6 @@ struct llvm::pdb::GSIHashStreamBuilder {
 
 // DenseMapInfo implementation for deduplicating symbol records.
 struct llvm::pdb::SymbolDenseMapInfo {
-  static inline CVSymbol getEmptyKey() {
-    static CVSymbol Empty;
-    return Empty;
-  }
-  static inline CVSymbol getTombstoneKey() {
-    static CVSymbol Tombstone(
-        DenseMapInfo<ArrayRef<uint8_t>>::getTombstoneKey());
-    return Tombstone;
-  }
   static unsigned getHashValue(const CVSymbol &Val) {
     return xxh3_64bits(Val.RecordData);
   }
@@ -200,7 +190,7 @@ void GSIHashStreamBuilder::finalizeBuckets(
     uint32_t RecordZeroOffset, MutableArrayRef<BulkPublic> Records) {
   // Hash every name in parallel.
   parallelFor(0, Records.size(), [&](size_t I) {
-    Records[I].setBucketIdx(hashStringV1(Records[I].Name) % IPHR_HASH);
+    Records[I].setBucketIdx(hashStringV1(Records[I].getName()) % IPHR_HASH);
   });
 
   // Count up the size of each bucket. Then, use an exclusive prefix sum to

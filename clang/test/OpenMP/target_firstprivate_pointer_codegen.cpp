@@ -30,8 +30,8 @@
 /// Test 1: Explicit firstprivate(pointer) → map type 288
 ///==========================================================================
 
-// CHECK-DAG: @.offload_maptypes{{[^.]*}} = private unnamed_addr constant [1 x i64] [i64 288]
-// CHECK-DAG: @.offload_sizes{{[^.]*}} = private unnamed_addr constant [1 x i64] zeroinitializer
+// CHECK-DAG: @.offload_maptypes{{[^.]*}} = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
+// CHECK-DAG: @.offload_sizes{{[^.]*}} = private unnamed_addr constant [2 x i64] zeroinitializer
 
 void test1_explicit_firstprivate() {
   double *ptr = nullptr;
@@ -48,8 +48,8 @@ void test1_explicit_firstprivate() {
 /// Test 2: defaultmap(firstprivate:pointer) → map type 800
 ///==========================================================================
 
-// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 800]
-// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] zeroinitializer
+// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
+// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] zeroinitializer
 
 void test2_defaultmap_firstprivate_pointer() {
   double *ptr = nullptr;
@@ -66,7 +66,7 @@ void test2_defaultmap_firstprivate_pointer() {
 /// Test 3: defaultmap(firstprivate:scalar) with double → map type 800
 ///==========================================================================
 
-// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 800]
+// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
 
 void test3_defaultmap_scalar_double() {
   double d = 3.0;
@@ -83,8 +83,8 @@ void test3_defaultmap_scalar_double() {
 /// Test 4: Pointer with defaultmap(firstprivate:scalar) → map type 800
 ///==========================================================================
 
-// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 800]
-// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] zeroinitializer
+// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 800, i64 288]
+// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] zeroinitializer
 
 void test4_pointer_with_scalar_defaultmap() {
   double *ptr = nullptr;
@@ -103,8 +103,8 @@ void test4_pointer_with_scalar_defaultmap() {
 /// Test 5: Multiple pointers with explicit firstprivate → all get 288
 ///==========================================================================
 
-// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [3 x i64] [i64 288, i64 288, i64 288]
-// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [3 x i64] zeroinitializer
+// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 288, i64 288, i64 288, i64 288]
+// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [4 x i64] zeroinitializer
 
 void test5_multiple_firstprivate() {
   int *a = nullptr;
@@ -124,8 +124,8 @@ void test5_multiple_firstprivate() {
 /// Test 6: Pointer to const with firstprivate → map type 288
 ///==========================================================================
 
-// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 288]
-// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] zeroinitializer
+// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
+// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] zeroinitializer
 
 void test6_const_pointer() {
   const double *const_ptr = nullptr;
@@ -144,8 +144,8 @@ void test6_const_pointer() {
 /// Test 7: Pointer-to-pointer with firstprivate → map type 288
 ///==========================================================================
 
-// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 288]
-// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] zeroinitializer
+// CHECK-DAG: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
+// CHECK-DAG: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] zeroinitializer
 
 void test7_pointer_to_pointer() {
   int **pp = nullptr;

@@ -8,13 +8,15 @@ void operator delete(void*);
 // CHECK-LABEL: @_Z1fPiz(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    [[L:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
-// CHECK-NEXT:    [[L2:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+// CHECK-NEXT:    [[L:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
+// CHECK-NEXT:    [[L2:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG]]], align 16
 // CHECK-NEXT:    store ptr [[P:%.*]], ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @_Z1ev()
 // CHECK-NEXT:    br i1 [[CALL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // CHECK:       cond.true:
-// CHECK-NEXT:    call void @llvm.trap()
+// CHECK-NEXT:    call void @llvm.trap() #[[ATTR8:[0-9]+]]
+// CHECK-NEXT:    unreachable
+// CHECK:       0:
 // CHECK-NEXT:    br label [[COND_END:%.*]]
 // CHECK:       cond.false:
 // CHECK-NEXT:    br label [[COND_END]]
@@ -28,12 +30,12 @@ void operator delete(void*);
 // CHECK-NEXT:    br label [[COND_END4]]
 // CHECK:       cond.end4:
 // CHECK-NEXT:    [[CALL5:%.*]] = call noundef zeroext i1 @_Z1ev()
-// CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[CALL5]] to i64
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[CALL5]] to i64
 // CHECK-NEXT:    call void @llvm.assume(i1 true)
 // CHECK-NEXT:    [[CALL6:%.*]] = call noundef zeroext i1 @_Z1ev()
 // CHECK-NEXT:    br i1 [[CALL6]], label [[COND_TRUE7:%.*]], label [[COND_FALSE8:%.*]]
 // CHECK:       cond.true7:
-// CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[L]], i64 0, i64 0
+// CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x [[STRUCT___VA_LIST_TAG]]], ptr [[L]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[ARRAYDECAY]])
 // CHECK-NEXT:    br label [[COND_END9:%.*]]
 // CHECK:       cond.false8:
@@ -42,8 +44,8 @@ void operator delete(void*);
 // CHECK-NEXT:    [[CALL10:%.*]] = call noundef zeroext i1 @_Z1ev()
 // CHECK-NEXT:    br i1 [[CALL10]], label [[COND_TRUE11:%.*]], label [[COND_FALSE14:%.*]]
 // CHECK:       cond.true11:
-// CHECK-NEXT:    [[ARRAYDECAY12:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[L]], i64 0, i64 0
-// CHECK-NEXT:    [[ARRAYDECAY13:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[L2]], i64 0, i64 0
+// CHECK-NEXT:    [[ARRAYDECAY12:%.*]] = getelementptr inbounds [1 x [[STRUCT___VA_LIST_TAG]]], ptr [[L]], i64 0, i64 0
+// CHECK-NEXT:    [[ARRAYDECAY13:%.*]] = getelementptr inbounds [1 x [[STRUCT___VA_LIST_TAG]]], ptr [[L2]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.va_copy.p0(ptr [[ARRAYDECAY12]], ptr [[ARRAYDECAY13]])
 // CHECK-NEXT:    br label [[COND_END15:%.*]]
 // CHECK:       cond.false14:
@@ -52,8 +54,8 @@ void operator delete(void*);
 // CHECK-NEXT:    [[CALL16:%.*]] = call noundef zeroext i1 @_Z1ev()
 // CHECK-NEXT:    br i1 [[CALL16]], label [[COND_TRUE17:%.*]], label [[COND_FALSE18:%.*]]
 // CHECK:       cond.true17:
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.prefetch.p0(ptr [[TMP1]], i32 0, i32 3, i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.prefetch.p0(ptr [[TMP2]], i32 0, i32 3, i32 1)
 // CHECK-NEXT:    br label [[COND_END19:%.*]]
 // CHECK:       cond.false18:
 // CHECK-NEXT:    br label [[COND_END19]]
@@ -67,9 +69,9 @@ void operator delete(void*);
 // CHECK-NEXT:    br label [[COND_END23]]
 // CHECK:       cond.end23:
 // CHECK-NEXT:    [[CALL24:%.*]] = call noundef zeroext i1 @_Z1ev()
-// CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[CALL24]] to i64
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZdlPv(ptr noundef [[TMP3]]) #[[ATTR8:[0-9]+]]
+// CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[CALL24]] to i64
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    call void @_ZdlPv(ptr noundef [[TMP4]]) #[[ATTR9:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void f(int* p, ...)

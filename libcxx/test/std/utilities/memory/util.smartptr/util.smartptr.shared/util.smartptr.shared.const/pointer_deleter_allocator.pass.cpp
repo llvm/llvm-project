@@ -165,5 +165,9 @@ int main(int, char**)
                                              test_allocator<derived[4]> >::value, "");
     }
 
+    { // Make sure that the allocator isn't instantiated with an incomplete type
+        std::shared_ptr<int> ptr(new int, std::default_delete<int>(), complete_type_allocator<int>());
+    }
+
   return 0;
 }

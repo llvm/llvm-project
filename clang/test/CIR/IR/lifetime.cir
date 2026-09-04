@@ -1,0 +1,14 @@
+// Test the CIR operations can parse and print correctly (roundtrip)
+
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+cir.func @lifetime_start_end() {
+  %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+  // CHECK: cir.lifetime.start %0 : !cir.ptr<!s32i>
+  cir.lifetime.start %0 : !cir.ptr<!s32i>
+  // CHECK: cir.lifetime.end %0 : !cir.ptr<!s32i>
+  cir.lifetime.end %0 : !cir.ptr<!s32i>
+  cir.return
+}

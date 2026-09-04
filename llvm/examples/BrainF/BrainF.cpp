@@ -160,7 +160,7 @@ void BrainF::header(LLVMContext& C) {
     puts_call->setTailCall(false);
 
     //br label %brainf.end
-    BranchInst::Create(endbb, aberrorbb);
+    UncondBrInst::Create(endbb, aberrorbb);
   }
 }
 
@@ -425,7 +425,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
 
       //br i1 %test.%d, label %main.%d, label %main.%d
       BasicBlock *bb_0 = BasicBlock::Create(C, label, brainf_func);
-      BranchInst::Create(bb_0, oldbb, test_0, testbb);
+      CondBrInst::Create(test_0, bb_0, oldbb, testbb);
 
       //main.%d:
       builder->SetInsertPoint(bb_0);

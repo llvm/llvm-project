@@ -1,0 +1,27 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@rules_python//python:py_library.bzl", "py_library")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+exports_files([
+    "lit.py",
+])
+
+py_library(
+    name = "lit",
+    srcs = glob(["lit/**/*.py"]),
+    imports = ["."],
+)
+
+py_binary(
+    name = "lit_bin",
+    srcs = ["lit.py"],
+    main = "lit.py",
+    deps = [":lit"],
+)

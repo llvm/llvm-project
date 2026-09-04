@@ -1,51 +1,9 @@
 // RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-transparent-functors %t
 
+#include <functional>
+#include <memory>
+
 namespace std {
-template<class T>
-struct remove_reference;
-
-template <class T>
-constexpr T &&forward(typename std::remove_reference<T>::type &t);
-
-template <class T>
-constexpr T &&forward(typename std::remove_reference<T>::type &&t);
-
-template <typename T = void>
-struct plus {
-  constexpr T operator()(const T &Lhs, const T &Rhs) const;
-};
-
-template <>
-struct plus<void> {
-  template <typename T, typename U>
-  constexpr auto operator()(T &&Lhs, U &&Rhs) const ->
-    decltype(forward<T>(Lhs) + forward<U>(Rhs));
-};
-
-template <typename T = void>
-struct less {
-  constexpr bool operator()(const T &Lhs, const T &Rhs) const;
-};
-
-template <>
-struct less<void> {
-  template <typename T, typename U>
-  constexpr bool operator()(T &&Lhs, U &&Rhs) const;
-};
-
-template <typename T = void>
-struct logical_not {
-  constexpr bool operator()(const T &Arg) const;
-};
-
-template <>
-struct logical_not<void> {
-  template <typename T>
-  constexpr bool operator()(T &&Arg) const;
-};
-
-template <typename T>
-class allocator;
 
 template <
     class Key,

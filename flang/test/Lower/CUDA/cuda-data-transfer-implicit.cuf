@@ -1,0 +1,17 @@
+! RUN: bbc -emit-hlfir -fopenacc -fcuda -gpu=managed %s -o - | FileCheck %s
+
+subroutine test()
+  real, allocatable :: a(:), b(:)
+  real :: c(10)
+
+  allocate(a(10))
+  allocate(b(10))
+  do i = 1, 10
+  c(i) = a(i) + b(i) ! no implicit data transfer generated
+  end do
+  deallocate(a)
+  deallocate(b)
+end subroutine test
+
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign

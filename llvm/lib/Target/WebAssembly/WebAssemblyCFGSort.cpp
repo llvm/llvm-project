@@ -21,13 +21,14 @@
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -46,17 +47,14 @@ static cl::opt<bool> WasmDisableEHPadSort(
 
 namespace {
 
-class WebAssemblyCFGSort final : public MachineFunctionPass {
+class WebAssemblyCFGSortLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override { return "WebAssembly CFG Sort"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
-    AU.addRequired<WebAssemblyExceptionInfo>();
-    AU.addPreserved<WebAssemblyExceptionInfo>();
+    AU.addRequired<WebAssemblyExceptionInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -64,16 +62,16 @@ class WebAssemblyCFGSort final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyCFGSort() : MachineFunctionPass(ID) {}
+  WebAssemblyCFGSortLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyCFGSort::ID = 0;
-INITIALIZE_PASS(WebAssemblyCFGSort, DEBUG_TYPE,
+char WebAssemblyCFGSortLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyCFGSortLegacy, DEBUG_TYPE,
                 "Reorders blocks in topological order", false, false)
 
-FunctionPass *llvm::createWebAssemblyCFGSort() {
-  return new WebAssemblyCFGSort();
+FunctionPass *llvm::createWebAssemblyCFGSortLegacyPass() {
+  return new WebAssemblyCFGSortLegacy();
 }
 
 static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
@@ -188,7 +186,6 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   // Remember original layout ordering, so we can update terminators after
   // reordering to point to the original layout successor.
   MF.RenumberBlocks();
-  MDT.updateBlockNumbers();
 
   // Prepare for a topological sort: Record the number of predecessors each
   // block has, ignoring loop backedges.
@@ -218,7 +215,6 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                 CompareBlockNumbersBackwards>
       Ready;
 
-  const auto *EHInfo = MF.getWasmEHFuncInfo();
   SortRegionInfo SRI(MLI, WEI);
   SmallVector<Entry, 4> Entries;
   for (MachineBasicBlock *MBB = &MF.front();;) {
@@ -246,34 +242,8 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
         if (SuccL->getHeader() == Succ && SuccL->contains(MBB))
           continue;
       // Decrement the predecessor count. If it's now zero, it's ready.
-      if (--NumPredsLeft[Succ->getNumber()] == 0) {
-        // When we are in a SortRegion, we allow sorting of not only BBs that
-        // belong to the current (innermost) region but also BBs that are
-        // dominated by the current region header. But we should not do this for
-        // exceptions because there can be cases in which, for example:
-        // EHPad A's unwind destination (where the exception lands when it is
-        // not caught by EHPad A) is EHPad B, so EHPad B does not belong to the
-        // exception dominated by EHPad A. But EHPad B is dominated by EHPad A,
-        // so EHPad B can be sorted within EHPad A's exception. This is
-        // incorrect because we may end up delegating/rethrowing to an inner
-        // scope in CFGStackify. So here we make sure those unwind destinations
-        // are deferred until their unwind source's exception is sorted.
-        if (EHInfo && EHInfo->hasUnwindSrcs(Succ)) {
-          SmallPtrSet<MachineBasicBlock *, 4> UnwindSrcs =
-              EHInfo->getUnwindSrcs(Succ);
-          bool IsDeferred = false;
-          for (Entry &E : Entries) {
-            if (UnwindSrcs.count(E.TheRegion->getHeader())) {
-              E.Deferred.push_back(Succ);
-              IsDeferred = true;
-              break;
-            }
-          }
-          if (IsDeferred)
-            continue;
-        }
+      if (--NumPredsLeft[Succ->getNumber()] == 0)
         Preferred.push(Succ);
-      }
     }
     // Determine the block to follow MBB. First try to find a preferred block,
     // to preserve the original block order when possible.
@@ -329,7 +299,6 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   }
   assert(Entries.empty() && "Active sort region list not finished");
   MF.RenumberBlocks();
-  MDT.updateBlockNumbers();
 
 #ifndef NDEBUG
   for (auto &MBB : MF) {
@@ -410,14 +379,12 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
 #endif
 }
 
-bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
+static bool sortCFG(MachineFunction &MF, MachineLoopInfo &MLI,
+                    WebAssemblyExceptionInfo &WEI, MachineDominatorTree &MDT) {
   LLVM_DEBUG(dbgs() << "********** CFG Sorting **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
 
@@ -425,4 +392,25 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
   sortBlocks(MF, MLI, WEI, MDT);
 
   return true;
+}
+
+bool WebAssemblyCFGSortLegacy::runOnMachineFunction(MachineFunction &MF) {
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  WebAssemblyExceptionInfo &WEI =
+      getAnalysis<WebAssemblyExceptionInfoWrapperPass>().getWEI();
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return sortCFG(MF, MLI, WEI, MDT);
+}
+
+PreservedAnalyses
+WebAssemblyCFGSortPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  WebAssemblyExceptionInfo &WEI =
+      MFAM.getResult<WebAssemblyExceptionAnalysis>(MF);
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  return sortCFG(MF, MLI, WEI, MDT) ? getMachineFunctionPassPreservedAnalyses()
+                                          .preserveSet<CFGAnalyses>()
+                                    : PreservedAnalyses::all();
 }

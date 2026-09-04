@@ -22,6 +22,7 @@
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
 #include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -90,6 +91,23 @@ struct PdbDbiModuleInfo {
   std::optional<PdbModiStream> Modi;
 };
 
+struct PdbDbiSectionContrib {
+  uint16_t ISect = 0;
+  int32_t Off = 0;
+  int32_t Size = 0;
+  uint32_t Characteristics = 0;
+  uint16_t Imod = 0;
+  uint32_t DataCrc = 0;
+  uint32_t RelocCrc = 0;
+  /// Only in `SectionContrib2`.
+  uint32_t ISectCoff = 0;
+};
+
+struct PdbDbiSectionContribs {
+  PdbRaw_DbiSecContribVer Version = PdbRaw_DbiSecContribVer::DbiSecContribVer60;
+  std::vector<PdbDbiSectionContrib> Items;
+};
+
 struct PdbDbiStream {
   PdbRaw_DbiVer VerHeader = PdbDbiV70;
   uint32_t Age = 1;
@@ -102,11 +120,16 @@ struct PdbDbiStream {
   std::vector<PdbDbiModuleInfo> ModInfos;
   COFF::header FakeHeader;
   std::vector<CoffSectionHeader> SectionHeaders;
+  std::optional<PdbDbiSectionContribs> SectionContribs;
 };
 
 struct PdbTpiStream {
   PdbRaw_TpiVer Version = PdbTpiV80;
   std::vector<CodeViewYAML::LeafRecord> Records;
+};
+
+struct PdbDXContainerStream {
+  DXContainerYAML::Object DXC;
 };
 
 struct PdbPublicsStream {
@@ -123,6 +146,7 @@ struct PdbObject {
   std::optional<PdbDbiStream> DbiStream;
   std::optional<PdbTpiStream> TpiStream;
   std::optional<PdbTpiStream> IpiStream;
+  std::optional<PdbDXContainerStream> DXContainerStream;
   std::optional<PdbPublicsStream> PublicsStream;
 
   std::optional<std::vector<StringRef>> StringTable;
@@ -139,11 +163,14 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::MSFHeaders)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(msf::SuperBlock)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::StreamBlockList)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbInfoStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiSectionContrib)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiSectionContribs)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbTpiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbPublicsStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::NamedStreamMapping)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbModiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiModuleInfo)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDXContainerStream)
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H

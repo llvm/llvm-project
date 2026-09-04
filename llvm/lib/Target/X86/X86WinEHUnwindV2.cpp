@@ -79,9 +79,9 @@ public:
 
 /// Rejects the current function due to an internal error within LLVM.
 std::nullopt_t rejectCurrentFunctionInternalError(const MachineFunction &MF,
-                                                  WinX64EHUnwindV2Mode Mode,
+                                                  WinX64EHUnwindMode Mode,
                                                   StringRef Reason) {
-  if (Mode == WinX64EHUnwindV2Mode::Required)
+  if (Mode == WinX64EHUnwindMode::V2Required)
     reportFatalInternalError("Windows x64 Unwind v2 is required, but LLVM has "
                              "generated incompatible code in function '" +
                              MF.getName() + "': " + Reason);
@@ -120,7 +120,7 @@ DebugLoc findDebugLoc(const MachineBasicBlock &MBB) {
 // Continues running the analysis on the given function or funclet.
 std::optional<FrameInfo>
 runAnalysisOnFuncOrFunclet(MachineFunction &MF, MachineFunction::iterator &Iter,
-                           WinX64EHUnwindV2Mode Mode) {
+                           WinX64EHUnwindMode Mode) {
   const TargetFrameLowering &TFL = *MF.getSubtarget().getFrameLowering();
 
   // Current state of processing the function. We'll assume that all functions
@@ -373,12 +373,20 @@ runAnalysisOnFuncOrFunclet(MachineFunction &MF, MachineFunction::iterator &Iter,
 }
 
 bool runX86WinEHUnwindV2(MachineFunction &MF) {
-  WinX64EHUnwindV2Mode Mode =
+  WinX64EHUnwindMode Mode =
       ForceMode.getNumOccurrences()
-          ? static_cast<WinX64EHUnwindV2Mode>(ForceMode.getValue())
-          : MF.getFunction().getParent()->getWinX64EHUnwindV2Mode();
+          ? static_cast<WinX64EHUnwindMode>(ForceMode.getValue())
+          : MF.getFunction().getParent()->getWinX64EHUnwindMode();
 
-  if (Mode == WinX64EHUnwindV2Mode::Disabled)
+  // Only act on V2 modes; V1 = disabled, V3 handled by the V3 pass.
+  if (Mode != WinX64EHUnwindMode::V2BestEffort &&
+      Mode != WinX64EHUnwindMode::V2Required)
+    return false;
+
+  // A function that requires V3 (see requireWinX64UnwindV3()) is emitted as V3
+  // instead; skip it here so this pass does not stamp V2 pseudos that conflict
+  // with the V3 layout.
+  if (requireWinX64UnwindV3(MF))
     return false;
 
   // Requested changes.

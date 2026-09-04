@@ -100,7 +100,7 @@ public:
     return llvm::StringSwitch<bool>(Name).Case("generic", true).Default(false);
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     CPU = Name;
     return isValidCPUName(Name);
   }

@@ -876,7 +876,7 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder,
     while (auto ifOp = dyn_cast_or_null<scf::IfOp>(
                builder.getInsertionBlock()->getParentOp())) {
       // Break on IfOp for slicing filtering.
-      if (ifOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()) ==
+      if (ifOp->getDiscardableAttr(LoopEmitter::getLoopEmitterLoopAttrName()) ==
           StringAttr::get(ifOp->getContext(), "slice"))
         break;
 
@@ -1411,7 +1411,7 @@ public:
       return failure();
 
     // Only accept scheduled loops.
-    if (!op->hasAttr("sorted")) {
+    if (!op->hasDiscardableAttr("sorted")) {
       return rewriter.notifyMatchFailure(
           op, "Loops not yet scheduled, try run --sparse-reinterpret-map "
               "before sparsification.");

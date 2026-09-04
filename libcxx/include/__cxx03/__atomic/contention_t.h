@@ -19,11 +19,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
+#if defined(__linux__) || defined(__Fuchsia__) || (defined(_AIX) && !defined(__64BIT__))
 using __cxx_contention_t = int32_t;
 #else
 using __cxx_contention_t = int64_t;
-#endif // __linux__ || (_AIX && !__64BIT__)
+#endif // __linux__ || __Fuchsia__ || (_AIX && !__64BIT__)
 
 using __cxx_atomic_contention_t = __cxx_atomic_impl<__cxx_contention_t>;
 

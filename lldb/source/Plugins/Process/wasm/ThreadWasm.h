@@ -25,6 +25,10 @@ public:
   /// Retrieve the current call stack from the WebAssembly remote process.
   llvm::Expected<std::vector<lldb::addr_t>> GetWasmCallStack();
 
+  /// Return the program counter the Wasm unwinder recorded for the given
+  /// concrete frame index, or LLDB_INVALID_ADDRESS if it is unavailable.
+  lldb::addr_t GetConcreteFramePC(uint32_t concrete_frame_idx);
+
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(StackFrame *frame) override;
 

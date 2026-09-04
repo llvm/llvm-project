@@ -50,6 +50,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -199,7 +200,8 @@ public:
       Instruction *Destination = Dep.getDestination(DepChecker);
 
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
-          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
+          Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe ||
+          Dep.Type == MemoryDepChecker::Dependence::InvariantUnsafe) {
         if (isa<LoadInst>(Source))
           LoadsWithUnknownDependence.insert(Source);
         if (isa<LoadInst>(Destination))
@@ -597,6 +599,10 @@ public:
 
       // Point of no-return, start the transformation.  First, version the loop
       // if necessary.
+
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, PSE.getSE());
 
       LoopVersioning LV(LAI, Checks, L, LI, DT, PSE.getSE());
       LV.versionLoop();

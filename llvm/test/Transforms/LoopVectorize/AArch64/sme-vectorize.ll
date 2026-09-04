@@ -41,14 +41,14 @@ entry:
   %cmp6 = icmp sgt i32 %N, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -63,7 +63,7 @@ for.body:                                         ; preds = %for.body.preheader,
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.interleave.count", i32 1}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.scalable.disable"}
 
 define void @test_scalable_loopvec(ptr noalias %dst, ptr readonly %src, i32 %N) #0 {
 ; CHECK-LABEL: @test_scalable_loopvec
@@ -74,14 +74,14 @@ entry:
   %cmp6 = icmp sgt i32 %N, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -96,7 +96,7 @@ for.body:                                         ; preds = %for.body.preheader,
 !4 = distinct !{!4, !5, !6, !7}
 !5 = !{!"llvm.loop.mustprogress"}
 !6 = !{!"llvm.loop.interleave.count", i32 1}
-!7 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!7 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 define void @test_slp(ptr noalias %dst, ptr readonly %src, i32 %N) #0 {
 ; CHECK-LABEL: @test_slp
@@ -107,14 +107,14 @@ entry:
   %cmp6 = icmp sgt i32 %N, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %src, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4

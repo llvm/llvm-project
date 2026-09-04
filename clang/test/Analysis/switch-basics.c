@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s -analyzer-checker=core
 
-// This file tests ExprEngine::processSwitch and the class SwitchNodeBuilder.
+// This file tests ExprEngine::processSwitch.
 
 int switch_simple(int x) {
   // Validate that switch behaves as expected in a very simple situation.
@@ -91,6 +91,16 @@ int switch_no_compound_stmt(int x) {
   switch (x) case 1: case 0: return 16 / x; // expected-warning {{Division by zero}}
 
   return 0;
+}
+
+void switch_empty(int x) {
+  // Validate that the engine does not crash on these empty switches.
+  // (These are pretty useless, but the analyzer should still handle them.)
+
+  switch (x) {}
+
+  switch (x)
+    ;
 }
 
 int switch_with_case_range(int x) {

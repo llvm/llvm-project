@@ -47,9 +47,9 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression(DW_OP_plus_uconst, 120))
 !1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 3, type: !9, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "main", scope: !4, file: !3, line: 1, type: !7, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagMainSubprogram, unit: !4)
+!2 = distinct !DISubprogram(name: "main", scope: !4, file: !3, line: 1, type: !7, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagMainSubprogram, unit: !4, retainedNodes: !6)
 !3 = !DIFile(filename: "namelist.f90", directory: "/dir")
-!4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: false, flags: "'+flang -g namelist.f90 -S -emit-llvm'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, globals: !6, imports: !5, nameTableKind: None)
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: " F90 Flang - 1.5 2017-05-01", isOptimized: false, flags: "'+flang -g namelist.f90 -S -emit-llvm'", runtimeVersion: 0, emissionKind: FullDebug, enums: !5, retainedTypes: !5, imports: !5, nameTableKind: None)
 !5 = !{}
 !6 = !{!0}
 !7 = !DISubroutineType(cc: DW_CC_program, types: !8)

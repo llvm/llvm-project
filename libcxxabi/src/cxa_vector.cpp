@@ -116,8 +116,7 @@ namespace {
 //
 
 namespace {
-_LIBCXXABI_NORETURN
-void throw_bad_array_new_length() {
+[[noreturn]] void throw_bad_array_new_length() {
 #ifndef _LIBCXXABI_NO_EXCEPTIONS
   throw std::bad_array_new_length();
 #else

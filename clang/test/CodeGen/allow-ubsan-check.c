@@ -7,6 +7,10 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -O1 -o - %s -fsanitize=signed-integer-overflow,integer-divide-by-zero,null,local-bounds -mllvm -ubsan-guard-checks -fsanitize-recover=signed-integer-overflow,integer-divide-by-zero,null,local-bounds | FileCheck %s --check-prefixes=REC
 
 
+//
+//                                                                       27 == SO_IntegerDivideByZero
+//
+//                                                                       41 == SO_SignedIntegerOverflow
 // CHECK-LABEL: define dso_local noundef i32 @div(
 // CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -14,13 +18,9 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X]], -2147483648, !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[Y]], -1, !nosanitize [[META6]]
 // CHECK-NEXT:    [[OR:%.*]] = or i1 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
-//
-//                                                                       27 == SO_IntegerDivideByZero
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 27), !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true, !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP5:%.*]] = or i1 [[TMP0]], [[TMP4]], !nosanitize [[META6]]
-//
-//                                                                       41 == SO_SignedIntegerOverflow
 // CHECK-NEXT:    [[TMP6:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 41), !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true, !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[OR]], [[TMP7]], !nosanitize [[META6]]
@@ -85,12 +85,12 @@ int div(int x, int y) {
   return x / y;
 }
 
-// CHECK-LABEL: define dso_local i32 @null(
-// CHECK-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META6]]
 //
 //                                                                       29 == SO_Null
+// CHECK-LABEL: define dso_local i32 @null(
+// CHECK-SAME: ptr nofree noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 29), !nosanitize [[META6]]
 // CHECK-NEXT:    [[DOTNOT1:%.*]] = and i1 [[TMP0]], [[TMP1]]
 // CHECK-NEXT:    br i1 [[DOTNOT1]], label %[[HANDLER_TYPE_MISMATCH:.*]], label %[[CONT:.*]], !prof [[PROF8:![0-9]+]], !nosanitize [[META6]]
@@ -98,11 +98,11 @@ int div(int x, int y) {
 // CHECK-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1_abort(ptr nonnull @[[GLOB2:[0-9]+]], i64 0) #[[ATTR6]], !nosanitize [[META6]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META6]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA9:![0-9]+]]
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 // TR-LABEL: define dso_local i32 @null(
-// TR-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// TR-SAME: ptr nofree noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // TR-NEXT:  [[ENTRY:.*:]]
 // TR-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META6]]
 // TR-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 29), !nosanitize [[META6]]
@@ -112,11 +112,11 @@ int div(int x, int y) {
 // TR-NEXT:    tail call void @llvm.ubsantrap(i8 22) #[[ATTR7]], !nosanitize [[META6]]
 // TR-NEXT:    unreachable, !nosanitize [[META6]]
 // TR:       [[CONT]]:
-// TR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// TR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA9:![0-9]+]]
 // TR-NEXT:    ret i32 [[TMP2]]
 //
 // REC-LABEL: define dso_local i32 @null(
-// REC-SAME: ptr noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// REC-SAME: ptr nofree noundef readonly captures(address_is_null) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // REC-NEXT:  [[ENTRY:.*:]]
 // REC-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[X]], null, !nosanitize [[META6]]
 // REC-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 29), !nosanitize [[META6]]
@@ -126,20 +126,20 @@ int div(int x, int y) {
 // REC-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1(ptr nonnull @[[GLOB2:[0-9]+]], i64 0) #[[ATTR6]], !nosanitize [[META6]]
 // REC-NEXT:    br label %[[CONT]], !nosanitize [[META6]]
 // REC:       [[CONT]]:
-// REC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// REC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[INT_TBAA9:![0-9]+]]
 // REC-NEXT:    ret i32 [[TMP2]]
 //
 int null(int* x) {
   return *x;
 }
 
+//
+//                                                                       41 == SO_SignedIntegerOverflow
 // CHECK-LABEL: define dso_local noundef i32 @overflow(
 // CHECK-SAME: i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 [[Y]]), !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META6]]
-//
-//                                                                       41 == SO_SignedIntegerOverflow
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @llvm.allow.ubsan.check(i8 41), !nosanitize [[META6]]
 // CHECK-NEXT:    [[DOTDEMORGAN:%.*]] = and i1 [[TMP1]], [[TMP2]]
 // CHECK-NEXT:    br i1 [[DOTDEMORGAN]], label %[[HANDLER_ADD_OVERFLOW:.*]], label %[[CONT:.*]], !prof [[PROF8]], !nosanitize [[META6]]
@@ -190,6 +190,8 @@ int overflow(int x, int y) {
 
 void use(double*);
 
+//
+//                                                                  71 == SO_LocalBounds
 // CHECK-LABEL: define dso_local double @lbounds(
 // CHECK-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -198,14 +200,12 @@ void use(double*);
 // CHECK-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
-//
-//                                                                  71 == SO_LocalBounds
 // CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
 // CHECK:       [[BB4]]:
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[VLA]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
 // CHECK-NEXT:    ret double [[TMP5]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR6]], !nosanitize [[META6]]
@@ -224,7 +224,7 @@ void use(double*);
 // TR-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
 // TR:       [[BB4]]:
 // TR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[VLA]], i64 [[IDXPROM]]
-// TR-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA9:![0-9]+]]
+// TR-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
 // TR-NEXT:    ret double [[TMP5]]
 // TR:       [[TRAP]]:
 // TR-NEXT:    call void @llvm.ubsantrap(i8 71) #[[ATTR7]], !nosanitize [[META6]]
@@ -243,7 +243,7 @@ void use(double*);
 // REC-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
 // REC:       [[BB4]]:
 // REC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[VLA]], i64 [[IDXPROM]]
-// REC-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA9:![0-9]+]]
+// REC-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
 // REC-NEXT:    ret double [[TMP5]]
 // REC:       [[TRAP]]:
 // REC-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR6]], !nosanitize [[META6]]
@@ -256,33 +256,33 @@ double lbounds(int b, int i) {
 }
 
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[META6]] = !{}
 // CHECK: [[PROF7]] = !{!"branch_weights", i32 1048575, i32 1}
 // CHECK: [[PROF8]] = !{!"branch_weights", i32 1, i32 1048575}
-// CHECK: [[DOUBLE_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// CHECK: [[META10]] = !{!"double", [[META4]], i64 0}
+// CHECK: [[INT_TBAA9]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[DOUBLE_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
+// CHECK: [[META11]] = !{!"double", [[META4]], i64 0}
 //.
-// TR: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// TR: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// TR: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // TR: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // TR: [[META5]] = !{!"Simple C/C++ TBAA"}
 // TR: [[META6]] = !{}
 // TR: [[PROF7]] = !{!"branch_weights", i32 1048575, i32 1}
 // TR: [[PROF8]] = !{!"branch_weights", i32 1, i32 1048575}
-// TR: [[DOUBLE_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// TR: [[META10]] = !{!"double", [[META4]], i64 0}
+// TR: [[INT_TBAA9]] = !{[[META3]], [[META3]], i64 0}
+// TR: [[DOUBLE_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
+// TR: [[META11]] = !{!"double", [[META4]], i64 0}
 //.
-// REC: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// REC: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// REC: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // REC: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // REC: [[META5]] = !{!"Simple C/C++ TBAA"}
 // REC: [[META6]] = !{}
 // REC: [[PROF7]] = !{!"branch_weights", i32 1048575, i32 1}
 // REC: [[PROF8]] = !{!"branch_weights", i32 1, i32 1048575}
-// REC: [[DOUBLE_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// REC: [[META10]] = !{!"double", [[META4]], i64 0}
+// REC: [[INT_TBAA9]] = !{[[META3]], [[META3]], i64 0}
+// REC: [[DOUBLE_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
+// REC: [[META11]] = !{!"double", [[META4]], i64 0}
 //.

@@ -23,7 +23,8 @@ namespace __sanitizer {
 extern const char *SanitizerToolName;
 
 const char *DladdrSelfFName(void) {
-#if SANITIZER_GLIBC
+  // go-tsan can't link libdl before it was merged into glibc 2.34.
+#if SANITIZER_GLIBC && !SANITIZER_GO
   Dl_info info;
   int ret = dladdr((void *)&SanitizerToolName, &info);
   if (ret) {
@@ -32,6 +33,16 @@ const char *DladdrSelfFName(void) {
 #endif
 
   return nullptr;
+}
+
+char* DladdrElfHeaderBase(void* ld, char* addr) {
+  // go-tsan can't link libdl before it was merged into glibc 2.34.
+#if SANITIZER_GLIBC && !SANITIZER_GO
+  Dl_info info;
+  if (dladdr(ld, &info) && info.dli_fbase)
+    addr = (char*)info.dli_fbase;
+#endif  // SANITIZER_GLIBC
+  return addr;
 }
 
 }  // namespace __sanitizer

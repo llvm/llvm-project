@@ -37,3 +37,7 @@ endif()
 if("${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
   target_link_libraries(llvm-jitlink PRIVATE socket)
 endif()
+
+if("${CMAKE_SYSTEM_NAME}" MATCHES "QNX")
+  target_link_libraries(llvm-jitlink PRIVATE socket)
+endif()

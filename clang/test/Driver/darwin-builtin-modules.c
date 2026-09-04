@@ -1,7 +1,8 @@
 // Check that darwin passes -fbuiltin-headers-in-system-modules
 // when expected.
 
-// RUN: %clang -target x86_64-apple-darwin22.4 -### %s 2>&1 | FileCheck --check-prefix=CHECK_OLD %s
+// Pass --no-xcselect to avoid injecting an SDK that supports builtin modules.
+// RUN: %clang -target x86_64-apple-darwin22.4 --no-xcselect -### %s 2>&1 | FileCheck --check-prefix=CHECK_OLD %s
 // RUN: %clang -isysroot %S/Inputs/MacOSX10.15.sdk -target x86_64-apple-macos10.15 -### %s 2>&1 | FileCheck --check-prefix=CHECK_OLD %s
 // RUN: %clang -isysroot %S/Inputs/iPhoneOS13.0.sdk -target arm64-apple-ios13.0 -### %s 2>&1 | FileCheck --check-prefix=CHECK_OLD %s
 // CHECK_OLD: -fbuiltin-headers-in-system-modules

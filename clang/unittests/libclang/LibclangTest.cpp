@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestUtils.h"
+#include "clang-c/BuildSystem.h"
 #include "clang-c/Index.h"
 #include "clang-c/Rewrite.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -354,6 +357,107 @@ TEST(libclang, ModuleMapDescriptor) {
   EXPECT_STREQ(Contents, BufStr.c_str());
   clang_free(BufPtr);
   clang_ModuleMapDescriptor_dispose(MMD);
+}
+
+// Builds a fake module cache layout used by the prune tests:
+//   <CacheDir>/modules.timestamp        (old, so the prune interval passes)
+//   <CacheDir>/Bar.pcm                  (old access time, will be pruned)
+//   <CacheDir>/ABCDEF/                  (subdir, removed when emptied)
+//   <CacheDir>/ABCDEF/Foo.pcm           (old access time, will be pruned)
+//   <CacheDir>/123456/                  (subdir, must survive)
+//   <CacheDir>/123456/Fresh.pcm         (recent access time, must survive)
+class ModuleCachePruneTest : public ::testing::Test {
+protected:
+  llvm::SmallString<256> CacheDir;
+  llvm::SmallString<256> SubDir;
+  llvm::SmallString<256> PCMFile;
+  llvm::SmallString<256> RootPCMFile;
+  llvm::SmallString<256> FreshSubDir;
+  llvm::SmallString<256> FreshPCMFile;
+
+  void SetUp() override {
+    ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("libclang-module-cache",
+                                                      CacheDir));
+
+    SubDir = CacheDir;
+    llvm::sys::path::append(SubDir, "ABCDEF");
+    ASSERT_FALSE(llvm::sys::fs::create_directory(SubDir));
+
+    PCMFile = SubDir;
+    llvm::sys::path::append(PCMFile, "Foo.pcm");
+    ASSERT_NO_FATAL_FAILURE(writeFileWithOldAccessTime(PCMFile));
+
+    RootPCMFile = CacheDir;
+    llvm::sys::path::append(RootPCMFile, "Bar.pcm");
+    ASSERT_NO_FATAL_FAILURE(writeFileWithOldAccessTime(RootPCMFile));
+
+    // A recently-accessed .pcm in its own subdir. Pruning must leave both the
+    // file and its containing directory alone.
+    FreshSubDir = CacheDir;
+    llvm::sys::path::append(FreshSubDir, "123456");
+    ASSERT_FALSE(llvm::sys::fs::create_directory(FreshSubDir));
+
+    FreshPCMFile = FreshSubDir;
+    llvm::sys::path::append(FreshPCMFile, "Fresh.pcm");
+    ASSERT_NO_FATAL_FAILURE(writeFile(FreshPCMFile));
+
+    llvm::SmallString<256> ModulesTimestamp(CacheDir);
+    llvm::sys::path::append(ModulesTimestamp, "modules.timestamp");
+    ASSERT_NO_FATAL_FAILURE(writeFileWithOldAccessTime(ModulesTimestamp));
+  }
+
+  void TearDown() override { llvm::sys::fs::remove_directories(CacheDir); }
+
+private:
+  static void writeFile(const llvm::Twine &Path) {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(Path.str(), EC);
+    ASSERT_FALSE(EC);
+  }
+
+  static void writeFileWithOldAccessTime(const llvm::Twine &Path) {
+    ASSERT_NO_FATAL_FAILURE(writeFile(Path));
+    int FD;
+    ASSERT_FALSE(llvm::sys::fs::openFileForReadWrite(
+        Path, FD, llvm::sys::fs::CD_OpenExisting, llvm::sys::fs::OF_None));
+    time_t OldTime = time(nullptr) - 86400;
+    ASSERT_FALSE(llvm::sys::fs::setLastAccessAndModificationTime(
+        FD, llvm::sys::toTimePoint(OldTime)));
+    ::close(FD);
+  }
+};
+
+TEST_F(ModuleCachePruneTest, Prune) {
+  clang_ModuleCache_prune(CacheDir.c_str(), /*PruneInterval=*/1,
+                          /*PruneAfter=*/1);
+  EXPECT_FALSE(llvm::sys::fs::exists(PCMFile));
+  EXPECT_FALSE(llvm::sys::fs::exists(RootPCMFile));
+  EXPECT_TRUE(llvm::sys::fs::exists(FreshPCMFile));
+}
+
+TEST_F(ModuleCachePruneTest, PruneWithCallback) {
+  std::vector<std::string> Pruned;
+  auto Callback = +[](const char *Path, void *UserData) {
+    static_cast<std::vector<std::string> *>(UserData)->emplace_back(Path);
+  };
+
+  clang_ModuleCache_pruneWithCallback(CacheDir.c_str(), /*PruneInterval=*/1,
+                                      /*PruneAfter=*/1, Callback, &Pruned);
+
+  for (const auto &P : Pruned)
+    EXPECT_TRUE(llvm::sys::path::is_absolute(P)) << P;
+  auto contains = [&](llvm::StringRef Needle) {
+    return llvm::is_contained(Pruned, Needle);
+  };
+  EXPECT_TRUE(contains(PCMFile));
+  EXPECT_TRUE(contains(RootPCMFile));
+  EXPECT_TRUE(contains(SubDir));
+
+  // The recently-accessed .pcm and its directory must survive, and the
+  // callback must not report them.
+  EXPECT_TRUE(llvm::sys::fs::exists(FreshPCMFile));
+  EXPECT_FALSE(contains(FreshPCMFile));
+  EXPECT_FALSE(contains(FreshSubDir));
 }
 
 TEST_F(LibclangParseTest, GlobalOptions) {

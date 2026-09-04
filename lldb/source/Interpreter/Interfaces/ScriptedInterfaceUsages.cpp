@@ -8,20 +8,30 @@
 
 #include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 
+#include "lldb/Utility/AnsiTerminal.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
-void ScriptedInterfaceUsages::Dump(Stream &s, UsageKind kind) const {
+void ScriptedInterfaceUsages::Dump(Stream &s, UsageKind kind,
+                                   bool use_color) const {
+  const std::string label =
+      ansi::FormatAnsiTerminalCodes("${ansi.fg.green}${ansi.bold}", use_color);
+  const std::string dim =
+      ansi::FormatAnsiTerminalCodes("${ansi.faint}", use_color);
+  const std::string reset =
+      ansi::FormatAnsiTerminalCodes("${ansi.normal}", use_color);
+
   s.IndentMore();
   s.Indent();
   llvm::StringRef usage_kind =
       (kind == UsageKind::CommandInterpreter) ? "Command Interpreter" : "API";
-  s << usage_kind << " Usages:";
+  s << label << usage_kind << " Usages:" << reset;
   const std::vector<llvm::StringRef> &usages =
       (kind == UsageKind::CommandInterpreter) ? GetCommandInterpreterUsages()
                                               : GetSBAPIUsages();
   if (usages.empty())
-    s << " None\n";
+    s << ' ' << dim << "None" << reset << '\n';
   else if (usages.size() == 1)
     s << " " << usages.front() << '\n';
   else {

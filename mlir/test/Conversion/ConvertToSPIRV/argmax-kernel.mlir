@@ -18,7 +18,7 @@ module attributes {
       // CHECK: %[[ADDRESSLOCALINVOCATIONID:.*]] = spirv.mlir.addressof @[[$LOCALINVOCATIONIDVAR]]
       // CHECK: %[[LOCALINVOCATIONID:.*]] = spirv.Load "Input" %[[ADDRESSLOCALINVOCATIONID]]
       // CHECK: %[[LOCALINVOCATIONIDX:.*]] = spirv.CompositeExtract %[[LOCALINVOCATIONID]]{{\[}}0 : i32{{\]}}
-      // CHECK: %[[AC0:.*]] = spirv.AccessChain %[[ARG0]][%[[C0]], %[[LOCALINVOCATIONIDX]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
+      // CHECK: %[[AC0:.*]] = spirv.InBoundsAccessChain %[[ARG0]][%[[C0]], %[[LOCALINVOCATIONIDX]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
       // CHECK: %[[LOAD0:.*]] = spirv.Load "StorageBuffer" %[[AC0]] : f32
       // CHECK: %[[FUNC0:.*]] = spirv.Variable : !spirv.ptr<i32, Function>
       // CHECK: %[[FUNC1:.*]] = spirv.Variable : !spirv.ptr<f32, Function>
@@ -41,7 +41,7 @@ module attributes {
       // CHECK: ^[[BODY]]:
       // CHECK:   %[[MUL:.*]] = spirv.IMul %[[INDVAR0]], %[[C32]] : i32
       // CHECK:   %[[ADD:.*]] = spirv.IAdd %[[MUL]], %[[LOCALINVOCATIONIDX]] : i32
-      // CHECK:   %[[AC1:.*]] = spirv.AccessChain %[[ARG0]][%[[C0]], %[[ADD]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
+      // CHECK:   %[[AC1:.*]] = spirv.InBoundsAccessChain %[[ARG0]][%[[C0]], %[[ADD]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
       // CHECK:   %[[LOAD1:.*]] = spirv.Load "StorageBuffer" %[[AC1]] : f32
       // CHECK:   %[[OGT:.*]] = spirv.FOrdGreaterThan %[[LOAD1]], %[[INDVAR2]] : f32
       // CHECK:   %[[SELECT0:.*]] = spirv.Select %[[OGT]], %[[ADD]], %[[INDVAR1]] : i1, i32
@@ -82,7 +82,7 @@ module attributes {
       // CHECK: spirv.mlir.selection {
       // CHECK:   spirv.BranchConditional %[[EQ]], ^[[TRUE:.*]], ^[[FALSE:.*]]
       // CHECK: ^[[TRUE]]:
-      // CHECK:   %[[AC2:.*]] = spirv.AccessChain %[[ARG1]][%[[C0]], %[[C0]]] : !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>, i32, i32
+      // CHECK:   %[[AC2:.*]] = spirv.InBoundsAccessChain %[[ARG1]][%[[C0]], %[[C0]]] : !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>, i32, i32
       // CHECK:   spirv.Store "StorageBuffer" %[[AC2]], %[[LANE_RES]] : i32
       // CHECK:   spirv.Branch ^[[FALSE]]
       // CHECK: ^[[FALSE]]:

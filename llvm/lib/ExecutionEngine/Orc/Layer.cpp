@@ -70,6 +70,7 @@ IRMaterializationUnit::IRMaterializationUnit(
 
           auto EmuTLST = Mangle(("__emutls_t." + GV.getName()).str());
           SymbolFlags[EmuTLST] = Flags;
+          SymbolToDefinition[EmuTLST] = &GV;
         }
         continue;
       }

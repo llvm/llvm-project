@@ -34,10 +34,10 @@ static constexpr StringRef ErrorMsg =
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto DirectMemberVirtualFunctionPointer = unaryOperator(
+  const auto DirectMemberVirtualFunctionPointer = unaryOperator(
       allOf(hasOperatorName("&"),
             hasUnaryOperand(declRefExpr(to(cxxMethodDecl(isVirtual()))))));
-  auto IndirectMemberPointer =
+  const auto IndirectMemberPointer =
       ignoringImpCasts(declRefExpr().bind("indirect_member_pointer"));
 
   Finder->addMatcher(
@@ -65,7 +65,7 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
     return;
   }
   // compare with variable which type is pointer to member function.
-  llvm::SmallVector<SourceLocation, 12U> SameSignatureVirtualMethods{};
+  SmallVector<SourceLocation, 12U> SameSignatureVirtualMethods{};
   const auto *MPT = cast<MemberPointerType>(DRE->getType().getCanonicalType());
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
   if (RD == nullptr)

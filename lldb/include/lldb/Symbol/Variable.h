@@ -62,6 +62,8 @@ public:
 
   Type *GetType();
 
+  lldb::TypeSP GetEnclosingType();
+
   lldb::LanguageType GetLanguage() const;
 
   lldb::ValueType GetScope() const { return m_scope; }
@@ -87,8 +89,6 @@ public:
   // When given invalid address, it dumps all locations. Otherwise it only dumps
   // the location that contains this address.
   bool DumpLocations(Stream *s, const Address &address);
-
-  size_t MemorySize() const;
 
   void CalculateSymbolContext(SymbolContext *sc);
 

@@ -80,6 +80,7 @@ static_library("Sema") {
     "SemaDeclObjC.cpp",
     "SemaDirectX.cpp",
     "SemaExceptionSpec.cpp",
+    "SemaExpand.cpp",
     "SemaExpr.cpp",
     "SemaExprCXX.cpp",
     "SemaExprMember.cpp",

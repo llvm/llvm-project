@@ -8,20 +8,47 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Casting.h"
 
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
-  return region.getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS>();
+  return region
+      .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
+}
+
+mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
+  auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
+  if (!barg)
+    return nullptr;
+
+  mlir::Block *block = barg.getOwner();
+  auto computeReg =
+      mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
+  if (!computeReg)
+    return nullptr;
+  assert(block == computeReg.getBody() &&
+         "block must be the body of acc.compute_region");
+  return computeReg.getOperand(barg);
+}
+
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  mlir::Value orig = getACCOperandForBlockArg(v);
+  if (!orig)
+    return nullptr;
+  mlir::Operation *def = orig.getDefiningOp();
+  return mlir::isa_and_nonnull<ACC_DATA_ENTRY_OPS>(def) ? def : nullptr;
 }
 
 template <typename OpTy>
@@ -82,6 +109,10 @@ mlir::acc::VariableTypeCategory mlir::acc::getTypeCategory(mlir::Value var) {
   return typeCategory;
 }
 
+llvm::StringLiteral mlir::acc::getVarNamePlaceholder() {
+  return llvm::StringLiteral("<acc.varname.placeholder>");
+}
+
 std::string mlir::acc::getVariableName(mlir::Value v) {
   Value current = v;
 
@@ -92,8 +123,8 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
       return std::to_string(*constVal);
 
     // Check for `acc.var_name` attribute
-    if (auto varNameAttr =
-            definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
+    if (auto varNameAttr = definingOp->getDiscardableAttrOfType<VarNameAttr>(
+            getVarNameAttrName()))
       return varNameAttr.getName().str();
 
     // If it is a data entry operation, get name via getVarName
@@ -161,9 +192,34 @@ mlir::Value mlir::acc::getBaseEntity(mlir::Value val) {
   return val;
 }
 
+/// Look up `symbol` in the `gpu.module`s of the enclosing module. A
+/// `gpu.module` is its own symbol table, so `lookupNearestSymbolFrom` from a
+/// user outside of it does not find definitions placed inside.
+static mlir::Operation *lookupSymbolInGPUModules(mlir::Operation *user,
+                                                 mlir::SymbolRefAttr symbol) {
+  auto moduleOp = user->getParentOfType<mlir::ModuleOp>();
+  if (!moduleOp)
+    return nullptr;
+  for (auto gpuModule : moduleOp.getOps<mlir::gpu::GPUModuleOp>()) {
+    if (mlir::Operation *op = mlir::SymbolTable::lookupSymbolIn(
+            gpuModule, symbol.getRootReference()))
+      return op;
+  }
+  return nullptr;
+}
+
 bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
                                  mlir::SymbolRefAttr symbol,
                                  mlir::Operation **definingOpPtr) {
+  // A pass may prepare the device-side definition of a symbol inside a
+  // `gpu.module` while the use is still a reference from host IR. Such a
+  // symbol is meant to be used on device, so the use is valid.
+  if (mlir::Operation *gpuOp = lookupSymbolInGPUModules(user, symbol)) {
+    if (definingOpPtr)
+      *definingOpPtr = gpuOp;
+    return true;
+  }
+
   mlir::Operation *definingOp =
       mlir::SymbolTable::lookupNearestSymbolFrom(user, symbol);
 
@@ -175,11 +231,10 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   if (definingOpPtr)
     *definingOpPtr = definingOp;
 
-  // Check if the defining op is a recipe (private, reduction, firstprivate).
+  // Check if the defining op is a recipe.
   // Recipes are valid as they get materialized before being offloaded to
   // device. They are only instructions for how to materialize.
-  if (mlir::isa<mlir::acc::PrivateRecipeOp, mlir::acc::ReductionRecipeOp,
-                mlir::acc::FirstprivateRecipeOp>(definingOp))
+  if (mlir::isa<mlir::accomp::RecipeInterface>(definingOp))
     return true;
 
   // Check if the defining op is a global variable that is device data.
@@ -192,9 +247,10 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
-    // If this symbol is actually an acc routine - then it is expected for it
-    // to be offloaded - therefore it is valid.
-    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+    // If this symbol is actually an acc routine or a specialized acc routine -
+    // then it is expected for it to be offloaded - therefore it is valid.
+    if (func->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName()) ||
+        func->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName()))
       return true;
 
     // If this symbol is a call to an LLVM intrinsic, then it is likely valid.
@@ -211,7 +267,8 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   }
 
   // A declare attribute is needed for symbol references.
-  bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
+  bool hasDeclare =
+      definingOp->hasDiscardableAttr(mlir::acc::getDeclareAttrName());
   return hasDeclare;
 }
 
@@ -226,23 +283,34 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
     if (pointerLikeTy.isDeviceData(val))
       return true;
 
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data that is already associated with
+  // the device.
+  if (auto declareAttr =
+          defOp->getDiscardableAttrOfType<mlir::acc::DeclareAttr>(
+              mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
-  if (auto *defOp = val.getDefiningOp()) {
-    if (auto partialAccess =
-            dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
-      if (mlir::Value base = partialAccess.getBaseEntity())
-        return isDeviceValue(base);
-    }
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceValue(base);
+  }
 
-    // Handle address_of - check if the referenced global is device data.
-    if (auto addrOfIface =
-            dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
-      auto symbol = addrOfIface.getSymbol();
-      if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
-              mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-        return global.isDeviceData();
-    }
+  // Handle address_of - check if the referenced global is device data.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceData();
   }
 
   return false;
@@ -266,6 +334,16 @@ bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
   // If this is device data, it is valid.
   if (isDeviceValue(val))
     return true;
+
+  // Arguments of an enclosing acc routine are already on the device.
+  if (mlir::Operation *parent = region.getParentOp()) {
+    if (auto func = parent->getParentOfType<mlir::FunctionOpInterface>()) {
+      if ((mlir::acc::isAccRoutine(func) ||
+           mlir::acc::isSpecializedAccRoutine(func)) &&
+          llvm::is_contained(func.getArguments(), val))
+        return true;
+    }
+  }
 
   return false;
 }

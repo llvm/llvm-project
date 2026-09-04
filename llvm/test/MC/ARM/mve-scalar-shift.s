@@ -21,8 +21,8 @@ asrl    lr, r1, #27
 it eq
 asrleq    lr, r1, #27
 
-# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: invalid instruction
-# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid instruction
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be an even-numbered register
+# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: operand must be an even-numbered register
 asrl    r3, r2, #33
 
 # ERROR: [[@LINE+3]]:{{[0-9]+}}: {{error|note}}: operand must be an immediate in the range [1,32]
@@ -31,7 +31,7 @@ asrl    r3, r2, #33
 asrl    r0, r1, #33
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be an odd-numbered register in range [r1,r11]
-# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an odd-numbered register in range [r1,r11]
 asrl    r0, r0, #32
 
 # CHECK: asrl    r0, r1, r4  @ encoding: [0x50,0xea,0x2d,0x41]
@@ -39,7 +39,7 @@ asrl    r0, r0, #32
 asrl    r0, r1, r4
 
 # ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: operand must be an odd-numbered register in range [r1,r11]
-# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an odd-numbered register in range [r1,r11]
 asrl    r0, r0, r4
 
 # The assembler will reject the above shifts when MVE is not supported,

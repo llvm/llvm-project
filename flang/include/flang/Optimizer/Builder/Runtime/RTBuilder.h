@@ -19,7 +19,6 @@
 
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
@@ -29,7 +28,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstdint>
-#include <functional>
 
 #ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
@@ -242,6 +240,10 @@ constexpr TypeBuilderFunc getModel<void *>() {
     return fir::LLVMPointerType::get(context,
                                      mlir::IntegerType::get(context, 8));
   };
+}
+template <>
+constexpr TypeBuilderFunc getModel<const void *>() {
+  return getModel<void *>();
 }
 template <>
 constexpr TypeBuilderFunc getModel<void (*)(int)>() {

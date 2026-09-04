@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -291,7 +292,7 @@ struct OMPInformationCache : public InformationCache {
     switch (T.getArch()) {
     case llvm::Triple::nvptx:
     case llvm::Triple::nvptx64:
-    case llvm::Triple::amdgcn:
+    case llvm::Triple::amdgpu:
       assert(OMPBuilder.Config.IsTargetDevice &&
              "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
       OMPBuilder.Config.IsGPU = true;
@@ -649,6 +650,13 @@ struct OMPInformationCache : public InformationCache {
 
   /// Indicates if we have already linked in the OpenMP device library.
   bool OpenMPPostLink = false;
+
+  /// Kernels that OpenMPOpt transformed from generic to SPMD mode. Recorded at
+  /// the transform (changeToSPMDMode) so later cleanup does not have to
+  /// re-derive the mode. Such kernels no longer run a generic-mode state
+  /// machine, so the parallel data-sharing wrapper passed to __kmpc_parallel_60
+  /// is dead in them.
+  SmallPtrSet<Function *, 8> SPMDizedKernels;
 };
 
 template <typename Ty, bool InsertInvalidates = true>
@@ -968,6 +976,12 @@ struct OpenMPOpt {
       // TODO: This should be folded into buildCustomStateMachine.
       Changed |= rewriteDeviceCodeStateMachine();
 
+      // Drop the parallel data-sharing wrapper from __kmpc_parallel_60 calls in
+      // SPMD kernels, where the runtime never uses it, so the (otherwise dead)
+      // wrapper can be eliminated instead of lingering as a non-kernel LDS
+      // user.
+      Changed |= removeSPMDParallelWrappers();
+
       if (remarksEnabled())
         analysisGlobalization();
     } else {
@@ -1088,7 +1102,8 @@ private:
     SmallDenseMap<BasicBlock *, SmallPtrSet<Instruction *, 4>> BB2PRMap;
 
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
-    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                         ArrayRef<BasicBlock *> DeallocBlocks) {
       BasicBlock *CGStartBB = CodeGenIP.getBlock();
       BasicBlock *CGEndBB =
           SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1128,7 +1143,8 @@ private:
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
 
-      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                           ArrayRef<BasicBlock *> DeallocBlocks) {
         BasicBlock *CGStartBB = CodeGenIP.getBlock();
         BasicBlock *CGEndBB =
             SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
@@ -1183,10 +1199,10 @@ private:
           InsertPointTy(ParentBB, ParentBB->end()), DL);
       OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
-      cantFail(
-          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
+      cantFail(OMPInfoCache.OMPBuilder.createBarrier({SeqAfterIP, DL},
+                                                     OMPD_parallel));
 
-      BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
+      UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
       LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
                         << "\n");
@@ -1258,9 +1274,10 @@ private:
       // avoid overriding binding settings, and without explicit cancellation.
       OpenMPIRBuilder::InsertPointTy AfterIP =
           cantFail(OMPInfoCache.OMPBuilder.createParallel(
-              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-              OMP_PROC_BIND_default, /* IsCancellable */ false));
-      BranchInst::Create(AfterBB, AfterIP.getBlock());
+              Loc, AllocaIP, /* DeallocBlocks */ {}, BodyGenCB, PrivCB, FiniCB,
+              nullptr, nullptr, OMP_PROC_BIND_default,
+              /* IsCancellable */ false));
+      UncondBrInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
@@ -1297,8 +1314,9 @@ private:
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
           cantFail(OMPInfoCache.OMPBuilder.createBarrier(
-              InsertPointTy(NewCI->getParent(),
-                            NewCI->getNextNode()->getIterator()),
+              {InsertPointTy(NewCI->getParent(),
+                             NewCI->getNextNode()->getIterator()),
+               NewCI->getDebugLoc()},
               OMPD_parallel));
         }
 
@@ -1802,10 +1820,13 @@ private:
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
-      // unfortunate but we work around it for now.
+      // unfortunate but we work around it for now. No instruction is emitted
+      // here, so there is no debug location to preserve.
       if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
-        OMPInfoCache.OMPBuilder.updateToLocation(OpenMPIRBuilder::InsertPointTy(
-            &F.getEntryBlock(), F.getEntryBlock().begin()));
+        OMPInfoCache.OMPBuilder.updateToLocation(
+            {OpenMPIRBuilder::InsertPointTy(&F.getEntryBlock(),
+                                            F.getEntryBlock().begin()),
+             DebugLoc()});
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
       uint32_t SrcLocStrSize;
@@ -1978,6 +1999,11 @@ private:
   /// Rewrite the device (=GPU) code state machine create in non-SPMD mode in
   /// the cases we can avoid taking the address of a function.
   bool rewriteDeviceCodeStateMachine();
+
+  /// In SPMD kernels the parallel data-sharing wrapper passed to
+  /// __kmpc_parallel_60 is never used by the runtime; null it out so the dead
+  /// wrapper (and any LDS it references) can be removed.
+  bool removeSPMDParallelWrappers();
 
   ///
   ///}}
@@ -2240,6 +2266,47 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
 
     ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
 
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+bool OpenMPOpt::removeSPMDParallelWrappers() {
+  // Nothing to clean up unless we SPMD-ized at least one kernel.
+  if (OMPInfoCache.SPMDizedKernels.empty())
+    return false;
+
+  OMPInformationCache::RuntimeFunctionInfo &KernelParallelRFI =
+      OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_60];
+  if (!KernelParallelRFI || !KernelParallelRFI.Declaration)
+    return false;
+
+  constexpr unsigned WrapperFunctionArgNo = 6;
+  bool Changed = false;
+  for (User *U : KernelParallelRFI.Declaration->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI || CI->getCalledOperand() != KernelParallelRFI.Declaration ||
+        CI->arg_size() <= WrapperFunctionArgNo)
+      continue;
+
+    Value *Wrapper = CI->getArgOperand(WrapperFunctionArgNo);
+    if (isa<ConstantPointerNull>(Wrapper))
+      continue;
+
+    // Only drop the wrapper for a parallel region reached from a single kernel
+    // that we transformed to SPMD mode. A region also reachable from a
+    // generic-mode kernel still needs its wrapper for that kernel's state
+    // machine, and getUniqueKernelFor conservatively bails on such shared
+    // regions. (Mirrors the unique-kernel requirement in
+    // rewriteDeviceCodeStateMachine.)
+    Kernel K = getUniqueKernelFor(*CI->getFunction());
+    if (!K || !OMPInfoCache.SPMDizedKernels.contains(K))
+      continue;
+
+    CI->setArgOperand(
+        WrapperFunctionArgNo,
+        ConstantPointerNull::get(cast<PointerType>(Wrapper->getType())));
     Changed = true;
   }
 
@@ -2919,9 +2986,9 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 
   // Check if the edge into the successor block contains a condition that only
   // lets the main thread execute it.
-  static bool isInitialThreadOnlyEdge(Attributor &A, BranchInst *Edge,
+  static bool isInitialThreadOnlyEdge(Attributor &A, CondBrInst *Edge,
                                       BasicBlock &SuccessorBB) {
-    if (!Edge || !Edge->isConditional())
+    if (!Edge)
       return false;
     if (Edge->getSuccessor(0) != &SuccessorBB)
       return false;
@@ -3128,7 +3195,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         if (LivenessAA && LivenessAA->isEdgeDead(PredBB, &BB))
           continue;
         bool InitialEdgeOnly = isInitialThreadOnlyEdge(
-            A, dyn_cast<BranchInst>(PredBB->getTerminator()), BB);
+            A, dyn_cast<CondBrInst>(PredBB->getTerminator()), BB);
         mergeInPredecessor(A, ED, BEDMap[PredBB], InitialEdgeOnly);
       }
     }
@@ -3458,10 +3525,13 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
            bool &) -> std::optional<Value *> { return nullptr; };
 
     Function *F = getAnchorScope();
-    for (User *U : RFI.Declaration->users())
-      if (CallBase *CB = dyn_cast<CallBase>(U)) {
-        if (CB->getFunction() != F)
-          continue;
+    const OMPInformationCache::RuntimeFunctionInfo::UseVector *Uses =
+        RFI.getUseVector(*F);
+    if (!Uses)
+      return;
+
+    for (Use *U : *Uses)
+      if (CallBase *CB = dyn_cast<CallBase>(U->getUser())) {
         MallocCalls.insert(CB);
         A.registerSimplificationCallback(IRPosition::callsite_returned(*CB),
                                          SCB);
@@ -4060,7 +4130,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           OMPInfoCache.OMPBuilder.getOrCreateSrcLocStr(Loc, SrcLocStrSize);
       Value *Ident =
           OMPInfoCache.OMPBuilder.getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-      BranchInst::Create(RegionCheckTidBB, ParentBB)->setDebugLoc(DL);
+      UncondBrInst::Create(RegionCheckTidBB, ParentBB)->setDebugLoc(DL);
 
       // Add check for Tid in RegionCheckTidBB
       RegionCheckTidBB->getTerminator()->eraseFromParent();
@@ -4084,11 +4154,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
       FunctionCallee BarrierFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_barrier_simple_spmd);
-      OMPInfoCache.OMPBuilder.updateToLocation(InsertPointTy(
-          RegionBarrierBB, RegionBarrierBB->getFirstInsertionPt()));
+      OMPInfoCache.OMPBuilder.updateToLocation(
+          {InsertPointTy(RegionBarrierBB,
+                         RegionBarrierBB->getFirstInsertionPt()),
+           DL});
       CallInst *Barrier =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
-      Barrier->setDebugLoc(DL);
       OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
 
       // Second barrier ensures workers have read broadcast values.
@@ -4220,7 +4291,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
                          ConstantInt::get(ThreadIdInBlock->getType(), 0),
                          "thread.is_main", InitBB);
     IsMainThread->setDebugLoc(DLoc);
-    BranchInst::Create(ReturnBB, UserCodeBB, IsMainThread, InitBB);
+    CondBrInst::Create(IsMainThread, ReturnBB, UserCodeBB, InitBB);
   }
 
   bool changeToSPMDMode(Attributor &A, ChangeStatus &Changed) {
@@ -4293,6 +4364,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
                          ExecModeVal | OMP_TGT_EXEC_MODE_GENERIC_SPMD));
 
     ++NumOpenMPTargetRegionKernelsSPMD;
+
+    // Record that this kernel now runs SPMD so post-Attributor cleanup can drop
+    // the now-dead parallel data-sharing wrapper without re-deriving the mode.
+    OMPInfoCache.SPMDizedKernels.insert(Kernel);
 
     auto Remark = [&](OptimizationRemark OR) {
       return OR << "Transformed generic-mode kernel to SPMD-mode.";
@@ -4462,7 +4537,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
                          ConstantInt::getAllOnesValue(KernelInitCB->getType()),
                          "thread.is_worker", InitBB);
     IsWorker->setDebugLoc(DLoc);
-    BranchInst::Create(IsWorkerCheckBB, UserCodeEntryBB, IsWorker, InitBB);
+    CondBrInst::Create(IsWorker, IsWorkerCheckBB, UserCodeEntryBB, InitBB);
 
     Module &M = *Kernel->getParent();
     FunctionCallee BlockHwSizeFn =
@@ -4486,8 +4561,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
         ICmpInst::ICmp, llvm::CmpInst::ICMP_SLT, KernelInitCB, BlockSize,
         "thread.is_main_or_worker", IsWorkerCheckBB);
     IsMainOrWorker->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineBeginBB, StateMachineFinishedBB,
-                       IsMainOrWorker, IsWorkerCheckBB);
+    CondBrInst::Create(IsMainOrWorker, StateMachineBeginBB,
+                       StateMachineFinishedBB, IsWorkerCheckBB);
 
     // Create local storage for the work function pointer.
     const DataLayout &DL = M.getDataLayout();
@@ -4542,13 +4617,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
                          Constant::getNullValue(VoidPtrTy), "worker.is_done",
                          StateMachineBeginBB);
     IsDone->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineFinishedBB, StateMachineIsActiveCheckBB,
-                       IsDone, StateMachineBeginBB)
+    CondBrInst::Create(IsDone, StateMachineFinishedBB,
+                       StateMachineIsActiveCheckBB, StateMachineBeginBB)
         ->setDebugLoc(DLoc);
 
-    BranchInst::Create(StateMachineIfCascadeCurrentBB,
-                       StateMachineDoneBarrierBB, IsActiveWorker,
-                       StateMachineIsActiveCheckBB)
+    CondBrInst::Create(IsActiveWorker, StateMachineIfCascadeCurrentBB,
+                       StateMachineDoneBarrierBB, StateMachineIsActiveCheckBB)
         ->setDebugLoc(DLoc);
 
     Value *ZeroArg =
@@ -4568,7 +4642,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           StateMachineEndParallelBB);
       CallInst::Create(ParallelRegion, {ZeroArg, GTid}, "", PRExecuteBB)
           ->setDebugLoc(DLoc);
-      BranchInst::Create(StateMachineEndParallelBB, PRExecuteBB)
+      UncondBrInst::Create(StateMachineEndParallelBB, PRExecuteBB)
           ->setDebugLoc(DLoc);
 
       BasicBlock *PRNextBB =
@@ -4590,7 +4664,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         IsPR = ConstantInt::getTrue(Ctx);
       }
 
-      BranchInst::Create(PRExecuteBB, PRNextBB, IsPR,
+      CondBrInst::Create(IsPR, PRExecuteBB, PRNextBB,
                          StateMachineIfCascadeCurrentBB)
           ->setDebugLoc(DLoc);
       StateMachineIfCascadeCurrentBB = PRNextBB;
@@ -4606,8 +4680,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
                        StateMachineIfCascadeCurrentBB)
           ->setDebugLoc(DLoc);
     }
-    BranchInst::Create(StateMachineEndParallelBB,
-                       StateMachineIfCascadeCurrentBB)
+    UncondBrInst::Create(StateMachineEndParallelBB,
+                         StateMachineIfCascadeCurrentBB)
         ->setDebugLoc(DLoc);
 
     FunctionCallee EndParallelFn =
@@ -4617,12 +4691,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
         CallInst::Create(EndParallelFn, {}, "", StateMachineEndParallelBB);
     OMPInfoCache.setCallingConvention(EndParallelFn, EndParallel);
     EndParallel->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineDoneBarrierBB, StateMachineEndParallelBB)
+    UncondBrInst::Create(StateMachineDoneBarrierBB, StateMachineEndParallelBB)
         ->setDebugLoc(DLoc);
 
     CallInst::Create(BarrierFn, {Ident, GTid}, "", StateMachineDoneBarrierBB)
         ->setDebugLoc(DLoc);
-    BranchInst::Create(StateMachineBeginBB, StateMachineDoneBarrierBB)
+    UncondBrInst::Create(StateMachineBeginBB, StateMachineDoneBarrierBB)
         ->setDebugLoc(DLoc);
 
     return true;
@@ -4946,7 +5020,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_end_master:
       case OMPRTL___kmpc_barrier:
       case OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2:
-      case OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2:
+      case OMPRTL___kmpc_gpu_xteam_reduce_nowait:
       case OMPRTL___kmpc_error:
       case OMPRTL___kmpc_flush:
       case OMPRTL___kmpc_get_hardware_thread_id_in_block:
@@ -5022,6 +5096,29 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_free_shared:
         // Return without setting a fixpoint, to be resolved in updateImpl.
         return;
+      case OMPRTL___kmpc_distribute_static_loop_4:
+      case OMPRTL___kmpc_distribute_static_loop_4u:
+      case OMPRTL___kmpc_distribute_static_loop_8:
+      case OMPRTL___kmpc_distribute_static_loop_8u:
+      case OMPRTL___kmpc_distribute_for_static_loop_4:
+      case OMPRTL___kmpc_distribute_for_static_loop_4u:
+      case OMPRTL___kmpc_distribute_for_static_loop_8:
+      case OMPRTL___kmpc_distribute_for_static_loop_8u:
+      case OMPRTL___kmpc_for_static_loop_4:
+      case OMPRTL___kmpc_for_static_loop_4u:
+      case OMPRTL___kmpc_for_static_loop_8:
+      case OMPRTL___kmpc_for_static_loop_8u:
+        // Parallel regions might be reached by these calls, as they take a
+        // callback argument potentially containing arbitrary user-provided
+        // code.
+        ReachedUnknownParallelRegions.insert(&CB);
+        // TODO: The presence of these calls on their own does not prevent a
+        // kernel from being SPMD-izable. We mark it as such because we need
+        // further changes in order to also consider the contents of the
+        // callbacks passed to them.
+        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+        SPMDCompatibilityTracker.insert(&CB);
+        break;
       default:
         // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
         // generally. However, they do not hide parallel regions.
@@ -5560,13 +5657,22 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
 }
 
 void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
-  if (!DisableOpenMPOptDeglobalization)
-    A.getOrCreateAAFor<AAHeapToShared>(IRPosition::function(F));
-  A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(F));
-  if (!DisableOpenMPOptDeglobalization)
-    A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(F));
+  auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+
+  IRPosition FPos = IRPosition::function(F);
+  A.getOrCreateAAFor<AAExecutionDomain>(FPos);
   if (F.hasFnAttribute(Attribute::Convergent))
-    A.getOrCreateAAFor<AANonConvergent>(IRPosition::function(F));
+    A.getOrCreateAAFor<AANonConvergent>(FPos);
+
+  bool FunctionUsesSharedAlloc = false;
+  if (!DisableOpenMPOptDeglobalization) {
+    const OMPInformationCache::RuntimeFunctionInfo::UseVector *SharedAllocUses =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared].getUseVector(
+            const_cast<Function &>(F));
+    FunctionUsesSharedAlloc = SharedAllocUses && !SharedAllocUses->empty();
+  }
+  bool HasHeapToStackCandidate = false;
+  const TargetLibraryInfo *TLI = nullptr;
 
   for (auto &I : instructions(F)) {
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
@@ -5578,6 +5684,12 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       continue;
     }
     if (auto *CI = dyn_cast<CallBase>(&I)) {
+      if (!DisableOpenMPOptDeglobalization && !HasHeapToStackCandidate) {
+        if (!TLI)
+          TLI = A.getInfoCache().getTargetLibraryInfoForFunction(F);
+        HasHeapToStackCandidate =
+            isRemovableAlloc(CI, TLI) || getFreedOperand(CI, TLI);
+      }
       if (CI->isIndirectCall())
         A.getOrCreateAAFor<AAIndirectCallInfo>(
             IRPosition::callsite_function(*CI));
@@ -5600,6 +5712,11 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       }
     }
   }
+
+  if (FunctionUsesSharedAlloc)
+    A.getOrCreateAAFor<AAHeapToShared>(FPos);
+  if (HasHeapToStackCandidate)
+    A.getOrCreateAAFor<AAHeapToStack>(FPos);
 }
 
 const char AAICVTracker::ID = 0;

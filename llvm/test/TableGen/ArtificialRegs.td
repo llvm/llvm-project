@@ -25,9 +25,9 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // Make sure there are no DA_and_RA and DA_with_hi kind of
 // classes that only contain artificial registers or are inferred
 // copies of already existing register classes that only differ
-// in the presence of artificial regsiters.
+// in the presence of artificial registers.
 //
-// CHECK: RegisterClass RA:
+// CHECK-LABEL: RegisterClass RA:
 // CHECK-NEXT: SpillSize:
 // CHECK-NEXT: SpillAlignment:
 // CHECK-NEXT: NumRegs:
@@ -36,11 +36,12 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // CHECK-NEXT: CoveredBySubRegs:
 // CHECK-NEXT: Allocatable:
 // CHECK-NEXT: AllocationPriority:
+// CHECK-NEXT: Weight: 1
 // CHECK-NEXT: BaseClassOrder:
 // CHECK-NEXT: Regs: A R0 R1{{$}}
 // CHECK-NEXT: SubClasses: RA{{$}}
 //
-// CHECK: RegisterClass DA:
+// CHECK-LABEL: RegisterClass DA:
 // CHECK-NEXT: SpillSize:
 // CHECK-NEXT: SpillAlignment:
 // CHECK-NEXT: NumRegs:
@@ -49,8 +50,16 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // CHECK-NEXT: CoveredBySubRegs:
 // CHECK-NEXT: Allocatable:
 // CHECK-NEXT: AllocationPriority:
+// CHECK-NEXT: Weight: 2
 // CHECK-NEXT: BaseClassOrder:
 // CHECK-NEXT: Regs: A D0{{$}}
 // CHECK-NEXT: SubClasses: DA{{$}}
+//
+// CHECK-LABEL: Register A:
+// CHECK-NEXT: CostPerUse: 0
+// CHECK-NEXT: CoveredBySubregs: 0
+// CHECK-NEXT: HasDisjunctSubRegs: 0
+// CHECK-NEXT: RegUnit 0
+// CHECK-NEXT: Artificial: 1
 
 def TestTarget : Target;

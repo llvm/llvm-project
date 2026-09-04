@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -438,6 +439,13 @@ ExprResult Sema::ActOnBuiltinBitCastExpr(SourceLocation KWLoc, Declarator &D,
 ExprResult Sema::BuildBuiltinBitCastExpr(SourceLocation KWLoc,
                                          TypeSourceInfo *TSI, Expr *Operand,
                                          SourceLocation RParenLoc) {
+  if (Operand->hasPlaceholderType()) {
+    ExprResult PR = CheckPlaceholderExpr(Operand);
+    if (PR.isInvalid())
+      return ExprError();
+    Operand = PR.get();
+  }
+
   CastOperation Op(*this, TSI->getType(), Operand);
   Op.OpRange = CastOperation::OpRangeType(KWLoc, KWLoc, RParenLoc);
   TypeLoc TL = TSI->getTypeLoc();
@@ -1481,16 +1489,23 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    // C++26 [expr.static.cast]p8
+    //   If the enumeration type has a fixed underlying type, the value is
+    //   first converted to that type by integral promotion ([conv.prom]) or
+    //   integral conversion ([conv.integral]), if necessary, and then to the
+    //   enumeration type.
+    const auto *ED = DestType->castAsEnumDecl();
+    bool DestIsFixedBoolean =
+        ED->isFixed() && ED->getIntegerType()->isBooleanType();
     if (SrcType->isIntegralOrEnumerationType()) {
-      // [expr.static.cast]p10 If the enumeration type has a fixed underlying
-      // type, the value is first converted to that type by integral conversion
-      const auto *ED = DestType->castAsEnumDecl();
-      Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
-                 ? CK_IntegralToBoolean
-                 : CK_IntegralCast;
+      Kind = DestIsFixedBoolean ? CK_IntegralToBoolean : CK_IntegralCast;
       return TC_Success;
     } else if (SrcType->isRealFloatingType())   {
-      Kind = CK_FloatingToIntegral;
+      // C++26 [expr.static.cast]p8
+      //   A value of floating-point type can also be explicitly converted
+      //   to ... the underlying type of the enumeration ([conv.fpint]), and
+      //   subsequently to the enumeration type.
+      Kind = DestIsFixedBoolean ? CK_FloatingToBoolean : CK_FloatingToIntegral;
       return TC_Success;
     }
   }
@@ -1589,6 +1604,13 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    return TC_Success;
+  }
+
+  if (SrcType == Self.Context.AMDGPUFeaturePredicateTy &&
+      DestType == Self.Context.getLogicalOperationType()) {
+    SrcExpr = Self.AMDGPU().ExpandAMDGPUPredicateBuiltIn(SrcExpr.get());
+    Kind = CK_NoOp;
     return TC_Success;
   }
 
@@ -2939,10 +2961,16 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
   if (Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
     SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
     const VectorType *VT = SrcTy->getAs<VectorType>();
+    const ConstantMatrixType *MT = SrcTy->getAs<ConstantMatrixType>();
     // change splat from vec1 case to splat from scalar
     if (VT && VT->getNumElements() == 1)
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    // change splat from 1x1 matrix case to splat from scalar
+    else if (MT && MT->getNumElementsFlattened() == 1)
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), MT->getElementType(), CK_HLSLMatrixTruncation,
           SrcExpr.get()->getValueKind(), nullptr, CCK);
     // Inserting a scalar cast here allows for a simplified codegen in
     // the case the destTy is a vector

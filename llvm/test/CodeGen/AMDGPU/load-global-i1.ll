@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-- < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}global_load_i1:

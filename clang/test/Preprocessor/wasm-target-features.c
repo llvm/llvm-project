@@ -107,6 +107,15 @@
 // REFERENCE-TYPES: #define __wasm_reference_types__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mrelaxed-atomics \
+// RUN:   | FileCheck %s -check-prefix=RELAXED-ATOMICS
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mrelaxed-atomics \
+// RUN:   | FileCheck %s -check-prefix=RELAXED-ATOMICS
+//
+// RELAXED-ATOMICS: #define __wasm_relaxed_atomics__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mrelaxed-simd \
 // RUN:   | FileCheck %s -check-prefix=RELAXED-SIMD
 // RUN: %clang -E -dM %s -o - 2>&1 \
@@ -169,6 +178,7 @@
 // MVP-NOT: #define __wasm_mutable_globals__ 1{{$}}
 // MVP-NOT: #define __wasm_nontrapping_fptoint__ 1{{$}}
 // MVP-NOT: #define __wasm_reference_types__ 1{{$}}
+// MVP-NOT: #define __wasm_relaxed_atomics__ 1{{$}}
 // MVP-NOT: #define __wasm_relaxed_simd__ 1{{$}}
 // MVP-NOT: #define __wasm_sign_ext__ 1{{$}}
 // MVP-NOT: #define __wasm_simd128__ 1{{$}}
@@ -202,10 +212,12 @@
 // GENERIC-NOT: #define __wasm__fp16__ 1{{$}}
 // GENERIC-NOT: #define __wasm_gc__ 1{{$}}
 // GENERIC-NOT: #define __wasm_multimemory__ 1{{$}}
+// GENERIC-NOT: #define __wasm_relaxed_atomics__ 1{{$}}
 // GENERIC-NOT: #define __wasm_relaxed_simd__ 1{{$}}
 // GENERIC-NOT: #define __wasm_simd128__ 1{{$}}
 // GENERIC-NOT: #define __wasm_tail_call__ 1{{$}}
 // GENERIC-NOT: #define __wasm_wide_arithmetic__ 1{{$}}
+// GENERIC-NOT: #define __wasm_libcall_thread_context__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge \
@@ -225,6 +237,7 @@
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_mutable_globals__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_nontrapping_fptoint__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_reference_types__ 1{{$}}
+// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_relaxed_atomics__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_relaxed_simd__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_sign_ext__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_simd128__ 1{{$}}
@@ -239,3 +252,12 @@
 // RUN:   | FileCheck %s -check-prefix=BLEEDING-EDGE-NO-SIMD128
 //
 // BLEEDING-EDGE-NO-SIMD128-NOT: #define __wasm_simd128__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-wasip3 \
+// RUN:   | FileCheck %s -check-prefix=LIBCALL-THREAD-CONTEXT
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-wasip3 \
+// RUN:   | FileCheck %s -check-prefix=LIBCALL-THREAD-CONTEXT
+
+// LIBCALL-THREAD-CONTEXT: #define __wasm_libcall_thread_context__ 1{{$}}

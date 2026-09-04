@@ -96,6 +96,9 @@ private:
   /// Move affected values in the cache for OV to be affected values for NV.
   void transferAffectedValuesInCache(Value *OV, Value *NV);
 
+  /// Remove the entries in the affected-values cache that point to \p CI.
+  void removeAffectedValues(AssumeInst *CI);
+
   /// Flag tracking whether we have scanned the function yet.
   ///
   /// We want to be as lazy about this as possible, and so we scan the function
@@ -128,6 +131,10 @@ public:
   /// been added to the cache earlier.
   LLVM_ABI void unregisterAssumption(AssumeInst *CI);
 
+  /// Replace the assumption referenced by \p Handle (must be a valid handle for
+  /// a registered assumption) with \p New.
+  LLVM_ABI void replaceAssumption(WeakVH &Handle, AssumeInst *New);
+
   /// Update the cache of values being affected by this assumption (i.e.
   /// the values about which this assumption provides information).
   LLVM_ABI void updateAffectedValues(AssumeInst *CI);
@@ -156,6 +163,8 @@ public:
   }
 
   /// Access the list of assumptions which affect this value.
+  ///
+  /// No more than -max-assumes-per-value of them are cached.
   MutableArrayRef<ResultElem> assumptionsFor(const Value *V) {
     if (!Scanned)
       scanFunction();
@@ -168,7 +177,7 @@ public:
   }
 
   /// Determine which values are affected by this assume operand bundle.
-  static void
+  LLVM_ABI static void
   findValuesAffectedByOperandBundle(OperandBundleUse Bundle,
                                     function_ref<void(Value *)> InsertAffected);
 };
@@ -189,15 +198,14 @@ public:
 };
 
 /// Printer pass for the \c AssumptionAnalysis results.
-class AssumptionPrinterPass : public PassInfoMixin<AssumptionPrinterPass> {
+class AssumptionPrinterPass
+    : public RequiredPassInfoMixin<AssumptionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit AssumptionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// An immutable pass that tracks lazily created \c AssumptionCache

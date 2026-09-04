@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestSoftwareStep(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_sequence_test(self, filename, bkpt_name):
         source_file = filename + ".c"
         exe_file = filename + ".x"

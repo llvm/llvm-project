@@ -6,19 +6,20 @@ module attributes {gpu.container_module} {
       %0 = llvm.mlir.undef : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
       %1 = llvm.insertvalue %arg1, %0[0] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
       %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
-      %3 = llvm.mlir.constant(0 : index) : i64
+      %3 = llvm.mlir.constant(0 : i64) : i64
       %4 = llvm.insertvalue %3, %2[2] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
-      %5 = llvm.mlir.constant(10 : index) : i64
+      %5 = llvm.mlir.constant(10 : i64) : i64
       %6 = llvm.insertvalue %5, %4[3, 0] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
-      %7 = llvm.mlir.constant(1 : index) : i64
+      %7 = llvm.mlir.constant(1 : i64) : i64
       %8 = llvm.insertvalue %7, %6[4, 0] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
       llvm.return
     }
   }
   func.func @foo() {
-    // CHECK: [[MEMREF:%.*]] = gpu.alloc () : memref<10xf32, 1>
-    // CHECK: [[DESCRIPTOR:%.*]] = builtin.unrealized_conversion_cast [[MEMREF]] : memref<10xf32, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[PTR:%.*]] = llvm.extractvalue [[DESCRIPTOR]][1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[ALLOCATED:%.*]] = llvm.call @mgpuMemAlloc({{.*}}) : (i64, !llvm.ptr, i8) -> !llvm.ptr
+    // CHECK: [[CAST:%.*]] = llvm.addrspacecast [[ALLOCATED]] : !llvm.ptr to !llvm.ptr<1>
+    // CHECK: [[DESCRIPTOR:%.*]] = llvm.insertvalue [[CAST]], {{.*}}[0] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[PTR:%.*]] = llvm.extractvalue {{.*}}[1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: gpu.launch_func  @kernels::@kernel_1 blocks in ({{.*}}) threads in ({{.*}}) : i64
     // CHECK: args(%{{.*}} : f32, [[PTR]] : !llvm.ptr<1>)
     %0 = arith.constant 0. : f32

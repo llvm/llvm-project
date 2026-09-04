@@ -38,11 +38,11 @@
 
 // CK7-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK7-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
+// CK7-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 8, i64 0]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK7-64-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK7-64-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 // Map types: OMP_MAP_TO  | OMP_MAP_PRIVATE | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 673
-// CK7-32-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 673]
+// CK7-32-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 673, i64 288]
 
 // CK7-LABEL: implicit_maps_double{{.*}}(
 void implicit_maps_double (int a){
@@ -66,20 +66,20 @@ void implicit_maps_double (int a){
 // CK7-32-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK7-32-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK7-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
-// CK7-32: call void [[KERNEL:@.+]](ptr [[DECL]])
+// CK7-64: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
+// CK7-32: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
 #pragma omp target
   {
     d += 1.0;
   }
 }
 
-// CK7-64: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK7-64: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK7-64: [[ADDR:%.+]] = alloca i[[sz]],
 // CK7-64: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK7-64: {{.+}} = load double, ptr [[ADDR]],
 
-// CK7-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
+// CK7-32: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK7-32: [[ADDR:%.+]] = alloca ptr,
 // CK7-32: store ptr [[ARG]], ptr [[ADDR]],
 // CK7-32: [[REF:%.+]] = load ptr, ptr [[ADDR]],

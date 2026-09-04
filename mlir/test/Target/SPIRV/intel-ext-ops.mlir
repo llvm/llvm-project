@@ -60,6 +60,66 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, TensorF
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.MaskedGather / MaskedScatter
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, MaskedGatherScatterINTEL], [SPV_INTEL_masked_gather_scatter]> {
+  // CHECK-LABEL: @masked_gather_f32
+  spirv.func @masked_gather_f32(
+      %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %fill : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32> -> vector<4xf32>
+    %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+         : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xf32> -> vector<4xf32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_gather_i32
+  spirv.func @masked_gather_i32(
+      %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %fill : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32> -> vector<4xi32>
+    %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+         : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xi32> -> vector<4xi32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_scatter_f32
+  spirv.func @masked_scatter_f32(
+      %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %values : vector<4xf32>) "None" {
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32>
+    spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+         : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xf32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_scatter_i32
+  spirv.func @masked_scatter_i32(
+      %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %values : vector<4xi32>) "None" {
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32>
+    spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+         : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xi32>
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.SplitBarrier
 //===----------------------------------------------------------------------===//
 

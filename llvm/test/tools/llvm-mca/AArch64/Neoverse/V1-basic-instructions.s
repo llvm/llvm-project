@@ -779,7 +779,7 @@
 # CHECK-NEXT:  1      6     0.33    *                   ldr	d0, #1048572
 # CHECK-NEXT:  1      6     0.33    *                   ldr	q0, #-1048576
 # CHECK-NEXT:  1      4     0.33                  U     prfm	pldl1strm, #0
-# CHECK-NEXT:  1      4     0.33                  U     prfm	#22, #0
+# CHECK-NEXT:  1      4     0.33                  U     prfm	#25, #0
 # CHECK-NEXT:  3      5     0.67    *      *      U     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  3      5     0.67    *      *      U     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  3      5     0.67    *      *      U     stxr	w5, w6, [x17]
@@ -1219,6 +1219,7 @@
 # CHECK-NEXT:  1      0     0.13                        mov	wzr, w2
 # CHECK-NEXT:  1      0     0.13                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.25                        movz	w2, #0, lsl #16
+# CHECK-NEXT:  1      1     0.25                        mov	w10, #-1235
 # CHECK-NEXT:  1      1     0.25                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.25                        mov	x2, #5299989643264
 # CHECK-NEXT:  1      0     0.13                        mov	x2, #0
@@ -1272,7 +1273,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  48.00  48.00  48.00  98.67  171.67 171.67 323.25 210.25 142.75 142.75 190.00 56.50  65.50  13.00
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  48.00  48.00  48.00  98.67  171.67 171.67 323.50 210.50 143.00 143.00 190.00 56.50  65.50  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -2045,7 +2046,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldr	d0, #1048572
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     ldr	q0, #-1048576
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     prfm	pldl1strm, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     prfm	#22, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -      -      -     prfm	#25, #0
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.33   0.83   0.83    -      -      -      -      -      -      -      -     stxrb	w18, w8, [sp]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.33   0.83   0.83    -      -      -      -      -      -      -      -     stxrh	w24, w15, [x16]
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.33   0.83   0.83    -      -      -      -      -      -      -      -     stxr	w5, w6, [x17]
@@ -2485,6 +2486,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	wzr, w2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w3, w5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     movz	w2, #0, lsl #16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	w10, #-1235
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	w2, #-1235
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x2, #5299989643264
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x2, #0

@@ -15,6 +15,8 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include <string>
 
@@ -60,7 +62,7 @@ bool areAllBoundsConstant(llvm::ArrayRef<mlir::Value> bounds);
 /// \return The existing or created PrivateRecipeOp symbol
 mlir::SymbolRefAttr
 createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                         mlir::Type ty,
+                         mlir::Value var,
                          llvm::SmallVector<mlir::Value> &dataBoundOps);
 
 /// Create or get a firstprivate recipe for the given type and name.
@@ -71,7 +73,7 @@ createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \return The existing or created FirstprivateRecipeOp symbol
 mlir::SymbolRefAttr
 createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                              mlir::Type ty,
+                              mlir::Value var,
                               llvm::SmallVector<mlir::Value> &dataBoundOps);
 
 /// Create or get a reduction recipe for the given type, name and operator.
@@ -84,17 +86,29 @@ createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \return The existing or created ReductionRecipeOp symbol
 mlir::SymbolRefAttr
 createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
-                           mlir::Type ty, mlir::acc::ReductionOperator op,
+                           mlir::Value var, mlir::acc::ReductionOperator op,
                            llvm::SmallVector<mlir::Value> &dataBoundOps,
                            mlir::Attribute fastMathAttr = {});
 
 /// Walks through operations that forward or view their operand and returns
 /// the original defining value. This strips operations like fir.convert,
-/// ViewLikeOpInterface, and optionally fir.declare/hlfir.declare.
+/// ViewLikeOpInterface, and optionally fir.declare/hlfir.declare. Block
+/// arguments of `acc.compute_region` are unwrapped to the corresponding
+/// `ins` operand.
 /// \param value The value to trace back to its origin
 /// \param stripDeclare If true (default), also strips declare operations
 /// \return The original value after stripping all intermediate operations
 mlir::Value getOriginalDef(mlir::Value value, bool stripDeclare = true);
+
+/// Returns true if \p symbol, used by \p user, is valid in an OpenACC offload
+/// region for FIR. When \p definingOpPtr is provided, it is set to the
+/// defining operation of \p symbol if one is found.
+bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
+                      mlir::Operation **definingOpPtr = nullptr);
+
+/// Returns true if \p val may be used from OpenACC region \p region without
+/// further implicit data mapping.
+bool isValidValueUse(mlir::Value val, mlir::Region &region);
 
 } // namespace acc
 } // namespace fir

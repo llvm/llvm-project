@@ -21,7 +21,7 @@ class raw_ostream;
 namespace pdb {
 class NativeSession;
 
-class NativeTypeUDT : public NativeRawSymbol {
+class LLVM_ABI NativeTypeUDT : public NativeRawSymbol {
 public:
   NativeTypeUDT(NativeSession &Session, SymIndexId Id, codeview::TypeIndex TI,
                 codeview::ClassRecord Class);

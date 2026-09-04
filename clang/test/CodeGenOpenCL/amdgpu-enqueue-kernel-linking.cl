@@ -1,8 +1,8 @@
 // Make sure that invoking blocks in static functions with the same name in
 // different modules are linked together.
 
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_first -DTYPE=float -DCONST=256.0f -emit-llvm-bc -o %t.0.bc %s
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_second -DTYPE=int -DCONST=128.0f -emit-llvm-bc -o %t.1.bc %s
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_first -DTYPE=float -DCONST=256.0f -emit-llvm-bc -o %t.0.bc %s
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu-amd-amdhsa -fno-ident -DKERNEL_NAME=test_kernel_second -DTYPE=int -DCONST=128.0f -emit-llvm-bc -o %t.1.bc %s
 
 // Make sure nothing strange happens with the linkage choices.
 // RUN: opt -passes=globalopt -o %t.opt.0.bc %t.0.bc
@@ -30,7 +30,7 @@
 // CHECK-LABEL: define dso_local amdgpu_kernel void @test_kernel_first(
 
 
-// CHECK-LABEL: define internal fastcc void @static_invoker(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr)
+// CHECK-LABEL: define internal void @static_invoker(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr)
 // CHECK:  call i32 @__enqueue_kernel_basic(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle to ptr), ptr %{{.+}})
 
 // CHECK: declare i32 @__enqueue_kernel_basic(ptr addrspace(1), i32, ptr addrspace(5), ptr, ptr) local_unnamed_addr
@@ -48,7 +48,7 @@
 
 // CHECK-LABEL: define dso_local amdgpu_kernel void @test_kernel_second(ptr addrspace(1) noundef align 4 %outptr, ptr addrspace(1) noundef align 4 %argptr, ptr addrspace(1) noundef align 4 %difference)
 
-// CHECK-LABEL: define internal fastcc void @static_invoker.5(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr) unnamed_addr #{{[0-9]+}} {
+// CHECK-LABEL: define internal void @static_invoker.5(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr) unnamed_addr #{{[0-9]+}} {
 // CHECK: call i32 @__enqueue_kernel_basic(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle.3 to ptr), ptr %{{.+}})
 
 

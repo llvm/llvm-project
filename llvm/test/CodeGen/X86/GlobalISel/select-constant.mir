@@ -26,6 +26,10 @@
     ret i64 1879048192
   }
 
+  define i64 @const_i64_u32_max() {
+    ret i64 4294967295
+  }
+
   define i64 @const_i64_i32() {
     ret i64 -1
   }
@@ -145,6 +149,24 @@ body:             |
 
 ...
 ---
+name:            const_i64_u32_max
+legalized:       true
+regBankSelected: true
+selected:        false
+registers:
+  - { id: 0, class: gpr }
+body:             |
+  bb.1 (%ir-block.0):
+    ; CHECK-LABEL: name: const_i64_u32_max
+    ; CHECK: [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 4294967295
+    ; CHECK-NEXT: $rax = COPY [[MOV32ri64_]]
+    ; CHECK-NEXT: RET 0, implicit $rax
+    %0(s64) = G_CONSTANT i64 4294967295
+    $rax = COPY %0(s64)
+    RET 0, implicit $rax
+
+...
+---
 name:            const_i64_i32
 legalized:       true
 regBankSelected: true
@@ -178,8 +200,8 @@ body:             |
     ; CHECK: liveins: $rdi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK-NEXT: [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 0
-    ; CHECK-NEXT: MOV64mr [[COPY]], 1, $noreg, 0, $noreg, [[MOV64ri32_]] :: (store (p0) into %ir.data)
+    ; CHECK-NEXT: [[MOV32ri64_:%[0-9]+]]:gr64 = MOV32ri64 0
+    ; CHECK-NEXT: MOV64mr [[COPY]], 1, $noreg, 0, $noreg, [[MOV32ri64_]] :: (store (p0) into %ir.data)
     ; CHECK-NEXT: RET 0
     %0(p0) = COPY $rdi
     %1(p0) = G_CONSTANT i64 0

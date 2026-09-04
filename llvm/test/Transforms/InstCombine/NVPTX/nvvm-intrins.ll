@@ -104,13 +104,13 @@ define float @fma_float_ftz(float %a, float %b, float %c) #0 {
 
 ; CHECK-LABEL: @fmax_double
 define double @fmax_double(double %a, double %b) #0 {
-; CHECK: call double @llvm.maxnum.f64
+; CHECK: call double @llvm.maximumnum.f64
   %ret = call double @llvm.nvvm.fmax.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @fmax_float
 define float @fmax_float(float %a, float %b) #0 {
-; NOFTZ: call float @llvm.maxnum.f32
+; NOFTZ: call float @llvm.maximumnum.f32
 ; FTZ: call float @llvm.nvvm.fmax.f
   %ret = call float @llvm.nvvm.fmax.f(float %a, float %b)
   ret float %ret
@@ -118,20 +118,20 @@ define float @fmax_float(float %a, float %b) #0 {
 ; CHECK-LABEL: @fmax_float_ftz
 define float @fmax_float_ftz(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.nvvm.fmax.ftz.f
-; FTZ: call float @llvm.maxnum.f32
+; FTZ: call float @llvm.maximumnum.f32
   %ret = call float @llvm.nvvm.fmax.ftz.f(float %a, float %b)
   ret float %ret
 }
 
 ; CHECK-LABEL: @fmin_double
 define double @fmin_double(double %a, double %b) #0 {
-; CHECK: call double @llvm.minnum.f64
+; CHECK: call double @llvm.minimumnum.f64
   %ret = call double @llvm.nvvm.fmin.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @fmin_float
 define float @fmin_float(float %a, float %b) #0 {
-; NOFTZ: call float @llvm.minnum.f32
+; NOFTZ: call float @llvm.minimumnum.f32
 ; FTZ: call float @llvm.nvvm.fmin.f
   %ret = call float @llvm.nvvm.fmin.f(float %a, float %b)
   ret float %ret
@@ -139,7 +139,7 @@ define float @fmin_float(float %a, float %b) #0 {
 ; CHECK-LABEL: @fmin_float_ftz
 define float @fmin_float_ftz(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.nvvm.fmin.ftz.f
-; FTZ: call float @llvm.minnum.f32
+; FTZ: call float @llvm.minimumnum.f32
   %ret = call float @llvm.nvvm.fmin.ftz.f(float %a, float %b)
   ret float %ret
 }

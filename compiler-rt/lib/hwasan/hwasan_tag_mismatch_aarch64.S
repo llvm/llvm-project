@@ -20,7 +20,7 @@
 // particularly important as hwasan_check_* instances are duplicated in every
 // translation unit where HWASan is enabled.
 // This function calls HwasanTagMismatch to step back into the C++ code that
-// completes the stack unwinding and error printing. This function is is not
+// completes the stack unwinding and error printing. This function is not
 // permitted to return.
 
 

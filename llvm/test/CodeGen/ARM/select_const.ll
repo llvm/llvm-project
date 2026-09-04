@@ -628,7 +628,6 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; ARM-NEXT:    orr lr, lr, #65536
 ; ARM-NEXT:    mvnne r0, #3
 ; ARM-NEXT:    and r4, r0, lr
-; ARM-NEXT:    movne r12, #1
 ; ARM-NEXT:    subs r0, r4, #1
 ; ARM-NEXT:    eor r2, r2, lr
 ; ARM-NEXT:    eor r3, r3, #1
@@ -646,12 +645,10 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB2-NEXT:    ands r12, r0, #1
 ; THUMB2-NEXT:    mov.w lr, #1
 ; THUMB2-NEXT:    it ne
-; THUMB2-NEXT:    movne.w r12, #1
-; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne.w lr, #65536
 ; THUMB2-NEXT:    subs.w r0, lr, #1
-; THUMB2-NEXT:    eor r3, r3, #1
 ; THUMB2-NEXT:    sbc r1, r12, #0
+; THUMB2-NEXT:    eor r3, r3, #1
 ; THUMB2-NEXT:    eor r2, r2, #65537
 ; THUMB2-NEXT:    orrs r2, r3
 ; THUMB2-NEXT:    itt ne
@@ -663,42 +660,38 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    .save {r4, r5, r6, r7, lr}
 ; THUMB-NEXT:    push {r4, r5, r6, r7, lr}
-; THUMB-NEXT:    movs r7, #1
-; THUMB-NEXT:    ands r0, r7
-; THUMB-NEXT:    subs r1, r0, #1
-; THUMB-NEXT:    mov r12, r0
-; THUMB-NEXT:    mov r4, r12
-; THUMB-NEXT:    sbcs r4, r1
-; THUMB-NEXT:    cmp r0, #0
+; THUMB-NEXT:    movs r6, #1
+; THUMB-NEXT:    ands r0, r6
 ; THUMB-NEXT:    bne .LBB24_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    movs r5, #23
 ; THUMB-NEXT:    b .LBB24_3
 ; THUMB-NEXT:  .LBB24_2:
-; THUMB-NEXT:    movs r0, #3
-; THUMB-NEXT:    mvns r5, r0
+; THUMB-NEXT:    movs r1, #3
+; THUMB-NEXT:    mvns r5, r1
 ; THUMB-NEXT:  .LBB24_3:
-; THUMB-NEXT:    ldr r0, .LCPI24_0
-; THUMB-NEXT:    ands r5, r0
-; THUMB-NEXT:    movs r6, #0
-; THUMB-NEXT:    subs r0, r5, #1
-; THUMB-NEXT:    mov r12, r4
+; THUMB-NEXT:    ldr r1, .LCPI24_0
+; THUMB-NEXT:    ands r5, r1
+; THUMB-NEXT:    movs r4, #0
+; THUMB-NEXT:    subs r7, r5, #1
+; THUMB-NEXT:    mov r12, r0
 ; THUMB-NEXT:    mov r1, r12
-; THUMB-NEXT:    sbcs r1, r6
-; THUMB-NEXT:    eors r3, r7
-; THUMB-NEXT:    ldr r6, .LCPI24_0
-; THUMB-NEXT:    eors r2, r6
+; THUMB-NEXT:    sbcs r1, r4
+; THUMB-NEXT:    eors r3, r6
+; THUMB-NEXT:    ldr r4, .LCPI24_0
+; THUMB-NEXT:    eors r2, r4
 ; THUMB-NEXT:    orrs r2, r3
 ; THUMB-NEXT:    cmp r2, #0
 ; THUMB-NEXT:    beq .LBB24_5
 ; THUMB-NEXT:  @ %bb.4:
-; THUMB-NEXT:    mov r12, r4
+; THUMB-NEXT:    mov r12, r0
 ; THUMB-NEXT:    mov r1, r12
 ; THUMB-NEXT:  .LBB24_5:
 ; THUMB-NEXT:    beq .LBB24_7
 ; THUMB-NEXT:  @ %bb.6:
-; THUMB-NEXT:    movs r0, r5
+; THUMB-NEXT:    movs r7, r5
 ; THUMB-NEXT:  .LBB24_7:
+; THUMB-NEXT:    movs r0, r7
 ; THUMB-NEXT:    pop {r4, r5, r6, r7}
 ; THUMB-NEXT:    pop {r2}
 ; THUMB-NEXT:    bx r2

@@ -9,4 +9,4 @@ class A { A(int i); };
 // CHECK: TBEGIN' comment [clang-tidy-nolint]
 // CHECK: :[[@LINE-8]]:11: warning: single-argument constructors must be marked explicit
 
-// RUN: not clang-tidy %s --checks='-*,google-explicit-constructor' 2>&1 | FileCheck %s
+// RUN: not clang-tidy %s --checks='-*,google-explicit-constructor' -- 2>&1 | FileCheck %s

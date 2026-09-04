@@ -1,6 +1,6 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-android %s -o %t.o
-# RUN: not ld.lld --shared --android-memtag-mode=sync %t.o -o /dev/null 2>&1 | \
+# RUN: not ld.lld --shared -z memtag-mode=sync --android-memtag-note %t.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s --implicit-check-not=error:
 
 ## Verify that, when composing PAuth and Memtag ABIs, we error if trying to

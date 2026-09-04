@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "inline-asm-lowering"
@@ -24,6 +25,16 @@
 using namespace llvm;
 
 void InlineAsmLowering::anchor() {}
+
+/// Emit an inline asm error diagnostic and materialize undef values for the
+/// call results so that the rest of the function remains well-formed.
+static void emitInlineAsmError(MachineIRBuilder &MIRBuilder,
+                               const CallBase &Call, const Twine &Message,
+                               ArrayRef<Register> ResRegs) {
+  Call.getContext().diagnose(DiagnosticInfoInlineAsm(Call, Message));
+  for (Register Reg : ResRegs)
+    MIRBuilder.buildUndef(Reg);
+}
 
 namespace {
 
@@ -34,6 +45,9 @@ public:
   /// Regs - If this is a register or register class operand, this
   /// contains the set of assigned registers corresponding to the operand.
   SmallVector<Register, 1> Regs;
+
+  /// The register class selected for this operand's constraint.
+  const TargetRegisterClass *RegClass = nullptr;
 
   explicit GISelAsmOperandInfo(const TargetLowering::AsmOperandInfo &Info)
       : TargetLowering::AsmOperandInfo(Info) {}
@@ -101,6 +115,7 @@ static void getRegistersForValue(MachineFunction &MF,
   // RC is unset only on failure. Return immediately.
   if (!RC)
     return;
+  OpInfo.RegClass = RC;
 
   // No need to allocate a matching input constraint since the constraint it's
   // matching to has already been allocated.
@@ -208,7 +223,7 @@ static bool buildAnyextOrCopy(Register Dst, Register Src,
                            "destination register class\n");
       return false;
     }
-    Src = MIRBuilder.buildAnyExt(LLT::scalar(DstSize), Src).getReg(0);
+    Src = MIRBuilder.buildAnyExt(LLT::integer(DstSize), Src).getReg(0);
   }
 
   MIRBuilder.buildCopy(Dst, Src);
@@ -347,9 +362,12 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Find a register that we can use.
         if (OpInfo.Regs.empty()) {
-          LLVM_DEBUG(dbgs()
-                     << "Couldn't allocate output register for constraint\n");
-          return false;
+          emitInlineAsmError(MIRBuilder, Call,
+                             "could not allocate output register for "
+                             "constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'",
+                             GetOrCreateVRegs(Call));
+          return true;
         }
 
         // Add information to the INLINEASM instruction to know that this
@@ -411,14 +429,14 @@ bool InlineAsmLowering::lowerInlineAsm(
         // We need the tied input to live in the same register class as the def.
         //
         // - if Def is a vreg, we can just use its regclass.
-        // - if Def is a physreg, create a vreg in the minimal regclass for that
-        //   physreg.
+        // - if Def is a physreg, create a vreg in the regclass selected for its
+        //   constraint.
         //
         // Otherwise RegBankSelect may leave it in the wrong bank (e.g. GPR even
         // though it's tied to an FP physreg).
-        const TargetRegisterClass *RC = Def.isVirtual()
-                                            ? MRI->getRegClass(Def)
-                                            : TRI->getMinimalPhysRegClass(Def);
+        const TargetRegisterClass *RC =
+            Def.isVirtual() ? MRI->getRegClass(Def) : OpInfo.RegClass;
+        assert(RC && "Expected a register class for matching constraint");
 
         // Materialize `In` in a new vreg that has a register class that matches
         // the register class of `Def`.
@@ -528,19 +546,16 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       // Copy the input into the appropriate registers.
       if (OpInfo.Regs.empty()) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Couldn't allocate input register for register constraint\n");
-        return false;
+        emitInlineAsmError(MIRBuilder, Call,
+                           "could not allocate input reg for constraint '" +
+                               Twine(OpInfo.ConstraintCode) + "'",
+                           GetOrCreateVRegs(Call));
+        return true;
       }
 
       unsigned NumRegs = OpInfo.Regs.size();
       ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
-      assert(NumRegs == SourceRegs.size() &&
-             "Expected the number of input registers to match the number of "
-             "source registers");
-
-      if (NumRegs > 1) {
+      if (NumRegs != 1 || SourceRegs.size() != 1) {
         LLVM_DEBUG(dbgs() << "Input operands with multiple input registers are "
                              "not supported yet\n");
         return false;
@@ -625,11 +640,9 @@ bool InlineAsmLowering::lowerInlineAsm(
       if (ResTy.isScalar() && ResTy.getSizeInBits() < SrcSize) {
         // First copy the non-typed virtual register into a generic virtual
         // register
-        Register Tmp1Reg =
-            MRI->createGenericVirtualRegister(LLT::scalar(SrcSize));
-        MIRBuilder.buildCopy(Tmp1Reg, SrcReg);
+        auto Copy = MIRBuilder.buildCopy(LLT::integer(SrcSize), SrcReg);
         // Need to truncate the result of the register
-        MIRBuilder.buildTrunc(ResRegs[i], Tmp1Reg);
+        MIRBuilder.buildTrunc(ResRegs[i], Copy);
       } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
       } else {

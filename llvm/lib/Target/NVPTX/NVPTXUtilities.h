@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the declaration of the NVVM specific utility functions.
+// This file contains declarations for PTX-specific utility functions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,13 +14,10 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -30,64 +27,34 @@
 namespace llvm {
 
 class DataLayout;
-class TargetMachine;
+class MemSDNode;
 
-void clearAnnotationCache(const Module *);
-
-bool isTexture(const Value &);
-bool isSurface(const Value &);
-bool isSampler(const Value &);
-bool isImage(const Value &);
-bool isImageReadOnly(const Value &);
-bool isImageWriteOnly(const Value &);
-bool isImageReadWrite(const Value &);
-bool isManaged(const Value &);
-
-StringRef getTextureName(const Value &);
-StringRef getSurfaceName(const Value &);
-StringRef getSamplerName(const Value &);
-
-SmallVector<unsigned, 3> getMaxNTID(const Function &);
-SmallVector<unsigned, 3> getReqNTID(const Function &);
-SmallVector<unsigned, 3> getClusterDim(const Function &);
-
-std::optional<uint64_t> getOverallMaxNTID(const Function &);
-std::optional<uint64_t> getOverallReqNTID(const Function &);
-std::optional<uint64_t> getOverallClusterRank(const Function &);
-
-std::optional<unsigned> getMaxClusterRank(const Function &);
-std::optional<unsigned> getMinCTASm(const Function &);
-std::optional<unsigned> getMaxNReg(const Function &);
-
-bool hasBlocksAreClusters(const Function &);
-
-inline bool isKernelFunction(const Function &F) {
-  return F.getCallingConv() == CallingConv::PTX_Kernel;
-}
-
-bool isParamGridConstant(const Argument &);
-
-inline MaybeAlign getAlign(const Function &F, unsigned Index) {
-  return F.getAttributes().getAttributes(Index).getStackAlignment();
-}
-
-MaybeAlign getAlign(const CallInst &, unsigned);
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
-/// Since function arguments are passed via .param space, we may want to
-/// increase their alignment in a way that ensures that we can effectively
-/// vectorize their loads & stores. We can increase alignment only if the
-/// function has internal or private linkage as for other linkage types callers
-/// may already rely on default alignment. To allow using 128-bit vectorized
-/// loads/stores, this function ensures that alignment is 16 or greater.
-Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
-                                     const DataLayout &DL);
+/// The bit-width of a single element loaded by \p Mem, i.e. the width used for
+/// the ".fromtype" part of the emitted PTX load.
+unsigned getFromTypeWidthForLoad(const MemSDNode *Mem);
 
-Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
-                                   const DataLayout &DL);
+/// ABI alignment of \p ArgTy in .param space, capped at the PTX maximum of 128.
+Align getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL);
 
-Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
-                                 Align InitialAlign, const DataLayout &DL);
+/// The .param-space alignment for a byval parameter or call argument: the
+/// (possibly promoted) parameter alignment, raised to the ptxas byval minimum.
+Align getDeviceByValParamAlign(const Function *F, Type *ArgTy, unsigned AttrIdx,
+                               const DataLayout &DL);
+Align getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
+                               unsigned AttrIdx, const DataLayout &DL);
+
+/// Alignment for a function parameter or return value at AttributeList index
+/// \p AttrIdx (FirstArgIndex + argNo, or ReturnIndex). Prefers an explicit
+/// stackalign, else the ABI type alignment, folding in the byval `align`.
+Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
+                       const DataLayout &DL);
+
+/// Alignment for a call-site argument or return value. Prefers an explicit
+/// stackalign on the call, else resolves the direct callee.
+Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned AttrIdx,
+                       const DataLayout &DL);
 
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.
@@ -100,8 +67,6 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
     return 128;
   return size;
 }
-
-bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
 inline bool shouldPassAsArray(Type *Ty) {
   return Ty->isAggregateType() || Ty->isVectorTy() ||
@@ -195,7 +160,8 @@ inline raw_ostream &operator<<(raw_ostream &O, Scope S) {
   return O;
 }
 
-inline std::string AddressSpaceToString(AddressSpace A) {
+inline const char *addressSpaceToString(AddressSpace A,
+                                        bool UseParamSubqualifiers = false) {
   switch (A) {
   case AddressSpace::Generic:
     return "generic";
@@ -207,8 +173,10 @@ inline std::string AddressSpaceToString(AddressSpace A) {
     return "shared";
   case AddressSpace::SharedCluster:
     return "shared::cluster";
-  case AddressSpace::Param:
-    return "param";
+  case AddressSpace::EntryParam:
+    return UseParamSubqualifiers ? "param::entry" : "param";
+  case AddressSpace::DeviceParam:
+    return UseParamSubqualifiers ? "param::func" : "param";
   case AddressSpace::Local:
     return "local";
   }
@@ -217,7 +185,7 @@ inline std::string AddressSpaceToString(AddressSpace A) {
 }
 
 inline raw_ostream &operator<<(raw_ostream &O, AddressSpace A) {
-  O << AddressSpaceToString(A);
+  O << addressSpaceToString(A);
   return O;
 }
 

@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define float @load_float(ptr %fptr) {
 ; CHECK-LABEL: define float @load_float(
 ; CHECK-SAME: ptr [[FPTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__tsan_atomic32_load(ptr [[FPTR]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
@@ -20,7 +20,7 @@ define float @load_float(ptr %fptr) {
 define double @load_double(ptr %fptr) {
 ; CHECK-LABEL: define double @load_double(
 ; CHECK-SAME: ptr [[FPTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @__tsan_atomic64_load(ptr [[FPTR]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[TMP2]] to double
@@ -34,7 +34,7 @@ define double @load_double(ptr %fptr) {
 define fp128 @load_fp128(ptr %fptr) {
 ; CHECK-LABEL: define fp128 @load_fp128(
 ; CHECK-SAME: ptr [[FPTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i128 @__tsan_atomic128_load(ptr [[FPTR]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i128 [[TMP2]] to fp128
@@ -48,7 +48,7 @@ define fp128 @load_fp128(ptr %fptr) {
 define void @store_float(ptr %fptr, float %v) {
 ; CHECK-LABEL: define void @store_float(
 ; CHECK-SAME: ptr [[FPTR:%.*]], float [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[V]] to i32
 ; CHECK-NEXT:    call void @__tsan_atomic32_store(ptr [[FPTR]], i32 [[TMP2]], i32 0)
@@ -62,7 +62,7 @@ define void @store_float(ptr %fptr, float %v) {
 define void @store_double(ptr %fptr, double %v) {
 ; CHECK-LABEL: define void @store_double(
 ; CHECK-SAME: ptr [[FPTR:%.*]], double [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[V]] to i64
 ; CHECK-NEXT:    call void @__tsan_atomic64_store(ptr [[FPTR]], i64 [[TMP2]], i32 0)
@@ -76,7 +76,7 @@ define void @store_double(ptr %fptr, double %v) {
 define void @store_fp128(ptr %fptr, fp128 %v) {
 ; CHECK-LABEL: define void @store_fp128(
 ; CHECK-SAME: ptr [[FPTR:%.*]], fp128 [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast fp128 [[V]] to i128
 ; CHECK-NEXT:    call void @__tsan_atomic128_store(ptr [[FPTR]], i128 [[TMP2]], i32 0)

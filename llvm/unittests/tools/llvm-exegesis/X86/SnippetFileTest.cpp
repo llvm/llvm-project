@@ -67,11 +67,11 @@ MATCHER_P2(RegisterInitialValueIs, Reg, Val, "") {
 
 MATCHER_P3(MemoryDefinitionIs, Name, Value, Size, "") {
   if (arg.second.Value.getLimitedValue() == static_cast<uint64_t>(Value) &&
-      arg.second.SizeBytes == static_cast<size_t>(Size) && arg.first == Name)
+      arg.second.SizeBytes == static_cast<size_t>(Size) && arg.first() == Name)
     return true;
   *result_listener << "expected: {" << Name << ", " << Value << ", " << Size
                    << "} ";
-  *result_listener << "actual: {" << arg.first << ", "
+  *result_listener << "actual: {" << arg.first().str() << ", "
                    << arg.second.Value.getLimitedValue() << ", "
                    << arg.second.SizeBytes << "}";
   return false;

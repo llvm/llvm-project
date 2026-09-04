@@ -33,6 +33,30 @@ llvm.mlir.global internal @float_global(0.0: f32) : f32
 // CHECK: @float_global_array = internal global [1 x float] [float -5.000000e+00]
 llvm.mlir.global internal @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm.array<1 x f32>
 
+// CHECK: @splat_float_global_array = internal global [4 x float] [float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01]
+llvm.mlir.global internal @splat_float_global_array(dense<42.0> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_double_global_array = internal global [3 x double] [double 4.200000e+01, double 4.200000e+01, double 4.200000e+01]
+llvm.mlir.global internal @splat_double_global_array(dense<42.0> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_neg_float_global_array = internal global [4 x float] [float -1.350000e+01, float -1.350000e+01, float -1.350000e+01, float -1.350000e+01]
+llvm.mlir.global internal @splat_neg_float_global_array(dense<-13.5> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_neg_double_global_array = internal global [3 x double] [double -1.350000e+01, double -1.350000e+01, double -1.350000e+01]
+llvm.mlir.global internal @splat_neg_double_global_array(dense<-13.5> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_half_global_array = internal global [4 x half] [half 4.200000e+01, half 4.200000e+01, half 4.200000e+01, half 4.200000e+01]
+llvm.mlir.global internal @splat_half_global_array(dense<42.0> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_bfloat_global_array = internal global [3 x bfloat] [bfloat 4.200000e+01, bfloat 4.200000e+01, bfloat 4.200000e+01]
+llvm.mlir.global internal @splat_bfloat_global_array(dense<42.0> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
+// CHECK: @splat_neg_half_global_array = internal global [4 x half] [half -1.350000e+01, half -1.350000e+01, half -1.350000e+01, half -1.350000e+01]
+llvm.mlir.global internal @splat_neg_half_global_array(dense<-13.5> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_neg_bfloat_global_array = internal global [3 x bfloat] [bfloat -1.350000e+01, bfloat -1.350000e+01, bfloat -1.350000e+01]
+llvm.mlir.global internal @splat_neg_bfloat_global_array(dense<-13.5> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
 // CHECK: @string_const = internal constant [6 x i8] c"foobar"
 llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 
@@ -74,6 +98,9 @@ llvm.mlir.global internal @f8E4M3B11FNUZ_global_as_i8(1.5 : f8E4M3B11FNUZ) : i8
 
 // CHECK: @f8E8M0FNU_global_as_i8 = internal global i8 127
 llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
+
+// CHECK: @f8E5M3FNU_global_as_i8 = internal global i8 120
+llvm.mlir.global internal @f8E5M3FNU_global_as_i8(1.0 : f8E5M3FNU) : i8
 
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
@@ -188,6 +215,18 @@ llvm.mlir.global @has_dso_local(42 : i64) {dso_local} : i64
 llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
 // CHECK: @has_thr_local = thread_local global i64 42
 
+llvm.mlir.global thread_local(generaldynamic) @has_thr_local_gd(42 : i64) : i64
+// CHECK: @has_thr_local_gd = thread_local global i64 42
+
+llvm.mlir.global thread_local(localdynamic) @has_thr_local_ld(42 : i64) : i64
+// CHECK: @has_thr_local_ld = thread_local(localdynamic) global i64 42
+
+llvm.mlir.global thread_local(initialexec) @has_thr_local_ie(42 : i64) : i64
+// CHECK: @has_thr_local_ie = thread_local(initialexec) global i64 42
+
+llvm.mlir.global thread_local(localexec) @has_thr_local_le(42 : i64) : i64
+// CHECK: @has_thr_local_le = thread_local(localexec) global i64 42
+
 //
 // Section attribute.
 //
@@ -227,7 +266,7 @@ llvm.func @global_refs() {
   // Check the contracted form of load from array constants.
   // CHECK: load i8, ptr @string_const
   %2 = llvm.mlir.addressof @string_const : !llvm.ptr
-  %c0 = llvm.mlir.constant(0 : index) : i64
+  %c0 = llvm.mlir.constant(0 : i64) : i64
   %3 = llvm.getelementptr %2[%c0, %c0] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.array<6 x i8>
   %4 = llvm.load %3 : !llvm.ptr -> i8
 
@@ -247,8 +286,8 @@ llvm.func @simple_loop() {
 // CHECK: [[SIMPLE_bb1]]:
 // CHECK-NEXT: br label %[[SIMPLE_bb2:[0-9]+]]
 ^bb1:   // pred: ^bb0
-  %0 = llvm.mlir.constant(1 : index) : i64
-  %1 = llvm.mlir.constant(42 : index) : i64
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.mlir.constant(42 : i64) : i64
   llvm.br ^bb2(%0 : i64)
 
 // CHECK: [[SIMPLE_bb2]]:
@@ -265,7 +304,7 @@ llvm.func @simple_loop() {
 // CHECK-NEXT:   br label %[[SIMPLE_bb2]]
 ^bb3:   // pred: ^bb2
   llvm.call @body(%2) : (i64) -> ()
-  %4 = llvm.mlir.constant(1 : index) : i64
+  %4 = llvm.mlir.constant(1 : i64) : i64
   %5 = llvm.add %2, %4 : i64
   llvm.br ^bb2(%5 : i64)
 
@@ -316,8 +355,8 @@ llvm.func @func_args(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK: [[ARGS_bb1]]:
 // CHECK-NEXT: br label %[[ARGS_bb2:[0-9]+]]
 ^bb1:   // pred: ^bb0
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.mlir.constant(42 : index) : i64
+  %1 = llvm.mlir.constant(0 : i64) : i64
+  %2 = llvm.mlir.constant(42 : i64) : i64
   llvm.br ^bb2(%1 : i64)
 
 // CHECK: [[ARGS_bb2]]:
@@ -340,7 +379,7 @@ llvm.func @func_args(%arg0: i32, %arg1: i32) -> i32 {
   %6 = llvm.call @other(%5, %arg0) : (i64, i32) -> i32
   %7 = llvm.call @other(%5, %6) : (i64, i32) -> i32
   %8 = llvm.call @other(%5, %arg1) : (i64, i32) -> i32
-  %9 = llvm.mlir.constant(1 : index) : i64
+  %9 = llvm.mlir.constant(1 : i64) : i64
   %10 = llvm.add %3, %9 : i64
   llvm.br ^bb2(%10 : i64)
 
@@ -348,7 +387,7 @@ llvm.func @func_args(%arg0: i32, %arg1: i32) -> i32 {
 // CHECK-NEXT:   %14 = call i32 @other(i64 0, i32 0)
 // CHECK-NEXT:   ret i32 %14
 ^bb4:   // pred: ^bb2
-  %11 = llvm.mlir.constant(0 : index) : i64
+  %11 = llvm.mlir.constant(0 : i64) : i64
   %12 = llvm.call @other(%11, %0) : (i64, i32) -> i32
   llvm.return %12 : i32
 }
@@ -370,8 +409,8 @@ llvm.func @imperfectly_nested_loops() {
 // CHECK: [[IMPER_bb1]]:
 // CHECK-NEXT:   br label %[[IMPER_bb2:[0-9]+]]
 ^bb1:   // pred: ^bb0
-  %0 = llvm.mlir.constant(0 : index) : i64
-  %1 = llvm.mlir.constant(42 : index) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(42 : i64) : i64
   llvm.br ^bb2(%0 : i64)
 
 // CHECK: [[IMPER_bb2]]:
@@ -392,8 +431,8 @@ llvm.func @imperfectly_nested_loops() {
 // CHECK: [[IMPER_bb4]]:
 // CHECK-NEXT:   br label %[[IMPER_bb5:[0-9]+]]
 ^bb4:   // pred: ^bb3
-  %4 = llvm.mlir.constant(7 : index) : i64
-  %5 = llvm.mlir.constant(56 : index) : i64
+  %4 = llvm.mlir.constant(7 : i64) : i64
+  %5 = llvm.mlir.constant(56 : i64) : i64
   llvm.br ^bb5(%4 : i64)
 
 // CHECK: [[IMPER_bb5]]:
@@ -410,7 +449,7 @@ llvm.func @imperfectly_nested_loops() {
 // CHECK-NEXT:   br label %[[IMPER_bb5]]
 ^bb6:   // pred: ^bb5
   llvm.call @body2(%2, %6) : (i64, i64) -> ()
-  %8 = llvm.mlir.constant(2 : index) : i64
+  %8 = llvm.mlir.constant(2 : i64) : i64
   %9 = llvm.add %6, %8 : i64
   llvm.br ^bb5(%9 : i64)
 
@@ -420,7 +459,7 @@ llvm.func @imperfectly_nested_loops() {
 // CHECK-NEXT:   br label %[[IMPER_bb2]]
 ^bb7:   // pred: ^bb5
   llvm.call @post(%2) : (i64) -> ()
-  %10 = llvm.mlir.constant(1 : index) : i64
+  %10 = llvm.mlir.constant(1 : i64) : i64
   %11 = llvm.add %2, %10 : i64
   llvm.br ^bb2(%11 : i64)
 
@@ -481,8 +520,8 @@ llvm.func @body3(i64, i64)
 llvm.func @more_imperfectly_nested_loops() {
   llvm.br ^bb1
 ^bb1:	// pred: ^bb0
-  %0 = llvm.mlir.constant(0 : index) : i64
-  %1 = llvm.mlir.constant(42 : index) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(42 : i64) : i64
   llvm.br ^bb2(%0 : i64)
 ^bb2(%2: i64):	// 2 preds: ^bb1, ^bb11
   %3 = llvm.icmp "slt" %2, %1 : i64
@@ -491,35 +530,35 @@ llvm.func @more_imperfectly_nested_loops() {
   llvm.call @pre(%2) : (i64) -> ()
   llvm.br ^bb4
 ^bb4:	// pred: ^bb3
-  %4 = llvm.mlir.constant(7 : index) : i64
-  %5 = llvm.mlir.constant(56 : index) : i64
+  %4 = llvm.mlir.constant(7 : i64) : i64
+  %5 = llvm.mlir.constant(56 : i64) : i64
   llvm.br ^bb5(%4 : i64)
 ^bb5(%6: i64):	// 2 preds: ^bb4, ^bb6
   %7 = llvm.icmp "slt" %6, %5 : i64
   llvm.cond_br %7, ^bb6, ^bb7
 ^bb6:	// pred: ^bb5
   llvm.call @body2(%2, %6) : (i64, i64) -> ()
-  %8 = llvm.mlir.constant(2 : index) : i64
+  %8 = llvm.mlir.constant(2 : i64) : i64
   %9 = llvm.add %6, %8 : i64
   llvm.br ^bb5(%9 : i64)
 ^bb7:	// pred: ^bb5
   llvm.call @mid(%2) : (i64) -> ()
   llvm.br ^bb8
 ^bb8:	// pred: ^bb7
-  %10 = llvm.mlir.constant(18 : index) : i64
-  %11 = llvm.mlir.constant(37 : index) : i64
+  %10 = llvm.mlir.constant(18 : i64) : i64
+  %11 = llvm.mlir.constant(37 : i64) : i64
   llvm.br ^bb9(%10 : i64)
 ^bb9(%12: i64):	// 2 preds: ^bb8, ^bb10
   %13 = llvm.icmp "slt" %12, %11 : i64
   llvm.cond_br %13, ^bb10, ^bb11
 ^bb10:	// pred: ^bb9
   llvm.call @body3(%2, %12) : (i64, i64) -> ()
-  %14 = llvm.mlir.constant(3 : index) : i64
+  %14 = llvm.mlir.constant(3 : i64) : i64
   %15 = llvm.add %12, %14 : i64
   llvm.br ^bb9(%15 : i64)
 ^bb11:	// pred: ^bb9
   llvm.call @post(%2) : (i64) -> ()
-  %16 = llvm.mlir.constant(1 : index) : i64
+  %16 = llvm.mlir.constant(1 : i64) : i64
   %17 = llvm.add %2, %16 : i64
   llvm.br ^bb2(%17 : i64)
 ^bb12:	// pred: ^bb2
@@ -568,11 +607,11 @@ llvm.func @dso_local_func() attributes {dso_local} {
 llvm.func @memref_alloc() {
 // CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 400)
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr } undef, ptr %{{[0-9]+}}, 0
-  %0 = llvm.mlir.constant(10 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
+  %0 = llvm.mlir.constant(10 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
   %2 = llvm.mul %0, %1 : i64
   %3 = llvm.mlir.undef : !llvm.struct<(ptr)>
-  %4 = llvm.mlir.constant(4 : index) : i64
+  %4 = llvm.mlir.constant(4 : i64) : i64
   %5 = llvm.mul %2, %4 : i64
   %6 = llvm.call @malloc(%5) : (i64) -> !llvm.ptr
   %7 = llvm.insertvalue %6, %3[0] : !llvm.struct<(ptr)>
@@ -588,17 +627,17 @@ llvm.func @store_load_static() {
 ^bb0:
 // CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 40)
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr } undef, ptr %{{[0-9]+}}, 0
-  %0 = llvm.mlir.constant(10 : index) : i64
+  %0 = llvm.mlir.constant(10 : i64) : i64
   %1 = llvm.mlir.undef : !llvm.struct<(ptr)>
-  %2 = llvm.mlir.constant(4 : index) : i64
+  %2 = llvm.mlir.constant(4 : i64) : i64
   %3 = llvm.mul %0, %2 : i64
   %4 = llvm.call @malloc(%3) : (i64) -> !llvm.ptr
   %6 = llvm.insertvalue %4, %1[0] : !llvm.struct<(ptr)>
   %7 = llvm.mlir.constant(1.000000e+00 : f32) : f32
   llvm.br ^bb1
 ^bb1:   // pred: ^bb0
-  %8 = llvm.mlir.constant(0 : index) : i64
-  %9 = llvm.mlir.constant(10 : index) : i64
+  %8 = llvm.mlir.constant(0 : i64) : i64
+  %9 = llvm.mlir.constant(10 : i64) : i64
   llvm.br ^bb2(%8 : i64)
 // CHECK: %{{[0-9]+}} = phi i64 [ %{{[0-9]+}}, %{{[0-9]+}} ], [ 0, %{{[0-9]+}} ]
 ^bb2(%10: i64):        // 2 preds: ^bb1, ^bb3
@@ -610,11 +649,11 @@ llvm.func @store_load_static() {
 // CHECK: %{{[0-9]+}} = extractvalue { ptr } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, ptr %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: store float 1.000000e+00, ptr %{{[0-9]+}}
-  %12 = llvm.mlir.constant(10 : index) : i64
+  %12 = llvm.mlir.constant(10 : i64) : i64
   %13 = llvm.extractvalue %6[0] : !llvm.struct<(ptr)>
   %14 = llvm.getelementptr %13[%10] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   llvm.store %7, %14 : f32, !llvm.ptr
-  %15 = llvm.mlir.constant(1 : index) : i64
+  %15 = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %16 = llvm.add %10, %15 : i64
 // CHECK-NEXT: br label %{{[0-9]+}}
@@ -622,8 +661,8 @@ llvm.func @store_load_static() {
 ^bb4:   // pred: ^bb2
   llvm.br ^bb5
 ^bb5:   // pred: ^bb4
-  %17 = llvm.mlir.constant(0 : index) : i64
-  %18 = llvm.mlir.constant(10 : index) : i64
+  %17 = llvm.mlir.constant(0 : i64) : i64
+  %18 = llvm.mlir.constant(10 : i64) : i64
   llvm.br ^bb6(%17 : i64)
 // CHECK: %{{[0-9]+}} = phi i64 [ %{{[0-9]+}}, %{{[0-9]+}} ], [ 0, %{{[0-9]+}} ]
 ^bb6(%19: i64):        // 2 preds: ^bb5, ^bb7
@@ -635,11 +674,11 @@ llvm.func @store_load_static() {
 // CHECK:      %{{[0-9]+}} = extractvalue { ptr } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, ptr %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = load float, ptr %{{[0-9]+}}
-  %21 = llvm.mlir.constant(10 : index) : i64
+  %21 = llvm.mlir.constant(10 : i64) : i64
   %22 = llvm.extractvalue %6[0] : !llvm.struct<(ptr)>
   %23 = llvm.getelementptr %22[%19] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   %24 = llvm.load %23 : !llvm.ptr -> f32
-  %25 = llvm.mlir.constant(1 : index) : i64
+  %25 = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %26 = llvm.add %19, %25 : i64
 // CHECK-NEXT: br label %{{[0-9]+}}
@@ -656,7 +695,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } undef, ptr %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
   %0 = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
-  %1 = llvm.mlir.constant(4 : index) : i64
+  %1 = llvm.mlir.constant(4 : i64) : i64
   %2 = llvm.mul %arg0, %1 : i64
   %3 = llvm.call @malloc(%2) : (i64) -> !llvm.ptr
   %5 = llvm.insertvalue %3, %0[0] : !llvm.struct<(ptr, i64)>
@@ -665,7 +704,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
 // CHECK-NEXT: br label %{{[0-9]+}}
   llvm.br ^bb1
 ^bb1:   // pred: ^bb0
-  %8 = llvm.mlir.constant(0 : index) : i64
+  %8 = llvm.mlir.constant(0 : i64) : i64
   llvm.br ^bb2(%8 : i64)
 // CHECK: %{{[0-9]+}} = phi i64 [ %{{[0-9]+}}, %{{[0-9]+}} ], [ 0, %{{[0-9]+}} ]
 ^bb2(%9: i64): // 2 preds: ^bb1, ^bb3
@@ -682,7 +721,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
   %12 = llvm.extractvalue %6[0] : !llvm.struct<(ptr, i64)>
   %13 = llvm.getelementptr %12[%9] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   llvm.store %7, %13 : f32, !llvm.ptr
-  %14 = llvm.mlir.constant(1 : index) : i64
+  %14 = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %15 = llvm.add %9, %14 : i64
 // CHECK-NEXT: br label %{{[0-9]+}}
@@ -690,7 +729,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
 ^bb4:   // pred: ^bb3
   llvm.br ^bb5
 ^bb5:   // pred: ^bb4
-  %16 = llvm.mlir.constant(0 : index) : i64
+  %16 = llvm.mlir.constant(0 : i64) : i64
   llvm.br ^bb6(%16 : i64)
 // CHECK: %{{[0-9]+}} = phi i64 [ %{{[0-9]+}}, %{{[0-9]+}} ], [ 0, %{{[0-9]+}} ]
 ^bb6(%17: i64):        // 2 preds: ^bb5, ^bb7
@@ -707,7 +746,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
   %20 = llvm.extractvalue %6[0] : !llvm.struct<(ptr, i64)>
   %21 = llvm.getelementptr %20[%17] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   %22 = llvm.load %21 : !llvm.ptr -> f32
-  %23 = llvm.mlir.constant(1 : index) : i64
+  %23 = llvm.mlir.constant(1 : i64) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %24 = llvm.add %17, %23 : i64
 // CHECK-NEXT: br label %{{[0-9]+}}
@@ -719,7 +758,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
 
 // CHECK-LABEL: define void @store_load_mixed(i64 {{%.*}})
 llvm.func @store_load_mixed(%arg0: i64) {
-  %0 = llvm.mlir.constant(10 : index) : i64
+  %0 = llvm.mlir.constant(10 : i64) : i64
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 2, %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 4
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 10
@@ -728,13 +767,13 @@ llvm.func @store_load_mixed(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64, i64 } undef, ptr %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64, i64 } %{{[0-9]+}}, i64 10, 2
-  %1 = llvm.mlir.constant(2 : index) : i64
-  %2 = llvm.mlir.constant(4 : index) : i64
+  %1 = llvm.mlir.constant(2 : i64) : i64
+  %2 = llvm.mlir.constant(4 : i64) : i64
   %3 = llvm.mul %1, %arg0 : i64
   %4 = llvm.mul %3, %2 : i64
   %5 = llvm.mul %4, %0 : i64
   %6 = llvm.mlir.undef : !llvm.struct<(ptr, i64, i64)>
-  %7 = llvm.mlir.constant(4 : index) : i64
+  %7 = llvm.mlir.constant(4 : i64) : i64
   %8 = llvm.mul %5, %7 : i64
   %9 = llvm.call @malloc(%8) : (i64) -> !llvm.ptr
   %11 = llvm.insertvalue %9, %6[0] : !llvm.struct<(ptr, i64, i64)>
@@ -743,12 +782,12 @@ llvm.func @store_load_mixed(%arg0: i64) {
 
 // CHECK-NEXT: %{{[0-9]+}} = call i64 @get_index()
 // CHECK-NEXT: %{{[0-9]+}} = call i64 @get_index()
-  %14 = llvm.mlir.constant(1 : index) : i64
-  %15 = llvm.mlir.constant(2 : index) : i64
+  %14 = llvm.mlir.constant(1 : i64) : i64
+  %15 = llvm.mlir.constant(2 : i64) : i64
   %16 = llvm.call @get_index() : () -> i64
   %17 = llvm.call @get_index() : () -> i64
   %18 = llvm.mlir.constant(4.200000e+01 : f32) : f32
-  %19 = llvm.mlir.constant(2 : index) : i64
+  %19 = llvm.mlir.constant(2 : i64) : i64
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64, i64 } %{{[0-9]+}}, 2
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 1, %{{[0-9]+}}
@@ -761,7 +800,7 @@ llvm.func @store_load_mixed(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, ptr %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: store float 4.200000e+01, ptr %{{[0-9]+}}
   %20 = llvm.extractvalue %13[1] : !llvm.struct<(ptr, i64, i64)>
-  %21 = llvm.mlir.constant(4 : index) : i64
+  %21 = llvm.mlir.constant(4 : i64) : i64
   %22 = llvm.extractvalue %13[2] : !llvm.struct<(ptr, i64, i64)>
   %23 = llvm.mul %14, %20 : i64
   %24 = llvm.add %23, %15 : i64
@@ -783,9 +822,9 @@ llvm.func @store_load_mixed(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64, i64 } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, ptr %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = load float, ptr %{{[0-9]+}}
-  %31 = llvm.mlir.constant(2 : index) : i64
+  %31 = llvm.mlir.constant(2 : i64) : i64
   %32 = llvm.extractvalue %13[1] : !llvm.struct<(ptr, i64, i64)>
-  %33 = llvm.mlir.constant(4 : index) : i64
+  %33 = llvm.mlir.constant(4 : i64) : i64
   %34 = llvm.extractvalue %13[2] : !llvm.struct<(ptr, i64, i64)>
   %35 = llvm.mul %17, %32 : i64
   %36 = llvm.add %35, %16 : i64
@@ -802,14 +841,14 @@ llvm.func @store_load_mixed(%arg0: i64) {
 
 // CHECK-LABEL: define { ptr, i64 } @memref_args_rets({ ptr } {{%.*}}, { ptr, i64 } {{%.*}}, { ptr, i64 } {{%.*}})
 llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr)>, %arg1: !llvm.struct<(ptr, i64)>, %arg2: !llvm.struct<(ptr, i64)>) -> !llvm.struct<(ptr, i64)> {
-  %0 = llvm.mlir.constant(7 : index) : i64
+  %0 = llvm.mlir.constant(7 : i64) : i64
 // CHECK-NEXT: %{{[0-9]+}} = call i64 @get_index()
   %1 = llvm.call @get_index() : () -> i64
   %2 = llvm.mlir.constant(4.200000e+01 : f32) : f32
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, ptr %{{[0-9]+}}, i64 7
 // CHECK-NEXT: store float 4.200000e+01, ptr %{{[0-9]+}}
-  %3 = llvm.mlir.constant(10 : index) : i64
+  %3 = llvm.mlir.constant(10 : i64) : i64
   %4 = llvm.extractvalue %arg0[0] : !llvm.struct<(ptr)>
   %5 = llvm.getelementptr %4[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   llvm.store %2, %5 : f32, !llvm.ptr
@@ -827,7 +866,7 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr)>, %arg1: !llvm.struct<(ptr
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64 } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, ptr %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: store float 4.200000e+01, ptr %{{[0-9]+}}
-  %9 = llvm.mlir.constant(10 : index) : i64
+  %9 = llvm.mlir.constant(10 : i64) : i64
   %10 = llvm.extractvalue %arg2[1] : !llvm.struct<(ptr, i64)>
   %11 = llvm.mul %0, %10 : i64
   %12 = llvm.add %11, %1 : i64
@@ -839,10 +878,10 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr)>, %arg1: !llvm.struct<(ptr
 // CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 %{{[0-9]+}})
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } undef, ptr %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { ptr, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
-  %15 = llvm.mlir.constant(10 : index) : i64
+  %15 = llvm.mlir.constant(10 : i64) : i64
   %16 = llvm.mul %15, %1 : i64
   %17 = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
-  %18 = llvm.mlir.constant(4 : index) : i64
+  %18 = llvm.mlir.constant(4 : i64) : i64
   %19 = llvm.mul %16, %18 : i64
   %20 = llvm.call @malloc(%19) : (i64) -> !llvm.ptr
   %22 = llvm.insertvalue %20, %17[0] : !llvm.struct<(ptr, i64)>
@@ -855,11 +894,11 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr)>, %arg1: !llvm.struct<(ptr
 // CHECK-LABEL: define i64 @memref_dim({ ptr, i64, i64 } {{%.*}})
 llvm.func @memref_dim(%arg0: !llvm.struct<(ptr, i64, i64)>) -> i64 {
 // Expecting this to create an LLVM constant.
-  %0 = llvm.mlir.constant(42 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
 // CHECK-NEXT: %2 = extractvalue { ptr, i64, i64 } %0, 1
   %1 = llvm.extractvalue %arg0[1] : !llvm.struct<(ptr, i64, i64)>
 // Expecting this to create an LLVM constant.
-  %2 = llvm.mlir.constant(10 : index) : i64
+  %2 = llvm.mlir.constant(10 : i64) : i64
 // CHECK-NEXT: %3 = extractvalue { ptr, i64, i64 } %0, 2
   %3 = llvm.extractvalue %arg0[2] : !llvm.struct<(ptr, i64, i64)>
 // Checking that the constant for d0 has been created.
@@ -911,11 +950,11 @@ llvm.func @multireturn_caller() {
   %6 = llvm.mlir.constant(4.200000e+01 : f32) : f32
 // CHECK:   fadd float [[ret1]], 4.200000e+01
   %7 = llvm.fadd %2, %6 : f32
-  %8 = llvm.mlir.constant(0 : index) : i64
-  %9 = llvm.mlir.constant(42 : index) : i64
+  %8 = llvm.mlir.constant(0 : i64) : i64
+  %9 = llvm.mlir.constant(42 : i64) : i64
 // CHECK:   extractvalue { ptr, i64, i64 } [[ret2]], 0
   %10 = llvm.extractvalue %3[1] : !llvm.struct<(ptr, i64, i64)>
-  %11 = llvm.mlir.constant(10 : index) : i64
+  %11 = llvm.mlir.constant(10 : i64) : i64
   %12 = llvm.extractvalue %3[2] : !llvm.struct<(ptr, i64, i64)>
   %13 = llvm.mul %8, %10 : i64
   %14 = llvm.add %13, %8 : i64
@@ -1227,6 +1266,41 @@ llvm.func @alignstackattr_decl(!llvm.ptr {llvm.alignstack = 32 : i64})
 // CHECK-LABEL: declare void @writeonlyattr_decl(ptr writeonly)
 llvm.func @writeonlyattr_decl(!llvm.ptr {llvm.writeonly})
 
+// CHECK-LABEL: define void @writableattr(ptr writable %
+llvm.func @writableattr(%arg0: !llvm.ptr {llvm.writable}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @writableattr_decl(ptr writable)
+llvm.func @writableattr_decl(!llvm.ptr {llvm.writable})
+
+// CHECK-LABEL: define void @deadonunwindattr(ptr dead_on_unwind %
+llvm.func @deadonunwindattr(%arg0: !llvm.ptr {llvm.dead_on_unwind}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonunwindattr_decl(ptr dead_on_unwind)
+llvm.func @deadonunwindattr_decl(!llvm.ptr {llvm.dead_on_unwind})
+
+// CHECK-LABEL: define void @deadonreturnattr(ptr dead_on_return(8) %
+llvm.func @deadonreturnattr(%arg0: !llvm.ptr {llvm.dead_on_return = 8 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonreturnattr_decl(ptr dead_on_return(8))
+llvm.func @deadonreturnattr_decl(!llvm.ptr {llvm.dead_on_return = 8 : i64})
+
+// CHECK-LABEL: define void @nofpclassattr(float nofpclass(nan inf) %
+llvm.func @nofpclassattr(%arg0: f32 {llvm.nofpclass = 519 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @nofpclassattr_decl(float nofpclass(nan inf))
+llvm.func @nofpclassattr_decl(f32 {llvm.nofpclass = 519 : i64})
+
+// CHECK-LABEL: declare nofpclass(nan inf) float @nofpclassattr_ret_decl()
+llvm.func @nofpclassattr_ret_decl() -> (f32 {llvm.nofpclass = 519 : i64})
+
 // CHECK-LABEL: declare align 4 ptr @alignattr_ret_decl()
 llvm.func @alignattr_ret_decl() -> (!llvm.ptr {llvm.align = 4})
 
@@ -1281,6 +1355,24 @@ llvm.func @intpointerconversion(%arg0 : i32) -> i32 {
   %1 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %2 = llvm.ptrtoint %1 : !llvm.ptr to i32
   llvm.return %2 : i32
+}
+
+// CHECK-LABEL: @addrpointerconversion_scalar
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_scalar(%arg0 : !llvm.ptr) -> i64 {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr ptr %[[ARG0]] to i64
+// CHECK-NEXT: ret i64 %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+  llvm.return %1 : i64
+}
+
+// CHECK-LABEL: @addrpointerconversion_vector
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_vector(%arg0 : vector<3x!llvm.ptr>) -> vector<3x i64> {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr <3 x ptr> %[[ARG0]] to <3 x i64>
+// CHECK-NEXT: ret <3 x i64> %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : vector<3x!llvm.ptr> to vector<3x i64>
+  llvm.return %1 : vector<3x i64>
 }
 
 llvm.func @fpconversion(%arg0 : i32) -> i32 {
@@ -1346,14 +1438,14 @@ llvm.func @structconstant() -> !llvm.struct<(i32, f32)> {
 
 // CHECK-LABEL: @indexconstantsplat
 llvm.func @indexconstantsplat() -> vector<3xi32> {
-  %1 = llvm.mlir.constant(dense<42> : vector<3xindex>) : vector<3xi32>
+  %1 = llvm.mlir.constant(dense<42> : vector<3xi32>) : vector<3xi32>
   // CHECK: ret <3 x i32> splat (i32 42)
   llvm.return %1 : vector<3xi32>
 }
 
 // CHECK-LABEL: @indexconstantarray
 llvm.func @indexconstantarray() -> vector<3xi32> {
-  %1 = llvm.mlir.constant(dense<[0, 1, 2]> : vector<3xindex>) : vector<3xi32>
+  %1 = llvm.mlir.constant(dense<[0, 1, 2]> : vector<3xi32>) : vector<3xi32>
   // CHECK: ret <3 x i32> <i32 0, i32 1, i32 2>
   llvm.return %1 : vector<3xi32>
 }
@@ -1453,7 +1545,7 @@ llvm.func @alloca(%size : i64) {
 
 // CHECK-LABEL: @constants
 llvm.func @constants() -> vector<4xf32> {
-  // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.{{0*}}e+00, float 0.{{0*}}e+00, float 0.{{0*}}e+00>
+  // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.0{{0*}}e+00, float 0.0{{0*}}e+00, float 0.0{{0*}}e+00>
   %0 = llvm.mlir.constant(sparse<[0], [4.2e+01]> : vector<4xf32>) : vector<4xf32>
   llvm.return %0 : vector<4xf32>
 }
@@ -1816,12 +1908,62 @@ llvm.func @my_allocator(i64) attributes {passthrough = [["allocsize", "429496729
 // -----
 
 // CHECK-LABEL: @functionEntryCount
-// CHECK-SAME: !prof ![[PROF_ID:[0-9]*]]
-llvm.func @functionEntryCount() attributes {function_entry_count = 4242 : i64} {
+// CHECK-SAME: !prof ![[PROF_ID:[0-9]+]]
+llvm.func @functionEntryCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 4242>
+} {
   llvm.return
 }
 
-// CHECK: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
+// CHECK-DAG: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
+
+// -----
+
+// CHECK-LABEL: @syntheticFunctionEntryCount
+// CHECK-SAME: !prof ![[SYNTH_PROF_ID:[0-9]+]]
+llvm.func @syntheticFunctionEntryCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[SYNTH_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7}
+
+// -----
+
+// CHECK-LABEL: @syntheticFunctionEntryCountWithImports
+// CHECK-SAME: !prof ![[SYNTH_IMPORTS_PROF_ID:[0-9]+]]
+llvm.func @syntheticFunctionEntryCountWithImports() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234, 4, 1234>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[SYNTH_IMPORTS_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7, i64 4, i64 1234}
+
+// -----
+
+// CHECK-LABEL: @functionEntryCountWithImports
+// CHECK-SAME: !prof ![[IMPORTS_PROF_ID:[0-9]+]]
+llvm.func @functionEntryCountWithImports() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, imports = 1234, 4, 18446744073709551615, 1234>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[IMPORTS_PROF_ID]] = !{!"function_entry_count", i64 7, i64 4, i64 1234, i64 -1}
+
+// -----
+
+// CHECK-LABEL: @functionEntryCountNegativeCount
+// CHECK-SAME: !prof ![[NEG_PROF_ID:[0-9]+]]
+llvm.func @functionEntryCountNegativeCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[NEG_PROF_ID]] = !{!"function_entry_count", i64 -1}
 
 // -----
 
@@ -1831,7 +1973,7 @@ llvm.func @constant_bf16() -> bf16 {
   llvm.return %0 : bf16
 }
 
-// CHECK: ret bfloat 0xR4120
+// CHECK: ret bfloat 1.000000e+01
 
 // -----
 
@@ -2155,6 +2297,11 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
   %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+
+// CHECK: {{.*}} = fpext nnan float {{.*}} to double
+// CHECK: {{.*}} = fptrunc fast float {{.*}} to half
+  %27 = llvm.fpext %arg0 fastmath<nnan> : f32 to f64
+  %28 = llvm.fptrunc %arg0 fastmath<fast> : f32 to f16
   llvm.return
 }
 
@@ -2376,7 +2523,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -2384,7 +2531,7 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -2904,6 +3051,52 @@ llvm.func @save_reg_params_call() {
 
 llvm.func @f()
 
+// CHECK-LABEL: @uniform_work_group_size
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size() attributes { uniform_work_group_size } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @uniform_work_group_size_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_call() {
+  llvm.call @f() {uniform_work_group_size} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @uniform_work_group_size_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {uniform_work_group_size} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
 // CHECK-LABEL: @zero_call_used_regs_1
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {
@@ -2996,6 +3189,40 @@ llvm.func @default_func_attrs_call() {
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: "justKey"
 // CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @default_func_attrs_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {default_func_attrs={key="value", justKey}} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @builtin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @builtin_call() {
+  llvm.call @f() {builtin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: builtin
 
 // -----
 
@@ -3133,11 +3360,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem: none)
 
 // -----
 
@@ -3334,6 +3561,17 @@ llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
 
 // -----
 
+// Test that ArrayAttr of StringAttrs (e.g. "riscv-isa") is exported as an
+// MDTuple of MDStrings for a lossless round-trip.
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "riscv-isa", ["rv64i2p1", "m2p0"]>]
+
+// CHECK: !llvm.module.flags = !{![[#RISCV:]], {{.*}}}
+// CHECK: ![[#RISCV]] = !{i32 1, !"riscv-isa", ![[#ISA:]]}
+// CHECK: ![[#ISA]] = !{!"rv64i2p1", !"m2p0"}
+
+// -----
+
 module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
 
 // CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
@@ -3450,3 +3688,63 @@ llvm.mlir.global external @target_specific_attrs_only() {target_specific_attrs =
 // CHECK: @target_specific_attrs_combined = global i32 2, section "mysection", align 4 #[[ATTRS:[0-9]+]]
 // CHECK: attributes #[[ATTRS]] = { norecurse "bss-section"="my_bss.1" }
 llvm.mlir.global external @target_specific_attrs_combined(2 : i32) {alignment = 4 : i64, section = "mysection", target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]} : i32
+
+// -----
+
+// CHECK: @associated_target = global i32 0
+// CHECK: @associated_global = global i32 0, !associated ![[ASSOC:[0-9]+]]
+// CHECK: ![[ASSOC]] = !{ptr @associated_target}
+llvm.mlir.global external @associated_target(0 : i32) {addr_space = 0 : i32} : i32
+llvm.mlir.global external @associated_global(0 : i32) {addr_space = 0 : i32, associated = @associated_target} : i32
+
+// -----
+
+// CHECK: @associated_fn_global = global i32 0, !associated ![[ASSOC_FN:[0-9]+]]
+// CHECK: declare void @associated_fn()
+// CHECK: ![[ASSOC_FN]] = !{ptr @associated_fn}
+llvm.mlir.global external @associated_fn_global(0 : i32) {associated = @associated_fn} : i32
+llvm.func @associated_fn()
+
+// -----
+
+// CHECK: @alias_target = global i32 1
+// CHECK: @associated_via_alias = global i32 2, !associated ![[ASSOC_ALIAS:[0-9]+]]
+// CHECK: @alias_of_target = alias i32, ptr @alias_target
+// CHECK: ![[ASSOC_ALIAS]] = !{ptr @alias_of_target}
+llvm.mlir.global @alias_target(1 : i32) : i32
+llvm.mlir.alias external @alias_of_target : i32 {
+  %0 = llvm.mlir.addressof @alias_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+llvm.mlir.global @associated_via_alias(2 : i32) {associated = @alias_of_target} : i32
+
+// -----
+
+// CHECK: @associated_ifunc_global = global i32 0, !associated ![[ASSOC_IFUNC:[0-9]+]]
+// CHECK: @associated_ifunc = ifunc i32 (i32), ptr @associated_ifunc_resolver
+// CHECK: ![[ASSOC_IFUNC]] = !{ptr @associated_ifunc}
+llvm.mlir.global @associated_ifunc_global(0 : i32) {associated = @associated_ifunc} : i32
+llvm.mlir.ifunc @associated_ifunc : !llvm.func<i32 (i32)>, !llvm.ptr @associated_ifunc_resolver
+llvm.func @associated_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.zero : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// CHECK: @absolute_symbol_global = external global i8, !absolute_symbol ![[ABS:[0-9]+]]
+// CHECK: ![[ABS]] = !{i64 0, i64 42}
+llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0 : i64, 42 : i64]} : i8
+
+// -----
+
+// CHECK: @absolute_symbol_full = external global i8, !absolute_symbol ![[ABS_FULL:[0-9]+]]
+// CHECK: ![[ABS_FULL]] = !{i64 -1, i64 -1}
+llvm.mlir.global external @absolute_symbol_full() {absolute_symbol = [-1 : i64, -1 : i64]} : i8
+
+// -----
+
+// CHECK-LABEL: define b8 @byte_type(b8 %0)
+llvm.func @byte_type(%arg0: !llvm.byte<8>) -> !llvm.byte<8> {
+  llvm.return %arg0 : !llvm.byte<8>
+}

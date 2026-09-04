@@ -14,6 +14,7 @@ class PythonSynthDataFormatterTestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
+        self.runCmd("settings set target.check-vo-ownership 0")
 
     def test_callback_matchers_api_registration(self):
         """Test data formatter commands."""

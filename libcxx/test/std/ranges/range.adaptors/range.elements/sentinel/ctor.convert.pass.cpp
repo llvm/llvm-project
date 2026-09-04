@@ -60,19 +60,26 @@ static_assert(!std::is_constructible_v<std::ranges::sentinel_t<std::ranges::elem
                                        std::ranges::sentinel_t<const std::ranges::elements_view<Range, 0>>>);
 
 // !convertible_to<sentinel_t<V>, sentinel_t<Base>>
-static_assert(!std::is_constructible_v<
-              std::ranges::sentinel_t<const std::ranges::elements_view<NonConvertConstSentRange, 0>>,
-              std::ranges::sentinel_t<std::ranges::elements_view<NonConvertConstSentRange, 0>>>);
+static_assert(
+    !std::is_constructible_v<std::ranges::sentinel_t<const std::ranges::elements_view<NonConvertConstSentRange, 0>>,
+                             std::ranges::sentinel_t<std::ranges::elements_view<NonConvertConstSentRange, 0>>>);
 
 constexpr bool test() {
   // base is init correctly
   {
-    using R             = std::ranges::elements_view<Range, 0>;
+    struct TestRange : std::ranges::view_base {
+      constexpr std::tuple<int>* begin() const { return nullptr; }
+      constexpr Sent end() { return Sent{5}; }
+      constexpr ConstSent end() const { return ConstSent{5}; }
+    };
+
+    using R             = std::ranges::elements_view<TestRange, 0>;
     using Sentinel      = std::ranges::sentinel_t<R>;
     using ConstSentinel = std::ranges::sentinel_t<const R>;
     static_assert(!std::same_as<Sentinel, ConstSentinel>);
 
-    Sentinel s1(Sent{5});
+    R r{TestRange{}};
+    Sentinel s1      = r.end();
     ConstSentinel s2 = s1;
     assert(s2.base().i == 5);
   }

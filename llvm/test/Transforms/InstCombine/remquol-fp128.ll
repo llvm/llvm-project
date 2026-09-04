@@ -6,7 +6,7 @@ define fp128 @remquo_fp128(ptr %quo) {
 ; CHECK-SAME: ptr [[QUO:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 -2, ptr [[QUO]], align 4
-; CHECK-NEXT:    ret fp128 0xL00000000000000003FFF000000000000
+; CHECK-NEXT:    ret fp128 1.000000e+00
 ;
 entry:
   %call = call fp128 @remquol(fp128 0xL0000000000000000C001400000000000, fp128 0xL00000000000000004000800000000000, ptr %quo)

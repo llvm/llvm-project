@@ -9,12 +9,7 @@
 #ifndef OPTMIZER_CODEGEN_PASSDETAIL_H
 #define OPTMIZER_CODEGEN_PASSDETAIL_H
 
-#include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 
 namespace fir {
 

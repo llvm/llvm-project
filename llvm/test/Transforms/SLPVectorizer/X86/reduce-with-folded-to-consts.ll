@@ -5,9 +5,7 @@ define void @test() {
 ; CHECK-LABEL: define void @test
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 0, [[TMP0]]
-; CHECK-NEXT:    store i32 [[OP_RDX2]], ptr null, align 4
+; CHECK-NEXT:    store i32 0, ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:

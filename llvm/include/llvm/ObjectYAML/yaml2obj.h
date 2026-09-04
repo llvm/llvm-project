@@ -70,7 +70,7 @@ using ErrorHandler = llvm::function_ref<void(const Twine &Msg)>;
 LLVM_ABI bool yaml2archive(ArchYAML::Archive &Doc, raw_ostream &Out,
                            ErrorHandler EH);
 LLVM_ABI bool yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out,
-                        ErrorHandler EH);
+                        ErrorHandler EH, uint64_t MaxSize);
 LLVM_ABI bool yaml2goff(GOFFYAML::Object &Doc, raw_ostream &Out,
                         ErrorHandler EH);
 LLVM_ABI bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH,

@@ -24,6 +24,6 @@ struct D : B<T> {};
 // CHECK-NEXT: [indexEntityReference]: kind: c++-class-template | name: Foo | USR: c:@ST>1#T@Foo
 // CHECK-NEXT: [indexEntityReference]: kind: c++-instance-method | name: f | USR: c:@ST>1#T@Foo@F@f#t0.0#
 
-// CHECK: [indexDeclaration]: kind: c++-class-template | name: D
-// CHECK-NEXT: <base>: kind: c++-class-template | name: B
-// CHECK-NEXT: [indexEntityReference]: kind: c++-class-template | name: B
+// CHECK: [indexDeclaration]: kind: struct-template | name: D
+// CHECK-NEXT: <base>: kind: struct-template | name: B
+// CHECK-NEXT: [indexEntityReference]: kind: struct-template | name: B

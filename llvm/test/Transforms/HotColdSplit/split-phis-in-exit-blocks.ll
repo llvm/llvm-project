@@ -5,21 +5,17 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@pluto(
 ; CHECK-NEXT: bb:
-; CHECK-NEXT:  %tmp8.ce.loc = alloca i1
 ; CHECK-NEXT:  switch i8 undef, label %codeRepl [
 ; CHECK-NEXT:    i8 0, label %bb7
 ; CHECK-NEXT:    i8 1, label %bb7
 ; CHECK-NEXT:  ]
 ;
 ; CHECK:  codeRepl:
-; CHECK-NEXT:    lifetime.start
-; CHECK-NEXT:    call void @pluto.cold.1(ptr %tmp8.ce.loc)
-; CHECK-NEXT:    %tmp8.ce.reload = load i1, ptr %tmp8.ce.loc
-; CHECK-NEXT:    lifetime.end
+; CHECK-NEXT:    %0 = call i1 @pluto.cold.1()
 ; CHECK-NEXT:    br label %bb7
 ;
 ; CHECK:  bb7:
-; CHECK:    %tmp8 = phi i1 [ true, %bb ], [ true, %bb ], [ %tmp8.ce.reload, %codeRepl ]
+; CHECK:    %tmp8 = phi i1 [ true, %bb ], [ true, %bb ], [ %0, %codeRepl ]
 ; CHECK:    ret void
 
 ; CHECK-LABEL: define {{.*}}@pluto.cold.1(

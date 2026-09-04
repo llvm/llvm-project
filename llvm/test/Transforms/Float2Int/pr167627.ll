@@ -7,7 +7,7 @@
 define i1 @pr167627() {
 ; CHECK-LABEL: define i1 @pr167627() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FADD:%.*]] = fadd float 0xC5AAD8ABE0000000, 0xC57E819700000000
+; CHECK-NEXT:    [[FADD:%.*]] = fadd float f0xED56C55F, f0xEBF40CB8
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[FADD]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

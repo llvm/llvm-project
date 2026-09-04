@@ -1,0 +1,20 @@
+import("//llvm/lib/Target/targets.gni")
+
+assert(llvm_build_AMDGPU, "Should only be built with AMDGPU target enabled")
+
+executable("llvm-calc-occupancy") {
+  deps = [
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target/AMDGPU:AMDGPUGenRegisterBank",
+    "//llvm/lib/Target/AMDGPU:LLVMAMDGPUCodeGen",
+    "//llvm/lib/Target/AMDGPU/MCTargetDesc",
+    "//llvm/lib/Target/AMDGPU/TargetInfo",
+    "//llvm/lib/Target/AMDGPU/Utils",
+    "//llvm/lib/TargetParser",
+  ]
+  include_dirs = [ "//llvm/lib/Target/AMDGPU" ]
+  sources = [ "llvm-calc-occupancy.cpp" ]
+}

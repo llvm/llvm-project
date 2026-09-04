@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple riscv64 -verify=unsupported -fsyntax-only %s
 // RUN: %clang_cc1 -triple x86_64 -verify=x86_64 -fsyntax-only %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-cuda -fcuda-is-device -x cuda -verify=ignored -fsyntax-only %s
-// RUN: %clang_cc1 -triple amdgcn -verify=ignored -fsyntax-only %s
+// RUN: %clang_cc1 -triple amdgpu -verify=ignored -fsyntax-only %s
 // RUN: %clang_cc1 -triple r600 -verify=ignored -fsyntax-only %s
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -verify=ignored -fsyntax-only %s
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown -verify=ignored -fsyntax-only %s

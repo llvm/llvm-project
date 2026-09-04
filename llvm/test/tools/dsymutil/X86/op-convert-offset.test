@@ -20,7 +20,7 @@
 # $ xcrun clang -c op-convert-offset.ll -O0 -arch x86_64
 # $ xcrun clang -g op-convert-offset.o -O0 -arch x86_64 -o op-convert-offset
 
-RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset -o %t.dSYM 2>&1
+RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset -o %t.dSYM 2>&1
 RUN: llvm-dwarfdump %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset.o 2>&1 | FileCheck %s --check-prefix OBJ
 RUN: llvm-dwarfdump %t.dSYM 2>&1 | FileCheck %s --check-prefix DSYM
 

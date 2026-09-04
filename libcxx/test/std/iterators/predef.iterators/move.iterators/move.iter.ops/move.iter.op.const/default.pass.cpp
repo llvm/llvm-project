@@ -10,11 +10,8 @@
 
 // move_iterator
 
-// move_iterator();
-//
-//  constexpr in C++17
-//
-//  requires the underlying iterator to be default-constructible (extension).
+// constexpr move_iterator();                   // constexpr since C++17
+//   requires default_initializable<Iterator>;  // since C++20
 
 #include <iterator>
 
@@ -22,13 +19,33 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-#if TEST_STD_VER > 17
-struct NoDefaultCtr : forward_iterator<int*> {
-  NoDefaultCtr() = delete;
-};
+#if TEST_STD_VER >= 20
+class constable_iter {
+public:
+  using iterator_category = std::input_iterator_tag;
+  using difference_type   = int;
+  using value_type        = char;
 
-LIBCPP_STATIC_ASSERT( std::is_default_constructible_v<std::move_iterator<forward_iterator<int*>>>);
-LIBCPP_STATIC_ASSERT(!std::is_default_constructible_v<std::move_iterator<NoDefaultCtr>>);
+  constable_iter() = default;
+
+  template <class = void>
+  const constable_iter& operator=(const constable_iter&) const;
+
+  char operator*() const;
+
+  const constable_iter& operator++() const;
+  void operator++(int) const;
+
+private:
+  char payload_; // making `const constable_iter` value-initializable but not default-initializable
+};
+static_assert(std::is_default_constructible_v<const constable_iter>);
+static_assert(!std::default_initializable<const constable_iter>);
+static_assert(std::input_iterator<const constable_iter>);
+
+static_assert(std::is_default_constructible_v<std::move_iterator<forward_iterator<int*>>>);
+static_assert(!std::is_default_constructible_v<std::move_iterator<cpp20_input_iterator<int*>>>);
+static_assert(!std::is_default_constructible_v<std::move_iterator<const constable_iter>>);
 #endif
 
 template <class It>

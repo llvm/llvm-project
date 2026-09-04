@@ -1,0 +1,77 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+// Idempotent: max(x, x) -> x
+// CHECK-LABEL: cir.func @max_idempotent
+// CHECK-NEXT:    cir.return %arg0
+cir.func @max_idempotent(%arg0 : !s32i) -> !s32i {
+  %0 = cir.max %arg0, %arg0 : !s32i
+  cir.return %0 : !s32i
+}
+
+// Idempotent: min(x, x) -> x
+// CHECK-LABEL: cir.func @min_idempotent
+// CHECK-NEXT:    cir.return %arg0
+cir.func @min_idempotent(%arg0 : !s32i) -> !s32i {
+  %0 = cir.min %arg0, %arg0 : !s32i
+  cir.return %0 : !s32i
+}
+
+// Idempotent: max(x, x) -> x (unsigned)
+// CHECK-LABEL: cir.func @max_idempotent_unsigned
+// CHECK-NEXT:    cir.return %arg0
+cir.func @max_idempotent_unsigned(%arg0 : !u32i) -> !u32i {
+  %0 = cir.max %arg0, %arg0 : !u32i
+  cir.return %0 : !u32i
+}
+
+// Idempotent: min(x, x) -> x (unsigned)
+// CHECK-LABEL: cir.func @min_idempotent_unsigned
+// CHECK-NEXT:    cir.return %arg0
+cir.func @min_idempotent_unsigned(%arg0 : !u32i) -> !u32i {
+  %0 = cir.min %arg0, %arg0 : !u32i
+  cir.return %0 : !u32i
+}
+
+// Commutative: max(const, x) -> max(x, const)
+// CHECK-LABEL: cir.func @max_commutative
+// CHECK:         %[[C:.*]] = cir.const #cir.int<42> : !s32i
+// CHECK-NEXT:    %[[R:.*]] = cir.max %arg0, %[[C]] : !s32i
+// CHECK-NEXT:    cir.return %[[R]]
+cir.func @max_commutative(%arg0 : !s32i) -> !s32i {
+  %0 = cir.const #cir.int<42> : !s32i
+  %1 = cir.max %0, %arg0 : !s32i
+  cir.return %1 : !s32i
+}
+
+// Commutative: min(const, x) -> min(x, const)
+// CHECK-LABEL: cir.func @min_commutative
+// CHECK:         %[[C:.*]] = cir.const #cir.int<42> : !s32i
+// CHECK-NEXT:    %[[R:.*]] = cir.min %arg0, %[[C]] : !s32i
+// CHECK-NEXT:    cir.return %[[R]]
+cir.func @min_commutative(%arg0 : !s32i) -> !s32i {
+  %0 = cir.const #cir.int<42> : !s32i
+  %1 = cir.min %0, %arg0 : !s32i
+  cir.return %1 : !s32i
+}
+
+// Idempotent chained: max(max(x, y), max(x, y)) -> max(x, y)
+// CHECK-LABEL: cir.func @max_idempotent_chained
+// CHECK-NEXT:    %[[M:.*]] = cir.max %arg0, %arg1 : !s32i
+// CHECK-NEXT:    cir.return %[[M]]
+cir.func @max_idempotent_chained(%arg0 : !s32i, %arg1 : !s32i) -> !s32i {
+  %0 = cir.max %arg0, %arg1 : !s32i
+  %1 = cir.max %0, %0 : !s32i
+  cir.return %1 : !s32i
+}
+
+// No fold: distinct operands should remain unchanged
+// CHECK-LABEL: cir.func @max_no_fold
+// CHECK-NEXT:    %[[R:.*]] = cir.max %arg0, %arg1 : !s32i
+// CHECK-NEXT:    cir.return %[[R]]
+cir.func @max_no_fold(%arg0 : !s32i, %arg1 : !s32i) -> !s32i {
+  %0 = cir.max %arg0, %arg1 : !s32i
+  cir.return %0 : !s32i
+}

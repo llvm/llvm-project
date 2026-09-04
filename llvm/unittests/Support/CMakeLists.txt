@@ -21,6 +21,7 @@ add_llvm_unittest(SupportTests
   Caching.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
+  CHERICapabilityFormatTest.cpp
   Chrono.cpp
   CommandLineTest.cpp
   CompressionTest.cpp
@@ -56,6 +57,7 @@ add_llvm_unittest(SupportTests
   JobserverTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
+  KnownFPClassTest.cpp
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp

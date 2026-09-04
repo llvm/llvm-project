@@ -260,3 +260,46 @@ end do
 !$OMP END PARALLEL
 print *, arg1
 end subroutine
+
+! Check that LASTPRIVATE updates the private copy of `i` when used inside
+! nested PARALLEL constructs in which `i` is private.
+!CHECK-LABEL: func @_QPlastprivate_nested_parallel()
+!CHECK:         %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallelEi"} :
+!CHECK-SAME:                  (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:         omp.parallel private(@_QFlastprivate_nested_parallelEi_private_i32 %[[I]]#0 {{.*}})
+!CHECK:           %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallelEi"} :
+!CHECK-SAME:                         (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           omp.parallel {
+!CHECK:             omp.wsloop private(@_QFlastprivate_nested_parallelEi_private_i32 %[[PRIV_I]]#0 {{.*}})
+!CHECK:               hlfir.assign %{{.*}} to %[[PRIV_I]]#0
+
+subroutine lastprivate_nested_parallel()
+  integer :: i
+
+  !$OMP PARALLEL DEFAULT(PRIVATE)
+    !$OMP PARALLEL
+      !$OMP DO LASTPRIVATE(i)
+      do i = 1, 5
+      end do
+    !$OMP END PARALLEL
+  !$OMP END PARALLEL
+end subroutine
+
+!CHECK-LABEL: func @_QPlastprivate_nested_parallel2()
+!CHECK:         omp.parallel {
+!CHECK:           omp.wsloop private(@_QFlastprivate_nested_parallel2Ei_private_i32 {{.*}})
+!CHECK:             %[[PRIV_I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_nested_parallel2Ei"}
+!CHECK:             omp.parallel {
+!CHECK:               omp.wsloop private(@_QFlastprivate_nested_parallel2Ei_private_i32 %[[PRIV_I]]#0 {{.*}})
+!CHECK:                 hlfir.assign %{{.*}} to %[[PRIV_I]]#0
+
+subroutine lastprivate_nested_parallel2()
+  integer :: i, j, k
+
+  !$omp parallel do lastprivate(i)
+  do j = 1, 10
+    !$omp parallel do lastprivate(i)
+    do k = 2, 20
+    end do
+  end do
+end subroutine

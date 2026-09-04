@@ -5,14 +5,25 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+// -------------------------- Pre RA scheduling ----------------------------- //
+//
+// SystemZPreRASchedStrategy reduces register pressure by scheduling a (live)
+// definition low if it does not cause another register to become live (all
+// uses live). In most regions it then reduces the scheduled latency but only
+// if the SU that is higher (by Height) than the scheduled latency is as well
+// lower (by Depth) than the remaining latency. It also helps copy coalescing
+// and comparison elimination.
 //
 // -------------------------- Post RA scheduling ---------------------------- //
+//
 // SystemZPostRASchedStrategy is a scheduling strategy which is plugged into
 // the MachineScheduler. It has a sorted Available set of SUs and a pickNode()
 // implementation that looks to optimize decoder grouping and balance the
 // usage of processor resources. Scheduler states are saved for the end
 // region of each MBB, so that a successor block can learn from it.
-//===----------------------------------------------------------------------===//
+//
+//----------------------------------------------------------------------------//
 
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZMACHINESCHEDULER_H
@@ -23,6 +34,36 @@
 #include <set>
 
 namespace llvm {
+
+/// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
+class SystemZPreRASchedStrategy : public GenericScheduler {
+  Register Cmp0SrcReg;
+  // Return true if MI defines the Cmp0SrcReg that is used by a scheduled
+  // compare with 0. If CCDef is true MI must also have an implicit def of CC.
+  bool definesCmp0Src(const MachineInstr *MI, bool CCDef = true) const;
+
+  // SUs that have a Height of at least this value will not be scheduled
+  // "low" to reduce liveness.
+  unsigned LivenessHeightCutOff;
+
+  // Return true if the instruction defines a register while all use operands
+  // are already live.
+  bool closesLiveRange(const SUnit *SU, ScheduleDAGMILive *DAG) const;
+
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  SystemZPreRASchedStrategy(const MachineSchedContext *C)
+      : GenericScheduler(C) {}
+
+  void initPolicy(MachineBasicBlock::iterator Begin,
+                  MachineBasicBlock::iterator End,
+                  unsigned NumRegionInstrs) override;
+  void initialize(ScheduleDAGMI *dag) override;
+  void schedNode(SUnit *SU, bool IsTopNode) override;
+};
 
 /// A MachineSchedStrategy implementation for SystemZ post RA scheduling.
 class SystemZPostRASchedStrategy : public MachineSchedStrategy {

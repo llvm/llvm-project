@@ -58,7 +58,7 @@ The following three cases are accepted:
   };
 
 This check corresponds to the CERT C Coding Standard recommendation `INT09-C. Ensure enumeration constants map to unique values
-<https://wiki.sei.cmu.edu/confluence/display/c/INT09-C.+Ensure+enumeration+constants+map+to+unique+values>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/recommendations/integers-int/int09-c/>`_.
 
 `cert-int09-c` redirects here as an alias of this check.
 
@@ -92,3 +92,20 @@ Options
       g0 = 1, // Not allowed if AllowExplicitSequentialInitialValues is false.
       g1 = 2,
       g2 = 3,
+    };
+
+.. option:: AllowReferencedInitialValues
+
+  If set to `true`, enumerators initialized by referencing another enumerator
+  in the same enum are allowed, and the remaining enumerators are checked for
+  consistency. This implements the `INT09-C-EX1` exception from the CERT C
+  Coding Standard.
+  Default is `false`.
+
+  .. code-block:: c++
+
+    enum H {
+      h0,
+      h1,
+      h2 = h1, // Allowed if AllowReferencedInitialValues is true.
+    };

@@ -14,10 +14,11 @@
 #include <__chrono/statically_widen.h>
 #include <__config>
 #include <__format/buffer.h>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>
+#include <__format/formattable.h>
 #include <__format/formatter.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
@@ -31,9 +32,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__fmt_char_type _CharT, class _Tuple, formattable<_CharT>... _Args>
 struct __formatter_tuple {
@@ -126,7 +127,8 @@ struct __formatter_tuple {
     return std::ranges::copy(__closing_bracket_, __ctx.out()).out;
   }
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__left};
+  __format_spec::__parser<_CharT> __parser_ = {
+      __format_spec::__parser_data<_CharT>{.__alignment_ = __format_spec::__alignment::__left}};
 
 private:
   tuple<formatter<remove_cvref_t<_Args>, _CharT>...> __underlying_;
@@ -141,8 +143,8 @@ struct formatter<pair<_Args...>, _CharT> : public __formatter_tuple<_CharT, pair
 template <__fmt_char_type _CharT, formattable<_CharT>... _Args>
 struct formatter<tuple<_Args...>, _CharT> : public __formatter_tuple<_CharT, tuple<_Args...>, _Args...> {};
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_FORMATTER_TUPLE_H

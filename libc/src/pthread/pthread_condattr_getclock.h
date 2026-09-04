@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_CONDATTR_GETCLOCK_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_CONDATTR_GETCLOCK_H
 
+#include "hdr/types/clockid_t.h" // clockid_t
 #include "src/__support/macros/config.h"
-#include <pthread.h>   // pthread_condattr_t
-#include <sys/types.h> // clockid_t
+#include <pthread.h> // pthread_condattr_t
 
 namespace LIBC_NAMESPACE_DECL {
 

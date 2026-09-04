@@ -57,25 +57,25 @@ define double @logb_neg_zero() {
 
 define float @logbf_inf() {
 ; CHECK-LABEL: define float @logbf_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float +inf)
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @logbf(float 0x7FF0000000000000)
+  %r = call float @logbf(float +inf)
   ret float %r
 }
 
 define double @logb_inf() {
 ; CHECK-LABEL: define double @logb_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call double @logb(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @logb(double +inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @logb(double 0x7FF0000000000000)
+  %r = call double @logb(double +inf)
   ret double %r
 }
 
 define float @logbf_nan() {
 ; CHECK-LABEL: define float @logbf_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float +qnan)
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @logbf(float 0x7FF8000000000000)
@@ -84,7 +84,7 @@ define float @logbf_nan() {
 
 define double @logb_nan() {
 ; CHECK-LABEL: define double @logb_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call double @logb(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call double @logb(double +qnan)
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @logb(double 0x7FF8000000000000)

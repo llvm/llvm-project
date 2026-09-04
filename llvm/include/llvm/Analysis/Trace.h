@@ -17,6 +17,7 @@
 #ifndef LLVM_ANALYSIS_TRACE_H
 #define LLVM_ANALYSIS_TRACE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
 
@@ -47,11 +48,11 @@ public:
   BasicBlock *getBlock(unsigned i)   const { return BasicBlocks[i]; }
 
   /// getFunction - Return this trace's parent function.
-  Function *getFunction () const;
+  LLVM_ABI Function *getFunction() const;
 
   /// getModule - Return this Module that contains this trace's parent
   /// function.
-  Module *getModule () const;
+  LLVM_ABI Module *getModule() const;
 
   /// getBlockIndex - Return the index of the specified basic block in the
   /// trace, or -1 if it is not in the trace.
@@ -99,11 +100,11 @@ public:
   iterator erase(iterator q1, iterator q2) { return BasicBlocks.erase (q1, q2); }
 
   /// print - Write trace to output stream.
-  void print(raw_ostream &O) const;
+  LLVM_ABI void print(raw_ostream &O) const;
 
   /// dump - Debugger convenience method; writes trace to standard error
   /// output stream.
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 } // end namespace llvm

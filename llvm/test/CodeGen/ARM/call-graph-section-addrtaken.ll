@@ -5,16 +5,16 @@
 
 ; RUN: llc -mtriple=arm-unknown-linux --call-graph-section -o - < %s | FileCheck %s
 
-declare !type !0 void @_Z6doWorkPFviE(ptr)
+declare !callgraph !0 void @_Z6doWorkPFviE(ptr)
 
-define i32 @_Z4testv() !type !1 {
+define i32 @_Z4testv() !callgraph !1 {
 entry:
   call void @_Z6doWorkPFviE(ptr nonnull @_ZL10myCallbacki)
   ret i32 0
 }
 
 ; CHECK: _ZL10myCallbacki:
-define internal void @_ZL10myCallbacki(i32 %value) !type !2 {
+define internal void @_ZL10myCallbacki(i32 %value) !callgraph !2 {
 entry:
   %sink = alloca i32, align 4
   store volatile i32 %value, ptr %sink, align 4
@@ -22,9 +22,9 @@ entry:
   ret void
 }
 
-!0 = !{i64 0, !"_ZTSFvPFviEE.generalized"}
-!1 = !{i64 0, !"_ZTSFivE.generalized"}
-!2 = !{i64 0, !"_ZTSFviE.generalized"}
+!0 = !{!"_ZTSFvPFviEE"}
+!1 = !{!"_ZTSFivE"}
+!2 = !{!"_ZTSFviE"}
 
 ; CHECK: .section .llvm.callgraph,"o",%llvm_call_graph,.text
 ;; Version
@@ -33,6 +33,6 @@ entry:
 ; CHECK-NEXT: .byte   1
 ;; Function Entry PC
 ; CHECK-NEXT: .long _ZL10myCallbacki
-;; Function type ID -5212364466660467813
-; CHECK-NEXT: .long	1154849691
-; CHECK-NEXT: .long	3081369122
+;; Function type ID -8738933900360652027
+; CHECK-NEXT: .long 560098053
+; CHECK-NEXT: .long 2260275691

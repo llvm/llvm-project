@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 module same_type_as_mod
 
@@ -28,8 +28,10 @@ contains
 
 ! CHECK-LABEL: func.func @_QMsame_type_as_modPis_same_type(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.class<none> {fir.bindc_name = "b"}) {
-! CHECK: %[[BOX0:.*]] = fir.convert %[[ARG0]] : (!fir.class<none>) -> !fir.box<none>
-! CHECK: %[[BOX1:.*]] = fir.convert %[[ARG1]] : (!fir.class<none>) -> !fir.box<none>
+! CHECK: %[[DECL0:.*]]:2 = hlfir.declare %[[ARG0]] {{.*}} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+! CHECK: %[[DECL1:.*]]:2 = hlfir.declare %[[ARG1]] {{.*}} : (!fir.class<none>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+! CHECK: %[[BOX0:.*]] = fir.convert %[[DECL0]]#1 : (!fir.class<none>) -> !fir.box<none>
+! CHECK: %[[BOX1:.*]] = fir.convert %[[DECL1]]#1 : (!fir.class<none>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranASameTypeAs(%[[BOX0]], %[[BOX1]]) {{.*}} : (!fir.box<none>, !fir.box<none>) -> i1
 
 end module

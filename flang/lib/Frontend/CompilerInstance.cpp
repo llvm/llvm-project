@@ -16,28 +16,33 @@
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
-#include "flang/Support/Fortran-features.h"
 #include "flang/Support/Timing.h"
 #include "mlir/Support/RawOstreamExtras.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace Fortran::frontend;
 
 CompilerInstance::CompilerInstance()
-    : invocation(new CompilerInvocation()),
+    : CompilerInstance(std::make_shared<CompilerInvocation>()) {}
+
+CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> invocation)
+    : invocation(std::move(invocation)),
       allSources(new Fortran::parser::AllSources()),
       allCookedSources(new Fortran::parser::AllCookedSources(*allSources)),
       parsing(new Fortran::parser::Parsing(*allCookedSources)) {
+  assert(this->invocation && "Invocation must not be null.");
   // TODO: This is a good default during development, but ultimately we should
   // give the user the opportunity to specify this.
   allSources->set_encoding(Fortran::parser::Encoding::UTF_8);
@@ -45,11 +50,6 @@ CompilerInstance::CompilerInstance()
 
 CompilerInstance::~CompilerInstance() {
   assert(outputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> value) {
-  invocation = std::move(value);
 }
 
 void CompilerInstance::setSemaOutputStream(raw_ostream &value) {
@@ -309,6 +309,29 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
   return llvm::join(featuresVec, ",");
 }
 
+static std::string getExplicitAndImplicitPPCTargetFeatures(
+    clang::DiagnosticsEngine &diags, const TargetOptions &targetOpts,
+    const llvm::Triple triple, const CodeGenOptions &CGOpts) {
+  std::vector<std::string> featuresVec;
+  std::optional<llvm::StringMap<bool>> FeaturesOpt =
+      llvm::PPC::getPPCDefaultTargetFeatures(triple, targetOpts.cpu);
+  if (FeaturesOpt) {
+    for (auto &I : FeaturesOpt.value()) {
+      featuresVec.push_back(
+          (llvm::Twine(I.second ? "+" : "-") + I.first().str()).str());
+    }
+  }
+
+  // Include others set by ppc::getPPCTargetFeatures() and specified by users
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    featuresVec.push_back(userFeature[0] + userKeyString.str());
+  }
+
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
 std::string CompilerInstance::getTargetFeatures() {
   const TargetOptions &targetOpts = getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
@@ -325,6 +348,9 @@ std::string CompilerInstance::getTargetFeatures() {
   } else if (triple.isNVPTX()) {
     return getExplicitAndImplicitNVPTXTargetFeatures(getDiagnostics(),
                                                      targetOpts, triple);
+  } else if (triple.isPPC()) {
+    return getExplicitAndImplicitPPCTargetFeatures(
+        getDiagnostics(), targetOpts, triple, getInvocation().getCodeGenOpts());
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
@@ -355,7 +381,11 @@ bool CompilerInstance::setUpTargetMachine() {
 
   llvm::TargetOptions tOpts = llvm::TargetOptions();
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
+  tOpts.EnableMachineFunctionSplitter = targetOpts.SplitMachineFunctions;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
+  tOpts.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
+  tOpts.FunctionSections = CGOpts.FunctionSections;
+  tOpts.DataSections = CGOpts.DataSections;
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

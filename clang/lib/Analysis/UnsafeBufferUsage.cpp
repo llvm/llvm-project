@@ -28,6 +28,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,6 +37,7 @@
 #include <queue>
 #include <set>
 #include <sstream>
+#include <vector>
 
 using namespace clang;
 
@@ -736,8 +738,9 @@ static bool isSafeStringViewTwoParamConstruct(const CXXConstructExpr &Node,
     E = E->IgnoreParenImpCasts();
     if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
       const auto *MD = MCE->getMethodDecl();
-      if (MD && (MD->getName() == "begin" || MD->getName() == "end"))
-        return MCE->getImplicitObjectArgument()->IgnoreParenImpCasts();
+      if (MD && MD->getIdentifier())
+        if (MD->getName() == "begin" || MD->getName() == "end")
+          return MCE->getImplicitObjectArgument()->IgnoreParenImpCasts();
     }
     return nullptr;
   };
@@ -838,6 +841,38 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     return false;
   }
   return false;
+}
+
+static bool isSafePointerArithmetic(const Expr *Ptr, const Expr *OffsetExpr,
+                                    BinaryOperatorKind Opcode,
+                                    const ASTContext &Ctx) {
+  Expr::EvalResult EVResult;
+
+  if (OffsetExpr->isValueDependent() ||
+      !OffsetExpr->EvaluateAsInt(EVResult, Ctx)) {
+    // Dynamic offsets are not safe.
+    return false;
+  }
+
+  uint64_t limit = 0;
+  const Expr *Base = Ptr->IgnoreParenImpCasts();
+
+  if (const auto *CATy = dyn_cast<ConstantArrayType>(
+          Base->getType()->getUnqualifiedDesugaredType())) {
+    limit = CATy->getLimitedSize();
+  } else if (const auto *SLiteral = dyn_cast<clang::StringLiteral>(Base)) {
+    limit = SLiteral->getLength() + 1;
+  } else {
+    return false;
+  }
+
+  llvm::APSInt OffsetVal = EVResult.Val.getInt();
+  if (Opcode == BO_Sub)
+    OffsetVal = -OffsetVal;
+
+  // If the offset is a constant, and it is within the bounds of the
+  // array, then it is safe.
+  return OffsetVal.isNonNegative() && OffsetVal.getLimitedValue() < limit;
 }
 
 // Constant fold a conditional expression 'cond ? A : B' to
@@ -1761,30 +1796,47 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     const auto *BO = dyn_cast<BinaryOperator>(S);
     if (!BO)
       return false;
     const auto *LHS = BO->getLHS();
     const auto *RHS = BO->getRHS();
+
+    const Expr *Ptr = nullptr;
+    const Expr *OffsetExpr = nullptr;
+
     // ptr at left
     if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub ||
         BO->getOpcode() == BO_AddAssign || BO->getOpcode() == BO_SubAssign) {
       if (hasPointerType(*LHS) && (RHS->getType()->isIntegerType() ||
                                    RHS->getType()->isEnumeralType())) {
-        Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*LHS));
-        Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
-        return true;
+        Ptr = LHS;
+        OffsetExpr = RHS;
       }
     }
     // ptr at right
     if (BO->getOpcode() == BO_Add && hasPointerType(*RHS) &&
         (LHS->getType()->isIntegerType() || LHS->getType()->isEnumeralType())) {
-      Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*RHS));
-      Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
-      return true;
+      Ptr = RHS;
+      OffsetExpr = LHS;
     }
-    return false;
+
+    if (!Ptr || !OffsetExpr)
+      return false;
+
+    // If -Wno-unsafe-buffer-usage-in-static-sized-array is used, suppress
+    // warnings for guaranteed safe pointer arithmetic.
+    if (Handler->ignoreUnsafeBufferInStaticSizedArray(S->getBeginLoc()) &&
+        isSafePointerArithmetic(Ptr, OffsetExpr, BO->getOpcode(), Ctx)) {
+      return false;
+    }
+
+    // Default: warn on all pointer arithmetic
+    Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*Ptr));
+    Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
+    return true;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -2414,7 +2466,7 @@ public:
     auto *CE = dyn_cast<CallExpr>(S);
     if (!CE || !CE->getDirectCallee())
       return false;
-    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    const FunctionDecl *FD = CE->getDirectCallee();
     if (!FD)
       return false;
 
@@ -2622,7 +2674,7 @@ public:
       const auto *UO = dyn_cast<UnaryOperator>(S);
       if (!UO || UO->getOpcode() != UO_Deref)
         return;
-      const auto *CE = dyn_cast<Expr>(UO->getSubExpr());
+      const Expr *CE = UO->getSubExpr();
       if (!CE)
         return;
       CE = CE->IgnoreParenImpCasts();
@@ -3071,59 +3123,35 @@ template <typename NodeTy> struct CompareNode {
   }
 };
 
-std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
-  class MockReporter : public UnsafeBufferUsageHandler {
-  public:
-    MockReporter() {}
-    void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
-    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
-                              const Expr *UnsafeArg = nullptr) override {}
-    void handleUnsafeOperationInContainer(const Stmt *, bool,
-                                          ASTContext &) override {}
-    void handleUnsafeOperationInStringView(const Stmt *, bool,
-                                           ASTContext &) override {}
-    void handleUnsafeVariableGroup(const VarDecl *,
-                                   const VariableGroupsManager &, FixItList &&,
-                                   const Decl *,
-                                   const FixitStrategy &) override {}
-    void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
-                                          bool IsRelatedToDecl,
-                                          ASTContext &Ctx) override {}
-    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
-      return false;
-    }
-    bool isSafeBufferOptOut(const SourceLocation &) const override {
-      return false;
-    }
-    bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
-      return false;
-    }
-    bool ignoreUnsafeBufferInStaticSizedArray(
-        const SourceLocation &Loc) const override {
-      return false;
-    }
-    std::string getUnsafeBufferUsageAttributeTextAt(
-        SourceLocation, StringRef WSSuffix = "") const override {
-      return "";
-    }
+// Populate `Stmts` with the body/initializer Stmt of `D`, if `D` is one of the
+// followings:
+//   VarDecl
+//   FieldDecl
+//   FunctionDecl
+//   BlockDecl
+//   ObjCMethodDecl
+static void populateStmtsForFindingGadgets(SmallVector<const Stmt *> &Stmts,
+                                           const Decl *D) {
+  auto AddStmt = [&Stmts](const Stmt *S) {
+    if (S)
+      Stmts.push_back(S);
   };
-
-  FixableGadgetList FixableGadgets;
-  WarningGadgetList WarningGadgets;
-  DeclUseTracker Tracker;
-  MockReporter IgnoreHandler;
-
-  findGadgets(FD->getBody(), FD->getASTContext(), IgnoreHandler, false,
-              FixableGadgets, WarningGadgets, Tracker);
-
-  std::set<const Expr *> Result;
-  for (auto &G : WarningGadgets) {
-    for (const Expr *E : G->getUnsafePtrs()) {
-      Result.insert(E);
-    }
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    AddStmt(FD->getBody());
+    for (const auto *PD : FD->parameters())
+      if (PD->hasDefaultArg() && !PD->hasUninstantiatedDefaultArg())
+        AddStmt(PD->getDefaultArg());
+    if (const auto *CtorD = dyn_cast<CXXConstructorDecl>(FD))
+      llvm::append_range(
+          Stmts, llvm::map_range(CtorD->inits(),
+                                 std::mem_fn(&CXXCtorInitializer::getInit)));
+  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    AddStmt(D->getBody());
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    AddStmt(VD->getInit()); // FIXME: default arg for ParmVarDecl?
+  } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+    AddStmt(FD->getInClassInitializer());
   }
-
-  return Result;
 }
 
 struct WarningGadgetSets {
@@ -4804,9 +4832,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 #endif
 
   assert(D);
-
-  SmallVector<Stmt *> Stmts;
-
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // Consteval functions are free of UB by the spec, so we don't need to
     // visit them or produce diagnostics.
@@ -4828,27 +4853,89 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
         break;
       }
     }
-
-    Stmts.push_back(FD->getBody());
-
-    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
-      for (const CXXCtorInitializer *CI : ID->inits()) {
-        Stmts.push_back(CI->getInit());
-      }
-    }
-  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
-    Stmts.push_back(D->getBody());
   }
+
+  SmallVector<const Stmt *> Stmts;
+
+  populateStmtsForFindingGadgets(Stmts, D);
 
   assert(!Stmts.empty());
 
   FixableGadgetList FixableGadgets;
   WarningGadgetList WarningGadgets;
   DeclUseTracker Tracker;
-  for (Stmt *S : Stmts) {
+  for (const Stmt *S : Stmts) {
     findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
                 WarningGadgets, Tracker);
   }
   applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
                std::move(Tracker), Handler, EmitSuggestions);
+}
+
+bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
+                                std::set<const Expr *> &UnsafePointers) {
+  class MockReporter : public UnsafeBufferUsageHandler {
+  public:
+    MockReporter() {}
+    void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
+    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
+                              const Expr *UnsafeArg = nullptr) override {}
+    void handleUnsafeOperationInContainer(const Stmt *, bool,
+                                          ASTContext &) override {}
+    void handleUnsafeOperationInStringView(const Stmt *, bool,
+                                           ASTContext &) override {}
+    void handleUnsafeVariableGroup(const VarDecl *,
+                                   const VariableGroupsManager &, FixItList &&,
+                                   const Decl *,
+                                   const FixitStrategy &) override {}
+    void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                          bool IsRelatedToDecl,
+                                          ASTContext &Ctx) override {}
+    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
+      return false;
+    }
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInStaticSizedArray(
+        const SourceLocation &Loc) const override {
+      return false;
+    }
+    std::string getUnsafeBufferUsageAttributeTextAt(
+        SourceLocation, StringRef WSSuffix = "") const override {
+      return "";
+    }
+  } Handler;
+
+  const Stmt *S = N.get<Stmt>();
+  if (!S)
+    return false;
+
+  MatchResult Result;
+  WarningGadgetList WarningGadgets;
+  bool Matched = false;
+
+  // FIXME: By design, we don't need MockReporter, and we are supposed to
+  // only define WARNING_GADGET when we want to treat WARNING_OPTIONAL_GADGET
+  // the same as WARNING_GADGET. The reason we have to do it this way now is
+  // that some WARNING_OPTIONAL_GADGETs do not have the 3-argument `matches`
+  // overload. We need to fix this problem in a separate patch.
+
+#define WARNING_GADGET(name)                                                   \
+  if (name##Gadget::matches(S, Ctx, Result))                                   \
+    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));
+#define WARNING_OPTIONAL_GADGET(name)                                          \
+  if (name##Gadget::matches(S, Ctx, &Handler, Result))                         \
+    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+
+  for (auto &WG : WarningGadgets)
+    for (auto *E : WG->getUnsafePtrs()) {
+      UnsafePointers.insert(E);
+      Matched = true;
+    }
+  return Matched;
 }

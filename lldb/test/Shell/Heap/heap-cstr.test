@@ -1,5 +1,7 @@
 # REQUIRES: system-darwin
 # REQUIRES: python
+# Heap scanning reads tagged memory with untagged pointers.
+# UNSUPPORTED: lldb-mte
 # RUN: %clang_host %p/Inputs/cstr.c -g -o %t
 # RUN: %lldb -b -s %s -f %t | FileCheck %s
 

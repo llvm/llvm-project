@@ -8,6 +8,7 @@
 #include "refactor/Tweak.h"
 
 #include "support/Logger.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"

@@ -17,15 +17,13 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   auto std_remove    = [](auto first, auto last, auto const& value) { return std::remove(first, last, value); };
   auto std_remove_if = [](auto first, auto last, auto const& value) {
-    return std::remove_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::remove_if(first, last, [&](auto element) { return element == value; });
   };
 
   // Benchmark {std,ranges}::{remove,remove_if} on a sequence of the form xxxxxxxxxxyyyyyyyyyy
@@ -37,7 +35,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto remove) {
       benchmark::RegisterBenchmark(
           name,
-          [remove](auto& st) {
+          [remove](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 10;
             using ValueType                 = typename Container::value_type;
@@ -93,7 +91,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto remove) {
       benchmark::RegisterBenchmark(
           name,
-          [remove](auto& st) {
+          [remove](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 10;
             using ValueType                 = typename Container::value_type;

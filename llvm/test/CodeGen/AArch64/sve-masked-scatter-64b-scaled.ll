@@ -65,6 +65,20 @@ define void @masked_scatter_nxv2f64(<vscale x 2 x double> %data, ptr %base, <vsc
   ret void
 }
 
+define void @masked_scatter_nxv1i64(<vscale x 2 x i64> %data.wide, ptr %base, <vscale x 2 x i64> %wide.offsets, <vscale x 1 x i1> %mask) {
+; CHECK-LABEL: masked_scatter_nxv1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0, z1.d, lsl #3]
+; CHECK-NEXT:    ret
+  %offsets = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %wide.offsets, i64 0)
+  %ptrs = getelementptr i64, ptr %base, <vscale x 1 x i64> %offsets
+  %data = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %data.wide, i64 0)
+  call void @llvm.masked.scatter.nxv1i64(<vscale x 1 x i64> %data, <vscale x 1 x ptr> align 8 %ptrs, <vscale x 1 x i1> %mask)
+  ret void
+}
+
 declare void @llvm.masked.scatter.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x ptr>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x ptr>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x ptr>, i32, <vscale x 2 x i1>)

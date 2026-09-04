@@ -163,7 +163,6 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::windows_resource:
   case file_magic::pdb:
   case file_magic::minidump:
-  case file_magic::goff_object:
   case file_magic::cuda_fatbinary:
   case file_magic::offload_binary:
   case file_magic::offload_bundle:
@@ -203,6 +202,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
     return createWasmObjectFile(Object);
   case file_magic::dxcontainer_object:
     return createDXContainerObjectFile(Object);
+  case file_magic::goff_object:
+    return createGOFFObjectFile(Object);
   }
   llvm_unreachable("Unexpected Object File Type");
 }

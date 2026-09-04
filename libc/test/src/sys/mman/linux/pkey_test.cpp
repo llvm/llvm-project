@@ -8,6 +8,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/signal_macros.h"
+#include "hdr/sys_mman_macros.h"
 #include "hdr/types/size_t.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
@@ -72,7 +73,13 @@ public:
 };
 
 bool protection_keys_supported() {
-  static bool supported = []() {
+  static bool checked = false;
+  static bool supported;
+  if (checked)
+    return supported;
+
+  checked = true;
+  supported = []() {
     PKeyGuard pkey(LIBC_NAMESPACE::pkey_alloc(0, 0));
     int err = libc_errno;
     libc_errno = 0;

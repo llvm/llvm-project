@@ -181,13 +181,18 @@ define void @integer_extension_and_truncation(i32 %arg1) {
 ; CHECK-LABEL: @pointer_casts
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG2:[a-zA-Z0-9]+]]
-define ptr @pointer_casts(ptr %arg1, i64 %arg2) {
+; CHECK-SAME:  %[[ARG3:[a-zA-Z0-9]+]]
+define ptr @pointer_casts(ptr %arg1, i64 %arg2, <3 x ptr> %arg3) {
   ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:  llvm.ptrtoint %[[ARG1]] : !llvm.ptr to i64
+  ; CHECK:  llvm.ptrtoaddr %[[ARG1]] : !llvm.ptr to i64
+  ; CHECK:  llvm.ptrtoaddr %[[ARG3]] : vector<3x!llvm.ptr> to vector<3xi64>
   ; CHECK:  llvm.inttoptr %[[ARG2]] : i64 to !llvm.ptr
   ; CHECK:  llvm.bitcast %[[ARG1]] : !llvm.ptr to !llvm.ptr
   ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr
   %1 = ptrtoint ptr %arg1 to i64
+  %p = ptrtoaddr ptr %arg1 to i64
+  %vp = ptrtoaddr <3 x ptr> %arg3 to <3 x i64>
   %2 = inttoptr i64 %arg2 to ptr
   %3 = bitcast ptr %arg1 to ptr
   ret ptr null
@@ -881,6 +886,36 @@ define void @call_save_reg_params() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_uniform_work_group_size
+define void @call_uniform_work_group_size() {
+; CHECK: llvm.call @f() {uniform_work_group_size}
+  call void @f() "uniform-work-group-size"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL: @invoke_uniform_work_group_size
+define void @invoke_uniform_work_group_size() personality ptr @__gxx_personality_v0 {
+entry:
+; CHECK: llvm.invoke @f() to ^bb1 unwind ^bb2 {uniform_work_group_size}
+  invoke void @f() "uniform-work-group-size" to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_zero_call_used_regs
 define void @call_zero_call_used_regs() {
 ; CHECK: llvm.call @f() {zero_call_used_regs = "used"}
@@ -912,6 +947,18 @@ declare void @f()
 define void @call_default_func_attrs() {
 ; CHECK: llvm.call @f() : () -> ()
   call void @f() "key"="value" "key"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_builtin
+define void @call_builtin() {
+; CHECK: llvm.call @f() {builtin}
+  call void @f() builtin
   ret void
 }
 

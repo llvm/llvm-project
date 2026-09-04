@@ -1,5 +1,13 @@
 # MLIR project.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "MLIR")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -131,14 +139,6 @@ endif()
 option(MLIR_ENABLE_EXECUTION_ENGINE
        "Enable building the MLIR Execution Engine."
        ${MLIR_ENABLE_EXECUTION_ENGINE_default})
-
-# Build the ROCm conversions and run according tests if the AMDGPU backend
-# is available.
-if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_ROCM_CONVERSIONS 1)
-else()
-  set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
-endif()
 
 # Build the XeVM conversions and run according tests if the SPIRV backend
 # is available.

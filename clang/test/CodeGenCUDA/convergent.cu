@@ -36,27 +36,27 @@ __host__ __device__ [[clang::noconvergent]] float aliasf1(int) asm("somethingels
 // DEVICE-NEXT:    call void @_Z3bazv() #[[ATTR4:[0-9]+]]
 // DEVICE-NEXT:    [[TMP0:%.*]] = call i32 asm "trap", "=l"() #[[ATTR5:[0-9]+]], !srcloc [[META2:![0-9]+]]
 // DEVICE-NEXT:    store i32 [[TMP0]], ptr [[X]], align 4
-// DEVICE-NEXT:    call void asm sideeffect "trap", ""() #[[ATTR4]], !srcloc [[META3:![0-9]+]]
-// DEVICE-NEXT:    call void asm sideeffect "nop", ""() #[[ATTR6:[0-9]+]], !srcloc [[META4:![0-9]+]]
+// DEVICE-NEXT:    call void asm sideeffect "trap", ""() #[[ATTR6:[0-9]+]], !srcloc [[META3:![0-9]+]]
+// DEVICE-NEXT:    call void asm sideeffect "nop", ""() #[[ATTR7:[0-9]+]], !srcloc [[META4:![0-9]+]]
 // DEVICE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
 // DEVICE-NEXT:    [[CALL:%.*]] = call contract noundef float @something(i32 noundef [[TMP1]]) #[[ATTR4]]
 // DEVICE-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// DEVICE-NEXT:    [[CALL1:%.*]] = call contract noundef float @somethingelse(i32 noundef [[TMP2]]) #[[ATTR6]]
+// DEVICE-NEXT:    [[CALL1:%.*]] = call contract noundef float @somethingelse(i32 noundef [[TMP2]]) #[[ATTR8:[0-9]+]]
 // DEVICE-NEXT:    ret void
 //
 // HOST-LABEL: define dso_local void @_Z3barv(
 // HOST-SAME: ) #[[ATTR0:[0-9]+]] {
 // HOST-NEXT:  [[ENTRY:.*:]]
 // HOST-NEXT:    [[X:%.*]] = alloca i32, align 4
-// HOST-NEXT:    call void @_Z3bazv()
-// HOST-NEXT:    [[TMP0:%.*]] = call i32 asm "trap", "=l,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2:[0-9]+]], !srcloc [[META1:![0-9]+]]
+// HOST-NEXT:    call void @_Z3bazv() #[[ATTR2:[0-9]+]]
+// HOST-NEXT:    [[TMP0:%.*]] = call i32 asm "trap", "=l,~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]], !srcloc [[META1:![0-9]+]]
 // HOST-NEXT:    store i32 [[TMP0]], ptr [[X]], align 4
-// HOST-NEXT:    call void asm sideeffect "trap", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3:[0-9]+]], !srcloc [[META2:![0-9]+]]
-// HOST-NEXT:    call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR3]], !srcloc [[META3:![0-9]+]]
+// HOST-NEXT:    call void asm sideeffect "trap", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR4:[0-9]+]], !srcloc [[META2:![0-9]+]]
+// HOST-NEXT:    call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"() #[[ATTR4]], !srcloc [[META3:![0-9]+]]
 // HOST-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
-// HOST-NEXT:    [[CALL:%.*]] = call contract noundef float @something(i32 noundef [[TMP1]])
+// HOST-NEXT:    [[CALL:%.*]] = call contract noundef float @something(i32 noundef [[TMP1]]) #[[ATTR2]]
 // HOST-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// HOST-NEXT:    [[CALL1:%.*]] = call contract noundef float @somethingelse(i32 noundef [[TMP2]])
+// HOST-NEXT:    [[CALL1:%.*]] = call contract noundef float @somethingelse(i32 noundef [[TMP2]]) #[[ATTR2]]
 // HOST-NEXT:    ret void
 //
 __host__ __device__ void bar() {
@@ -71,27 +71,30 @@ __host__ __device__ void bar() {
 
 
 //.
-// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// DEVICE: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// DEVICE: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// DEVICE: attributes #[[ATTR3:[0-9]+]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// DEVICE: attributes #[[ATTR4]] = { convergent nounwind }
+// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEVICE: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEVICE: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEVICE: attributes #[[ATTR3:[0-9]+]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEVICE: attributes #[[ATTR4]] = { convergent nounwind "uniform-work-group-size" }
 // DEVICE: attributes #[[ATTR5]] = { convergent nounwind memory(none) }
-// DEVICE: attributes #[[ATTR6]] = { nounwind }
+// DEVICE: attributes #[[ATTR6]] = { convergent nounwind }
+// DEVICE: attributes #[[ATTR7]] = { nounwind }
+// DEVICE: attributes #[[ATTR8]] = { nounwind "uniform-work-group-size" }
 //.
-// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// HOST: attributes #[[ATTR1:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// HOST: attributes #[[ATTR2]] = { nounwind memory(none) }
-// HOST: attributes #[[ATTR3]] = { nounwind }
+// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
+// HOST: attributes #[[ATTR1:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
+// HOST: attributes #[[ATTR2]] = { "uniform-work-group-size" }
+// HOST: attributes #[[ATTR3]] = { nounwind memory(none) }
+// HOST: attributes #[[ATTR4]] = { nounwind }
 //.
 // DEVICE: [[META0:![0-9]+]] = !{i32 4, !"nvvm-reflect-ftz", i32 0}
 // DEVICE: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// DEVICE: [[META2]] = !{i64 3120}
-// DEVICE: [[META3]] = !{i64 3155}
-// DEVICE: [[META4]] = !{i64 3206}
+// DEVICE: [[META2]] = !{i64 3174}
+// DEVICE: [[META3]] = !{i64 3209}
+// DEVICE: [[META4]] = !{i64 3260}
 //.
 // HOST: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// HOST: [[META1]] = !{i64 3120}
-// HOST: [[META2]] = !{i64 3155}
-// HOST: [[META3]] = !{i64 3206}
+// HOST: [[META1]] = !{i64 3174}
+// HOST: [[META2]] = !{i64 3209}
+// HOST: [[META3]] = !{i64 3260}
 //.

@@ -220,15 +220,3 @@ bool fir::BoxValue::verify() const {
     return false;
   return true;
 }
-
-/// Get exactly one extent for any array-like extended value, \p exv. If \p exv
-/// is not an array or has rank less then \p dim, the result will be a nullptr.
-mlir::Value fir::factory::getExtentAtDimension(mlir::Location loc,
-                                               fir::FirOpBuilder &builder,
-                                               const fir::ExtendedValue &exv,
-                                               unsigned dim) {
-  auto extents = fir::factory::getExtents(loc, builder, exv);
-  if (dim < extents.size())
-    return extents[dim];
-  return {};
-}

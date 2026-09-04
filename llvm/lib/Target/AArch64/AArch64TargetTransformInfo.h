@@ -49,16 +49,8 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
 
-  static const FeatureBitset InlineInverseFeatures;
-
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
-
-  enum MemIntrinsicType {
-    VECTOR_LDST_TWO_ELEMENTS,
-    VECTOR_LDST_THREE_ELEMENTS,
-    VECTOR_LDST_FOUR_ELEMENTS
-  };
 
   /// Given a add/sub/mul operation, detect a widening addl/subl/mull pattern
   /// where both operands can be treated like extends. Returns the minimal type
@@ -80,7 +72,7 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
       const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {},
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
@@ -179,7 +171,8 @@ public:
     return VF.getKnownMinValue() * ST->getVScaleForTuning();
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
 
   bool prefersVectorizedAddressing() const override;
 
@@ -215,7 +208,7 @@ public:
                                  const Instruction *I = nullptr) const override;
 
   InstructionCost
-  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+  getVectorInstrCost(unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
@@ -225,20 +218,20 @@ public:
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCost(
-      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
       TTI::VectorInstrContext VIC =
           TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getVectorInstrCost(const Instruction &I, Type *Val,
+  getVectorInstrCost(const Instruction &I, Type *Ty,
                      TTI::TargetCostKind CostKind, unsigned Index,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Ty,
                                    TTI::TargetCostKind CostKind,
                                    unsigned Index) const override;
 
@@ -284,6 +277,8 @@ public:
   InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;
 
+  bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
@@ -302,10 +297,8 @@ public:
     if (Ty->isPointerTy())
       return true;
 
-    if (Ty->isBFloatTy() && ST->hasBF16())
-      return true;
-
-    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+    if (Ty->isBFloatTy() || Ty->isHalfTy() || Ty->isFloatTy() ||
+        Ty->isDoubleTy())
       return true;
 
     if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
@@ -319,10 +312,11 @@ public:
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
-    // For fixed vectors, avoid scalarization if using SVE for them.
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors() &&
-        DataType->getPrimitiveSizeInBits() != 128)
-      return false; // Fall back to scalarization of masked operations.
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
+      unsigned Bits = DataType->getPrimitiveSizeInBits();
+      if (Bits != 64 && Bits != 128)
+        return false; // Fall back to scalarization of masked operations.
+    }
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
@@ -340,13 +334,22 @@ public:
   }
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
-    return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
-           Ty->isIntegerTy(64);
+    assert(Ty->isIntegerTy() || Ty->isFloatingPointTy());
+    // 32-bit and 64-bit element types are legal if we have SVE.
+    if (is_contained({32u, 64u}, Ty->getScalarSizeInBits()))
+      return true;
+
+    // 8-bit and 16-bit types require +sve2p2 or +sme2p2.
+    if (is_contained({8u, 16u}, Ty->getScalarSizeInBits()))
+      return ST->hasSVE2p2() || ST->hasSME2p2();
+
+    return false;
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    if (!ST->isSVEAvailable())
+    if (!(ST->isSVEAvailable() ||
+          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
       return false;
 
     if (isa<FixedVectorType>(DataType) &&
@@ -460,6 +463,8 @@ public:
 
   unsigned getGISelRematGlobalCost() const override { return 2; }
 
+  InstructionCost getBranchMispredictPenalty() const override;
+
   unsigned getMinTripCountTailFoldingThreshold() const override {
     return ST->hasSVE() ? 5 : 0;
   }
@@ -469,11 +474,11 @@ public:
                         : TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;
+  bool preferFixedOverScalableIfEqualCost() const override;
 
   unsigned getEpilogueVectorizationMinVF() const override;
 
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override;
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
 
   bool supportsScalableVectors() const override {
     return ST->isSVEorStreamingSVEAvailable();
@@ -509,7 +514,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
@@ -537,13 +542,15 @@ public:
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) const override;
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override {
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override {
     // We can vectorize store v4i8.
     if (ScalarMemTy->isIntegerTy(8) && isPowerOf2_32(VF) && VF >= 4)
       return 4;
 
-    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+    return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                    AddrSpace);
   }
 
   std::optional<unsigned> getMinPageSize() const override { return 4096; }

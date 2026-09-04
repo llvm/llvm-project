@@ -13,7 +13,7 @@
 
 namespace llvm {
 class SIOptimizeVGPRLiveRangePass
-    : public PassInfoMixin<SIOptimizeVGPRLiveRangePass> {
+    : public OptionalPassInfoMixin<SIOptimizeVGPRLiveRangePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

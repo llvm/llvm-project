@@ -28,8 +28,6 @@ auto NestedNameSpecifier::getKind() const -> Kind {
       return Kind::Null;
     case FlagKind::Global:
       return Kind::Global;
-    case FlagKind::Invalid:
-      llvm_unreachable("use of invalid NestedNameSpecifier");
     }
     llvm_unreachable("unhandled FlagKind");
   }
@@ -253,12 +251,6 @@ SourceRange NestedNameSpecifierLocBuilder::getSourceRange() const {
 namespace llvm {
 
 template <> struct DenseMapInfo<clang::NestedNameSpecifier> {
-  static clang::NestedNameSpecifier getEmptyKey() { return std::nullopt; }
-
-  static clang::NestedNameSpecifier getTombstoneKey() {
-    return clang::NestedNameSpecifier::getInvalid();
-  }
-
   static unsigned getHashValue(const clang::NestedNameSpecifier &V) {
     return hash_combine(V.getAsVoidPointer());
   }
@@ -267,16 +259,6 @@ template <> struct DenseMapInfo<clang::NestedNameSpecifier> {
 template <> struct DenseMapInfo<clang::NestedNameSpecifierLoc> {
   using FirstInfo = DenseMapInfo<clang::NestedNameSpecifier>;
   using SecondInfo = DenseMapInfo<void *>;
-
-  static clang::NestedNameSpecifierLoc getEmptyKey() {
-    return clang::NestedNameSpecifierLoc(FirstInfo::getEmptyKey(),
-                                         SecondInfo::getEmptyKey());
-  }
-
-  static clang::NestedNameSpecifierLoc getTombstoneKey() {
-    return clang::NestedNameSpecifierLoc(FirstInfo::getTombstoneKey(),
-                                         SecondInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const clang::NestedNameSpecifierLoc &PairVal) {
     return hash_combine(

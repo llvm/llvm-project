@@ -1,12 +1,12 @@
 # REQUIRES: amdgpu
 
-# RUN: llvm-mc -filetype=obj -triple=amdgcn-amd-amdhsa --amdhsa-code-object-version=4 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=amdgpu7.00-amd-amdhsa --amdhsa-code-object-version=4 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj --file-headers %t | FileCheck --check-prefixes=CHECK,HSA4 %s
 # RUN: ld.lld -m elf64_amdgpu %t.o -o %t
 # RUN: llvm-readobj --file-headers %t | FileCheck --check-prefixes=CHECK,HSA4 %s
 
-# RUN: llvm-mc -filetype=obj -triple=amdgcn-amd-amdhsa --amdhsa-code-object-version=5 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=amdgpu7.00-amd-amdhsa --amdhsa-code-object-version=5 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj --file-headers %t | FileCheck --check-prefixes=CHECK,HSA5 %s
 # RUN: ld.lld -m elf64_amdgpu %t.o -o %t
@@ -29,7 +29,8 @@
 # CHECK-NEXT:   Entry:
 # CHECK-NEXT:   ProgramHeaderOffset: 0x40
 # CHECK-NEXT:   SectionHeaderOffset:
-# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     EF_AMDGPU_MACH_AMDGCN_GFX700 (0x22)
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 64
 # CHECK-NEXT:   ProgramHeaderEntrySize: 56

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <latch>
@@ -15,10 +16,6 @@
 // constexpr explicit latch(ptrdiff_t __expected);
 
 // Make sure that calling latch with a negative value triggers an assertion
-
-// REQUIRES: has-unix-headers
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <latch>
 

@@ -1,5 +1,5 @@
-# RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
-# RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -passes si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
+# RUN: llc --mtriple=amdgpu8.03--amdhsa -verify-machineinstrs -run-pass si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
+# RUN: llc --mtriple=amdgpu8.03--amdhsa -verify-machineinstrs -passes si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
 --- |
   define amdgpu_kernel void @add_f32_1.0_one_f16_use() #0 {
     %f16.val0 = load volatile half, ptr addrspace(1) poison
@@ -158,7 +158,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = V_MOV_B32_e32 1065353216, implicit $exec
     %13 = V_ADD_F16_e64 0, killed %11, 0, %12, 0, 0, implicit $mode, implicit $exec
@@ -221,7 +221,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 1065353216, implicit $exec
@@ -288,7 +288,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
@@ -358,7 +358,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
@@ -424,7 +424,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 1, implicit $exec
@@ -490,7 +490,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
@@ -559,7 +559,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 15360, implicit $exec
@@ -624,7 +624,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 80886784, implicit $exec
@@ -686,7 +686,7 @@ body:             |
     %7 = COPY %6.sub0
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
-    %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
+    %10 = REG_SEQUENCE killed %7, %subreg.sub0, killed %5, %subreg.sub1, killed %9, %subreg.sub2, killed %8, %subreg.sub3
     %11 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 305413120, implicit $exec

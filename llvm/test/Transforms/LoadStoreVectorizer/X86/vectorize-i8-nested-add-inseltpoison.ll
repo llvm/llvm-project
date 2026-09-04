@@ -15,11 +15,11 @@ define void @ld_v4i8_add_nsw(i32 %v0, i32 %v1, ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[V1:%.*]], [[TMP]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i8> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x i8> [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x i8> [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x i8> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> poison, i8 [[TMP41]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP82]], i32 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP133]], i32 2

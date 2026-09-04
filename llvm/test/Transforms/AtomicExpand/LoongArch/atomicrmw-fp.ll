@@ -3,7 +3,8 @@
 
 define float @atomicrmw_fadd_float(ptr %ptr, float %value) {
 ; CHECK-LABEL: @atomicrmw_fadd_float(
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP6]] to float
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -24,7 +25,8 @@ define float @atomicrmw_fadd_float(ptr %ptr, float %value) {
 
 define float @atomicrmw_fsub_float(ptr %ptr, float %value) {
 ; CHECK-LABEL: @atomicrmw_fsub_float(
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP6]] to float
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -45,7 +47,8 @@ define float @atomicrmw_fsub_float(ptr %ptr, float %value) {
 
 define float @atomicrmw_fmin_float(ptr %ptr, float %value) {
 ; CHECK-LABEL: @atomicrmw_fmin_float(
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP7]] to float
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -66,7 +69,8 @@ define float @atomicrmw_fmin_float(ptr %ptr, float %value) {
 
 define float @atomicrmw_fmax_float(ptr %ptr, float %value) {
 ; CHECK-LABEL: @atomicrmw_fmax_float(
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP7]] to float
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -87,7 +91,8 @@ define float @atomicrmw_fmax_float(ptr %ptr, float %value) {
 
 define double @atomicrmw_fadd_double(ptr %ptr, double %value) {
 ; CHECK-LABEL: @atomicrmw_fadd_double(
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i64, ptr [[PTR:%.*]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP6]] to double
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -108,7 +113,8 @@ define double @atomicrmw_fadd_double(ptr %ptr, double %value) {
 
 define double @atomicrmw_fsub_double(ptr %ptr, double %value) {
 ; CHECK-LABEL: @atomicrmw_fsub_double(
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i64, ptr [[PTR:%.*]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP6]] to double
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -129,7 +135,8 @@ define double @atomicrmw_fsub_double(ptr %ptr, double %value) {
 
 define double @atomicrmw_fmin_double(ptr %ptr, double %value) {
 ; CHECK-LABEL: @atomicrmw_fmin_double(
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i64, ptr [[PTR:%.*]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP7]] to double
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -150,7 +157,8 @@ define double @atomicrmw_fmin_double(ptr %ptr, double %value) {
 
 define double @atomicrmw_fmax_double(ptr %ptr, double %value) {
 ; CHECK-LABEL: @atomicrmw_fmax_double(
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i64, ptr [[PTR:%.*]] monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP7]] to double
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]

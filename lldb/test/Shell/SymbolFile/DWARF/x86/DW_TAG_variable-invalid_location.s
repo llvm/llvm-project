@@ -2,7 +2,7 @@
 # RUN: %lldb %t -o "target variable var" -b | FileCheck %s
 
 # CHECK: (lldb) target variable var
-# CHECK: (long) var = <Unhandled opcode DW_OP_unknown_ff in DWARFExpression>
+# CHECK: (long) var = <unhandled opcode DW_OP_unknown_ff in DWARFExpression>
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code

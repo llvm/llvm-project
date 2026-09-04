@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s | FileCheck %s
 
 ; RUN: llc -filetype=obj -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s -o %t32.o
 ; RUN: llvm-readobj %t32.o --syms --relocs | FileCheck %s -D#NFA=2 --check-prefix=OBJ32
-; RUN: llc -filetype=obj -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s -o %t64.o
+; RUN: llc -filetype=obj -mtriple powerpc64-ibm-aix-xcoff --code-model=small -verify-machineinstrs < %s -o %t64.o
 ; RUN: llvm-readobj %t64.o --syms --relocs | FileCheck %s -D#NFA=2 --check-prefix=OBJ64
 
 @i = external global i32, align 4  #0

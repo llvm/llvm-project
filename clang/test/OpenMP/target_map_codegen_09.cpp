@@ -35,9 +35,9 @@
 
 // CK10-LABEL: @.__omp_offloading_{{.*}}implicit_maps_pointer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK10-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
+// CK10-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] zeroinitializer
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK10-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 544]
+// CK10-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 544, i64 288]
 
 // CK10-LABEL: implicit_maps_pointer{{.*}}(
 void implicit_maps_pointer (){
@@ -55,7 +55,7 @@ void implicit_maps_pointer (){
 // CK10-DAG: store ptr [[PTR:%[^,]+]], ptr [[BP1]]
 // CK10-DAG: store ptr [[PTR]], ptr [[P1]]
 
-// CK10: call void [[KERNEL:@.+]](ptr [[PTR]])
+// CK10: call void [[KERNEL:@.+]](ptr [[PTR]], ptr null)
 #pragma omp target
   {
     ddyn[0] += 1.0;
@@ -63,7 +63,7 @@ void implicit_maps_pointer (){
   }
 }
 
-// CK10: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]])
+// CK10: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{[^)]*}})
 // CK10: [[ADDR:%.+]] = alloca ptr,
 // CK10: store ptr [[ARG]], ptr [[ADDR]],
 // CK10: [[REF:%.+]] = load ptr, ptr [[ADDR]],

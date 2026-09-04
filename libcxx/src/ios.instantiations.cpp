@@ -15,6 +15,26 @@
 #include <streambuf>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+#if _LIBCPP_HAS_FILESYSTEM
+// This is provided for ABI compatiblity with programs compiled against old headers.
+// TODO: Is this actually required? If so, this should be guarded with
+// `_LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 24`. Otherwise this should be removed.
+template <class _CharT, class _Traits>
+bool basic_filebuf<_CharT, _Traits>::__read_mode() {
+  if (!(__cm_ & ios_base::in)) {
+    this->setp(nullptr, nullptr);
+    if (__always_noconv_)
+      this->setg((char_type*)__extbuf_, (char_type*)__extbuf_ + __ebs_, (char_type*)__extbuf_ + __ebs_);
+    else
+      this->setg(__intbuf_, __intbuf_ + __ibs_, __intbuf_ + __ibs_);
+    __cm_ = ios_base::in;
+    return true;
+  }
+  return false;
+}
+#endif
 
 // Original explicit instantiations provided in the library
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ios<char>;
@@ -45,4 +65,5 @@ template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_filebuf<char>;
 
 // Add more here if needed...
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

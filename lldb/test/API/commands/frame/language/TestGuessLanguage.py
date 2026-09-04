@@ -30,38 +30,9 @@ class TestFrameGuessLanguage(TestBase):
 
     def do_test(self):
         """Test GuessLanguage for C & C++."""
-        target = self.createTestTarget()
-
-        # Now create a breakpoint in main.c at the source matching
-        # "Set a breakpoint here"
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "Set breakpoint here", lldb.SBFileSpec("somefunc.c")
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("somefunc.c")
         )
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT
-        )
-
-        error = lldb.SBError()
-        # This is the launch info.  If you want to launch with arguments or
-        # environment variables, add them using SetArguments or
-        # SetEnvironmentEntries
-
-        launch_info = target.GetLaunchInfo()
-        process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Did we hit our breakpoint?
-        from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
-
-        threads = get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(
-            len(threads), 1, "There should be a thread stopped at our breakpoint"
-        )
-
-        # The hit count for the breakpoint should be 1.
-        self.assertEqual(breakpoint.GetHitCount(), 1)
-
-        thread = threads[0]
 
         c_frame_language = lldb.eLanguageTypeC99
         cxx_frame_language = lldb.eLanguageTypeC_plus_plus_11

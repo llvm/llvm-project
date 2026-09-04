@@ -10,21 +10,56 @@
 
 namespace clang::lifetimes::internal {
 
-void PathLoan::dump(llvm::raw_ostream &OS) const {
-  OS << getID() << " (Path: ";
-  if (const clang::ValueDecl *VD = Path.getAsValueDecl())
+void AccessPath::dump(llvm::raw_ostream &OS) const {
+  if (const clang::ValueDecl *VD = getAsValueDecl())
     OS << VD->getNameAsString();
   else if (const clang::MaterializeTemporaryExpr *MTE =
-               Path.getAsMaterializeTemporaryExpr())
-    // No nice "name" for the temporary, so deferring to LLVM default
+               getAsMaterializeTemporaryExpr())
     OS << "MaterializeTemporaryExpr at " << MTE;
+  else if (const PlaceholderBase *PB = getAsPlaceholderBase()) {
+    if (const auto *PVD = PB->getParmVarDecl())
+      OS << "$" << PVD->getNameAsString();
+    else if (PB->getImplicitThisParent())
+      OS << "$this";
+  } else if (const auto *E = getAsNewAllocation())
+    OS << "NewAllocation at " << E;
   else
-    llvm_unreachable("access path is not one of any supported types");
+    llvm_unreachable("access path base invalid");
+  for (const auto &E : Elements)
+    E.dump(OS);
+}
+
+void Loan::dump(llvm::raw_ostream &OS) const {
+  OS << getID() << " (Path: ";
+  Path.dump(OS);
   OS << ")";
 }
 
-void PlaceholderLoan::dump(llvm::raw_ostream &OS) const {
-  OS << getID() << " (Placeholder loan)";
+const PlaceholderBase *
+LoanManager::getOrCreatePlaceholderBase(const ParmVarDecl *PVD) {
+  llvm::FoldingSetNodeID ID;
+  PlaceholderBase::Profile(ID, PVD);
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
+    return Existing;
+
+  void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
+  PlaceholderBase *NewPB = new (Mem) PlaceholderBase(PVD);
+  PlaceholderBases.insert(NewPB, InsertToken);
+  return NewPB;
 }
 
+const PlaceholderBase *
+LoanManager::getOrCreatePlaceholderBase(const CXXMethodDecl *MD) {
+  llvm::FoldingSetNodeID ID;
+  PlaceholderBase::Profile(ID, MD);
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
+    return Existing;
+
+  void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
+  PlaceholderBase *NewPB = new (Mem) PlaceholderBase(MD);
+  PlaceholderBases.insert(NewPB, InsertToken);
+  return NewPB;
+}
 } // namespace clang::lifetimes::internal

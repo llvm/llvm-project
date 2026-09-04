@@ -10,6 +10,7 @@
 #include "DumpAST.h"
 #include "TestTU.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -211,7 +212,7 @@ TEST(DumpASTTests, Arcana) {
   auto Node = dumpAST(DynTypedNode::create(findDecl(AST, "x")), AST.getTokens(),
                       AST.getASTContext());
   EXPECT_THAT(Node.arcana, testing::StartsWith("VarDecl "));
-  EXPECT_THAT(Node.arcana, testing::EndsWith(" 'int'"));
+  EXPECT_THAT(Node.arcana, testing::EndsWith(" 'int' external-linkage"));
   ASSERT_THAT(Node.children, SizeIs(1)) << "Expected one child typeloc";
   EXPECT_THAT(Node.children.front().arcana, testing::StartsWith("QualType "));
 }
@@ -225,6 +226,28 @@ TEST(DumpASTTests, UnbalancedBraces) {
   auto Node = dumpAST(DynTypedNode::create(findDecl(AST, "main")),
                       AST.getTokens(), AST.getASTContext());
   ASSERT_EQ(Node.range, Case.range("func"));
+}
+
+bool hasDetail(const ASTNode &Node, llvm::StringRef Detail) {
+  if (Node.detail == Detail)
+    return true;
+  return llvm::any_of(Node.children, [&Detail](const ASTNode &Child) {
+    return hasDetail(Child, Detail);
+  });
+}
+
+TEST(DumpASTTests, PackIndexedConcept) {
+  auto TU = TestTU::withCode(R"cpp(
+template <template <class> concept... CC, CC...[0] T>
+void func(T);
+  )cpp");
+  TU.ExtraArgs = {"-std=c++2d"};
+  ParsedAST AST = TU.build();
+  const ASTNode Node = dumpAST(
+      DynTypedNode::create(*AST.getASTContext().getTranslationUnitDecl()),
+      AST.getTokens(), AST.getASTContext());
+
+  EXPECT_TRUE(hasDetail(Node, "CC...[0]"));
 }
 
 TEST(DumpASTTests, NestedTemplates) {

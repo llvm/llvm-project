@@ -104,7 +104,8 @@ public:
     if (isBoxAddressOrValue())
       return llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(getType()));
     const bool isVolatile = fir::isa_volatile_type(getType());
-    return fir::BoxType::get(getElementOrSequenceType(), isVolatile);
+    const int64_t corank = fir::getBoxCorank(getType());
+    return fir::BoxType::get(getElementOrSequenceType(), isVolatile, corank);
   }
 
   bool hasLengthParameters() const {
@@ -522,7 +523,7 @@ convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             hlfir::Entity entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType, unsigned corank = 0);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
@@ -613,6 +614,10 @@ bool designatePreservesContinuity(hlfir::DesignateOp op);
 /// This function is an extension of hlfir::Entity::isSimplyContiguous(),
 /// and it can be used on pure FIR representation as well as on HLFIR.
 bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
+
+/// Return true if \p region belongs to a sub-expression of an hlfir.where
+/// that is subject to the WHERE mask control.
+bool isInsideHlfirWhereMaskedExpression(mlir::Region &region);
 
 } // namespace hlfir
 

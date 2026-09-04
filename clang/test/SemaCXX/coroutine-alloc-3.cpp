@@ -1,5 +1,5 @@
 // Tests that we'll emit the proper diagnostic message if we failed to find `::operator new(size_­t, nothrow_­t)`.
-// RUN: %clang_cc1 %s -std=c++20 %s -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++20 -Wno-coroutines-unsupported-target %s -fsyntax-only -verify
 
 namespace std {
 template <typename... T>

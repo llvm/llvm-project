@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LazyBranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -25,7 +25,7 @@ using namespace llvm;
 
 INITIALIZE_PASS_BEGIN(LazyBranchProbabilityInfoPass, DEBUG_TYPE,
                       "Lazy Branch Probability Analysis", true, true)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LazyBranchProbabilityInfoPass, DEBUG_TYPE,
                     "Lazy Branch Probability Analysis", true, true)
@@ -45,7 +45,7 @@ void LazyBranchProbabilityInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   // asserts that DT is also present so if we don't make sure that we have DT
   // here, that assert will trigger.
   AU.addRequiredTransitive<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<CycleInfoWrapperPass>();
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
   AU.setPreservesAll();
 }
@@ -53,21 +53,21 @@ void LazyBranchProbabilityInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
 void LazyBranchProbabilityInfoPass::releaseMemory() { LBPI.reset(); }
 
 bool LazyBranchProbabilityInfoPass::runOnFunction(Function &F) {
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  CycleInfo &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
   TargetLibraryInfo &TLI =
       getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  LBPI = std::make_unique<LazyBranchProbabilityInfo>(&F, &LI, &TLI);
+  LBPI = std::make_unique<LazyBranchProbabilityInfo>(&F, &CI, &TLI);
   return false;
 }
 
 void LazyBranchProbabilityInfoPass::getLazyBPIAnalysisUsage(AnalysisUsage &AU) {
   AU.addRequiredTransitive<LazyBranchProbabilityInfoPass>();
-  AU.addRequiredTransitive<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<CycleInfoWrapperPass>();
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
 
 void llvm::initializeLazyBPIPassPass(PassRegistry &Registry) {
   INITIALIZE_PASS_DEPENDENCY(LazyBranchProbabilityInfoPass);
-  INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
+  INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
   INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass);
 }

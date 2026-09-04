@@ -1,5 +1,6 @@
 // setting strict FP behaviour in the run line below tests that the compiler
 // does the right thing for global compound literals (compoundliteral test)
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -ffreestanding -Wno-pointer-to-int-cast -Wno-int-conversion -ffp-exception-behavior=strict -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -ffreestanding -Wno-pointer-to-int-cast -Wno-int-conversion -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s
 
 #include <stdint.h>
@@ -187,7 +188,7 @@ void g31(void) {
 
 // Clang should evaluate this in constant context, so floating point mode should
 // have no effect.
-// CHECK: @.compoundliteral = internal global [1 x float] [float 0x3FB99999A0000000], align 4
+// CHECK: @.compoundliteral = internal global [1 x float] [float 1.000000e-01], align 4
 struct { const float *floats; } compoundliteral = {
   (float[1]) { 0.1, },
 };

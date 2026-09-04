@@ -19,6 +19,10 @@
 // LINK: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -Wl,--no-demangle 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_NO_DEMANGLE %s
+// LINK_NO_DEMANGLE: wasm-ld{{.*}}"--no-demangle"
+
 // A basic C link command-line with optimization with unknown OS.
 
 // RUN: %clang -### -O2 --target=wasm32-unknown-unknown --sysroot=/foo %s 2>&1 \
@@ -303,3 +307,9 @@
 // RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
+
+// Test that `wasm32-wasip3` passes `--cooperative-threading` to the linker.
+
+// RUN: %clang -### --target=wasm32-wasip3 -fuse-ld=lld %s --sysroot /foo 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP3_COOP %s
+// LINK_WASIP3_COOP: wasm-ld{{.*}}" {{.*}} "--cooperative-threading"

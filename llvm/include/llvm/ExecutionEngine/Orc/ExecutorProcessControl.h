@@ -14,9 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/DylibManager.h"
-#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -30,9 +27,17 @@
 #include <mutex>
 #include <vector>
 
+namespace llvm::jitlink {
+
+class JITLinkMemoryManager;
+
+} // namespace llvm::jitlink
+
 namespace llvm::orc {
 
+class DylibManager;
 class ExecutionSession;
+class MemoryAccess;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class LLVM_ABI ExecutorProcessControl {
@@ -97,13 +102,6 @@ public:
     TaskDispatcher &D;
   };
 
-  /// Contains the address of the dispatch function and context that the ORC
-  /// runtime can use to call functions in the JIT.
-  struct JITDispatchInfo {
-    ExecutorAddr JITDispatchFunction;
-    ExecutorAddr JITDispatchContext;
-  };
-
   ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
                          std::unique_ptr<TaskDispatcher> D)
       : SSP(std::move(SSP)), D(std::move(D)) {}
@@ -131,26 +129,16 @@ public:
   /// Get the page size for the target process.
   unsigned getPageSize() const { return PageSize; }
 
-  /// Get the JIT dispatch function and context address for the executor.
-  const JITDispatchInfo &getJITDispatchInfo() const { return JDI; }
+  /// Create a default JITLinkMemoryManager for the target process.
+  virtual Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() = 0;
 
-  /// Return a MemoryAccess object for the target process.
-  MemoryAccess &getMemoryAccess() const {
-    assert(MemAccess && "No MemAccess object set.");
-    return *MemAccess;
-  }
+  /// Create a default DylibManager for the target process.
+  virtual Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() = 0;
 
-  /// Return a JITLinkMemoryManager for the target process.
-  jitlink::JITLinkMemoryManager &getMemMgr() const {
-    assert(MemMgr && "No MemMgr object set");
-    return *MemMgr;
-  }
-
-  /// Return the DylibManager for the target process.
-  DylibManager &getDylibMgr() const {
-    assert(DylibMgr && "No DylibMgr object set");
-    return *DylibMgr;
-  }
+  /// Create a default MemoryAccess for the target process.
+  virtual Expected<std::unique_ptr<MemoryAccess>>
+  createDefaultMemoryAccess() = 0;
 
   /// Returns the bootstrap map.
   const StringMap<std::vector<char>> &getBootstrapMap() const {
@@ -203,15 +191,6 @@ public:
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
-
-  // TODO: move this to ORC runtime.
-  /// Run function with a int (*)(void) signature.
-  virtual Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) = 0;
-
-  // TODO: move this to ORC runtime.
-  /// Run function with a int (*)(int) signature.
-  virtual Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr,
-                                             int Arg) = 0;
 
   /// Run a wrapper function in the executor. The given WFRHandler will be
   /// called on the result when it is returned.
@@ -314,10 +293,6 @@ protected:
   ExecutionSession *ES = nullptr;
   Triple TargetTriple;
   unsigned PageSize = 0;
-  JITDispatchInfo JDI;
-  MemoryAccess *MemAccess = nullptr;
-  jitlink::JITLinkMemoryManager *MemMgr = nullptr;
-  DylibManager *DylibMgr = nullptr;
   StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };

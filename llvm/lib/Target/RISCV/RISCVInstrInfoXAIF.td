@@ -53,6 +53,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def simm10 : RISCVSImmOp<10>, ImmLeaf<XLenVT, "return isInt<10>(Imm);">;
+
 let DecoderNamespace = "XAIF", Predicates = [HasXAIFET] in {
 
   let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in

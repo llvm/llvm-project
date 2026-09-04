@@ -20,9 +20,9 @@ namespace clang::tidy::abseil {
 // Returns `true` if `Range` is inside a macro definition.
 static bool insideMacroDefinition(const MatchFinder::MatchResult &Result,
                                   SourceRange Range) {
-  return !clang::Lexer::makeFileCharRange(
-              clang::CharSourceRange::getCharRange(Range),
-              *Result.SourceManager, Result.Context->getLangOpts())
+  return !Lexer::makeFileCharRange(CharSourceRange::getCharRange(Range),
+                                   *Result.SourceManager,
+                                   Result.Context->getLangOpts())
               .isValid();
 }
 
@@ -85,7 +85,7 @@ static bool parensRequired(const MatchFinder::MatchResult &Result,
 }
 
 void TimeSubtractionCheck::emitDiagnostic(const Expr *Node,
-                                          llvm::StringRef Replacement) {
+                                          StringRef Replacement) {
   diag(Node->getBeginLoc(), "perform subtraction in the time domain")
       << FixItHint::CreateReplacement(Node->getSourceRange(), Replacement);
 }
@@ -97,7 +97,7 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
     std::optional<DurationScale> Scale = getScaleForTimeInverse(TimeInverse);
     assert(Scale && "Unknown scale encountered");
 
-    auto TimeInverseMatcher = callExpr(callee(
+    const auto TimeInverseMatcher = callExpr(callee(
         functionDecl(hasName((llvm::Twine("::absl::") + TimeInverse).str()))
             .bind("func_decl")));
 
@@ -106,7 +106,7 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
     // is not sufficient, since the second operand could be either a 'Time' or
     // a 'Duration'. If we know the result is a 'Duration', we can then infer
     // that the second operand must be a 'Time'.
-    auto CallMatcher =
+    const auto CallMatcher =
         callExpr(
             callee(functionDecl(hasName(getDurationFactoryForScale(*Scale)))),
             hasArgument(0, binaryOperator(hasOperatorName("-"),
@@ -118,7 +118,7 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
     // Match cases where we know the second operand is a 'Time'. Since
     // subtracting a 'Time' from a 'Duration' is not defined, in these cases,
     // we always know the first operand is a 'Time' if the second is a 'Time'.
-    auto OperandMatcher =
+    const auto OperandMatcher =
         binaryOperator(hasOperatorName("-"), hasRHS(TimeInverseMatcher))
             .bind("binop");
     Finder->addMatcher(OperandMatcher, this);

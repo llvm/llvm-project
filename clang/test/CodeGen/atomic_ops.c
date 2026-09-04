@@ -34,12 +34,12 @@ extern _Atomic _Bool b;
 _Bool bar(void) {
 // NATIVE-LABEL: @bar
 // NATIVE: %[[load:.*]] = load atomic i8, ptr @b seq_cst, align 1
-// NATIVE: %[[tobool:.*]] = trunc i8 %[[load]] to i1
+// NATIVE: %[[tobool:.*]] = icmp ne i8 %[[load]], 0
 // NATIVE: ret i1 %[[tobool]]
 // LIBCALL-LABEL: @bar
 // LIBCALL: call void @__atomic_load(i32 noundef 1, ptr noundef @b, ptr noundef %atomic-temp, i32 noundef 5)
 // LIBCALL: %[[load:.*]] = load i8, ptr %atomic-temp
-// LIBCALL: %[[tobool:.*]] = trunc i8 %[[load]] to i1
+// LIBCALL: %[[tobool:.*]] = icmp ne i8 %[[load]], 0
 // LIBCALL: ret i1 %[[tobool]]
 
   return b;

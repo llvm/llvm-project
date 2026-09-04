@@ -91,7 +91,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::RegisterByHwMode::getNullReg(HwModeId)) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov.zero $dst
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::PTR_MOV_ZERO);
 // CHECK-NEXT:       // Operand: dst
@@ -102,7 +102,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // ptr_mov.tied $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::PTR_MOV_TIED);
 // CHECK-NEXT:       // Operand: dst
@@ -113,9 +113,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // ptr_mov.small $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::PTR_MOV_SMALL);
 // CHECK-NEXT:       // Operand: dst
@@ -131,7 +131,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::X0) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // x_mov.zero $dst
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::X_MOV_ZERO);
 // CHECK-NEXT:       // Operand: dst
@@ -142,7 +142,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // x_mov.tied $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::X_MOV_TIED);
 // CHECK-NEXT:       // Operand: dst
@@ -153,9 +153,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // x_mov.small $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::X_MOV_SMALL);
 // CHECK-NEXT:       // Operand: dst
@@ -179,9 +179,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   default: return false;
 // CHECK-NEXT:   case MyTarget::PTR_MOV_SMALL: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // ptr_mov $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::PTR_MOV);
 // CHECK-NEXT:       // Operand: dst
@@ -195,9 +195,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   } // case PTR_MOV_SMALL
 // CHECK-NEXT:   case MyTarget::PTR_MOV_TIED: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::PTR_MOV);
 // CHECK-NEXT:       // Operand: dst
@@ -211,7 +211,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   } // case PTR_MOV_TIED
 // CHECK-NEXT:   case MyTarget::PTR_MOV_ZERO: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::PTR_MOV);
 // CHECK-NEXT:       // Operand: dst
@@ -225,9 +225,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   } // case PTR_MOV_ZERO
 // CHECK-NEXT:   case MyTarget::X_MOV_SMALL: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // x_mov $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::X_MOV);
 // CHECK-NEXT:       // Operand: dst
@@ -241,9 +241,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   } // case X_MOV_SMALL
 // CHECK-NEXT:   case MyTarget::X_MOV_TIED: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // x_mov $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::X_MOV);
 // CHECK-NEXT:       // Operand: dst
@@ -257,7 +257,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   } // case X_MOV_TIED
 // CHECK-NEXT:   case MyTarget::X_MOV_ZERO: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // x_mov $dst, $src
 // CHECK-NEXT:       OutInst.setOpcode(MyTarget::X_MOV);
 // CHECK-NEXT:       // Operand: dst
@@ -280,9 +280,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   default: return false;
 // CHECK-NEXT:   case MyTarget::PTR_MOV: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // ptr_mov.small $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
@@ -291,7 +291,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // ptr_mov.tied $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
@@ -300,7 +300,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::RegisterByHwMode::getNullReg(HwModeId)) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov.zero $dst
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       return true;
@@ -309,9 +309,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:   } // case PTR_MOV
 // CHECK-NEXT:   case MyTarget::X_MOV: {
 // CHECK-NEXT:     if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg()) &&
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // x_mov.small $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
@@ -320,7 +320,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MI.getOperand(0).getReg()) &&
 // CHECK-NEXT:         MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(1).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(1).getReg())) {
 // CHECK-NEXT:       // x_mov.tied $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
@@ -329,7 +329,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
 // CHECK-NEXT:         (MI.getOperand(1).getReg() == MyTarget::X0) &&
 // CHECK-NEXT:         MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
-// CHECK-NEXT:         MyTargetMCRegisterClasses[MyTarget::XRegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // x_mov.zero $dst
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       return true;

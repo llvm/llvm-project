@@ -1162,7 +1162,7 @@ bool IntegerRelation::gaussianEliminate() {
       equalities.normalizeRow(i);
     }
     for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, firstVar, 0, false);
+      eliminateFromConstraint(this, i, *pivotRow, firstVar, firstVar, false);
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
@@ -2573,6 +2573,9 @@ void IntegerRelation::compose(const IntegerRelation &rel) {
 
   // Project out B in R1.
   convertVarKind(VarKind::Range, 0, numBVars, VarKind::Local);
+
+  // Eliminate local variables
+  removeRedundantLocalVars();
 }
 
 void IntegerRelation::applyDomain(const IntegerRelation &rel) {

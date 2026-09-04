@@ -8,8 +8,8 @@
 # RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
 
 # ICFCHECK:      ICF iteration 1
-# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
 # ICFCHECK-NEXT: folding barMulFunc into fooMulFunc
+# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
 
 # SAFEICFCHECK:      skipping function with reference taken fooMulFunc
 # SAFEICFCHECK-NEXT: skipping function with reference taken barMulFunc

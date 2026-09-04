@@ -53,10 +53,10 @@ func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
 
 // -----
 
-func.func @int_vector4_invalid(%arg0: vector<2xi16>) {
+func.func @int_vector4_invalid(%arg0: vector<2xi16>, %arg1: vector<2xi16>) {
   // expected-error @+2 {{failed to legalize operation 'arith.divui'}}
   // expected-error @+1 {{bitwidth emulation is not implemented yet on unsigned op}}
-  %0 = arith.divui %arg0, %arg0: vector<2xi16>
+  %0 = arith.divui %arg0, %arg1: vector<2xi16>
   return
 }
 

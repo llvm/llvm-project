@@ -25,8 +25,10 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -153,11 +155,8 @@ void X86AsmPrinter::EmitKCFITypePadding(const MachineFunction &MF,
                                         bool HasType) {
   // Keep the function entry aligned, taking patchable-function-prefix into
   // account if set.
-  int64_t PrefixBytes = 0;
-  (void)MF.getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixBytes);
+  int64_t PrefixBytes = MF.getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // Also take the type identifier into account if we're emitting
   // one. Otherwise, just pad with nops. The X86::MOV32ri instruction emitted
@@ -192,7 +191,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   // symbols for weak parent functions.
   MCSymbol *FnSym = OutContext.getOrCreateSymbol("__cfi_" + MF.getName());
   emitLinkage(&MF.getFunction(), FnSym);
-  if (MAI->hasDotTypeDotSizeDirective())
+  if (MAI.hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(FnSym, MCSA_ELF_TypeFunction);
   OutStreamer->emitLabel(FnSym);
 
@@ -237,7 +236,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
                               .addReg(DestReg)
                               .addImm(MaskKCFIType(Type->getZExtValue())));
 
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (MAI.hasDotTypeDotSizeDirective()) {
     MCSymbol *EndSym = OutContext.createTempSymbol("cfi_func_end");
     OutStreamer->emitLabel(EndSym);
 
@@ -434,6 +433,10 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
   // If we really don't want to print out (rip), don't.
   bool HasBaseReg = BaseReg.getReg() != 0;
   if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
+    HasBaseReg = false;
+
+  // If we really just want to print out displacement.
+  if ((DispSpec.isGlobal() || DispSpec.isSymbol()) && Modifier == "disp-only")
     HasBaseReg = false;
 
   // HasParenPart - True if we will print out the () part of the mem ref.
@@ -670,10 +673,11 @@ void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
       *Subtarget);
 }
 
-static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
-                              char Mode, raw_ostream &O) {
+static bool printAsmMRegister(const X86AsmPrinter &P, const MachineInstr &MI,
+                              const MachineOperand &MO, char Mode,
+                              raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   if (!X86::GR8RegClass.contains(Reg) &&
       !X86::GR16RegClass.contains(Reg) &&
@@ -714,10 +718,10 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
   return false;
 }
 
-static bool printAsmVRegister(const MachineOperand &MO, char Mode,
-                              raw_ostream &O) {
+static bool printAsmVRegister(const MachineInstr &MI, const MachineOperand &MO,
+                              char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   unsigned Index;
   if (X86::VR128XRegClass.contains(Reg))
@@ -759,6 +763,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
 
     const MachineOperand &MO = MI->getOperand(OpNo);
+    const bool IsIntel = MI->getInlineAsmDialect() == InlineAsm::AD_Intel;
 
     switch (ExtraCode[0]) {
     default:
@@ -781,9 +786,9 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
           O << "(%rip)";
         return false;
       case MachineOperand::MO_Register:
-        O << '(';
+        O << (IsIntel ? '[' : '(');
         PrintOperand(MI, OpNo, O);
-        O << ')';
+        O << (IsIntel ? ']' : ')');
         return false;
       }
 
@@ -807,7 +812,8 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
     case 'A': // Print '*' before a register (it must be a register)
       if (MO.isReg()) {
-        O << '*';
+        if (!IsIntel)
+          O << '*';
         PrintOperand(MI, OpNo, O);
         return false;
       }
@@ -820,7 +826,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'q': // Print DImode register
     case 'V': // Print native register without '%'
       if (MO.isReg())
-        return printAsmMRegister(*this, MO, ExtraCode[0], O);
+        return printAsmMRegister(*this, *MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 
@@ -828,7 +834,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 't': // Print V8SFmode register
     case 'g': // Print V16SFmode register
       if (MO.isReg())
-        return printAsmVRegister(MO, ExtraCode[0], O);
+        return printAsmVRegister(*MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 
@@ -867,6 +873,13 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
     switch (ExtraCode[0]) {
     default: return true;  // Unknown modifier.
+    case 'a': {
+      // Print as address — only valid with 'p' constraint.
+      const InlineAsm::Flag Flags(MI->getOperand(OpNo - 1).getImm());
+      if (Flags.getMemoryConstraintID() != InlineAsm::ConstraintCode::p)
+        return true;
+      break;
+    }
     case 'b': // Print QImode register
     case 'h': // Print QImode high register
     case 'w': // Print HImode register
@@ -892,6 +905,11 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       }
       return false;
     }
+  } else {
+    // Constraint 'p' requires modifier 'a'.
+    const InlineAsm::Flag Flags(MI->getOperand(OpNo - 1).getImm());
+    if (Flags.getMemoryConstraintID() == InlineAsm::ConstraintCode::p)
+      return true;
   }
   if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
     PrintIntelMemReference(MI, OpNo, O);
@@ -948,10 +966,15 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
+
+    // Unwind v3 is set for the entire module, not just individual functions.
+    if (M.getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3)
+      OutStreamer->emitWinCFIUnwindVersion(3);
   }
 
   // TODO: Support prefixed registers for the Intel syntax.
-  const bool IntelSyntax = MAI->getAssemblerDialect() == InlineAsm::AD_Intel;
+  const bool IntelSyntax =
+      MAI.getOutputAssemblerDialect() == InlineAsm::AD_Intel;
   OutStreamer->emitSyntaxDirective(IntelSyntax ? "intel" : "att",
                                    IntelSyntax ? "noprefix" : "");
 
@@ -1119,7 +1142,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       OutStreamer->switchSection(ReadOnlySection);
       OutStreamer->emitLabel(AddrSymbol);
 
-      unsigned PtrSize = MAI->getCodePointerSize();
+      unsigned PtrSize = MAI.getCodePointerSize();
       OutStreamer->emitSymbolValue(GetExternalSymbolSymbol("__morestack"),
                                    PtrSize);
     }
@@ -1143,14 +1166,18 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
 
 PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  // Force the computation of SDPI so that it is available for the
+  // actual pass, where it cannot be explicitly requested.
+  MAM.getResult<StaticDataProfileInfoAnalysis>(M);
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doInitialization(M);
   return PreservedAnalyses::all();
@@ -1158,15 +1185,20 @@ PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
 
 PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
   AsmPrinter.GetPSI = [&MFAM, &MF](Module &M) {
     return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
         .getCachedResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MFAM, &MF](Module &M) {
+    return &MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                .getCachedResult<StaticDataProfileInfoAnalysis>(
+                    *MF.getFunction().getParent())
+                ->getStaticDataProfileInfo();
+  };
   setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
   AsmPrinter.runOnMachineFunction(MF);
   return PreservedAnalyses::all();
@@ -1174,14 +1206,15 @@ PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
 
 PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
-  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-  if (!Streamer)
-    reportFatalInternalError("Failed to create MCStreamer");
-  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
+      MAM.getCachedResult<AsmPrinterAnalysis>(M)->getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doFinalization(M);
   return PreservedAnalyses::all();

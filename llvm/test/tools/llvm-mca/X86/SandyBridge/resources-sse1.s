@@ -230,7 +230,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  2      20    14.00   *                   divps	(%rax), %xmm2
 # CHECK-NEXT:  1      14    14.00                       divss	%xmm0, %xmm2
 # CHECK-NEXT:  2      20    14.00   *                   divss	(%rax), %xmm2
-# CHECK-NEXT:  4      5     1.00    *      *      U     ldmxcsr	(%rax)
+# CHECK-NEXT:  3      5     1.00    *      *      U     ldmxcsr	(%rax)
 # CHECK-NEXT:  1      1     1.00    *      *      U     maskmovq	%mm0, %mm1
 # CHECK-NEXT:  1      3     1.00                        maxps	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   maxps	(%rax), %xmm2
@@ -331,7 +331,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     112.00 41.00  55.50  10.00  34.50  33.50  33.50
+# CHECK-NEXT:  -     112.00 41.00  55.50  9.00   34.50  33.50  33.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -371,7 +371,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  -     14.00  1.00    -      -      -     0.50   0.50   divps	(%rax), %xmm2
 # CHECK-NEXT:  -     14.00  1.00    -      -      -      -      -     divss	%xmm0, %xmm2
 # CHECK-NEXT:  -     14.00  1.00    -      -      -     0.50   0.50   divss	(%rax), %xmm2
-# CHECK-NEXT:  -      -     1.00    -     1.00   1.00   0.50   0.50   ldmxcsr	(%rax)
+# CHECK-NEXT:  -      -     1.00    -      -     1.00   0.50   0.50   ldmxcsr	(%rax)
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     maskmovq	%mm0, %mm1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     maxps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   maxps	(%rax), %xmm2

@@ -62,8 +62,6 @@ def PPCA2Itineraries : ProcessorItineraries<
                                  [5, 0, 0]>,
   InstrItinData<IIC_BrMCRX,      [InstrStage<1, [A2_XU]>],
                                  [1, 0, 0]>,
-  InstrItinData<IIC_LdStDCBA,    [InstrStage<1, [A2_XU]>],
-                                 [1, 0, 0]>,
   InstrItinData<IIC_LdStDCBF,    [InstrStage<1, [A2_XU]>],
                                  [1, 0, 0]>,
   InstrItinData<IIC_LdStDCBI,    [InstrStage<1, [A2_XU]>],

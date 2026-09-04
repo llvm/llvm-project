@@ -50,3 +50,8 @@ float3 test_exp2_float3(float3 p0) { return exp2(p0); }
 // CHECK: [[EXP2:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.exp2.v4f32
 // CHECK: ret <4 x float> [[EXP2]]
 float4 test_exp2_float4(float4 p0) { return exp2(p0); }
+
+// CHECK-LABEL: test_exp2_float5
+// CHECK: [[EXP2:%.*]] = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.exp2.v5f32
+// CHECK: ret <5 x float> [[EXP2]]
+vector<float, 5> test_exp2_float5(vector<float, 5> p0) { return exp2(p0); }

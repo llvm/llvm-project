@@ -5,7 +5,9 @@ add_entrypoint_object(
   HDRS
     ../sendfile.h
   DEPENDS
-    libc.include.sys_sendfile
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

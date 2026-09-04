@@ -117,7 +117,6 @@ define ptx_device float @f32_iii(float %x) {
 ; CHECK-LABEL: f32_iii(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1092616192;
 ; CHECK-NEXT:    ret;

@@ -59,7 +59,7 @@ void loop_with_counter_collapse() {
   // CHECK: [[BOOL:%.+]] = zext i1 [[CMP]] to i8
   // CHECK: store i8 [[BOOL]], ptr [[J_UB_CMP:%.+]],
   // CHECK: [[J_UB_CMP_VAL:%.+]] = load i8, ptr [[J_UB_CMP]],
-  // CHECK: [[BOOL:%.+]] = trunc i8 [[J_UB_CMP_VAL]] to i1
+  // CHECK: [[BOOL:%.+]] = icmp ne i8 [[J_UB_CMP_VAL]], 0
   // CHECK: br i1 [[BOOL]], label %[[TRUE:[^,]+]], label %[[FALSE:[^,]+]]
   // CHECK: [[TRUE]]:
   // CHECK: [[J_UB_MIN_VAL:%.+]] = load i32, ptr [[J_UB_MIN]],
@@ -71,7 +71,7 @@ void loop_with_counter_collapse() {
   // CHECK: [[J_UB_VAL:%.+]] = phi i32 [ [[J_UB_MIN_VAL]], %[[TRUE]] ], [ [[J_UB_MAX_VAL]], %[[FALSE]] ]
   // CHECK: store i32 [[J_UB_VAL]], ptr [[J_UB:%.+]],
   // CHECK: [[J_LB_CMP_VAL:%.+]] = load i8, ptr [[J_LB_CMP]],
-  // CHECK: [[BOOL:%.+]] = trunc i8 [[J_LB_CMP_VAL]] to i1
+  // CHECK: [[BOOL:%.+]] = icmp ne i8 [[J_LB_CMP_VAL]], 0
   // CHECK: br i1 [[BOOL]], label %[[TRUE:[^,]+]], label %[[FALSE:[^,]+]]
   // CHECK: [[TRUE]]:
   // CHECK: [[J_LB_MIN_VAL:%.+]] = load i32, ptr [[J_LB_MIN]],

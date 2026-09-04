@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMScalarOpts
   DivRemPairs.cpp
   DropUnnecessaryAssumes.cpp
   EarlyCSE.cpp
+  ExpandMemCmp.cpp
   FlattenCFGPass.cpp
   Float2Int.cpp
   GuardWidening.cpp
@@ -28,6 +29,7 @@ add_llvm_component_library(LLVMScalarOpts
   JumpThreading.cpp
   JumpTableToSwitch.cpp
   LICM.cpp
+  LogicalSROA.cpp
   LoopAccessAnalysisPrinter.cpp
   LoopBoundSplit.cpp
   LoopSink.cpp

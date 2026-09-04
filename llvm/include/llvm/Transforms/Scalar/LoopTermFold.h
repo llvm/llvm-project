@@ -19,10 +19,11 @@ namespace llvm {
 class Loop;
 class LPMUpdater;
 
-class LoopTermFoldPass : public PassInfoMixin<LoopTermFoldPass> {
+class LoopTermFoldPass : public OptionalPassInfoMixin<LoopTermFoldPass> {
 public:
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

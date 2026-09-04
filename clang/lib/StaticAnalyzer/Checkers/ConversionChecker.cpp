@@ -65,7 +65,7 @@ void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
     return;
 
   // Get Parent.
-  const ParentMap &PM = C.getLocationContext()->getParentMap();
+  const ParentMap &PM = C.getStackFrame()->getParentMap();
   const Stmt *Parent = PM.getParent(Cast);
   if (!Parent)
     return;

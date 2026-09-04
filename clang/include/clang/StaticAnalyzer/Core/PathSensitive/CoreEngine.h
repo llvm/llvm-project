@@ -49,14 +49,10 @@ class ExprEngine;
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class ExprEngine;
-  friend class IndirectGotoNodeBuilder;
-  friend class NodeBuilder;
-  friend class NodeBuilderContext;
-  friend class SwitchNodeBuilder;
 
 public:
   using BlocksExhausted =
-      std::vector<std::pair<BlockEdge, const ExplodedNode *>>;
+      std::vector<std::pair<BlockEntrance, const ExplodedNode *>>;
 
   using BlocksAborted =
       std::vector<std::pair<const CFGBlock *, const ExplodedNode *>>;
@@ -85,6 +81,11 @@ private:
   /// The locations where we stopped because the engine aborted analysis,
   /// usually because it could not reason about something.
   BlocksAborted blocksAborted;
+
+  /// Whether the single-TU phase completed the exploration of all paths
+  /// within its budget limit.
+  /// The CTU phase replaces \c WList, so this has to be remembered separately.
+  bool ExploredAllSTUPaths = false;
 
   /// The information about functions shared by the whole translation unit.
   /// (This data is owned by AnalysisConsumer.)
@@ -139,7 +140,7 @@ public:
 
   /// ExecuteWorkList - Run the worklist algorithm for a maximum number of
   ///  steps.  Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkList(const LocationContext *L, unsigned Steps,
+  bool ExecuteWorkList(const StackFrame *SF, unsigned Steps,
                        ProgramStateRef InitState);
 
   /// Dispatch the work list item based on the given location information.
@@ -150,9 +151,10 @@ public:
   // Functions for external checking of whether we have unfinished work.
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
-  bool hasWorkRemaining() const { return wasBlocksExhausted() ||
-                                         WList->hasWork() ||
-                                         wasBlockAborted(); }
+  bool hasExploredAllPaths() const {
+    return !wasBlocksExhausted() && !WList->hasWork() && ExploredAllSTUPaths &&
+           !wasBlockAborted();
+  }
 
   /// Inform the CoreEngine that a basic block was aborted because
   /// it could not be completely analyzed.
@@ -172,6 +174,29 @@ public:
   ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
                          ExplodedNode *Pred, bool MarkAsSink = false) const;
 
+  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+                                 ExplodedNode *Pred,
+                                 bool MarkAsSink = false) const {
+    PostStmt Loc(S, Pred->getStackFrame(), /*tag=*/nullptr);
+    return makeNode(Loc, State, Pred, MarkAsSink);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramStateRef State,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    const StackFrame *SF = Pred->getStackFrame();
+    State = State->BindExpr(E, SF, V);
+    const auto &L = ProgramPoint::getProgramPoint(E, K, SF, /*tag=*/nullptr);
+    return makeNode(L, State, Pred);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    return makeNodeWithBinding(Pred, E, V, Pred->getState(), K);
+  }
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
@@ -188,193 +213,6 @@ public:
   void enqueueStmtNode(ExplodedNode *N, const CFGBlock *Block, unsigned Idx);
 
   DataTag::Factory &getDataTags() { return DataTags; }
-};
-
-class NodeBuilderContext {
-  const CoreEngine &Eng;
-  const CFGBlock *Block;
-  const LocationContext *LC;
-
-public:
-  NodeBuilderContext(const CoreEngine &E, const CFGBlock *B,
-                     const LocationContext *L)
-      : Eng(E), Block(B), LC(L) {
-    assert(B);
-  }
-
-  NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
-      : NodeBuilderContext(E, B, N->getLocationContext()) {}
-
-  /// Return the CoreEngine associated with this builder.
-  const CoreEngine &getEngine() const { return Eng; }
-
-  /// Return the CFGBlock associated with this builder.
-  const CFGBlock *getBlock() const { return Block; }
-
-  /// Return the location context associated with this builder.
-  const LocationContext *getLocationContext() const { return LC; }
-
-  /// Returns the number of times the current basic block has been
-  /// visited on the exploded graph path.
-  unsigned blockCount() const {
-    return Eng.WList->getBlockCounter().getNumVisited(
-                    LC->getStackFrame(),
-                    Block->getBlockID());
-  }
-};
-
-/// \class NodeBuilder
-/// This is the simplest builder which generates nodes in the
-/// ExplodedGraph.
-///
-/// The main benefit of the builder is that it automatically tracks the
-/// frontier nodes (or destination set). This is the set of nodes which should
-/// be propagated to the next step / builder. They are the nodes which have been
-/// added to the builder (either as the input node set or as the newly
-/// constructed nodes) but did not have any outgoing transitions added.
-///
-/// TODO: This "main benefit" is often useless, in fact the only significant
-/// use is within `CheckerManager::ExpandGraphWithCheckers`. There this logic
-/// ensures that if a checker performs multiple transitions on the same path,
-/// then only the last of them is "built upon" by other checkers or the engine.
-///
-/// However, there are also many short-lived temporary `NodeBuilder` instances
-/// where the `generateNode` is called in a very predictable manner (once, or
-/// once for each source node) and the frontier management is overkill.
-/// These locations should be gradually simplified by using the method
-/// `CoreEngine::makeNode()` instead of the temporary `NodeBuilder`s.
-class NodeBuilder {
-protected:
-  const NodeBuilderContext &C;
-
-  bool HasGeneratedNodes = false;
-
-  /// The frontier set - a set of nodes which need to be propagated after
-  /// the builder dies.
-  ExplodedNodeSet &Frontier;
-
-public:
-  NodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
-      : C(Ctx), Frontier(DstSet) {}
-
-  NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-              const NodeBuilderContext &Ctx)
-      : NodeBuilder(DstSet, Ctx) {
-    Frontier.Add(SrcNode);
-  }
-
-  NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-              const NodeBuilderContext &Ctx)
-      : NodeBuilder(DstSet, Ctx) {
-    Frontier.insert(SrcSet);
-  }
-
-  /// Generates a node in the ExplodedGraph.
-  ExplodedNode *generateNode(const ProgramPoint &PP, ProgramStateRef State,
-                             ExplodedNode *Pred, bool MarkAsSink = false);
-
-  /// Generates a sink in the ExplodedGraph.
-  ///
-  /// When a node is marked as sink, the exploration from the node is stopped -
-  /// the node becomes the last node on the path and certain kinds of bugs are
-  /// suppressed.
-  ExplodedNode *generateSink(const ProgramPoint &PP,
-                             ProgramStateRef State,
-                             ExplodedNode *Pred) {
-    return generateNode(PP, State, Pred, true);
-  }
-
-  ExplodedNode *generateNode(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
-    return generateNode(L, St, Pred);
-  }
-
-  ExplodedNode *generateSink(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
-    return generateSink(L, St, Pred);
-  }
-
-  const ExplodedNodeSet &getResults() const { return Frontier; }
-
-  const NodeBuilderContext &getContext() const { return C; }
-  bool hasGeneratedNodes() const { return HasGeneratedNodes; }
-
-  void takeNodes(const ExplodedNodeSet &S) {
-    for (const auto I : S)
-      Frontier.erase(I);
-  }
-
-  void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
-  void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
-  void addNodes(ExplodedNode *N) { Frontier.Add(N); }
-};
-
-/// BranchNodeBuilder is responsible for constructing the nodes
-/// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder : public NodeBuilder {
-  const CFGBlock *DstT;
-  const CFGBlock *DstF;
-
-public:
-  BranchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &C,
-                    const CFGBlock *DT, const CFGBlock *DF)
-      : NodeBuilder(DstSet, C), DstT(DT), DstF(DF) {}
-
-  ExplodedNode *generateNode(ProgramStateRef State, bool branch,
-                             ExplodedNode *Pred);
-};
-
-class IndirectGotoNodeBuilder : public NodeBuilder {
-  const CFGBlock &DispatchBlock;
-  const Expr *Target;
-
-public:
-  IndirectGotoNodeBuilder(ExplodedNodeSet &DstSet, NodeBuilderContext &Ctx,
-                          const Expr *Tgt, const CFGBlock *Dispatch)
-      : NodeBuilder(DstSet, Ctx), DispatchBlock(*Dispatch), Target(Tgt) {}
-
-  using iterator = CFGBlock::const_succ_iterator;
-
-  iterator begin() { return DispatchBlock.succ_begin(); }
-  iterator end() { return DispatchBlock.succ_end(); }
-
-  using NodeBuilder::generateNode;
-
-  ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
-                             ExplodedNode *Pred);
-
-  const Expr *getTarget() const { return Target; }
-
-  const LocationContext *getLocationContext() const {
-    return C.getLocationContext();
-  }
-};
-
-class SwitchNodeBuilder : public NodeBuilder {
-public:
-  SwitchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
-      : NodeBuilder(DstSet, Ctx) {}
-
-  using iterator = CFGBlock::const_succ_reverse_iterator;
-
-  iterator begin() { return C.getBlock()->succ_rbegin() + 1; }
-  iterator end() { return C.getBlock()->succ_rend(); }
-
-  ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
-                                     ProgramStateRef State, ExplodedNode *Pred);
-
-  ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        ExplodedNode *Pred);
 };
 
 } // namespace ento

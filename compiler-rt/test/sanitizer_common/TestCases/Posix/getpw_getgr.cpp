@@ -1,12 +1,15 @@
 // RUN: %clangxx %s -o %t && %run %t
 
 #include <assert.h>
+#include <errno.h>
 #include <grp.h>
 #include <memory>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
+#include <unistd.h>
 
 std::unique_ptr<char []> any_group;
 const int N = 123456;
@@ -63,8 +66,16 @@ template <class T, class Fn, class... Args>
 void test_r(Fn f, Args... args) {
   T gr;
   T *result;
-  char buff[10000];
-  assert(!f(args..., &gr, buff, sizeof(buff), &result));
+  std::string buff;
+
+  int r;
+  do {
+    buff.resize(1000 + buff.size() * 2);
+    r = f(args..., &gr, buff.data(), buff.size(), &result);
+  } while (r == ERANGE);
+
+  assert(!r);
+
   Check(&gr);
   Check(result);
 }

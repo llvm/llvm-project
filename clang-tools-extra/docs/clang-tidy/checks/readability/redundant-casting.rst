@@ -27,11 +27,24 @@ Options
 
 .. option:: IgnoreMacros
 
-   If set to `true`, the check will not give warnings inside macros. Default
-   is `true`.
+  If set to `true`, the check will not give warnings inside macros. Default
+  is `true`.
 
 .. option:: IgnoreTypeAliases
 
-   When set to `false`, the check will consider type aliases, and when set to
-   `true`, it will resolve all type aliases and operate on the underlying
-   types. Default is `false`.
+  When set to `false`, the check will consider type aliases, and when set to
+  `true`, it will resolve all type aliases and operate on the underlying types.
+  Default is `false`.
+
+.. option:: IgnoreImplicitCasts
+
+  When set to `false`, the check will flag casts as redundant when atleast one
+  operand in an expression is implicitly cast to match the result type of the
+  explicit cast. When set to `true` the casts will not be flagged. Default is
+  `false`.
+
+  For example, with `IgnoreImplicitCasts = false`:
+
+  .. code-block:: c++
+
+    static_cast<float>(2.0f + 1);  // redundant (1 implicitly converts to float)

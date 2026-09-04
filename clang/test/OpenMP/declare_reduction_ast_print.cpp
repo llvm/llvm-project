@@ -38,11 +38,11 @@ public:
 
 // CHECK: template <class T> class SSS {
 // CHECK: #pragma omp declare reduction (fun : T : omp_out += omp_in) initializer(omp_priv = omp_orig + 15)
-// CHECK: #pragma omp declare reduction (fun1 : T : omp_out = 1 , omp_out = foo(omp_in)) initializer(omp_priv = omp_orig + 14)
+// CHECK: #pragma omp declare reduction (fun1 : T : omp_out = 1, omp_out = foo(omp_in)) initializer(omp_priv = omp_orig + 14)
 // CHECK: };
 // CHECK: template<> class SSS<int> {
 // CHECK: #pragma omp declare reduction (fun : int : omp_out += omp_in) initializer(omp_priv = omp_orig + 15)
-// CHECK: #pragma omp declare reduction (fun1 : int : omp_out = 1 , omp_out = foo(omp_in)) initializer(omp_priv = omp_orig + 14)
+// CHECK: #pragma omp declare reduction (fun1 : int : omp_out = 1, omp_out = foo(omp_in)) initializer(omp_priv = omp_orig + 14)
 // CHECK: };
 
 SSS<int> d;

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -36,6 +37,7 @@
 #define DEBUG_TYPE "riscv-postlegalizer-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 namespace {
 
@@ -54,12 +56,7 @@ bool matchFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (!SrcReg.isVirtual())
     return false;
 
-  MachineInstr *Def = MRI.getVRegDef(SrcReg);
-  if (!Def || Def->getOpcode() != TargetOpcode::G_FCONSTANT)
-    return false;
-
-  auto *CFP = Def->getOperand(1).getFPImm();
-  if (!CFP || !CFP->getValueAPF().isPosZero())
+  if (!mi_match(SrcReg, MRI, m_PosZeroFP()))
     return false;
 
   unsigned ValBits = MRI.getType(SrcReg).getSizeInBits();
@@ -101,8 +98,8 @@ protected:
 
 public:
   RISCVPostLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const RISCVPostLegalizerCombinerImplRuleConfig &RuleConfig,
       const RISCVSubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
@@ -122,12 +119,12 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 RISCVPostLegalizerCombinerImpl::RISCVPostLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const RISCVPostLegalizerCombinerImplRuleConfig &RuleConfig,
     const RISCVSubtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -161,7 +158,6 @@ void RISCVPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -196,8 +192,8 @@ bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
-  RISCVPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
-                                      ST, MDT, LI);
+  RISCVPostLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
+                                      MDT, LI);
   return Impl.combineMachineInstrs();
 }
 

@@ -2,6 +2,7 @@
 ; RUN: opt -passes=constraint-elimination -S %s | FileCheck %s
 
 declare { i8, i1 } @llvm.ssub.with.overflow.i8(i8, i8)
+declare { i1, i1 } @llvm.ssub.with.overflow.i1(i1, i1)
 
 define i8 @ssub_no_overflow_due_to_or_conds(i8 %a, i8 %b) {
 ; CHECK-LABEL: @ssub_no_overflow_due_to_or_conds(
@@ -11,7 +12,7 @@ define i8 @ssub_no_overflow_due_to_or_conds(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i8 [[B]], [[A]]
 ; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
 ; CHECK-NEXT:    ret i8 [[TMP0]]
@@ -47,7 +48,7 @@ define i8 @ssub_no_overflow_due_to_or_conds_result_used(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT_FAIL:%.*]], label [[MATH:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[B]], i8 [[A]])
 ; CHECK-NEXT:    call void @use_res({ i8, i1 } [[OP]])
 ; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
@@ -84,7 +85,7 @@ define i8 @ssub_no_overflow_due_to_and_conds(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[MATH:%.*]], label [[EXIT_FAIL:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[B]], [[A]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i8 [[B]], [[A]]
 ; CHECK-NEXT:    br i1 false, label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:
 ; CHECK-NEXT:    ret i8 [[TMP0]]
@@ -348,4 +349,49 @@ exit.ok:
 
 exit.fail:
   ret i8 0
+}
+
+; The arguments of the intrinsic are compares that are themselves checked, and
+; the block holding the intrinsic comes before the block defining them.
+define i1 @ssub_simplified_before_uses_of_arguments(i32 %a) {
+; CHECK-LABEL: @ssub_simplified_before_uses_of_arguments(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[CHECK_1:%.*]]
+; CHECK:       math:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i1 [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP0]], false
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       check.1:
+; CHECK-NEXT:    [[C]] = icmp sgt i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[D]] = icmp sgt i32 [[A]], 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i1 [[C]], [[D]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[CHECK_2:%.*]], label [[EXIT:%.*]]
+; CHECK:       check.2:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i1 [[D]], false
+; CHECK-NEXT:    br i1 [[C_2]], label [[MATH:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %check.1
+
+math:
+  %op = call { i1, i1 } @llvm.ssub.with.overflow.i1(i1 %c, i1 %d)
+  %res = extractvalue { i1, i1 } %op, 0
+  %status = extractvalue { i1, i1 } %op, 1
+  %r = or i1 %res, %status
+  ret i1 %r
+
+check.1:
+  %c = icmp sgt i32 %a, 0
+  %d = icmp sgt i32 %a, 1
+  %c.1 = icmp sge i1 %c, %d
+  br i1 %c.1, label %check.2, label %exit
+
+check.2:
+  %c.2 = icmp sge i1 %d, 0
+  br i1 %c.2, label %math, label %exit
+
+exit:
+  ret i1 false
 }

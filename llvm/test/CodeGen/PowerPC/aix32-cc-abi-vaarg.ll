@@ -59,12 +59,10 @@ define i32 @int_stack_va_arg(i32 %one, i32 %two, i32 %three, i32 %four, i32 %fiv
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add 3, 4, 3
 ; CHECK-NEXT:    lwz 4, 56(1)
-; CHECK-NEXT:    li 11, 4
+; CHECK-NEXT:    addi 11, 1, 60
 ; CHECK-NEXT:    add 3, 3, 5
-; CHECK-NEXT:    addi 12, 1, 56
 ; CHECK-NEXT:    add 3, 3, 6
-; CHECK-NEXT:    rlwimi 12, 11, 0, 29, 29
-; CHECK-NEXT:    stw 12, -4(1)
+; CHECK-NEXT:    stw 11, -4(1)
 ; CHECK-NEXT:    add 3, 3, 7
 ; CHECK-NEXT:    add 3, 3, 8
 ; CHECK-NEXT:    add 3, 3, 9

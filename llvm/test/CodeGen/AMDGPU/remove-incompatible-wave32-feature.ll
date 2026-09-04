@@ -1,25 +1,25 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgpu9.06 -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX906 %s
 ; RUN: FileCheck --check-prefix=WARN-GFX906 %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -mattr=+wavefrontsize64 < %s
+; RUN: llc -mtriple=amdgpu9.06 -mattr=+wavefrontsize64 < %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgpu9.0a -mattr=+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX90A %s
 ; RUN: FileCheck --check-prefix=WARN-GFX90A %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+wavefrontsize64 < %s
+; RUN: llc -mtriple=amdgpu9.0a -mattr=+wavefrontsize64 < %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgpu10.11 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -mattr=-wavefrontsize32,+wavefrontsize64 < %s
+; RUN: llc -mtriple=amdgpu10.11 -mattr=-wavefrontsize32,+wavefrontsize64 < %s
 
-; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1011 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -enable-new-pm -mtriple=amdgpu10.11 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX10 %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 < %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-wavefrontsize32,+wavefrontsize64 < %s
 
-; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
+; RUN: llc -enable-new-pm -mtriple=amdgpu11.00 -mattr=-wavefrontsize32,+wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX11 %s
 
 ; WARN-GFX906: removing function 'needs_wavefrontsize32': +wavefrontsize32 is not supported on the current target

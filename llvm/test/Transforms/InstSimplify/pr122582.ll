@@ -75,25 +75,25 @@ define i32 @ilogb_neg_zero() {
 
 define i32 @ilogbf_inf() {
 ; CHECK-LABEL: define i32 @ilogbf_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float +inf)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogbf(float 0x7FF0000000000000)
+  %r = call i32 @ilogbf(float +inf)
   ret i32 %r
 }
 
 define i32 @ilogb_inf() {
 ; CHECK-LABEL: define i32 @ilogb_inf() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double +inf)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogb(double 0x7FF0000000000000)
+  %r = call i32 @ilogb(double +inf)
   ret i32 %r
 }
 
 define i32 @ilogbf_nan() {
 ; CHECK-LABEL: define i32 @ilogbf_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float +qnan)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @ilogbf(float 0x7FF8000000000000)
@@ -102,7 +102,7 @@ define i32 @ilogbf_nan() {
 
 define i32 @ilogb_nan() {
 ; CHECK-LABEL: define i32 @ilogb_nan() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double +qnan)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @ilogb(double 0x7FF8000000000000)
@@ -147,25 +147,25 @@ define i32 @ilogb_neg_zero_readnone() {
 
 define i32 @ilogbf_inf_readnone() {
 ; CHECK-LABEL: define i32 @ilogbf_inf_readnone() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float 0x7FF0000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float +inf) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogbf(float 0x7FF0000000000000) readnone
+  %r = call i32 @ilogbf(float +inf) readnone
   ret i32 %r
 }
 
 define i32 @ilogb_inf_readnone() {
 ; CHECK-LABEL: define i32 @ilogb_inf_readnone() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double 0x7FF0000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double +inf) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogb(double 0x7FF0000000000000) readnone
+  %r = call i32 @ilogb(double +inf) readnone
   ret i32 %r
 }
 
 define i32 @ilogbf_nan_readnone() {
 ; CHECK-LABEL: define i32 @ilogbf_nan_readnone() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float 0x7FF8000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogbf(float +qnan) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @ilogbf(float 0x7FF8000000000000) readnone
@@ -174,7 +174,7 @@ define i32 @ilogbf_nan_readnone() {
 
 define i32 @ilogb_nan_readnone() {
 ; CHECK-LABEL: define i32 @ilogb_nan_readnone() {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double 0x7FF8000000000000) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double +qnan) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @ilogb(double 0x7FF8000000000000) readnone

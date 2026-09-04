@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52 -Werror
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52 -Werror -Wno-experimental-option
 
 subroutine f10(x)
   integer :: x
@@ -93,6 +93,14 @@ subroutine f23(x)
   integer :: x(10)
 !ERROR: 'map-type' should be the last modifier
   !$omp target map(present, from, iterator(i = 1:10): x(i))
+  x = x + 1
+  !$omp end target
+end
+
+subroutine f24(x)
+  integer :: x(10)
+!ERROR: 'ompx-hold-modifier' modifier cannot occur multiple times
+  !$omp target map(ompx_hold, ompx_hold: x)
   x = x + 1
   !$omp end target
 end

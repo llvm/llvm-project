@@ -120,7 +120,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::ReciprocalOp>(op) && isa<FloatType>(elementTy)) {
     auto one =
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, args[0]);
+    return arith::DivFOp::create(rewriter, loc, one, args[0]);
   }
 
   // tosa::MulOp
@@ -140,8 +140,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                                           "Cannot have shift value for float");
         return nullptr;
       }
-      return arith::MulFOp::create(rewriter, loc, resultTypes, args[0],
-                                   args[1]);
+      return arith::MulFOp::create(rewriter, loc, args[0], args[1]);
     }
 
     if (isa<IntegerType>(elementTy)) {
@@ -292,7 +291,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::ArithmeticRightShiftOp
   if (isa<tosa::ArithmeticRightShiftOp>(op) && isa<IntegerType>(elementTy)) {
     auto result = arith::ShRSIOp::create(rewriter, loc, resultTypes, args);
-    auto round = cast<BoolAttr>(op->getAttr("round")).getValue();
+    bool round = cast<tosa::ArithmeticRightShiftOp>(op).getRound();
     if (!round) {
       return result;
     }
@@ -452,8 +451,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::ClampOp
   if (isa<tosa::ClampOp>(op) && isa<FloatType>(elementTy)) {
     bool losesInfo = false;
-    APFloat minApf = cast<FloatAttr>(op->getAttr("min_val")).getValue();
-    APFloat maxApf = cast<FloatAttr>(op->getAttr("max_val")).getValue();
+    auto clampOp = cast<tosa::ClampOp>(op);
+    APFloat minApf = cast<FloatAttr>(clampOp.getMinValAttr()).getValue();
+    APFloat maxApf = cast<FloatAttr>(clampOp.getMaxValAttr()).getValue();
     minApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
                    APFloat::rmNearestTiesToEven, &losesInfo);
     maxApf.convert(cast<FloatType>(elementTy).getFloatSemantics(),
@@ -464,7 +464,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         rewriter, loc, elementTy, rewriter.getFloatAttr(elementTy, maxApf));
     auto result = clampFloatHelper(loc, args[0], min, max, rewriter);
 
-    auto clampOp = llvm::cast<tosa::ClampOp>(op);
     const auto nanMode = clampOp.getNanMode();
 
     // NaN propagation has no meaning for non floating point types.
@@ -496,10 +495,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   if (isa<tosa::ClampOp>(op) && isa<IntegerType>(elementTy)) {
     auto intTy = cast<IntegerType>(elementTy);
+    auto clampOp = cast<tosa::ClampOp>(op);
     int64_t min =
-        cast<IntegerAttr>(op->getAttr("min_val")).getValue().getSExtValue();
+        cast<IntegerAttr>(clampOp.getMinValAttr()).getValue().getSExtValue();
     int64_t max =
-        cast<IntegerAttr>(op->getAttr("max_val")).getValue().getSExtValue();
+        cast<IntegerAttr>(clampOp.getMaxValAttr()).getValue().getSExtValue();
 
     int64_t minRepresentable = std::numeric_limits<int64_t>::min();
     int64_t maxRepresentable = std::numeric_limits<int64_t>::max();
@@ -538,8 +538,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         arith::ConstantOp::create(rewriter, loc, FloatAttr::get(elementTy, 1));
     auto negate = arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
     auto exp = mlir::math::ExpOp::create(rewriter, loc, resultTypes, negate);
-    auto added = arith::AddFOp::create(rewriter, loc, resultTypes, exp, one);
-    return arith::DivFOp::create(rewriter, loc, resultTypes, one, added);
+    auto added = arith::AddFOp::create(rewriter, loc, exp, one);
+    return arith::DivFOp::create(rewriter, loc, one, added);
   }
 
   // tosa::CastOp
@@ -2036,10 +2036,12 @@ public:
         val = arith::AddIOp::create(b, val, offset);
         index = arith::FloorDivSIOp::create(b, val, scaleN);
 
-        // rx = x % scale_n
-        // dx = rx / scale_n
-        Value r = arith::RemSIOp::create(b, val, scaleN);
+        // rx = x - ix * scale_n (x % scale_n, if values are positive)
+        Value scaledIndex = arith::MulIOp::create(b, index, scaleN);
+        Value r = arith::SubIOp::create(b, val, scaledIndex);
         Value rFp = arith::SIToFPOp::create(b, floatTy, r);
+
+        // dx = rx / scale_n
         Value scaleNfp = arith::UIToFPOp::create(b, floatTy, scaleN);
         delta = arith::DivFOp::create(b, rFp, scaleNfp);
       };
@@ -2058,7 +2060,7 @@ public:
         //  dx = x - ix * scale_n;
         Value val = arith::MulIOp::create(b, in, scaleD);
         val = arith::AddIOp::create(b, val, offset);
-        index = arith::DivSIOp::create(b, val, scaleN);
+        index = arith::FloorDivSIOp::create(b, val, scaleN);
         delta = arith::MulIOp::create(b, index, scaleN);
         delta = arith::SubIOp::create(b, val, delta);
       };
@@ -2826,10 +2828,18 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     auto dimW = rewriter.createOrFold<tensor::DimOp>(loc, input, 2);
 
     // Constants and dimension sizes
+    auto zeroFloat = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getZeroAttr(elementType));
     auto twoPiAttr = rewriter.getFloatAttr(elementType, 6.283185307179586);
     auto twoPi = arith::ConstantOp::create(rewriter, loc, twoPiAttr);
+
+    auto zeroIndex = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto twoIndex = arith::ConstantIndexOp::create(rewriter, loc, 2);
+
     auto constH = castIndexToFloat(rewriter, loc, elementType, dimH);
     auto constW = castIndexToFloat(rewriter, loc, elementType, dimW);
+    auto halfH = index::DivUOp::create(rewriter, loc, dimH, twoIndex);
+    auto halfW = index::DivUOp::create(rewriter, loc, dimW, twoIndex);
 
     auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange args) {
       Value valReal = args[0];
@@ -2859,14 +2869,37 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
       auto sumXY = arith::AddFOp::create(builder, loc, yComponent, xComponent);
       auto angle = arith::MulFOp::create(builder, loc, twoPi, sumXY);
 
+      // We will check the indices to see if this is a position that should use
+      // a 0.0 weight for the imaginary value computation following the TOSA
+      // specification with `tosa_extra_multiplies=true`.
+      //
+      // These are the relevant locations: (0,0), (0,W/2), (H/2,0), (H/2, W/2).
+      auto iyIs0 = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                         iyRem, zeroIndex);
+      auto iyIsHalfH = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, iyRem, halfH);
+      auto ixIs0 = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                         ixRem, zeroIndex);
+      auto ixIsHalfW = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, ixRem, halfW);
+
+      auto iyIsSinSkippable =
+          arith::OrIOp::create(builder, loc, iyIs0, iyIsHalfH);
+      auto ixIsSinSkippable =
+          arith::OrIOp::create(builder, loc, ixIs0, ixIsHalfW);
+      auto shouldSkipSin = arith::AndIOp::create(builder, loc, iyIsSinSkippable,
+                                                 ixIsSinSkippable);
+
       // realComponent = valReal * cos(angle)
-      // imagComponent = valReal * sin(angle)
+      // imagComponent = valReal * (shouldSkipSin ? 0.0 : sin(angle))
       auto cosAngle = math::CosOp::create(builder, loc, angle);
       auto sinAngle = math::SinOp::create(builder, loc, angle);
+      auto imagWeight = arith::SelectOp::create(builder, loc, shouldSkipSin,
+                                                zeroFloat, sinAngle);
       auto realComponent =
           arith::MulFOp::create(builder, loc, valReal, cosAngle);
       auto imagComponent =
-          arith::MulFOp::create(builder, loc, valReal, sinAngle);
+          arith::MulFOp::create(builder, loc, valReal, imagWeight);
 
       // outReal = sumReal + realComponent
       // outImag = sumImag - imagComponent

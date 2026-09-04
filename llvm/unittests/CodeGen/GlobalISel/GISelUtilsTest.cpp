@@ -451,56 +451,52 @@ TEST_F(AMDGPUGISelMITest, isConstantOrConstantSplatVectorFP) {
 
   collectNonCopyMI(MIList, MF);
 
-  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(*MIList[0], *MRI).has_value());
-  auto val = isConstantOrConstantSplatVectorFP(*MIList[0], *MRI).value();
+  auto GetReg = [&](int I) { return MIList[I]->getOperand(0).getReg(); };
+
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(0), *MRI).has_value());
+  auto val = isConstantOrConstantSplatVectorFP(GetReg(0), *MRI).value();
   EXPECT_EQ(2.0, val.convertToFloat());
 
-  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(*MIList[1], *MRI).has_value());
-  val = isConstantOrConstantSplatVectorFP(*MIList[1], *MRI).value();
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(1), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(1), *MRI).value();
   EXPECT_EQ(0.0, val.convertToFloat());
 
-  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(*MIList[2], *MRI).has_value());
-  val = isConstantOrConstantSplatVectorFP(*MIList[2], *MRI).value();
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(2), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(2), *MRI).value();
   EXPECT_EQ(0.03, val.convertToDouble());
 
-  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(*MIList[3], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(3), *MRI).has_value());
 
-  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(*MIList[4], *MRI).has_value());
-  val = isConstantOrConstantSplatVectorFP(*MIList[4], *MRI).value();
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(4), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(4), *MRI).value();
   EXPECT_EQ(2.0, val.convertToFloat());
 
-  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(*MIList[5], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(5), *MRI).has_value());
 
-  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(*MIList[6], *MRI).has_value());
-  val = isConstantOrConstantSplatVectorFP(*MIList[6], *MRI).value();
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(6), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(6), *MRI).value();
   EXPECT_EQ(0.03, val.convertToDouble());
 
-  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(*MIList[7], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(7), *MRI).has_value());
 
-  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(*MIList[8], *MRI).has_value());
-  val = isConstantOrConstantSplatVectorFP(*MIList[8], *MRI).value();
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(8), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(8), *MRI).value();
   EXPECT_EQ(2.0, val.convertToFloat());
 
-  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(*MIList[9], *MRI).has_value());
-  val = isConstantOrConstantSplatVectorFP(*MIList[9], *MRI).value();
+  EXPECT_TRUE(isConstantOrConstantSplatVectorFP(GetReg(9), *MRI).has_value());
+  val = isConstantOrConstantSplatVectorFP(GetReg(9), *MRI).value();
   EXPECT_EQ(0.03, val.convertToDouble());
 
-  EXPECT_FALSE(
-      isConstantOrConstantSplatVectorFP(*MIList[10], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(10), *MRI).has_value());
 
-  EXPECT_FALSE(
-      isConstantOrConstantSplatVectorFP(*MIList[11], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(11), *MRI).has_value());
 
-  EXPECT_FALSE(
-      isConstantOrConstantSplatVectorFP(*MIList[12], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(12), *MRI).has_value());
 
-  EXPECT_FALSE(
-      isConstantOrConstantSplatVectorFP(*MIList[13], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(13), *MRI).has_value());
 
-  EXPECT_FALSE(
-      isConstantOrConstantSplatVectorFP(*MIList[14], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(14), *MRI).has_value());
 
-  EXPECT_FALSE(
-      isConstantOrConstantSplatVectorFP(*MIList[15], *MRI).has_value());
+  EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(15), *MRI).has_value());
 }
 }

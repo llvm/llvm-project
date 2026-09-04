@@ -398,12 +398,22 @@ let hasSideEffects = 0, isCommutable = 1, Constraints = "$src = $rd",
                         "adcw\t$rd, $rr",
                         [(set i16:$rd, (adde i16:$src, i16:$rr))]>;
 
-  // AIDW Rd, k
+  // ADIW Rd, k
   // Adds an immediate 6-bit value K to Rd, placing the result in Rd.
   def ADIWRdK : FWRdK<0b0, (outs IWREGS:$rd), (ins IWREGS :$src, imm_arith6:$k),
                       "adiw\t$rd, $k",
                       [(set i16:$rd, (add i16:$src, uimm6:$k))]>,
                 Requires<[HasADDSUBIW]>;
+
+  // ADIW Rd, k
+  // Adds an immediate 8-bit value K to Rd, placing the result in Rd.
+  //
+  // Expands to ADIW or SUBIW, depending on the size of `k` and the supported
+  // instruction set.
+  def ADIWRdKP : Pseudo<(outs DLDREGS:$rd),
+                        (ins DLDREGS:$src, i16imm:$k),
+                        "adiw\t$rd, $k",
+                        [(set i16:$rd, (add i16:$src, i16:$k))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -914,7 +924,7 @@ let hasSideEffects = 0, mayLoad = 1 in {
     //   ld    Rd+1, P+
     //   subiw P,    2
     let Constraints = "@earlyclobber $reg" in
-    def LDWRdPtr : Pseudo<(outs DREGS:$reg), (ins PTRDISPREGS:$ptrreg),
+    def LDWRdPtr : Pseudo<(outs DREGSNOZ:$reg), (ins PTRDISPREGS:$ptrreg),
                           "ldw\t$reg, $ptrreg",
                           [(set i16:$reg, (load i16:$ptrreg))]>,
                    Requires<[HasSRAM]>;
@@ -1019,13 +1029,13 @@ class AtomicLoadOp<PatFrag Op, RegisterClass DRC, RegisterClass PTRRC>
 // which require PTRDISPREGS.
 
 def AtomicLoad8 : AtomicLoad<atomic_load_nonext_8, GPR8, PTRREGS>;
-def AtomicLoad16 : AtomicLoad<atomic_load_nonext_16, DREGS, PTRDISPREGS>;
+def AtomicLoad16 : AtomicLoad<atomic_load_nonext_16, DREGSNOZ, PTRDISPREGS>;
 
 def AtomicStore8 : AtomicStore<atomic_store_8, GPR8, PTRREGS>;
-def AtomicStore16 : AtomicStore<atomic_store_16, DREGS, PTRDISPREGS>;
+def AtomicStore16 : AtomicStore<atomic_store_16, DREGSNOZ, PTRDISPREGS>;
 
 class AtomicLoadOp8<PatFrag Op> : AtomicLoadOp<Op, GPR8, PTRREGS>;
-class AtomicLoadOp16<PatFrag Op> : AtomicLoadOp<Op, DREGS, PTRDISPREGS>;
+class AtomicLoadOp16<PatFrag Op> : AtomicLoadOp<Op, DREGSNOZ, PTRDISPREGS>;
 
 let usesCustomInserter = 1, Defs = [SREG] in {
   def AtomicLoadAdd8 : AtomicLoadOp8<atomic_load_add_i8>;
@@ -1085,7 +1095,7 @@ def STPtrRr : FSTLD<1, 0b00, (outs), (ins PTRREGS:$ptrreg, GPR8:$reg),
 //   st    P+, Rr+1
 //   subiw P,  q+2
 let hasSideEffects = 0, mayStore = 1 in
-def STWPtrRr : Pseudo<(outs), (ins PTRDISPREGS:$ptrreg, DREGS:$reg),
+def STWPtrRr : Pseudo<(outs), (ins PTRDISPREGS:$ptrreg, DREGSNOZ:$reg),
                       "stw\t$ptrreg, $reg", [(store i16:$reg, i16:$ptrreg)]>,
                Requires<[HasSRAM]>;
 
@@ -1525,10 +1535,16 @@ def SEXT : ExtensionPseudo<(outs DREGS:$dt), (ins GPR8:$src), "sext\t$dt, $src",
 def ZEXT : ExtensionPseudo<(outs DREGS:$dt), (ins GPR8:$src), "zext\t$dt, $src",
                            [(set i16:$dt, (zext i8:$src))]>;
 
+let hasSideEffects = 0 in
+def FRMSP : Pseudo<(outs DLDREGS:$dst),
+                   (ins i16imm:$off),
+                   "frmsp\t$dst, $off", []>;
+
 // This pseudo gets expanded into a movw+adiw thus it clobbers SREG.
 let Defs = [SREG], hasSideEffects = 0 in
-def FRMIDX : Pseudo<(outs DLDREGS:$dst), (ins DLDREGS:$src, i16imm:$src2),
-                    "frmidx\t$dst, $src, $src2", []>;
+def FRMIDX : Pseudo<(outs DLDREGS:$dst),
+                    (ins DLDREGS:$src, i16imm:$off, DLDREGS:$rel),
+                    "frmidx\t$dst, $src, $off, $rel", []>;
 
 // The instructions STDSPQRr and STDWSPQRr are used to store to the stack
 // frame. The most accurate implementation would be to load the SP into
@@ -1736,3 +1752,14 @@ def : Pat<(AVRtst i8 : $rd), (ANDRdRr GPR8 : $rd, GPR8 : $rd)>;
 // Lowering of 'lsl' node to 'LSL' instruction.
 // LSL is an alias of 'ADD Rd, Rd'
 def : Pat<(AVRlsl i8 : $rd), (ADDRdRr GPR8 : $rd, GPR8 : $rd)>;
+
+//===----------------------------------------------------------------------===//
+// Builtin lowering
+//===----------------------------------------------------------------------===//
+
+def : Pat<(int_avr_nop), (NOP)>;
+def : Pat<(int_avr_sleep), (SLEEP)>;
+def : Pat<(int_avr_wdr), (WDR)>;
+def : Pat<(int_avr_sei), (BSETs 7)>;
+def : Pat<(int_avr_cli), (BCLRs 7)>;
+def : Pat<(int_avr_swap i8:$src), (SWAPRd GPR8:$src)>;

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti | FileCheck %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu6.00 | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu8.02 -mattr=-flat-for-global | FileCheck %s
 
 ; CHECK-LABEL: {{^}}flt_f64:
 ; CHECK: v_cmp_nge_f64_e32 vcc, {{s\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}

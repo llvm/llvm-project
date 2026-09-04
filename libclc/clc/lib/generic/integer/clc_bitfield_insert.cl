@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/integer/clc_bitfield_insert.h>
+#include "clc/integer/clc_bitfield_insert.h"
 
-#define __CLC_BODY <clc_bitfield_insert.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc_bitfield_insert.inc"
+#include "clc/integer/gentype.inc"

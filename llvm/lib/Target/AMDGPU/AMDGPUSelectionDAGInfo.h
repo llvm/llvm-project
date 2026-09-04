@@ -50,6 +50,13 @@ public:
 
   ~AMDGPUSelectionDAGInfo() override;
 
+  bool disableGenericCombines(CodeGenOptLevel OptLevel) const override {
+    // Disable generic DAG combines at -O0 to preserve debuggability.
+    // This prevents optimizations like constant reassociation that would
+    // eliminate intermediate instructions users want to step through.
+    return OptLevel == CodeGenOptLevel::None;
+  }
+
   const char *getTargetNodeName(unsigned Opcode) const override;
 
   void verifyTargetNode(const SelectionDAG &DAG,

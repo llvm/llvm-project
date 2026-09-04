@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 func.func @load_number_of_indices(%v : memref<f32>) {
-  // expected-error @+2 {{incorrect number of indices for load}}
+  // expected-error @+2 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   memref.load %v[%c0] : memref<f32>
 }
@@ -9,7 +9,7 @@ func.func @load_number_of_indices(%v : memref<f32>) {
 // -----
 
 func.func @store_number_of_indices(%v : memref<f32>) {
-  // expected-error @+3 {{store index operand count not equal to memref rank}}
+  // expected-error @+3 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   memref.store %f0, %v[%c0] : memref<f32>
@@ -415,7 +415,7 @@ func.func @illegal_fill_memref_with_tensor_return
 func.func @illegal_fill_tensor_with_memref_return
   (%arg0 : tensor<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
 {
-  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any type values, but got 'memref<?x?xf32>'}}
+  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any non-token type values, but got 'memref<?x?xf32>'}}
   %0 = linalg.fill ins(%arg1 : f32) outs(%arg0 : tensor<?x?xf32>) -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
@@ -468,7 +468,7 @@ func.func @invalid_scalar_input_matmul(%arg0: f32, %arg1: memref<3x4xf32>, %arg2
 // -----
 
 func.func @invalid_scalar_output_matmul(%arg0: memref<2x3xf32>, %arg1: memref<3x4xf32>, %arg2: f32) {
-  // expected-error @+1 {{'linalg.matmul' op operand #2 must be variadic of shaped of any type values, but got 'f32'}}
+  // expected-error @+1 {{'linalg.matmul' op operand #2 must be variadic of shaped of any non-token type values, but got 'f32'}}
   linalg.matmul ins(%arg0, %arg1 : memref<2x3xf32>, memref<3x4xf32>)
                 outs(%arg2 : f32)
   return
@@ -644,6 +644,21 @@ func.func @invalid_type_matmul(%arg0 : !x86.amx.tile<16x16xbf16>)
 
 // -----
 
+func.func @illegal_contract_memref_with_memref_return
+  (%arg0: memref<4x8xf32>, %arg1: memref<8x6xf32>, %arg2: memref<4x6xf32>) -> memref<4x6xf32>
+{
+  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any non-token type values, but got 'memref<4x6xf32>'}}
+  %0 = linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%arg0, %arg1 : memref<4x8xf32>, memref<8x6xf32>)
+      outs(%arg2 : memref<4x6xf32>) -> memref<4x6xf32>
+  return %0 : memref<4x6xf32>
+}
+
+// -----
+
 func.func @invalid_indexing_maps_placement_contraction(
     %lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
   // expected-error @+3 {{custom op 'linalg.contract' expected 'indexing_maps' attribute}}
@@ -738,6 +753,249 @@ func.func @unused_iteration_space_dim_contraction(
       ins(%lhs, %rhs : tensor<8x4x1xf32>, tensor<1x64xf32>)
       outs(%init : tensor<4x64xf32>) -> tensor<4x64xf32>
   return
+}
+
+// -----
+
+func.func @scaled_contract_scale_with_symbols(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{scale affine_map must not contain symbols}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k)[s0] -> (m floordiv 32, s0)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_wrong_number_of_indexing_maps(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{expected 5 indexing maps and operands}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>]
+      ins(%A, %sA, %B, %sB
+        : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>,
+          tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_non_float_output(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xi32>) -> tensor<256x128xi32> {
+  // expected-error @+1 {{expected output element type to be floating-point}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB
+        : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>,
+          tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xi32>) -> tensor<256x128xi32>
+  return %D : tensor<256x128xi32>
+}
+
+// -----
+
+func.func @scaled_contract_input_wider_than_output(
+    %A: tensor<256x512xf64>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xf64>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{expected input element type bitwidth to be no greater than output element type bitwidth}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB
+        : tensor<256x512xf64>, tensor<8x4xf8E8M0FNU>,
+          tensor<128x512xf64>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_scale_too_many_results(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{scale affine_map must not have more results than inputs}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128, n, m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_scale_non_floordiv(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{only block scale with floordiv is supported for now}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k mod 128)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_block_scale_lhs_not_dim(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{block scale LHS must be dim}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> ((m + n) floordiv 32, k floordiv 128)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_block_scale_nonpositive_factor(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{block scale factor must be positive}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k floordiv -32)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_scale_duplicate_dims(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{scale affine_map must not have duplicate result dimensions}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, m floordiv 16)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_scale_rank_mismatch(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{scale ranks of shaped operand and results of corresponding affine_map differ}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_scale_non_shaped_operand(
+    %A: tensor<256x512xi8>, %sA: f8E8M0FNU,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{scale affine_map specifies shaped access while operand has non-shaped type}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, f8E8M0FNU, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_scale_rank_exceeds_input(
+    %A: tensor<256x512xi8>, %sA: tensor<8x4x2xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{scale must have at most the same rank as input}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m, k, n)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x4x2xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_invalid_block_scale_shape(
+    %A: tensor<256x512xi8>, %sA: tensor<8x8xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{Invalid scale shape at dim 1, expected 4 but got 8}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<8x8xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+
+// -----
+
+func.func @scaled_contract_scale_dim_not_in_input(
+    %A: tensor<256x512xi8>, %sA: tensor<128xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %sB: tensor<128xf8E8M0FNU>, %C: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  // expected-error @+1 {{scale map must contain corresponding input dimensions only}}
+  %D = linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : tensor<256x512xi8>, tensor<128xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
 }
 
 // -----
@@ -1177,6 +1435,18 @@ func.func @broadcast_size_1_extension_not_supported(
       outs(%init:tensor<4x?x16xf32>)
       dimensions = [1]
   func.return %bcast : tensor<4x?x16xf32>
+}
+
+// -----
+
+func.func @broadcast_duplicate_dims(
+    %input: tensor<i32>, %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
+  // expected-error @+1 {{'linalg.broadcast' op dimensions should not contain duplicates}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<i32>)
+      outs(%init:tensor<32x2xi32>)
+      dimensions = [0, 0]
+  func.return %bcast : tensor<32x2xi32>
 }
 
 // -----
@@ -1877,7 +2147,7 @@ func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf
 
 func.func @pack_mismatch_inner_tile_size_and_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x8xf32>) -> tensor<?x?x8x8xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got 8 != 4}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?xf32> -> tensor<?x?x8x8xf32>
   return %0 : tensor<?x?x8x8xf32>
 }
@@ -1887,7 +2157,7 @@ func.func @pack_mismatch_inner_tile_size_and_output_shape(
 func.func @pack_dynamic_inner_tile_size_and_static_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x8xf32>) -> tensor<?x?x8x8xf32> {
   %c8 = arith.constant 8 : index
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified at index 1: got static shape 8 but dynamic tile size}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, %c8] into %output : tensor<?x?xf32> -> tensor<?x?x8x8xf32>
   return %0 : tensor<?x?x8x8xf32>
 }
@@ -1896,7 +2166,7 @@ func.func @pack_dynamic_inner_tile_size_and_static_output_shape(
 
 func.func @pack_static_inner_tile_size_and_dynamic_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x?xf32>) -> tensor<?x?x8x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %output : tensor<?x?xf32> -> tensor<?x?x8x?xf32>
   return %0 : tensor<?x?x8x?xf32>
 }
@@ -1987,7 +2257,7 @@ func.func @unpack_invalid_source_shape(%output: tensor<256x128xf32>, %input: ten
 
 func.func @unpack_mismatch_inner_tile_size_and_output_shape(
   %input : tensor<?x?x8x8xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got 8 != 4}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x8x8xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -1997,7 +2267,7 @@ func.func @unpack_mismatch_inner_tile_size_and_output_shape(
 func.func @unpack_dynamic_inner_tile_size_and_static_output_shape(
   %input : tensor<?x?x8x4xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %c8 = arith.constant 8 : index
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified at index 0: got static shape 8 but dynamic tile size}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [%c8, 4] into %output : tensor<?x?x8x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -2006,7 +2276,7 @@ func.func @unpack_dynamic_inner_tile_size_and_static_output_shape(
 
 func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
   %input : tensor<?x?x?x4xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 0: got}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x?x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -2171,4 +2441,38 @@ func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
   %0 = linalg.matmul ins(%t, %t : tensor<?xf16>, tensor<?xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>
   func.return %0, %f : tensor<?xf16>, vector<4xf16>
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/93973.
+// Having more inputs than inits must not crash but produce a clear error.
+
+func.func @reduce_unequal_input_output_count(
+    %arg0: tensor<32xi32>, %arg1: tensor<32xi32>) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %init = tensor.from_elements %c0 : tensor<i32>
+  // expected-error @+1 {{'linalg.reduce' op expected equal number of inputs and outputs}}
+  %reduced = linalg.reduce
+      ins(%arg0, %arg1 : tensor<32xi32>, tensor<32xi32>)
+      outs(%init : tensor<i32>)
+      dimensions = [0]
+      (%in0: i32, %in1: i32, %acc: i32) {
+        %v = arith.addi %in0, %acc : i32
+        linalg.yield %v : i32
+      }
+  %ext = tensor.extract %reduced[] : tensor<i32>
+  return %ext : i32
+}
+
+// -----
+
+func.func @reduce_no_inputs() {
+  // expected-error @+1 {{'linalg.reduce' op expected at least one input}}
+  linalg.reduce
+      dimensions = []
+      () {
+        linalg.yield
+      }
+  func.return
 }

@@ -319,38 +319,86 @@ TEST_F(SpecialCaseListTest, DotSlash) {
       makeSpecialCaseList(IgnoreList, /*Version=*/3);
   std::unique_ptr<SpecialCaseList> SCL4 = makeSpecialCaseList(IgnoreList,
                                                               /*Version=*/4);
+  std::unique_ptr<SpecialCaseList> SCL5 = makeSpecialCaseList(IgnoreList,
+                                                              /*Version=*/5);
 
   EXPECT_TRUE(SCL2->inSection("dot", "fun", "./foo"));
   EXPECT_TRUE(SCL3->inSection("dot", "fun", "./foo"));
   EXPECT_TRUE(SCL4->inSection("dot", "fun", "./foo"));
+  EXPECT_TRUE(SCL5->inSection("dot", "fun", "./foo"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "fun", "foo"));
   EXPECT_FALSE(SCL3->inSection("dot", "fun", "foo"));
   EXPECT_FALSE(SCL4->inSection("dot", "fun", "foo"));
+  EXPECT_FALSE(SCL5->inSection("dot", "fun", "foo"));
 
   EXPECT_TRUE(SCL2->inSection("dot", "src", "./bar"));
   EXPECT_FALSE(SCL3->inSection("dot", "src", "./bar"));
-  EXPECT_FALSE(SCL4->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL4->inSection("dot", "src", "./bar"));
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "./bar"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "src", "bar"));
   EXPECT_FALSE(SCL3->inSection("dot", "src", "bar"));
   EXPECT_FALSE(SCL4->inSection("dot", "src", "bar"));
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "bar"));
 
   EXPECT_FALSE(SCL2->inSection("not", "fun", "./foo"));
   EXPECT_FALSE(SCL3->inSection("not", "fun", "./foo"));
   EXPECT_FALSE(SCL4->inSection("not", "fun", "./foo"));
+  EXPECT_FALSE(SCL5->inSection("not", "fun", "./foo"));
 
   EXPECT_TRUE(SCL2->inSection("not", "fun", "foo"));
   EXPECT_TRUE(SCL3->inSection("not", "fun", "foo"));
   EXPECT_TRUE(SCL4->inSection("not", "fun", "foo"));
+  EXPECT_TRUE(SCL5->inSection("not", "fun", "foo"));
 
   EXPECT_FALSE(SCL2->inSection("not", "src", "./bar"));
   EXPECT_TRUE(SCL3->inSection("not", "src", "./bar"));
   EXPECT_TRUE(SCL4->inSection("not", "src", "./bar"));
+  EXPECT_TRUE(SCL5->inSection("not", "src", "./bar"));
 
   EXPECT_TRUE(SCL2->inSection("not", "src", "bar"));
   EXPECT_TRUE(SCL3->inSection("not", "src", "bar"));
   EXPECT_TRUE(SCL4->inSection("not", "src", "bar"));
+  EXPECT_TRUE(SCL5->inSection("not", "src", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, DotSlashWarning) {
+  StringRef IgnoreList = "[dot]\n"
+                         "src:./bar\n"
+                         "[not]\n"
+                         "src:bar\n";
+  std::unique_ptr<SpecialCaseList> SCL3 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/3);
+  std::unique_ptr<SpecialCaseList> SCL4 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/4);
+  std::unique_ptr<SpecialCaseList> SCL5 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/5);
+
+  // Version 3 should not warn (new behavior, no warn)
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(SCL3->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
+
+  // Version 4 should warn (transition)
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(SCL4->inSection("dot", "src", "./bar"));
+  std::string Warning = testing::internal::GetCapturedStderr();
+  EXPECT_THAT(
+      Warning,
+      HasSubstr(
+          "warning: Deprecated behaviour: pattern './bar' matches './bar'"));
+  EXPECT_THAT(Warning, HasSubstr("update it to match 'bar' instead"));
+
+  // Version 5 should not warn (new behavior, no warn)
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
+
+  // Version 4 should not warn here because it is a new match
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(SCL4->inSection("not", "src", "./bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
 }
 
 TEST_F(SpecialCaseListTest, LinesInSection) {
@@ -415,5 +463,25 @@ TEST_F(SpecialCaseListTest, FileIdx) {
   for (auto &Path : Files)
     sys::fs::remove(Path);
 }
+
+#ifdef _WIN32
+TEST_F(SpecialCaseListTest, SlashAgnosticPathsOnWindows) {
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("#!special-case-list-v4\n"
+                          "\n"
+                          "src:*foo/bar*\n"
+                          "src:*foo\\\\baz\n"
+                          "fun:hi\\\\bye=category\n");
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/bar"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\bar"));
+  // The baz pattern matches because paths are matched slash-agnostically
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/baz"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\baz"));
+  // Slash-agnostic matching only applies to files
+  EXPECT_TRUE(SCL->inSection("", "fun", "hi\\bye", "category"));
+  EXPECT_FALSE(SCL->inSection("", "fun", "hi/bye", "category"));
+}
+
+#endif
 
 } // namespace

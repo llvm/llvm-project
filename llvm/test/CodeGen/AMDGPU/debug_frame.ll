@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -o - < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --force-dwarf-frame-section -o - < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --exception-model=dwarf -o - < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --force-dwarf-frame-section --exception-model=dwarf -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa --force-dwarf-frame-section -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa --exception-model=dwarf -o - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa --force-dwarf-frame-section --exception-model=dwarf -o - < %s | FileCheck %s
 
 ; CHECK: .cfi_sections .debug_frame
 

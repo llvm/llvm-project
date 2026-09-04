@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 # The tests below test the allocation of 128bit callee-saves
 # on the stack, specifically their offsets.

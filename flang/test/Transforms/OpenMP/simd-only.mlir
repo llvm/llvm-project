@@ -84,7 +84,7 @@ func.func @target_map(%arg5: i32, %arg6: !fir.ref<i32>) {
   // CHECK-NOT: omp.map.info
   %3 = omp.map.info var_ptr(%arg6 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32>
   // CHECK-NOT: omp.target
-  omp.target map_entries(%3 -> %arg0 : !fir.ref<i32>) {
+  omp.target kernel_type(generic) map_entries(%3 -> %arg0 : !fir.ref<i32>) {
     // CHECK: arith.constant
     %c1_i32 = arith.constant 1 : i32
     // CHECK: fir.store %c1_i32 to %[[ARG_1]]
@@ -183,7 +183,7 @@ func.func @map_info(%funcArg0: i32, %funcArg1: !fir.ref<i32>) {
   // CHECK-NOT: omp.map.info
   %13 = omp.map.info var_ptr(%funcArg1 : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) bounds(%1) -> !fir.ref<i32>
   // CHECK-NOT: omp.target
-  omp.target map_entries(%13 -> %arg3 : !fir.ref<i32>) {
+  omp.target kernel_type(generic) map_entries(%13 -> %arg3 : !fir.ref<i32>) {
     %c1_i32 = arith.constant 1 : i32
     // CHECK: fir.store %c1_i32 to %[[ARG_1]]
     fir.store %c1_i32 to %arg3 : !fir.ref<i32>

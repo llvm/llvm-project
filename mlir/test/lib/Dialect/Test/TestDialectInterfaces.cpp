@@ -8,8 +8,13 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "TestTypes.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -322,7 +327,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
     // Don't allow inlining calls that are marked `noinline`.
-    return !call->hasAttr("noinline");
+    return !call->hasDiscardableAttr("noinline");
   }
   bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     // Inlining into test dialect regions is legal.
@@ -341,6 +346,19 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   //===--------------------------------------------------------------------===//
   // Transformation Hooks
   //===--------------------------------------------------------------------===//
+
+  /// Handle the given inlined terminator by replacing it with a new operation
+  /// as necessary (multi-block inlining case: replace test.return with a
+  /// branch to the successor block that carries the inlined results).
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    auto returnOp = dyn_cast<TestReturnOp>(op);
+    if (!returnOp)
+      return;
+    OpBuilder builder(op);
+    cf::BranchOp::create(builder, op->getLoc(), newDest,
+                         returnOp.getOperands());
+    op->erase();
+  }
 
   /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
@@ -402,7 +420,8 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     // Set attributed on all ops in the inlined blocks.
     for (Block &block : inlinedBlocks) {
       block.walk([&](Operation *op) {
-        op->setAttr("inlined_conversion", UnitAttr::get(call->getContext()));
+        op->setDiscardableAttr("inlined_conversion",
+                               UnitAttr::get(call->getContext()));
       });
     }
   }
@@ -418,6 +437,20 @@ public:
   }
 };
 
+struct TestToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  explicit TestToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
+
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns,
+      ::std::optional<bool> lowerToCpp) const final {
+    typeConverter.addConversion([](test::TestMemRefElementTypeType type) {
+      return emitc::OpaqueType::get(type.getContext(), "TestElementT");
+    });
+  }
+};
+
 } // namespace
 
 void TestDialect::registerInterfaces() {
@@ -426,4 +459,5 @@ void TestDialect::registerInterfaces() {
 
   addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
                 TestReductionPatternInterface, TestBytecodeDialectInterface>();
+  addInterface<TestToEmitCDialectInterface>();
 }

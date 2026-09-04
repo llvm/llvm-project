@@ -48,7 +48,8 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
           continue;
         auto *originalOp = info->originalProducer.getOperation();
         auto *originalOpInLinalgOpsVector = llvm::find(linalgOps, originalOp);
-        *originalOpInLinalgOpsVector = info->fusedProducer;
+        if (originalOpInLinalgOpsVector != linalgOps.end())
+          *originalOpInLinalgOpsVector = info->fusedProducer;
         // Don't mark for erasure in the tensor case, let DCE handle this.
         changed = true;
       }

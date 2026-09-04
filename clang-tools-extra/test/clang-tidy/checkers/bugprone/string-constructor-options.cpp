@@ -3,8 +3,7 @@
 // RUN:     bugprone-string-constructor.WarnOnLargeLength: true, \
 // RUN:     bugprone-string-constructor.LargeLengthThreshold: 10, \
 // RUN:     bugprone-string-constructor.StringNames: '::std::basic_string;::std::basic_string_view;::custom::String' \
-// RUN:   }}" -- -isystem %clang_tidy_headers
-
+// RUN:   }}"
 #include <string>
 
 namespace custom {

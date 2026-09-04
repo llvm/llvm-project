@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -verify=expected -fsyntax-only -triple=x86_64-unknown-linux-gnu
-// RUN: %clang_cc1 %s -verify=expected -fsyntax-only -triple=x86_64-unknown-linux-gnu -std=c++20
+// RUN: %clang_cc1 %s -verify=expected,noms -fsyntax-only -triple=x86_64-unknown-linux-gnu
+// RUN: %clang_cc1 %s -verify=expected,noms -fsyntax-only -triple=x86_64-unknown-linux-gnu -std=c++20
 // RUN: %clang_cc1 %s -verify=expected,ms -fms-extensions -fms-compatibility -triple=x86_64-pc-windows-msvc -DMS
 
 // Verify that clang doesn't emit additional errors when searching for
@@ -56,7 +56,34 @@ struct Final1 : BaseDelete1, BaseDelete2, BaseDestructor {
 };
 #endif // MS
 
+// Make sure there is no double diagnosing for declared-only destructors and
+// new[].
+struct DeclaredOnly {
+  virtual ~DeclaredOnly(); // ms-error {{attempt to use a deleted function}}
+  static void operator delete(void* ptr) = delete; // ms-note {{explicitly marked deleted here}}
+};
+
+struct DeclaredOnlyArr {
+  virtual ~DeclaredOnlyArr();
+  static void operator delete[](void* ptr) = delete;
+};
+
 void foo() {
     Final* a = new Final[10]();
     FinalExplicit* b = new FinalExplicit[10]();
+    DeclaredOnly *d = new DeclaredOnly[5]();
+    DeclaredOnlyArr *e = new DeclaredOnlyArr[5]();
 }
+
+// Make sure there is no double diagnosing for forward declared destructors
+// and new[].
+namespace std { struct destroying_delete_t {}; }
+struct A {
+  void operator delete(
+      A*, //expected-error {{cannot cast 'D' to its private base class 'A'}}
+      std::destroying_delete_t);
+};
+struct B : private A { using A::operator delete; }; //expected-note {{declared private here}}
+struct D : B { virtual ~D(); }; //ms-note {{while checking implicit 'delete this' for virtual destructor}}
+void f() { new D[5]; }
+D::~D() {} // noms-note {{while checking implicit 'delete this' for virtual destructor}}

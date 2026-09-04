@@ -19,8 +19,11 @@
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
+
+class MCContext;
 
 class MCSymbolGOFF : public MCSymbol {
 
@@ -43,6 +46,7 @@ public:
       : MCSymbol(Name, IsTemporary) {}
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
+    assert(AssociatedDataArea && "ADA must be non-null");
     ADA = AssociatedDataArea;
     AssociatedDataArea->RequiresNonZeroLength = true;
   }
@@ -89,7 +93,11 @@ public:
                     : GOFF::ESDBindingStrength::ESD_BST_Strong;
   }
 
-  bool setSymbolAttribute(MCSymbolAttr Attribute);
+  LLVM_ABI bool setSymbolAttribute(MCSymbolAttr Attribute);
+
+  /// Return the PR section to use when emitting this symbol as a common symbol.
+  LLVM_ABI MCSectionGOFF *getSectionForCommonSymbol(MCContext &Ctx,
+                                                    Align ByteAlignment);
 
   bool isInEDSection() const {
     return isInSection() && static_cast<MCSectionGOFF &>(getSection()).isED();

@@ -33,12 +33,11 @@ define bfloat @faddv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define bfloat @faddv_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: faddv_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
+; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
+; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    fadd z0.s, z0.s, z2.s
 ; CHECK-NEXT:    faddv s0, p0, z0.s
 ; CHECK-NEXT:    bfcvt h0, s0
 ; CHECK-NEXT:    ret
@@ -75,12 +74,11 @@ define bfloat @fmaxv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define bfloat @fmaxv_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fmaxv_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
+; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    fmaxnmv s0, p0, z0.s
 ; CHECK-NEXT:    bfcvt h0, s0
 ; CHECK-NEXT:    ret
@@ -117,12 +115,11 @@ define bfloat @fminv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define bfloat @fminv_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fminv_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
+; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    fminnmv s0, p0, z0.s
 ; CHECK-NEXT:    bfcvt h0, s0
 ; CHECK-NEXT:    ret
@@ -159,12 +156,11 @@ define bfloat @fmaximumv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define bfloat @fmaximumv_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fmaximumv_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
+; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    fmaxv s0, p0, z0.s
 ; CHECK-NEXT:    bfcvt h0, s0
 ; CHECK-NEXT:    ret
@@ -201,12 +197,11 @@ define bfloat @fminimumv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 define bfloat @fminimumv_nxv8bf16(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fminimumv_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
+; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    fminv s0, p0, z0.s
 ; CHECK-NEXT:    bfcvt h0, s0
 ; CHECK-NEXT:    ret

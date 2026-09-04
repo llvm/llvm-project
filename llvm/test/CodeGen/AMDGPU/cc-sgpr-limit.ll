@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck %s
+; RUN: llc < %s -mtriple=amdgpu9.00 | FileCheck %s
 
 ; CHECK: s_add_i32 s0, s0, s1
 ; CHECK: s_add_i32 s1, s0, s2

@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/BitReader.h"
-#include "llvm-c/Core.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <cstring>
 #include <string>
 
 using namespace llvm;

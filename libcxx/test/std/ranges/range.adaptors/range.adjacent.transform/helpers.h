@@ -13,6 +13,7 @@
 #include <functional>
 #include <numeric>
 #include <tuple>
+#include <utility>
 
 // intentionally not using meta programming for the expected tuple types
 
@@ -33,6 +34,10 @@ struct Tie {
 
 struct GetFirst {
   constexpr decltype(auto) operator()(auto&& first, auto&&...) const { return std::forward<decltype(first)>(first); }
+};
+
+struct GetFirstAsXvalue {
+  static constexpr decltype(auto) operator()(auto&& first, auto&&...) { return std::move(first); }
 };
 
 template <std::size_t N>

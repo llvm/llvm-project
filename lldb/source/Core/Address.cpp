@@ -40,10 +40,12 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <cassert>
@@ -225,7 +227,7 @@ static size_t ReadCStringFromMemory(ExecutionContextScope *exe_scope,
 
     if (len < k_buf_len)
       break;
-    curr_address.SetOffset(curr_address.GetOffset() + bytes_read);
+    curr_address.Slide(bytes_read);
   }
   strm->PutChar('"');
   return total_len;
@@ -386,7 +388,7 @@ bool Address::GetDescription(Stream &s, Target &target,
          "Non-brief descriptions not implemented");
   LineEntry line_entry;
   if (CalculateSymbolContextLineEntry(line_entry)) {
-    s.Printf(" (%s:%u:%u)", line_entry.GetFile().GetFilename().GetCString(),
+    s.Format(" ({0}:{1}:{2})", line_entry.GetFile().GetFilename(),
              line_entry.line, line_entry.column);
     return true;
   }
@@ -437,8 +439,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     if (section_sp) {
       ModuleSP module_sp = section_sp->GetModule();
       if (module_sp)
-        s->Printf("%s[", module_sp->GetFileSpec().GetFilename().AsCString(
-                             "<Unknown>"));
+        s->Format("{0}[", module_sp->GetFileSpec().GetFilename().nonEmptyOr(
+                              "<Unknown>"));
       else
         s->Printf("%s[", "<Unknown>");
     }
@@ -503,8 +505,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               const Symbol *symbol =
                   symtab->FindSymbolContainingFileAddress(file_Addr);
               if (symbol) {
-                const char *symbol_name = symbol->GetName().AsCString();
-                if (symbol_name) {
+                llvm::StringRef symbol_name = symbol->GetName().GetStringRef();
+                if (!symbol_name.empty()) {
                   s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
@@ -552,7 +554,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                 s->PutCString("{ ");
 #endif
                 Address cstr_addr(*this);
-                cstr_addr.SetOffset(cstr_addr.GetOffset() + pointer_size);
+                cstr_addr.Slide(pointer_size);
                 func_sc.DumpStopContext(s, exe_scope, so_addr, true, true,
                                         false, true, true);
                 if (ReadAddress(exe_scope, cstr_addr, pointer_size, so_addr)) {
@@ -578,8 +580,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
 
         case eSectionTypeDataObjCCFStrings: {
           Address cfstring_data_addr(*this);
-          cfstring_data_addr.SetOffset(cfstring_data_addr.GetOffset() +
-                                       (2 * pointer_size));
+          cfstring_data_addr.Slide(2 * pointer_size);
           if (ReadAddress(exe_scope, cfstring_data_addr, pointer_size,
                           so_addr)) {
 #if VERBOSE_OUTPUT
@@ -748,7 +749,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               DumpAddressRange(s->AsRawOstream(), range->GetRangeBase(),
                                range->GetRangeEnd(), addr_size);
             s->PutCString(", location = ");
-            var_sp->DumpLocations(s, all_ranges ? LLDB_INVALID_ADDRESS : *this);
+            var_sp->DumpLocations(s, all_ranges ? Address() : *this);
             s->PutCString(", decl = ");
             var_sp->GetDeclaration().DumpStopContext(s, false);
             s->EOL();
@@ -768,18 +769,17 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     if (process) {
       addr_t load_addr = GetLoadAddress(target);
       if (load_addr != LLDB_INVALID_ADDRESS) {
-        Status memory_error;
-        addr_t dereferenced_load_addr =
-            process->ReadPointerFromMemory(load_addr, memory_error);
-        if (dereferenced_load_addr != LLDB_INVALID_ADDRESS) {
+        std::optional<addr_t> dereferenced_load_addr =
+            llvm::expectedToOptional(process->ReadPointerFromMemory(load_addr));
+        if (dereferenced_load_addr) {
           Address dereferenced_addr;
-          if (dereferenced_addr.SetLoadAddress(dereferenced_load_addr,
+          if (dereferenced_addr.SetLoadAddress(*dereferenced_load_addr,
                                                target)) {
             StreamString strm;
             if (dereferenced_addr.Dump(&strm, exe_scope,
                                        DumpStyleResolvedDescription,
                                        DumpStyleInvalid, addr_size)) {
-              DumpAddress(s->AsRawOstream(), dereferenced_load_addr, addr_size,
+              DumpAddress(s->AsRawOstream(), *dereferenced_load_addr, addr_size,
                           " -> ", " ");
               s->Write(strm.GetString().data(), strm.GetSize());
               return true;
@@ -957,12 +957,6 @@ int Address::CompareModulePointerAndOffset(const Address &a, const Address &b) {
   if (a_file_addr > b_file_addr)
     return +1;
   return 0;
-}
-
-size_t Address::MemorySize() const {
-  // Noting special for the memory size of a single Address object, it is just
-  // the size of itself.
-  return sizeof(Address);
 }
 
 // NOTE: Be careful using this operator. It can correctly compare two

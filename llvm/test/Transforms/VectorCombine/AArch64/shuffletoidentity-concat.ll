@@ -236,9 +236,7 @@ define <16 x i32> @two_concats(<4 x i32> %a1a, <4 x i32> %a2a, <4 x i32> %a3a, <
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i32> [[TMP3]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i32> [[TMP4]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[A1A]], <4 x i32> [[A1A]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[A1A]], <4 x i32> [[A1A]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP7]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[A1A]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[R:%.*]] = xor <16 x i32> [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;

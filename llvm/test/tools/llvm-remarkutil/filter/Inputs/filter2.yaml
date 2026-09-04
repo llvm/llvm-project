@@ -1,0 +1,9 @@
+--- !Passed
+Pass:            pass4
+Name:            Remark4
+DebugLoc:        { File: 'path/to/func4.c', Line: 1, Column: 2 }
+Function:        func4
+Args:
+  - String:          ' text'
+  - arg4:            argval4
+...

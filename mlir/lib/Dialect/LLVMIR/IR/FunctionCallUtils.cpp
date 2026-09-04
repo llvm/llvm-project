@@ -87,6 +87,17 @@ mlir::LLVM::lookupOrCreateFn(OpBuilder &b, Operation *moduleOp, StringRef name,
     return func;
   }
 
+  // A symbol with this name may already exist as a non-LLVM function (e.g.,
+  // func::FuncOp from user code that hasn't been converted to LLVM dialect
+  // yet). Creating a new LLVMFuncOp with the same name would cause a symbol
+  // redefinition error. Return failure so the calling pattern can retry after
+  // the existing symbol is converted.
+  if (symbolTables
+          ? symbolTables->lookupSymbolIn(
+                moduleOp, StringAttr::get(moduleOp->getContext(), name))
+          : SymbolTable::lookupSymbolIn(moduleOp, name))
+    return failure();
+
   OpBuilder::InsertionGuard g(b);
   assert(!moduleOp->getRegion(0).empty() && "expected non-empty region");
   b.setInsertionPointToStart(&moduleOp->getRegion(0).front());

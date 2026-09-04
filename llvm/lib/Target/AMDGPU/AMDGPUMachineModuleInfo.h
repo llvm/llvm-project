@@ -47,47 +47,6 @@ private:
   /// Cluster synchronization scope ID (single address space).
   SyncScope::ID ClusterOneAddressSpaceSSID;
 
-  /// In AMDGPU target synchronization scopes are inclusive, meaning a
-  /// larger synchronization scope is inclusive of a smaller synchronization
-  /// scope.
-  ///
-  /// \returns \p SSID's inclusion ordering, or "std::nullopt" if \p SSID is not
-  /// supported by the AMDGPU target.
-  std::optional<uint8_t>
-  getSyncScopeInclusionOrdering(SyncScope::ID SSID) const {
-    if (SSID == SyncScope::SingleThread ||
-        SSID == getSingleThreadOneAddressSpaceSSID())
-      return 0;
-    else if (SSID == getWavefrontSSID() ||
-             SSID == getWavefrontOneAddressSpaceSSID())
-      return 1;
-    else if (SSID == getWorkgroupSSID() ||
-             SSID == getWorkgroupOneAddressSpaceSSID())
-      return 2;
-    else if (SSID == getClusterSSID() ||
-             SSID == getClusterOneAddressSpaceSSID())
-      return 3;
-    else if (SSID == getAgentSSID() ||
-             SSID == getAgentOneAddressSpaceSSID())
-      return 4;
-    else if (SSID == SyncScope::System ||
-             SSID == getSystemOneAddressSpaceSSID())
-      return 5;
-
-    return std::nullopt;
-  }
-
-  /// \returns True if \p SSID is restricted to single address space, false
-  /// otherwise
-  bool isOneAddressSpace(SyncScope::ID SSID) const {
-    return SSID == getClusterOneAddressSpaceSSID() ||
-           SSID == getSingleThreadOneAddressSpaceSSID() ||
-           SSID == getWavefrontOneAddressSpaceSSID() ||
-           SSID == getWorkgroupOneAddressSpaceSSID() ||
-           SSID == getAgentOneAddressSpaceSSID() ||
-           SSID == getSystemOneAddressSpaceSSID();
-  }
-
 public:
   AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI);
 
@@ -130,26 +89,57 @@ public:
     return ClusterOneAddressSpaceSSID;
   }
 
-  /// In AMDGPU target synchronization scopes are inclusive, meaning a
-  /// larger synchronization scope is inclusive of a smaller synchronization
-  /// scope.
+  /// In AMDGPU, synchronization scopes are inclusive: a larger scope is
+  /// inclusive of a smaller one (e.g. agent includes workgroup).
   ///
-  /// \returns True if synchronization scope \p A is larger than or equal to
-  /// synchronization scope \p B, false if synchronization scope \p A is smaller
-  /// than synchronization scope \p B, or "std::nullopt" if either
-  /// synchronization scope \p A or \p B is not supported by the AMDGPU target.
-  std::optional<bool> isSyncScopeInclusion(SyncScope::ID A,
-                                           SyncScope::ID B) const {
-    const auto &AIO = getSyncScopeInclusionOrdering(A);
-    const auto &BIO = getSyncScopeInclusionOrdering(B);
-    if (!AIO || !BIO)
+  /// Returns the merged synchronization scope of \p A and \p B: the smallest
+  /// scope that is inclusive of both. Takes the larger inclusion level and,
+  /// if either scope is cross-address-space, the result is also
+  /// cross-address-space (since a one-AS scope cannot subsume a cross-AS
+  /// scope at the same level).
+  ///
+  /// \returns The merged scope ID, or "std::nullopt" if either scope is not
+  /// supported by the AMDGPU target.
+  std::optional<SyncScope::ID> getMergedSyncScopeID(SyncScope::ID A,
+                                                    SyncScope::ID B) const {
+    // Ordered from smallest to largest scope. Level is the index.
+    // Cross-AS and one-AS scopes share the same inclusion ordering level.
+    // Level | Cross-AS scope   | One-AS scope
+    // ------+------------------+----------------------
+    //   0   | singlethread     | singlethread-one-as
+    //   1   | wavefront        | wavefront-one-as
+    //   2   | workgroup        | workgroup-one-as
+    //   3   | cluster          | cluster-one-as
+    //   4   | agent            | agent-one-as
+    //   5   | system           | one-as
+    const SyncScope::ID CrossAS[] = {
+        SyncScope::SingleThread, getWavefrontSSID(), getWorkgroupSSID(),
+        getClusterSSID(),        getAgentSSID(),     SyncScope::System};
+    const SyncScope::ID OneAS[] = {
+        getSingleThreadOneAddressSpaceSSID(), getWavefrontOneAddressSpaceSSID(),
+        getWorkgroupOneAddressSpaceSSID(),    getClusterOneAddressSpaceSSID(),
+        getAgentOneAddressSpaceSSID(),        getSystemOneAddressSpaceSSID()};
+
+    // Returns {level, isOneAS} for a given scope, or nullopt if unsupported.
+    auto GetLevelAndOneAS =
+        [&](SyncScope::ID SSID) -> std::optional<std::pair<unsigned, bool>> {
+      for (auto [I, Cross, One] : llvm::enumerate(CrossAS, OneAS)) {
+        if (Cross == SSID)
+          return std::make_pair(I, false);
+        if (One == SSID)
+          return std::make_pair(I, true);
+      }
+      return std::nullopt;
+    };
+
+    auto AI = GetLevelAndOneAS(A);
+    auto BI = GetLevelAndOneAS(B);
+    if (!AI || !BI)
       return std::nullopt;
 
-    bool IsAOneAddressSpace = isOneAddressSpace(A);
-    bool IsBOneAddressSpace = isOneAddressSpace(B);
-
-    return *AIO >= *BIO &&
-           (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
+    unsigned Level = std::max(AI->first, BI->first);
+    // If either scope is cross-AS, the result must be cross-AS.
+    return (AI->second && BI->second) ? OneAS[Level] : CrossAS[Level];
   }
 };
 

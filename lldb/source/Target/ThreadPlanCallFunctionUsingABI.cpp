@@ -47,7 +47,7 @@ ThreadPlanCallFunctionUsingABI::~ThreadPlanCallFunctionUsingABI() = default;
 void ThreadPlanCallFunctionUsingABI::GetDescription(Stream *s,
                                                     DescriptionLevel level) {
   if (level == eDescriptionLevelBrief) {
-    s->Printf("Function call thread plan using ABI instead of JIT");
+    s->PutCString("Function call thread plan using ABI instead of JIT");
   } else {
     s->Printf("Thread plan to call 0x%" PRIx64 " using ABI instead of JIT",
               m_function_addr.GetLoadAddress(&GetTarget()));

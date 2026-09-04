@@ -12,6 +12,8 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/FileSystem.h"
@@ -80,6 +82,17 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   // Check if the virtual file exists which means that our VFS is used by the
   // CompilerInstance.
   ASSERT_TRUE(Instance.getFileManager().getOptionalFileRef("vfs-virtual.file"));
+}
+
+TEST(CompilerInstance, CreateVFSWithoutDiagnosticConsumer) {
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  Invocation->getHeaderSearchOpts().VFSOverlayFiles.push_back("/missing.yaml");
+  auto BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  CompilerInstance Instance(std::move(Invocation));
+  // Check that omitting the DiagnosticConsumer doesn't crash (e.g. by
+  // dereferencing the null pointer).
+  ASSERT_NO_FATAL_FAILURE(
+      Instance.createVirtualFileSystem(std::move(BaseFS), /*DC=*/nullptr));
 }
 
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
@@ -173,7 +186,7 @@ TEST(CompilerInstance, SingleModuleParseModeCallback) {
     std::vector<std::string> &SkippedModules;
     ModuleLoadSkippedCallback(std::vector<std::string> &SkippedModules)
         : SkippedModules(SkippedModules) {}
-    void moduleLoadSkipped(Module *Skipped) override {
+    void moduleLoadSkipped(clang::Module *Skipped) override {
       SkippedModules.emplace_back(Skipped->getFullModuleName());
     }
   };

@@ -32,7 +32,7 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     %glob:gpr(p0) = G_GLOBAL_VALUE @glob
-    %load:gpr(s32) = G_LOAD %glob(p0) :: (dereferenceable load (s8) from @glob, align 4)
+    %load:gpr(i32) = G_LOAD %glob(p0) :: (dereferenceable load (s8) from @glob, align 4)
 
     ; Look through G_TRUNC to get the load. The load is into a s8, which will
     ; be selected to a GPR32, so we don't need a copy.
@@ -64,12 +64,12 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $w0
-    %reg:gpr(s32) = COPY $w0
-    %zext:gpr(s64) = G_ZEXT %reg(s32)
-    %bit:gpr(s64) = G_CONSTANT i64 8589934592
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %and:gpr(s64) = G_AND %zext, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s64), %zero
+    %reg:gpr(i32) = COPY $w0
+    %zext:gpr(i64) = G_ZEXT %reg(i32)
+    %bit:gpr(i64) = G_CONSTANT i64 8589934592
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %and:gpr(i64) = G_AND %zext, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(eq), %and(i64), %zero
 
     ; We should widen using a SUBREG_TO_REG here, because we need a TBZX to get
     ; bit 33. The subregister should be sub_32.
@@ -99,12 +99,12 @@ body:             |
   ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     successors: %bb.0, %bb.1
-    %reg:gpr(s16) = G_IMPLICIT_DEF
-    %zext:gpr(s64) = G_ZEXT %reg(s16)
-    %bit:gpr(s64) = G_CONSTANT i64 8589934592
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %and:gpr(s64) = G_AND %zext, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(eq), %and(s64), %zero
+    %reg:gpr(i16) = G_IMPLICIT_DEF
+    %zext:gpr(i64) = G_ZEXT %reg(i16)
+    %bit:gpr(i64) = G_CONSTANT i64 8589934592
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %and:gpr(i64) = G_AND %zext, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(eq), %and(i64), %zero
 
     ; We should widen using a SUBREG_TO_REG here, because we need a TBZX to get
     ; bit 33. The subregister should be sub_32, because s16 will end up on a
@@ -137,10 +137,10 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %wide:gpr(s64) = COPY $x0
+    %wide:gpr(i64) = COPY $x0
 
     ; We should narrow using a subregister copy here.
-    %trunc:gpr(s32) = G_TRUNC %wide(s64)
+    %trunc:gpr(i32) = G_TRUNC %wide(i64)
     G_BRCOND %trunc, %bb.1
     G_BR %bb.0
   bb.1:

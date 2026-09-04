@@ -73,7 +73,7 @@ static Instruction *genAMDGPUReportBlock(Module &M, IRBuilder<> &IRB,
 
   Trm = SplitBlockAndInsertIfThen(Cond, Trm, false);
   IRB.SetInsertPoint(Trm);
-  return IRB.CreateIntrinsic(Intrinsic::amdgcn_unreachable, {});
+  return IRB.CreateIntrinsicWithoutFolding(Intrinsic::amdgcn_unreachable, {});
 }
 
 static Value *createSlowPathCmp(Module &M, IRBuilder<> &IRB, Type *IntptrTy,
@@ -323,6 +323,7 @@ void getInterestingMemoryOperands(
     case Intrinsic::amdgcn_struct_tbuffer_load:
     case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
     case Intrinsic::amdgcn_s_buffer_load:
+    case Intrinsic::amdgcn_ptr_s_buffer_load:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128: {
       unsigned PtrOpNo = 0;

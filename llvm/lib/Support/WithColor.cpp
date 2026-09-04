@@ -26,7 +26,7 @@ struct CreateUseColor {
     return new cl::opt<cl::boolOrDefault>(
         "color", cl::cat(getColorCategory()),
         cl::desc("Use colors in output (default=autodetect)"),
-        cl::init(cl::BOU_UNSET));
+        cl::init(cl::boolOrDefault::BOU_UNSET));
   }
 };
 } // namespace
@@ -34,8 +34,9 @@ static ManagedStatic<cl::opt<cl::boolOrDefault>, CreateUseColor> UseColor;
 void llvm::initWithColorOptions() { *UseColor; }
 
 static bool DefaultAutoDetectFunction(const raw_ostream &OS) {
-  return *UseColor == cl::BOU_UNSET ? OS.has_colors()
-                                    : *UseColor == cl::BOU_TRUE;
+  return *UseColor == cl::boolOrDefault::BOU_UNSET
+             ? OS.has_colors()
+             : *UseColor == cl::boolOrDefault::BOU_TRUE;
 }
 
 WithColor::AutoDetectFunctionType WithColor::AutoDetectFunction =

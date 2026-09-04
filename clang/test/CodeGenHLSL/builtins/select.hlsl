@@ -28,7 +28,7 @@ int2 test_select_bool_vector(bool cond0, int2 tVal, int2 fVal) {
 }
 
 // CHECK-LABEL: test_select_vector_1
-// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, <1 x i32> {{%.*}}, <1 x i32> {{%.*}}
+// CHECK: [[SELECT:%.*]] = select <1 x i1> {{%.*}}, <1 x i32> {{%.*}}, <1 x i32> {{%.*}}
 // CHECK: ret <1 x i32> [[SELECT]]
 int1 test_select_vector_1(bool1 cond0, int1 tVals, int1 fVals) {
   return select(cond0, tVals, fVals);
@@ -84,8 +84,47 @@ int4 test_select_vector_scalar_scalar(bool4 cond0, int tVal, int fVal) {
   return select(cond0, tVal, fVal);
 }
 
+// CHECK-LABEL: test_select_vector_17
+// CHECK: [[SELECT:%.*]] = select <17 x i1> {{%.*}}, <17 x i32> {{%.*}}, <17 x i32> {{%.*}}
+// CHECK: ret <17 x i32> [[SELECT]]
+vector<int, 17> test_select_vector_17(vector<bool, 17> cond0,
+                                   vector<int, 17> tVals,
+                                   vector<int, 17> fVals) {
+  return select(cond0, tVals, fVals);
+}
+
+// CHECK-LABEL: test_select_vector_5_scalar_vector
+// CHECK: [[COND:%.*]] = load <5 x i32>, ptr %cond0.addr, align 4
+// CHECK: [[TOBOOL:%.*]] = icmp ne <5 x i32> [[COND]], zeroinitializer
+// CHECK: [[SELECT:%.*]] = select <5 x i1> [[TOBOOL]], <5 x i32> {{%.*}}, <5 x i32> {{%.*}}
+// CHECK: ret <5 x i32> [[SELECT]]
+vector<int, 5> test_select_vector_5_scalar_vector(vector<int, 5> cond0,
+                                                 int tVal,
+                                                 vector<int, 5> fVals) {
+  return select(cond0, tVal, fVals);
+}
+
+// CHECK-LABEL: test_select_vector_20_vector_scalar
+// CHECK: [[SELECT:%.*]] = select <20 x i1> {{%.*}}, <20 x i32> {{%.*}}, <20 x i32> {{%.*}}
+// CHECK: ret <20 x i32> [[SELECT]]
+vector<int, 20> test_select_vector_20_vector_scalar(vector<bool, 20> cond0,
+                                                 vector<int, 20> tVals,
+                                                 int fVal) {
+  return select(cond0, tVals, fVal);
+}
+
+// CHECK-LABEL: test_select_vector_8_scalar_scalar
+// CHECK: [[COND:%.*]] = load <8 x i32>, ptr %cond0.addr, align 4
+// CHECK: [[TOBOOL:%.*]] = icmp ne <8 x i32> [[COND]], zeroinitializer
+// CHECK: [[SELECT:%.*]] = select <8 x i1> [[TOBOOL]], <8 x i32> {{%.*}}, <8 x i32> {{%.*}}
+// CHECK: ret <8 x i32> [[SELECT]]
+vector<int, 8> test_select_vector_8_scalar_scalar(vector<int, 8> cond0,
+                                                 int tVal, int fVal) {
+  return select(cond0, tVal, fVal);
+}
+
 // CHECK-LABEL: test_select_nonbool_cond_vector_4
-// CHECK: [[TMP0:%.*]] = load <4 x i32>, ptr %cond0.addr, align 16
+// CHECK: [[TMP0:%.*]] = load <4 x i32>, ptr %cond0.addr, align 4
 // CHECK: [[TOBOOL:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
 // CHECK: [[SELECT:%.*]] = select <4 x i1> [[TOBOOL]], <4 x i1> {{%.*}}, <4 x i1> {{%.*}}
 // CHECK: ret <4 x i1> [[SELECT]]
@@ -94,7 +133,7 @@ bool4 test_select_nonbool_cond_vector_4(int4 cond0, bool4 tVal, bool4 fVal) {
 }
 
 // CHECK-LABEL: test_select_nonbool_cond_vector_scalar_vector
-// CHECK: [[TMP0:%.*]] = load <3 x i32>, ptr %cond0.addr, align 16
+// CHECK: [[TMP0:%.*]] = load <3 x i32>, ptr %cond0.addr, align 4
 // CHECK: [[TOBOOL:%.*]] = icmp ne <3 x i32> [[TMP0]], zeroinitializer
 // CHECK: [[SPLAT_SRC1:%.*]] = insertelement <3 x i32> poison, i32 {{%.*}}, i64 0
 // CHECK: [[SPLAT1:%.*]] = shufflevector <3 x i32> [[SPLAT_SRC1]], <3 x i32> poison, <3 x i32> zeroinitializer
@@ -105,7 +144,7 @@ int3 test_select_nonbool_cond_vector_scalar_vector(int3 cond0, int tVal, int3 fV
 }
 
 // CHECK-LABEL: test_select_nonbool_cond_vector_vector_scalar
-// CHECK: [[TMP0:%.*]] = load <2 x i32>, ptr %cond0.addr, align 8
+// CHECK: [[TMP0:%.*]] = load <2 x i32>, ptr %cond0.addr, align 4
 // CHECK: [[TOBOOL:%.*]] = icmp ne <2 x i32> [[TMP0]], zeroinitializer
 // CHECK: [[SPLAT_SRC1:%.*]] = insertelement <2 x i32> poison, i32 {{%.*}}, i64 0
 // CHECK: [[SPLAT1:%.*]] = shufflevector <2 x i32> [[SPLAT_SRC1]], <2 x i32> poison, <2 x i32> zeroinitializer
@@ -116,7 +155,7 @@ int2 test_select_nonbool_cond_vector_vector_scalar(int2 cond0, int2 tVal, int fV
 }
 
 // CHECK-LABEL: test_select_nonbool_cond_vector_scalar_scalar
-// CHECK: [[TMP0:%.*]] = load <4 x i32>, ptr %cond0.addr, align 16
+// CHECK: [[TMP0:%.*]] = load <4 x i32>, ptr %cond0.addr, align 4
 // CHECK: [[TOBOOL:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
 // CHECK: [[SPLAT_SRC1:%.*]] = insertelement <4 x i32> poison, i32 {{%.*}}, i64 0
 // CHECK: [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLAT_SRC1]], <4 x i32> poison, <4 x i32> zeroinitializer

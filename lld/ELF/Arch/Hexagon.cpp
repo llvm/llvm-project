@@ -9,6 +9,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -39,13 +40,16 @@ public:
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override {
-    elf::scanSection1<Hexagon, ELF32LE>(*this, sec);
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override {
+    elf::scanSection1<Hexagon, ELF32LE>(*this, sec, shard);
   }
+  void finalizeRelocScan() override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
+  uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -124,8 +128,9 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
 }
 
 template <class ELFT, class RelTy>
-void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                              unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
@@ -182,7 +187,11 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_HEX_GD_PLT_B22_PCREL:
     case R_HEX_GD_PLT_B22_PCREL_X:
     case R_HEX_GD_PLT_B32_PCREL_X:
-      sym.setFlags(NEEDS_PLT);
+      // GD PLT: call foo@GDPLT becomes call __tls_get_addr.
+      // Record R_PLT_PC on the TLS symbol; finalizeRelocScan (called
+      // single-threaded after scanning) will create __tls_get_addr and
+      // rebind these relocations.  We cannot access the symbol table here
+      // because scanSectionImpl runs in parallel.
       sec.addReloc({R_PLT_PC, type, offset, addend, &sym});
       continue;
 
@@ -370,7 +379,10 @@ bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                          uint64_t branchAddr, const Symbol &s,
                          int64_t a) const {
-  // Only check branch range for supported branch relocation types
+  // Undefined weak symbols without PLT entries resolve to address zero.
+  // Thunks are not needed since the branch target is fixed.
+  if (s.isUndefined() && !s.isInPlt(ctx))
+    return false;
   switch (type) {
   case R_HEX_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
@@ -378,11 +390,20 @@ bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_HEX_LD_PLT_B22_PCREL:
   case R_HEX_B15_PCREL:
   case R_HEX_B13_PCREL:
-  case R_HEX_B9_PCREL:
-    return !ctx.target->inBranchRange(type, branchAddr, s.getVA(ctx, a));
+  case R_HEX_B9_PCREL: {
+    uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(ctx, a);
+    return !ctx.target->inBranchRange(type, branchAddr, dst);
+  }
   default:
     return false;
   }
+}
+
+uint32_t Hexagon::getThunkSectionSpacing() const {
+  // B22_PCREL has a range of +/- 8 MiB (22-bit signed offset * 4).
+  // Pre-create ThunkSections at intervals below this to leave room for
+  // thunk growth.
+  return 0x800000 - 0x30000;
 }
 
 void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
@@ -659,6 +680,44 @@ void elf::mergeHexagonAttributesSections(Ctx &ctx) {
   // Add the merged section.
   ctx.inputSections.insert(ctx.inputSections.begin() + place,
                            mergeAttributesSection(ctx, sections));
+}
+
+static bool isGDPLT(RelType type) {
+  switch (type) {
+  case R_HEX_GD_PLT_B22_PCREL:
+  case R_HEX_GD_PLT_B22_PCREL_X:
+  case R_HEX_GD_PLT_B32_PCREL_X:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void Hexagon::finalizeRelocScan() {
+  Symbol *tga = nullptr;
+
+  // Scan for R_HEX_GD_PLT_* relocations (recorded as R_PLT_PC by
+  // scanSectionImpl) and rebind them to __tls_get_addr.
+  for (ELFFileBase *f : ctx.objectFiles) {
+    for (InputSectionBase *s : f->getSections()) {
+      auto *isec = dyn_cast_or_null<InputSection>(s);
+      if (!isec || !isec->isLive())
+        continue;
+      for (Relocation &rel : isec->relocs()) {
+        if (rel.expr != R_PLT_PC || !isGDPLT(rel.type))
+          continue;
+        if (!tga) {
+          tga = ctx.symtab->addSymbol(Undefined{ctx.internalFile,
+                                                "__tls_get_addr", STB_GLOBAL,
+                                                STV_DEFAULT, STT_FUNC});
+          tga->isUsedInRegularObj = true;
+          tga->isPreemptible = true;
+          tga->setFlags(NEEDS_PLT | USED);
+        }
+        rel.sym = tga;
+      }
+    }
+  }
 }
 
 void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }

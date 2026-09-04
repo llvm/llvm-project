@@ -14,7 +14,7 @@
 
 namespace polly {
 
-class PollyModulePass : public llvm::PassInfoMixin<PollyModulePass> {
+class PollyModulePass : public llvm::OptionalPassInfoMixin<PollyModulePass> {
 public:
   PollyModulePass() {}
   PollyModulePass(PollyPassOptions Opts) : Opts(std::move(Opts)) {}

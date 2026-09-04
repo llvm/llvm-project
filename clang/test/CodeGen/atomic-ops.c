@@ -423,7 +423,7 @@ int structAtomicCmpExchange(void) {
   // CHECK: %[[zext1:.*]] = zext i1 %[[call1]] to i8
   // CHECK: store i8 %[[zext1]], ptr %[[x_mem]], align 1
   // CHECK: %[[x:.*]] = load i8, ptr %[[x_mem]]
-  // CHECK: %[[x_bool:.*]] = trunc i8 %[[x]] to i1
+  // CHECK: %[[x_bool:.*]] = icmp ne i8 %[[x]], 0
   // CHECK: %[[conv1:.*]] = zext i1 %[[x_bool]] to i32
 
   struct foo f = {0};

@@ -7,10 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 
 namespace llvm {
 
 // vtable anchor
 InstructionSelector::~InstructionSelector() = default;
+
+void InstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
+                                           const MachineInstr &MI,
+                                           int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
+         "Expected G_FRAME_INDEX");
+  MIB.add(MI.getOperand(1));
+}
 
 } // namespace llvm

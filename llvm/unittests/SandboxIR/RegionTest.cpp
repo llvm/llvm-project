@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Region.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
@@ -21,12 +20,10 @@ using namespace llvm;
 struct RegionTest : public testing::Test {
   LLVMContext C;
   std::unique_ptr<Module> M;
-  std::unique_ptr<TargetTransformInfo> TTI;
 
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    TTI = std::make_unique<TargetTransformInfo>(M->getDataLayout());
     if (!M)
       Err.print("RegionTest", errs());
   }
@@ -48,7 +45,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T0 = cast<sandboxir::Instruction>(&*It++);
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
-  sandboxir::Region Rgn(Ctx, *TTI);
+  sandboxir::Region Rgn(Ctx);
 
   // Check getContext.
   EXPECT_EQ(&Ctx, &Rgn.getContext());
@@ -76,7 +73,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
 #ifndef NDEBUG
   // Check equality comparison. Insert in reverse order into `Other` to check
   // that comparison is order-independent.
-  sandboxir::Region Other(Ctx, *TTI);
+  sandboxir::Region Other(Ctx);
   sandboxir::RegionInternalsAttorney::add(Other, Ret);
   EXPECT_NE(Rgn, Other);
   sandboxir::RegionInternalsAttorney::add(Other, T1);
@@ -101,7 +98,7 @@ define i8 @foo(i8 %v0, i8 %v1, ptr %ptr) {
   auto *T0 = cast<sandboxir::Instruction>(&*It++);
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
-  sandboxir::Region Rgn(Ctx, *TTI);
+  sandboxir::Region Rgn(Ctx);
   sandboxir::RegionInternalsAttorney::add(Rgn, T0);
   sandboxir::RegionInternalsAttorney::add(Rgn, T1);
 
@@ -137,7 +134,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T2 = cast<sandboxir::Instruction>(&*It++);
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+      sandboxir::Region::createRegionsFromMD(*F);
   EXPECT_THAT(Regions[0]->insts(), testing::UnorderedElementsAre(T0));
   EXPECT_THAT(Regions[1]->insts(), testing::UnorderedElementsAre(T1, T2));
 }
@@ -163,7 +160,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T2 = cast<sandboxir::Instruction>(&*It++);
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+      sandboxir::Region::createRegionsFromMD(*F);
   EXPECT_THAT(Regions[0]->insts(), testing::UnorderedElementsAre(T0, T2));
 }
 
@@ -185,9 +182,9 @@ define i8 @foo(i8 %v0, i8 %v1) {
   [[maybe_unused]] auto *T1 = cast<sandboxir::Instruction>(&*It++);
   auto *T2 = cast<sandboxir::Instruction>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::Instruction>(&*It++);
-  sandboxir::Region Rgn(Ctx, *TTI);
+  sandboxir::Region Rgn(Ctx);
   sandboxir::RegionInternalsAttorney::add(Rgn, T0);
-  sandboxir::Region Rgn2(Ctx, *TTI);
+  sandboxir::Region Rgn2(Ctx);
   sandboxir::RegionInternalsAttorney::add(Rgn2, T2);
 
   std::string output;
@@ -229,68 +226,16 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T0 = cast<sandboxir::Instruction>(&*It++);
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
 
-  sandboxir::Region Rgn(Ctx, *TTI);
+  sandboxir::Region Rgn(Ctx);
   sandboxir::RegionInternalsAttorney::add(Rgn, T0);
   sandboxir::RegionInternalsAttorney::add(Rgn, T1);
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+      sandboxir::Region::createRegionsFromMD(*F);
   ASSERT_EQ(1U, Regions.size());
 #ifndef NDEBUG
   EXPECT_EQ(Rgn, *Regions[0].get());
 #endif
-}
-
-TEST_F(RegionTest, RegionCost) {
-  parseIR(C, R"IR(
-define void @foo(i8 %v0, i8 %v1, i8 %v2) {
-  %add0 = add i8 %v0, 1
-  %add1 = add i8 %v1, 2
-  %add2 = add i8 %v2, 3
-  ret void
-}
-)IR");
-  llvm::Function *LLVMF = &*M->getFunction("foo");
-  auto *LLVMBB = &*LLVMF->begin();
-  auto LLVMIt = LLVMBB->begin();
-  auto *LLVMAdd0 = &*LLVMIt++;
-  auto *LLVMAdd1 = &*LLVMIt++;
-  auto *LLVMAdd2 = &*LLVMIt++;
-
-  sandboxir::Context Ctx(C);
-  auto *F = Ctx.createFunction(LLVMF);
-  auto *BB = &*F->begin();
-  auto It = BB->begin();
-  auto *Add0 = cast<sandboxir::Instruction>(&*It++);
-  auto *Add1 = cast<sandboxir::Instruction>(&*It++);
-  auto *Add2 = cast<sandboxir::Instruction>(&*It++);
-
-  sandboxir::Region Rgn(Ctx, *TTI);
-  const auto &SB = Rgn.getScoreboard();
-  EXPECT_EQ(SB.getAfterCost(), 0);
-  EXPECT_EQ(SB.getBeforeCost(), 0);
-
-  auto GetCost = [this](llvm::Instruction *LLVMI) {
-    constexpr static TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    SmallVector<const llvm::Value *> Operands(LLVMI->operands());
-    return TTI->getInstructionCost(LLVMI, Operands, CostKind);
-  };
-  // Add `Add0` to the region, should be counted in "After".
-  sandboxir::RegionInternalsAttorney::add(Rgn, Add0);
-  EXPECT_EQ(SB.getBeforeCost(), 0);
-  EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd0));
-  // Same for `Add1`.
-  sandboxir::RegionInternalsAttorney::add(Rgn, Add1);
-  EXPECT_EQ(SB.getBeforeCost(), 0);
-  EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd0) + GetCost(LLVMAdd1));
-  // Remove `Add0`, should be subtracted from "After".
-  sandboxir::RegionInternalsAttorney::remove(Rgn, Add0);
-  EXPECT_EQ(SB.getBeforeCost(), 0);
-  EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd1));
-  // Remove `Add2` which was never in the region, should counted in "Before".
-  sandboxir::RegionInternalsAttorney::remove(Rgn, Add2);
-  EXPECT_EQ(SB.getBeforeCost(), GetCost(LLVMAdd2));
-  EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd1));
 }
 
 TEST_F(RegionTest, Aux) {
@@ -329,7 +274,7 @@ define void @foo(i8 %v) {
   auto *T5 = cast<sandboxir::Instruction>(&*It++);
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+      sandboxir::Region::createRegionsFromMD(*F);
   // Check that the regions are correct.
   EXPECT_THAT(Regions[0]->insts(), testing::UnorderedElementsAre(T0, T1));
   EXPECT_THAT(Regions[1]->insts(),
@@ -362,8 +307,7 @@ define void @foo(i8 %v) {
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
-  EXPECT_DEBUG_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI),
-                     ".*Gap*");
+  EXPECT_DEBUG_DEATH(sandboxir::Region::createRegionsFromMD(*F), ".*Gap*");
 }
 
 // Check that we get an assertion failure if we try to set the same index more
@@ -382,8 +326,7 @@ define void @foo(i8 %v) {
   llvm::Function *LLVMF = &*M->getFunction("foo");
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
-  EXPECT_DEBUG_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI),
-                     ".*already.*");
+  EXPECT_DEBUG_DEATH(sandboxir::Region::createRegionsFromMD(*F), ".*already.*");
 }
 
 // Check that Aux automatically drops instructions that get deleted.
@@ -413,7 +356,7 @@ define void @foo(i8 %v) {
   auto *Add2 = &*It++;
   auto *Add3 = &*It++;
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+      sandboxir::Region::createRegionsFromMD(*F);
   auto &R = *Regions[0];
   EXPECT_THAT(R.getAux(), testing::ElementsAre(Add0, Add1, Add2, Add3));
   // Now delete Add1 and check that Aux contains nullptr instead of Add1.
@@ -424,7 +367,7 @@ define void @foo(i8 %v) {
     // But first drop Add3 to create a legal Aux vector with no gaps.
     Add3->eraseFromParent();
     SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-        sandboxir::Region::createRegionsFromMD(*F, *TTI);
+        sandboxir::Region::createRegionsFromMD(*F);
     EXPECT_THAT(Regions[0]->getAux(), testing::ElementsAre(Add0, Add1));
   }
 }
@@ -441,9 +384,9 @@ define void @foo(i8 %v) {
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
 #ifndef NDEBUG
-  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI), "No region.*");
+  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F), "No region.*");
 #endif
-  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F, *TTI),
+  EXPECT_DEATH(sandboxir::Region::createRegionsFromMD(*F),
                "No region specified for Aux!");
 }
 
@@ -463,7 +406,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T0 = cast<sandboxir::Instruction>(&*It++);
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
 
-  sandboxir::Region Rgn(Ctx, *TTI);
+  sandboxir::Region Rgn(Ctx);
 #ifndef NDEBUG
   EXPECT_DEATH(Rgn.setAux({T0, T0}), ".*already.*");
 #endif
@@ -472,7 +415,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   Rgn.setAux({T1, T0});
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+      sandboxir::Region::createRegionsFromMD(*F);
   ASSERT_EQ(1U, Regions.size());
 #ifndef NDEBUG
   EXPECT_EQ(Rgn, *Regions[0].get());
@@ -498,14 +441,14 @@ define void @foo(i8 %v) {
   auto *Add0 = cast<sandboxir::Instruction>(&*It++);
   auto *Add1 = cast<sandboxir::Instruction>(&*It++);
 
-  sandboxir::Region Rgn(Ctx, *TTI);
+  sandboxir::Region Rgn(Ctx);
 #ifndef NDEBUG
   EXPECT_DEATH(Rgn.setAux({Add0, Add0}), ".*already.*");
 #endif
   Rgn.setAux({Add1, Add0});
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
-      sandboxir::Region::createRegionsFromMD(*F, *TTI);
+      sandboxir::Region::createRegionsFromMD(*F);
   ASSERT_EQ(1U, Regions.size());
 #ifndef NDEBUG
   EXPECT_EQ(Rgn, *Regions[0].get());

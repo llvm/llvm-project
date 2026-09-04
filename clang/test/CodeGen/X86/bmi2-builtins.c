@@ -17,12 +17,12 @@ unsigned int test_bzhi_u32(unsigned int __X, unsigned int __Y) {
 }
 
 unsigned int test_pdep_u32(unsigned int __X, unsigned int __Y) {
-  // CHECK: @llvm.x86.bmi.pdep.32
+  // CHECK: @llvm.pdep.i32
   return _pdep_u32(__X, __Y);
 }
 
 unsigned int test_pext_u32(unsigned int __X, unsigned int __Y) {
-  // CHECK: @llvm.x86.bmi.pext.32
+  // CHECK: @llvm.pext.i32
   return _pext_u32(__X, __Y);
 }
 
@@ -41,12 +41,12 @@ unsigned long long test_bzhi_u64(unsigned long long __X, unsigned long long __Y)
 }
 
 unsigned long long test_pdep_u64(unsigned long long __X, unsigned long long __Y) {
-  // CHECK: @llvm.x86.bmi.pdep.64
+  // CHECK: @llvm.pdep.i64
   return _pdep_u64(__X, __Y);
 }
 
 unsigned long long test_pext_u64(unsigned long long __X, unsigned long long __Y) {
-  // CHECK: @llvm.x86.bmi.pext.64
+  // CHECK: @llvm.pext.i64
   return _pext_u64(__X, __Y);
 }
 

@@ -35,7 +35,7 @@ private:
   const unsigned ShortNamespaceLines;
   const unsigned SpacesBeforeComments;
   const bool AllowOmittingNamespaceComments;
-  llvm::SmallVector<SourceLocation, 4> Ends;
+  SmallVector<SourceLocation, 4> Ends;
 };
 
 } // namespace clang::tidy::readability

@@ -3,6 +3,8 @@
 # because libstdc++ has some undefined behavior issues
 # in some of the headers, in particular, stl_tree.h.
 
+[undefined]
+
 # upcast of address with insufficient space for an object of type std::_Rb_tree_node<...>
 src:*bits/stl_tree.h
 
@@ -14,3 +16,7 @@ src:*bits/stl_vector.h
 # libstdc++ 8.0.1 casts an under-aligned pointer to type type_info:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85930
 src:*bits/shared_ptr_base.h
+
+[cfi-icall]
+# Different callback types for C and C++.
+src:*llvm/include/llvm/IR/DiagnosticHandler.h

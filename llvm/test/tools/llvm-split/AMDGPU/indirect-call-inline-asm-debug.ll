@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: llvm-split -o %t %s -j 2 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-no-externalize-address-taken -debug-only=amdgpu-split-module 2>&1 | FileCheck %s
+; RUN: llvm-split -o %t %s -j 2 -mtriple amdgpu-amd-amdhsa -amdgpu-module-splitting-no-externalize-address-taken -debug-only=amdgpu-split-module 2>&1 | FileCheck %s
 
 ; CHECK:      [!] callgraph is incomplete for ptr @A  - analyzing function
 ; CHECK-NEXT:     found inline assembly

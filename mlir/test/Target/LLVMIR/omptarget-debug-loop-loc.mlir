@@ -10,11 +10,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %3 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr<5> loc(#loc4)
     %4 = llvm.addrspacecast %3 : !llvm.ptr<5> to !llvm.ptr
     %5 = llvm.mlir.addressof @_QFEarray : !llvm.ptr
-    %6 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"} loc(#loc3)
-    %7 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "j"} loc(#loc3)
-    %8 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<16384 x i32>) map_clauses(implicit, tofrom) capture(ByRef) -> !llvm.ptr {name = "array"} loc(#loc3)
-    %9 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"} loc(#loc3)
-    omp.target map_entries(%6 -> %arg0, %7 -> %arg2, %8 -> %arg4, %9 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    %6 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr loc(#loc3)
+    %7 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("j") -> !llvm.ptr loc(#loc3)
+    %8 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<16384 x i32>) map_clauses(implicit, tofrom) capture(ByRef) name("array") -> !llvm.ptr loc(#loc3)
+    %9 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr loc(#loc3)
+    omp.target kernel_type(spmd) map_entries(%6 -> %arg0, %7 -> %arg2, %8 -> %arg4, %9 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %10 = llvm.mlir.constant(1 : i32) : i32
       %11 = llvm.mlir.constant(16384 : i32) : i32
       omp.teams {
@@ -33,9 +33,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
           } loc(#loc9)
         } loc(#loc9)
         omp.terminator loc(#loc9)
-      } loc(#loc9)
+      } {omp.combined} loc(#loc9)
       omp.terminator loc(#loc9)
-    } loc(#loc15)
+    } {omp.combined} loc(#loc15)
     llvm.return loc(#loc9)
   } loc(#loc14)
   llvm.mlir.global internal @_QFEarray() {addr_space = 0 : i32} : !llvm.array<16384 x i32> {

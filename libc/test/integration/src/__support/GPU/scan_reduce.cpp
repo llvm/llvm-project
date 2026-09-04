@@ -97,13 +97,120 @@ static void test_scan_divergent() {
   }
 }
 
+static void test_reduce_bitwise() {
+  uint64_t mask = gpu::get_lane_mask();
+  uint32_t id = gpu::get_lane_id();
+
+  EXPECT_EQ(__gpu_lane_and_u32(mask, 0xFFu), 0xFFu);
+  EXPECT_EQ(__gpu_lane_and_u32(mask, id == 0 ? 0x0Fu : 0xFFu), 0x0Fu);
+
+  EXPECT_EQ(__gpu_lane_or_u32(mask, id == 0 ? 0xF0u : 0x0Fu), 0xFFu);
+  EXPECT_EQ(__gpu_lane_or_u32(mask, 0u), 0u);
+
+  EXPECT_EQ(__gpu_lane_xor_u32(mask, 1u), 0u);
+  EXPECT_EQ(__gpu_lane_xor_u32(mask, id == 0 ? 0xFFu : 0u), 0xFFu);
+}
+
+static void test_reduce_min_max() {
+  uint64_t mask = gpu::get_lane_mask();
+  uint32_t id = gpu::get_lane_id();
+  uint32_t n = gpu::get_lane_size();
+
+  EXPECT_EQ(__gpu_lane_min_u32(mask, id), 0u);
+  EXPECT_EQ(__gpu_lane_max_u32(mask, id), n - 1);
+  EXPECT_EQ(__gpu_lane_min_u32(mask, n - 1 - id), 0u);
+  EXPECT_EQ(__gpu_lane_max_u32(mask, n - 1 - id), n - 1);
+
+  EXPECT_EQ(__gpu_lane_minnum_f32(mask, static_cast<float>(id)), 0.0f);
+  EXPECT_EQ(__gpu_lane_maxnum_f32(mask, static_cast<float>(id)),
+            static_cast<float>(n - 1));
+}
+
+static void test_scan_bitwise() {
+  uint64_t mask = gpu::get_lane_mask();
+  uint32_t id = gpu::get_lane_id();
+
+  EXPECT_EQ(__gpu_prefix_scan_and_u32(mask, 0xFFu), 0xFFu);
+  EXPECT_EQ(__gpu_prefix_scan_and_u32(mask, id == 0 ? 0x0Fu : 0xFFu), 0x0Fu);
+
+  EXPECT_EQ(__gpu_prefix_scan_or_u32(mask, 0x0Fu), 0x0Fu);
+  uint32_t or_expected = id == 0 ? 0xF0u : 0xFFu;
+  EXPECT_EQ(__gpu_prefix_scan_or_u32(mask, id == 0 ? 0xF0u : 0x0Fu),
+            or_expected);
+
+  uint32_t xor_expected = id % 2 == 0 ? 0x0Fu : 0u;
+  EXPECT_EQ(__gpu_prefix_scan_xor_u32(mask, 0x0Fu), xor_expected);
+}
+
+static void test_scan_min_max() {
+  uint64_t mask = gpu::get_lane_mask();
+  uint32_t id = gpu::get_lane_id();
+  uint32_t n = gpu::get_lane_size();
+
+  EXPECT_EQ(__gpu_prefix_scan_min_u32(mask, n - 1 - id), n - 1 - id);
+  EXPECT_EQ(__gpu_prefix_scan_max_u32(mask, id), id);
+
+  EXPECT_EQ(__gpu_prefix_scan_min_u32(mask, id), 0u);
+  EXPECT_EQ(__gpu_prefix_scan_max_u32(mask, n - 1 - id), n - 1);
+
+  EXPECT_EQ(__gpu_prefix_scan_minnum_f32(mask, static_cast<float>(n - 1 - id)),
+            static_cast<float>(n - 1 - id));
+  EXPECT_EQ(__gpu_prefix_scan_maxnum_f32(mask, static_cast<float>(id)),
+            static_cast<float>(id));
+}
+
+static void test_float_min_max() {
+  uint64_t mask = gpu::get_lane_mask();
+  uint32_t id = gpu::get_lane_id();
+  uint32_t n = gpu::get_lane_size();
+
+  float centered = static_cast<float>(id) - static_cast<float>(n / 2);
+  EXPECT_EQ(__gpu_lane_minnum_f32(mask, centered), -static_cast<float>(n / 2));
+  EXPECT_EQ(__gpu_lane_maxnum_f32(mask, centered),
+            static_cast<float>(n / 2 - 1));
+
+  float alt =
+      id % 2 == 0 ? static_cast<float>(id + 1) : -static_cast<float>(id + 1);
+  EXPECT_EQ(__gpu_lane_minnum_f32(mask, alt), -static_cast<float>(n));
+  EXPECT_EQ(__gpu_lane_maxnum_f32(mask, alt), static_cast<float>(n - 1));
+
+  float v_val = id < n / 2 ? static_cast<float>(n / 2 - id)
+                           : static_cast<float>(id - n / 2);
+  float min_expected = id < n / 2 ? static_cast<float>(n / 2 - id) : 0.0f;
+  EXPECT_EQ(__gpu_prefix_scan_minnum_f32(mask, v_val), min_expected);
+
+  float inv_v =
+      id < n / 2 ? static_cast<float>(id) : static_cast<float>(n - 1 - id);
+  float max_expected =
+      id < n / 2 ? static_cast<float>(id) : static_cast<float>(n / 2 - 1);
+  EXPECT_EQ(__gpu_prefix_scan_maxnum_f32(mask, inv_v), max_expected);
+
+  double d_centered = static_cast<double>(id) - static_cast<double>(n / 2);
+  EXPECT_EQ(__gpu_lane_minnum_f64(mask, d_centered),
+            -static_cast<double>(n / 2));
+  EXPECT_EQ(__gpu_lane_maxnum_f64(mask, d_centered),
+            static_cast<double>(n / 2 - 1));
+
+  double desc = static_cast<double>(n - 1 - id);
+  EXPECT_EQ(__gpu_prefix_scan_minnum_f64(mask, desc),
+            static_cast<double>(n - 1 - id));
+  EXPECT_EQ(__gpu_prefix_scan_maxnum_f64(mask, desc),
+            static_cast<double>(n - 1));
+}
+
 TEST_MAIN(int, char **, char **) {
   if (gpu::get_thread_id() >= gpu::get_lane_size())
     return 0;
 
   test_reduce();
+  test_reduce_bitwise();
+  test_reduce_min_max();
 
   test_scan();
+  test_scan_bitwise();
+  test_scan_min_max();
+
+  test_float_min_max();
 
   test_scan_divergent();
 

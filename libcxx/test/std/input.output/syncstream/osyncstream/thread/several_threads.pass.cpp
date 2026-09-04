@@ -21,6 +21,9 @@
 // but the words should be written without interleaving. To increment the
 // change of interleaving words are written one character at a time.
 
+// segmentation fault
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cassert>
 #include <chrono>
 #include <mutex>

@@ -39,23 +39,97 @@ TEST(RISCVVType, CheckSameRatioLMUL) {
                 RISCVVType::getSEWLMULRatio(8, RISCVVType::LMUL_F4), 16));
 }
 
+TEST(RISCVVType, IMEVTypeFields) {
+  EXPECT_TRUE(RISCVVType::IME::isValidLambda(0));
+  EXPECT_TRUE(RISCVVType::IME::isValidLambda(1));
+  EXPECT_TRUE(RISCVVType::IME::isValidLambda(64));
+  EXPECT_FALSE(RISCVVType::IME::isValidLambda(3));
+  EXPECT_FALSE(RISCVVType::IME::isValidLambda(128));
+
+  EXPECT_EQ(0U, RISCVVType::IME::encodeLambda(0));
+  EXPECT_EQ(1U, RISCVVType::IME::encodeLambda(1));
+  EXPECT_EQ(3U, RISCVVType::IME::encodeLambda(4));
+  EXPECT_EQ(7U, RISCVVType::IME::encodeLambda(64));
+  EXPECT_FALSE(RISCVVType::IME::decodeLambda(0));
+  EXPECT_EQ(1U, *RISCVVType::IME::decodeLambda(1));
+  EXPECT_EQ(4U, *RISCVVType::IME::decodeLambda(3));
+  EXPECT_EQ(64U, *RISCVVType::IME::decodeLambda(7));
+
+  unsigned BaseVType =
+      RISCVVType::encodeVTYPE(RISCVVType::LMUL_1, 32, /*TailAgnostic=*/true,
+                              /*MaskAgnostic=*/true);
+
+  uint64_t RV32VType = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/32, /*Lambda=*/4, /*AltFmtA=*/true,
+      /*AltFmtB=*/false, /*BlockSize16=*/true);
+  EXPECT_EQ(0x3c0000d0ULL, RV32VType);
+  EXPECT_EQ(0x7e000000ULL, RISCVVType::IME::getVTypeFieldsMask(32));
+  EXPECT_EQ(3U, RISCVVType::IME::getLambdaEncoding(RV32VType, 32));
+  EXPECT_EQ(4U, *RISCVVType::IME::getLambda(RV32VType, 32));
+  EXPECT_TRUE(RISCVVType::IME::isAltFmtA(RV32VType, 32));
+  EXPECT_FALSE(RISCVVType::IME::isAltFmtB(RV32VType, 32));
+  EXPECT_TRUE(RISCVVType::IME::isBlockSize16(RV32VType, 32));
+
+  uint64_t RV64VType = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/64, /*Lambda=*/64, /*AltFmtA=*/true,
+      /*AltFmtB=*/true, /*BlockSize16=*/true);
+  EXPECT_EQ(0x7e000000000000d0ULL, RV64VType);
+  EXPECT_EQ(0x7e00000000000000ULL, RISCVVType::IME::getVTypeFieldsMask(64));
+  EXPECT_EQ(7U, RISCVVType::IME::getLambdaEncoding(RV64VType, 64));
+  EXPECT_EQ(64U, *RISCVVType::IME::getLambda(RV64VType, 64));
+  EXPECT_TRUE(RISCVVType::IME::isAltFmtA(RV64VType, 64));
+  EXPECT_TRUE(RISCVVType::IME::isAltFmtB(RV64VType, 64));
+  EXPECT_TRUE(RISCVVType::IME::isBlockSize16(RV64VType, 64));
+
+  uint64_t RV64AltFmtAOnly = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/64, /*Lambda=*/0, /*AltFmtA=*/true,
+      /*AltFmtB=*/false, /*BlockSize16=*/false);
+  EXPECT_EQ(0x04000000000000d0ULL, RV64AltFmtAOnly);
+  EXPECT_TRUE(RISCVVType::IME::isAltFmtA(RV64AltFmtAOnly, 64));
+  EXPECT_FALSE(RISCVVType::IME::isAltFmtB(RV64AltFmtAOnly, 64));
+  EXPECT_FALSE(RISCVVType::IME::isBlockSize16(RV64AltFmtAOnly, 64));
+
+  uint64_t RV64BlockSizeOnly = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/64, /*Lambda=*/0, /*AltFmtA=*/false,
+      /*AltFmtB=*/false, /*BlockSize16=*/true);
+  EXPECT_EQ(0x08000000000000d0ULL, RV64BlockSizeOnly);
+  EXPECT_FALSE(RISCVVType::IME::isAltFmtA(RV64BlockSizeOnly, 64));
+  EXPECT_FALSE(RISCVVType::IME::isAltFmtB(RV64BlockSizeOnly, 64));
+  EXPECT_TRUE(RISCVVType::IME::isBlockSize16(RV64BlockSizeOnly, 64));
+
+  uint64_t DynamicLambda = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/64, /*Lambda=*/0, /*AltFmtA=*/false,
+      /*AltFmtB=*/false, /*BlockSize16=*/false);
+  EXPECT_FALSE(RISCVVType::IME::getLambda(DynamicLambda, 64));
+  EXPECT_EQ(BaseVType, DynamicLambda);
+}
+
 TEST(RISCVTuneFeature, AllTuneFeatures) {
   SmallVector<StringRef> AllTuneFeatures;
   RISCV::getAllTuneFeatures(AllTuneFeatures);
   // Only allowed subtarget features that are explicitly marked by
   // special TableGen class.
-  EXPECT_EQ(AllTuneFeatures.size(), 19U);
-  for (auto F :
-       {"conditional-cmv-fusion", "disable-latency-sched-heuristic",
-        "disable-misched-load-clustering", "disable-misched-store-clustering",
-        "disable-postmisched-load-clustering",
-        "disable-postmisched-store-clustering", "single-element-vec-fp64",
-        "no-default-unroll", "no-sink-splat-operands", "use-postra-scheduler",
-        "predictable-select-expensive", "prefer-vsetvli-over-read-vlenb",
-        "prefer-w-inst", "short-forward-branch-ialu",
-        "short-forward-branch-iminmax", "short-forward-branch-imul",
-        "short-forward-branch-iload", "vl-dependent-latency",
-        "vxrm-pipeline-flush"})
+  EXPECT_EQ(AllTuneFeatures.size(), 20U);
+  for (auto F : {"conditional-cmv-fusion",
+                 "disable-latency-sched-heuristic",
+                 "disable-misched-load-clustering",
+                 "disable-misched-store-clustering",
+                 "disable-postmisched-load-clustering",
+                 "disable-postmisched-store-clustering",
+                 "single-element-vec-fp64",
+                 "no-default-unroll",
+                 "no-sink-splat-operands",
+                 "use-postra-scheduler",
+                 "predictable-select-expensive",
+                 "prefer-ascending-load-store",
+                 "prefer-vsetvli-over-read-vlenb",
+                 "prefer-w-inst",
+                 "short-forward-branch-ialu",
+                 "short-forward-branch-iminmax",
+                 "short-forward-branch-imul",
+                 "short-forward-branch-iload",
+                 "vl-dependent-latency",
+                 "vxrm-pipeline-flush"})
     EXPECT_TRUE(is_contained(AllTuneFeatures, F));
 }
 
@@ -159,6 +233,12 @@ TEST(RISCVTuneFeature, AllProcConfigurableFeatures) {
 
   Result.clear();
   RISCV::getCPUConfigurableTuneFeatures("sifive-x390", Result);
+  EXPECT_TRUE(is_contained(Result, "single-element-vec-fp64"));
+  EXPECT_TRUE(is_contained(Result, "full-vec-fp64"));
+  EXPECT_EQ(Result.size(), 2U);
+
+  Result.clear();
+  RISCV::getCPUConfigurableTuneFeatures("sifive-x180", Result);
   EXPECT_TRUE(is_contained(Result, "single-element-vec-fp64"));
   EXPECT_TRUE(is_contained(Result, "full-vec-fp64"));
   EXPECT_EQ(Result.size(), 2U);

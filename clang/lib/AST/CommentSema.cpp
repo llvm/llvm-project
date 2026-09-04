@@ -111,13 +111,16 @@ void Sema::checkFunctionDeclVerbatimLine(const BlockCommandComment *Comment) {
         DiagSelect = diag::CallableKind::FunctionGroup;
       break;
     case CommandTraits::KCI_method:
-      DiagSelect = diag::CallableKind::Method;
+      if (!isObjCMethodDecl())
+        DiagSelect = diag::CallableKind::Method;
       break;
     case CommandTraits::KCI_methodgroup:
-      DiagSelect = diag::CallableKind::MethodGroup;
+      if (!isObjCMethodDecl())
+        DiagSelect = diag::CallableKind::MethodGroup;
       break;
     case CommandTraits::KCI_callback:
-      DiagSelect = diag::CallableKind::Callback;
+      if (!isFunctionPointerVarDecl())
+        DiagSelect = diag::CallableKind::Callback;
       break;
   }
   if (DiagSelect)
@@ -286,6 +289,12 @@ TParamCommandComment *Sema::actOnTParamCommandStart(
       new (Allocator) TParamCommandComment(LocBegin, LocEnd, CommandID,
                                            CommandMarker);
 
+  if (isExplicitFunctionTemplateInstantiation()) {
+    // Do not warn on explicit instantiations, since the documentation
+    // comments are on the primary template.
+    return Command;
+  }
+
   if (!isTemplateOrSpecialization())
     Diag(Command->getLocation(),
          diag::warn_doc_tparam_not_attached_to_a_template_decl)
@@ -370,19 +379,21 @@ Sema::actOnInlineCommand(SourceLocation CommandLocBegin,
       getInlineCommandRenderKind(CommandName), CommandMarker, Args);
 }
 
-InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,
-                                                SourceLocation LocEnd,
-                                                StringRef CommandName) {
+InlineContentComment *
+Sema::actOnUnknownCommand(SourceLocation LocBegin, SourceLocation LocEnd,
+                          StringRef CommandName,
+                          CommandMarkerKind CommandMarker) {
   unsigned CommandID = Traits.registerUnknownCommand(CommandName)->getID();
-  return actOnUnknownCommand(LocBegin, LocEnd, CommandID);
+  return actOnUnknownCommand(LocBegin, LocEnd, CommandID, CommandMarker);
 }
 
-InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,
-                                                SourceLocation LocEnd,
-                                                unsigned CommandID) {
+InlineContentComment *
+Sema::actOnUnknownCommand(SourceLocation LocBegin, SourceLocation LocEnd,
+                          unsigned CommandID, CommandMarkerKind CommandMarker) {
   ArrayRef<InlineCommandComment::Argument> Args;
-  return new (Allocator) InlineCommandComment(
-      LocBegin, LocEnd, CommandID, InlineCommandRenderKind::Normal, Args);
+  return new (Allocator) InlineCommandComment(LocBegin, LocEnd, CommandID,
+                                              InlineCommandRenderKind::Normal,
+                                              CommandMarker, Args);
 }
 
 TextComment *Sema::actOnText(SourceLocation LocBegin,
@@ -852,6 +863,19 @@ bool Sema::isTemplateOrSpecialization() {
   if (!ThisDeclInfo->IsFilled)
     inspectThisDecl();
   return ThisDeclInfo->getTemplateKind() != DeclInfo::NotTemplate;
+}
+
+bool Sema::isExplicitFunctionTemplateInstantiation() {
+  if (!ThisDeclInfo)
+    return false;
+  if (!ThisDeclInfo->IsFilled)
+    inspectThisDecl();
+  if (const auto *FD = dyn_cast<FunctionDecl>(ThisDeclInfo->CurrentDecl)) {
+    TemplateSpecializationKind TSK = FD->getTemplateSpecializationKind();
+    return (TSK == TSK_ExplicitInstantiationDeclaration) ||
+           (TSK == TSK_ExplicitInstantiationDefinition);
+  }
+  return false;
 }
 
 bool Sema::isRecordLikeDecl() {

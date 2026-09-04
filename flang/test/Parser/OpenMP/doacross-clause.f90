@@ -19,21 +19,22 @@ end
 !UNPARSE:  DO i=1_4,10_4
 !UNPARSE:   DO j=1_4,10_4
 !UNPARSE: !$OMP ORDERED  DOACROSS(SOURCE)
-!UNPARSE:     x(int(i,kind=8),int(j,kind=8))=i+j
+!UNPARSE:     x(__builtin_int(i,kind=8),__builtin_int(j,kind=8))=i+j
 !UNPARSE:   END DO
 !UNPARSE:  END DO
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE-LABEL: ProgramUnit -> SubroutineSubprogram
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Ordered -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 ![...]
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = ordered
-!PARSE-TREE: | OmpClauseList -> OmpClause -> Doacross -> OmpDoacrossClause -> OmpDoacross -> Source
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Doacross -> OmpDoacrossClause -> OmpDoacross
+!PARSE-TREE: | | Modifier -> OmpDependenceType -> Value = Source
 
 subroutine f01(x)
   integer :: x(10, 10)
@@ -53,38 +54,42 @@ end
 !UNPARSE:  DO i=1_4,10_4
 !UNPARSE:   DO j=1_4,10_4
 !UNPARSE: !$OMP ORDERED  DOACROSS(SINK: i+1_4, j-2_4) DOACROSS(SINK: i, j+3_4)
-!UNPARSE:     x(int(i,kind=8),int(j,kind=8))=i+j
+!UNPARSE:     x(__builtin_int(i,kind=8),__builtin_int(j,kind=8))=i+j
 !UNPARSE:   END DO
 !UNPARSE:  END DO
 !UNPARSE: !$OMP END DO
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE-LABEL: ProgramUnit -> SubroutineSubprogram
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Ordered -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 ![...]
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = ordered
-!PARSE-TREE: | OmpClauseList -> OmpClause -> Doacross -> OmpDoacrossClause -> OmpDoacross -> Sink -> OmpIterationVector -> OmpIteration
-!PARSE-TREE: | | Name = 'i'
-!PARSE-TREE: | | OmpIterationOffset
-!PARSE-TREE: | | | DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | | Scalar -> Integer -> Constant -> Expr = '1_4'
-!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | OmpIteration
-!PARSE-TREE: | | Name = 'j'
-!PARSE-TREE: | | OmpIterationOffset
-!PARSE-TREE: | | | DefinedOperator -> IntrinsicOperator = Subtract
-!PARSE-TREE: | | | Scalar -> Integer -> Constant -> Expr = '2_4'
-!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '2'
-!PARSE-TREE: | OmpClause -> Doacross -> OmpDoacrossClause -> OmpDoacross -> Sink -> OmpIterationVector -> OmpIteration
-!PARSE-TREE: | | Name = 'i'
-!PARSE-TREE: | OmpIteration
-!PARSE-TREE: | | Name = 'j'
-!PARSE-TREE: | | OmpIterationOffset
-!PARSE-TREE: | | | DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | | Scalar -> Integer -> Constant -> Expr = '3_4'
-!PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '3'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Doacross -> OmpDoacrossClause -> OmpDoacross
+!PARSE-TREE: | | Modifier -> OmpDependenceType -> Value = Sink
+!PARSE-TREE: | | OmpIterationVector -> OmpIteration
+!PARSE-TREE: | | | Name = 'i'
+!PARSE-TREE: | | | OmpIterationOffset
+!PARSE-TREE: | | | | DefinedOperator -> IntrinsicOperator = Add
+!PARSE-TREE: | | | | Scalar -> Integer -> Constant -> Expr = '1_4'
+!PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!PARSE-TREE: | | OmpIteration
+!PARSE-TREE: | | | Name = 'j'
+!PARSE-TREE: | | | OmpIterationOffset
+!PARSE-TREE: | | | | DefinedOperator -> IntrinsicOperator = Subtract
+!PARSE-TREE: | | | | Scalar -> Integer -> Constant -> Expr = '2_4'
+!PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!PARSE-TREE: | OmpClause -> Doacross -> OmpDoacrossClause -> OmpDoacross
+!PARSE-TREE: | | Modifier -> OmpDependenceType -> Value = Sink
+!PARSE-TREE: | | OmpIterationVector -> OmpIteration
+!PARSE-TREE: | | | Name = 'i'
+!PARSE-TREE: | | OmpIteration
+!PARSE-TREE: | | | Name = 'j'
+!PARSE-TREE: | | | OmpIterationOffset
+!PARSE-TREE: | | | | DefinedOperator -> IntrinsicOperator = Add
+!PARSE-TREE: | | | | Scalar -> Integer -> Constant -> Expr = '3_4'
+!PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '3'
 

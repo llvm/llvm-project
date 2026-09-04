@@ -1,13 +1,13 @@
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++20-or-later %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: true}}" \
-// RUN:   -- -isystem %clang_tidy_headers \
+// RUN:   -- \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 // RUN: %check_clang_tidy \
 // RUN:   -std=c++20-or-later %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: false}}" \
-// RUN:   -- -isystem %clang_tidy_headers \
+// RUN:   -- \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
 #include <string>

@@ -549,18 +549,35 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     Value lhsImag = complex::ImOp::create(b, elementType, adaptor.getLhs());
     Value rhsReal = complex::ReOp::create(b, elementType, adaptor.getRhs());
     Value rhsImag = complex::ImOp::create(b, elementType, adaptor.getRhs());
-    Value lhsRealTimesRhsReal =
-        arith::MulFOp::create(b, lhsReal, rhsReal, fmfValue);
-    Value lhsImagTimesRhsImag =
-        arith::MulFOp::create(b, lhsImag, rhsImag, fmfValue);
-    Value real = arith::SubFOp::create(b, lhsRealTimesRhsReal,
-                                       lhsImagTimesRhsImag, fmfValue);
-    Value lhsImagTimesRhsReal =
-        arith::MulFOp::create(b, lhsImag, rhsReal, fmfValue);
-    Value lhsRealTimesRhsImag =
-        arith::MulFOp::create(b, lhsReal, rhsImag, fmfValue);
-    Value imag = arith::AddFOp::create(b, lhsImagTimesRhsReal,
-                                       lhsRealTimesRhsImag, fmfValue);
+    Value real;
+    Value imag;
+    if (arith::bitEnumContainsAll(fmfValue, arith::FastMathFlags::contract)) {
+      Value lhsImagTimesRhsImag =
+          arith::MulFOp::create(b, lhsImag, rhsImag, fmfValue);
+      Value negLhsImagTimesRhsImag =
+          arith::NegFOp::create(b, lhsImagTimesRhsImag, fmfValue);
+      real = math::FmaOp::create(b, lhsReal, rhsReal, negLhsImagTimesRhsImag,
+                                 fmfValue);
+
+      Value lhsImagTimesRhsReal =
+          arith::MulFOp::create(b, lhsImag, rhsReal, fmfValue);
+      imag = math::FmaOp::create(b, lhsReal, rhsImag, lhsImagTimesRhsReal,
+                                 fmfValue);
+    } else {
+      Value lhsRealTimesRhsReal =
+          arith::MulFOp::create(b, lhsReal, rhsReal, fmfValue);
+      Value lhsImagTimesRhsImag =
+          arith::MulFOp::create(b, lhsImag, rhsImag, fmfValue);
+      Value lhsImagTimesRhsReal =
+          arith::MulFOp::create(b, lhsImag, rhsReal, fmfValue);
+      Value lhsRealTimesRhsImag =
+          arith::MulFOp::create(b, lhsReal, rhsImag, fmfValue);
+
+      real = arith::SubFOp::create(b, lhsRealTimesRhsReal, lhsImagTimesRhsImag,
+                                   fmfValue);
+      imag = arith::AddFOp::create(b, lhsImagTimesRhsReal, lhsRealTimesRhsImag,
+                                   fmfValue);
+    }
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, imag);
     return success();
   }
@@ -602,7 +619,7 @@ struct SinOpConversion : public TrigonometricOpConversion<complex::SinOp> {
     // and defining t := exp(y)
     // We get:
     //   Re(sin(x + iy)) = (0.5*t + 0.5/t) * sin x
-    //   Im(cos(x + iy)) = (0.5*t - 0.5/t) * cos x
+    //   Im(sin(x + iy)) = (0.5*t - 0.5/t) * cos x
     Value sum =
         arith::AddFOp::create(rewriter, loc, scaledExp, reciprocalExp, fmf);
     Value resultReal = arith::MulFOp::create(rewriter, loc, sum, sin, fmf);
@@ -760,11 +777,13 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
                                            b.getFloatAttr(elementType, 4.0));
     Value twoReal = arith::AddFOp::create(b, real, real, fmf);
     Value negTwoReal = arith::MulFOp::create(b, negOne, twoReal, fmf);
-
     Value expTwoRealMinusOne = math::ExpM1Op::create(b, twoReal, fmf);
     Value expNegTwoRealMinusOne = math::ExpM1Op::create(b, negTwoReal, fmf);
     Value realNum = arith::SubFOp::create(b, expTwoRealMinusOne,
                                           expNegTwoRealMinusOne, fmf);
+    Value expProduct = arith::MulFOp::create(b, expTwoRealMinusOne,
+                                             expNegTwoRealMinusOne, fmf);
+    Value expSumMinusTwo = arith::MulFOp::create(b, negOne, expProduct, fmf);
 
     Value cosImag = math::CosOp::create(b, imag, fmf);
     Value cosImagSq = arith::MulFOp::create(b, cosImag, cosImag, fmf);
@@ -774,8 +793,6 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     Value imagNum = arith::MulFOp::create(
         b, four, arith::MulFOp::create(b, cosImag, sinImag, fmf), fmf);
 
-    Value expSumMinusTwo = arith::AddFOp::create(b, expTwoRealMinusOne,
-                                                 expNegTwoRealMinusOne, fmf);
     Value denom =
         arith::AddFOp::create(b, expSumMinusTwo, twoCosTwoImagPlusOne, fmf);
 

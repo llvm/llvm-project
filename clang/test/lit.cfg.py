@@ -15,25 +15,17 @@ from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
+if lit.util.pythonize_bool(lit_config.params.get("use_normalized_slashes")):
+    config.available_features.add("windows-prefer-forward-slash")
+
 # name: The name of this test suite.
 config.name = "Clang"
-
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
-# env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -118,7 +110,6 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
-    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -142,7 +133,12 @@ tools = [
         command=FindTool("clang-extdef-mapping"),
         unresolved="ignore",
     ),
+    "clang-ssaf-linker",
+    "clang-ssaf-format",
 ]
+
+if config.clang_enable_cir:
+    tools.append("cir-opt")
 
 if config.clang_examples:
     config.available_features.add("examples")
@@ -164,8 +160,9 @@ def have_host_out_of_process_jit_feature_support():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             input=testcode,
+            timeout=5,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
     if clang_repl_cmd.returncode == 0:
@@ -224,8 +221,16 @@ def have_host_clang_repl_cuda():
 
     return False
 
-if have_host_jit_feature_support('jit'):
-    config.available_features.add('host-supports-jit')
+
+skip_clang_repl_checks = lit.util.pythonize_bool(
+    lit_config.params.get(
+        "clang_skip_clang_repl_checks",
+        os.environ.get("CLANG_LIT_SKIP_CLANG_REPL_CHECKS", "0"),
+    )
+)
+
+if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
+    config.available_features.add("host-supports-jit")
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
@@ -266,6 +271,14 @@ if config.clang_staticanalyzer:
 if config.clang_enable_cir:
     config.available_features.add("cir-support")
 
+# SPIRV-Tools validator availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if lit.util.which("spirv-val", config.llvm_tools_dir):
+    config.available_features.add("spirv-val")
+
+# SPIRV-Tools availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if config.spirv_tools_tests:
+    config.available_features.add("spirv-tools")
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -286,6 +299,17 @@ config.substitutions.append(
         % (
             config.python_executable,
             os.path.join(config.clang_src_dir, "utils", "module-deps-to-rsp.py"),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
+        "%scan-deps-filter",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(config.clang_src_dir, "utils", "scan-deps-filter.py"),
         ),
     )
 )
@@ -313,9 +337,7 @@ if config.clang_default_cxx_stdlib != "":
         "default-cxx-stdlib={}".format(config.clang_default_cxx_stdlib)
     )
 
-# As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
-if platform.system() not in ["FreeBSD"]:
-    config.available_features.add("crash-recovery")
+config.available_features.add("crash-recovery")
 
 # ANSI escape sequences in non-dumb terminal
 if platform.system() not in ["Windows"]:
@@ -372,7 +394,7 @@ if platform.system() not in ["Windows"]:
     config.available_features.add("can-remove-opened-file")
 
 # Features
-known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
+known_arches = ["x86_64", "mips64", "ppc64", "aarch64", "s390x"]
 if any(config.target_triple.startswith(x) for x in known_arches):
     config.available_features.add("clang-target-64-bits")
 
@@ -401,6 +423,13 @@ if config.enable_backtrace:
 if config.enable_threads:
     config.available_features.add("thread_support")
 
+# Add clang resource directory as a substitution
+if config.clang:
+    clang_resource_dir = subprocess.run(
+        [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True
+    ).stdout.rstrip()
+    config.substitutions.append(("%clang-resource-dir", clang_resource_dir))
+
 # Check if we should allow outputs to console.
 run_console_tests = int(lit_config.params.get("enable_console", "0"))
 if run_console_tests != 0:
@@ -427,6 +456,25 @@ if config.have_llvm_driver:
 if config.clang_enable_cir:
     config.available_features.add("cir-enabled")
 
+if config.use_xcselect:
+    config.available_features.add("xcselect")
+
+# Tests that rely on chmod to restrict file permissions (e.g. write-permission
+# checks) are unreliable when run as root, since root bypasses file permissions.
+def user_is_root():
+    # os.getuid() is not available on all platforms
+    try:
+        if os.getuid() == 0:
+            return True
+    except:
+        pass
+
+    return False
+
+
+if not user_is_root():
+    config.available_features.add("non-root-user")
+
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The
 # `AIXTHREAD_STK` environment variable provides a non-intrusive way to request
@@ -444,11 +492,8 @@ elif platform.system() == "AIX":
 # objects only. In order to not affect most test cases, which expect to support
 # 32-bit and 64-bit objects by default, set the environment variable
 # "OBJECT_MODE" to "any" by default on AIX OS.
-
 if "system-aix" in config.available_features:
-   config.substitutions.append(("llvm-nm", "env OBJECT_MODE=any llvm-nm"))
-   config.substitutions.append(("llvm-ar", "env OBJECT_MODE=any llvm-ar"))
-   config.substitutions.append(("llvm-ranlib", "env OBJECT_MODE=any llvm-ranlib"))
+    config.environment["OBJECT_MODE"] = "any"
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable

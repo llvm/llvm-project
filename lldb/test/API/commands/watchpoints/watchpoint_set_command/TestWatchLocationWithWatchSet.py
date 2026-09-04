@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireThreadSupport
 class WatchLocationUsingWatchpointSetTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -1,6 +1,6 @@
 ! Test that scalar expressions are not hoisted from WHERE loops
 ! when they do not appear
-! RUN: bbc -hlfir -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" %s | FileCheck %s
+! RUN: bbc -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments)" %s | FileCheck %s
 
 subroutine do_not_hoist_div(n, mask, a)
   integer :: a(10), n

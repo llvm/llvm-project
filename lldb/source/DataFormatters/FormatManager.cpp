@@ -189,7 +189,7 @@ void FormatManager::GetPossibleMatches(
       target_sp->GetDebugger().GetScriptInterpreter();
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
-    sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
+    sstring.Format("{0}:{1}", type_name, valobj.GetBitfieldBitSize());
     ConstString bitfieldname(sstring.GetString());
     entries.push_back({bitfieldname, script_interpreter,
                        TypeImpl(compiler_type), current_flags,
@@ -388,14 +388,14 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
     category_sp = GetCategoryAtIndex(category_id);
     if (!category_sp->IsEnabled())
       continue;
-    lldb::ScriptedSyntheticChildrenSP synth_current_sp(
-        (ScriptedSyntheticChildren *)category_sp->GetSyntheticForType(type_sp)
-            .get());
-    if (synth_current_sp &&
+    auto synth_current_sp = category_sp->GetSyntheticForType(type_sp);
+
+    if (synth_current_sp && synth_current_sp->IsScripted() &&
         (synth_chosen_sp.get() == nullptr ||
          (prio_category > category_sp->GetEnabledPosition()))) {
       prio_category = category_sp->GetEnabledPosition();
-      synth_chosen_sp = synth_current_sp;
+      synth_chosen_sp =
+          std::static_pointer_cast<ScriptedSyntheticChildren>(synth_current_sp);
     }
   }
   return synth_chosen_sp;
@@ -658,12 +658,10 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
     LLDB_LOGF(log, "\n\n" FORMAT_LOG("Looking into cache for type %s"),
               match_data.GetTypeForCache().AsCString("<invalid>"));
     if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp)) {
-      if (log) {
-        LLDB_LOGF(log, FORMAT_LOG("Cache search success. Returning."));
-        LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-                  m_format_cache.GetCacheHits(),
-                  m_format_cache.GetCacheMisses());
-      }
+      LLDB_LOGF(log, FORMAT_LOG("Cache search success. Returning."));
+      LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
+                       m_format_cache.GetCacheHits(),
+                       m_format_cache.GetCacheMisses());
       return retval_sp;
     }
     LLDB_LOGF(log, FORMAT_LOG("Cache search failed. Going normal route"));
@@ -676,8 +674,9 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
               match_data.GetTypeForCache().AsCString("<invalid>"));
     m_format_cache.Set(match_data.GetTypeForCache(), retval_sp);
   }
-  LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
-            m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
+  LLDB_LOG_VERBOSE(log, "Cache hits: {0} - Cache Misses: {1}",
+                   m_format_cache.GetCacheHits(),
+                   m_format_cache.GetCacheMisses());
   return retval_sp;
 }
 

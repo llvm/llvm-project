@@ -769,10 +769,11 @@ static void allUsesOfLoadAndStores(GlobalVariable *GV,
   }
 }
 
-static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
+static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
   bool Changed = false;
-  for (auto UI = V->user_begin(), E = V->user_end(); UI != E; ) {
-    Instruction *I = cast<Instruction>(*UI++);
+  SmallVector<User *, 8> Users(V->user_begin(), V->user_end());
+  for (User *U : Users) {
+    Instruction *I = cast<Instruction>(U);
     // Uses are non-trapping if null pointer is considered valid.
     // Non address-space 0 globals are already pruned by the caller.
     if (NullPointerIsDefined(I->getFunction()))
@@ -792,17 +793,9 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
         // that the pointer is not also being passed as an argument.
         CB->setCalledOperand(NewV);
         Changed = true;
-        bool PassedAsArg = false;
         for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
-          if (CB->getArgOperand(i) == V) {
-            PassedAsArg = true;
+          if (CB->getArgOperand(i) == V)
             CB->setArgOperand(i, NewV);
-          }
-
-        if (PassedAsArg) {
-          // Being passed as an argument also.  Be careful to not invalidate UI!
-          UI = V->user_begin();
-        }
       }
     } else if (AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(I)) {
       Changed |= OptimizeAwayTrappingUsesOfValue(
@@ -1719,6 +1712,9 @@ static bool hasChangeableCCImpl(Function *F) {
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
     return false;
 
+  if (!F->canChangeSignature())
+    return false;
+
   if (F->isVarArg())
     return false;
 
@@ -1983,6 +1979,10 @@ OptimizeFunctions(Module &M,
     if (!F.hasLocalLinkage())
       continue;
 
+    // Ensure function definition is available for interprocedural analysis.
+    if (!F.isDefinitionExact())
+      continue;
+
     // If we have an inalloca parameter that we can safely remove the
     // inalloca attribute from, do so. This unlocks optimizations that
     // wouldn't be safe in the presence of inalloca.
@@ -2061,16 +2061,16 @@ OptimizeGlobalVars(Module &M,
     if (!GV.hasName() && !GV.isDeclaration() && !GV.hasLocalLinkage())
       GV.setLinkage(GlobalValue::InternalLinkage);
     // Simplify the initializer.
-    if (GV.hasInitializer())
-      if (auto *C = dyn_cast<Constant>(GV.getInitializer())) {
-        auto &DL = M.getDataLayout();
-        // TLI is not used in the case of a Constant, so use default nullptr
-        // for that optional parameter, since we don't have a Function to
-        // provide GetTLI anyway.
-        Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
-        if (New != C)
-          GV.setInitializer(New);
-      }
+    if (GV.hasInitializer()) {
+      const Constant *C = GV.getInitializer();
+      auto &DL = M.getDataLayout();
+      // TLI is not used in the case of a Constant, so use default nullptr
+      // for that optional parameter, since we don't have a Function to
+      // provide GetTLI anyway.
+      Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
+      if (New != C)
+        GV.setInitializer(New);
+    }
 
     if (deleteIfDead(GV, NotDiscardableComdats)) {
       Changed = true;
@@ -2368,8 +2368,7 @@ FindAtExitLibFunc(Module &M,
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  LibFunc F;
-  if (!TLI->getLibFunc(*Fn, F) || F != Func)
+  if (TLI->getLibFunc(*Fn) != Func)
     return nullptr;
 
   return Fn;

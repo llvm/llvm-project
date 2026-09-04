@@ -8,11 +8,11 @@ end
 
 subroutine f03(x)
   integer :: x(10)
-!ERROR: 'expectation' modifier cannot occur multiple times
+!ERROR: 'motion-modifier' modifier cannot occur multiple times
   !$omp target update to(present, present: x)
 end
 
 subroutine f04
-!ERROR: 'f04' must be a variable
+!ERROR: 'f04' must be a locator list item
   !$omp target update to(f04)
 end

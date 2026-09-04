@@ -131,7 +131,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ldr	b0, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [1] Code Region - FPR16-bit
 
@@ -213,7 +213,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ldr	h0, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [2] Code Region - FPR32-bit
 
@@ -295,7 +295,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ldr	s0, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [3] Code Region - FPR64-bit
 
@@ -377,7 +377,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ldr	d0, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [4] Code Region - FPR128-bit
 
@@ -459,7 +459,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ldr	q0, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [5] Code Region - SIMD64-bit-b
 
@@ -541,7 +541,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ld1	{ v0.8b }, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [6] Code Region - SIMD64-bit-h
 
@@ -623,7 +623,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ld1	{ v0.4h }, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [7] Code Region - SIMD64-bit-s
 
@@ -705,7 +705,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ld1	{ v0.2s }, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [8] Code Region - SIMD64-bit-d
 
@@ -787,7 +787,7 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.5       ld1	{ v0.1d }, [sp]
 # CHECK-NEXT: 1.     4     7.5    0.3    0.0       add	z0.d, z0.d, z0.d
-# CHECK-NEXT:        4     4.4    0.8    0.8       <total>
+# CHECK-NEXT:        8     4.4    0.8    0.8       <total>
 
 # CHECK:      [9] Code Region - insr
 
@@ -869,4 +869,4 @@ add z0.s, z0.s, z0.s
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     11.3   0.3    0.0       insr	z0.s, w0
 # CHECK-NEXT: 1.     4     16.3   0.0    0.0       add	z0.s, z0.s, z0.s
-# CHECK-NEXT:        4     13.8   0.1    0.0       <total>
+# CHECK-NEXT:        8     13.8   0.1    0.0       <total>

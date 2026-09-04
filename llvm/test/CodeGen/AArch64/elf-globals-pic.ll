@@ -68,3 +68,6 @@ define i64 @test_default_unaligned() {
   %val = load i64, ptr @var_default
   ret i64 %val
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 0}

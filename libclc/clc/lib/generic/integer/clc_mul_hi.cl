@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/integer/clc_hadd.h>
-#include <clc/integer/definitions.h>
-#include <clc/internal/clc.h>
+#include "clc/clc_convert.h"
+#include "clc/integer/clc_hadd.h"
+#include "clc/integer/definitions.h"
+#include "clc/internal/clc.h"
 
 // For all types EXCEPT long, which is implemented separately
 #define __CLC_MUL_HI_IMPL(BGENTYPE, GENTYPE, GENSIZE)                          \

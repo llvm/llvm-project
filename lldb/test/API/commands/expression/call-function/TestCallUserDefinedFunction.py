@@ -13,6 +13,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class ExprCommandCallUserDefinedFunction(TestBase):
     def test(self):
         """Test return values of user defined function calls."""

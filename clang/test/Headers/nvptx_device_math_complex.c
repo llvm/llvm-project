@@ -12,9 +12,9 @@
 #endif
 
 // CHECK: define weak {{.*}} @__divsc3
-// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 3)
-// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 516)
-// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 504)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (inf) */ i32 516)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (zero sub norm) */ i32 504)
 // CHECK-DAG: call float @llvm.copysign.f32(
 // CHECK-DAG: call float @__nv_scalbnf(
 // CHECK-DAG: call nsz float @llvm.fabs.f32(
@@ -23,14 +23,14 @@
 // CHECK-DAG: call float @__nv_logbf(
 
 // CHECK: define weak {{.*}} @__mulsc3
-// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 3)
-// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, i32 516)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (inf) */ i32 516)
 // CHECK-DAG: call float @llvm.copysign.f32(
 
 // CHECK: define weak {{.*}} @__divdc3
-// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 3)
-// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 504)
-// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 516)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (zero sub norm) */ i32 504)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (inf) */ i32 516)
 // CHECK-DAG: call double @llvm.copysign.f64(
 // CHECK-DAG: call double @__nv_scalbn(
 // CHECK-DAG: call nsz double @llvm.fabs.f64(
@@ -39,8 +39,8 @@
 // CHECK-DAG: call double @__nv_logb(
 
 // CHECK: define weak {{.*}} @__muldc3
-// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 3)
-// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, i32 516)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (inf) */ i32 516)
 // CHECK-DAG: call double @llvm.copysign.f64(
 
 void test_scmplx(float _Complex a) {

@@ -107,7 +107,9 @@ template <size_t S> struct count {
   static constexpr size_t N = count<S - 1>::N;
 };
 
-template <> struct count<0> { static constexpr size_t N = 0; };
+template <> struct count<0> {
+  static constexpr size_t N = 0;
+};
 
 // Get a constexpr size_t ID, starts at zero
 #define DLWRAP_ID() (dlwrap::type::count<__LINE__>::N)
@@ -167,6 +169,7 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
       return reinterpret_cast<T::FunctionType>(P);                             \
     }                                                                          \
   };                                                                           \
+  bool SYMBOL##_loaded() { return SYMBOL##_Trait::get() != nullptr; }          \
   }
 
 #define DLWRAP_IMPL(SYMBOL, ARITY)                                             \

@@ -14,7 +14,7 @@
 #ifndef LLVM_ANALYSIS_CODEMETRICS_H
 #define LLVM_ANALYSIS_CODEMETRICS_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -45,23 +45,17 @@ struct CodeMetrics {
   /// one or more 'noduplicate' instructions.
   bool notDuplicatable = false;
 
-  /// The kind of convergence specified in this function.
-  ConvergenceKind Convergence = ConvergenceKind::None;
-
   /// True if this function calls alloca (in the C sense).
   bool usesDynamicAlloca = false;
+
+  /// The kind of convergence specified in this function.
+  ConvergenceKind Convergence = ConvergenceKind::None;
 
   /// Code size cost of the analyzed blocks.
   InstructionCost NumInsts = 0;
 
-  /// Number of analyzed blocks.
-  unsigned NumBlocks = false;
-
-  /// Keeps track of basic block code size estimates.
-  DenseMap<const BasicBlock *, InstructionCost> NumBBInsts;
-
-  /// Keep track of the number of calls to 'big' functions.
-  unsigned NumCalls = false;
+  /// Keeps track of basic block code size estimates. Indexed by block number.
+  SmallVector<InstructionCost, 0> NumBBInsts;
 
   /// The number of calls to internal functions with a single caller.
   ///

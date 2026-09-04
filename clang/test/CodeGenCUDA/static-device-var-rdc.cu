@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o %t.nocuid.dev -x hip %s
 // RUN: cat %t.nocuid.dev | FileCheck -check-prefixes=DEV,INT-DEV %s
 
@@ -9,7 +9,7 @@
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o %t.nocuid.host -x hip %s
 // RUN: cat %t.nocuid.host | FileCheck -check-prefixes=HOST,INT-HOST %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=DEV,EXT-DEV %s
 
@@ -25,7 +25,7 @@
 
 // Negative tests.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefix=DEV-NEG %s
 
@@ -33,7 +33,7 @@
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefix=HOST-NEG %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -std=c++11 -fgpu-rdc -emit-llvm -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefix=DEV-NEG %s
 
@@ -61,17 +61,17 @@
 
 // Test normal static device variables
 // INT-DEV-DAG: @_ZL1x[[FILEID:.*]] = addrspace(1) externally_initialized global i32 0
-// INT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x[[FILEID:.*]]\00"
+// INT-HOST-DAG: @.offloading.entry_name{{.*}} = {{.*}}c"_ZL1x[[FILEID:.*]]\00"
 
 // Test externalized static device variables
 // EXT-DEV-DAG: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// EXT-HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH:.*]]\00"
+// EXT-HOST-DAG: @.offloading.entry_name{{.*}} = {{.*}}c"_ZL1x.static.[[HASH:.*]]\00"
 // CUDA-DAG: @_ZL1x__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
 
 // POSTFIX: @_ZL1x.static.[[HASH:.*]] = addrspace(1) externally_initialized global i32 0
-// POSTFIX: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[HASH]]\00"
+// POSTFIX: @.offloading.entry_name{{.*}} = {{.*}}c"_ZL1x.static.[[HASH]]\00"
 // POSTFIX-ID: @_ZL1x.static.[[FILEID:.*]] = addrspace(1) externally_initialized global i32 0
-// POSTFIX-ID: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"_ZL1x.static.[[FILEID]]\00"
+// POSTFIX-ID: @.offloading.entry_name{{.*}} = {{.*}}c"_ZL1x.static.[[FILEID]]\00"
 
 static __device__ int x;
 
@@ -82,11 +82,11 @@ static __device__ int x2;
 
 // Test normal static device variables
 // INT-DEV-DAG: @_ZL1y[[FILEID:.*]] = addrspace(4) externally_initialized constant i32 0
-// INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y[[FILEID:.*]]\00"
+// INT-HOST-DAG: @.offloading.entry_name{{.*}} = {{.*}}c"_ZL1y[[FILEID:.*]]\00"
 
 // Test externalized static device variables
 // EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = addrspace(4) externally_initialized constant i32 0
-// EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.static.[[HASH]]\00"
+// EXT-HOST-DAG: @.offloading.entry_name{{.*}} = {{.*}}c"_ZL1y.static.[[HASH]]\00"
 
 static __constant__ int y;
 
@@ -128,9 +128,10 @@ void foo() {
   decltype(u) tmp;
 }
 
-// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1x, {{.*}}@[[DEVNAMEX]]
-// HOST-DAG: __hipRegisterVar({{.*}}@_ZL1y, {{.*}}@[[DEVNAMEY]]
-// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZL2x2
-// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZZ6kernelPiPPKiE1w
-// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZZ6devfunPPKiE1p
-// HOST-NEG-NOT: __hipRegisterVar({{.*}}@_ZL1u
+// The host emits offloading entries for externalized static device variables.
+// HOST-DAG: @.offloading.entry._ZL1x.static.{{.*}} = {{.*}}ptr @_ZL1x
+// HOST-DAG: @.offloading.entry._ZL1y.static.{{.*}} = {{.*}}ptr @_ZL1y
+// HOST-NEG-NOT: @.offloading.entry.{{.*}}_ZL2x2
+// HOST-NEG-NOT: @.offloading.entry.{{.*}}_ZZ6kernelPiPPKiE1w
+// HOST-NEG-NOT: @.offloading.entry.{{.*}}_ZZ6devfunPPKiE1p
+// HOST-NEG-NOT: @.offloading.entry.{{.*}}_ZL1u

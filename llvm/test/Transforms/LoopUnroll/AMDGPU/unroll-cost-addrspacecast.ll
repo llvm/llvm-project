@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=hawaii -passes=loop-unroll -unroll-threshold=57 -unroll-peel-count=0 -unroll-allow-partial=false -unroll-max-iteration-count-to-analyze=16 < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu7.01-unknown-amdhsa -passes=loop-unroll -unroll-threshold=57 -unroll-peel-count=0 -unroll-allow-partial=false -unroll-max-iteration-count-to-analyze=16 < %s | FileCheck %s
 
 @indices = external global [16 x i32]
 

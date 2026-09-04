@@ -1054,7 +1054,8 @@ ObjCInterfaceDecl *SemaObjC::ActOnStartClassInterface(
   if (PrevIDecl) {
     // Class already seen. Was it a definition?
     if (ObjCInterfaceDecl *Def = PrevIDecl->getDefinition()) {
-      if (SkipBody && !SemaRef.hasVisibleDefinition(Def)) {
+      if (SkipBody && (!SemaRef.hasVisibleDefinition(Def) ||
+                       SemaRef.isFromSameSingleIncludeHeader(Def, ClassLoc))) {
         SkipBody->CheckSameAsPrevious = true;
         SkipBody->New = IDecl;
         SkipBody->Previous = Def;
@@ -1235,7 +1236,8 @@ ObjCProtocolDecl *SemaObjC::ActOnStartProtocolInterface(
                                      ProtocolLoc, AtProtoInterfaceLoc,
                                      /*PrevDecl=*/Def);
 
-    if (SkipBody && !SemaRef.hasVisibleDefinition(Def)) {
+    if (SkipBody && (!SemaRef.hasVisibleDefinition(Def) ||
+                     SemaRef.isFromSameSingleIncludeHeader(Def, ProtocolLoc))) {
       SkipBody->CheckSameAsPrevious = true;
       SkipBody->New = PDecl;
       SkipBody->Previous = Def;
@@ -4769,7 +4771,8 @@ ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
   SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, Param, ArgInfo.ArgAttrs);
   SemaRef.AddPragmaAttributes(SemaRef.TUScope, Param);
   if (Param->hasAttr<BlocksAttr>()) {
-    Diag(Param->getLocation(), diag::err_block_on_nonlocal);
+    Diag(Param->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
     Param->setInvalidDecl();
   }
 
@@ -5254,7 +5257,8 @@ Decl *SemaObjC::ActOnObjCExceptionDecl(Scope *S, Declarator &D) {
   SemaRef.ProcessDeclAttributes(S, New, D);
 
   if (New->hasAttr<BlocksAttr>())
-    Diag(New->getLocation(), diag::err_block_on_nonlocal);
+    Diag(New->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
   return New;
 }
 

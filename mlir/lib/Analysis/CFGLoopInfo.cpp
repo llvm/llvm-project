@@ -16,9 +16,6 @@ template class llvm::LoopInfoBase<mlir::Block, mlir::CFGLoop>;
 
 using namespace mlir;
 
-CFGLoop::CFGLoop(mlir::Block *block)
-    : llvm::LoopBase<mlir::Block, CFGLoop>(block) {}
-
 CFGLoopInfo::CFGLoopInfo(
     const llvm::DominatorTreeBase<mlir::Block, false> &domTree) {
   analyze(domTree);

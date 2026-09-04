@@ -11,14 +11,14 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %0 = arith.constant dense<42.> : vector<4xf32>
 // CHECK-NEXT:  %1 = llvm.fadd %arg0, %0 : vector<4xf32>
   %1 = arith.addf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg2 : vector<4xi64>
-  %3 = arith.divsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg2 : vector<4xi64>
-  %4 = arith.divui %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg2 : vector<4xi64>
-  %5 = arith.remsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg2 : vector<4xi64>
-  %6 = arith.remui %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg3 : vector<4xi64>
+  %3 = arith.divsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg3 : vector<4xi64>
+  %4 = arith.divui %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg3 : vector<4xi64>
+  %5 = arith.remsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg3 : vector<4xi64>
+  %6 = arith.remui %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %6 = llvm.fdiv %arg0, %0 : vector<4xf32>
   %7 = arith.divf %arg0, %0 : vector<4xf32>
 // CHECK-NEXT:  %7 = llvm.frem %arg0, %0 : vector<4xf32>
@@ -31,10 +31,10 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %11 = arith.xori %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : vector<4xi64>
   %12 = arith.shli %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg2 : vector<4xi64>
-  %13 = arith.shrsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg2 : vector<4xi64>
-  %14 = arith.shrui %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg3 : vector<4xi64>
+  %13 = arith.shrsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg3 : vector<4xi64>
+  %14 = arith.shrui %arg2, %arg3 : vector<4xi64>
   return %1 : vector<4xf32>
 }
 
@@ -156,6 +156,30 @@ func.func @index_castui_nneg_not_set(%arg0: i1) {
 // CHECK-NOT: nneg
   %0 = arith.index_castui %arg0 : i1 to index
   return
+}
+
+// -----
+
+// Memref index_cast is a no-op at the LLVM level since LLVM uses opaque
+// pointers and all memrefs with integer or index element types convert to the
+// same struct type. Verify that no sext/zext/trunc is generated.
+
+// CHECK-LABEL: @memref_index_cast
+// CHECK-NOT: llvm.sext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_cast(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_cast %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @memref_index_castui
+// CHECK-NOT: llvm.zext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_castui(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_castui %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
 }
 
 // -----
@@ -377,6 +401,101 @@ func.func @experimental_constrained_fptrunc(%arg0 : f64) {
 
 // -----
 
+// CHECK-LABEL: experimental_constrained_addf
+func.func @experimental_constrained_addf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore
+  %0 = arith.addf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 downward ignore
+  %1 = arith.addf %arg0, %arg1 downward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 upward ignore
+  %2 = arith.addf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 towardzero ignore
+  %3 = arith.addf %arg0, %arg1 toward_zero : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearestaway ignore
+  %4 = arith.addf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_subf
+func.func @experimental_constrained_subf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 tonearest ignore
+  %0 = arith.subf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 downward ignore
+  %1 = arith.subf %arg0, %arg1 downward : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_mulf
+func.func @experimental_constrained_mulf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 upward ignore
+  %0 = arith.mulf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 towardzero ignore
+  %1 = arith.mulf %arg0, %arg1 toward_zero : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_divf
+func.func @experimental_constrained_divf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearest ignore
+  %0 = arith.divf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearestaway ignore
+  %1 = arith.divf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// Verify that fastmath flags are stripped when lowering to constrained
+// intrinsics (constrained FP and fastmath are contradictory).
+// CHECK-LABEL: constrained_addf_with_fastmath
+func.func @constrained_addf_with_fastmath(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore : f64
+// CHECK-NOT: fastmath
+  %0 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_f16_to_bf16
+func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : f16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : f32 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : bf16
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_bf16_to_f16
+func.func @convertf_bf16_to_f16(%arg0 : bf16) -> f16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : bf16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : f32 to f16
+  %0 = arith.convertf %arg0 : bf16 to f16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : f16
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_vector
+func.func @convertf_vector(%arg0 : vector<2xf16>) -> vector<2xbf16> {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : vector<2xf16> to vector<2xf32>
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : vector<2xf32> to vector<2xbf16>
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xbf16>
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : vector<2xbf16>
+}
+
+// -----
+
 // Check sign and zero extension and truncation of integers.
 // CHECK-LABEL: @integer_extension_and_truncation
 func.func @integer_extension_and_truncation(%arg0 : i3) {
@@ -438,7 +557,7 @@ func.func @fcmp(f32, f32) -> () {
   %13 = arith.cmpf une, %arg0, %arg1 : f32
   %14 = arith.cmpf uno, %arg0, %arg1 : f32
 
-  %15 = arith.cmpf oeq, %arg0, %arg1 {fastmath = #arith.fastmath<fast>} : f32
+  %15 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
   return
 }
@@ -447,7 +566,7 @@ func.func @fcmp(f32, f32) -> () {
 
 // CHECK-LABEL: @index_vector
 func.func @index_vector(%arg0: vector<4xindex>) {
-  // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xindex>) : vector<4xi64>
+  // CHECK: %[[CST:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3]> : vector<4xi64>) : vector<4xi64>
   %0 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
   // CHECK: %[[V:.*]] = llvm.add %{{.*}}, %[[CST]] : vector<4xi64>
   %1 = arith.addi %arg0, %0 : vector<4xindex>
@@ -485,6 +604,30 @@ func.func @addui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -
   %sum, %carry = arith.addui_extended %arg0, %arg1 : vector<3xi16>, vector<3xi1>
   // CHECK-NEXT: return [[SUM]], [[CARRY]] : vector<3xi16>, vector<3xi1>
   return %sum, %carry : vector<3xi16>, vector<3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @subui_extended_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> (i32, i1)
+func.func @subui_extended_scalar(%arg0: i32, %arg1: i32) -> (i32, i1) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (i32, i32) -> !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(i32, i1)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : i32, i1
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subui_extended_vector1d
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<3xi16>, [[ARG1:%.+]]: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>)
+func.func @subui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (vector<3xi16>, vector<3xi16>) -> !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : vector<3xi16>, vector<3xi1>
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : vector<3xi16>, vector<3xi1>
+  return %diff, %borrow : vector<3xi16>, vector<3xi1>
 }
 
 // -----
@@ -637,16 +780,16 @@ func.func @ceildivsi(%arg0 : i64, %arg1 : i64) -> i64 {
 }
 
 // CHECK-LABEL: @ceildivui
-// CHECK-SAME: %[[ARG0:.*]]: i32) -> i32
-func.func @ceildivui(%arg0 : i32) -> i32 {
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32) -> i32
+func.func @ceildivui(%arg0 : i32, %arg1 : i32) -> i32 {
 // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %[[CMP0:.*]] = llvm.icmp "eq" %[[ARG0]], %[[CST0]] : i32
 // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: %[[SUB0:.*]] = llvm.sub %[[ARG0]], %[[CST1]] : i32
-// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG0]] : i32
+// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG1]] : i32
 // CHECK: %[[ADD0:.*]] = llvm.add %[[DIV0]], %[[CST1]] : i32
 // CHECK: %[[SEL0:.*]] = llvm.select %[[CMP0]], %[[CST0]], %[[ADD0]] : i1, i32
-  %0 = arith.ceildivui %arg0, %arg0 : i32
+  %0 = arith.ceildivui %arg0, %arg1 : i32
   return %0: i32
 }
 
@@ -837,4 +980,119 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
   %2 = arith.addf %arg2, %arg2 : vector<4x8xf32>
   %3 = arith.cmpf oeq, %arg0, %arg3 : f32
   return
+}
+
+// -----
+
+// The type converter maps the low-precision float types that have no LLVM
+// equivalent to an integer of the same width. The value attribute stays a float
+// attribute, which `llvm.mlir.constant` accepts for such a result type.
+
+// CHECK-LABEL: @low_precision_float_constant
+//       CHECK:   llvm.mlir.constant(1.000000e+00 : f8E4M3FN) : i8
+//       CHECK:   llvm.mlir.constant(dense<1.000000e+00> : vector<4xf8E4M3FN>) : vector<4xi8>
+//       CHECK:   llvm.mlir.constant(dense<1.000000e+00> : vector<2x4xf8E4M3FN>) : !llvm.array<2 x vector<4xi8>>
+func.func @low_precision_float_constant() -> (f8E4M3FN, vector<4xf8E4M3FN>, vector<2x4xf8E4M3FN>) {
+  %0 = arith.constant 1.0 : f8E4M3FN
+  %1 = arith.constant dense<1.0> : vector<4xf8E4M3FN>
+  %2 = arith.constant dense<1.0> : vector<2x4xf8E4M3FN>
+  return %0, %1, %2 : f8E4M3FN, vector<4xf8E4M3FN>, vector<2x4xf8E4M3FN>
+}
+
+// -----
+
+// An integer or float constant whose element type the converter leaves alone
+// keeps its value attribute.
+
+// CHECK-LABEL: @unconverted_element_type_constant
+//       CHECK:   llvm.mlir.constant(42 : i32) : i32
+//       CHECK:   llvm.mlir.constant(4.200000e+01 : f32) : f32
+//       CHECK:   llvm.mlir.constant(dense<42> : vector<4xi32>) : vector<4xi32>
+func.func @unconverted_element_type_constant() -> (i32, f32, vector<4xi32>) {
+  %0 = arith.constant 42 : i32
+  %1 = arith.constant 42.0 : f32
+  %2 = arith.constant dense<42> : vector<4xi32>
+  return %0, %1, %2 : i32, f32, vector<4xi32>
+}
+
+// -----
+
+// A scalar `index` constant is retyped to the converted index type.
+
+// CHECK-LABEL: @scalar_index_constant
+//       CHECK:   llvm.mlir.constant(42 : i64) : i64
+func.func @scalar_index_constant() -> index {
+  %0 = arith.constant 42 : index
+  return %0 : index
+}
+
+// -----
+
+// A multi-dimensional vector constant keeps its builtin attribute type even
+// though the result is a nested LLVM array, as only the element types have to
+// match.
+
+// CHECK-LABEL: @multi_dim_vector_constant
+//       CHECK:   llvm.mlir.constant(dense<1.000000e+00> : vector<2x3xf32>) : !llvm.array<2 x vector<3xf32>>
+//       CHECK:   llvm.mlir.constant(dense<{{\[}}[1, 2, 3], [-4, 5, 6]]> : vector<2x3xi64>) : !llvm.array<2 x vector<3xi64>>
+func.func @multi_dim_vector_constant() -> (vector<2x3xf32>, vector<2x3xindex>) {
+  %0 = arith.constant dense<1.0> : vector<2x3xf32>
+  %1 = arith.constant dense<[[1, 2, 3], [-4, 5, 6]]> : vector<2x3xindex>
+  return %0, %1 : vector<2x3xf32>, vector<2x3xindex>
+}
+
+// -----
+
+// A scalable vector constant has to be a splat, which the element-wise retyping
+// of a dense attribute preserves.
+
+// CHECK-LABEL: @scalable_index_constant
+//       CHECK:   llvm.mlir.constant(dense<1> : vector<[4]xi64>) : vector<[4]xi64>
+func.func @scalable_index_constant() -> vector<[4]xindex> {
+  %0 = arith.constant dense<1> : vector<[4]xindex>
+  return %0 : vector<[4]xindex>
+}
+
+// -----
+
+// A sparse elements attribute of `index` element type has to be rebuilt, as it
+// cannot be retyped element-wise like a dense one.
+
+// CHECK-LABEL: @sparse_index_constant
+//       CHECK:   llvm.mlir.constant(sparse<0, 1> : vector<4xi64>) : vector<4xi64>
+func.func @sparse_index_constant() -> vector<4xindex> {
+  %0 = arith.constant sparse<[[0]], [1]> : vector<4xindex>
+  return %0 : vector<4xindex>
+}
+
+// -----
+
+// A resource-backed elements attribute refers to a blob laid out for its own
+// element type, so it is reinterpreted rather than rewritten. This works because
+// `index` is stored with the same width as the target `i64`.
+
+// CHECK-LABEL: @resource_index_constant
+//       CHECK:   llvm.mlir.constant(dense_resource<index_blob> : vector<2xi64>) : vector<2xi64>
+func.func @resource_index_constant() -> vector<2xindex> {
+  %0 = arith.constant dense_resource<index_blob> : vector<2xindex>
+  return %0 : vector<2xindex>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      index_blob: "0x0800000001000000000000000200000000000000"
+    }
+  }
+#-}
+
+// -----
+
+// There is no type conversion rule for `tf32`, so the constant is not lowered.
+
+// CHECK-LABEL: @unconvertible_type_constant
+//       CHECK:   arith.constant 2.000000e+00 : tf32
+func.func @unconvertible_type_constant() -> tf32 {
+  %0 = arith.constant 2.0 : tf32
+  return %0 : tf32
 }

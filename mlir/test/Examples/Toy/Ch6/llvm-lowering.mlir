@@ -1,4 +1,4 @@
-// RUN: toyc-ch6 %s -emit=llvm -opt
+// RUN: toyc-ch6 %s -emit=llvm -opt 2>&1 | FileCheck %s
 
 toy.func @main() {
   %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
@@ -20,4 +20,4 @@ toy.func @main() {
 // CHECK: @printf
 // CHECK-SAME: 9.000000e+00
 // CHECK: @printf
-// CHECK-SAME: 3.000000e+01
+// CHECK-SAME: 3.600000e+01

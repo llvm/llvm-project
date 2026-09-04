@@ -1,0 +1,46 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-profgen --binary=%t.exe --output=/dev/null --show-disassembly-only 2>&1 \
+# RUN:   | FileCheck %s
+
+# CHECK-NOT: invalid instructions
+# CHECK: Disassembly of section .text
+# CHECK-NOT: <unknown>
+# CHECK: <foo>:
+# CHECK-NEXT: {{[0-9a-f]+}}:	ldaddal	w0, w1, [x2]
+# CHECK-NEXT: {{[0-9a-f]+}}:	ldapr	x3, [x4]
+# CHECK-NEXT: {{[0-9a-f]+}}:	ret
+# CHECK-NOT: <unknown>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+  Entry:   0x0000000000401000
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x0000000000401000
+    AddressAlign: 0x4
+    ## ldaddal w0, w1, [x2]
+    ## ldapr x3, [x4]
+    ## ret
+    Content: 4100E0B883C0BFF8C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x0000000000400000
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x0000000000401000
+    Size:    0x000000000000000C

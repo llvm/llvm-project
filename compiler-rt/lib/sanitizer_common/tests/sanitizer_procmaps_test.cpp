@@ -90,6 +90,8 @@ Size:                 12 kB
 Rss:                  12 kB
 )";
 
+#    if !SANITIZER_NETBSD
+// Test fails to link with NetBSD 10.1 /usr/bin/ld.
 TEST(MemoryMapping, ParseUnixMemoryProfile) {
   struct entry {
     uptr p;
@@ -132,6 +134,7 @@ TEST(MemoryMapping, ParseUnixMemoryProfileTruncated) {
   }
   UnmapOrDie(mem, 2 * page);
 }
+#  endif
 #  endif
 
 }  // namespace __sanitizer

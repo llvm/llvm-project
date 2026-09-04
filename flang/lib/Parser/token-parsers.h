@@ -14,14 +14,11 @@
 
 #include "basic-parsers.h"
 #include "type-parsers.h"
-#include "flang/Common/idioms.h"
 #include "flang/Parser/char-set.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/instrumented-parser.h"
-#include "flang/Parser/provenance.h"
 #include <cstddef>
 #include <cstring>
-#include <functional>
 #include <limits>
 #include <list>
 #include <optional>

@@ -837,9 +837,9 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "tokLen": 18
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 289,
-// CHECK-NEXT:      "col": 57,
-// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:      "offset": 283,
+// CHECK-NEXT:      "col": 51,
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "CanPassInRegisters",
@@ -980,9 +980,9 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 382,
-// CHECK-NEXT:      "col": 58,
-// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:      "offset": 377,
+// CHECK-NEXT:      "col": 53,
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "CantPassInRegisters",
@@ -2547,9 +2547,9 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 847,
-// CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:      "offset": 841,
+// CHECK-NEXT:      "col": 17,
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "IsTrivial",
@@ -3747,9 +3747,9 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1126,
-// CHECK-NEXT:      "col": 24,
-// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:      "offset": 1120,
+// CHECK-NEXT:      "col": 18,
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "~IsLiteral",

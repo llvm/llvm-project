@@ -32,9 +32,7 @@
 ///   - Driver/pass "run" function glues everything together.
 
 #include "AMDGPUSplitModule.h"
-#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
@@ -43,9 +41,11 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -58,9 +58,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <cassert>
 #include <cmath>
-#include <memory>
 #include <utility>
-#include <vector>
 
 #ifndef NDEBUG
 #include "llvm/Support/LockFileManager.h"
@@ -1285,7 +1283,9 @@ namespace {
 static bool needsConservativeImport(const GlobalValue *GV) {
   if (const auto *Var = dyn_cast<GlobalVariable>(GV))
     return Var->hasLocalLinkage();
-  return isa<GlobalAlias>(GV);
+  if (const auto *GA = dyn_cast<GlobalAlias>(GV))
+    return GA->hasLocalLinkage();
+  return false;
 }
 
 /// Prints a summary of the partition \p N, represented by module \p M, to \p
@@ -1394,8 +1394,6 @@ static void splitAMDGPUModule(
   // visible copy, then internalize all other copies" for some functions?
   if (!NoExternalizeOnAddrTaken) {
     for (auto &Fn : M) {
-      // TODO: Should aliases count? Probably not but they're so rare I'm not
-      // sure it's worth fixing.
       if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
                    dbgs() << " because its address is taken\n");
@@ -1411,6 +1409,13 @@ static void splitAMDGPUModule(
       if (GV.hasLocalLinkage())
         LLVM_DEBUG(dbgs() << "[externalize] GV " << GV.getName() << '\n');
       externalize(GV);
+    }
+  }
+
+  for (auto &GA : M.aliases()) {
+    if (GA.hasLocalLinkage()) {
+      LLVM_DEBUG(dbgs() << "[externalize] alias " << GA.getName() << '\n');
+      externalize(GA);
     }
   }
 
@@ -1510,14 +1515,17 @@ static void splitAMDGPUModule(
             return false;
           }
 
+          // Aliases should not be separated from their underlying object.
+          if (const auto *GA = dyn_cast<GlobalAlias>(GV)) {
+            if (const auto *Fn = dyn_cast<Function>(GA->getAliaseeObject()))
+              return FnsInPart.contains(Fn);
+          }
+
           // Everything else goes in the first non-empty module we create.
           return ImportAllGVs || needsConservativeImport(GV);
         }));
 
     ImportAllGVs = false;
-
-    // FIXME: Aliases aren't seen often, and their handling isn't perfect so
-    // bugs are possible.
 
     // Clean-up conservatively imported GVs without any users.
     for (auto &GV : make_early_inc_range(MPart->global_values())) {

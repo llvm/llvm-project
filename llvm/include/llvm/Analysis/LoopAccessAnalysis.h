@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 #include <optional>
 #include <variant>
 
@@ -36,7 +37,7 @@ struct VectorizerParams {
   LLVM_ABI static const unsigned MaxVectorWidth;
 
   /// VF as overridden by the user.
-  LLVM_ABI static unsigned VectorizationFactor;
+  LLVM_ABI static ElementCount VectorizationFactor;
   /// Interleave factor as overridden by the user.
   LLVM_ABI static unsigned VectorizationInterleave;
   /// True if force-vector-interleave was specified by the user.
@@ -53,6 +54,10 @@ struct VectorizerParams {
   // loop invariant.
   LLVM_ABI static bool HoistRuntimeChecks;
 };
+
+/// Maps a pointer to its symbolic (non-constant) stride. Strides are loop
+/// invariant, which collectStridedAccess checks before inserting.
+using SymbolicStrideMap = DenseMap<Value *, const SCEVUnknown *>;
 
 /// Checks memory dependences among accesses to the same underlying
 /// object to determine whether there vectorization is legal or not (and at
@@ -90,10 +95,10 @@ struct VectorizerParams {
 ///
 class MemoryDepChecker {
 public:
-  typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
-  typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
+  using MemAccessInfo =
+      PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
   /// Set of potential dependent memory accesses.
-  typedef EquivalenceClasses<MemAccessInfo> DepCandidates;
+  using DepCandidates = EquivalenceClasses<MemAccessInfo>;
 
   /// Type to keep track of the status of the dependence check. The order of
   /// the elements is important and has to be from most permissive to least
@@ -121,6 +126,11 @@ public:
       // the loop, like A[B[i]]. We cannot determine direction or distance in
       // those cases, and also are unable to generate any runtime checks.
       IndirectUnsafe,
+      // Both accesses to the same loop-invariant address and at least one is a
+      // write. Vectorization is unsafe because different vector lanes would
+      // read/write the same memory location, and the ordering of accesses
+      // across lanes matters.
+      InvariantUnsafe,
 
       // Lexically forward.
       //
@@ -182,7 +192,7 @@ public:
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
                    DominatorTree *DT, const Loop *L,
-                   const DenseMap<Value *, const SCEV *> &SymbolicStrides,
+                   const SymbolicStrideMap &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits,
                    std::optional<ScalarEvolution::LoopGuards> &LoopGuards)
       : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
@@ -203,7 +213,7 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   LLVM_ABI bool areDepsSafe(const DepCandidates &AccessSets,
-                            const MemAccessInfoList &CheckDeps);
+                            ArrayRef<MemAccessInfo> CheckDeps);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -227,6 +237,37 @@ public:
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return MaxStoreLoadForwardSafeDistanceInBits ==
            std::numeric_limits<uint64_t>::max();
+  }
+
+  /// Returns true if a memory dependence at byte distance \p Distance between
+  /// a store (with element size \p TypeByteSize bytes) widened to
+  /// \p VectorStoreSize bytes and a subsequent load of \p LoadElementSize bytes
+  /// would prevent store-to-load forwarding.
+  ///
+  /// The conflicting store must still be likely to be in the store buffer, i.e.
+  /// \c Distance / VectorStoreSize is below 8 * TypeByteSize iterations. Given
+  /// that, the load overruns from the widened store it starts in into the next
+  /// one when either:
+  ///   (a) it starts misaligned, \c R = \c Distance % VectorStoreSize bytes
+  ///       below a widened-store boundary, and is wider than those \c R bytes
+  ///       (\p LoadElementSize > \c R), or
+  ///   (b) it starts aligned (\c R == 0) but is itself wider than the widened
+  ///       store window (\p LoadElementSize > \p VectorStoreSize).
+  /// A \p LoadElementSize of 0 (the default) leaves the load width unknown and
+  /// disables both terms. Passing \p VectorStoreSize makes (a) reduce to "any
+  /// misalignment conflicts" and (b) never fire, matching the original,
+  /// width-agnostic predicate.
+  static bool isStoreLoadForwardingConflict(uint64_t Distance,
+                                            uint64_t VectorStoreSize,
+                                            uint64_t TypeByteSize,
+                                            uint64_t LoadElementSize = 0) {
+    assert(VectorStoreSize != 0 && "Expected non-zero vector store size");
+    const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
+    if (Distance / VectorStoreSize >= NumItersForStoreLoadThroughMemory)
+      return false;
+    if (uint64_t R = Distance % VectorStoreSize)
+      return LoadElementSize > R;
+    return LoadElementSize > VectorStoreSize;
   }
 
   /// Return safe power-of-2 number of elements, which do not prevent store-load
@@ -286,7 +327,7 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
-  DenseMap<std::pair<const SCEV *, Type *>,
+  DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
     return PointerBounds;
@@ -317,7 +358,7 @@ private:
 
   /// Reference to map of pointer values to
   /// their stride symbols, if they have a symbolic stride.
-  const DenseMap<Value *, const SCEV *> &SymbolicStrides;
+  const SymbolicStrideMap &SymbolicStrides;
 
   /// Maps access locations (ptr, read/write) to program order.
   DenseMap<MemAccessInfo, std::vector<unsigned> > Accesses;
@@ -370,7 +411,7 @@ private:
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
-  DenseMap<std::pair<const SCEV *, Type *>,
+  DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
@@ -482,9 +523,8 @@ struct RuntimeCheckingPtrGroup {
 };
 
 /// A memcheck which made up of a pair of grouped pointers.
-typedef std::pair<const RuntimeCheckingPtrGroup *,
-                  const RuntimeCheckingPtrGroup *>
-    RuntimePointerCheck;
+using RuntimePointerCheck =
+    std::pair<const RuntimeCheckingPtrGroup *, const RuntimeCheckingPtrGroup *>;
 
 struct PointerDiffInfo {
   const SCEV *SrcStart;
@@ -721,6 +761,7 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
+  /// \pre \p TheLoop has a unique latch.
   LLVM_ABI static bool blockNeedsPredication(const BasicBlock *BB,
                                              const Loop *TheLoop,
                                              const DominatorTree *DT);
@@ -748,7 +789,7 @@ public:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  const DenseMap<Value *, const SCEV *> &getSymbolicStrides() const {
+  const SymbolicStrideMap &getSymbolicStrides() const {
     return SymbolicStrides;
   }
 
@@ -856,7 +897,7 @@ private:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  DenseMap<Value *, const SCEV *> SymbolicStrides;
+  SymbolicStrideMap SymbolicStrides;
 };
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride
@@ -870,8 +911,15 @@ private:
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
 LLVM_ABI const SCEV *
 replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                          const DenseMap<Value *, const SCEV *> &PtrToStride,
-                          Value *Ptr);
+                          const SymbolicStrideMap &PtrToStride, Value *Ptr);
+
+/// If \p AR is an affine AddRec for \p Lp with a constant step, return the
+/// step in units of \p AccessTy's allocation size. Returns std::nullopt if the
+/// step is not constant, does not divide the access size, or \p AccessTy is a
+/// scalable vector. \p Ptr is only used for debug output and may be null.
+LLVM_ABI std::optional<int64_t>
+getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
+                    Value *Ptr, PredicatedScalarEvolution &PSE);
 
 /// If the pointer has a constant stride return it in units of the access type
 /// size. If the pointer is loop-invariant, return 0. Otherwise return
@@ -882,8 +930,8 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 ///
 /// If necessary this method will version the stride of the pointer according
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
-/// The \p Assume parameter indicates if we are allowed to make additional
-/// run-time assumptions.
+///
+/// If \p Predicates is non-null, add no-wrap SCEV predicates if needed.
 ///
 /// Note that the analysis results are defined if-and-only-if the original
 /// memory access was defined.  If that access was dead, or UB, then the
@@ -891,9 +939,18 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
-             const DenseMap<Value *, const SCEV *> &StridesMap =
-                 DenseMap<Value *, const SCEV *>(),
-             bool Assume = false, bool ShouldCheckWrap = true);
+             const SymbolicStrideMap &StridesMap = SymbolicStrideMap(),
+             bool ShouldCheckWrap = true,
+             SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+
+/// Overload of \ref getPtrStride that adds the no-wrap predicates directly to
+/// \p PSE. The \p Assume parameter indicates whether such additional run-time
+/// assumptions are allowed.
+LLVM_ABI std::optional<int64_t>
+getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+             const Loop *Lp, const DominatorTree &DT,
+             const SymbolicStrideMap &StridesMap, bool Assume,
+             bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This
@@ -943,7 +1000,14 @@ LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
-    DenseMap<std::pair<const SCEV *, Type *>,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
+LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+    const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
@@ -988,7 +1052,7 @@ class LoopAccessAnalysis
   LLVM_ABI static AnalysisKey Key;
 
 public:
-  typedef LoopAccessInfoManager Result;
+  using Result = LoopAccessInfoManager;
 
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 };

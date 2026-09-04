@@ -13,6 +13,9 @@ declare <4 x double> @llvm.matrix.multiply.v4f64.v4f64.v4f64(<4 x double>, <4 x 
 declare <2 x double> @llvm.matrix.multiply.v2f64.v4f64.v2f64(<4 x double>, <2 x double>, i32, i32, i32)
 declare <6 x float> @llvm.matrix.multiply.v6f32.v2f32.v3f32(<2 x float>, <3 x float>, i32, i32, i32)
 declare <6 x i32> @llvm.matrix.multiply.v6i32.v2i32.v3i32(<2 x i32>, <3 x i32>, i32, i32, i32)
+declare <4 x half> @llvm.matrix.multiply.v4f16.v4f16.v4f16(<4 x half>, <4 x half>, i32, i32, i32)
+declare <2 x half> @llvm.matrix.multiply.v2f16.v6f16.v3f16(<6 x half>, <3 x half>, i32, i32, i32)
+declare <6 x half> @llvm.matrix.multiply.v6f16.v2f16.v3f16(<2 x half>, <3 x half>, i32, i32, i32)
 
 ; 2x2 float: 4 dot2 calls.
 define <4 x float> @test_float_2x2(<4 x float> %a, <4 x float> %b) {
@@ -306,6 +309,82 @@ define <6 x float> @test_k1_outer_product(<2 x float> %a, <3 x float> %b) {
 ;
   %r = call <6 x float> @llvm.matrix.multiply.v6f32.v2f32.v3f32(<2 x float> %a, <3 x float> %b, i32 2, i32 1, i32 3)
   ret <6 x float> %r
+}
+
+; 2x2 half: 4 dot2 calls.
+define <4 x half> @test_half_2x2(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: define <4 x half> @test_half_2x2(
+; CHECK-SAME: <4 x half> [[A:%.*]], <4 x half> [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x half> [[A]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x half> [[A]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x half> [[A]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x half> [[B]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x half> [[B]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x half> [[B]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x half> [[B]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = call half @llvm.dx.dot2.f16(half [[TMP1]], half [[TMP3]], half [[TMP5]], half [[TMP6]])
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x half> poison, half [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = call half @llvm.dx.dot2.f16(half [[TMP2]], half [[TMP4]], half [[TMP5]], half [[TMP6]])
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x half> [[TMP10]], half [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = call half @llvm.dx.dot2.f16(half [[TMP1]], half [[TMP3]], half [[TMP7]], half [[TMP8]])
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x half> [[TMP12]], half [[TMP13]], i64 2
+; CHECK-NEXT:    [[TMP15:%.*]] = call half @llvm.dx.dot2.f16(half [[TMP2]], half [[TMP4]], half [[TMP7]], half [[TMP8]])
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x half> [[TMP14]], half [[TMP15]], i64 3
+; CHECK-NEXT:    ret <4 x half> [[TMP16]]
+;
+  %r = call <4 x half> @llvm.matrix.multiply.v4f16.v4f16.v4f16(<4 x half> %a, <4 x half> %b, i32 2, i32 2, i32 2)
+  ret <4 x half> %r
+}
+
+; 2x3 half * 3x1 half: 2 dot3 calls.
+define <2 x half> @test_half_mat_vec(<6 x half> %m, <3 x half> %v) {
+; CHECK-LABEL: define <2 x half> @test_half_mat_vec(
+; CHECK-SAME: <6 x half> [[M:%.*]], <3 x half> [[V:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <6 x half> [[M]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x half> [[M]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <6 x half> [[M]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <6 x half> [[M]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <6 x half> [[M]], i64 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <6 x half> [[M]], i64 5
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <3 x half> [[V]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x half> [[V]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <3 x half> [[V]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = call half @llvm.dx.dot3.f16(half [[TMP1]], half [[TMP3]], half [[TMP5]], half [[TMP7]], half [[TMP8]], half [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x half> poison, half [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = call half @llvm.dx.dot3.f16(half [[TMP2]], half [[TMP4]], half [[TMP6]], half [[TMP7]], half [[TMP8]], half [[TMP9]])
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x half> [[TMP11]], half [[TMP12]], i64 1
+; CHECK-NEXT:    ret <2 x half> [[TMP13]]
+;
+  %r = call <2 x half> @llvm.matrix.multiply.v2f16.v6f16.v3f16(<6 x half> %m, <3 x half> %v, i32 2, i32 3, i32 1)
+  ret <2 x half> %r
+}
+
+; K=1 half outer product (2x1 * 1x3 = 2x3): each element is a single fmul.
+define <6 x half> @test_k1_half_outer_product(<2 x half> %a, <3 x half> %b) {
+; CHECK-LABEL: define <6 x half> @test_k1_half_outer_product(
+; CHECK-SAME: <2 x half> [[A:%.*]], <3 x half> [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x half> [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x half> [[A]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x half> [[B]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x half> [[B]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x half> [[B]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul half [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x half> poison, half [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul half [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <6 x half> [[TMP7]], half [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul half [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <6 x half> [[TMP9]], half [[TMP10]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul half [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <6 x half> [[TMP11]], half [[TMP12]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul half [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <6 x half> [[TMP13]], half [[TMP14]], i64 4
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul half [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <6 x half> [[TMP15]], half [[TMP16]], i64 5
+; CHECK-NEXT:    ret <6 x half> [[TMP17]]
+;
+  %r = call <6 x half> @llvm.matrix.multiply.v6f16.v2f16.v3f16(<2 x half> %a, <3 x half> %b, i32 2, i32 1, i32 3)
+  ret <6 x half> %r
 }
 
 ; K=1 integer outer product (2x1 * 1x3 = 2x3): each element is a single mul.

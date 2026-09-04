@@ -120,8 +120,8 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
     // expect unique exits
     return false;
   assert(CurLoop->contains(CondExitBlock) && "meaning of exit block");
-  auto *BI = dyn_cast<BranchInst>(CondExitBlock->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(CondExitBlock->getTerminator());
+  if (!BI)
     return false;
   // If condition is constant and false leads to ExitBlock then we always
   // execute the true branch.
@@ -204,6 +204,14 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   if (BB == CurLoop->getHeader())
     return true;
 
+  auto [It, Inserted] = GuaranteedToExecute.try_emplace(BB, false);
+  if (Inserted)
+    It->second = allLoopPathsLeadToBlockImpl(CurLoop, BB, DT);
+  return It->second;
+}
+
+bool LoopSafetyInfo::allLoopPathsLeadToBlockImpl(
+    const Loop *CurLoop, const BasicBlock *BB, const DominatorTree *DT) const {
   // Collect all transitive predecessors of BB in the same loop. This set will
   // be a subset of the blocks within the loop.
   SmallPtrSet<const BasicBlock *, 4> Predecessors;

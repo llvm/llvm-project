@@ -3099,19 +3099,14 @@ static void inspect_print_cursor(CXCursor Cursor) {
 
   {
     CXModule mod = clang_Cursor_getModule(Cursor);
-    CXFile astFile;
-    CXString name, astFilename;
+    CXString name;
     unsigned i, numHeaders;
     if (mod) {
-      astFile = clang_Module_getASTFile(mod);
-      astFilename = clang_getFileName(astFile);
       name = clang_Module_getFullName(mod);
       numHeaders = clang_Module_getNumTopLevelHeaders(TU, mod);
-      printf(" ModuleName=%s (%s) system=%d Headers(%d):",
-             clang_getCString(name), clang_getCString(astFilename),
+      printf(" ModuleName=%s system=%d Headers(%d):", clang_getCString(name),
              clang_Module_isSystem(mod), numHeaders);
       clang_disposeString(name);
-      clang_disposeString(astFilename);
       for (i = 0; i < numHeaders; ++i) {
         CXFile file = clang_Module_getTopLevelHeader(TU, mod, i);
         CXString filename = clang_getFileName(file);

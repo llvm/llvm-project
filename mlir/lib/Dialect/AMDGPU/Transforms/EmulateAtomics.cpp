@@ -110,7 +110,10 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   Location loc = atomicOp.getLoc();
 
-  ArrayRef<NamedAttribute> origAttrs = atomicOp->getAttrs();
+  NamedAttrList origAttrs(atomicOp->getDiscardableAttrDictionary());
+  atomicOp->getName().walkInherentAttrs(
+      atomicOp,
+      [&](StringRef name, Attribute &attr) { origAttrs.append(name, attr); });
   ValueRange operands = adaptor.getOperands();
   Value data = operands.take_front()[0];
   ValueRange invariantArgs = operands.drop_front();
@@ -123,6 +126,7 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
   Block *currentBlock = rewriter.getInsertionBlock();
   Block *afterAtomic =
       rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+  afterAtomic->addArgument(dataType, loc);
   Block *loopBlock = rewriter.createBlock(afterAtomic, {dataType}, {loc});
 
   rewriter.setInsertionPointToEnd(currentBlock);
@@ -157,9 +161,9 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
   Value canLeave =
       arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
                             atomicResForCompare, prevLoadForCompare);
-  cf::CondBranchOp::create(rewriter, loc, canLeave, afterAtomic, ValueRange{},
-                           loopBlock, atomicRes);
-  rewriter.eraseOp(atomicOp);
+  cf::CondBranchOp::create(rewriter, loc, canLeave, afterAtomic,
+                           ValueRange{prevLoad}, loopBlock, atomicRes);
+  rewriter.replaceOp(atomicOp, ValueRange{afterAtomic->getArgument(0)});
   return success();
 }
 

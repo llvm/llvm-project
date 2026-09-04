@@ -1,9 +1,9 @@
-// RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown \
+// RUN: %clang_analyze_cc1 -triple amdgpu-unknown-unknown \
 // RUN:   -analyzer-checker=core -DAMDGCN_TRIPLE \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -Wno-implicit-int -Wno-int-conversion -verify %s
 //
-// RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown \
+// RUN: %clang_analyze_cc1 -triple amdgpu-unknown-unknown \
 // RUN:   -analyzer-checker=core -DDEFAULT_TRIPLE \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -Wno-implicit-int -Wno-int-conversion -verify %s

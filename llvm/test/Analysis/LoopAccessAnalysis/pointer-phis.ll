@@ -495,13 +495,13 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: 'phi_load_store_memdep_check'
 ; CHECK-NEXT:    for.body:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Unsafe dependence on loop-invariant address.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        InvariantUnsafe:
 ; CHECK-NEXT:            %lv3 = load i16, ptr %c.sink, align 2 ->
 ; CHECK-NEXT:            store i16 %add, ptr %c.sink, align 1
 ; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        InvariantUnsafe:
 ; CHECK-NEXT:            %lv3 = load i16, ptr %c.sink, align 2 ->
 ; CHECK-NEXT:            store i16 %add, ptr %c.sink, align 1
 ; CHECK-EMPTY:

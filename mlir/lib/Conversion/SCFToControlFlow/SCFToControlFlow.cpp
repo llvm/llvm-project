@@ -313,17 +313,20 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
 
 } // namespace
 
+static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
+  SmallVector<NamedAttribute> llvmAttrs;
+  llvm::copy_if(from->getAttrs(), std::back_inserter(llvmAttrs), [](auto attr) {
+    return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+  });
+  to->setDiscardableAttrs(llvmAttrs);
+}
+
 static void propagateLoopAttrs(Operation *scfOp, Operation *brOp) {
   // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
   // llvm.loop_annotation attribute.
   // LLVM requires the loop metadata to be attached on the "latch" block. Which
   // is the back-edge to the header block (conditionBlock)
-  SmallVector<NamedAttribute> llvmAttrs;
-  llvm::copy_if(scfOp->getAttrs(), std::back_inserter(llvmAttrs),
-                [](auto attr) {
-                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
-                });
-  brOp->setDiscardableAttrs(llvmAttrs);
+  copyLLVMDialectAttrs(scfOp, brOp);
 }
 
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
@@ -507,10 +510,12 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   ivs.reserve(parallelOp.getNumLoops());
   bool first = true;
   SmallVector<Value, 4> loopResults(iterArgs);
+  ForOp innermostForOp;
   for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
     ForOp forOp = ForOp::create(rewriter, loc, lower, upper, step, iterArgs);
+    innermostForOp = forOp;
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();
     iterArgs.assign(iterRange.begin(), iterRange.end());
@@ -529,6 +534,12 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
 
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
+
+  // Serializing into the for nest would drop attributes such as
+  // llvm.loop_annotation. The loop above emits one scf.for per dimension, so
+  // the attributes go to the innermost one, which runs the body.
+  if (innermostForOp)
+    copyLLVMDialectAttrs(parallelOp, innermostForOp);
 
   // First, merge reduction blocks into the main region.
   SmallVector<Value> yieldOperands;
@@ -684,7 +695,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
 
   // Convert the case regions.
   SmallVector<Block *> caseSuccessors;
-  SmallVector<int32_t> caseValues;
+  SmallVector<APInt> caseValues;
   caseSuccessors.reserve(op.getCases().size());
   caseValues.reserve(op.getCases().size());
   for (auto [region, value] : llvm::zip(op.getCaseRegions(), op.getCases())) {
@@ -692,7 +703,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
     if (failed(block))
       return failure();
     caseSuccessors.push_back(*block);
-    caseValues.push_back(value);
+    caseValues.push_back(APInt(64, value));
   }
 
   // Convert the default region.
@@ -704,13 +715,12 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
   rewriter.setInsertionPointToEnd(condBlock);
   SmallVector<ValueRange> caseOperands(caseSuccessors.size(), {});
 
-  // Cast switch index to integer case value.
+  // Cast switch index to i64 to avoid truncation for large case values.
   Value caseValue = arith::IndexCastOp::create(
-      rewriter, op.getLoc(), rewriter.getI32Type(), op.getArg());
+      rewriter, op.getLoc(), rewriter.getI64Type(), op.getArg());
 
   cf::SwitchOp::create(rewriter, op.getLoc(), caseValue, *defaultBlock,
-                       ValueRange(), rewriter.getDenseI32ArrayAttr(caseValues),
-                       caseSuccessors, caseOperands);
+                       ValueRange(), caseValues, caseSuccessors, caseOperands);
   rewriter.replaceOp(op, continueBlock->getArguments());
   return success();
 }

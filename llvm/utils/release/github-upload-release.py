@@ -44,7 +44,8 @@ from textwrap import dedent
 # * A format string for the line's content.
 # * A list of filenames to substitute into the format string. Before substitution into
 #   the format string, file names will have the base download URL prepended to
-#   them and 'release' replaced with the release version.
+#   them. 'release' is replaced with the release version and 'windows_release'
+#   is replaced with the Wix friendly variant of the release version.
 #
 # Between each set of links, an empty line will be added.
 #
@@ -55,18 +56,22 @@ release_links = (
     (
         (
             "LINUX_X86",
-            "* [Linux x86_64]({0}) ([signature]({1}))",
+            "* Linux x86_64: [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-Linux-X64.tar.xz",
                 "LLVM-{release}-Linux-X64.tar.xz.jsonl",
+                "LLVM-{release}-Linux-X64.tar.zst",
+                "LLVM-{release}-Linux-X64.tar.zst.jsonl",
             ),
         ),
         (
             "LINUX_ARM64",
-            "* [Linux Arm64]({0}) ([signature]({1}))",
+            "* Linux Arm64: [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-Linux-ARM64.tar.xz",
                 "LLVM-{release}-Linux-ARM64.tar.xz.jsonl",
+                "LLVM-{release}-Linux-ARM64.tar.zst",
+                "LLVM-{release}-Linux-ARM64.tar.zst.jsonl",
             ),
         ),
         (
@@ -81,49 +86,73 @@ release_links = (
     (
         (
             "MACOS_ARM64",
-            "* [macOS Apple Silicon]({0}) (ARM64) ([signature]({1}))",
+            "* macOS Apple Silicon (ARM64): [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-macOS-ARM64.tar.xz",
                 "LLVM-{release}-macOS-ARM64.tar.xz.jsonl",
+                "LLVM-{release}-macOS-ARM64.tar.zst",
+                "LLVM-{release}-macOS-ARM64.tar.zst.jsonl",
             ),
         ),
         (
             "MACOS_X86",
-            "* [macOS Intel]({0}) (x86-64) ([signature]({1}))",
+            "* macOS Intel (x86-64): [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-macOS-X64.tar.xz",
                 "LLVM-{release}-macOS-X64.tar.xz.jsonl",
+                "LLVM-{release}-macOS-X64.tar.zst",
+                "LLVM-{release}-macOS-X64.tar.zst.jsonl",
             ),
         ),
     ),
     (
         (
             "WINDOWS_X64",
-            "* Windows x64 (64-bit): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
+            "* Windows x64 (64-bit): [installer]({0}) ([signature]({1})), [xz archive]({2}) ([signature]({3})), [zstd archive]({4}) ([signature]({5}))",
             (
-                "LLVM-{release}-win64.exe",
-                "LLVM-{release}-win64.exe.jsonl",
-                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz",
-                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.jsonl",
+                "LLVM-{windows_release}-win64.msi",
+                "LLVM-{windows_release}-win64.msi.jsonl",
+                "clang+llvm-{windows_release}-x86_64-pc-windows-msvc.tar.xz",
+                "clang+llvm-{windows_release}-x86_64-pc-windows-msvc.tar.xz.jsonl",
+                "clang+llvm-{windows_release}-x86_64-pc-windows-msvc.tar.zst",
+                "clang+llvm-{windows_release}-x86_64-pc-windows-msvc.tar.zst.jsonl",
             ),
         ),
         (
             "WINDOWS_X86",
             "* Windows x86 (32-bit): [installer]({0}) ([signature]({1}))",
-            ("LLVM-{release}-win32.exe", "LLVM-{release}-win32.exe.sig"),
+            (
+                "LLVM-{windows_release}-win32.msi",
+                "LLVM-{windows_release}-win32.msi.sig",
+            ),
         ),
         (
             "WINDOWS_ARM64",
-            "* Windows on Arm (ARM64): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
+            "* Windows on Arm (ARM64): [installer]({0}) ([signature]({1})), [xz archive]({2}) ([signature]({3})), [zstd archive]({4}) ([signature]({5}))",
             (
-                "LLVM-{release}-woa64.exe",
-                "LLVM-{release}-woa64.exe.jsonl",
-                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz",
-                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.jsonl",
+                "LLVM-{windows_release}-woa64.msi",
+                "LLVM-{windows_release}-woa64.msi.jsonl",
+                "clang+llvm-{windows_release}-aarch64-pc-windows-msvc.tar.xz",
+                "clang+llvm-{windows_release}-aarch64-pc-windows-msvc.tar.xz.jsonl",
+                "clang+llvm-{windows_release}-aarch64-pc-windows-msvc.tar.zst",
+                "clang+llvm-{windows_release}-aarch64-pc-windows-msvc.tar.zst.jsonl",
             ),
         ),
     ),
 )
+
+
+def windows_release_version(release):
+    # Windows installers use Wix which does not support version strings with
+    # characters. To work around this, "X.1.0-rcZ" is changed to "X.0.0.Z".
+    # Equivalent to what is done in .github/workflows/release-binaries.yml.
+    if "-rc" in release:
+        version, rc = release.split("-")
+        major_version = version.split(".")[0]
+        rc_number = rc.replace("rc", "")
+        release = f"{major_version}.0.0.{rc_number}"
+
+    return release
 
 
 def generate_download_links(release):
@@ -136,7 +165,13 @@ def generate_download_links(release):
         for line in section:
             comment_tag, format_string, files = line
             markdown_line = f"<!-- {comment_tag} "
-            files = [base_url + f.format(release=release) for f in files]
+            files = [
+                base_url
+                + f.format(
+                    release=release, windows_release=windows_release_version(release)
+                )
+                for f in files
+            ]
             markdown_line += format_string.format(*files)
             markdown_line += " -->"
             markdown_lines.append(markdown_line)
@@ -170,9 +205,9 @@ If you do not find a release package for your platform, you may be able to find 
 
 ## Package Types
 
-Each platform has one binary release package. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
+Each platform has binary release packages. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux. Binary archive packages may be available as `.tar.xz` or `.tar.zst` files. The `.tar.zst` files contain the same package contents, but use zstd compression.
 
-Except for Windows. Where `LLVM-*.exe` is an installer intended for using LLVM as a toolchain and the archive `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
+Except for Windows. Where `LLVM-*.msi` is an installer intended for using LLVM as a toolchain and the archive `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
 
 In addition, source archives are available:
 * To get all the `llvm-project` source code for this release, choose `llvm-project-{release}.src.tar.xz`.
@@ -233,7 +268,15 @@ def uncomment_download_links(repo, release_version):
                     continue
 
                 print(f'Found link line "{comment_tag}":')
-                files = set([f.format(release=release_version) for f in files])
+                files = set(
+                    [
+                        f.format(
+                            release=release_version,
+                            windows_release=windows_release_version(release_version),
+                        )
+                        for f in files
+                    ]
+                )
                 print("  Files required:", files)
                 if files.issubset(release_assets):
                     print("  All files present, revealing link line.")

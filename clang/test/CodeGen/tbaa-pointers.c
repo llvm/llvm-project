@@ -2,106 +2,154 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -disable-llvm-passes -no-pointer-tbaa %s -emit-llvm -o - | FileCheck --check-prefixes=COMMON,DISABLE %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -disable-llvm-passes %s -emit-llvm -o - | FileCheck --check-prefixes=COMMON,DEFAULT %s
 
+// DISABLE-LABEL: define void @p2unsigned(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6:![0-9]+]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p2unsigned(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DEFAULT-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA10:![0-9]+]]
+// DEFAULT-NEXT:    ret void
+//
 void p2unsigned(unsigned **ptr) {
-  // COMMON-LABEL: define void @p2unsigned(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:        [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6:![0-9]+]]
-  // DEFAULT-NEXT:  [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DEFAULT-NEXT:  store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA10:![0-9]+]]
-  // DISABLE-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6:![0-9]+]]
-  // DISABLE-NEXT:  [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:  store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:   ret void
   //
   *ptr = 0;
 }
 
+// DISABLE-LABEL: define void @p2unsigned_volatile(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store volatile ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p2unsigned_volatile(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DEFAULT-NEXT:    store volatile ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// DEFAULT-NEXT:    ret void
+//
 void p2unsigned_volatile(unsigned *volatile *ptr) {
-  // COMMON-LABEL: define void @p2unsigned_volatile(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DEFAULT-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DEFAULT-NEXT:   store volatile ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
-  // DISABLE-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   store volatile ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:    ret void
   //
   *ptr = 0;
 }
 
+// DISABLE-LABEL: define void @p3int(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store ptr null, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p3int(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA12:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA12]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DEFAULT-NEXT:    store ptr null, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
+// DEFAULT-NEXT:    ret void
+//
 void p3int(int ***ptr) {
-  // COMMON-LABEL: define void @p3int(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA12:![0-9]+]]
-  // DEFAULT-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA12]]
-  // DEFAULT-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // DEFAULT-NEXT:   store ptr null, ptr [[TMP1]], align 8, !tbaa [[TBAA10]]
-  // DISABLE-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   store ptr null, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:    ret void
   //
   **ptr = 0;
 }
 
+// DISABLE-LABEL: define void @p4char(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p4char(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA18:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA20:![0-9]+]]
+// DEFAULT-NEXT:    store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA22:![0-9]+]]
+// DEFAULT-NEXT:    ret void
+//
 void p4char(char ****ptr) {
-  // COMMON-LABEL: define void @p4char(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15:![0-9]+]]
-  // DEFAULT-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
-  // DEFAULT-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA18:![0-9]+]]
-  // DEFAULT-NEXT:   [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA20:![0-9]+]]
-  // DEFAULT-NEXT:   store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA22:![0-9]+]]
-  // DISABLE-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:    ret void
   //
   ***ptr = 0;
 }
 
+// DISABLE-LABEL: define void @p4char_const1(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p4char_const1(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA18]]
+// DEFAULT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA20]]
+// DEFAULT-NEXT:    store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA22]]
+// DEFAULT-NEXT:    ret void
+//
 void p4char_const1(const char ****ptr) {
-  // COMMON-LABEL: define void @p4char_const1(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
-  // DEFAULT-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
-  // DEFAULT-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA18]]
-  // DEFAULT-NEXT:   [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA20]]
-  // DEFAULT-NEXT:   store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA22]]
-  // DISABLE-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:   ret void
   //
   ***ptr = 0;
 }
 
+// DISABLE-LABEL: define void @p4char_const2(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p4char_const2(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA18]]
+// DEFAULT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA20]]
+// DEFAULT-NEXT:    store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA22]]
+// DEFAULT-NEXT:    ret void
+//
 void p4char_const2(const char **const **ptr) {
-  // COMMON-LABEL: define void @p4char_const2(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
-  // DEFAULT-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA15]]
-  // DEFAULT-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA18]]
-  // DEFAULT-NEXT:   [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA20]]
-  // DEFAULT-NEXT:   store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA22]]
-  // DISABLE-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   store ptr null, ptr [[TMP2]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:    ret void
   //
   ***ptr = 0;
 }
@@ -111,32 +159,48 @@ struct S1 {
   int y;
 };
 
+// DISABLE-LABEL: define void @p2struct(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p2struct(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24]]
+// DEFAULT-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA26:![0-9]+]]
+// DEFAULT-NEXT:    ret void
+//
 void p2struct(struct S1 **ptr) {
-  // COMMON-LABEL: define void @p2struct(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24:![0-9]+]]
-  // DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24]]
-  // DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DEFAULT-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA26:![0-9]+]]
-  // DISABLE-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:    ret void
   //
   *ptr = 0;
 }
 
+// DISABLE-LABEL: define void @p2struct_const(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p2struct_const(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24]]
+// DEFAULT-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA26]]
+// DEFAULT-NEXT:    ret void
+//
 void p2struct_const(struct S1 const **ptr) {
-  // COMMON-LABEL: define void @p2struct_const(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24]]
-  // DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA24]]
-  // DEFAULT-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA26]]
-  // DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:    store ptr null, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-  // COMMON-NEXT:    ret void
   //
   *ptr = 0;
 }
@@ -145,44 +209,72 @@ struct S2 {
   struct S1 *s;
 };
 
+// DISABLE-LABEL: define void @p2struct2(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[S:%.*]] = getelementptr inbounds nuw [[STRUCT_S2:%.*]], ptr [[TMP0]], i32 0, i32 0
+// DISABLE-NEXT:    store ptr null, ptr [[S]], align 8, !tbaa [[TBAA8:![0-9]+]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @p2struct2(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA28:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA28]]
+// DEFAULT-NEXT:    [[S:%.*]] = getelementptr inbounds nuw [[STRUCT_S2:%.*]], ptr [[TMP0]], i32 0, i32 0
+// DEFAULT-NEXT:    store ptr null, ptr [[S]], align 8, !tbaa [[TBAA30:![0-9]+]]
+// DEFAULT-NEXT:    ret void
+//
 void p2struct2(struct S2 *ptr) {
-  // COMMON-LABEL: define void @p2struct2(
-  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
-  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA28:![0-9]+]]
-  // DEFAULT-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA28]]
-  // DEFAULT-NEXT:   [[S:%.*]] = getelementptr inbounds nuw [[STRUCT_S2:%.*]], ptr [[TMP0]], i32 0, i32 0
-  // DEFAULT-NEXT:   store ptr null, ptr [[S]], align 8, !tbaa [[TBAA30:![0-9]+]]
-  // DISABLE-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-  // DISABLE-NEXT:   [[S:%.*]] = getelementptr inbounds nuw [[STRUCT_S2:%.*]], ptr [[TMP0]], i32 0, i32 0
-  // DISABLE-NEXT:   store ptr null, ptr [[S]], align 8, !tbaa [[TBAA8:![0-9]+]]
-  // COMMON-NEXT:    ret void
     ptr->s = 0;
 }
 
 
+// DISABLE-LABEL: define void @vla1(
+// DISABLE-SAME: i32 noundef [[N:%.*]], ptr noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
+// DISABLE-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4, !tbaa [[TBAA10:![0-9]+]]
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA10]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N_ADDR]], align 4, !tbaa [[TBAA10]]
+// DISABLE-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+// DISABLE-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP3:%.*]] = load i32, ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA10]]
+// DISABLE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP3]] to i64
+// DISABLE-NEXT:    [[TMP4:%.*]] = mul nsw i64 [[IDXPROM]], [[TMP1]]
+// DISABLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[TMP4]]
+// DISABLE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX]], i64 0
+// DISABLE-NEXT:    store i32 0, ptr [[ARRAYIDX1]], align 4, !tbaa [[TBAA10]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @vla1(
+// DEFAULT-SAME: i32 noundef [[N:%.*]], ptr noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
+// DEFAULT-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4, !tbaa [[TBAA32:![0-9]+]]
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA10]]
+// DEFAULT-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA32]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N_ADDR]], align 4, !tbaa [[TBAA32]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+// DEFAULT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA10]]
+// DEFAULT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA32]]
+// DEFAULT-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP3]] to i64
+// DEFAULT-NEXT:    [[TMP4:%.*]] = mul nsw i64 [[IDXPROM]], [[TMP1]]
+// DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[TMP4]]
+// DEFAULT-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX]], i64 0
+// DEFAULT-NEXT:    store i32 0, ptr [[ARRAYIDX1]], align 4, !tbaa [[TBAA32]]
+// DEFAULT-NEXT:    ret void
+//
 void vla1(int n, int ptr[][n], int idx) {
-// COMMON-LABEL: define void @vla1(
-// COMMON-SAME:    i32 noundef [[N:%.+]], ptr noundef [[PTR:%.+]], i32 noundef [[IDX:%.+]])
-// COMMON:  	 [[N_ADDR:%.+]] = alloca i32, align 4
-// COMMON-NEXT:  [[PTR_ADDR:%.+]] = alloca ptr, align 8
-// COMMON-NEXT:  [[IDX_ADDR:%.+]] = alloca i32, align 4
-// COMMON-NEXT: store i32 [[N]], ptr [[N_ADDR]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// DEFAULT-NEXT: store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA10]]
-// DISABLE-NEXT: store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-// COMMON-NEXT: store i32 [[IDX]], ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA2]]
-// COMMON-NEXT: [[TMP0:%.*]] = load i32, ptr [[N_ADDR]], align 4, !tbaa [[TBAA2]]
-// COMMON-NEXT: [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-// DEFAULT-NEXT: [[TMP2:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA10]]
-// DISABLE-NEXT: [[TMP2:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-// COMMON-NEXT: [[TMP3:%.*]] = load i32, ptr [[IDX_ADDR]], align 4, !tbaa [[TBAA2]]
-// COMMON-NEXT: [[IDXPROM:%.*]] = sext i32 [[TMP3]] to i64
-// COMMON-NEXT: [[TMP4:%.*]] = mul nsw i64 [[IDXPROM]], [[TMP1]]
-// COMMON-NEXT: [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 [[TMP4]]
-// COMMON-NEXT: [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX]], i64 0
-// COMMON-NEXT: store i32 0, ptr [[ARRAYIDX1]], align 4, !tbaa [[TBAA2]]
-// COMMON-NEXT: ret void
 
     ptr[idx][0] = 0;
 }
@@ -191,52 +283,73 @@ typedef struct {
   int i1;
 } TypedefS;
 
+// DISABLE-LABEL: define void @unamed_struct_typedef(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw [[STRUCT_TYPEDEFS:%.*]], ptr [[TMP0]], i32 0, i32 0
+// DISABLE-NEXT:    store i32 0, ptr [[I1]], align 4, !tbaa [[TBAA11:![0-9]+]]
+// DISABLE-NEXT:    ret void
+//
+// DEFAULT-LABEL: define void @unamed_struct_typedef(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA33:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA33]]
+// DEFAULT-NEXT:    [[I1:%.*]] = getelementptr inbounds nuw [[STRUCT_TYPEDEFS:%.*]], ptr [[TMP0]], i32 0, i32 0
+// DEFAULT-NEXT:    store i32 0, ptr [[I1]], align 4, !tbaa [[TBAA34:![0-9]+]]
+// DEFAULT-NEXT:    ret void
+//
 void unamed_struct_typedef(TypedefS *ptr) {
-// COMMON-LABEL: define void @unamed_struct_typedef(
-// COMMON-SAME: ptr noundef [[PTRA:%.+]])
-// COMMON:        [[PTR_ADDR:%.+]]  = alloca ptr, align 8
-// DISABLE-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-// DEFAULT-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA32:![0-9]+]]
-// DISABLE-NEXT:  [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-// DEFAULT-NEXT:  [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA32]]
-// COMMON-NEXT:   [[I1:%.*]] = getelementptr inbounds nuw [[STRUCT_TYPEDEFS:%.*]], ptr [[TMP0]], i32 0, i32 0
-// DISABLE-NEXT:  store i32 0, ptr [[I1]], align 4, !tbaa [[TBAA10:![0-9]+]]
-// DEFAULT-NEXT:  store i32 0, ptr [[I1]], align 4, !tbaa [[TBAA33:![0-9]+]]
-// COMMON-NEXT:   ret void
 
   ptr->i1 = 0;
 }
 
+// DISABLE-LABEL: define i32 @void_ptrs(
+// DISABLE-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DISABLE-NEXT:  [[ENTRY:.*:]]
+// DISABLE-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DISABLE-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
+// DISABLE-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[TMP1]], null
+// DISABLE-NEXT:    [[TMP2:%.*]] = zext i1 [[TOBOOL]] to i64
+// DISABLE-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 1
+// DISABLE-NEXT:    ret i32 [[COND]]
+//
+// DEFAULT-LABEL: define i32 @void_ptrs(
+// DEFAULT-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// DEFAULT-NEXT:  [[ENTRY:.*:]]
+// DEFAULT-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA36:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA36]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA33]]
+// DEFAULT-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[TMP1]], null
+// DEFAULT-NEXT:    [[TMP2:%.*]] = zext i1 [[TOBOOL]] to i64
+// DEFAULT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 1
+// DEFAULT-NEXT:    ret i32 [[COND]]
+//
 int void_ptrs(void **ptr) {
-// COMMON-LABEL: define i32 @void_ptrs(
-// COMMON-SAME: ptr noundef [[PTRA:%.+]])
-// COMMON:        [[PTR_ADDR:%.+]]  = alloca ptr, align 8
-// DISABLE-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-// DEFAULT-NEXT:  store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA35:![0-9]+]]
-// DISABLE-NEXT:  [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA6]]
-// DEFAULT-NEXT:  [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[TBAA35]]
-// DISABLE-NEXT:  [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA6]]
-// DEFAULT-NEXT:  [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[TBAA32]]
-// COMMON-NEXT:   [[TOBOOL:%.*]] = icmp ne ptr [[TMP1]], null
-// COMMON-NEXT:   [[TMP2:%.*]] = zext i1 [[TOBOOL]] to i64
-// COMMON-NEXT:   [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 1
-// COMMON-NEXT:   ret i32 [[COND]]
 
   return *ptr ? 0 : 1;
 }
 
-// DISABLE: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// DISABLE: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+//.
+// DISABLE: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // DISABLE: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // DISABLE: [[META5]] = !{!"Simple C/C++ TBAA"}
 // DISABLE: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
 // DISABLE: [[META7]] = !{!"any pointer", [[META4]], i64 0}
 // DISABLE: [[TBAA8]] = !{[[META9:![0-9]+]], [[META7]], i64 0}
 // DISABLE: [[META9]] = !{!"S2", [[META7]], i64 0}
-// DISABLE: [[TBAA10]] = !{[[META11:![0-9]+]], [[META3]], i64 0}
-// DISABLE: [[META11]] = !{!"", [[META3]], i64 0}
-// DEFAULT: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// DEFAULT: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// DISABLE: [[TBAA10]] = !{[[META3]], [[META3]], i64 0}
+// DISABLE: [[TBAA11]] = !{[[META12:![0-9]+]], [[META3]], i64 0}
+// DISABLE: [[META12]] = !{!"", [[META3]], i64 0}
+//.
+// DEFAULT: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // DEFAULT: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // DEFAULT: [[META5]] = !{!"Simple C/C++ TBAA"}
 // DEFAULT: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
@@ -265,8 +378,11 @@ int void_ptrs(void **ptr) {
 // DEFAULT: [[META29]] = !{!"p1 _ZTS2S2", [[META9]], i64 0}
 // DEFAULT: [[TBAA30]] = !{[[META31:![0-9]+]], [[META27]], i64 0}
 // DEFAULT: [[META31]] = !{!"S2", [[META27]], i64 0}
-// DEFAULT: [[TBAA32]] = !{[[META9]], [[META9]], i64 0}
-// DEFAULT: [[TBAA33]] = !{[[META34:![0-9]+]], [[META3]], i64 0}
-// DEFAULT: [[META34]] = !{!"", [[META3]], i64 0}
-// DEFAULT: [[TBAA35]] = !{[[META8]], [[META8]], i64 0}
+// DEFAULT: [[TBAA32]] = !{[[META3]], [[META3]], i64 0}
+// DEFAULT: [[TBAA33]] = !{[[META9]], [[META9]], i64 0}
+// DEFAULT: [[TBAA34]] = !{[[META35:![0-9]+]], [[META3]], i64 0}
+// DEFAULT: [[META35]] = !{!"", [[META3]], i64 0}
+// DEFAULT: [[TBAA36]] = !{[[META8]], [[META8]], i64 0}
 //.
+//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+// COMMON: {{.*}}

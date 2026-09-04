@@ -170,7 +170,7 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
   }
 
   // We changed the SDK name. Adjust the sysroot accordingly.
-  if (m_sysroot && m_sysroot.GetFilename().GetStringRef() != m_name)
+  if (m_sysroot && m_sysroot.GetFilename() != m_name)
     m_sysroot.SetFilename(m_name);
 }
 
@@ -245,12 +245,12 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
 
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
-  ConstString last_path_component = sdk_path.GetFilename();
+  llvm::StringRef last_path_component = sdk_path.GetFilename();
 
-  if (!last_path_component)
+  if (last_path_component.empty())
     return false;
 
-  XcodeSDK sdk(last_path_component.GetStringRef().str());
+  XcodeSDK sdk(last_path_component.str());
   if (sdk.GetType() != desired_type)
     return false;
   return SDKSupportsModules(sdk.GetType(), sdk.GetVersion());

@@ -132,8 +132,8 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
         OpBuilder &builder, OperationState &state, StringRef name, Type type,
         ArrayRef<NamedAttribute> attrs, TypeRange inputTypes) {
       OpBuilder::InsertionGuard g(builder);
-      state.addAttribute(SymbolTable::getSymbolAttrName(),
-                        builder.getStringAttr(name));
+      state.getOrAddProperties<typename ConcreteOp::Properties>().sym_name =
+          builder.getStringAttr(name);
       state.addAttribute(ConcreteOp::getFunctionTypeAttrName(state.name),
                         TypeAttr::get(type));
       state.attributes.append(attrs.begin(), attrs.end());
@@ -490,8 +490,11 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     }
 
     /// Return an ArrayAttr containing all result attribute dictionaries of this
-    /// function, or nullptr if no result have attributes.
-    ::mlir::ArrayAttr getAllResultAttrs() { return $_op.getResAttrsAttr(); }
+    /// function, or nullptr if no results have attributes.
+    ::mlir::ArrayAttr getAllResultAttrs() {
+      auto attrs = $_op.getResAttrsAttr();
+      return attrs && !attrs.empty() ? attrs : nullptr;
+    }
 
     /// Return all result attributes of this function.
     void getAllResultAttrs(::llvm::SmallVectorImpl<::mlir::DictionaryAttr> &result) {

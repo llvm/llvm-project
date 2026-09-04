@@ -17,11 +17,22 @@ int main(int argc, char const *argv[]) {
     fputs("\n", f);
     fflush(f);
     fclose(f);
+
+    // Wait on input from stdin.
+    // when lldb connects to the process, on MacOS getchar() is interupted
+    // and sets the stream's error indicator (EINTR).
+    // ignore that and keep waiting until we actually receive a character.
+    while (1) {
+      int c = getchar();
+      if (c == EOF && ferror(stdin)) {
+        clearerr(stdin);
+        continue;
+      }
+      printf("char = %c\n", c);
+      break;
+    }
   }
 
-  // Wait on input from stdin.
-  getchar();
-
   printf("pid = %i\n", getpid());
-  return 0;
+  return 0; // breakpoint 1
 }

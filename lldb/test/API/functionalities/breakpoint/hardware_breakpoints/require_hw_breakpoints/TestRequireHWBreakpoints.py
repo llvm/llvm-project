@@ -14,6 +14,7 @@ from lldbsuite.test import lldbutil
 from functionalities.breakpoint.hardware_breakpoints.base import *
 
 
+@requireNotWasm("no hardware breakpoints")
 class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
     def test_breakpoint(self):
         """Test regular breakpoints when hardware breakpoints are required."""

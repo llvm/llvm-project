@@ -10,18 +10,25 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_SERIAL_H
 #define _LIBCPP___PSTL_BACKENDS_SERIAL_H
 
+#include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
+#include <__algorithm/is_heap_until.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/min_element.h>
+#include <__algorithm/mismatch.h>
+#include <__algorithm/reverse.h>
+#include <__algorithm/search.h>
+#include <__algorithm/search_n.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__numeric/transform_reduce.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -47,11 +54,45 @@ namespace __pstl {
 //
 
 template <class _ExecutionPolicy>
+struct __find_end<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _BinaryPredicate __pred) const noexcept {
+    return std::find_end(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
 struct __find_if<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Pred>
   _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
   operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     return std::find_if(std::move(__first), std::move(__last), std::forward<_Pred>(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __mismatch<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<pair<_ForwardIterator1, _ForwardIterator2>>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _Predicate&& __pred) const noexcept {
+    return std::mismatch(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        std::forward<_Predicate>(__pred));
   }
 };
 
@@ -62,6 +103,15 @@ struct __for_each<__serial_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Function&& __func) const noexcept {
     std::for_each(std::move(__first), std::move(__last), std::forward<_Function>(__func));
     return __empty{};
+  }
+};
+
+template <class _Backend, class _RawExecutionPolicy>
+struct __is_heap_until {
+  template <class _Policy, class _RandomAccessIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<_RandomAccessIterator>
+  operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept {
+    return std::is_heap_until(std::move(__first), std::move(__last), std::move(__comp));
   }
 };
 
@@ -83,6 +133,54 @@ struct __merge<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__last2),
         std::move(__outit),
         std::forward<_Comp>(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __min_element<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Compare>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
+    return std::min_element(std::move(__first), std::move(__last), std::move(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __reverse<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator>
+  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
+    std::reverse(std::move(__first), std::move(__last));
+    return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __search<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _BinaryPredicate __pred) const noexcept {
+    return std::search(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __search_n<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size, class _Tp, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _Size __count,
+             const _Tp& __value,
+             _Predicate __pred) const noexcept {
+    return std::search_n(std::move(__first), std::move(__last), __count, __value, std::move(__pred));
   }
 };
 

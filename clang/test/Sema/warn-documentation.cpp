@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -verify %s
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -Wdocumentation -Wdocumentation-pedantic -verify %s
 
 // This file contains lots of corner cases, so ensure that XML we generate is not invalid.
 // RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s | FileCheck %s -check-prefix=WRONG
@@ -833,6 +834,12 @@ unsigned test_function(Base64Flags inFlags);
 typedef unsigned int BaseFlags;
 unsigned (*test_callback)(BaseFlags inFlags);
 
+// @callback should not warn when the comment is directly attached to a
+// pointer to function declaration.
+/*! @callback test_callback_attached
+*/
+unsigned (*test_callback_attached)(BaseFlags inFlags);
+
 // expected-warning@+1 {{'\endverbatim' command does not terminate a verbatim text block}}
 /// \endverbatim
 int test_verbatim_1();
@@ -1536,3 +1543,20 @@ template <class T, class = void> constexpr auto var = T{};
 template <typename T> constexpr auto var<T> = T{};
 } // namespace GH144775
 #endif
+
+namespace GH64087
+{
+/// @brief Primary template
+/// @tparam T type
+template <typename T>
+void foo(){}
+
+#if __cplusplus >= 202002L
+/// @tparam T Derived class.
+/// @tparam TBase Base class.
+template <typename T, typename TBase>
+concept bar = true;
+#endif
+
+template void foo<bool>();
+} // namespace GH64087

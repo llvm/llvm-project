@@ -13,7 +13,7 @@ struct Foo {
 void test1() {
   struct Foo foo;
   foo.bar = 42☃
-  // CHECK: error: character <U+2603> not allowed in an identifier
+  // CHECK: error: character '☃' U+2603 not allowed in an identifier
   // CHECK: {{^              \^}}
   // Make sure we emit the fixit right in front of the snowman.
 

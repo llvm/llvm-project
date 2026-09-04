@@ -3,39 +3,55 @@
 # RUN: ld.lld -pie %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
-# RUN: llvm-readelf -x .got2 %t | FileCheck --check-prefix=HEX %s
+# RUN: llvm-readelf -x .got2 -x .got.plt %t | FileCheck --check-prefix=HEX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# RUN: ld.lld -pie %t.o -o %t --apply-dynamic-relocs
-# RUN: llvm-readelf -x .got2 %t | FileCheck --check-prefix=HEX2 %s
+# RUN: ld.lld -pie %t.o -o %t2 --apply-dynamic-relocs
+# RUN: llvm-readelf -x .got2 -x .got.plt %t2 | FileCheck --check-prefix=HEX2 %s
 
 # RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x3022C R_PPC_RELATIVE - 0x101A0
-# RELOC-NEXT:   0x30230 R_PPC_IRELATIVE - 0x10188
+# RELOC-NEXT:   0x3023C R_PPC_RELATIVE - 0x101A0
+# RELOC-NEXT:   0x30240 R_PPC_IRELATIVE - 0x10188
 # RELOC-NEXT: }
 
 # SYM: 000101a0 0 FUNC GLOBAL DEFAULT {{.*}} func
+
 # HEX:      Hex dump of section '.got2':
-# HEX-NEXT: 0x0003022c 00000000 ....
+# HEX-NEXT: 0x0003023c 00000000 ....
+# HEX:      Hex dump of section '.got.plt':
+# HEX-NEXT: 0x00030240 00000000 ....
 
 # HEX2:      Hex dump of section '.got2':
-# HEX2-NEXT: 0x0003022c 000101a0 ....
+# HEX2-NEXT: 0x0003023c 000101a0 ....
+# HEX2:      Hex dump of section '.got.plt':
+# HEX2-NEXT: 0x00030240 00000000 ....
 
 .section .got2,"aw"
 .long func
 
 # CHECK:      Disassembly of section .text:
-# CHECK:      <.text>:
+# CHECK:      <func>:
 # CHECK-NEXT: 10188: blr
 # CHECK:      <_start>:
-# CHECK-NEXT:   bl 0x10190
+# CHECK-NEXT:        bl 0x10190
 # CHECK-EMPTY:
 # CHECK-NEXT: <00008000.got2.plt_pic32.func>:
-## 0x10020114 = 65536*4098+276
-# CHECK-NEXT:   lwz 11, -32764(30)
-# CHECK-NEXT:   mtctr 11
-# CHECK-NEXT:   bctr
-# CHECK-NEXT:   nop
+## 0x30240 - 0x3023c - 0x8000 = -32764
+# CHECK-NEXT: 10190: lwz 11, -32764(30)
+# CHECK-NEXT:        mtctr 11
+# CHECK-NEXT:        bctr
+# CHECK-NEXT:        nop
+# CHECK:      Disassembly of section .glink:
+# CHECK:      <func>:
+## 0x30240 - 0x101a8 = 65536*2 + 152
+# CHECK-NEXT: 101a0: mflr 0
+# CHECK-NEXT:        bcl 20, 31, 0x101a8
+# CHECK-NEXT:        mflr 11
+# CHECK-NEXT:        mtlr 0
+# CHECK-NEXT:        addis 11, 11, 2
+# CHECK-NEXT:        lwz 11, 152(11)
+# CHECK-NEXT:        mtctr 11
+# CHECK-NEXT:        bctr
 
 .text
 .globl func

@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementations of general utility functions used
+/// across the clang-doc tool.
+///
+//===----------------------------------------------------------------------===//
 
 #include "Utils.h"
 #include "llvm/ADT/SmallString.h"

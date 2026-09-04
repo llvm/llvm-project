@@ -134,23 +134,27 @@ define i128 @test_cmpxchg_i128(ptr %arg, i128 %old, i128 %new) {
 ; CHECK-LABEL: @test_add_i128(
 ; CHECK:  %1 = alloca i128, align 8
 ; CHECK:  %2 = alloca i128, align 8
-; CHECK:  %3 = load i128, ptr %arg, align 16
+; CHECK:  %3 = alloca i128, align 8
+; CHECK:  call void @llvm.lifetime.start.p0(ptr %3)
+; CHECK:  call void @__atomic_load(i32 16, ptr %arg, ptr %3, i32 0)
+; CHECK:  %4 = load i128, ptr %3, align 8
+; CHECK:  call void @llvm.lifetime.end.p0(ptr %3)
 ; CHECK:  br label %atomicrmw.start
 ; CHECK:atomicrmw.start:
-; CHECK:  %loaded = phi i128 [ %3, %0 ], [ %newloaded, %atomicrmw.start ]
+; CHECK:  %loaded = phi i128 [ %4, %0 ], [ %newloaded, %atomicrmw.start ]
 ; CHECK:  %new = add i128 %loaded, %val
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
 ; CHECK:  store i128 %loaded, ptr %1, align 8
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %2)
 ; CHECK:  store i128 %new, ptr %2, align 8
-; CHECK:  %4 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5, i32 5)
+; CHECK:  %5 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %2)
-; CHECK:  %5 = load i128, ptr %1, align 8
+; CHECK:  %6 = load i128, ptr %1, align 8
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
-; CHECK:  %6 = insertvalue { i128, i1 } poison, i128 %5, 0
-; CHECK:  %7 = insertvalue { i128, i1 } %6, i1 %4, 1
-; CHECK:  %success = extractvalue { i128, i1 } %7, 1
-; CHECK:  %newloaded = extractvalue { i128, i1 } %7, 0
+; CHECK:  %7 = insertvalue { i128, i1 } poison, i128 %6, 0
+; CHECK:  %8 = insertvalue { i128, i1 } %7, i1 %5, 1
+; CHECK:  %success = extractvalue { i128, i1 } %8, 1
+; CHECK:  %newloaded = extractvalue { i128, i1 } %8, 0
 ; CHECK:  br i1 %success, label %atomicrmw.end, label %atomicrmw.start
 ; CHECK:atomicrmw.end:
 ; CHECK:  ret i128 %newloaded

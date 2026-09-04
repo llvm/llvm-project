@@ -1,24 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreNonDeducedTemplateTypes: true, cppcoreguidelines-rvalue-reference-param-not-moved.MoveFunction: custom_move}}" -- -fno-delayed-template-parsing
 
-// NOLINTBEGIN
-namespace std {
-template <typename>
-struct remove_reference;
-
-template <typename _Tp> struct remove_reference { typedef _Tp type; };
-template <typename _Tp> struct remove_reference<_Tp&> { typedef _Tp type; };
-template <typename _Tp> struct remove_reference<_Tp&&> { typedef _Tp type; };
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept;
-
-template <typename _Tp>
-constexpr _Tp &&
-forward(typename remove_reference<_Tp>::type &__t) noexcept;
-
-}
-// NOLINTEND
+#include <utility>
 
 
 struct Obj {
