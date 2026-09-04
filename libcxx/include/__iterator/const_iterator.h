@@ -256,26 +256,26 @@ public:
     return __current_ <=> __rhs;
   }
 
-  template <__not_a_const_iterator _Iter2>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const _Iter2& __lhs, const basic_const_iterator& __rhs)
+  template <__not_a_const_iterator _Iter2, same_as<_Iter> _Jter>
+  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator<(const _Iter2& __lhs, const basic_const_iterator<_Jter>& __rhs)
     requires random_access_iterator<_Iter> && totally_ordered_with<_Iter, _Iter2>
   {
     return __lhs < __rhs.__current_;
   }
-  template <__not_a_const_iterator _Iter2>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const _Iter2& __lhs, const basic_const_iterator& __rhs)
+  template <__not_a_const_iterator _Iter2, same_as<_Iter> _Jter>
+  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator>(const _Iter2& __lhs, const basic_const_iterator<_Jter>& __rhs)
     requires random_access_iterator<_Iter> && totally_ordered_with<_Iter, _Iter2>
   {
     return __lhs > __rhs.__current_;
   }
-  template <__not_a_const_iterator _Iter2>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const _Iter2& __lhs, const basic_const_iterator& __rhs)
+  template <__not_a_const_iterator _Iter2, same_as<_Iter> _Jter>
+  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(const _Iter2& __lhs, const basic_const_iterator<_Jter>& __rhs)
     requires random_access_iterator<_Iter> && totally_ordered_with<_Iter, _Iter2>
   {
     return __lhs <= __rhs.__current_;
   }
-  template <__not_a_const_iterator _Iter2>
-  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const _Iter2& __lhs, const basic_const_iterator& __rhs)
+  template <__not_a_const_iterator _Iter2, same_as<_Iter> _Jter>
+  friend _LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(const _Iter2& __lhs, const basic_const_iterator<_Jter>& __rhs)
     requires random_access_iterator<_Iter> && totally_ordered_with<_Iter, _Iter2>
   {
     return __lhs >= __rhs.__current_;

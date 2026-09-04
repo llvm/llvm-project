@@ -11,12 +11,14 @@
 // std::basic_const_iterator
 
 #include <cassert>
+#include <concepts>
 #include <iterator>
 #include <list>
 #include <memory>
 #include <ranges>
 #include <type_traits>
 #include <vector>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
@@ -177,6 +179,11 @@ int main(int, char**) {
     static_assert(std::is_convertible_v<It, ConstIt>);
     static_assert(std::is_constructible_v<ConstIt, const It&> == std::is_copy_constructible_v<It>);
     static_assert(std::is_convertible_v<const It&, ConstIt> == std::is_copy_constructible_v<It>);
+  });
+  // LWG4218: Constraint recursion in `basic_const_iterator`'s relational operators due to ADL + CWG2369
+  types::for_each(types::type_list<int, double, std::vector<long>, std::unique_ptr<const char[]>>{}, []<class T>() {
+    using RCI = std::reverse_iterator<std::basic_const_iterator<typename std::vector<T>::iterator>>;
+    static_assert(std::totally_ordered<RCI>);
   });
 
   test_p2836r1();
