@@ -1,5 +1,4 @@
-//===- ACCDeclareGPUModuleInsertion.cpp
-//------------------------------------===//
+//===- ACCDeclareGPUModuleInsertion.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -80,7 +79,7 @@ static bool hasAccDeclareGlobals(ModuleOp mod) {
 static void makeDeviceGlobalDeclaration(Operation &globalOp) {
   globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "initVal"),
                            {});
-  globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "linkName"),
+  globalOp.setInherentAttr(StringAttr::get(globalOp.getContext(), "linkage"),
                            {});
   for (Region &region : globalOp.getRegions()) {
     region.dropAllReferences();

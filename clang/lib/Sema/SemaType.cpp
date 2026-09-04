@@ -5717,10 +5717,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (T->containsUnexpandedParameterPack())
         T = Context.getPackExpansionType(T, std::nullopt);
       else
-        S.Diag(D.getEllipsisLoc(),
-               LangOpts.CPlusPlus11
-                 ? diag::warn_cxx98_compat_variadic_templates
-                 : diag::ext_variadic_templates);
+        S.DiagCompat(D.getEllipsisLoc(), diag_compat::variadic_templates);
       break;
 
     case DeclaratorContext::File:
@@ -10103,8 +10100,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
   QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
 
   if (!Type.isNull())
-    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::warn_cxx23_pack_indexing
-                                        : diag::ext_pack_indexing);
+    DiagCompat(Loc, diag_compat::pack_indexing);
   return Type;
 }
 

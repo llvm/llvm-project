@@ -42,6 +42,10 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::equal(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::find_end(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::find_end(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::find_if(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::find_if_not(std::execution::par, std::begin(a), std::end(a), pred);
@@ -51,6 +55,10 @@ void test() {
   std::find_first_of(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::find_first_of(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::is_heap_until(std::execution::par, std::begin(a), std::end(a));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::is_heap_until(std::execution::par, std::begin(a), std::end(a), pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::is_partitioned(std::execution::par, std::begin(a), std::end(a), pred);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}

@@ -610,7 +610,7 @@ define <vscale x 2 x float> @splat_pinf_nxv2f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0x7f800000
 ; CHECK-NEXT:    ret
-  ret <vscale x 2 x float> splat (float 0x7FF0000000000000)
+  ret <vscale x 2 x float> splat (float +inf)
 }
 
 define <vscale x 4 x float> @splat_pinf_nxv4f32() {
@@ -618,7 +618,7 @@ define <vscale x 4 x float> @splat_pinf_nxv4f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0x7f800000
 ; CHECK-NEXT:    ret
-  ret <vscale x 4 x float> splat (float 0x7FF0000000000000)
+  ret <vscale x 4 x float> splat (float +inf)
 }
 
 define <vscale x 2 x double> @splat_pinf_nxv2f64() {
@@ -682,7 +682,7 @@ define <vscale x 2 x float> @splat_ninf_nxv2f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0xff800000
 ; CHECK-NEXT:    ret
-  ret <vscale x 2 x float> splat (float 0xFFF0000000000000)
+  ret <vscale x 2 x float> splat (float -inf)
 }
 
 define <vscale x 4 x float> @splat_ninf_nxv4f32() {
@@ -690,7 +690,7 @@ define <vscale x 4 x float> @splat_ninf_nxv4f32() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #0xff800000
 ; CHECK-NEXT:    ret
-  ret <vscale x 4 x float> splat (float 0xFFF0000000000000)
+  ret <vscale x 4 x float> splat (float -inf)
 }
 
 define <vscale x 2 x double> @splat_ninf_nxv2f64() {

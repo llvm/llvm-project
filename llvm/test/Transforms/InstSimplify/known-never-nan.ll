@@ -593,7 +593,7 @@ define i1 @issue63316_commute(i64 %arg) {
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float 0x7FF0000000000000, %sitofp
+  %fmul = fmul float +inf, %sitofp
   %fcmp = fcmp uno float %fmul, 0.000000e+00
   ret i1 %fcmp
 }
