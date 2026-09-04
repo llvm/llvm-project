@@ -5749,9 +5749,10 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   // Vectorization for masked interleaved accesses is only enabled for scalable
   // VF. For fixed-length SVE, avoid non-native interleave factor because
   // the generic fallback costs wide fixed-vector shuffles too optimistically.
-  if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps ||
-                                 (Factor > MaxNativeInterleaveFactor &&
-                                  TLI->useSVEForFixedLengthVectorVT(LT.second))))
+  if (!VecTy->isScalableTy() &&
+      (UseMaskForCond || UseMaskForGaps ||
+       (Factor > MaxNativeInterleaveFactor &&
+        TLI->useSVEForFixedLengthVectorVT(LT.second))))
     return InstructionCost::getInvalid();
 
   if (!UseMaskForGaps && Factor <= MaxNativeInterleaveFactor) {
