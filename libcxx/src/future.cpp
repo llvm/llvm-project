@@ -144,8 +144,12 @@ promise<void>::promise() : __state_(new __assoc_sub_state) {}
 promise<void>::~promise() {
   if (__state_) {
 #if _LIBCPP_HAS_EXCEPTIONS
-    if (!__state_->__has_value() && __state_->use_count() > 1)
-      __state_->set_exception(make_exception_ptr(future_error(future_errc::broken_promise)));
+    if (!__state_->__has_value() && __state_->use_count() > 1) {
+      try {
+        __state_->set_exception(make_exception_ptr(future_error(future_errc::broken_promise)));
+      } catch (...) {
+      }
+    }
 #endif // _LIBCPP_HAS_EXCEPTIONS
     __state_->__release_shared();
   }
