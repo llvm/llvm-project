@@ -282,6 +282,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   if (TRI->requiresRegisterScavenging(MF) && FrameIndexVirtualScavenging)
     scavengeFrameVirtualRegs(MF, *RS);
 
+  insertZeroCallUsedRegs(MF);
+
   // Warn on stack size when we exceeds the given limit.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t StackSize = MFI.getStackSize();
@@ -1172,9 +1174,6 @@ void PEIImpl::insertPrologEpilogCode(MachineFunction &MF) {
   // Add epilogue to restore the callee-save registers in each exiting block.
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(MF, *RestoreBlock);
-
-  // Zero call used registers before restoring callee-saved registers.
-  insertZeroCallUsedRegs(MF);
 
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.inlineStackProbe(MF, *SaveBlock);

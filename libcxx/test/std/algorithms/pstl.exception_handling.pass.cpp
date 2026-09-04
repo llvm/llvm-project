@@ -187,6 +187,20 @@ int main(int, char**) {
       {
         auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
 
+        // find_end(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_end(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // find_end(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_end(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), pred);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
         // find_first_of(first1, last1, first2, last2)
         assert_non_throwing([=, &policy] {
           (void)std::find_first_of(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
@@ -248,11 +262,43 @@ int main(int, char**) {
       }
 
       {
+        auto comp = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // is_heap_until(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_heap_until(policy, std::move(first1), std::move(last1)); });
+
+        // is_heap_until(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_heap_until(policy, std::move(first1), std::move(last1), comp);
+        });
+      }
+
+      {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
         // is_partitioned(first, last, pred)
         assert_non_throwing([=, &policy] {
           (void)std::is_partitioned(policy, std::move(first1), std::move(last1), pred);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // max_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::max_element(policy, std::move(first1), std::move(last1)); });
+
+        // max_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::max_element(policy, std::move(first1), std::move(last1), compare);
+        });
+
+        // min_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::min_element(policy, std::move(first1), std::move(last1)); });
+
+        // min_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::min_element(policy, std::move(first1), std::move(last1), compare);
         });
       }
 

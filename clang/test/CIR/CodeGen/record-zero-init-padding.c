@@ -35,7 +35,7 @@ void test_zero_init_padding(void) {
 }
 
 // Type definitions for anonymous structs with padding
-// CIR-DAG: !rec_bitfield_with_padding = !cir.struct<"bitfield_with_padding" {bitfield !u8i, data !s32i}>
+// CIR-DAG: !rec_bitfield_with_padding = !cir.struct<"bitfield_with_padding" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 3>, #cir.bitfield_decl<!u32i, 5>]>, data !s32i}>
 // CIR-DAG: !rec_multiple_padding = !cir.struct<"multiple_padding" {data !s8i, data !s16i, data !s64i}>
 // CIR-DAG: !rec_padding_after_field = !cir.struct<"padding_after_field" {data !s8i, data !s32i}>
 // CIR-DAG: !rec_tail_padding = !cir.struct<"tail_padding" {data !s32i, data !s8i}>

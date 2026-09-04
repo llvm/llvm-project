@@ -270,4 +270,37 @@ TEST(InternalNamesTest, getTypeDescriptorBindingTableName) {
       fir::NameUniquer::getTypeDescriptorBindingTableName("_QMdispatch1Pp1"));
 }
 
+TEST(InternalNamesTest, isCompilerGenerated) {
+  // Test normal compiler genereated names
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.n.member"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.n.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.c.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.dt.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.n.member"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.n.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.c.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.dt.struct"));
+  // Test names after CompilerGeneratedNamesConversionPass has run
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXnXmember"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXnXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXcXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXdtXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXnXmember"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXnXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXcXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXdtXstruct"));
+  // Test false cases
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1Eintvar"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1Epi"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1Emytype"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1EmytypeK4KN6"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1EmytypeK4KN6"));
+  // Test for string literals
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated(
+      "_QQcl.2E2F6669725F7064745F6578616D706C652E66393000"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated(
+      "_QQcl.2E2F6669725F7064745F6578616D706C652E66393000",
+      /*excludeStringLiterals=*/false));
+}
+
 // main() from gtest_main

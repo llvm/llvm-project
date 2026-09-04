@@ -754,7 +754,20 @@ convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
     return std::nullopt;
   }
 
-  llvm::MDString *valMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(1));
+  llvm::Metadata *valueMD = tupleEntry->getOperand(1).get();
+  if (!valueMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': null";
+    return std::nullopt;
+  }
+
+  llvm::MDString *valMD = dyn_cast<llvm::MDString>(valueMD);
+  if (!valMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': "
+        << diagMD(valueMD, llvmModule);
+    return std::nullopt;
+  }
   std::optional<ProfileSummaryFormatKind> fmtKind =
       symbolizeProfileSummaryFormatKind(valMD->getString());
   if (!fmtKind) {
@@ -2912,6 +2925,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("target-features"),
     StringLiteral("trap-func-name"),
     StringLiteral("tune-cpu"),
+    StringLiteral("uniform-work-group-size"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
@@ -3010,6 +3024,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setOptsize(true);
   if (func->hasFnAttribute("save-reg-params"))
     funcOp.setSaveRegParams(true);
+  if (func->hasFnAttribute("uniform-work-group-size"))
+    funcOp.setUniformWorkGroupSize(true);
   if (func->hasFnAttribute(llvm::Attribute::MinSize))
     funcOp.setMinsize(true);
   if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
@@ -3224,6 +3240,9 @@ static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
 
 LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
                                                     InvokeOp op) {
+  llvm::AttributeList invokeAttrs = inst->getAttributes();
+  op.setUniformWorkGroupSize(
+      invokeAttrs.getFnAttr("uniform-work-group-size").isValid());
   return convertCallBaseAttributes(inst, op);
 }
 
@@ -3243,6 +3262,8 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setUniformWorkGroupSize(
+      callAttrs.getFnAttr("uniform-work-group-size").isValid());
   op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());

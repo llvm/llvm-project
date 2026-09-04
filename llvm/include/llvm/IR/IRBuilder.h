@@ -2255,9 +2255,16 @@ public:
     return CreateCast(Instruction::BitCast, V, DestTy, Name);
   }
 
-  Value *CreateAddrSpaceCast(Value *V, Type *DestTy,
-                             const Twine &Name = "") {
-    return CreateCast(Instruction::AddrSpaceCast, V, DestTy, Name);
+  Value *CreateAddrSpaceCast(Value *V, Type *DestTy, const Twine &Name = "",
+                             bool IsNonNull = false) {
+    if (V->getType() == DestTy)
+      return V;
+    if (Value *Folded = Folder.FoldCast(Instruction::AddrSpaceCast, V, DestTy))
+      return Folded;
+    Instruction *I = Insert(new AddrSpaceCastInst(V, DestTy), Name);
+    if (IsNonNull)
+      cast<AddrSpaceCastInst>(I)->setNonNull();
+    return I;
   }
 
   Value *CreateZExtOrBitCast(Value *V, Type *DestTy, const Twine &Name = "") {

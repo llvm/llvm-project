@@ -233,6 +233,28 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
   return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));
 }
 
+// Decode an indexed-resource (rsrcidx) 9-bit srsrc field into a 32-bit index
+// register. SGPRs are encoded as 128-251, VGPRs have bit 8 set.
+static DecodeStatus decodeRsrcRegOp(MCInst &Inst, unsigned Imm,
+                                    uint64_t /* Addr */,
+                                    const MCDisassembler *Decoder,
+                                    unsigned OpWidth) {
+  // Uniform-indexed resource. SGPR[0..123] encoded as 128-251.
+  if (Imm >= 128 && Imm < 256)
+    Imm -= 128;
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, Decoder);
+}
+
+static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_128).
+  if (Imm < 128)
+    OpWidth = 128;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
 // get register class. Used by SGPR only operands.
 #define DECODE_OPERAND_SREG_7(RegClass, OpWidth)                               \
@@ -240,6 +262,9 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
 
 #define DECODE_OPERAND_SREG_8(RegClass, OpWidth)                               \
   DECODE_SrcOp(Decode##RegClass##RegisterClass, 8, OpWidth, Imm)
+
+#define DECODE_OPERAND_SREG_9(RegClass, OpWidth)                               \
+  DECODE_SrcOp(Decode##RegClass##RegisterClass, 9, OpWidth, Imm)
 
 // Decoder for registers. Imm(10-bit): Imm{7-0} is number of register,
 // Imm{9} is acc(agpr or vgpr) Imm{8} should be 0 (see VOP3Pe_SMFMAC).
@@ -334,12 +359,15 @@ DECODE_OPERAND_SREG_7(SReg_64_XEXEC, 64)
 DECODE_OPERAND_SREG_7(SReg_64_XEXEC_XNULL, 64)
 DECODE_OPERAND_SREG_7(SReg_96, 96)
 DECODE_OPERAND_SREG_7(SReg_128, 128)
-DECODE_OPERAND_SREG_7(SReg_128_XNULL, 128)
 DECODE_OPERAND_SREG_7(SReg_256, 256)
 DECODE_OPERAND_SREG_7(SReg_256_XNULL, 256)
 DECODE_OPERAND_SREG_7(SReg_512, 512)
 
 DECODE_OPERAND_SREG_8(SReg_64, 64)
+
+// GFX13 VBUFFER instructions use a 9-bit srsrc field. For the non-indexed form
+// the two extra MSBs are always 0, so the value still decodes to an SReg_128.
+DECODE_OPERAND_SREG_9(SReg_128_XNULL, 128)
 
 DECODE_OPERAND_REG_8(AGPR_32)
 DECODE_OPERAND_REG_8(AReg_64)
