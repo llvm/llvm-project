@@ -64,16 +64,22 @@ public:
   // Each symbol file can claim to support one or more symbol file abilities.
   // These get returned from SymbolFile::GetAbilities(). These help us to
   // determine which plug-in will be best to load the debug information found
-  // in files.
+  // in files. The values are ordered so that a simple numeric comparison
+  // prefers detailed debug information over data read directly from an object
+  // file's symbol table.
   enum Abilities {
-    CompileUnits = (1u << 0),
-    LineTables = (1u << 1),
-    Functions = (1u << 2),
-    Blocks = (1u << 3),
-    GlobalVariables = (1u << 4),
-    LocalVariables = (1u << 5),
-    VariableTypes = (1u << 6),
-    kAllAbilities = ((1u << 7) - 1u)
+    Symbols = (1u << 0),
+    CompileUnits = (1u << 1),
+    LineTables = (1u << 2),
+    Functions = (1u << 3),
+    Blocks = (1u << 4),
+    GlobalVariables = (1u << 5),
+    LocalVariables = (1u << 6),
+    VariableTypes = (1u << 7),
+    // All detailed debug-information abilities. Symbols is excluded because
+    // it describes information from the object file's symbol table.
+    kAllAbilities = CompileUnits | LineTables | Functions | Blocks |
+        GlobalVariables | LocalVariables | VariableTypes
   };
 
   static SymbolFile *FindPlugin(lldb::ObjectFileSP objfile_sp);
