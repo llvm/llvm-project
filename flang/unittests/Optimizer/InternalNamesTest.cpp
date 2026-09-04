@@ -295,6 +295,12 @@ TEST(InternalNamesTest, isCompilerGenerated) {
   ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1Emytype"));
   ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1EmytypeK4KN6"));
   ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1EmytypeK4KN6"));
+  // Test for string literals
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated(
+      "_QQcl.2E2F6669725F7064745F6578616D706C652E66393000"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated(
+      "_QQcl.2E2F6669725F7064745F6578616D706C652E66393000",
+      /*excludeStringLiterals=*/false));
 }
 
 // main() from gtest_main
