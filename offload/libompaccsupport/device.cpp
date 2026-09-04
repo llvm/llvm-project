@@ -68,9 +68,10 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+                   ol_device_handle_t DeviceHandle)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      MappingInfo(*this) {}
+      DeviceHandle(DeviceHandle), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -81,11 +82,11 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
-  int32_t Ret = RTL->init_device(RTLDeviceID);
-  if (Ret != OFFLOAD_SUCCESS)
-    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                     "failed to initialize device %d\n",
-                                     DeviceID);
+  // TODO: Remove this once all device operations go through liboffload
+  // This just ensures the device is initialized for cases where we go through the
+  // plugin interface.
+  size_t Size = 0;
+  olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_GLOBAL_MEM_SIZE, &Size);
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -105,7 +106,7 @@ llvm::Error DeviceTy::init() {
     bool EmitReport =
         OMPX_EmitRecordReport || !OMPX_RecordReportFilename.get().empty();
 
-    Ret = RTL->initialize_record_replay(
+    int32_t Ret = RTL->initialize_record_replay(
         RTLDeviceID, OMPX_RecordMemSize, nullptr,
         /*IsRecord=*/true, /*IsNative=*/true, OMPX_RecordOutput, EmitReport,
         OMPX_RecordReportFilename.get().c_str(),

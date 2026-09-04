@@ -120,11 +120,9 @@ struct PluginManager {
     return Devices.getExclusiveAccessor();
   }
 
-  /// Initialize \p Plugin. Returns true on success.
-  bool initializePlugin(GenericPluginTy &Plugin);
-
-  /// Initialize device \p DeviceNo of \p Plugin. Returns true on success.
-  bool initializeDevice(GenericPluginTy &Plugin, int32_t DeviceId);
+  /// Initialize device \p DeviceHandle as on OpenMP device. Returns true on
+  /// success.
+  bool initializeDevice(ol_device_handle_t DeviceHandle);
 
   /// Eagerly initialize all plugins and their devices.
   void initializeAllDevices();
@@ -158,8 +156,8 @@ private:
   // List of all plugins, in use or not.
   llvm::SmallVector<GenericPluginTy *> Plugins;
 
-  // Mapping of plugins to the OpenMP device identifier.
-  llvm::DenseMap<std::pair<const GenericPluginTy *, int32_t>, int32_t>
+  // Mapping of device handles to the OpenMP device identifier.
+  llvm::DenseMap<ol_device_handle_t, int32_t>
       DeviceIds;
 
   // Set of all device images currently in use.
