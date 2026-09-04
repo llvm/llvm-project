@@ -811,11 +811,11 @@ def scan_dynamic_schemas(
                         ones = _extract_literal_kws(one_str)
                         multis = _extract_literal_kws(multi_str)
                         context.list_keywords.update(multis)
-                        context.dynamic_schemas[current_fn_name.lower()] = (
-                            CommandSchema(
-                                options=opts, one_value=ones, multi_value=multis
-                            )
+                        fn_key = current_fn_name.lower()
+                        schema = CommandSchema(
+                            options=opts, one_value=ones, multi_value=multis
                         )
+                        context.dynamic_schemas[fn_key] = schema
 
 
 # Filesystem markers that indicate a project root boundary. Used by pre_scan_workspace_modules
