@@ -1,0 +1,46 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_startup_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+libc_startup_library(
+    name = "tls",
+    srcs = ["tls.cpp"],
+    deps = [
+        "//libc:__support_macros_config",
+        "//libc:__support_osutil_linux_syscall_wrappers_getrandom",
+        "//libc:__support_osutil_linux_syscall_wrappers_mmap",
+        "//libc:__support_osutil_linux_syscall_wrappers_munmap",
+        "//libc:config_app_h",
+        "//libc:hdr_sys_mman_macros",
+        "//libc:string_memory_utils",
+    ],
+)
+
+libc_startup_library(
+    name = "start",
+    srcs = ["start.cpp"],
+    deps = [
+        "//libc:__support_macros_attributes",
+        "//libc:config_app_h",
+        "//libc/startup/linux:do_start",
+    ],
+)
+
+libc_startup_library(
+    name = "irelative",
+    srcs = ["irelative.cpp"],
+    deps = [
+        "//libc:__support_macros_config",
+        "//libc:hdr_elf_macros",
+        "//libc:hdr_elf_proxy",
+        "//libc:hdr_link_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc/startup/linux:irelative_hdr",
+    ],
+)
