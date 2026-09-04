@@ -29,3 +29,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.elf.symbol
 )
+
+add_libc_test(
+  relocation_test
+  SUITE
+    libc-support-tests
+  SRCS
+    relocation_test.cpp
+  DEPENDS
+    libc.src.__support.elf.relocation
+)
