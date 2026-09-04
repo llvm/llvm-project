@@ -123,6 +123,7 @@ add_object_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.tcb
     libc.src.__support.threads.thread
+    libc.src.__support.threads.linux.futex_utils
     libc.src.__support.macros.config
     libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
     libc.src.link._r_debug
