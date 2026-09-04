@@ -456,6 +456,7 @@ public:
     case RecurKind::FMinimumNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FAddChainWithSubs:
+    case RecurKind::ComplexFMul:
       return false;
     case RecurKind::None:
       llvm_unreachable("Unknown reduction kind.");

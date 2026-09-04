@@ -687,6 +687,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::Intrinsic:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ComputeComplexReductionResult:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLane:
@@ -975,6 +976,50 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
 
     return ReducedPartRdx;
+  }
+  case VPInstruction::ComputeComplexReductionResult: {
+    bool IsRealPart = isReductionRealPart();
+    bool IsInLoop = isReductionInLoop();
+
+    unsigned NumOperands = getNumOperands();
+    assert(NumOperands >= 2 && NumOperands % 2 == 0 &&
+           "Expected pairs of own/partner operands");
+
+    Value *OwnVec = State.get(getOperand(0), IsInLoop);
+    Value *PartnerVec = State.get(getOperand(1), IsInLoop);
+
+    IRBuilderBase::FastMathFlagGuard FMFG(Builder);
+    if (hasFastMathFlags())
+      Builder.setFastMathFlags(getFastMathFlagsOrNone());
+
+    // Reduce across unroll parts with element-wise complex multiplication.
+    // Operands come in (own, partner) pairs from VPlanUnroll.
+    for (unsigned I = 2; I < NumOperands; I += 2) {
+      Value *OwnPart = State.get(getOperand(I), IsInLoop);
+      Value *PartnerPart = State.get(getOperand(I + 1), IsInLoop);
+
+      Value *Re1 = IsRealPart ? OwnVec : PartnerVec;
+      Value *Im1 = IsRealPart ? PartnerVec : OwnVec;
+      Value *Re2 = IsRealPart ? OwnPart : PartnerPart;
+      Value *Im2 = IsRealPart ? PartnerPart : OwnPart;
+
+      // (Re1 + i*Im1) * (Re2 + i*Im2)
+      Value *NewRe = Builder.CreateFSub(Builder.CreateFMul(Re1, Re2),
+                                        Builder.CreateFMul(Im1, Im2), "rdx.re");
+      Value *NewIm = Builder.CreateFAdd(Builder.CreateFMul(Re1, Im2),
+                                        Builder.CreateFMul(Im1, Re2), "rdx.im");
+
+      OwnVec = IsRealPart ? NewRe : NewIm;
+      PartnerVec = IsRealPart ? NewIm : NewRe;
+    }
+
+    if (State.VF.isVector() && !IsInLoop) {
+      Value *ReVec = IsRealPart ? OwnVec : PartnerVec;
+      Value *ImVec = IsRealPart ? PartnerVec : OwnVec;
+      auto [ScalarRe, ScalarIm] = createComplexReduction(Builder, ReVec, ImVec);
+      return IsRealPart ? ScalarRe : ScalarIm;
+    }
+    return OwnVec;
   }
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement: {
@@ -1522,6 +1567,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::LastActiveLane ||
          getOpcode() == VPInstruction::ExtractLastActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
+         getOpcode() == VPInstruction::ComputeComplexReductionResult ||
          getOpcode() == VPInstruction::AnyOf ||
          getOpcode() == VPInstruction::NumActiveLanes;
 }
@@ -1550,6 +1596,7 @@ void VPInstruction::addOperand(VPValue *Op) {
            "types of operand 0 and new operand must match");
     break;
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ComputeComplexReductionResult:
   case VPInstruction::BuildVector:
   case VPInstruction::BuildStructVector:
     assert(Ty == getOperand(0)->getScalarType() &&
@@ -1827,6 +1874,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::ComputeComplexReductionResult:
+    O << "compute-complex-reduction-result";
     break;
   case VPInstruction::LogicalAnd:
     O << "logical-and";
@@ -2567,6 +2617,7 @@ VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode, Type *ResultTy) {
   case Instruction::ICmp:
   case Instruction::FCmp:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ComputeComplexReductionResult:
     llvm_unreachable("opcode requires explicit flags");
   default:
     return VPIRFlags();
@@ -2608,7 +2659,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::Cmp:
     return Opcode == Instruction::FCmp || Opcode == Instruction::ICmp;
   case OperationType::ReductionOp:
-    return Opcode == VPInstruction::ComputeReductionResult;
+    return Opcode == VPInstruction::ComputeReductionResult ||
+           Opcode == VPInstruction::ComputeComplexReductionResult;
   case OperationType::Other:
     return true;
   }
@@ -2622,7 +2674,8 @@ bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode,
     return OpType == OperationType::Cmp;
   if (Opcode == Instruction::FCmp)
     return OpType == OperationType::FCmp;
-  if (Opcode == VPInstruction::ComputeReductionResult)
+  if (Opcode == VPInstruction::ComputeReductionResult ||
+      Opcode == VPInstruction::ComputeComplexReductionResult)
     return OpType == OperationType::ReductionOp;
 
   OperationType Required = getDefaultFlags(Opcode, ResultTy).OpType;
@@ -2716,6 +2769,9 @@ static void printRecurrenceKind(raw_ostream &OS, const RecurKind &Kind) {
     break;
   case RecurKind::FindLast:
     OS << "find-last";
+    break;
+  case RecurKind::ComplexFMul:
+    OS << "complex-fmul";
     break;
   }
 }

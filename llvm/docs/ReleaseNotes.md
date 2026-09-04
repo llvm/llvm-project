@@ -168,6 +168,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Vectorizers
 
+* LoopVectorizer can now recognize multiply reductions of complex numbers.
+
 ### Changes to the AArch64 Backend
 
 ### Changes to the AMDGPU Backend
