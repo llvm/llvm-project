@@ -91,6 +91,7 @@ static constexpr StringRef CanonicalSuffixes[] =
         ".cold", ".warm",
         // Compiler/LTO internal
         ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
+static const StringRef CoroSuffixes[] = {".cleanup", ".destroy", ".resume"};
 
 static const Target *getTarget(const ObjectFile *Obj) {
   Triple TheTriple = Obj->makeTriple();
@@ -1172,7 +1173,8 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
       FunctionName =
           FunctionSamples::getCanonicalFnName(FunctionName, CanonicalSuffixes);
     else
-      FunctionName = FunctionSamples::getCanonicalCoroFnName(FunctionName);
+      FunctionName =
+          FunctionSamples::getCanonicalFnName(FunctionName, CoroSuffixes);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
     uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;
