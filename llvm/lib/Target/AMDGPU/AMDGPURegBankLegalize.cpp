@@ -40,13 +40,6 @@ using namespace llvm::MIPatternMatch;
 
 namespace {
 
-// AMDGPU-specific pattern matchers
-template <typename SrcTy>
-inline UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>
-m_GAMDGPUReadAnyLane(const SrcTy &Src) {
-  return UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>(Src);
-}
-
 class AMDGPURegBankLegalize : public MachineFunctionPass {
 public:
   static char ID;

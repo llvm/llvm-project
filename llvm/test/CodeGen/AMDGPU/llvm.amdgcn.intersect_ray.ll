@@ -228,77 +228,40 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 inreg %node_ptr, f
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX1013-GISEL-LABEL: image_bvh_intersect_ray_a16:
-; GFX1013-GISEL:       ; %bb.0: ; %main_body
-; GFX1013-GISEL-NEXT:    s_and_b32 s8, s8, 0xffff
-; GFX1013-GISEL-NEXT:    s_mov_b32 s16, s9
-; GFX1013-GISEL-NEXT:    v_alignbit_b32 v0, s8, s7, 16
-; GFX1013-GISEL-NEXT:    s_lshr_b32 s9, s5, 16
-; GFX1013-GISEL-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX1013-GISEL-NEXT:    s_lshl_b32 s8, s9, 16
-; GFX1013-GISEL-NEXT:    s_and_b32 s9, s7, 0xffff
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s7, v0
-; GFX1013-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX1013-GISEL-NEXT:    s_lshl_b32 s9, s9, 16
-; GFX1013-GISEL-NEXT:    s_or_b32 s5, s5, s8
-; GFX1013-GISEL-NEXT:    s_or_b32 s6, s6, s9
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v4, s4
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v5, s5
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v6, s6
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v7, s7
-; GFX1013-GISEL-NEXT:    s_mov_b32 s17, s10
-; GFX1013-GISEL-NEXT:    s_mov_b32 s18, s11
-; GFX1013-GISEL-NEXT:    s_mov_b32 s19, s12
-; GFX1013-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], v[0:7], s[16:19] a16
-; GFX1013-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1013-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX1030-GISEL-LABEL: image_bvh_intersect_ray_a16:
-; GFX1030-GISEL:       ; %bb.0: ; %main_body
-; GFX1030-GISEL-NEXT:    s_mov_b32 s16, s9
-; GFX1030-GISEL-NEXT:    s_lshr_b32 s9, s5, 16
-; GFX1030-GISEL-NEXT:    s_and_b32 s5, s5, 0xffff
-; GFX1030-GISEL-NEXT:    s_lshl_b32 s9, s9, 16
-; GFX1030-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX1030-GISEL-NEXT:    s_or_b32 s5, s5, s9
-; GFX1030-GISEL-NEXT:    s_and_b32 s9, s7, 0xffff
-; GFX1030-GISEL-NEXT:    s_and_b32 s8, s8, 0xffff
-; GFX1030-GISEL-NEXT:    s_lshl_b32 s9, s9, 16
-; GFX1030-GISEL-NEXT:    v_alignbit_b32 v7, s8, s7, 16
-; GFX1030-GISEL-NEXT:    s_or_b32 s6, s6, s9
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v4, s4
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v5, s5
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v6, s6
-; GFX1030-GISEL-NEXT:    s_mov_b32 s17, s10
-; GFX1030-GISEL-NEXT:    s_mov_b32 s18, s11
-; GFX1030-GISEL-NEXT:    s_mov_b32 s19, s12
-; GFX1030-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], v[0:7], s[16:19] a16
-; GFX1030-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1030-GISEL-NEXT:    ; return to shader part epilog
+; GFX10-GISEL-LABEL: image_bvh_intersect_ray_a16:
+; GFX10-GISEL:       ; %bb.0: ; %main_body
+; GFX10-GISEL-NEXT:    s_mov_b32 s16, s9
+; GFX10-GISEL-NEXT:    s_lshr_b32 s9, s5, 16
+; GFX10-GISEL-NEXT:    s_and_b32 s5, s5, 0xffff
+; GFX10-GISEL-NEXT:    s_lshl_b32 s9, s9, 16
+; GFX10-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX10-GISEL-NEXT:    s_or_b32 s5, s5, s9
+; GFX10-GISEL-NEXT:    s_and_b32 s9, s7, 0xffff
+; GFX10-GISEL-NEXT:    s_and_b32 s8, s8, 0xffff
+; GFX10-GISEL-NEXT:    s_lshl_b32 s9, s9, 16
+; GFX10-GISEL-NEXT:    v_alignbit_b32 v7, s8, s7, 16
+; GFX10-GISEL-NEXT:    s_or_b32 s6, s6, s9
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, s4
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s5
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v6, s6
+; GFX10-GISEL-NEXT:    s_mov_b32 s17, s10
+; GFX10-GISEL-NEXT:    s_mov_b32 s18, s11
+; GFX10-GISEL-NEXT:    s_mov_b32 s19, s12
+; GFX10-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], v[0:7], s[16:19] a16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: image_bvh_intersect_ray_a16:
 ; GFX11-SDAG:       ; %bb.0: ; %main_body
@@ -530,79 +493,41 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 inreg %node_ptr,
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX1013-GISEL-LABEL: image_bvh64_intersect_ray_a16:
-; GFX1013-GISEL:       ; %bb.0: ; %main_body
-; GFX1013-GISEL-NEXT:    s_and_b32 s9, s9, 0xffff
-; GFX1013-GISEL-NEXT:    s_mov_b32 s16, s10
-; GFX1013-GISEL-NEXT:    v_alignbit_b32 v0, s9, s8, 16
-; GFX1013-GISEL-NEXT:    s_lshr_b32 s10, s6, 16
-; GFX1013-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX1013-GISEL-NEXT:    s_lshl_b32 s9, s10, 16
-; GFX1013-GISEL-NEXT:    s_and_b32 s10, s8, 0xffff
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
-; GFX1013-GISEL-NEXT:    s_and_b32 s7, s7, 0xffff
-; GFX1013-GISEL-NEXT:    s_lshl_b32 s10, s10, 16
-; GFX1013-GISEL-NEXT:    s_or_b32 s6, s6, s9
-; GFX1013-GISEL-NEXT:    s_or_b32 s7, s7, s10
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v4, s4
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v5, s5
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v6, s6
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v7, s7
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v8, s8
-; GFX1013-GISEL-NEXT:    s_mov_b32 s17, s11
-; GFX1013-GISEL-NEXT:    s_mov_b32 s18, s12
-; GFX1013-GISEL-NEXT:    s_mov_b32 s19, s13
-; GFX1013-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:8], s[16:19] a16
-; GFX1013-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1013-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1013-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1013-GISEL-NEXT:    ; return to shader part epilog
-;
-; GFX1030-GISEL-LABEL: image_bvh64_intersect_ray_a16:
-; GFX1030-GISEL:       ; %bb.0: ; %main_body
-; GFX1030-GISEL-NEXT:    s_mov_b32 s16, s10
-; GFX1030-GISEL-NEXT:    s_lshr_b32 s10, s6, 16
-; GFX1030-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX1030-GISEL-NEXT:    s_lshl_b32 s10, s10, 16
-; GFX1030-GISEL-NEXT:    s_and_b32 s7, s7, 0xffff
-; GFX1030-GISEL-NEXT:    s_or_b32 s6, s6, s10
-; GFX1030-GISEL-NEXT:    s_and_b32 s10, s8, 0xffff
-; GFX1030-GISEL-NEXT:    s_and_b32 s9, s9, 0xffff
-; GFX1030-GISEL-NEXT:    s_lshl_b32 s10, s10, 16
-; GFX1030-GISEL-NEXT:    v_alignbit_b32 v8, s9, s8, 16
-; GFX1030-GISEL-NEXT:    s_or_b32 s7, s7, s10
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v4, s4
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v5, s5
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v6, s6
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v7, s7
-; GFX1030-GISEL-NEXT:    s_mov_b32 s17, s11
-; GFX1030-GISEL-NEXT:    s_mov_b32 s18, s12
-; GFX1030-GISEL-NEXT:    s_mov_b32 s19, s13
-; GFX1030-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:8], s[16:19] a16
-; GFX1030-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX1030-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX1030-GISEL-NEXT:    ; return to shader part epilog
+; GFX10-GISEL-LABEL: image_bvh64_intersect_ray_a16:
+; GFX10-GISEL:       ; %bb.0: ; %main_body
+; GFX10-GISEL-NEXT:    s_mov_b32 s16, s10
+; GFX10-GISEL-NEXT:    s_lshr_b32 s10, s6, 16
+; GFX10-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX10-GISEL-NEXT:    s_lshl_b32 s10, s10, 16
+; GFX10-GISEL-NEXT:    s_and_b32 s7, s7, 0xffff
+; GFX10-GISEL-NEXT:    s_or_b32 s6, s6, s10
+; GFX10-GISEL-NEXT:    s_and_b32 s10, s8, 0xffff
+; GFX10-GISEL-NEXT:    s_and_b32 s9, s9, 0xffff
+; GFX10-GISEL-NEXT:    s_lshl_b32 s10, s10, 16
+; GFX10-GISEL-NEXT:    v_alignbit_b32 v8, s9, s8, 16
+; GFX10-GISEL-NEXT:    s_or_b32 s7, s7, s10
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, s4
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, s5
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v6, s6
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v7, s7
+; GFX10-GISEL-NEXT:    s_mov_b32 s17, s11
+; GFX10-GISEL-NEXT:    s_mov_b32 s18, s12
+; GFX10-GISEL-NEXT:    s_mov_b32 s19, s13
+; GFX10-GISEL-NEXT:    image_bvh64_intersect_ray v[0:3], v[0:8], s[16:19] a16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: image_bvh64_intersect_ray_a16:
 ; GFX11-SDAG:       ; %bb.0: ; %main_body

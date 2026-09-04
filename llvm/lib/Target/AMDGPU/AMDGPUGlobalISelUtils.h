@@ -9,7 +9,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/Register.h"
 #include <utility>
 
@@ -48,6 +50,14 @@ public:
 private:
   void initLaneMaskIntrinsics(MachineFunction &MF);
 };
+
+// AMDGPU-specific pattern matchers
+template <typename SrcTy>
+inline MIPatternMatch::UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>
+m_GAMDGPUReadAnyLane(const SrcTy &Src) {
+  return MIPatternMatch::UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>(
+      Src);
+}
 
 void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
                       const RegisterBankInfo &RBI);
