@@ -261,6 +261,14 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
+- `-funique-internal-linkage-names` now gives internal global variables a
+  unique `.__uniq.<module-hash>` suffix, as it already does for functions. This
+  helps profiling tools distinguish static variables with the same name in
+  different source files. LLVM can demangle these suffixes for both functions
+  and data symbols. GNU libiberty can demangle suffixed function symbols, but
+  leaves suffixed data symbols unchanged. The option remains opt-in, and
+  variables with explicit assembly labels keep their original names.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -656,6 +664,10 @@ features cannot lower the translation-unit ABI level;
   threshold to the target's `size_t` width instead of using a fixed
   threshold of `1 << 60` regardless of the target.
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
+- Fixed a crash when filling in the ``TypeLoc`` for an ``AttributedType``
+  that was inherited from a different declarator, for example when
+  ``__typeof__`` resolves to the type of another, already-processed
+  declaration. (#GH217489)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
 
