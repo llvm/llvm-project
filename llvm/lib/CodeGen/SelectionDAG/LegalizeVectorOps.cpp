@@ -2191,7 +2191,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
 
     if (HasMaskArg && I == E - 1) {
       assert(cast<VectorType>(ParamTy)->getElementType()->isIntegerTy(1) &&
-             cast<VectorType(ParamTy)>->getElementCount() ==
+             cast<VectorType>(ParamTy)->getElementCount() ==
                  CallVT.getVectorElementCount() &&
              "unexpected vector mask type");
       EVT MaskVT = EVT::getEVT(ParamTy, /*HandleUnknown=*/true);
