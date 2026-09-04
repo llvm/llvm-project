@@ -31,6 +31,7 @@ define void @memset_to_constant() {
 ; value. Stop folding it once #52930 is resolved.
 define void @memset_undef(ptr %p) {
 ; CHECK-LABEL: @memset_undef(
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(8) [[P:%.*]], i8 undef, i32 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i32(ptr %p, i8 undef, i32 8, i1 false)
@@ -48,6 +49,7 @@ define void @memset_undef_volatile(ptr %p) {
 
 define void @memset_poison(ptr %p) {
 ; CHECK-LABEL: @memset_poison(
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(8) [[P:%.*]], i8 poison, i32 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i32(ptr %p, i8 poison, i32 8, i1 false)
