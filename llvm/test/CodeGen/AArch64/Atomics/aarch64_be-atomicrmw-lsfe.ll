@@ -2260,6 +2260,30 @@ define dso_local double @atomicrmw_fminimum_double_unaligned_seq_cst(ptr %ptr, d
     ret double %r
 }
 
+define dso_local fp128 @atomicrmw_fadd_fp128_aligned_monotonic(ptr %ptr, fp128 %value) #0 {
+; -O0-LABEL: atomicrmw_fadd_fp128_aligned_monotonic:
+; -O0:    bl __addtf3
+; -O0:    ldxp x10, x8, [x13]
+; -O0:    cmp x8, x9
+; -O0:    cmp x10, x11
+; -O0:    stxp w12, x15, x14, [x13]
+; -O0:    stxp w12, x10, x8, [x13]
+; -O0:    subs x10, x10, x11
+; -O0:    ccmp x8, x9, #0, eq
+;
+; -O1-LABEL: atomicrmw_fadd_fp128_aligned_monotonic:
+; -O1:    cmp x13, x10
+; -O1:    ccmp x12, x11, #0, eq
+; -O1:    bl __addtf3
+; -O1:    ldxp x13, x12, [x19]
+; -O1:    cmp x12, x11
+; -O1:    cmp x13, x10
+; -O1:    stxp w14, x13, x12, [x19]
+; -O1:    stxp w14, x8, x9, [x19]
+    %r = atomicrmw fadd ptr %ptr, fp128 %value monotonic, align 16
+    ret fp128 %r
+}
+
 define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_trapping(ptr %ptr, float %value) {
 ; -O0-LABEL: atomicrmw_fadd_float_aligned_seq_cst_trapping:
 ; -O0:    ldaxr w8, [x11]
@@ -2285,6 +2309,34 @@ define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_strictfp(ptr %ptr, 
 ; -O1:    ldaxr w8, [x0]
 ; -O1:    stlxr w9, w8, [x0]
     %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fsub_float_aligned_seq_cst_trapping(ptr %ptr, float %value) {
+; -O0-LABEL: atomicrmw_fsub_float_aligned_seq_cst_trapping:
+; -O0:    ldaxr w8, [x11]
+; -O0:    cmp w8, w9
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w9, w8, w9
+;
+; -O1-LABEL: atomicrmw_fsub_float_aligned_seq_cst_trapping:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fsub ptr %ptr, float %value seq_cst, align 4
+    ret float %r
+}
+
+define dso_local float @atomicrmw_fsub_float_aligned_seq_cst_strictfp(ptr %ptr, float %value) #1 {
+; -O0-LABEL: atomicrmw_fsub_float_aligned_seq_cst_strictfp:
+; -O0:    ldaxr w8, [x11]
+; -O0:    cmp w8, w9
+; -O0:    stlxr w10, w12, [x11]
+; -O0:    subs w9, w8, w9
+;
+; -O1-LABEL: atomicrmw_fsub_float_aligned_seq_cst_strictfp:
+; -O1:    ldaxr w8, [x0]
+; -O1:    stlxr w9, w8, [x0]
+    %r = atomicrmw fsub ptr %ptr, float %value seq_cst, align 4
     ret float %r
 }
 
