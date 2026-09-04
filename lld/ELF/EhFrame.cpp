@@ -146,6 +146,21 @@ bool elf::hasZeroPcRange(Ctx &ctx, const EhSectionPiece &p, uint8_t enc) {
   ArrayRef<uint8_t> d = p.data();
   if (pSize == 0 || d.size() < 8 + 2 * pSize)
     return false;
+
+  // On architectures with linker relaxation (e.g. RISC-V), pc_range has
+  // relocations (such as R_RISCV_ADD32/R_RISCV_SUB32) and the raw section
+  // data contains zeroes. Do not treat it as zero-range if relocations exist.
+  if (p.firstRelocation != (unsigned)-1) {
+    auto *isec = cast<EhInputSection>(p.sec);
+    uint64_t rangeOff = p.inputOff + 8 + pSize;
+    for (size_t i = p.firstRelocation;
+         i < isec->rels.size() && isec->rels[i].offset < rangeOff + pSize;
+         ++i) {
+      if (isec->rels[i].offset >= rangeOff)
+        return false;
+    }
+  }
+
   return llvm::all_of(d.slice(8 + pSize, pSize), [](uint8_t c) { return !c; });
 }
 
