@@ -1,15 +1,7 @@
-! At -O0, a scalar-to-array broadcast assignment in CUDA Fortran device code
-! must still be inlined, so that no _FortranAAssign runtime call (which
-! internally uses malloc/free) is emitted into device code. Such a call also
-! drags its callees into the kernel's call graph, inflating the worst-case
-! stack frame the device linker has to reserve for that kernel.
-!
-! Host code keeps the runtime call at -O0, so that a line breakpoint on a
-! scalar-to-array assignment hits once instead of once per element. A CUDA
-! Fortran module holds both, so the distinction is per-function.
-!
-! CUDA Fortran is enabled here by the .cuf suffix rather than -x cuda, which
-! covers both ways the language feature gets turned on.
+! At -O0, a scalar-to-array broadcast must be inlined in device code to keep
+! _FortranAAssign out of the kernel's call graph. Host code keeps the call so
+! that a breakpoint on the assignment fires once, not once per element.
+! CUDA Fortran is enabled here by the .cuf suffix rather than -x cuda.
 
 ! RUN: %flang_fc1 -emit-fir -O0 %s -o - | FileCheck %s
 

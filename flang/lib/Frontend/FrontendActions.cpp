@@ -638,9 +638,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
     config.EnableOpenMPIsTargetDevice = true;
-  // Use the parser options rather than the frontend options: they are seeded
-  // from the latter, and beginSourceFile additionally enables CUDA there for
-  // a .cuf/.CUF input, which -x cuda alone does not cover.
+  // Parser options, not frontend options: they are seeded from the frontend
+  // ones and additionally get CUDA enabled for a .cuf/.CUF input.
   if (ci.getInvocation().getFortranOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::CUDA))
     config.EnableCUDA = true;

@@ -41,10 +41,9 @@ static llvm::cl::opt<bool> inlineAllocatableExprAssignFlag(
                    "hlfir.expr (e.g., from hlfir.elemental)"),
     llvm::cl::init(false));
 
-/// Will \p op run on the device? An OpenMP target device compilation is
-/// device-only, so the whole module qualifies. A CUDA Fortran module instead
-/// holds both host subprograms and device code, making this a per-operation
-/// question that cuf::isCUDADeviceContext answers.
+/// Returns true if \p op runs on the device. CUDA Fortran mixes host and
+/// device code, so that check is per-operation; an OpenMP target device
+/// module is all device.
 static bool isDeviceCode(mlir::Operation *op) {
   if (cuf::isCUDADeviceContext(op))
     return true;
@@ -104,13 +103,12 @@ public:
       return rewriter.notifyMatchFailure(
           assign, "onlyScalarRHS: skipping array-to-array assignment");
 
-    // onlyScalarRHS is the O0 mode, where this pass runs solely to keep
-    // Fortran runtime calls out of device code. Leave host code alone there:
-    // it keeps the runtime call so that a line breakpoint on a scalar-to-array
-    // assignment hits once instead of once per element.
+    // onlyScalarRHS is the O0 mode, which exists only to keep runtime calls
+    // out of device code. Host code keeps the call so that a breakpoint on
+    // the assignment fires once, not once per element.
     if (onlyScalarRHS && !isDeviceCode(assign))
-      return rewriter.notifyMatchFailure(
-          assign, "onlyScalarRHS: skipping host code");
+      return rewriter.notifyMatchFailure(assign,
+                                         "onlyScalarRHS: skipping host code");
 
     mlir::Type rhsEleTy = rhs.getFortranElementType();
     if (!fir::isa_trivial(rhsEleTy))
@@ -380,10 +378,9 @@ public:
   void runOnOperation() override {
     mlir::MLIRContext *context = &getContext();
 
-    // In onlyScalarRHS (O0) mode, skip host code entirely rather than relying
-    // on the pattern to reject it: the greedy driver folds and removes dead
-    // ops as it walks, which would perturb host code at O0 even when no
-    // assignment is rewritten.
+    // Bail out before the greedy driver runs: it folds and removes dead ops
+    // as it walks, which would perturb host code at O0 even though the
+    // pattern rewrites nothing there.
     if (onlyScalarRHS) {
       bool anyDeviceAssign = false;
       getOperation()->walk([&](hlfir::AssignOp assign) {
