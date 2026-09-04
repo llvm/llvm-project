@@ -627,17 +627,6 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
 
 // -----
 
-llvm.func @taskwait_nowait() {
-  // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait nowait {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @teams_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.teams operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
