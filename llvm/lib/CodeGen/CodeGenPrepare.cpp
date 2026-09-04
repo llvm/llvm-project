@@ -92,6 +92,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -7621,37 +7622,106 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   return true;
 }
 
-/// Check if V (an operand of a select instruction) is an expensive instruction
-/// that is only used once.
-static bool sinkSelectOperand(const TargetTransformInfo *TTI, Value *V) {
+static bool isLatencyExpensiveToSpeculate(const TargetTransformInfo *TTI,
+                                          const Instruction *I,
+                                          bool UseLatencySelectSink) {
+  if (!UseLatencySelectSink)
+    return TTI->isExpensiveToSpeculativelyExecute(I);
+
+  InstructionCost InstLat =
+      TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+  InstructionCost BrPenalty = TTI->getBranchMispredictPenalty();
+
+  if (!InstLat.isValid() || !BrPenalty.isValid() || BrPenalty.getValue() == 0)
+    return TTI->isExpensiveToSpeculativelyExecute(I);
+
+  return InstLat >= BrPenalty;
+}
+
+enum { SinkSelectChainMaxDepth = 8 };
+
+static bool collectSinkableChain(const TargetTransformInfo *TTI, Value *V,
+                                 BasicBlock *StartBlock, Value *SharedCond,
+                                 SmallVectorImpl<Instruction *> &Chain,
+                                 int Depth, bool UseLatencySelectSink) {
   auto *I = dyn_cast<Instruction>(V);
-  // If it's safe to speculatively execute, then it should not have side
-  // effects; therefore, it's safe to sink and possibly *not* execute.
-  return I && I->hasOneUse() && isSafeToSpeculativelyExecute(I) &&
-         TTI->isExpensiveToSpeculativelyExecute(I);
+  if (!I || Depth <= 0)
+    return false;
+  if (I->getParent() != StartBlock)
+    return false;
+  if (auto *Inner = dyn_cast<SelectInst>(I))
+    if (Inner->getCondition() == SharedCond)
+      return false;
+  if (!I->hasOneUse())
+    return false;
+  if (!isSafeToSpeculativelyExecute(I))
+    return false;
+
+  bool HasExpensiveOp =
+      isLatencyExpensiveToSpeculate(TTI, I, UseLatencySelectSink);
+  for (Value *Op : I->operands()) {
+    if (collectSinkableChain(TTI, Op, StartBlock, SharedCond, Chain, Depth - 1,
+                             UseLatencySelectSink))
+      HasExpensiveOp = true;
+  }
+
+  if (HasExpensiveOp) {
+    Chain.push_back(I);
+    LLVM_DEBUG(dbgs() << "CGP: Collected instruction to sink: " << *I << "\n");
+  }
+  return HasExpensiveOp;
+}
+
+struct SelectSinkPlan {
+  SmallVector<Instruction *, 4> TrueChain;
+  SmallVector<Instruction *, 4> FalseChain;
+  bool HasExpensiveOp = false;
+};
+
+static SelectSinkPlan planSelectSink(const TargetTransformInfo *TTI,
+                                     ArrayRef<SelectInst *> ASI,
+                                     bool UseLatencySelectSink) {
+  SelectSinkPlan Plan;
+  BasicBlock *StartBlock = ASI.front()->getParent();
+  Value *SharedCond = ASI.front()->getCondition();
+
+  int MaxDepth = UseLatencySelectSink ? SinkSelectChainMaxDepth : 1;
+
+  for (SelectInst *SI : ASI) {
+    if (collectSinkableChain(TTI, SI->getTrueValue(), StartBlock, SharedCond,
+                             Plan.TrueChain, MaxDepth, UseLatencySelectSink))
+      Plan.HasExpensiveOp = true;
+    if (collectSinkableChain(TTI, SI->getFalseValue(), StartBlock, SharedCond,
+                             Plan.FalseChain, MaxDepth, UseLatencySelectSink))
+      Plan.HasExpensiveOp = true;
+  }
+
+  return Plan;
 }
 
 /// Returns true if a SelectInst should be turned into an explicit branch.
 static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
                                                 const TargetLowering *TLI,
-                                                SelectInst *SI) {
+                                                ArrayRef<SelectInst *> ASI,
+                                                const SelectSinkPlan &Plan) {
   // If even a predictable select is cheap, then a branch can't be cheaper.
   if (!TLI->isPredictableSelectExpensive())
     return false;
 
-  // FIXME: This should use the same heuristics as IfConversion to determine
-  // whether a select is better represented as a branch.
+  SelectInst *SI = ASI.front();
 
-  // If metadata tells us that the select condition is obviously predictable,
-  // then we want to replace the select with a branch.
   uint64_t TrueWeight, FalseWeight;
   if (extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);
     uint64_t Sum = TrueWeight + FalseWeight;
     if (Sum != 0) {
       auto Probability = BranchProbability::getBranchProbability(Max, Sum);
-      if (Probability > TTI->getPredictableBranchThreshold())
+      if (Probability > TTI->getPredictableBranchThreshold()) {
+        LLVM_DEBUG(dbgs() << "CGP: Forming branch from select due to profile "
+                             "data: "
+                          << *SI << " (probability " << Probability << ")\n");
         return true;
+      }
     }
   }
 
@@ -7660,14 +7730,20 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   // If a branch is predictable, an out-of-order CPU can avoid blocking on its
   // comparison condition. If the compare has more than one use, there's
   // probably another cmov or setcc around, so it's not worth emitting a branch.
-  if (!Cmp || !Cmp->hasOneUse())
+  if (!Cmp)
     return false;
+  SmallPtrSet<const Value *, 4> ASISet(ASI.begin(), ASI.end());
+  for (const User *U : Cmp->users()) {
+    if (!ASISet.contains(U))
+      return false;
+  }
 
-  // If either operand of the select is expensive and only needed on one side
-  // of the select, we should form a branch.
-  if (sinkSelectOperand(TTI, SI->getTrueValue()) ||
-      sinkSelectOperand(TTI, SI->getFalseValue()))
+  if (Plan.HasExpensiveOp) {
+    LLVM_DEBUG(dbgs() << "CGP: Forming branch from select due to expensive "
+                         "operand in group of "
+                      << ASI.size() << " selects\n");
     return true;
+  }
 
   return false;
 }
@@ -7805,8 +7881,11 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   else
     SelectKind = TargetLowering::ScalarValSelect;
 
+  bool UseLatencySelectSink = TM && TM->getTargetTriple().isX86();
+  SelectSinkPlan Plan = planSelectSink(TTI, ASI, UseLatencySelectSink);
+
   if (TLI->isSelectSupported(SelectKind) &&
-      (!isFormingBranchFromSelectProfitable(TTI, TLI, SI) ||
+      (!isFormingBranchFromSelectProfitable(TTI, TLI, ASI, Plan) ||
        llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI)))
     return false;
 
@@ -7838,15 +7917,8 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // but we don't set a ModifiedDT flag to avoid restarting the function walk in
   // runOnFunction for each select optimized.
 
-  // Collect values that go on the true side and the values that go on the false
-  // side.
-  SmallVector<Instruction *> TrueInstrs, FalseInstrs;
-  for (SelectInst *SI : ASI) {
-    if (Value *V = SI->getTrueValue(); sinkSelectOperand(TTI, V))
-      TrueInstrs.push_back(cast<Instruction>(V));
-    if (Value *V = SI->getFalseValue(); sinkSelectOperand(TTI, V))
-      FalseInstrs.push_back(cast<Instruction>(V));
-  }
+  SmallVectorImpl<Instruction *> &TrueInstrs = Plan.TrueChain;
+  SmallVectorImpl<Instruction *> &FalseInstrs = Plan.FalseChain;
 
   // Split the select block, according to how many (if any) values go on each
   // side.

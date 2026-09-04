@@ -820,22 +820,26 @@ define i64 @test_minsigned_i64(i64 %a0, i64 %a1) nounwind {
 ;
 ; X86-LABEL: test_minsigned_i64:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    leal -2147483648(%edx), %esi
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    xorl %edi, %edx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    xorl %edi, %eax
+; X86-NEXT:    subl %edi, %eax
+; X86-NEXT:    sbbl %edi, %edx
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    jne .LBB20_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal -2147483648(%edx), %ecx
-; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    jne .LBB20_1
-; X86-NEXT:  # %bb.2: # %select.end
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB20_1: # %select.false.sink
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    xorl %ecx, %edx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:  .LBB20_2:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
   %lim = icmp eq i64 %a0, -9223372036854775808
   %abs = tail call i64 @llvm.abs.i64(i64 %a0, i1 false)
