@@ -177,7 +177,7 @@ module no_loop_before_another_metadirective
   implicit none
   !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
   !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
-  !$omp metadirective when(implementation={vendor(llvm)}: parallel) default(nothing)
+  !$omp metadirective when(implementation={vendor(llvm)}: nothing) default(nothing)
 end module
 
 ! A loop in the enclosing subprogram cannot satisfy a variant from an
