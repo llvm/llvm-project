@@ -420,6 +420,9 @@ public:
   /// Returns memory location for a parameter variable within the callee stack
   /// frame. The behavior is undefined if the block count is different from the
   /// one that is there when call happens. May fail; returns null on failure.
+  ///
+  /// \param Index refers to the index of the declared parameter of the callee.
+  /// See getDeclaredParameterIndex().
   const ParamVarRegion *getParameterLocation(unsigned Index,
                                              unsigned BlockCount) const;
 
@@ -429,6 +432,9 @@ public:
   /// if we are supposed to construct an argument directly, we may still
   /// not do that because we don't know how (i.e., construction context is
   /// unavailable in the CFG or not supported by the analyzer).
+  ///
+  /// \param Index index of the argument as understood by the AST.
+  /// See getASTArgumentIndex().
   bool isArgumentConstructedDirectly(unsigned Index) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
@@ -437,9 +443,13 @@ public:
   }
 
   /// Some calls have parameter numbering mismatched from argument numbering.
-  /// This function converts an argument index to the corresponding
-  /// parameter index. Returns std::nullopt is the argument doesn't correspond
+  /// This function converts an argument index as understood by the AST to the
+  /// index of the *declared* parameter of the callee that this argument
+  /// initializes. Returns std::nullopt if the argument doesn't correspond
   /// to any parameter variable.
+  ///
+  /// Note that \c clang::AnyCall::arguments() uses the opposite convention:
+  /// there the object argument is part of the argument list.
   virtual std::optional<unsigned>
   getAdjustedParameterIndex(unsigned ASTArgumentIndex) const {
     return ASTArgumentIndex;
@@ -450,6 +460,21 @@ public:
   /// as understood by CallEvent to the argument index as understood by the AST.
   virtual unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const {
     return CallArgumentIndex;
+  }
+
+  /// Returns the declared parameter index that CallEvent argument
+  /// \p CallArgumentIndex (as understood by CallEvent) initializes or
+  /// std::nullopt if that argument does not initialize any declared parameter.
+  ///
+  /// This is the index to use with parameters() and getParameterLocation().
+  /// Note that this is not necessarily equal to \p CallArgumentIndex. For an
+  /// overloaded operator call, the object is passed as argument 0, but it is
+  /// not a declared parameter of an implicit ombject member function. For an
+  /// explicit object member function, the object is likewise passed as
+  /// argument 0, but there it is a declared parameter #0.
+  std::optional<unsigned>
+  getDeclaredParameterIndex(unsigned CallArgumentIndex) const {
+    return getAdjustedParameterIndex(getASTArgumentIndex(CallArgumentIndex));
   }
 
   /// Returns the construction context of the call, if it is a C++ constructor
