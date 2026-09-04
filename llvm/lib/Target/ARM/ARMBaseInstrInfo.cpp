@@ -624,6 +624,11 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       return 4;
     else
       return 2;
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // Size of xray sled: Branch + 6 nops.
+    return 28;
   case ARM::CONSTPOOL_ENTRY:
   case ARM::JUMPTABLE_INSTS:
   case ARM::JUMPTABLE_ADDRS:

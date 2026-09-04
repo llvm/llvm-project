@@ -723,12 +723,12 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
 
     DialectStrings dialectStrings;
     dialectStrings.dialectName = dialectName;
-    dialectStrings.dialectBaseTypeName = dialectBaseTypeName;
-    dialectStrings.dialectCppName = cppName;
-    dialectStrings.dialectCppShortName = cppShortName;
-    dialectStrings.namespaceOpen = namespaceOpen;
-    dialectStrings.namespaceClose = namespaceClose;
-    dialectStrings.namespacePath = namespacePath;
+    dialectStrings.dialectBaseTypeName = std::move(dialectBaseTypeName);
+    dialectStrings.dialectCppName = std::move(cppName);
+    dialectStrings.dialectCppShortName = std::move(cppShortName);
+    dialectStrings.namespaceOpen = std::move(namespaceOpen);
+    dialectStrings.namespaceClose = std::move(namespaceClose);
+    dialectStrings.namespacePath = std::move(namespacePath);
 
     dialectStringTable[dialect] = std::move(dialectStrings);
   }

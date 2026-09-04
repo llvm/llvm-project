@@ -22,7 +22,7 @@ define i32 @main() {
 ;
 entry:
   %u = alloca %struct..1anon, align 8
-  store double 0x7FF0000000000000, ptr %u
+  store double +inf, ptr %u
   %tmp5 = getelementptr %struct..0anon, ptr %u, i32 0, i32 1
   %tmp6 = load i32, ptr %tmp5
   %tmp7 = shl i32 %tmp6, 1

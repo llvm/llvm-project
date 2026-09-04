@@ -757,6 +757,22 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+cir::CallingConv
+CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
+  switch (cc) {
+  case CC_C:
+    // SPIR/SPIR-V lowers the default CC to spir_func, not plain C.
+    if (cgm.getTriple().isSPIROrSPIRV())
+      return cir::CallingConv::SpirFunction;
+    return cir::CallingConv::C;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  default:
+    // TODO(cir): Support the remaining target-specific calling conventions.
+    return cir::CallingConv::C;
+  }
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
@@ -780,11 +796,11 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     return *fi;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  cir::CallingConv cirCC = clangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
-                                  required);
+  fi = CIRGenFunctionInfo::create(cirCC, info, isInstanceMethod, returnType,
+                                  argTypes, required);
   functionInfos.insert(fi, insertToken);
 
   return *fi;
