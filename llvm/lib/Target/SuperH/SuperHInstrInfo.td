@@ -128,13 +128,18 @@ class SHRegIndirectClass<string op> : SHOpClass<"IReg" # op> {
 
 // Immediate
 class SHImmOp<int width, ValueType vt>
-      : Operand<vt> {
+      : Operand<vt>, ImmLeaf<vt, [{ return isInt<}] # width # [{>(Imm); }]> {
     let ParserMatchClass = SHImmClass<width>;
     let OperandType = "OPERAND_IMMEDIATE";
     let PrintMethod = "printImm";
-    let MCOperandPredicate = [{int64_t Imm; return MCOp.evaluateAsConstantImm(Imm) ? isInt<}] # width # [{>(Imm) : false;}];
+    let MCOperandPredicate = [{
+      int64_t Imm;
+      if (MCOp.evaluateAsConstantImm(Imm))
+        return isInt<}] # width # [{>(Imm)
+      return false;
+    }];
 }
-def imm8 : SHImmOp<8, i32>, ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
+def imm8 : SHImmOp<8, i32>;
 
 // Displacement
 class SHDispOp<int width, ValueType vt>
@@ -564,7 +569,7 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
   def ADDI          : InstRnI8<0b0111000000000000, 
                               (outs GPR:$Rn), (ins GPR:$src, imm8:$imm),
                               "add $imm,$Rn",
-                              [(set i32:$Rn, (add i32:$src, imm8:$imm))]>;
+                              [(set i32:$Rn, (add i32:$src, imm:$imm))]>;
 
   // addc Rm, Rn
   let Defs = [SR], Uses = [SR], isCommutable = 1 in
@@ -641,54 +646,54 @@ let hasSideEffects = 0 in {
 // Multiplication
 //===--------------------------------------------------------------------------===//
 
-let hasSideEffects = 0, isCommutable = 1, Constraints = "$src = $Rn" in {
+let hasSideEffects = 0, isCommutable = 1 in {
 
   // mac.w @Rm+, @Rn+
   let Defs = [MACLO] in
   def MACW      : InstRmRn<0b0100000000001111, 
-                              (outs GPR:$Rn), (ins IGPRInc:$Rm, IGPRInc:$src),
+                              (outs), (ins IGPRInc:$Rm, IGPRInc:$Rn),
                               "mac.w $Rm,$Rn",
                               []>;
 
   // mac.l @Rm+, @Rn+
   let Defs = [MACLO, MACHI] in
   def MACL          : InstRmRn<0b0000000000001111, 
-                              (outs GPR:$Rn), (ins IGPRInc:$Rm, IGPRInc:$src),
+                              (outs), (ins IGPRInc:$Rm, IGPRInc:$Rn),
                               "mac.l $Rm,$Rn",
                               []>;
 
   // mul.l Rm, Rn
   let Defs = [MACLO] in
   def MULL          : InstRmRn<0b0000000000000111, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs), (ins GPR:$Rm, GPR:$Rn),
                               "mul.l $Rm,$Rn",
                               []>;
 
   // muls.w Rm, Rn
   let Defs = [MACLO] in
   def MULS          : InstRmRn<0b0010000000001111, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs), (ins GPR:$Rm, GPR:$Rn),
                               "muls.w $Rm,$Rn",
                               []>;
 
   // mulu.w Rm, Rn
   let Defs = [MACLO] in
   def MULU          : InstRmRn<0b0010000000001110, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs), (ins GPR:$Rm, GPR:$Rn),
                               "mulu.w $Rm,$Rn",
                               []>;
 
   // dmuls.l Rm, Rn
   let Defs = [MACLO, MACHI] in
   def DMULS         : InstRmRn<0b0011000000001101, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs), (ins GPR:$Rm, GPR:$Rn),
                               "dmuls.l $Rm,$Rn",
                               []>;
 
   // dmulu.l Rm, Rn
   let Defs = [MACLO, MACHI] in
   def DMULU         : InstRmRn<0b0011000000000101, 
-                              (outs GPR:$Rn), (ins GPR:$Rm, GPR:$src),
+                              (outs), (ins GPR:$Rm, GPR:$Rn),
                               "dmulu.l $Rm,$Rn",
                               []>;
 }
@@ -1371,9 +1376,9 @@ include "SuperHInstrDSP.td"
 // def : Pat<(i32 (sextloadi8  i32:$src)), (EXTSBRmRn (MOVBRmiRn i32:$src))>;
 // def : Pat<(i32 (sextloadi16 i32:$src)), (EXTSWRmRn (MOVWRmiRn i32:$src))>;
 
-// def : Pat<(sext_inreg i32:$src, i1),  (EXTSBRmRn i32:$src)>;
-// def : Pat<(sext_inreg i32:$src, i8),  (EXTSBRmRn i32:$src)>;
-// def : Pat<(sext_inreg i32:$src, i16), (EXTSWRmRn i32:$src)>;
+def : Pat<(sext_inreg i32:$src, i1),  (EXTSB i32:$src)>;
+def : Pat<(sext_inreg i32:$src, i8),  (EXTSB i32:$src)>;
+def : Pat<(sext_inreg i32:$src, i16), (EXTSW i32:$src)>;
 
 //===--------------------------------------------------------------------------===//
 // Truncating Store

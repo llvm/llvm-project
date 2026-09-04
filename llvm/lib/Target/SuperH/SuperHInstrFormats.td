@@ -126,7 +126,7 @@ class InstRmRn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patt
   
   // Opcode
   let Opcode = opcode;
-  let Inst{15-11} = Opcode{15-11};
+  let Inst{15-12} = Opcode{15-12};
   let Inst{3-0} = Opcode{3-0};
 
   // Operands

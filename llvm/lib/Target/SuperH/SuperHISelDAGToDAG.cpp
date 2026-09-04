@@ -198,6 +198,14 @@ bool SuperHDAGToDAGISel::trySelectWrapper(SDNode *N) {
     }
   }
 
+  if (ConstantSDNode* Const = dyn_cast<ConstantSDNode>(N0.getNode())) {
+    if (auto *CPV = SFI->tryGetConstant(Const, *CurDAG, SHCP::no_modifier)) {
+      SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+      MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
+      ReplaceNode(N, Res);
+      return true;
+    }
+  }
   return false;
 }
 
@@ -301,7 +309,6 @@ bool SuperHDAGToDAGISel::trySelectBRCOND(SDNode *N) {
 
   return false;
 }
-
 
 
 

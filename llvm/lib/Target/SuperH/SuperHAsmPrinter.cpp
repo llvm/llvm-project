@@ -47,6 +47,11 @@ private:
   /// pool entries so we can properly mark them as data regions.
   bool InConstantPool = false;
 
+  /// Set of globals in PromotedGlobals that we've emitted labels for.
+  /// We need to emit labels even for promoted globals so that DWARF
+  /// debug info can link properly.
+  SmallPtrSet<const GlobalVariable*,2> EmittedPromotedGlobalLabels;
+
 	SuperHTargetStreamer &getTargetStreamer() {
 		return static_cast<SuperHTargetStreamer &>(
 			*OutStreamer->getTargetStreamer());
@@ -183,8 +188,21 @@ void SuperHAsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MC
   if (Size < 4)
     Size = 4;
 
-  MCSymbol *MCSym;
+  // Handle promoted constants (eg. immediates that don't fit in 8 bits).
   SuperHConstantPoolValue *SCPV = static_cast<SuperHConstantPoolValue*>(MCPV);
+  if (SCPV->isPromotedGlobal()) {
+    auto *SCPC = cast<SuperHConstantPoolConstant>(SCPV);
+    for (const auto *GV : SCPC->promotedGlobals()) {
+      if (!EmittedPromotedGlobalLabels.count(GV)) {
+        MCSymbol *GVSym = getSymbol(GV);
+        OutStreamer->emitLabel(GVSym);
+        EmittedPromotedGlobalLabels.insert(GV);
+      }
+    }
+    return emitGlobalConstant(DL, SCPC->getPromotedGlobalInit());
+  } 
+
+  MCSymbol *MCSym;
   if (SCPV->isBlockAddress()) {
     const BlockAddress *BA =
       cast<SuperHConstantPoolConstant>(SCPV)->getBlockAddress();

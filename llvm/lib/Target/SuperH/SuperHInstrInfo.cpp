@@ -118,7 +118,7 @@ const MCInstrDesc &SuperHInstrInfo::getBrCond(ISD::CondCode CC) const {
 
 
 //===----------------------------------------------------------------------===//
-//                              Stack Frames
+//                             Register Managment.
 //===----------------------------------------------------------------------===//
 
 void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -130,6 +130,20 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (SrcReg == DestReg)
     return;
 
+  // Load from MACL
+  if (SrcReg == SH::MACLO && SH::GPRRegClass.contains(DestReg)) {
+    BuildMI(MBB, MI, DL, get(SH::STSMACL), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  // Store to MACL
+  if (SH::GPRRegClass.contains(SrcReg) && DestReg == SH::MACLO) {
+    BuildMI(MBB, MI, DL, get(SH::LDSMACL), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
   // If the targets are GPR registers, use MOV Rm, Rn.
   if (SH::GPRRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MI, DL, get(SH::MOV), DestReg)
@@ -140,6 +154,14 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Otherwise this is not possible.
   llvm_unreachable("Impossible reg-to-reg copy");
 }
+
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                              Stack Frames
+//===----------------------------------------------------------------------===//
 
 void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, 
                                           Register SrcReg, bool isKill, int FrameIndex, 
@@ -354,10 +376,10 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&
           MBB.isLayoutSuccessor(TargetBB)) {
 
         BranchCode = getOppositeCondCode(BranchCode);
-        unsigned JNCC = getBrCond(BranchCode).getOpcode();
-        MachineBasicBlock::iterator OldInst = I;
+        auto JNCC = getBrCond(BranchCode);
 
-        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(JNCC))
+        MachineBasicBlock::iterator OldInst = I;
+        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), JNCC)
             .addMBB(UnCondBrIter->getOperand(0).getMBB());
         BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(SH::BRA))
             .addMBB(TargetBB);

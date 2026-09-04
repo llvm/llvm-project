@@ -79,7 +79,6 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(VT, MVT::i1, Promote);
   }
 
-
   // Division and remainders are multi-instruction sequences
   // on SuperH. Use a custom pass to lower those.
   for (MVT VT : {MVT::i8, MVT::i16, MVT::i32}) {
@@ -90,7 +89,7 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   }
 
   // Multiplies have multiple lowerings depending on size.
-  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32}) {
+  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
     setOperationAction(ISD::MUL, VT, Custom);
   }
 
@@ -98,7 +97,7 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i32, Custom);
-
+  setOperationAction(ISD::Constant, MVT::i32, Custom);
 
   setOperationAction(ISD::BR_CC, MVT::i8, Custom);
   setOperationAction(ISD::BR_CC, MVT::i16, Custom);
@@ -114,6 +113,10 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i16, Custom);
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
+
+  // for (MVT VT : MVT::integer_valuetypes()) {
+  //   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
+  // }
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent);
@@ -189,6 +192,32 @@ SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
 
 //===----------------------------------------------------------------------===//
+//                            CONSTANT LOWERING
+//===----------------------------------------------------------------------===//
+
+SDValue SuperHTargetLowering::LowerConstant(SDValue Op, SelectionDAG &DAG) const {
+  DEBUG_FN_PRINT()
+
+  // Get the address of the target into a register
+  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
+    auto DL = SDLoc(C);
+
+    // Constant would fit in immediate
+    if (isInt<8>(C->getSExtValue())) {
+      return Op;
+    }
+
+    // Constant would NOT fit in immediate, lower to constpool.
+    SDValue Const = DAG.getSignedTargetConstant(C->getSExtValue(), DL, C->getValueType(0));
+    return DAG.getNode(SHISD::WRAPPER, DL, C->getValueType(0), Const);
+  }
+  return SDValue();
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
 //                             ADDRESS LOWERING
 //===----------------------------------------------------------------------===//
 
@@ -255,15 +284,12 @@ SDValue SuperHTargetLowering::LowerFormalArguments(SDValue Chain,
                        SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineRegisterInfo &RegInfo = MF.getRegInfo();
   DataLayout DL = DAG.getDataLayout();
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
-
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SH);
-
 
   SDValue ArgValue;
   for (CCValAssign &VA : ArgLocs) {
@@ -432,6 +458,14 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
+  // Resolve the global value to jump to.
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    Callee = LowerGlobalAddress(SDValue(G, 0), DAG);
+  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    Callee = LowerExternalSymbol(SDValue(S, 0), DAG);
+  }
+  CCInfo.AnalyzeCallOperands(Outs, CC_SH);
+
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
@@ -444,6 +478,26 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
     CCValAssign &VA = ArgLocs[AI];
     EVT RegVT = VA.getLocVT();
     SDValue Arg = OutVals[AI];
+
+    // Promote the value if needed. With Clang this should not happen.
+    switch (VA.getLocInfo()) {
+    default:
+      llvm_unreachable("Unknown loc info!");
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::SExt:
+      Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, RegVT, Arg);
+      break;
+    case CCValAssign::ZExt:
+      Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, RegVT, Arg);
+      break;
+    case CCValAssign::AExt:
+      Arg = DAG.getNode(ISD::ANY_EXTEND, DL, RegVT, Arg);
+      break;
+    case CCValAssign::BCvt:
+      Arg = DAG.getNode(ISD::BITCAST, DL, RegVT, Arg);
+      break;
+    }
 
     // Stop when we encounter a stack argument, we need to process them
     // in reverse order in the loop below.
@@ -494,14 +548,6 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
     Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, InGlue);
     InGlue = Chain.getValue(1);
   }
-
-  // Resolve the global value to jump to.
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    Callee = LowerGlobalAddress(SDValue(G, 0), DAG);
-  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    Callee = LowerExternalSymbol(SDValue(S, 0), DAG);
-  }
-  InGlue = Chain.getValue(1);
 
   // Returns a chain & a flag for retval copy to use.
   SmallVector<SDValue, 8> Ops;
@@ -633,6 +679,7 @@ SDValue SuperHTargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
 //===----------------------------------------------------------------------===//
 //                          MULTIPLICATION LOWERING
 //===----------------------------------------------------------------------===//
+
 SDValue SuperHTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::MUL) && "Invalid opcode for MUL lowering");
@@ -644,17 +691,24 @@ SDValue SuperHTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   switch (VT.getSimpleVT().SimpleTy) {
   default:
     llvm_unreachable("Unexpected type for ");
+
   case MVT::i8: {
-    SDValue MulOp = DAG.getNode(SH::MULS, DL, MVT::i32, Op.getValue(0), Op.getValue(1));
-    return DAG.getNode(SH::LDSMACL, DL, MVT::i32, MulOp);
+    MachineSDNode *MUL = DAG.getMachineNode(SH::MULL, DL, VT, Op.getOperand(0), Op.getOperand(1));
+    return DAG.getCopyFromReg(SDValue(MUL, 0), DL, SH::MACLO, VT);
   }
+
   case MVT::i16: {
-    SDValue MulOp = DAG.getNode(SH::MULS, DL, MVT::i32, Op.getValue(0), Op.getValue(1));
-    return DAG.getNode(SH::LDSMACL, DL, MVT::i32, MulOp);
+    MachineSDNode *MUL = DAG.getMachineNode(SH::MULL, DL, VT, Op.getOperand(0), Op.getOperand(1));
+    return DAG.getCopyFromReg(SDValue(MUL, 0), DL, SH::MACLO, VT);
   }
 
   case MVT::i32: {
-    // 32-bit multiplication requires lowering to __mulsi3
+    MachineSDNode *MUL = DAG.getMachineNode(SH::MULL, DL, VT, Op.getOperand(0), Op.getOperand(1));
+    return DAG.getCopyFromReg(SDValue(MUL, 0), DL, SH::MACLO, VT);
+  }
+
+  case MVT::i64: {
+    // 64-bit multiplication requires lowering to __mulsi3
     SDValue InChain = DAG.getEntryNode();
 
     TargetLowering::ArgListTy Args;
@@ -701,6 +755,8 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) cons
     return LowerDIV(Op, DAG);
   case ISD::MUL:
     return LowerMUL(Op, DAG);
+  case ISD::Constant:
+    return LowerConstant(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::ExternalSymbol:

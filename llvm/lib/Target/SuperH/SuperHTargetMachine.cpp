@@ -48,8 +48,6 @@ public:
     : TargetPassConfig(TM, PM) {}
 
   bool addInstSelector() override;
-  void addPreSched2() override;
-  void addPreEmitPass() override;
   void addPreEmitPass2() override;
   SuperHTargetMachine &getSuperHTargetMachine() const {
     return getTM<SuperHTargetMachine>();
@@ -61,14 +59,8 @@ bool SuperHPassConfig::addInstSelector() {
   return false;
 }
 
-void SuperHPassConfig::addPreSched2() {
-}
-
-void SuperHPassConfig::addPreEmitPass() {
-  addPass(createSuperHFillDelaySlotsPass());
-}
-
 void SuperHPassConfig::addPreEmitPass2() {
+  addPass(createSuperHFillDelaySlotsPass());
 
   // Inserts Constant Islands. Block sizes cannot be increased after this point,
   // as this may push the branch ranges and load offsets of accessing constant
