@@ -24,9 +24,9 @@ RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 foo.o
 RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux no-dyndbg.s -o no-dyndbg.o
 
 ## Default link.
-RUN: not ld.lld -o /dev/null main.o foo.o no-dyndbg.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=error -DERR_OR_NOIEXEC_WARN=error \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=error -DERR_OR_NOIEXEC_WARN=error \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
 
 CHECK:      [[ERR_OR_WARN]]: undefined symbol: undef_no_dyndbg_inner
 CHECK-NEXT: >>> referenced by no-dyndbg.o:(.text.bar+0x1)
@@ -43,9 +43,9 @@ CHECK-NEXT: >>> referenced by main.o:(.debug_llvm_dyndbg+0x0)
 CHECK-EMPTY:
 
 ## Default link with reverse input file order.
-RUN: not ld.lld -o /dev/null no-dyndbg.o foo.o main.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=error -DERR_OR_NOIEXEC_WARN=error --check-prefix=REVERSE \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=error -DERR_OR_NOIEXEC_WARN=error --check-prefix=REVERSE \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
 
 REVERSE:      [[ERR_OR_WARN]]: undefined symbol: undef_no_dyndbg_inner
 REVERSE-NEXT: >>> referenced by no-dyndbg.o:(.text.bar+0x1)
@@ -62,28 +62,28 @@ REVERSE-NEXT: >>> referenced by foo.o:(.debug_llvm_dyndbg+0x0)
 REVERSE-EMPTY:
 
 ## Links with `--warn-unresolved-symbols`.
-RUN: not ld.lld --warn-unresolved-symbols -o /dev/null main.o foo.o no-dyndbg.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=error \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
-RUN: not ld.lld --warn-unresolved-symbols -o /dev/null no-dyndbg.o foo.o main.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=error --check-prefix=REVERSE \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --warn-unresolved-symbols -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=error \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --warn-unresolved-symbols -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=error --check-prefix=REVERSE \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
 
 ## Links with `--noinhibit-exec`.
-RUN: not ld.lld --noinhibit-exec -o /dev/null main.o foo.o no-dyndbg.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=warning \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
-RUN: not ld.lld --noinhibit-exec -o /dev/null no-dyndbg.o foo.o main.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=warning --check-prefix=REVERSE \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --noinhibit-exec -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=warning \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --noinhibit-exec -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=warning --check-prefix=REVERSE \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
 
 ## Links with `--unresolved-symbols=ignore-all`.
-RUN: not ld.lld --unresolved-symbols=ignore-all -o /dev/null main.o foo.o no-dyndbg.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=warning -DFILE="main.o" --check-prefix=ERROR \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
-RUN: not ld.lld --unresolved-symbols=ignore-all -o /dev/null no-dyndbg.o foo.o main.o 2>&1 \
-RUN:   | FileCheck -DERR_OR_WARN=warning -DFILE="foo.o" --check-prefix=ERROR \
-RUN:       --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --unresolved-symbols=ignore-all -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DFILE="main.o" --check-prefix=ERROR \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --unresolved-symbols=ignore-all -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DFILE="foo.o" --check-prefix=ERROR \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
 
 ERROR:      error: undefined hidden symbol: undef_hidden
 ERROR-NEXT: >>> referenced by [[FILE]]:(.debug_llvm_dyndbg+0x0)

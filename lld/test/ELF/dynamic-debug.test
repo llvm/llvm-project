@@ -150,11 +150,11 @@ IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
 IN: There are no section groups in this file.
 
 ## Check disabling of incompatible ICF options.
-RUN: ld.lld -e main --icf=all -o %t/out-dd-icf-all %t/main.o %t/foo.o %t/shared.so 2>&1 \
-RUN:   | FileCheck --check-prefix=ICF-WARN %s
+RUN: ld.lld -e main --icf=all -o %t/out-dd-icf-all %t/main.o %t/foo.o %t/shared.so 2>&1 | \
+RUN:   FileCheck --check-prefix=ICF-WARN %s
 RUN: cmp %t/out-dd-icf-all %t/out-dd
-RUN: ld.lld -e main --icf=safe -o %t/out-dd-icf-safe %t/main.o %t/foo.o %t/shared.so 2>&1 \
-RUN:   | FileCheck --check-prefix=ICF-WARN %s
+RUN: ld.lld -e main --icf=safe -o %t/out-dd-icf-safe %t/main.o %t/foo.o %t/shared.so 2>&1 | \
+RUN:   FileCheck --check-prefix=ICF-WARN %s
 RUN: cmp %t/out-dd-icf-safe %t/out-dd
 
 ICF-WARN: ICF disabled because it is incompatible with dynamic debugging
