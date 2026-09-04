@@ -83,14 +83,14 @@ static cl::opt<bool>
 
 namespace sampleprof {
 
-// Internal suffixes which are not reflected in the DWARF info.
-static const SmallVector<StringRef, 10> CanonicalSuffixes(
-    {// Internal suffixes from CoroSplit pass
-     ".cleanup", ".destroy", ".resume",
-     // Internal suffixes from Bolt
-     ".cold", ".warm",
-     // Compiler/LTO internal
-     ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
+// Internal suffixes which are not reflected in the source code.
+static constexpr StringRef CanonicalSuffixes[] =
+    { // Internal suffixes from CoroSplit pass
+        ".cleanup", ".destroy", ".resume",
+        // Internal suffixes from Bolt
+        ".cold", ".warm",
+        // Compiler/LTO internal
+        ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
 
 static const Target *getTarget(const ObjectFile *Obj) {
   Triple TheTriple = Obj->makeTriple();
@@ -1171,6 +1171,8 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
     if (UseCanonicalFnName)
       FunctionName =
           FunctionSamples::getCanonicalFnName(FunctionName, CanonicalSuffixes);
+    else
+      FunctionName = FunctionSamples::getCanonicalCoroFnName(FunctionName);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
     uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;
