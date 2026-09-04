@@ -129,6 +129,7 @@ namespace {
 class AllocaSliceRewriter;
 class AllocaSlices;
 class Partition;
+class Slice;
 
 class SelectHandSpeculativity {
   unsigned char Storage = 0; // None are speculatable by default.
@@ -153,6 +154,8 @@ using UnspeculatableStore = StoreInst *;
 using RewriteableMemOp =
     std::variant<PossiblySpeculatableLoad, UnspeculatableStore>;
 using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
+using InstructionSliceMap =
+    SmallDenseMap<Instruction *, SmallPtrSet<Slice *, 8>, 8>;
 
 /// An optimization pass providing Scalar Replacement of Aggregates.
 ///
@@ -4834,6 +4837,45 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
+/// Try to find a slice in the map that partially overlaps with S, i.e. some but
+/// not all of its range is contained within the range of S, and which forms a
+/// load/store pair with S (i.e. the two slices are used to perform a
+/// memmove-like copy). SliceMap is expected to contain the slices for a single
+/// Partition.
+static Slice *findOverlappingCopySlice(Slice &S,
+                                       InstructionSliceMap &SliceMap) {
+  // Single byte slices can't partially overlap anything
+  if (S.endOffset() - S.beginOffset() == 1)
+    return nullptr;
+  // The source/destination of this slice needs to be a memory instruction
+  // whose slice overlaps this one.
+  Instruction *I = cast<Instruction>(S.getUse()->getUser());
+  Instruction *J = nullptr;
+  if (auto *LI = dyn_cast<LoadInst>(I)) {
+    if (!LI->hasOneUser())
+      return nullptr;
+    J = dyn_cast<Instruction>(*LI->user_begin());
+    if (!J)
+      return nullptr;
+  } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+    J = dyn_cast<Instruction>(SI->getValueOperand());
+    if (!J || !J->hasOneUser())
+      return nullptr;
+  } else {
+    return nullptr;
+  }
+  // Check if there's a slice that corresponds to J that overlaps this slice
+  for (Slice *JS : SliceMap[J]) {
+    if (S.beginOffset() > JS->beginOffset() &&
+        S.beginOffset() < JS->endOffset())
+      return JS;
+    if (JS->beginOffset() > S.beginOffset() &&
+        JS->beginOffset() < S.endOffset())
+      return JS;
+  }
+  return nullptr;
+}
+
 /// Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
@@ -4894,9 +4936,15 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
   LLVM_DEBUG(dbgs() << "  Searching for candidate loads and stores\n");
   for (auto &P : AS.partitions()) {
+    InstructionSliceMap SliceMap;
+    for (Slice &S : P) {
+      SliceMap[cast<Instruction>(S.getUse()->getUser())].insert(&S);
+    }
     for (Slice &S : P) {
       Instruction *I = cast<Instruction>(S.getUse()->getUser());
-      if (!S.isSplittable() || S.endOffset() <= P.endOffset()) {
+      bool ExtendsPastPartitionEnd = S.endOffset() > P.endOffset();
+      Slice *CopyOverlap = findOverlappingCopySlice(S, SliceMap);
+      if (!S.isSplittable() || !(ExtendsPastPartitionEnd || CopyOverlap)) {
         // If this is a load we have to track that it can't participate in any
         // pre-splitting. If this is a store of a load we have to track that
         // that load also can't participate in any pre-splitting.
@@ -4952,7 +5000,37 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       assert(Offsets.Splits.empty() &&
              "Should not have splits the first time we see an instruction!");
       Offsets.S = &S;
-      Offsets.Splits.push_back(P.endOffset() - S.beginOffset());
+      if (CopyOverlap) {
+        // S is being moved to CopyOverlap, which overlaps with S, so we split S
+        // into three parts:
+        //  * Initially outside the overlap and copied into the overlap.
+        //  * Either initially inside the overlap and remains inside it after
+        //    the copy, or initially outside and remains outside, depending on
+        //    if the overlap or non-overlap area is larger, and which will be
+        //    empty if they are equal.
+        //  * Initially inside the overlap and copied outside the overlap.
+        // This should result in the first and last parts being promoted to
+        // scalars, which may result in the middle part now being an overlapping
+        // copy which will then be presplit in the same way in the next
+        // iteration of the SROA loop.
+        uint64_t OverlapStart =
+            std::max(S.beginOffset(), CopyOverlap->beginOffset());
+        uint64_t OverlapEnd = std::min(S.endOffset(), CopyOverlap->endOffset());
+        uint64_t OverlapSize = OverlapEnd - OverlapStart;
+        uint64_t NonOverlapSize =
+            (S.endOffset() - S.beginOffset()) - OverlapSize;
+        if (OverlapSize < NonOverlapSize) {
+          Offsets.Splits.push_back(OverlapSize);
+          Offsets.Splits.push_back(NonOverlapSize);
+        } else if (OverlapSize > NonOverlapSize) {
+          Offsets.Splits.push_back(NonOverlapSize);
+          Offsets.Splits.push_back(OverlapSize);
+        } else {
+          Offsets.Splits.push_back(OverlapSize);
+        }
+      } else {
+        Offsets.Splits.push_back(P.endOffset() - S.beginOffset());
+      }
     }
 
     // Now scan the already split slices, and add a split for any of them which
