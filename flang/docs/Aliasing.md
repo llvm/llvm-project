@@ -281,13 +281,14 @@ print *, target
 end
 ```
 
-By default, optimizations assume that Cray pointers do not alias any other
-variables. In the above example, it is assumed that `handle` and `target` do
-not alias, and optimizations will treat them as separate entities.
+By default, optimizations assume that Cray pointers do not alias other
+variables unless the association is visible in the same procedure. In the
+above example, `ptr = loc(target)` causes accesses through `handle` and
+`target` to be treated as potentially aliasing.
 
 In order to disable optimizations that assume that there is no aliasing between
-Cray pointer targets and entities they alias with, add the TARGET attribute to
-variables aliasing with a Cray pointer (the `target` variable in this example).
+Cray pointer targets and entities they alias with when the association is not
+visible, add the TARGET attribute to variables aliasing with a Cray pointer.
 
 There is also a flag, `-funsafe-cray-pointers`, which causes the compiler
 to assume that cray pointers alias with all data whether or not it has the
