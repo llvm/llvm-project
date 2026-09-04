@@ -123,15 +123,21 @@ Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
 
   init();
   sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
+  StringRef PassName = P->getPassName();
+  StringRef PassArgument;
+  if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
+    PassArgument = PI->getPassArgument();
+  StringRef TimerName = PassArgument.empty() ? PassName : PassArgument;
+
   std::unique_ptr<Timer> &T = TimingData[Pass];
 
-  if (!T) {
-    StringRef PassName = P->getPassName();
-    StringRef PassArgument;
-    if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
-      PassArgument = PI->getPassArgument();
-    T.reset(newPassTimer(PassArgument.empty() ? PassName : PassArgument, PassName));
-  }
+  // This map outlives the pass instances it is keyed on, so a new pass can be
+  // allocated at a destroyed one's address. Its timer carries the old name.
+  if (T && T->getName() != TimerName)
+    T.reset();
+
+  if (!T)
+    T.reset(newPassTimer(TimerName, PassName));
   return T.get();
 }
 
