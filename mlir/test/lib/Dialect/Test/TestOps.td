@@ -1132,10 +1132,53 @@ def UpdateAttr : Pat<(I32ElementsAttrOp $attr),
                      (I32ElementsAttrOp ConstantAttr<I32ElementsAttr, "0">),
                      [(IsNotScalar $attr)]>;
 
+def TestGreedyCfgRewriteOp : TEST_Op<"greedy_cfg_rewrite"> {
+  let description = [{
+    Exercises reachability changes while the greedy driver is processing its
+    worklist. The matching test pattern performs the CFG change selected by
+    `mode`, then erases the op:
+
+      observe:           emit a remark; used to observe whether a block is
+                         processed
+      append_unreachable: append a disconnected block holding an observer
+      append_reachable:  append a block holding an observer and branch to it
+                         on `cond`
+      insert_entry:      insert a new entry block, disconnecting the old one
+      move_entry:        move the last block to the front
+      move_entry_away:   insert a block after the entry and move the entry to
+                         the end
+      erase_entry:       erase the entry block; its successor becomes the entry
+      redirect:          retarget the block's branch to the last block
+      double_redirect:   retarget the block's branch to the last block and
+                         replace the entry's branch with a return
+      reconnect:         replace the block's branch with a conditional branch
+                         on `cond` to its destination and to the next block
+      disconnect_parent: retarget the entry branch of the parent region
+      move_parent:       move the grandparent operation into a new block
+      move_erase:        retarget the block's branch, then move its old
+                         destination to another region and erase it
+      merge:             merge the branch destination into the block
+      merge_disconnect:  merge, then fold the merged conditional branch
+      redirect_retarget: retarget the block's branch to its destination's
+                         destination, and the destination's branch to an
+                         appended block holding an observer
+
+    Modes that operate on the block's branch expect an unconditional branch
+    without operands as the terminator.
+  }];
+  let arguments = (ins EnumProp<TestGreedyCfgRewriteMode>:$mode,
+                       Optional<I1>:$cond);
+  let assemblyFormat = "$mode ($cond^)? attr-dict";
+}
+
 def TestBranchOp : TEST_Op<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
-  let arguments = (ins Variadic<AnyType>:$targetOperands);
+  let arguments = (ins Variadic<AnyType>:$targetOperands,
+                       UnitAttr:$fold_to_last);
   let successors = (successor AnySuccessor:$target);
+  // With `fold_to_last`, the fold retargets the branch in place to the last
+  // block of the region, to exercise CFG changes made by folding.
+  let hasFolder = 1;
 }
 
 def TestProducingBranchOp : TEST_Op<"producing_br",
