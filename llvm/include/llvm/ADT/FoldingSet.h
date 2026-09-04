@@ -235,12 +235,11 @@ template <typename T> struct DefaultFoldingSetTrait {
   static void Profile(const T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
   static void Profile(T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
 
-  // Equals - Test if the profile for X would match ID, using TempID
-  // to compute a temporary ID if necessary. The default implementation
-  // just calls Profile and does a regular comparison. Implementations
-  // can override this to provide more efficient implementations.
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
-                            FoldingSetNodeID &TempID) {
+  // Test if the profile for X would match ID. Implementations can override this
+  // to compare against X's fields, which avoids building a profile for every
+  // candidate.
+  static bool Equals(T &X, const FoldingSetNodeID &ID) {
+    FoldingSetNodeID TempID;
     FoldingSetTrait<T>::Profile(X, TempID);
     return TempID == ID;
   }
@@ -269,8 +268,8 @@ template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
     X.Profile(ID, Context);
   }
 
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
-                            FoldingSetNodeID &TempID, Ctx Context) {
+  static bool Equals(T &X, const FoldingSetNodeID &ID, Ctx Context) {
+    FoldingSetNodeID TempID;
     ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
     return TempID == ID;
   }
@@ -460,14 +459,10 @@ class FoldingSetImpl : public FoldingSetBase, public Trait::ContextStorage {
   }
 
   bool nodeEquals(FoldingSetNode *N, const FoldingSetNodeID &ID) const {
-    // Trait::Equals profiles into TempID without clearing it first, so each
-    // candidate needs its own.
-    FoldingSetNodeID TempID;
     if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
-      return Trait::Equals(*static_cast<T *>(N), ID, TempID);
+      return Trait::Equals(*static_cast<T *>(N), ID);
     else
-      return Trait::Equals(*static_cast<T *>(N), ID, TempID,
-                           this->getContext());
+      return Trait::Equals(*static_cast<T *>(N), ID, this->getContext());
   }
 
 public:
