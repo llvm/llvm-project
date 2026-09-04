@@ -1,0 +1,19 @@
+# REQUIRES: aarch64
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/used.ll -o %t/used.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts %t/used.o -e foo -o %t/out
+# RUN: llvm-readelf -s -W %t/out | FileCheck %s
+
+# CHECK: val
+
+#--- used.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+@val = global i32 2, section ".data.val", align 4
+@llvm.used = appending global [1 x ptr] [ptr @val], section "llvm.metadata"
+
+define i32 @foo() section ".text.foo" {
+  %v = load volatile i32, ptr @val
+  ret i32 %v
+}

@@ -1833,7 +1833,7 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
 
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
-  obj = CHECK2(lto::InputFile::create(mbref), this);
+  obj = CHECK2(lto::InputFile::create(mbref, ctx.arg.ltoLinkerScripts), this);
   obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
 
   Triple t(obj->getTargetTriple());
@@ -1857,9 +1857,25 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
                                 const lto::InputFile::Symbol &objSym,
                                 BitcodeFile &f) {
-  uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
+  uint8_t binding;
+  if (!objSym.isGlobal())
+    binding = STB_LOCAL;
+  else if (objSym.isWeak())
+    binding = STB_WEAK;
+  else
+    binding = STB_GLOBAL;
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
+
+  if (!objSym.isGlobal()) {
+    // Local symbols aren't inserted in the symbol table.
+    assert(!sym);
+    objSym.Name = ctx.uniqueSaver.save(objSym.getName());
+    sym = reinterpret_cast<Symbol *>(makeThreadLocalN<SymbolUnion>(1));
+    new (sym)
+        Defined(ctx, &f, StringRef(), binding, visibility, type, 0, 0, nullptr);
+    return;
+  }
 
   if (!sym) {
     // Symbols can be duplicated in bitcode files because of '#include' and
@@ -1923,6 +1939,8 @@ void BitcodeFile::parseLazy() {
   numSymbols = obj->symbols().size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
+    if (!irSym.isGlobal())
+      continue;
     // Symbols can be duplicated in bitcode files because of '#include' and
     // linkonce_odr. Use uniqueSaver to save symbol names for de-duplication.
     // Update objSym.Name to reference (via StringRef) the string saver's copy;
@@ -1941,7 +1959,7 @@ void BitcodeFile::postParse() {
   for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
     const Symbol &sym = *symbols[i];
     if (sym.file == this || !sym.isDefined() || irSym.isUndefined() ||
-        irSym.isCommon() || irSym.isWeak())
+        !irSym.isGlobal() || irSym.isCommon() || irSym.isWeak())
       continue;
     int c = irSym.getComdatIndex();
     if (c != -1 && !keptComdats[c])

@@ -1,0 +1,72 @@
+# REQUIRES: aarch64
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/A.ll -o %t/A.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/B.s -o %t/B.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts -Map=%t/map.txt -T %t/script.t %t/A.o %t/B.o -o %t/out
+# RUN: FileCheck %s --check-prefix=MAP < %t/map.txt
+
+# MAP: .foo
+# MAP: __foo_A
+# MAP: .text.Afun1
+# MAP: .text.Afun2
+# MAP: __foo_B
+# MAP: .text.Bfun1
+# MAP: .text.Bfun2
+# MAP: .text.main
+# MAP: __foo_end
+
+#--- A.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+declare ptr @Bfun2(i32)
+
+define internal ptr @Afun1(i32 %x) noinline section ".text.Afun1" {
+  %p = call ptr @Bfun2(i32 0)
+  ret ptr %p
+}
+
+define ptr @Afun2(i32 %y) section ".text.Afun2" {
+  %p = call ptr @Afun1(i32 0)
+  ret ptr %p
+}
+
+#--- B.s
+.text
+.section .text.Bfun1,"ax",@progbits
+.type Bfun1,@function
+Bfun1:
+  mov x0, xzr
+  ret
+.size Bfun1, .-Bfun1
+
+.section .text.Bfun2,"ax",@progbits
+.globl Bfun2
+.type Bfun2,@function
+Bfun2:
+  b Bfun1
+.size Bfun2, .-Bfun2
+
+.section .text.main,"ax",@progbits
+.globl main
+.type main,@function
+main:
+  mov x0, xzr
+  bl Afun2
+  mov x0, xzr
+  bl Bfun2
+  mov x0, xzr
+  ret
+.size main, .-main
+
+#--- script.t
+SECTIONS {
+  .foo : {
+     __foo_A = .;
+     *A.o(.text.*)
+     __foo_B = .;
+     *B.o(.text.*)
+     __foo_end = .;
+     }
+}
