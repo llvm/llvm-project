@@ -5427,7 +5427,7 @@ void MaskedOp::build(OpBuilder &builder, OperationState &state,
 }
 
 //===----------------------------------------------------------------------===//
-// Spec 5.1: Dispatch construct (12.3)
+// Spec 5.2: Dispatch construct (7.6)
 //===----------------------------------------------------------------------===//
 
 void DispatchOp::build(OpBuilder &builder, OperationState &state,

@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version = #omp.version<version = 31>} {
+module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version = #omp.version<version = 51>} {
   // CHECK-LABEL: define void @_QMfuncsPfoo_variant()
   llvm.func @_QMfuncsPfoo_variant() {
     llvm.return

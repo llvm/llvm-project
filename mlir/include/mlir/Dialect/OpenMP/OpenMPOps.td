@@ -2436,9 +2436,13 @@ def DispatchOp : OpenMP_Op<"dispatch", traits = [
   let summary = "dispatch construct";
   let description = [{
     The dispatch construct enables the invocation of a variant of a
-    base procedure. The structured block of a dispatch construct is
-    a single expression statement that contains a function call or
-    a subroutine call.
+    base procedure. It was introduced in OpenMP 5.0; the section numbers cited
+    here follow the OpenMP 5.2 spec (7.6). At the source level (C/C++/Fortran)
+    the structured block of a dispatch construct is a single expression
+    statement containing a function or subroutine call. That is a restriction on
+    the source form, not an invariant of this op: the region may contain
+    multiple blocks and control flow (for example, a runtime base/variant
+    branch).
 
     The producer of the region is responsible for materializing the base/variant
     selection inside the region. The `nocontext` and `novariants` operands are

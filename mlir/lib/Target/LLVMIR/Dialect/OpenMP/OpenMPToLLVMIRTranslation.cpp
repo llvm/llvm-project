@@ -573,9 +573,15 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskwaitOp op) { checkNowait(op, result); })
       .Case([&](omp::DispatchOp op) {
-        // nowait clause requests asynchronous dispatch and is not yet honored,
-        // so diagnose it rather than silently dropping it.
-        checkNowait(op, result);
+        // In OpenMP 5.0/5.1 `dispatch` creates an implicit task and `nowait`
+        // controls whether that task is included; in OpenMP 5.2 `nowait` has no
+        // effect on `dispatch`. The 5.0/5.1 asynchronous-task behavior is not
+        // yet implemented, so diagnose `nowait` for those versions; for 5.2 it
+        // is a legal no-op and is accepted.
+        int64_t version = omp::getOpenMPVersionAttribute(
+            op->getParentOfType<ModuleOp>(), /*fallback=*/50);
+        if (version == 50 || version == 51)
+          checkNowait(op, result);
       })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
