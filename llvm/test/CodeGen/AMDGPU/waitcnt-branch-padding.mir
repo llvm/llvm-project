@@ -1,12 +1,16 @@
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -run-pass='si-waitcnt-branch-padding,si-insert-waitcnts' -o - %s | FileCheck %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-machineinstrs -run-pass='si-waitcnt-branch-padding,si-insert-waitcnts' -o - %s | FileCheck %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=-gfx940-insts -verify-machineinstrs -run-pass='si-waitcnt-branch-padding,si-insert-waitcnts' -o - %s | FileCheck --check-prefix=NO-GFX940 %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=true -verify-machineinstrs -run-pass='si-waitcnt-branch-padding,si-insert-waitcnts' -o - %s | FileCheck --check-prefix=FORCE-ENABLED %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=false -verify-machineinstrs -run-pass='si-waitcnt-branch-padding,si-insert-waitcnts' -o - %s | FileCheck --check-prefix=DISABLED %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs -run-pass='si-waitcnt-branch-padding,si-insert-waitcnts' -o - %s | FileCheck --check-prefix=OTHER-GFX9 %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -run-pass=si-waitcnt-branch-padding -o - %s | FileCheck --check-prefix=PADDING-ONLY %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -passes='si-waitcnt-branch-padding,si-insert-waitcnts' -o - %s | FileCheck %s
-# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -start-before=si-waitcnt-branch-padding -stop-after=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=-gfx940-insts -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=NO-GFX940 %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=true -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=FORCE-ENABLED %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=false -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=DISABLED %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=OTHER-GFX9 %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -passes=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -start-before=si-insert-waitcnts -stop-after=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -O0 -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=true -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=O0 %s
+# RUN: llc -O0 -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=true -verify-machineinstrs -passes=si-insert-waitcnts -o - %s | FileCheck --check-prefix=O0 %s
+# Cache PDT before the merged pass and verify its post-pass result contains the
+# newly split block.
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='require<machine-post-dom-tree>,si-insert-waitcnts,print<machine-post-dom-tree>' -filetype=null %s 2>&1 | FileCheck --check-prefix=PDT %s
 
 --- |
   define amdgpu_kernel void @pad_execz_edge_for_vmem() #0 { ret void }
@@ -38,10 +42,13 @@ machineFunctionInfo:
   occupancy:       8
 body:             |
   ; CHECK-LABEL: name: pad_execz_edge_for_vmem
-  ; PADDING-ONLY-LABEL: name: pad_execz_edge_for_vmem
+  ; O0-LABEL: name: pad_execz_edge_for_vmem
+  ; O0-NOT: BUFFER_INV
   ; NO-GFX940-LABEL: name: pad_execz_edge_for_vmem
   ; DISABLED-LABEL: name: pad_execz_edge_for_vmem
   ; OTHER-GFX9-LABEL: name: pad_execz_edge_for_vmem
+  ; PDT-LABEL: MachinePostDominatorTree for machine function: pad_execz_edge_for_vmem
+  ; PDT: %bb.3
   bb.0:
     liveins: $exec, $m0, $sgpr0_sgpr1, $vgpr0_vgpr1
 
@@ -62,8 +69,8 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def dead $scc
     ; CHECK: WAIT_ASYNCMARK 0
     ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
-    ; PADDING-ONLY: WAIT_ASYNCMARK 0
-    ; PADDING-ONLY-NOT: S_WAITCNT
+    ; O0: WAIT_ASYNCMARK 0
+    ; O0-NEXT: S_WAITCNT .Vmcnt_0
     ; DISABLED-NOT: BUFFER_INV
     ; DISABLED: WAIT_ASYNCMARK 0
     ; DISABLED-NEXT: S_WAITCNT .Vmcnt_0
@@ -77,11 +84,10 @@ body:             |
     S_ENDPGM 0
 
   ; CHECK: bb.3:
-  ; PADDING-ONLY: bb.3:
   ; CHECK-NOT: S_MOV_B64
   ; CHECK: BUFFER_INV 0, implicit $exec
-  ; PADDING-ONLY: BUFFER_INV 0, implicit $exec
   ; CHECK-NEXT: S_BRANCH %bb.2
+  ; O0-NOT: BUFFER_INV
 ...
 
 ---
@@ -92,6 +98,8 @@ machineFunctionInfo:
   occupancy:       8
 body:             |
   ; CHECK-LABEL: name: pad_ordinary_vmem_dependency
+  ; O0-LABEL: name: pad_ordinary_vmem_dependency
+  ; PDT-LABEL: MachinePostDominatorTree for machine function: pad_ordinary_vmem_dependency
   bb.0:
     liveins: $exec, $scc, $vgpr0_vgpr1
 
@@ -746,6 +754,9 @@ body:             |
   bb.2:
     liveins: $exec, $vgpr2
 
+    ; CHECK: S_WAITCNT .Vmcnt_0
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
     $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
     S_ENDPGM 0
+    ; CHECK-NOT: BUFFER_INV
 ...

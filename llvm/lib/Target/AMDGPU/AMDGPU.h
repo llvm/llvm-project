@@ -58,7 +58,6 @@ FunctionPass *createAMDGPUNextUseAnalysisPrinterLegacyPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
-FunctionPass *createSIWaitcntBranchPaddingPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
@@ -444,13 +443,6 @@ public:
                         MachineFunctionAnalysisManager &AM);
 };
 
-class SIWaitcntBranchPaddingPass
-    : public OptionalPassInfoMixin<SIWaitcntBranchPaddingPass> {
-public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
-};
-
 class SIInsertWaitcntsPass
     : public RequiredPassInfoMixin<SIInsertWaitcntsPass> {
 public:
@@ -556,9 +548,6 @@ extern char &AMDGPULowerVGPREncodingLegacyID;
 
 void initializeSIInsertHardClausesLegacyPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
-
-void initializeSIWaitcntBranchPaddingLegacyPass(PassRegistry &);
-extern char &SIWaitcntBranchPaddingID;
 
 void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
