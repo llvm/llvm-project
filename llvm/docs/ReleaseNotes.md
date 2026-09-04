@@ -57,8 +57,10 @@ Makes programs 10x faster by doing Special New Thing.
   numbering and ordering compared with earlier releases. Standalone metadata
   printing now uses numbered definitions such as `!1 = !DIFile(...)` instead
   of pointer-based forms such as `<0x...> = !DIFile(...)`. Tools and tests that
-  compare such output may need updating. Final assembly output is still
-  renumbered into canonical order.
+  compare such output may need updating. Before a complete module is emitted
+  as LLVM IR, its metadata IDs are renumbered into a contiguous sequence in
+  canonical order, so normal complete-module LLVM IR output remains unchanged
+  from earlier releases.
 
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
