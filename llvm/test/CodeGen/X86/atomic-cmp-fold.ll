@@ -10,16 +10,14 @@
 define i1 @cmp8_eq0_monotonic(ptr %p) {
 ; X64-LABEL: cmp8_eq0_monotonic:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl (%rdi), %eax
-; X64-NEXT:    testb %al, %al
+; X64-NEXT:    cmpb $0, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: cmp8_eq0_monotonic:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl (%eax), %eax
-; X86-NEXT:    testb %al, %al
+; X86-NEXT:    cmpb $0, (%eax)
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %v = load atomic i8, ptr %p monotonic, align 1
@@ -30,16 +28,14 @@ define i1 @cmp8_eq0_monotonic(ptr %p) {
 define i1 @cmp16_eq0_acquire(ptr %p) {
 ; X64-LABEL: cmp16_eq0_acquire:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    testw %ax, %ax
+; X64-NEXT:    cmpw $0, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: cmp16_eq0_acquire:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl (%eax), %eax
-; X86-NEXT:    testw %ax, %ax
+; X86-NEXT:    cmpw $0, (%eax)
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %v = load atomic i16, ptr %p acquire, align 2
@@ -50,16 +46,14 @@ define i1 @cmp16_eq0_acquire(ptr %p) {
 define i1 @cmp32_eq0_seq_cst(ptr %p) {
 ; X64-LABEL: cmp32_eq0_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    cmpl $0, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: cmp32_eq0_seq_cst:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    cmpl $0, (%eax)
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %v = load atomic i32, ptr %p seq_cst, align 4
@@ -95,16 +89,14 @@ define i1 @cmp64_eq0_unordered(ptr %p) {
 define i1 @cmp32_imm_acquire(ptr %p) {
 ; X64-LABEL: cmp32_imm_acquire:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    cmpl $42, %eax
+; X64-NEXT:    cmpl $42, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: cmp32_imm_acquire:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    cmpl $42, %eax
+; X86-NEXT:    cmpl $42, (%eax)
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %v = load atomic i32, ptr %p acquire, align 4
@@ -115,16 +107,14 @@ define i1 @cmp32_imm_acquire(ptr %p) {
 define i1 @cmp32_imm_large(ptr %p) {
 ; X64-LABEL: cmp32_imm_large:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    cmpl $305419896, %eax # imm = 0x12345678
+; X64-NEXT:    cmpl $305419896, (%rdi) # imm = 0x12345678
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: cmp32_imm_large:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    cmpl $305419896, %eax # imm = 0x12345678
+; X86-NEXT:    cmpl $305419896, (%eax) # imm = 0x12345678
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %v = load atomic i32, ptr %p monotonic, align 4
@@ -135,8 +125,7 @@ define i1 @cmp32_imm_large(ptr %p) {
 define i1 @cmp64_imm_sext32(ptr %p) {
 ; X64-LABEL: cmp64_imm_sext32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    cmpq $-100, %rax
+; X64-NEXT:    cmpq $-100, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -165,9 +154,8 @@ define i1 @cmp64_imm_sext32(ptr %p) {
 define i1 @cmp64_imm_too_wide(ptr %p) {
 ; X64-LABEL: cmp64_imm_too_wide:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    movabsq $4886718345, %rcx # imm = 0x123456789
-; X64-NEXT:    cmpq %rcx, %rax
+; X64-NEXT:    movabsq $4886718345, %rax # imm = 0x123456789
+; X64-NEXT:    cmpq %rax, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -195,8 +183,7 @@ define i1 @cmp64_imm_too_wide(ptr %p) {
 define i1 @cmp32_reg(ptr %p, i32 %x) {
 ; X64-LABEL: cmp32_reg:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    cmpl %esi, %eax
+; X64-NEXT:    cmpl %esi, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -216,8 +203,7 @@ define i1 @cmp32_reg(ptr %p, i32 %x) {
 define i1 @cmp32_reg_rhs(ptr %p, i32 %x) {
 ; X64-LABEL: cmp32_reg_rhs:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    cmpl %eax, %esi
+; X64-NEXT:    cmpl (%rdi), %esi
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
 ;
@@ -237,8 +223,7 @@ define i1 @cmp32_reg_rhs(ptr %p, i32 %x) {
 define i32 @cmp32_sge_branch(ptr %p, i32 %lvl) {
 ; X64-LABEL: cmp32_sge_branch:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    cmpl %esi, %eax
+; X64-NEXT:    cmpl %esi, (%rdi)
 ; X64-NEXT:    jl .LBB10_2
 ; X64-NEXT:  # %bb.1: # %log
 ; X64-NEXT:    movl $1, %eax
@@ -346,8 +331,7 @@ define i1 @cmp_two_loads(ptr %p, ptr %q) {
 ; X64-LABEL: cmp_two_loads:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    movl (%rsi), %ecx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    cmpl (%rsi), %eax
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
@@ -356,8 +340,7 @@ define i1 @cmp_two_loads(ptr %p, ptr %q) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    cmpl (%eax), %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %a = load atomic i32, ptr %p acquire, align 4
@@ -371,16 +354,14 @@ define i1 @cmp_two_loads(ptr %p, ptr %q) {
 define i1 @cmp32_volatile(ptr %p) {
 ; X64-LABEL: cmp32_volatile:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    cmpl $0, (%rdi)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: cmp32_volatile:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    cmpl $0, (%eax)
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
   %v = load atomic volatile i32, ptr %p acquire, align 4
