@@ -240,6 +240,23 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
   if (Bits.hasConflict())
     return Known;
 
+  // Return unknown for types we have not validated.
+  auto IsSupported = [](const fltSemantics &Semantics) {
+    switch (APFloat::SemanticsToEnum(Semantics)) {
+    case APFloatBase::S_IEEEhalf:
+    case APFloatBase::S_BFloat:
+    case APFloatBase::S_IEEEsingle:
+    case APFloatBase::S_IEEEdouble:
+    case APFloatBase::S_IEEEquad:
+    case APFloatBase::S_x87DoubleExtended:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (!IsSupported(FltSemantics))
+    return Known;
+
   // Transfer information from the sign bit.
   if (Bits.isNonNegative())
     Known.signBitMustBeZero();
@@ -301,6 +318,23 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
 
   // Return unknown if poison.
   if (FPClasses == fcNone)
+    return Known;
+
+  // Return unknown for types we have not validated.
+  auto IsSupported = [](const fltSemantics &Semantics) {
+    switch (APFloat::SemanticsToEnum(Semantics)) {
+    case APFloatBase::S_IEEEhalf:
+    case APFloatBase::S_BFloat:
+    case APFloatBase::S_IEEEsingle:
+    case APFloatBase::S_IEEEdouble:
+    case APFloatBase::S_IEEEquad:
+    case APFloatBase::S_x87DoubleExtended:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (!IsSupported(FltSemantics))
     return Known;
 
   if (isKnownNever(fcNormal | fcSubnormal | fcNan)) {

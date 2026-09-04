@@ -127,4 +127,75 @@ TEST(KnownFPClassTest, BitcastConstant) {
   }
 }
 
+TEST(KnownFPClassTest, BitcastUnsupported) {
+  auto IsSupported = [](const fltSemantics &Semantics) {
+    switch (APFloat::SemanticsToEnum(Semantics)) {
+    case APFloatBase::S_IEEEhalf:
+    case APFloatBase::S_BFloat:
+    case APFloatBase::S_IEEEsingle:
+    case APFloatBase::S_IEEEdouble:
+    case APFloatBase::S_IEEEquad:
+    case APFloatBase::S_x87DoubleExtended:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    APFloat::Semantics SemanticsKind = static_cast<APFloat::Semantics>(I);
+    const fltSemantics &Semantics = APFloat::EnumToSemantics(SemanticsKind);
+
+    for (const APInt &ValueBits : {APInt::getZero(Semantics.sizeInBits),
+                                   APInt::getAllOnes(Semantics.sizeInBits)}) {
+      SCOPED_TRACE(testing::Message()
+                   << "Semantics = " << I << ", bits = " << ValueBits);
+      KnownFPClass Known =
+          KnownFPClass::bitcast(Semantics, KnownBits::makeConstant(ValueBits));
+      if (IsSupported(Semantics)) {
+        // We should be able to make at least one deduction for "Supported"
+        // types.
+        EXPECT_FALSE(Known.isUnknown());
+      } else {
+        EXPECT_TRUE(Known.isUnknown());
+      }
+    }
+  }
+}
+
+TEST(KnownFPClassTest, ToKnownBitsUnsupported) {
+  auto IsSupported = [](const fltSemantics &Semantics) {
+    switch (APFloat::SemanticsToEnum(Semantics)) {
+    case APFloatBase::S_IEEEhalf:
+    case APFloatBase::S_BFloat:
+    case APFloatBase::S_IEEEsingle:
+    case APFloatBase::S_IEEEdouble:
+    case APFloatBase::S_IEEEquad:
+    case APFloatBase::S_x87DoubleExtended:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    APFloat::Semantics SemanticsKind = static_cast<APFloat::Semantics>(I);
+    const fltSemantics &Semantics = APFloat::EnumToSemantics(SemanticsKind);
+
+    for (FPClassTest FPClass : {fcPosZero, fcPosNormal}) {
+      SCOPED_TRACE(testing::Message()
+                   << "Semantics = " << I << ", class = " << FPClass);
+      KnownBits Known = KnownFPClass(FPClass, false).toKnownBits(Semantics);
+      if (IsSupported(Semantics)) {
+        // The following expectations are true for all "supported" types.
+        EXPECT_TRUE(Known.isNonNegative());
+        if (FPClass == fcPosZero)
+          EXPECT_TRUE(Known.isZero());
+      } else {
+        EXPECT_TRUE(Known.isUnknown());
+      }
+    }
+  }
+}
+
 } // end anonymous namespace
