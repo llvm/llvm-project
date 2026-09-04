@@ -69,3 +69,17 @@ add_libc_test(
   DEPENDS
     libc.src.__support.elf.load_layout
 )
+
+add_libc_test(
+  map_segments_test
+  SUITE
+    libc-support-tests
+  SRCS
+    map_segments_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.write
+    libc.src.__support.elf.map_segments
+)
