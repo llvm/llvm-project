@@ -992,7 +992,6 @@ add_header_library(
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
-
 )
 
 add_header_library(
@@ -1299,7 +1298,6 @@ add_header_library(
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
-
 )
 
 add_header_library(
