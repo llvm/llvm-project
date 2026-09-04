@@ -805,37 +805,18 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
 
   uint64_t insertIdx = 0;
   auto paddingItr = paddingAddedIndexes.begin();
-  auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmTy);
 
-  // The field \p elt lands in, when that field holds no bytes and the element
-  // kept a type it cannot take.  Only a zero-width bit-field is like this.  A
-  // flexible array member's field also holds no bytes, but does match.
-  auto emptyFieldFor = [&](uint64_t idx, mlir::Attribute elt) -> mlir::Type {
-    if (!structTy || idx >= structTy.getBody().size())
-      return {};
-    mlir::Type fieldTy = structTy.getBody()[idx];
-    auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(fieldTy);
-    if (!arrayTy || arrayTy.getNumElements() != 0)
-      return {};
-    auto typedElt = mlir::dyn_cast<mlir::TypedAttr>(elt);
-    if (!typedElt || converter->convertType(typedElt.getType()) == fieldTy)
-      return {};
-    return fieldTy;
-  };
-
-  // Iteratively lower each constant element of the record.
+  // Iteratively lower each constant element of the record.  A record member
+  // that owns no bytes has no LLVM field and takes no element, so the elements
+  // run one per field.
   for (auto [idx, elt] : llvm::enumerate(constRecord.getMembers())) {
     if (paddingItr != paddingAddedIndexes.end() && *paddingItr == idx) {
       ++insertIdx;
       ++paddingItr;
     }
 
-    mlir::Type emptyTy = emptyFieldFor(insertIdx, elt);
-    mlir::Value init = emptyTy
-                           ? mlir::LLVM::ZeroOp::create(rewriter, loc, emptyTy)
-                           : visit(elt);
-    result = mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init,
-                                               insertIdx);
+    result = mlir::LLVM::InsertValueOp::create(rewriter, loc, result,
+                                               visit(elt), insertIdx);
     ++insertIdx;
   }
 
@@ -3944,17 +3925,14 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::StructType type) -> mlir::Type {
     llvm::SmallVector<mlir::Type> llvmMembers;
-    for (auto [ty, kind] :
-         llvm::zip_equal(type.getMembers(), type.getMemberKinds())) {
-      // Argument passing has already read the declared type, and carrying it
-      // into LLVM would apply the element's alignment and grow the record.  The
-      // member stays, since the members after it are numbered from it.
-      if (cir::isZeroWidthBitField(ty, kind)) {
-        llvmMembers.push_back(mlir::LLVM::LLVMArrayType::get(
-            mlir::IntegerType::get(type.getContext(), 8), 0));
+    for (mlir::Type ty : type.getMembers()) {
+      // A bit-field that shares an earlier field's access unit, and a
+      // zero-width bit-field, own no bytes, so they get no field of their own.
+      // StructType::getLLVMFieldIndex maps the two numberings.
+      if (!cir::memberOwnsBytes(ty))
         continue;
-      }
-      mlir::Type memberTy = convertTypeForMemory(converter, dataLayout, ty);
+      mlir::Type memberTy = convertTypeForMemory(converter, dataLayout,
+                                                 cir::memberStorageType(ty));
       // A null member means an unsupported type (e.g. a _BitInt with byte-array
       // storage); propagate the conversion failure instead of building an
       // invalid struct body.
@@ -4478,7 +4456,10 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
   auto structTy = mlir::cast<cir::StructType>(pointee);
   // Since the base address is a pointer to an aggregate, the first offset
   // is always zero. The second offset tells us which member it will access.
-  llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
+  // Members that own no bytes are left out of the LLVM body, so the CIR member
+  // index has to be mapped rather than used directly.
+  llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{
+      0, static_cast<int32_t>(structTy.getLLVMFieldIndex(op.getIndex()))};
   const mlir::Type elementTy = getTypeConverter()->convertType(structTy);
   // Struct member accesses are always inbounds and nuw: the base pointer
   // is valid and the member offset is a positive, constant offset within
@@ -4494,13 +4475,14 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
     cir::ExtractMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  std::int64_t indices[1] = {static_cast<std::int64_t>(op.getIndex())};
-
   if (mlir::isa<cir::UnionType>(op.getRecord().getType())) {
     op.emitError("cir.extract_member cannot extract member from a union");
     return mlir::failure();
   }
 
+  auto structTy = mlir::cast<cir::StructType>(op.getRecord().getType());
+  std::int64_t indices[1] = {
+      static_cast<std::int64_t>(structTy.getLLVMFieldIndex(op.getIndex()))};
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
       op, adaptor.getRecord(), indices);
   return mlir::success();
@@ -4509,15 +4491,16 @@ mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
     cir::InsertMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  std::int64_t indecies[1] = {static_cast<std::int64_t>(op.getIndex())};
-
   if (mlir::isa<cir::UnionType>(op.getRecord().getType())) {
     op.emitError("cir.update_member cannot update member of a union");
     return mlir::failure();
   }
 
+  auto structTy = mlir::cast<cir::StructType>(op.getRecord().getType());
+  std::int64_t indices[1] = {
+      static_cast<std::int64_t>(structTy.getLLVMFieldIndex(op.getIndex()))};
   rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
-      op, adaptor.getRecord(), adaptor.getValue(), indecies);
+      op, adaptor.getRecord(), adaptor.getValue(), indices);
   return mlir::success();
 }
 

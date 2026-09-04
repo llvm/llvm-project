@@ -3,6 +3,7 @@
 !s8i = !cir.int<s, 8>
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
@@ -11,28 +12,22 @@
 !rec_UByteBlobs = !cir.union<"UByteBlobs" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
 !rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
-!rec_BFPad = !cir.struct<"BFPad" packed {bitfield !u8i, data !s32i, pad !cir.array<!u8i x 3>}>
 !rec_ZeroLenArr = !cir.struct<"ZeroLenArr" packed {data !s8i, empty !cir.array<!s32i x 0>}>
-!rec_NamedPlusZeroWidth =
-    !cir.struct<"NamedPlusZeroWidth" {bitfield !u8i, pad !cir.array<!u8i x 3>,
-                                      bitfield !cir.array<!s32i x 0>,
-                                      data !s32i, pad !cir.array<!u8i x 8>}>
 !rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
 !rec_E = !cir.struct<"E" {pad !u8i}>
-!rec_UBitEmpty = !cir.union<"UBitEmpty" {data !cir.array<!rec_E x 4>, bitfield !u8i}>
-!rec_UBitUnnamed = !cir.union<"UBitUnnamed" {bitfield !u8i, empty !u64i}>
+!rec_UBitEmpty =
+    !cir.union<"UBitEmpty" {data !cir.array<!rec_E x 4>,
+                            bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>}>
+!rec_UBitUnnamed =
+    !cir.union<"UBitUnnamed" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>,
+                              empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
 !rec_UWideBitUnnamed =
-    !cir.union<"UWideBitUnnamed" {bitfield !cir.array<!u8i x 3>, empty !u64i}>
+    !cir.union<"UWideBitUnnamed" {bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 24>]>,
+                                  empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
 !rec_UEmptyNarrow = !cir.union<"UEmptyNarrow" {data !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
-!rec_BitPad = !cir.struct<"BitPad" {bitfield !u8i, pad !cir.array<!u8i x 15>}>
-!rec_InnerBits = !cir.struct<"InnerBits" {bitfield !u32i}>
-!rec_OuterBitPad = !cir.struct<"OuterBitPad" {data !rec_InnerBits, pad !cir.array<!u8i x 12>}>
-!rec_ArrBitPad = !cir.struct<"ArrBitPad" {data !cir.array<!rec_InnerBits x 2>, pad !cir.array<!u8i x 8>}>
 !rec_HoldsAllPad = !cir.struct<"HoldsAllPad" {data !s32i, empty !rec_E}>
-!rec_EBits = !cir.struct<"EBits" {empty !u32i}>
-!rec_HoldsEmptyBits = !cir.struct<"HoldsEmptyBits" {empty !rec_EBits, data !s32i}>
 !rec_LeadPad = !cir.struct<"LeadPad" {pad !cir.array<!u8i x 8>, data !s32i}>
 !rec_Incomplete = !cir.struct<"Incomplete" incomplete>
 
@@ -87,16 +82,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UEmptyLarge"
-
-  // The unit-width rule keys on the padding rather than the packing, so a
-  // packed record still hits it once a pad member gives classic a gap to read
-  // the declared type through.  Classic sends this one to memory, so the
-  // rejection is conservative rather than a divergence avoided.
-  cir.func @take_bf_pad(%arg0: !rec_BFPad) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"BFPad" packed
 
   // A zero-sized member is dropped before classification, so its offset never
   // reaches the rule sending a record with a member off its own alignment to
@@ -154,29 +139,9 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UEmptyNarrow"
 
-  // A bit-field access unit is narrower than the declaration it holds, so
-  // classifying around this record's padding would coerce to i8 where classic
-  // CodeGen widens to i64.
-  cir.func @take_bit_pad(%arg0: !rec_BitPad) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"BitPad" {bitfield
-
-  // The reject reaches through a member record.  Classic coerces this one to
-  // i32, so the rejection is conservative rather than a divergence avoided.
-  cir.func @take_outer_bit_pad(%arg0: !rec_OuterBitPad) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"OuterBitPad" {data
-
-  // And through an array element.
-  cir.func @take_arr_bit_pad(%arg0: !rec_ArrBitPad) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"ArrBitPad" {data
+  // A bit-field carries the type its declaration named, so a record whose
+  // padding a coercion would have to read through is classified rather than
+  // refused; see x86_64-bitfield.cir.
 
   // The all-pad reject also has to hold when the record is reached as a member,
   // which is the shape a C++ empty class produces.
@@ -185,16 +150,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.struct<"HoldsAllPad" {data
-
-  // An empty-for-ABI member can occupy bytes without a pad member, by holding
-  // an unnamed access unit of its own.  Classic CodeGen reaches those bytes
-  // through the member's own fields, so this is refused.  An empty base or a
-  // [[no_unique_address]] member of `struct { unsigned : 32; }` produces it.
-  cir.func @take_holds_empty_bits(%arg0: !rec_HoldsEmptyBits) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"HoldsEmptyBits" {empty
 
   // With no field in the low eightbyte the classifier coerces the high one and
   // names an offset of 8 into the record, which the rewriter cannot express: it
@@ -248,14 +203,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.vector<2 x !cir.long_double<!cir.f80>>
-
-  // A zero-width bit-field no longer refuses a padded record, but a named
-  // access unit still does, and one record can carry both.
-  cir.func @take_named_plus_zero_width(%arg0: !rec_NamedPlusZeroWidth) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"NamedPlusZeroWidth"
 
   // A definition (unlike a declaration) is refused: no incomplete-by-value
   // definition can arise from valid C++, so this stays a hard reject rather

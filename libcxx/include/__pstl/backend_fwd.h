@@ -202,6 +202,18 @@ struct __merge;
 //                       _ForwardOutIterator __result, _Comp __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __max_element;
+// template <class _Policy, class _ForwardIterator, class _Compare>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __min_element;
+// template <class _Policy, class _ForwardIterator, class _Compare>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __search_n;
 // template <class _Policy, class _ForwardIterator, class _Size, class _T, class _Predicate>
 // optional<_ForwardIterator>
