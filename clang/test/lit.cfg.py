@@ -1,5 +1,6 @@
 # -*- Python -*-
 
+import glob
 import os
 import platform
 import re
@@ -222,6 +223,54 @@ def have_host_clang_repl_cuda():
     return False
 
 
+def _hip_lib_directory():
+    explicit = lit_config.params.get("hip_lib_path")
+    if explicit:
+        candidates = [explicit]
+    else:
+        candidates = []
+        for var in ("ROCM_PATH", "HIP_PATH"):
+            if os.environ.get(var):
+                candidates.append(os.path.join(os.environ[var], "lib"))
+        candidates.append("/opt/rocm/lib")
+    for directory in candidates:
+        if directory and glob.glob(os.path.join(directory, "libamdhip64.so*")):
+            return directory
+    return None
+
+
+def _clang_can_compile_hip(clang, rocm_lib_dir):
+    rocm_root = os.path.dirname(rocm_lib_dir)
+    offload_arch = lit_config.params.get("amdgpu_arch", "gfx906")
+    test_src = b"#include <hip/hip_runtime.h>\n__global__ void k() {}\n"
+    try:
+        proc = subprocess.run(
+            [
+                clang,
+                "-x",
+                "hip",
+                "-fsyntax-only",
+                "-nogpulib",
+                "--offload-arch=" + offload_arch,
+                "--rocm-path=" + rocm_root,
+                "-",
+            ],
+            input=test_src,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
+def have_host_hip_environment():
+    hip_lib_dir = _hip_lib_directory()
+    if not hip_lib_dir or not config.clang:
+        return False
+    return _clang_can_compile_hip(config.clang, hip_lib_dir)
+
+
 skip_clang_repl_checks = lit.util.pythonize_bool(
     lit_config.params.get(
         "clang_skip_clang_repl_checks",
@@ -234,6 +283,9 @@ if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+
+    if have_host_hip_environment():
+        config.available_features.add("host-supports-hip")
     hosttriple = run_clang_repl("--host-jit-triple")
     config.substitutions.append(("%host-jit-triple", hosttriple.strip()))
 
