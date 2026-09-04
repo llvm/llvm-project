@@ -1345,7 +1345,7 @@ def CIR_CleanupKind : CIR_I32EnumAttr<"CleanupKind", "cleanup kind", [
   let genSpecializedAttr = 0;
 }
 
-def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
+def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup"> {
   let summary = "Cleanup kind attribute";
   let description = [{
     Cleanup kind attributes.
@@ -1360,10 +1360,6 @@ def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
       return $_get($_ctxt, value);
     }]>
   ];
-
-  let assemblyFormat = [{
-    $value
-  }];
 
   let extraClassDeclaration = [{
     bool isNormal() const {
@@ -1427,7 +1423,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
   let skipDefaultBuilders = 1;
 
   let assemblyFormat = [{
-    $bodyRegion `cleanup` $cleanupKind $cleanupRegion attr-dict
+    $bodyRegion `cleanup` enum($cleanupKind) $cleanupRegion attr-dict
   }];
 
   let builders = [
@@ -2296,7 +2292,7 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
-    $cond `do` $body (`cleanup` $cleanupKind $cleanup^)? attr-dict
+    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)? attr-dict
   }];
 
   let description = [{
@@ -2456,7 +2452,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     `:` `cond` $cond
     `body` $body
     `step` $step
-    (`cleanup` $cleanupKind $cleanup^)?
+    (`cleanup` enum($cleanupKind) $cleanup^)?
     attr-dict
   }];
 
