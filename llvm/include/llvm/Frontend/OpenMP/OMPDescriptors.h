@@ -38,8 +38,39 @@ static constexpr size_t Modifier_enumSize =
     llvm::to_underlying(Modifier::Last_) -
     llvm::to_underlying(Modifier::First_) + 1;
 
+enum class ModifierSet {
+#define GEN_OMP_MODIFIER_GROUP_ENUMS
+#define First_ FirstGroup_
+#define Last_ LastGroup_
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h.inc"
+#undef Last_
+#undef First_
+#undef GEN_OMP_MODIFIER_GROUP_ENUMS
+
+#define GEN_OMP_MODIFIER_SET_ENUMS
+#define First_ FirstSet_
+#define Last_ LastSet_
+#include "llvm/Frontend/OpenMP/OMPDescriptors.h.inc"
+#undef Last_
+#undef First_
+#undef GEN_OMP_MODIFIER_SET_ENUMS
+  First_ = FirstGroup_,
+  Last_ = LastSet_,
+};
+
+static constexpr size_t ModifierSet_enumSize =
+    llvm::to_underlying(ModifierSet::Last_) -
+    llvm::to_underlying(ModifierSet::First_) + 1;
+
+constexpr inline bool isModifierGroup(ModifierSet S) {
+  return //
+      llvm::to_underlying(ModifierSet::FirstGroup_) <= llvm::to_underlying(S) &&
+      llvm::to_underlying(S) <= llvm::to_underlying(ModifierSet::LastGroup_);
+}
+
 using Properties = EnumSet<Property, Property_enumSize>;
 using Modifiers = EnumSet<Modifier, Modifier_enumSize>;
+using ModifierSets = EnumSet<ModifierSet, ModifierSet_enumSize>;
 
 using Clauses = llvm::omp::ClauseSet;
 using Directives = llvm::omp::DirectiveSet;
@@ -55,9 +86,15 @@ struct Clause : public Base {
   Directives Dirs;
   SourceLanguage Langs;
   Modifiers Mods;
+  ModifierSets ModSets;
 };
 
 struct Modifier : public Base {
+  Clauses Cls;
+};
+
+struct ModifierSet : public Base {
+  Modifiers Mods;
   Clauses Cls;
 };
 } // namespace details
@@ -95,12 +132,21 @@ struct Clause : public Descriptor<details::Clause> {
   LLVM_ABI Properties getProperties(Version V) const;
   LLVM_ABI Directives getDirectives(Version V) const;
   LLVM_ABI Modifiers getModifiers(Version V) const;
+  LLVM_ABI ModifierSets getModifierSets(Version V) const;
 };
 
 struct Modifier : public Descriptor<details::Modifier> {
   using Base = Descriptor<details::Modifier>;
   using Base::Base;
   LLVM_ABI Properties getProperties(Version V) const;
+  LLVM_ABI Clauses getClauses(Version V) const;
+};
+
+struct ModifierSet : public Descriptor<details::ModifierSet> {
+  using Base = Descriptor<details::ModifierSet>;
+  using Base::Base;
+  LLVM_ABI Properties getProperties(Version V) const;
+  LLVM_ABI Modifiers getModifiers(Version V) const;
   LLVM_ABI Clauses getClauses(Version V) const;
 };
 } // namespace descriptor
@@ -110,6 +156,7 @@ using DescriptorMap = DenseMap<Enum, DescriptorTy>;
 
 LLVM_ABI const descriptor::Clause &getDescriptor(llvm::omp::Clause C);
 LLVM_ABI const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M);
+LLVM_ABI const descriptor::ModifierSet &getDescriptor(llvm::omp::ModifierSet S);
 
 LLVM_ABI Properties getProperties(Clause C, Version V);
 } // namespace llvm::omp

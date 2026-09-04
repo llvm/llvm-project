@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 
+#include <__assert>
+#include <__bit/popcount.h>
 #include <__config>
 #include <__cstddef/max_align_t.h>
 #include <__cstddef/size_t.h>
@@ -35,6 +37,7 @@ public:
 
   [[nodiscard]] [[using __gnu__: __returns_nonnull__, __alloc_size__(2), __alloc_align__(3)]]
   _LIBCPP_HIDE_FROM_ABI void* allocate(size_t __bytes, size_t __align = __max_align) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(std::__popcount(__align) == 1, "The alignment has to be a power of two");
     return do_allocate(__bytes, __align);
   }
 

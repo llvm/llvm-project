@@ -272,7 +272,7 @@ LogicalResult MmaSyncOp::verify() {
 
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
-                         getOperation()->hasAttr(getTf32EnabledAttrName()));
+                         getTf32Enabled().value_or(false));
 }
 
 //===----------------------------------------------------------------------===//
@@ -296,8 +296,7 @@ LogicalResult MmaSparseSyncOp::verify() {
 
   return verifyMmaSyncOp(this->getOperation(), getMatrixA(), getMatrixB(),
                          getMatrixC(), getMmaShapeAsArray(),
-                         getOperation()->hasAttr(getTf32EnabledAttrName()),
-                         true);
+                         getTf32Enabled().value_or(false), true);
 }
 
 //===----------------------------------------------------------------------===//

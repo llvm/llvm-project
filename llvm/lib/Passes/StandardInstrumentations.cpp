@@ -19,11 +19,15 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -138,6 +142,9 @@ static cl::opt<bool>
                     cl::desc("Dump dropped debug variables stats"),
                     cl::init(false));
 
+static bool shouldGenerateData(const Function &F);
+static bool shouldGenerateData(const MachineFunction &MF);
+
 namespace {
 
 // An option for specifying an executable that will be called with the IR
@@ -152,6 +159,22 @@ static cl::opt<std::string>
                 cl::desc("exe called with module IR after each pass that "
                          "changes it"));
 
+bool loopContainsPrintSourceLoc(const Loop &L) {
+  const Function *F = L.getHeader()->getParent();
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
+  if (!isFunctionInPrintList(F->getName()))
+    return false;
+
+  if (SourceLocFilterEmpty)
+    return true;
+
+  for (const BasicBlock *BB : L.blocks())
+    for (const Instruction &I : *BB)
+      if (isSourceLocInPrintList(I.getDebugLoc()))
+        return true;
+  return false;
+}
+
 /// Extract Module out of \p IR unit. May return nullptr if \p IR does not match
 /// certain global filters. Will never return nullptr if \p Force is true.
 const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
@@ -159,7 +182,7 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
     return M;
 
   if (const auto *F = dyn_cast<Function>(IR)) {
-    if (!Force && !isFunctionInPrintList(F->getName()))
+    if (!Force && !shouldGenerateData(*F))
       return nullptr;
 
     return F->getParent();
@@ -168,7 +191,7 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
   if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR)) {
     for (const LazyCallGraph::Node &N : *C) {
       const Function &F = N.getFunction();
-      if (Force || (!F.isDeclaration() && isFunctionInPrintList(F.getName()))) {
+      if (Force || shouldGenerateData(F)) {
         return F.getParent();
       }
     }
@@ -178,13 +201,13 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
 
   if (const auto *L = dyn_cast<Loop>(IR)) {
     const Function *F = L->getHeader()->getParent();
-    if (!Force && !isFunctionInPrintList(F->getName()))
+    if (!Force && !loopContainsPrintSourceLoc(*L))
       return nullptr;
     return F->getParent();
   }
 
   if (const auto *MF = dyn_cast<MachineFunction>(IR)) {
-    if (!Force && !isFunctionInPrintList(MF->getName()))
+    if (!Force && !shouldGenerateData(*MF))
       return nullptr;
     return MF->getFunction().getParent();
   }
@@ -193,13 +216,13 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
 }
 
 void printIR(raw_ostream &OS, const Function *F) {
-  if (!isFunctionInPrintList(F->getName()))
+  if (!shouldPrintFunction(*F))
     return;
   OS << *F;
 }
 
 void printIR(raw_ostream &OS, const Module *M) {
-  if (isFunctionInPrintList("*") || forcePrintModuleIR()) {
+  if (shouldPrintAllFunctions() || forcePrintModuleIR()) {
     M->print(OS, nullptr);
   } else {
     for (const auto &F : M->functions()) {
@@ -211,21 +234,20 @@ void printIR(raw_ostream &OS, const Module *M) {
 void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
   for (const LazyCallGraph::Node &N : *C) {
     const Function &F = N.getFunction();
-    if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+    if (shouldGenerateData(F)) {
       F.print(OS);
     }
   }
 }
 
 void printIR(raw_ostream &OS, const Loop *L) {
-  const Function *F = L->getHeader()->getParent();
-  if (!isFunctionInPrintList(F->getName()))
+  if (!loopContainsPrintSourceLoc(*L))
     return;
   printLoop(const_cast<Loop &>(*L), OS);
 }
 
 void printIR(raw_ostream &OS, const MachineFunction *MF) {
-  if (!isFunctionInPrintList(MF->getName()))
+  if (!shouldGenerateData(*MF))
     return;
   MF->print(OS);
 }
@@ -251,19 +273,17 @@ std::string getIRName(IRUnitRef IR) {
 }
 
 bool moduleContainsFilterPrintFunc(const Module &M) {
+  if (shouldPrintAllFunctions())
+    return true;
   return any_of(M.functions(),
-                [](const Function &F) {
-                  return isFunctionInPrintList(F.getName());
-                }) ||
-         isFunctionInPrintList("*");
+                [](const Function &F) { return shouldPrintFunction(F); });
 }
 
 bool sccContainsFilterPrintFunc(const LazyCallGraph::SCC &C) {
-  return any_of(C,
-                [](const LazyCallGraph::Node &N) {
-                  return isFunctionInPrintList(N.getName());
-                }) ||
-         isFunctionInPrintList("*");
+  return any_of(C, [](const LazyCallGraph::Node &N) {
+    const Function &F = N.getFunction();
+    return shouldGenerateData(F);
+  });
 }
 
 bool shouldPrintIR(IRUnitRef IR) {
@@ -271,16 +291,16 @@ bool shouldPrintIR(IRUnitRef IR) {
     return moduleContainsFilterPrintFunc(*M);
 
   if (const auto *F = dyn_cast<Function>(IR))
-    return isFunctionInPrintList(F->getName());
+    return shouldPrintFunction(*F);
 
   if (const auto *C = dyn_cast<LazyCallGraph::SCC>(IR))
     return sccContainsFilterPrintFunc(*C);
 
   if (const auto *L = dyn_cast<Loop>(IR))
-    return isFunctionInPrintList(L->getHeader()->getParent()->getName());
+    return loopContainsPrintSourceLoc(*L);
 
   if (const auto *MF = dyn_cast<MachineFunction>(IR))
-    return isFunctionInPrintList(MF->getName());
+    return shouldGenerateData(*MF);
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -358,9 +378,7 @@ const Module *getModuleForComparison(IRUnitRef IR) {
   return nullptr;
 }
 
-bool isInterestingFunction(const Function &F) {
-  return isFunctionInPrintList(F.getName());
-}
+bool isInterestingFunction(const Function &F) { return shouldGenerateData(F); }
 
 // Return true when this is a pass on IR for which printing
 // of changes is desired.
@@ -392,13 +410,13 @@ void ChangeReporter<T>::saveIRBeforePass(IRUnitRef IR, StringRef PassID,
   // are not given the IR so it cannot be determined whether the pass was for
   // something that was filtered out.
   BeforeStack.emplace_back();
-
-  if (!isInteresting(IR, PassID, PassName))
+  auto &Before = BeforeStack.back();
+  Before.IsInteresting = isInteresting(IR, PassID, PassName);
+  if (!Before.IsInteresting)
     return;
 
   // Save the IR representation on the stack.
-  T &Data = BeforeStack.back();
-  generateIRRepresentation(IR, PassID, Data);
+  generateIRRepresentation(IR, PassID, Before.Data);
 }
 
 template <typename T>
@@ -411,22 +429,24 @@ void ChangeReporter<T>::handleIRAfterPass(IRUnitRef IR, StringRef PassID,
   if (isIgnored(PassID)) {
     if (VerboseMode)
       handleIgnored(PassID, Name);
-  } else if (!isInteresting(IR, PassID, PassName)) {
-    if (VerboseMode)
-      handleFiltered(PassID, Name);
   } else {
-    // Get the before rep from the stack
-    T &Before = BeforeStack.back();
-    // Create the after rep
-    T After;
-    generateIRRepresentation(IR, PassID, After);
-
-    // Was there a change in IR?
-    if (Before == After) {
+    auto &Before = BeforeStack.back();
+    bool AfterIsInteresting = isInteresting(IR, PassID, PassName);
+    if (!Before.IsInteresting && !AfterIsInteresting) {
       if (VerboseMode)
-        omitAfter(PassID, Name);
-    } else
-      handleAfter(PassID, Name, Before, After, IR);
+        handleFiltered(PassID, Name);
+    } else {
+      T After;
+      if (AfterIsInteresting)
+        generateIRRepresentation(IR, PassID, After);
+
+      // Was there a change in IR?
+      if (Before.Data == After) {
+        if (VerboseMode)
+          omitAfter(PassID, Name);
+      } else
+        handleAfter(PassID, Name, Before.Data, After, IR);
+    }
   }
   BeforeStack.pop_back();
 }
@@ -664,10 +684,16 @@ void IRComparer<T>::compare(
         CompareFunc) {
   if (!CompareModule) {
     // Just handle the single function.
-    assert(Before.getData().size() == 1 && After.getData().size() == 1 &&
-           "Expected only one function.");
-    CompareFunc(false, 0, Before.getData().begin()->getValue(),
-                After.getData().begin()->getValue());
+    assert(Before.getData().size() <= 1 && After.getData().size() <= 1 &&
+           (!Before.getData().empty() || !After.getData().empty()) &&
+           "Expected one function in at least one IR unit.");
+    FuncDataT<T> Missing("");
+    const FuncDataT<T> &BeforeFunction =
+        Before.getData().empty() ? Missing
+                                 : Before.getData().begin()->getValue();
+    const FuncDataT<T> &AfterFunction =
+        After.getData().empty() ? Missing : After.getData().begin()->getValue();
+    CompareFunc(false, 0, BeforeFunction, AfterFunction);
     return;
   }
 
@@ -713,11 +739,22 @@ void IRComparer<T>::analyzeIR(IRUnitRef IR, IRDataT<T> &Data) {
 }
 
 static bool shouldGenerateData(const Function &F) {
-  return !F.isDeclaration() && isFunctionInPrintList(F.getName());
+  return !F.isDeclaration() && shouldPrintFunction(F);
 }
 
 static bool shouldGenerateData(const MachineFunction &MF) {
-  return isFunctionInPrintList(MF.getName());
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
+  if (!isFunctionInPrintList(MF.getName()))
+    return false;
+
+  if (SourceLocFilterEmpty)
+    return true;
+
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isSourceLocInPrintList(MI.getDebugLoc()))
+        return true;
+  return false;
 }
 
 template <typename T>

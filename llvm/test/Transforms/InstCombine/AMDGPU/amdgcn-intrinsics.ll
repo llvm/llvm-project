@@ -112,7 +112,7 @@ define float @test_constant_fold_rcp_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_inf(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.rcp.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.rcp.f32(float +inf)
   ret float %val
 }
 
@@ -433,7 +433,7 @@ define float @test_constant_fold_frexp_mant_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_inf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.frexp.mant.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float +inf)
   ret float %val
 }
 
@@ -441,7 +441,7 @@ define double @test_constant_fold_frexp_mant_f64_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f64_inf(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %val = call double @llvm.amdgcn.frexp.mant.f64(double 0x7FF0000000000000)
+  %val = call double @llvm.amdgcn.frexp.mant.f64(double +inf)
   ret double %val
 }
 
@@ -449,7 +449,7 @@ define float @test_constant_fold_frexp_mant_f32_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_ninf(
 ; CHECK-NEXT:    ret float -inf
 ;
-  %val = call float @llvm.amdgcn.frexp.mant.f32(float 0xFFF0000000000000)
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float -inf)
   ret float %val
 }
 
@@ -457,7 +457,7 @@ define double @test_constant_fold_frexp_mant_f64_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f64_ninf(
 ; CHECK-NEXT:    ret double -inf
 ;
-  %val = call double @llvm.amdgcn.frexp.mant.f64(double 0xFFF0000000000000)
+  %val = call double @llvm.amdgcn.frexp.mant.f64(double -inf)
   ret double %val
 }
 
@@ -625,7 +625,7 @@ define i32 @test_constant_fold_frexp_exp_f32_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_inf(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float 0x7FF0000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float +inf)
   ret i32 %val
 }
 
@@ -633,7 +633,7 @@ define i32 @test_constant_fold_frexp_exp_f64_inf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f64_inf(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f64(double 0x7FF0000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f64(double +inf)
   ret i32 %val
 }
 
@@ -641,7 +641,7 @@ define i32 @test_constant_fold_frexp_exp_f32_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_ninf(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float 0xFFF0000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float -inf)
   ret i32 %val
 }
 
@@ -649,7 +649,7 @@ define i32 @test_constant_fold_frexp_exp_f64_ninf() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f64_ninf(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f64(double 0xFFF0000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f64(double -inf)
   ret i32 %val
 }
 
@@ -870,7 +870,7 @@ define i1 @test_constant_class_ninf_test_ninf_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_ninf_test_ninf_f64(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0xFFF0000000000000, i32 4)
+  %val = call i1 @llvm.amdgcn.class.f64(double -inf, i32 4)
   ret i1 %val
 }
 
@@ -878,7 +878,7 @@ define i1 @test_constant_class_pinf_test_ninf_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_pinf_test_ninf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000000, i32 4)
+  %val = call i1 @llvm.amdgcn.class.f64(double +inf, i32 4)
   ret i1 %val
 }
 
@@ -998,7 +998,7 @@ define i1 @test_constant_class_pinf_test_pinf_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_pinf_test_pinf_f64(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF0000000000000, i32 512)
+  %val = call i1 @llvm.amdgcn.class.f64(double +inf, i32 512)
   ret i1 %val
 }
 
@@ -1006,7 +1006,7 @@ define i1 @test_constant_class_ninf_test_pinf_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_ninf_test_pinf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0xFFF0000000000000, i32 512)
+  %val = call i1 @llvm.amdgcn.class.f64(double -inf, i32 512)
   ret i1 %val
 }
 
@@ -5037,7 +5037,7 @@ define double @trig_preop_inf_0() {
 ; CHECK-LABEL: @trig_preop_inf_0(
 ; CHECK-NEXT:    ret double f0x0B43DD63F5F2F8BD
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF0000000000000, i32 0)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double +inf, i32 0)
   ret double %val
 }
 
@@ -5045,7 +5045,7 @@ define double @trig_preop_ninf_0() {
 ; CHECK-LABEL: @trig_preop_ninf_0(
 ; CHECK-NEXT:    ret double f0x0B43DD63F5F2F8BD
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0xFFF0000000000000, i32 0)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double -inf, i32 0)
   ret double %val
 }
 
@@ -5465,7 +5465,7 @@ define float @test_constant_fold_log_f32_pinf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.log.f32(float +inf)
   ret float %val
 }
 
@@ -5473,7 +5473,7 @@ define float @test_constant_fold_log_f32_ninf() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_ninf(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000)
+  %val = call float @llvm.amdgcn.log.f32(float -inf)
   ret float %val
 }
 
@@ -5575,7 +5575,7 @@ define float @test_constant_fold_log_f32_pinf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_pinf_strictfp(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.log.f32(float +inf) strictfp
   ret float %val
 }
 
@@ -5584,7 +5584,7 @@ define float @test_constant_fold_log_f32_ninf_strictfp() strictfp {
 ; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -inf) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.log.f32(float -inf) strictfp
   ret float %val
 }
 
@@ -5718,7 +5718,7 @@ define float @test_constant_fold_exp2_f32_pinf() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_pinf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF0000000000000)
+  %val = call float @llvm.amdgcn.exp2.f32(float +inf)
   ret float %val
 }
 
@@ -5726,7 +5726,7 @@ define float @test_constant_fold_exp2_f32_ninf() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_ninf(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0xFFF0000000000000)
+  %val = call float @llvm.amdgcn.exp2.f32(float -inf)
   ret float %val
 }
 
@@ -5857,7 +5857,7 @@ define float @test_constant_fold_exp2_f32_pinf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_pinf_strictfp(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.exp2.f32(float +inf) strictfp
   ret float %val
 }
 
@@ -5865,7 +5865,7 @@ define float @test_constant_fold_exp2_f32_ninf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_ninf_strictfp(
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0xFFF0000000000000) strictfp
+  %val = call float @llvm.amdgcn.exp2.f32(float -inf) strictfp
   ret float %val
 }
 

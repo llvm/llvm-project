@@ -173,7 +173,6 @@ def TileSliceLayout : I32EnumAttr<"TileSliceLayout", "Layout of a tile slice", [
 /// An attribute that specifies the layout of a tile slice in a tile.
 def ArmSME_TileSliceLayoutAttr : EnumAttr<ArmSME_Dialect, TileSliceLayout,
                                           "layout"> {
-  let assemblyFormat = "`<` $value `>`";
   let defaultValue = "TileSliceLayout::Horizontal";
 }
 
@@ -194,7 +193,6 @@ def CombiningKind : I32EnumAttr<"CombiningKind", "Kind of combining function", [
 /// FMOPS: https://developer.arm.com/documentation/ddi0602/2022-03/SME-Instructions/FMOPS--non-widening---Floating-point-outer-product-and-subtract-
 def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
                                           "kind"> {
-  let assemblyFormat = "`<` $value `>`";
   let defaultValue = "CombiningKind::Add";
 }
 
@@ -209,9 +207,7 @@ def TypeSize : I32EnumAttr<"TypeSize", "Size of a vector element type", [
 }
 
 def ArmSME_TypeSizeAttr : EnumAttr<ArmSME_Dialect, TypeSize,
-                                   "type_size"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+                                   "type_size">;
 
 //===----------------------------------------------------------------------===//
 // ArmSME op definitions

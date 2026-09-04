@@ -620,8 +620,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
                 cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
-                cir::VTableAttr>(attrType))
+                cir::GlobalOffsetAttr, cir::GlobalViewAttr, cir::PoisonAttr,
+                cir::TypeInfoAttr, cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -3262,19 +3262,32 @@ void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
 
 void cir::AwaitOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // If any index all the underlying regions branch back to the parent
-  // operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
+  assert(point.isParent() || point.getTerminatorPredecessorOrNull());
+
+  // Execution always starts in the ready region.
+  if (point.isParent()) {
+    regions.emplace_back(&getReady());
     return;
   }
 
+  mlir::Region *parentRegion =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+
+  // Branching from ready: the cir.condition terminating it selects between
+  // suspending and resuming. Keep in sync with
+  // ConditionOp::getSuccessorRegions.
+  //
   // TODO: retrieve information from the promise and only push the
   // necessary ones. Example: `std::suspend_never` on initial or final
   // await's might allow suspend region to be skipped.
-  regions.push_back(RegionSuccessor(&this->getReady()));
-  regions.push_back(RegionSuccessor(&this->getSuspend()));
-  regions.push_back(RegionSuccessor(&this->getResume()));
+  if (&getReady() == parentRegion) {
+    regions.emplace_back(&getResume());
+    regions.emplace_back(&getSuspend());
+    return;
+  }
+
+  // Branching from suspend or resume: exit to the parent operation.
+  regions.emplace_back(getOperation());
 }
 
 mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
