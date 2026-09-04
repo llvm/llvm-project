@@ -9,24 +9,21 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_TOTALORDERMAGF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_TOTALORDERMAGF128_H
 
-#include "include/llvm-libc-types/float128.h"
-
-#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
-
 #include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr int totalordermagf128(const float128 *x,
-                                            const float128 *y) {
+using LIBC_NAMESPACE::fputil::Float128;
+
+LIBC_INLINE constexpr int totalordermagf128(const Float128 *x,
+                                            const Float128 *y) {
   return static_cast<int>(fputil::totalordermag(*x, *y));
 }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_TOTALORDERMAGF128_H

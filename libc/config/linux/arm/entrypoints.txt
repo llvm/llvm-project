@@ -593,9 +593,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderf128
     libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
+    libc.src.math.totalordermagf128
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
