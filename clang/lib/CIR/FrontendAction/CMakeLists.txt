@@ -14,6 +14,8 @@ add_clang_library(clangCIRFrontendAction
   DEPENDS
   MLIRCIROpsIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
   MLIRBuiltinOpsIncGen
 
   LINK_LIBS
