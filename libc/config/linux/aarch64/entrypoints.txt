@@ -41,6 +41,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.fcntl
     libc.src.fcntl.open
     libc.src.fcntl.openat
+    libc.src.fcntl.posix_fadvise
 
     # poll.h entrypoints
     libc.src.poll.poll
@@ -48,7 +49,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # pwd.h entrypoints
     libc.src.pwd.endpwent
     libc.src.pwd.getpwent
+    libc.src.pwd.getpwnam
     libc.src.pwd.getpwnam_r
+    libc.src.pwd.getpwuid
     libc.src.pwd.getpwuid_r
     libc.src.pwd.setpwent
 
@@ -592,6 +595,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
+    libc.src.math.fdimf128
     libc.src.math.fdiml
     libc.src.math.floor
     libc.src.math.floorf
@@ -607,6 +611,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_mag_num
     libc.src.math.fmaximum_mag_numf
+    libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_mag_numl
     libc.src.math.fmaximum_magf
     libc.src.math.fmaximum_magf128
@@ -626,6 +631,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
+    libc.src.math.fminimum_mag_numf128
     libc.src.math.fminimum_mag_numl
     libc.src.math.fminimum_magf
     libc.src.math.fminimum_magf128
@@ -939,11 +945,8 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
     libc.src.math.faddf128
-    libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
-    libc.src.math.fmaximum_mag_numf128
-    libc.src.math.fminimum_mag_numf128
     libc.src.math.fmodf128
     libc.src.math.fmulf128
     libc.src.math.frexpf128
@@ -1404,6 +1407,7 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
 
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo
+      libc.src.netdb.gai_strerror
       libc.src.netdb.getaddrinfo
 
       # regex.h entrypoints

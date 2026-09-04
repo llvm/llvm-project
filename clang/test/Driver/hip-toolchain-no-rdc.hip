@@ -156,7 +156,7 @@
 
 // AMDGCNSPIRV-NEW: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}} "-o" "[[AMDGCNSPV_BC:[^"]*]]"
 
-// Check verbose printing with the new driver.
+// Check verbose printing.
 // RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc -nogpulib -nogpuinc \
 // RUN:   --offload-arch=gfx908 -v %s 2>&1 | FileCheck %s --check-prefix=VERBOSE
 // VERBOSE: clang-linker-wrapper

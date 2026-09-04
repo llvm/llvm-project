@@ -1208,10 +1208,6 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
     }]>
   ];
 
-  let assemblyFormat = [{
-    `(` custom<AddressSpaceValue>($value) `)`
-  }];
-
   let defaultValue = "cir::LangAddressSpace::Default";
 
   let extraClassDeclaration = [{
@@ -1351,7 +1347,7 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 }
 
 //===----------------------------------------------------------------------===//
-// VisibilityAttr
+// VisibilityKind
 //===----------------------------------------------------------------------===//
 
 def CIR_VisibilityKind : CIR_I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
@@ -1360,33 +1356,6 @@ def CIR_VisibilityKind : CIR_I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
   I32EnumAttrCase<"Protected", 2, "protected">
 ]> {
   let genSpecializedAttr = 0;
-}
-
-def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
-  let summary = "Visibility attribute";
-  let description = [{
-    Visibility attributes.
-  }];
-
-  let cppClassName = "VisibilityAttr";
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    AttrBuilder<(ins CArg<"VisibilityKind",
-                          "cir::VisibilityKind::Default">:$value), [{
-      return $_get($_ctxt, value);
-    }]>
-  ];
-
-  let assemblyFormat = [{
-    $value
-  }];
-
-  let extraClassDeclaration = [{
-    bool isDefault() const { return getValue() == VisibilityKind::Default; };
-    bool isHidden() const { return getValue() == VisibilityKind::Hidden; };
-    bool isProtected() const { return getValue() == VisibilityKind::Protected; };
-  }];
 }
 
 //===----------------------------------------------------------------------===//
