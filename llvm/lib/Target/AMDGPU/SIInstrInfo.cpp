@@ -1189,6 +1189,15 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, EltSize);
 
+  // Report rather than assert if a register is missing a required subreg.
+  for (int16_t SubIdx : SubIndices) {
+    if (!RI.getSubReg(DestReg, SubIdx) || !RI.getSubReg(SrcReg, SubIdx)) {
+      reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc,
+                        "Cannot decompose copy into subregister moves!");
+      return;
+    }
+  }
+
   // If there is an overlap, we can't kill the super-register on the last
   // instruction, since it will also kill the components made live by this def.
   const bool Overlap = RI.regsOverlap(SrcReg, DestReg);
