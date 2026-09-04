@@ -64,6 +64,11 @@ typedef int int32_t;
 
 #define MAP_FAILED ((void *)-1)
 
+#define MADV_HUGEPAGE 14 /* Worth backing with hugepages */
+
+/* set the state of the "THP disable" flags for the calling thread */
+#define PR_SET_THP_DISABLE 41
+
 #define SEEK_SET 0 /* Seek from beginning of file.  */
 #define SEEK_CUR 1 /* Seek from current position.  */
 #define SEEK_END 2 /* Seek from end of file.  */
