@@ -421,6 +421,11 @@ void Watchpoint::SetEnabled(bool enabled, bool notify) {
   }
   bool changed = enabled != m_enabled;
   m_enabled = enabled;
+  if (enabled && !m_new_value_sp && m_target.GetProcessSP()) {
+    ExecutionContext exe_ctx;
+    m_target.GetProcessSP()->CalculateExecutionContext(exe_ctx);
+    CaptureWatchedValue(exe_ctx);
+  }
   if (notify && !m_is_ephemeral && changed)
     SendWatchpointChangedEvent(enabled ? eWatchpointEventTypeEnabled
                                        : eWatchpointEventTypeDisabled);
