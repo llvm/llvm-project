@@ -79,6 +79,7 @@
 ; CHECK-NEXT:     stack-slot-coloring
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     machinelicm
+; CHECK-NEXT:     riscv-post-ra-v0-rewrite
 ; CHECK-NEXT:     remove-redundant-debug-values
 ; CHECK-NEXT:     fixup-statepoint-caller-saved
 ; CHECK-NEXT:     postra-machine-sink
@@ -97,6 +98,7 @@
 ; CHECK-NEXT:     xray-instrumentation
 ; CHECK-NEXT:     patchable-function
 ; CHECK-NEXT:     machine-cp
+; CHECK-NEXT:     riscv-vsetvli-cleanup
 ; CHECK-NEXT:     branch-relaxation
 ; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses

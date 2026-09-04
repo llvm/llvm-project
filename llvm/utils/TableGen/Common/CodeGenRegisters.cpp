@@ -749,6 +749,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
       RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
       TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
+  PreservePressureSet = R->getValueAsBit("PreservePressureSet");
   for (const Record *Type : R->getValueAsListOfDefs("RegTypes"))
     VTs.push_back(getValueTypeByHwMode(Type, RegBank.getHwModes()));
 
@@ -839,6 +840,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   MemberBV.resize(RegBank.getRegisters().size());
   Artificial = true;
   GeneratePressureSet = false;
+  PreservePressureSet = false;
   for (const auto R : Members) {
     MemberBV.set(CodeGenRegBank::getRegIndex(R));
     if (!R->getSuperRegs().empty())
@@ -2171,6 +2173,10 @@ void CodeGenRegBank::pruneUnitSets() {
   std::vector<unsigned> SuperSetIDs;
   unsigned EndIdx = RegUnitSets.size();
   for (auto [SubIdx, SubSet] : enumerate(RegUnitSets)) {
+    if (SubSet.Preserve) {
+      SuperSetIDs.push_back(SubIdx);
+      continue;
+    }
     unsigned SuperIdx = 0;
     for (; SuperIdx != EndIdx; ++SuperIdx) {
       if (SuperIdx == SubIdx)
@@ -2201,7 +2207,8 @@ void CodeGenRegBank::pruneUnitSets() {
   std::vector<RegUnitSet> PrunedUnitSets;
   PrunedUnitSets.reserve(SuperSetIDs.size());
   for (unsigned SuperIdx : SuperSetIDs) {
-    PrunedUnitSets.emplace_back(RegUnitSets[SuperIdx].Name);
+    PrunedUnitSets.emplace_back(RegUnitSets[SuperIdx].Name,
+                                RegUnitSets[SuperIdx].Preserve);
     PrunedUnitSets.back().Units = std::move(RegUnitSets[SuperIdx].Units);
   }
   RegUnitSets = std::move(PrunedUnitSets);
@@ -2234,12 +2241,15 @@ void CodeGenRegBank::computeRegUnitSets() {
       continue;
 
     // Compute a sorted list of units in this class.
-    RegUnitSet RUSet(RC.getName());
+    RegUnitSet RUSet(RC.getName(), RC.PreservePressureSet);
     RC.buildRegUnitSet(*this, RUSet.Units);
 
     // Find an existing RegUnitSet.
-    if (findRegUnitSet(RegUnitSets, RUSet) == RegUnitSets.end())
+    auto Existing = findRegUnitSet(RegUnitSets, RUSet);
+    if (Existing == RegUnitSets.end())
       RegUnitSets.push_back(std::move(RUSet));
+    else if (RUSet.Preserve)
+      RegUnitSets[Existing - RegUnitSets.begin()].Preserve = true;
   }
 
   if (RegUnitSets.empty())

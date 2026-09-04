@@ -24,8 +24,8 @@ define i1 @foo(<vscale x 16 x i8> %x, i64 %y) {
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    addi a2, sp, 64

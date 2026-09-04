@@ -44,6 +44,9 @@ MACHINE_FUNCTION_PASS("riscv-expand-pseudo-pre-ra",
 MACHINE_FUNCTION_PASS("riscv-fold-mem-offset", RISCVFoldMemOffsetPass())
 MACHINE_FUNCTION_PASS("riscv-isel", RISCVISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
+MACHINE_FUNCTION_PASS("riscv-post-ra-v0-rewrite",
+                      RISCVPostRAV0RewritePass())
 MACHINE_FUNCTION_PASS("riscv-vector-peephole", RISCVVectorPeepholePass())
 MACHINE_FUNCTION_PASS("riscv-vl-optimizer", RISCVVLOptimizerPass())
+MACHINE_FUNCTION_PASS("riscv-vsetvli-cleanup", RISCVVSETVLICleanupPass())
 #undef MACHINE_FUNCTION_PASS

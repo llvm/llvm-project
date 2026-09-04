@@ -1,0 +1,1174 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=riscv-post-ra-v0-rewrite \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=riscv64 -mattr=+v -enable-new-pm \
+# RUN:   -passes=riscv-post-ra-v0-rewrite -verify-machineinstrs -o - %s | \
+# RUN:   FileCheck %s
+
+--- |
+  define void @nonadjacent_scalar() { ret void }
+  define void @nonadjacent_unordered_load() { ret void }
+  define void @keep_nonadjacent_volatile_load() { ret void }
+  define void @keep_nonadjacent_ordered_load() { ret void }
+  define void @nonadjacent_vset_read() { ret void }
+  define void @nonadjacent_scan_limit() { ret void }
+  define void @keep_nonadjacent_vl_vtype_def() { ret void }
+  define void @keep_nonadjacent_d_read() { ret void }
+  define void @keep_nonadjacent_d_def() { ret void }
+  define void @keep_nonadjacent_v0_read() { ret void }
+  define void @keep_nonadjacent_v0_def() { ret void }
+  define void @keep_nonadjacent_regmask() { ret void }
+  define void @keep_nonadjacent_bundle() { ret void }
+  define void @keep_nonadjacent_debug_number() { ret void }
+  define void @keep_nonadjacent_probe() { ret void }
+  define void @keep_nonadjacent_scan_cap() { ret void }
+  define void @producer_compare() { ret void }
+  define void @producer_vmv_i() { ret void }
+  define void @producer_vmv_s_x() { ret void }
+  define void @producer_vlm() { ret void }
+  define void @producer_slidedown_vx() { ret void }
+  define void @producer_slidedown_vi() { ret void }
+  define void @producer_vle64() { ret void }
+  define void @keep_slidedown_nonundef() { ret void }
+  define void @keep_slidedown_masked() { ret void }
+  define void @keep_slidedown_v0_source() { ret void }
+  define void @keep_vle64_nonundef() { ret void }
+  define void @keep_vle64_masked() { ret void }
+  define void @producer_copy_vtype() { ret void }
+  define void @producer_copy_vl_vtype() { ret void }
+  define void @producer_vmand_tied_source() { ret void }
+  define void @producer_vmand_both_tied_sources() { ret void }
+  define void @producer_vmand_untied_sources() { ret void }
+  define void @keep_vmand_live_source() { ret void }
+  define void @keep_vmand_v0_source() { ret void }
+  define void @producer_compare_m2() { ret void }
+  define void @producer_compare_m4() { ret void }
+  define void @producer_compare_m8() { ret void }
+  define void @keep_compare_m8_v0_overlap() { ret void }
+  define void @chain_a() { ret void }
+  define void @chain_b() { ret void }
+  define void @chain_copy_vtype() { ret void }
+  define void @chain_b_copy_vl_vtype() { ret void }
+  define void @two_kinds() { ret void }
+  define void @keep_live() { ret void }
+  define void @keep_masked_producer() { ret void }
+  define void @keep_tied_live() { ret void }
+  define void @keep_lr_split() { ret void }
+  define void @keep_debug_between() !dbg !4 { ret void }
+  define void @keep_debug_before() !dbg !10 { ret void }
+  define void @keep_debug_after() !dbg !16 { ret void }
+  define void @keep_probe() { ret void }
+  define void @keep_bundle() { ret void }
+  define void @keep_flagged_copy() { ret void }
+  define void @keep_internal_read_copy() { ret void }
+  define void @keep_internal_read_copy_source() { ret void }
+  define void @keep_copy_vl() { ret void }
+  define void @keep_copy_vtype_def() { ret void }
+  define void @keep_copy_vtype_unshared() { ret void }
+  define void @keep_chain_copy_vl() { ret void }
+  define void @keep_chain_debug_after() !dbg !22 { ret void }
+  define void @keep_chain_probe() { ret void }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "llc", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "post-ra-v0-rewrite.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = distinct !DISubprogram(name: "keep_debug_between", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null}
+  !7 = !DILocalVariable(name: "between", scope: !4, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 1, column: 1, scope: !4)
+  !10 = distinct !DISubprogram(name: "keep_debug_before", scope: !1, file: !1, line: 2, type: !5, scopeLine: 2, spFlags: DISPFlagDefinition, unit: !0)
+  !11 = !DILocalVariable(name: "before", scope: !10, file: !1, line: 2, type: !8)
+  !12 = !DILocation(line: 2, column: 1, scope: !10)
+  !16 = distinct !DISubprogram(name: "keep_debug_after", scope: !1, file: !1, line: 3, type: !5, scopeLine: 3, spFlags: DISPFlagDefinition, unit: !0)
+  !17 = !DILocalVariable(name: "after", scope: !16, file: !1, line: 3, type: !8)
+  !18 = !DILocation(line: 3, column: 1, scope: !16)
+  !22 = distinct !DISubprogram(name: "keep_chain_debug_after", scope: !1, file: !1, line: 4, type: !5, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !0)
+  !23 = !DILocalVariable(name: "chain_after", scope: !22, file: !1, line: 4, type: !8)
+  !24 = !DILocation(line: 4, column: 1, scope: !22)
+...
+---
+name: nonadjacent_scalar
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10
+
+    ; CHECK-LABEL: name: nonadjacent_scalar
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x11 = ADDI
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $x11 = ADDI killed $x10, 1
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: nonadjacent_unordered_load
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: nonadjacent_unordered_load
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x11 = LW
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    dead $x11 = LW killed $x10, 0 :: (load (s32))
+    $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_volatile_load
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_nonadjacent_volatile_load
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x11 = LW
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    dead $x11 = LW killed $x10, 0 :: (volatile load (s32))
+    $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_ordered_load
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_nonadjacent_ordered_load
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x11 = LW
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    dead $x11 = LW killed $x10, 0 :: (load monotonic (s32))
+    $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: nonadjacent_vset_read
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v11, $v12, $vl, $vtype
+
+    ; CHECK-LABEL: name: nonadjacent_vset_read
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead renamable $v13 = PseudoVADD_VV_M1
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    dead renamable $v13 = PseudoVADD_VV_M1 undef $v13, killed renamable $v11, killed renamable $v12, -1, 5, 0, implicit $vl, implicit $vtype
+    $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: nonadjacent_scan_limit
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: nonadjacent_scan_limit
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x11 = ADDI
+    ; CHECK-NEXT: dead $x12 = ADDI
+    ; CHECK-NEXT: dead $x13 = ADDI
+    ; CHECK-NEXT: dead $x14 = ADDI
+    ; CHECK-NEXT: dead $x15 = ADDI
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $x11 = ADDI $x0, 1
+    dead $x12 = ADDI $x0, 2
+    dead $x13 = ADDI $x0, 3
+    dead $x14 = ADDI $x0, 4
+    dead $x15 = ADDI $x0, 5
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_vl_vtype_def
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_nonadjacent_vl_vtype_def
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10, implicit $vl, implicit $vtype
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    dead $x0 = PseudoVSETIVLI 0, 210, implicit-def $vl, implicit-def $vtype
+    $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_d_read
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_nonadjacent_d_read
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x10 = PseudoVMV_X_S {{(renamable )?}}$v10
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $x10 = PseudoVMV_X_S renamable $v10, 5
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_d_def
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v9
+
+    ; CHECK-LABEL: name: keep_nonadjacent_d_def
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x10 = ADDI
+    ; CHECK-NEXT: $v10 = COPY killed renamable $v9
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $x10 = ADDI $x0, 1
+    renamable $v10 = COPY killed renamable $v9
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_v0_read
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8
+
+    ; CHECK-LABEL: name: keep_nonadjacent_v0_read
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x10 = PseudoVCPOP_M_B8 {{(renamable )?}}$v0
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $x10 = PseudoVCPOP_M_B8 renamable $v0, -1, 0
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_v0_def
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_nonadjacent_v0_def
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $v0 = IMPLICIT_DEF
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $v0 = IMPLICIT_DEF
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_regmask
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10
+
+    ; CHECK-LABEL: name: keep_nonadjacent_regmask
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $x10 = ADDI $x10, 0, CustomRegMask($v10,$x10)
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $x10 = ADDI $x10, 0, CustomRegMask($v10, $x10)
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0, implicit killed $x10
+...
+
+---
+name: keep_nonadjacent_bundle
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10
+
+    ; CHECK-LABEL: name: keep_nonadjacent_bundle
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: BUNDLE {
+    ; CHECK: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    BUNDLE {
+      dead $x11 = ADDI killed $x10, 1
+    }
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_debug_number
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10
+
+    ; CHECK-LABEL: name: keep_nonadjacent_debug_number
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x11 = ADDI {{.*}}debug-instr-number 1
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $x11 = ADDI killed $x10, 1, debug-instr-number 1
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_probe
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_nonadjacent_probe
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: PSEUDO_PROBE
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    PSEUDO_PROBE 1, 1, 0, 0
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_nonadjacent_scan_cap
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10
+
+    ; CHECK-LABEL: name: keep_nonadjacent_scan_cap
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: dead $x11 = ADDI
+    ; CHECK-NEXT: dead $x12 = ADDI
+    ; CHECK-NEXT: dead $x13 = ADDI
+    ; CHECK-NEXT: dead $x14 = ADDI
+    ; CHECK-NEXT: dead $x15 = ADDI
+    ; CHECK-NEXT: dead $x16 = ADDI
+    ; CHECK-NEXT: $v0 = COPY killed {{(renamable )?}}$v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    dead $x11 = ADDI $x10, 1
+    dead $x12 = ADDI $x10, 2
+    dead $x13 = ADDI $x10, 3
+    dead $x14 = ADDI $x10, 4
+    dead $x15 = ADDI $x10, 5
+    dead $x16 = ADDI killed $x10, 6
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_compare
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: producer_compare
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+---
+name: producer_vmv_i
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: producer_vmv_i
+    ; CHECK: $v0 = PseudoVMV_V_I_M1 undef $v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMV_V_I_M1 undef renamable $v10, 0, -1, 3, 0
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_vmv_s_x
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: producer_vmv_s_x
+    ; CHECK: $v0 = PseudoVMV_S_X undef $v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMV_S_X undef renamable $v10, killed $x10, 1, 5
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_vlm
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $x10
+
+    ; CHECK-LABEL: name: producer_vlm
+    ; CHECK: $v0 = PseudoVLM_V_B8 undef $v0
+    ; CHECK-SAME: :: (load
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVLM_V_B8 undef renamable $v10, killed $x10, -1, 0, 0 :: (load unknown-size)
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_slidedown_vx
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_slidedown_vx
+    ; CHECK: $v0 = PseudoVSLIDEDOWN_VX_MF2 undef $v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVSLIDEDOWN_VX_MF2 undef renamable $v10, killed renamable $v8, killed renamable $x10, -1, 3, 3, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_slidedown_vi
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_slidedown_vi
+    ; CHECK: $v0 = PseudoVSLIDEDOWN_VI_MF2 undef $v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVSLIDEDOWN_VI_MF2 undef renamable $v10, killed renamable $v8, 4, 4, 3, 3, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_vle64
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_vle64
+    ; CHECK: $v0 = PseudoVLE64_V_M1 undef $v0
+    ; CHECK-SAME: :: (load
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVLE64_V_M1 undef renamable $v10, killed renamable $x10, 8, 6, 2, implicit $vl, implicit $vtype :: (load unknown-size)
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_slidedown_nonundef
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v10, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_slidedown_nonundef
+    ; CHECK: $v10 = PseudoVSLIDEDOWN_VX_MF2 renamable $v10
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVSLIDEDOWN_VX_MF2 renamable $v10, killed renamable $v8, killed renamable $x10, -1, 3, 3, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_slidedown_masked
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_slidedown_masked
+    ; CHECK: $v10 = PseudoVSLIDEDOWN_VX_MF2_MASK
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVSLIDEDOWN_VX_MF2_MASK undef renamable $v10, killed renamable $v8, killed renamable $x10, killed renamable $v0, -1, 3, 3, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_slidedown_v0_source
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_slidedown_v0_source
+    ; CHECK: renamable $v10 = PseudoVSLIDEDOWN_VX_MF2 undef renamable $v10, killed renamable $v0
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVSLIDEDOWN_VX_MF2 undef renamable $v10, killed renamable $v0, killed renamable $x10, -1, 3, 3, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_vle64_nonundef
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v10, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_vle64_nonundef
+    ; CHECK: $v10 = PseudoVLE64_V_M1 renamable $v10
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVLE64_V_M1 renamable $v10, killed renamable $x10, 8, 6, 2, implicit $vl, implicit $vtype :: (load unknown-size)
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_vle64_masked
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $x10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_vle64_masked
+    ; CHECK: $v10 = PseudoVLE64_V_M1_MASK
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVLE64_V_M1_MASK undef renamable $v10, killed renamable $x10, killed renamable $v0, 8, 6, 2, implicit $vl, implicit $vtype :: (load unknown-size)
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_copy_vtype
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_copy_vtype
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    $v0 = COPY killed renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_copy_vl_vtype
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_copy_vl_vtype
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_vmand_tied_source
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v10, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_vmand_tied_source
+    ; CHECK: $v0 = PseudoVMAND_MM_B64 killed renamable $v8, killed renamable $v10
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v8, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_vmand_both_tied_sources
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v10, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_vmand_both_tied_sources
+    ; CHECK: $v0 = PseudoVMAND_MM_B64 killed renamable $v10, killed renamable $v10
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v10, killed renamable $v10, -1, 0, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_vmand_untied_sources
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v9, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_vmand_untied_sources
+    ; CHECK: $v0 = PseudoVMAND_MM_B64 killed renamable $v8, killed renamable $v9
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v8, killed renamable $v9, -1, 0, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_vmand_live_source
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v10, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_vmand_live_source
+    ; CHECK: $v10 = PseudoVMAND_MM_B64 killed renamable $v8, renamable $v10
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v8, renamable $v10, -1, 0, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_vmand_v0_source
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_vmand_v0_source
+    ; CHECK: renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v0, killed renamable $v8
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVMAND_MM_B64 killed renamable $v0, killed renamable $v8, -1, 0, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_compare_m2
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8m2, $v10m2, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_compare_m2
+    ; CHECK: early-clobber $v0 = PseudoVMSEQ_VV_M2
+    ; CHECK-NOT: $v0 = COPY
+    early-clobber renamable $v12 = PseudoVMSEQ_VV_M2 killed renamable $v8m2, killed renamable $v10m2, -1, 5, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v12, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_compare_m4
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8m4, $v12m4, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_compare_m4
+    ; CHECK: early-clobber $v0 = PseudoVMSEQ_VV_M4
+    ; CHECK-NOT: $v0 = COPY
+    early-clobber renamable $v16 = PseudoVMSEQ_VV_M4 killed renamable $v8m4, killed renamable $v12m4, -1, 5, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v16, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: producer_compare_m8
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8m8, $v16m8, $vl, $vtype
+
+    ; CHECK-LABEL: name: producer_compare_m8
+    ; CHECK: early-clobber $v0 = PseudoVMSEQ_VV_M8
+    ; CHECK-NOT: $v0 = COPY
+    early-clobber renamable $v24 = PseudoVMSEQ_VV_M8 killed renamable $v8m8, killed renamable $v16m8, -1, 5, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v24, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_compare_m8_v0_overlap
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0m8, $v8m8, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_compare_m8_v0_overlap
+    ; CHECK: early-clobber renamable $v24 = PseudoVMSEQ_VV_M8
+    ; CHECK-NEXT: $v0 = COPY renamable $v24
+    early-clobber renamable $v24 = PseudoVMSEQ_VV_M8 killed renamable $v0m8, killed renamable $v8m8, -1, 5, implicit $vl, implicit $vtype
+    $v0 = COPY renamable $v24, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: chain_a
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9
+
+    ; CHECK-LABEL: name: chain_a
+    ; CHECK-NOT: $v10 = COPY
+    ; CHECK: $v0 = PseudoVMFLT_VV_MF4_MASK {{.*}}$v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = COPY renamable $v0
+    renamable $v10 = PseudoVMFLT_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: chain_b
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v9, $v10
+
+    ; CHECK-LABEL: name: chain_b
+    ; CHECK: $v0 = COPY {{.*}}$v10
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_MF4_MASK {{.*}}$v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVMFLT_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: chain_copy_vtype
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9, $vl, $vtype
+
+    ; CHECK-LABEL: name: chain_copy_vtype
+    ; CHECK-NOT: $v10 = COPY
+    ; CHECK: $v0 = PseudoVMFLT_VV_MF4_MASK {{.*}}$v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v10 = COPY renamable $v0, implicit $vtype
+    renamable $v10 = PseudoVMFLT_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
+    $v0 = COPY killed renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: chain_b_copy_vl_vtype
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $v9, $v10, $vl, $vtype
+
+    ; CHECK-LABEL: name: chain_b_copy_vl_vtype
+    ; CHECK: $v0 = COPY {{.*}}$v10, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v0 = PseudoVMFLT_VV_MF4_MASK {{.*}}$v0
+    ; CHECK-NOT: $v0 = COPY
+    renamable $v0 = COPY renamable $v10, implicit $vl, implicit $vtype
+    renamable $v10 = PseudoVMFLT_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1, implicit $vl, implicit $vtype
+    $v0 = COPY killed renamable $v10, implicit $vl, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: two_kinds
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9
+
+    ; CHECK-LABEL: name: two_kinds
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK: $v0 = PseudoVMFLT_VV_MF4_MASK {{.*}}$v0
+    ; CHECK: $v0 = PseudoVMSEQ_VI_M1
+    ; CHECK-NOT: COPY
+    renamable $v10 = PseudoVMSEQ_VI_M1 renamable $v8, 0, -1, 5
+    $v0 = COPY killed renamable $v10
+    renamable $v11 = COPY renamable $v0
+    renamable $v11 = PseudoVMFLT_VV_MF4_MASK killed renamable $v11, renamable $v8, renamable $v9, killed renamable $v0, -1, 4, 1
+    $v0 = COPY killed renamable $v11
+    renamable $v12 = PseudoVMSEQ_VI_M1 killed renamable $v9, 0, -1, 5
+    $v0 = COPY killed renamable $v12
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_live
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_live
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = COPY renamable $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 renamable $v8, 0, -1, 5
+    $v0 = COPY renamable $v10
+    PseudoRET implicit $v0, implicit $v10
+...
+
+---
+name: keep_masked_producer
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9, $v10
+
+    ; CHECK-LABEL: name: keep_masked_producer
+    ; CHECK: $v10 = PseudoVMSEQ_VV_M1_MASK
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    renamable $v10 = PseudoVMSEQ_VV_M1_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 5, 1
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_tied_live
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v10
+
+    ; CHECK-LABEL: name: keep_tied_live
+    ; CHECK: $v10 = PseudoVMV_V_I_M1 renamable $v10
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    renamable $v10 = PseudoVMV_V_I_M1 renamable $v10, 0, -1, 3, 0
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+name: keep_lr_split
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_lr_split
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = lr-split COPY killed renamable $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = lr-split COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_debug_between
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_debug_between
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK: DBG_VALUE $v10
+    ; CHECK: $v0 = COPY killed renamable $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    DBG_VALUE $v10, $noreg, !7, !DIExpression(), debug-location !9
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_debug_before
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_debug_before
+    ; CHECK: DBG_VALUE $v10
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    DBG_VALUE $v10, $noreg, !11, !DIExpression(), debug-location !12
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_debug_after
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_debug_after
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    ; CHECK: DBG_VALUE $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = COPY killed renamable $v10
+    DBG_VALUE $v10, $noreg, !17, !DIExpression(), debug-location !18
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_probe
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_probe
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: PSEUDO_PROBE
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    PSEUDO_PROBE 1, 1, 0, 0
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_bundle
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $vl, $vtype
+
+    ; CHECK-LABEL: name: keep_bundle
+    ; CHECK: BUNDLE {
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK: $v0 = COPY killed renamable $v10, implicit $vtype
+    BUNDLE {
+      renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5, implicit $vl, implicit $vtype
+    }
+    $v0 = COPY killed renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_flagged_copy
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_flagged_copy
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = frame-setup COPY killed renamable $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = frame-setup COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+# The implementation rejects every non-NoFlags COPY, including NoMerge.  This
+# snapshot's MIR parser cannot spell NoMerge (the printer can print "nomerge"),
+# so frame-setup exercises the same shared getFlags() gate here.
+
+---
+name: keep_internal_read_copy
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8
+
+    ; CHECK-LABEL: name: keep_internal_read_copy
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: internal $v0 = COPY killed renamable $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    internal $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_internal_read_copy_source
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_internal_read_copy_source
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = COPY internal killed renamable $v10
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = COPY internal killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_copy_vl
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $vl
+
+    ; CHECK-LABEL: name: keep_copy_vl
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10, implicit $vl
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = COPY killed renamable $v10, implicit $vl
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_copy_vtype_def
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_copy_vtype_def
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10, implicit-def $vtype
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = COPY killed renamable $v10, implicit-def $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_copy_vtype_unshared
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v8, $vtype
+
+    ; CHECK-LABEL: name: keep_copy_vtype_unshared
+    ; CHECK: $v10 = PseudoVMSEQ_VI_M1
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10, implicit $vtype
+    renamable $v10 = PseudoVMSEQ_VI_M1 killed renamable $v8, 0, -1, 5
+    $v0 = COPY killed renamable $v10, implicit $vtype
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_chain_copy_vl
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9, $vl
+
+    ; CHECK-LABEL: name: keep_chain_copy_vl
+    ; CHECK: $v10 = COPY renamable $v0, implicit $vl
+    ; CHECK-NEXT: $v10 = PseudoVMFLT_VV_MF4_MASK
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    renamable $v10 = COPY renamable $v0, implicit $vl
+    renamable $v10 = PseudoVMFLT_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_chain_debug_after
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9
+
+    ; CHECK-LABEL: name: keep_chain_debug_after
+    ; CHECK: $v10 = COPY renamable $v0
+    ; CHECK-NEXT: $v10 = PseudoVMFLT_VV_MF4_MASK
+    ; CHECK-NEXT: $v0 = COPY killed renamable $v10
+    ; CHECK: DBG_VALUE $v10
+    renamable $v10 = COPY renamable $v0
+    renamable $v10 = PseudoVMFLT_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1
+    $v0 = COPY killed renamable $v10
+    DBG_VALUE $v10, $noreg, !23, !DIExpression(), debug-location !24
+    PseudoRET implicit $v0
+...
+
+---
+name: keep_chain_probe
+tracksRegLiveness: true
+noVRegs: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $v9
+
+    ; CHECK-LABEL: name: keep_chain_probe
+    ; CHECK: $v10 = COPY renamable $v0
+    ; CHECK-NEXT: PSEUDO_PROBE
+    ; CHECK-NEXT: $v10 = PseudoVMFLT_VV_MF4_MASK
+    renamable $v10 = COPY renamable $v0
+    PSEUDO_PROBE 2, 1, 0, 0
+    renamable $v10 = PseudoVMFLT_VV_MF4_MASK killed renamable $v10, killed renamable $v8, killed renamable $v9, killed renamable $v0, -1, 4, 1
+    $v0 = COPY killed renamable $v10
+    PseudoRET implicit $v0
+...

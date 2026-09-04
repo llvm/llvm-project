@@ -230,26 +230,26 @@ PseudoVSE32_V_M1 %y, %addr, 4 /*avl*/, 5 /*sew*/
 
 For a vector pseudo to be considered for AVL optimisation, its underlying instruction must specify that its output doesn't depend on `vl` in the `ElementsDependOn` TSFlag. The default for this flag is conservatively set to depending on `vl`, so AVL optimisation will be off by default.
 
-## VMV0 elimination
+## VMV0 register allocation
 
 Because masked instructions must have the mask register in `v0`, a specific register class `vmv0` is used that contains only one register, `v0`.
 
-However register coalescing may end up coalescing copies into `vmv0`, resulting in instructions with multiple uses of `vmv0` that the register allocator can't allocate:
+The `vmv0` class remains virtual until register allocation. Its singleton
+pressure set models the fact that only one value can occupy `v0`, while normal
+register-class inflation and live-range splitting allow additional mask values
+to reside in the general vector registers.
 
 ```
-%x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vmv0, %3:vmv0, ...
+%mask:vmv0 = COPY %value:vr
+%x:vrnov0 = PseudoVADD_VV_M1_MASK %passthru:vrnov0, %a:vr, %b:vr,
+                                      %mask:vmv0, ...
 ```
 
-To avoid this, `RISCVVMV0Elimination` replaces any uses of `vmv0` with physical copies to `v0` before register coalescing and allocation:
-
-```
-%x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, %3:vmv0, ...
-
-// vmv0 gets eliminated to:
-
-$v0 = COPY %3:vr
-%x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, $v0, ...
-```
+Machine optimizations avoid merging `vmv0` and general-vector live ranges. The
+pre-register-allocation scheduler also preserves the order between virtual
+`vmv0` operands and explicit physical `v0` accesses, whose alias is otherwise
+not visible until allocation. Register allocation then assigns `vmv0` operands
+to `v0` and inserts any copies needed to resolve overlapping live ranges.
 
 (rvv_register_allocation)=
 

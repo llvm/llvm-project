@@ -390,6 +390,9 @@ public:
   /// Generate register pressure set for this register class and any class
   /// synthesized from it.
   bool GeneratePressureSet;
+  /// Preserve the pressure set generated directly from this register class
+  /// when pruning insignificant subsets.
+  bool PreservePressureSet;
 
   // Return the Record that defined this class, or NULL if the class was
   // created by TableGen.
@@ -629,8 +632,10 @@ struct RegUnitSet {
   std::vector<unsigned> Units;
   unsigned Weight = 0; // Cache the sum of all unit weights.
   unsigned Order = 0;  // Cache the sort key.
+  bool Preserve = false;
 
-  RegUnitSet(std::string Name) : Name(std::move(Name)) {}
+  RegUnitSet(std::string Name, bool Preserve = false)
+      : Name(std::move(Name)), Preserve(Preserve) {}
 };
 
 // Base vector for identifying TopoSigs. The contents uniquely identify a

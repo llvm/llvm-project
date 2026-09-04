@@ -260,11 +260,12 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 define <8 x i8> @udiv_trunc_select(<8 x i16> %x, i16 %y, <8 x i1> %m, i1 %c) {
 ; CHECK-LABEL: udiv_trunc_select:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vdivu.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vdivu.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0

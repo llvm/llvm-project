@@ -157,6 +157,34 @@ FunctionPass *createRISCVInsertVSETVLIPass();
 void initializeRISCVInsertVSETVLIPass(PassRegistry &);
 extern char &RISCVInsertVSETVLIID;
 
+class RISCVVSETVLICleanupPass
+    : public OptionalPassInfoMixin<RISCVVSETVLICleanupPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+FunctionPass *createRISCVVSETVLICleanupLegacyPass();
+void initializeRISCVVSETVLICleanupLegacyPass(PassRegistry &);
+
+class RISCVPostRAV0RewritePass
+    : public OptionalPassInfoMixin<RISCVPostRAV0RewritePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs().setTracksLiveness();
+  }
+};
+
+FunctionPass *createRISCVPostRAV0RewritePass();
+void initializeRISCVPostRAV0RewriteLegacyPass(PassRegistry &);
+
 FunctionPass *createRISCVInsertReadWriteCSRPass();
 void initializeRISCVInsertReadWriteCSRPass(PassRegistry &);
 
@@ -216,9 +244,6 @@ public:
 
 FunctionPass *createRISCVVLOptimizerLegacyPass();
 void initializeRISCVVLOptimizerLegacyPass(PassRegistry &);
-
-FunctionPass *createRISCVVMV0EliminationPass();
-void initializeRISCVVMV0EliminationPass(PassRegistry &);
 
 FunctionPass *createRISCVQCRelaxMarkingPass();
 void initializeRISCVQCRelaxMarkingPass(PassRegistry &);

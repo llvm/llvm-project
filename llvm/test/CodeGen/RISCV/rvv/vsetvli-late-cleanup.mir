@@ -1,0 +1,221 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=riscv-vsetvli-cleanup \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,DIRECT
+# RUN: llc -mtriple=riscv64 -mattr=+v -passes=riscv-vsetvli-cleanup \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,DIRECT
+# RUN: llc -mtriple=riscv64 -mattr=+v \
+# RUN:   -run-pass=machine-cp,riscv-vsetvli-cleanup \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,MCP
+# RUN: llc -mtriple=riscv64 -mattr=+v \
+# RUN:   -passes=machine-cp,riscv-vsetvli-cleanup \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,MCP
+
+# Baseline coverage for VSETVLI configurations that become redundant only
+# after late copy propagation.
+
+--- |
+  declare void @callee()
+  define void @overwritten_config() { ret void }
+  define void @keep_live_scalar_result() { ret void }
+  define void @keep_for_vector_copy() { ret void }
+  define void @keep_across_call() { ret void }
+  define void @keep_across_inline_asm() { ret void }
+  define void @keep_for_explicit_vl_read() { ret void }
+  define void @keep_across_vtype_clobber() { ret void }
+  define void @keep_vl_producer() { ret void }
+  define void @remove_consecutive_configs() { ret void }
+  define void @keep_debug_numbered_config() { ret void }
+  define void @cleanup_after_mcp() { ret void }
+  define void @keep_at_block_boundary() { ret void }
+...
+
+---
+name: overwritten_config
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8, $v9
+
+    ; CHECK-LABEL: name: overwritten_config
+    ; CHECK-NOT: PseudoVSETIVLI 2
+    ; CHECK: dead $x0 = PseudoVSETIVLI 1, 192
+    ; CHECK-NEXT: renamable $v10 = PseudoVADD_VV_M1
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    renamable $v10 = PseudoVADD_VV_M1 undef $noreg, renamable $v8, renamable $v9, 1, 3, 0, implicit $vl, implicit $vtype
+    PseudoRET implicit $v10
+...
+
+---
+name: keep_live_scalar_result
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_live_scalar_result
+    ; CHECK: renamable $x10 = PseudoVSETIVLI 2, 193
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    renamable $x10 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET implicit $x10
+...
+
+---
+name: keep_for_vector_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: keep_for_vector_copy
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193
+    ; CHECK-NEXT: renamable $v9 = COPY renamable $v8, implicit $vtype
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    renamable $v9 = COPY renamable $v8, implicit $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET implicit $v9
+...
+
+---
+name: keep_across_call
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_across_call
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) @callee
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    PseudoCALL target-flags(riscv-call) @callee, csr_ilp32_lp64, implicit-def $x1, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...
+
+---
+name: keep_across_inline_asm
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_across_inline_asm
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193
+    ; CHECK-NEXT: INLINEASM
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    INLINEASM &"", sideeffect attdialect
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...
+
+---
+name: keep_for_explicit_vl_read
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_for_explicit_vl_read
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193
+    ; CHECK-NEXT: dead renamable $x10 = PseudoReadVL implicit $vl
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    dead renamable $x10 = PseudoReadVL implicit $vl
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...
+
+---
+name: keep_across_vtype_clobber
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_across_vtype_clobber
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193
+    ; CHECK-NEXT: dead renamable $x5 = ADDI $x0, 0, implicit-def $vtype
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    dead renamable $x5 = ADDI $x0, 0, implicit-def $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...
+
+---
+name: keep_vl_producer
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_vl_producer
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193
+    ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0X0 killed $x0, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETVLIX0X0 killed $x0, 192, implicit-def $vl, implicit-def $vtype, implicit $vl
+    PseudoRET
+...
+
+---
+name: remove_consecutive_configs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: remove_consecutive_configs
+    ; CHECK-NOT: PseudoVSETIVLI 3
+    ; CHECK-NOT: PseudoVSETIVLI 2
+    ; CHECK: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 3, 194, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...
+
+---
+name: keep_debug_numbered_config
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: keep_debug_numbered_config
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193{{.*}}debug-instr-number 1
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype, debug-instr-number 1
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...
+
+---
+name: cleanup_after_mcp
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    ; CHECK-LABEL: name: cleanup_after_mcp
+    ; CHECK: bb.0:
+    ; CHECK-NEXT: liveins: $v8
+    ; DIRECT: dead $x0 = PseudoVSETIVLI 2, 193
+    ; DIRECT-NEXT: renamable $v9 = COPY renamable $v8, implicit $vtype
+    ; DIRECT-NEXT: renamable $v8 = COPY renamable $v9, implicit $vtype
+    ; DIRECT-NEXT: dead $x0 = PseudoVSETIVLI 1, 192
+    ; MCP-NOT: COPY
+    ; MCP-NOT: PseudoVSETIVLI 2
+    ; MCP: dead $x0 = PseudoVSETIVLI 1, 192
+    ; MCP-NEXT: PseudoRET implicit $v8
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+    renamable $v9 = COPY renamable $v8, implicit $vtype
+    renamable $v8 = COPY renamable $v9, implicit $vtype
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET implicit $v8
+...
+
+---
+name: keep_at_block_boundary
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+
+    ; CHECK-LABEL: name: keep_at_block_boundary
+    ; CHECK: bb.0:
+    ; CHECK: dead $x0 = PseudoVSETIVLI 2, 193
+    ; CHECK: bb.1:
+    ; CHECK: dead $x0 = PseudoVSETIVLI 1, 192
+    dead $x0 = PseudoVSETIVLI 2, 193, implicit-def $vl, implicit-def $vtype
+
+  bb.1:
+    dead $x0 = PseudoVSETIVLI 1, 192, implicit-def $vl, implicit-def $vtype
+    PseudoRET
+...

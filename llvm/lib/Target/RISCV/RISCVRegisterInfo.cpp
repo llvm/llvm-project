@@ -34,8 +34,10 @@ static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
 static cl::opt<bool>
     DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
                          cl::init(false),
-                         cl::desc("Disable two address hints for register "
-                                  "allocation"));
+                         cl::desc("Disable RISC-V register allocation hints"));
+static cl::opt<bool> EnableV0RegAllocHint(
+    "riscv-enable-v0-regalloc-hint", cl::Hidden, cl::init(true),
+    cl::desc("Prefer V0 for single-use vector mask producers"));
 
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
@@ -953,6 +955,97 @@ RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   return RC;
 }
 
+bool RISCVRegisterInfo::isV0OnlyRegClass(const TargetRegisterClass *RC,
+                                         unsigned SubReg,
+                                         const TargetRegisterInfo &TRI) {
+  return RC && !RC->getRegisters().empty() &&
+         llvm::all_of(RC->getRegisters(), [&](MCPhysReg Reg) {
+           if (SubReg) {
+             Reg = TRI.getSubReg(Reg, SubReg);
+             if (!Reg)
+               return false;
+           }
+           return TRI.regsOverlap(Reg, RISCV::V0);
+         });
+}
+
+unsigned RISCVRegisterInfo::getV0AccessKind(const MachineInstr &MI,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetInstrInfo *TII,
+                                            const TargetRegisterInfo &TRI) {
+  unsigned Kind = NoV0Access;
+  for (ConstMIBundleOperands OpIt(MI); OpIt.isValid(); ++OpIt) {
+    const MachineOperand &MO = *OpIt;
+    if (MO.isRegMask()) {
+      if (MO.clobbersPhysReg(RISCV::V0))
+        Kind |= PhysV0Def;
+      continue;
+    }
+    if (!MO.isReg() || !MO.getReg())
+      continue;
+
+    Register Reg = MO.getReg();
+    bool IsVirtualV0 = false;
+    if (Reg.isPhysical()) {
+      if (!TRI.regsOverlap(Reg, RISCV::V0))
+        continue;
+    } else {
+      IsVirtualV0 = isV0OnlyRegClass(MRI.getRegClass(Reg), MO.getSubReg(), TRI);
+      const MachineInstr *OperandMI = MO.getParent();
+      const TargetRegisterClass *Constraint =
+          OperandMI->getRegClassConstraint(MO.getOperandNo(), TII, &TRI);
+      IsVirtualV0 |= isV0OnlyRegClass(Constraint, /*SubReg=*/0, TRI);
+      if (!IsVirtualV0)
+        continue;
+    }
+
+    if (MO.readsReg())
+      Kind |= IsVirtualV0 ? VirtualV0Use : PhysV0Use;
+    if (MO.isDef())
+      Kind |= IsVirtualV0 ? VirtualV0Def : PhysV0Def;
+  }
+  return Kind;
+}
+
+static bool isV0OnlyCrossClassCopy(const TargetRegisterClass *SrcRC,
+                                   unsigned SrcSubReg,
+                                   const TargetRegisterClass *DstRC,
+                                   unsigned DstSubReg,
+                                   const TargetRegisterInfo &TRI) {
+  return RISCVRegisterInfo::isV0OnlyRegClass(SrcRC, SrcSubReg, TRI) !=
+         RISCVRegisterInfo::isV0OnlyRegClass(DstRC, DstSubReg, TRI);
+}
+
+bool RISCVRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
+                                             unsigned DefSubReg,
+                                             const TargetRegisterClass *SrcRC,
+                                             unsigned SrcSubReg) const {
+  if (isV0OnlyCrossClassCopy(SrcRC, SrcSubReg, DefRC, DefSubReg, *this))
+    return false;
+  const TargetRegisterClass *NewRC =
+      findCommonRegClass(DefRC, DefSubReg, SrcRC, SrcSubReg);
+  if (isV0OnlyRegClass(NewRC, /*SubReg=*/0, *this) &&
+      (!isV0OnlyRegClass(SrcRC, SrcSubReg, *this) ||
+       !isV0OnlyRegClass(DefRC, DefSubReg, *this)))
+    return false;
+  return NewRC != nullptr;
+}
+
+bool RISCVRegisterInfo::shouldCoalesce(
+    MachineInstr *, const TargetRegisterClass *SrcRC, unsigned SrcSubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &) const {
+  // SrcSubReg and DstSubReg describe where the old virtual registers would
+  // live in NewRC, not subregisters of SrcRC and DstRC. Reject a join if it
+  // would newly constrain either complete old value to V0.
+  bool SrcForcedToV0 = isV0OnlyRegClass(NewRC, SrcSubReg, *this);
+  bool DstForcedToV0 = isV0OnlyRegClass(NewRC, DstSubReg, *this);
+  bool SrcWasV0Only = isV0OnlyRegClass(SrcRC, /*SubReg=*/0, *this);
+  bool DstWasV0Only = isV0OnlyRegClass(DstRC, /*SubReg=*/0, *this);
+  return !((SrcForcedToV0 && !SrcWasV0Only) ||
+           (DstForcedToV0 && !DstWasV0Only));
+}
+
 void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
                                          SmallVectorImpl<uint64_t> &Ops) const {
   // VLENB is the length of a vector register in bytes. We use <vscale x 8 x i8>
@@ -1004,6 +1097,34 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+  auto shouldPreferV0 = [&]() {
+    if (!EnableV0RegAllocHint || !VRM || VRM->getOriginal(VirtReg) != VirtReg ||
+        MRI->getRegClass(VirtReg) != &RISCV::VRRegClass ||
+        !is_contained(Order, RISCV::V0) || MRI->isReserved(RISCV::V0) ||
+        !MRI->hasOneNonDBGUse(VirtReg))
+      return false;
+    const MachineOperand *Use = MRI->getOneNonDBGUse(VirtReg);
+    if (!Use || !Use->readsReg() || Use->getSubReg())
+      return false;
+    const MachineInstr &Copy = *Use->getParent();
+    if (!Copy.isFullCopy() || Copy.getFlag(MachineInstr::LRSplit) ||
+        Use->getOperandNo() != 1)
+      return false;
+    const MachineOperand &Dst = Copy.getOperand(0);
+    if (!Dst.isReg() || !Dst.getReg().isVirtual() || Dst.getSubReg() ||
+        !isV0OnlyRegClass(MRI->getRegClass(Dst.getReg()), 0, *this))
+      return false;
+    const MachineInstr *Def = MRI->getUniqueVRegDef(VirtReg);
+    if (!Def)
+      return false;
+    if (Def->isFullCopy() && Def->getOperand(1).getReg().isPhysical() &&
+        regsOverlap(Def->getOperand(1).getReg(), RISCV::V0))
+      return false;
+    uint64_t TSFlags = Def->getDesc().TSFlags;
+    return !RISCVII::hasVLOp(TSFlags) ||
+           RISCVII::getLMul(TSFlags) != RISCVVType::LMUL_8;
+  };
+
   // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
   std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(VirtReg);
   unsigned HintType = Hint.first;
@@ -1049,6 +1170,12 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
   if (!VRM || DisableRegAllocHints)
     return BaseImplRetVal;
+
+  // A single-use vector value copied directly to VMV0 can avoid that copy if
+  // it happens to receive V0. This is only a soft hint: the rest of the
+  // allocation order remains available if V0 interferes.
+  if (!BaseImplRetVal && shouldPreferV0() && !is_contained(Hints, RISCV::V0))
+    Hints.insert(Hints.begin(), RISCV::V0);
 
   // Add any two address hints after any copy hints.
   SmallSet<Register, 4> TwoAddrHints;

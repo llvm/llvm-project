@@ -514,10 +514,10 @@ public:
                      const TargetRegisterClass *SrcRC,
                      unsigned SrcSubReg) const;
 
-  // For a copy-like instruction that defines a register of class DefRC with
-  // subreg index DefSubReg, reading from another source with class SrcRC and
-  // subregister SrcSubReg return true if this is a preferable copy
-  // instruction or an earlier use should be used.
+  // Return true if a register of class SrcRC with subregister SrcSubReg may
+  // replace a register of class DefRC with subregister DefSubReg. This is used
+  // when propagating through copy-like instructions and when replacing an
+  // equivalent definition during CSE.
   virtual bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                                     unsigned DefSubReg,
                                     const TargetRegisterClass *SrcRC,

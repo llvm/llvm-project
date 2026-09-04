@@ -251,7 +251,10 @@ bool TailDuplicator::tailDuplicateAndUpdate(
       continue;
     Register Dst = Copy->getOperand(0).getReg();
     Register Src = Copy->getOperand(1).getReg();
-    if (MRI->hasOneNonDBGUse(Src) &&
+    if (!Copy->getOperand(1).getSubReg() && MRI->hasOneNonDBGUse(Src) &&
+        TRI->shouldRewriteCopySrc(
+            MRI->getRegClass(Dst), Copy->getOperand(0).getSubReg(),
+            MRI->getRegClass(Src), Copy->getOperand(1).getSubReg()) &&
         MRI->constrainRegClass(Src, MRI->getRegClass(Dst))) {
       // Copy is the only use. Do trivial copy propagation here.
       MRI->replaceRegWith(Dst, Src);
@@ -424,8 +427,13 @@ void TailDuplicator::duplicateInstruction(
     // replaced.
     auto *OrigRC = MRI->getRegClass(Reg);
     auto *MappedRC = MRI->getRegClass(VI->second.Reg);
-    const TargetRegisterClass *ConstrRC;
-    if (VI->second.SubReg != 0) {
+    unsigned MappedSubReg =
+        TRI->composeSubRegIndices(VI->second.SubReg, MO.getSubReg());
+    bool CanRewrite = NewMI.isDebugInstr() ||
+                      TRI->shouldRewriteCopySrc(OrigRC, MO.getSubReg(),
+                                                MappedRC, MappedSubReg);
+    const TargetRegisterClass *ConstrRC = nullptr;
+    if (CanRewrite && VI->second.SubReg != 0) {
       ConstrRC =
           TRI->getMatchingSuperRegClass(MappedRC, OrigRC, VI->second.SubReg);
       if (ConstrRC) {
@@ -434,7 +442,7 @@ void TailDuplicator::duplicateInstruction(
         // change the class of the mapped register.
         MRI->setRegClass(VI->second.Reg, ConstrRC);
       }
-    } else {
+    } else if (CanRewrite) {
       // For mapped registers that do not have sub-registers, simply
       // restrict their class to match the original one.
 

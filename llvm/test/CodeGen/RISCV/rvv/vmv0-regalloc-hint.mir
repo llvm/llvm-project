@@ -1,0 +1,107 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v \
+# RUN:   -run-pass=greedy,virtregrewriter -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s --check-prefix=HINT
+# RUN: llc -mtriple=riscv64 -mattr=+v \
+# RUN:   -riscv-enable-v0-regalloc-hint=false \
+# RUN:   -run-pass=greedy,virtregrewriter -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s --check-prefix=NO-HINT
+
+--- |
+  define void @single_use() { ret void }
+  define void @multiple_uses() { ret void }
+  define void @lmul8_producer() { ret void }
+  define void @physical_v0_interference() { ret void }
+...
+
+# Prefer V0 for an original VR whose only non-debug use is a full copy to
+# VMV0. This remains a soft hint: disabling it leaves the copy in place.
+---
+name: single_use
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; HINT-LABEL: name: single_use
+  ; HINT: renamable $v0 = PseudoVMAND_MM_B8
+  ; HINT-NEXT: INLINEASM {{.*}}reguse:VMV0{{.*}}$v0
+  ; NO-HINT-LABEL: name: single_use
+  ; NO-HINT: renamable $[[WIDE:v[1-9][0-9]*]] = PseudoVMAND_MM_B8
+  ; NO-HINT-NEXT: renamable $v0 = COPY killed renamable $[[WIDE]]
+
+  bb.0:
+    %a:vr = IMPLICIT_DEF
+    %b:vr = IMPLICIT_DEF
+    %wide:vr = PseudoVMAND_MM_B8 %a, %b, 4, 0
+    %mask:vmv0 = COPY %wide
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    PseudoRET
+...
+
+# Do not hint a value with another real use. Its full broad live range should
+# not be biased toward the singleton mask register.
+---
+name: multiple_uses
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; HINT-LABEL: name: multiple_uses
+  ; HINT: renamable $[[WIDE:v[1-9][0-9]*]] = PseudoVMAND_MM_B8
+  ; HINT-NEXT: INLINEASM {{.*}}reguse:VR{{.*}}$[[WIDE]]
+  ; HINT-NEXT: renamable $v0 = COPY killed renamable $[[WIDE]]
+
+  bb.0:
+    %a:vr = IMPLICIT_DEF
+    %b:vr = IMPLICIT_DEF
+    %wide:vr = PseudoVMAND_MM_B8 %a, %b, 4, 0
+    INLINEASM &"", sideeffect attdialect, reguse:VR, %wide
+    %mask:vmv0 = COPY %wide
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    PseudoRET
+...
+
+# An LMUL=8 producer is deliberately excluded because extending V0 pressure
+# through a live LMUL=8 group can turn a cheap copy into expensive spills.
+---
+name: lmul8_producer
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; HINT-LABEL: name: lmul8_producer
+  ; HINT: renamable $[[WIDE:v[1-9][0-9]*]] = PseudoVMFEQ_VV_M8
+  ; HINT-NEXT: renamable $v0 = COPY killed renamable $[[WIDE]]
+
+  bb.0:
+    liveins: $v8m8
+
+    %src:vrm8nov0 = COPY $v8m8
+    %wide:vr = PseudoVMFEQ_VV_M8 %src, %src, 16, 6
+    %mask:vmv0 = COPY %wide
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    PseudoRET
+...
+
+# A fixed V0 value interferes with the preferred assignment. Since this is a
+# soft hint, greedy allocation falls back to another vector register and keeps
+# the final copy rather than spilling or failing allocation.
+---
+name: physical_v0_interference
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; HINT-LABEL: name: physical_v0_interference
+  ; HINT: renamable $[[WIDE:v[1-9][0-9]*]] = PseudoVMAND_MM_B8
+  ; HINT-NEXT: renamable $[[SAVED:v[1-9][0-9]*]] = COPY $v0
+  ; HINT-NEXT: renamable $v0 = COPY killed renamable $[[WIDE]]
+  ; HINT-NOT: Folded Spill
+  ; HINT-NOT: Folded Reload
+
+  bb.0:
+    liveins: $v0
+
+    %a:vr = IMPLICIT_DEF
+    %b:vr = IMPLICIT_DEF
+    %wide:vr = PseudoVMAND_MM_B8 %a, %b, 4, 0
+    %saved:vr = COPY $v0
+    %mask:vmv0 = COPY %wide
+    INLINEASM &"", sideeffect attdialect, reguse:VMV0, %mask
+    PseudoRET implicit %saved
+...

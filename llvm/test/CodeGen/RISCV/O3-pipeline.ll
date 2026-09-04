@@ -149,7 +149,6 @@
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
 ; CHECK-NEXT:       RISC-V Landing Pad Setup
-; CHECK-NEXT:       RISC-V VMV0 Elimination
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
@@ -182,6 +181,7 @@
 ; CHECK-NEXT:       Stack Slot Coloring
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
+; CHECK-NEXT:       RISC-V Post-RA V0 Rewrite
 ; CHECK-NEXT:       RISC-V Redundant Copy Elimination
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
@@ -216,6 +216,7 @@
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Machine Copy Propagation Pass
+; CHECK-NEXT:       RISC-V VSETVLI Cleanup
 ; CHECK-NEXT:       RISC-V Late Branch Optimisation Pass
 ; CHECK-NEXT:       RISC-V Indirect Branch Tracking
 ; CHECK-NEXT:       Branch relaxation pass
