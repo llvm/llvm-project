@@ -5415,6 +5415,96 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   return Sub;
 }
 
+// If CmpInstr is a dead-result SUB reg, imm, and a single-pred
+// successor redundantly recomputes reg - imm, reuse CmpInstr's
+// destination for that instead of erasing it, and delete the redundant
+// recompute. Returns true if something was folded.
+
+static bool foldRedundantRecompute(MachineInstr &CmpInstr, Register SrcReg,
+                                   int64_t CmpValue) {
+
+  Register DstReg = CmpInstr.getOperand(0).getReg();
+
+  // Transformation currently requires SSA values.
+  if (!SrcReg.isVirtual() || !DstReg.isVirtual())
+    return false;
+
+  MachineBasicBlock &MBB = *CmpInstr.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
+  if (TII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return false;
+
+  if (Cond.empty())
+    return false;
+  MachineBasicBlock *Fallthrough = MBB.getFallThrough();
+  for (MachineBasicBlock *Succ : {TBB, FBB ? FBB : Fallthrough}) {
+    if (!Succ || Succ->pred_size() != 1)
+      continue;
+
+    for (MachineInstr &MI : *Succ) {
+      if (MI.isDebugInstr())
+        continue;
+
+      bool IsMatch = false;
+
+      switch (MI.getOpcode()) {
+        CASE_ND(ADD64ri32)
+        CASE_ND(ADD32ri)
+        CASE_ND(ADD16ri)
+        CASE_ND(ADD8ri)
+        IsMatch = MI.getOperand(1).getReg() == SrcReg &&
+                  MI.getOperand(2).isImm() &&
+                  MI.getOperand(2).getImm() == -CmpValue;
+        break;
+        CASE_ND(SUB64ri32)
+        CASE_ND(SUB32ri)
+        CASE_ND(SUB16ri)
+        CASE_ND(SUB8ri)
+        IsMatch = MI.getOperand(1).getReg() == SrcReg &&
+                  MI.getOperand(2).isImm() &&
+                  MI.getOperand(2).getImm() == CmpValue;
+        break;
+      default:
+        break;
+      }
+
+      if (IsMatch) {
+
+        // Ensure the matching instruction does not define a live EFLAGS value
+        // that is required downstream.
+        MachineOperand *FlagDef =
+            MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+        if (FlagDef && !FlagDef->isDead())
+          return false;
+
+        // Register classes must match exactly to safely reuse the destination.
+        Register OldDst = MI.getOperand(0).getReg();
+        if (!OldDst.isVirtual() ||
+            MRI.getRegClass(OldDst) != MRI.getRegClass(DstReg))
+          return false;
+
+        // Restrict the fold to cases where SrcReg has no uses other than
+        // CmpInstr and MI. Otherwise, preserving SrcReg for its remaining
+        // uses can result in additional copies during register allocation.
+        for (MachineInstr &UseMI : MRI.use_nodbg_instructions(SrcReg)) {
+          if (&UseMI != &CmpInstr && &UseMI != &MI)
+            return false;
+        }
+
+        CmpInstr.getOperand(0).setIsDead(false);
+        MRI.replaceRegWith(OldDst, DstReg);
+        MI.eraseFromParent();
+
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Check if there exists an earlier instruction that
 /// operates on the same source operands and sets flags in the same way as
 /// Compare; remove Compare if possible.
@@ -5440,6 +5530,13 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   CASE_ND(SUB8rr) {
     if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
       return false;
+
+    // Before discarding SUB's dead destination to make a plain CMP, see
+    // if a successor redundantly recomputes the same value and can reuse
+    // it instead.
+    if (CmpMask != 0 && foldRedundantRecompute(CmpInstr, SrcReg, CmpValue))
+      return true;
+
     // There is no use of the destination register, we can replace SUB with CMP.
     unsigned NewOpcode = 0;
 #define FROM_TO(A, B)                                                          \
