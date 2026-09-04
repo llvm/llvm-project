@@ -1185,11 +1185,8 @@ LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
   return success();
 }
 
-/// Perform various checks on the input IR to see if it contains IR constructs
-/// that are unsupported by One-Shot Bufferize.
-static LogicalResult
-checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
-                                 OneShotAnalysisState &state) {
+LogicalResult bufferization::checkPreBufferizationAssumptions(
+    Operation *op, const DominanceInfo &domInfo, OneShotAnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
 
   // Note: This walk cannot be combined with the one below because interface
