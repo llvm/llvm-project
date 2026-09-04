@@ -201,7 +201,7 @@ static unsigned getMovMskBits(unsigned Opc) {
   case X86::VPCMPBZ256rri:
     return 32;
   default:
-    llvm_unreachable("Unknown MOVMSK source opcode");
+    llvm_unreachable("Unknown opcode");
   }
 }
 
@@ -254,9 +254,11 @@ static MachineInstr *getSignMaskConstantDef(MachineInstr &MI, Register Reg,
            MI.getParent()->begin(), MachineBasicBlock::iterator(MI)))) {
     if (!DefMI.modifiesRegister(Reg, TRI))
       continue;
-    return (IsZero ? isZeroVector(DefMI) : isAllOnesVector(DefMI, Is256Bit))
-               ? &DefMI
-               : nullptr;
+    // Stop at the nearest def/clobber; an older matching constant may no
+    // longer be the reaching definition.
+    if (IsZero ? isZeroVector(DefMI) : isAllOnesVector(DefMI, Is256Bit))
+      return &DefMI;
+    break;
   }
   return nullptr;
 }
@@ -312,19 +314,20 @@ static bool isCompressibleBlendVUse(unsigned BlendOpc, unsigned UseOpc) {
   }
 }
 
-// Try to compress VPMOV*2M and complementary signed sign-test patterns:
-//   vpmov*2m %xmm0, %k0             ->  (erase this)
-//   kmov* %k0, %eax                 ->  vmovmskp* %xmm0, %eax
-//   vpcmpge* $0, %xmm0, %k0         ->  (erase this)  (X >= 0)
-//   vpcmpgt* $-1, %xmm0, %k0        ->  (erase this)  (X > -1)
-//   kmov* %k0, %eax                 ->  vmovmskp* %xmm0, %eax
-//                                      bounded complement of %eax
-// and:
-//   vpmov*2m %xmm0, %k1             ->  (erase this)
-//   vmov* %xmm1, %xmm2 {%k1}        ->  vblendv* %xmm0, %xmm2, %xmm1, %xmm2
-static bool tryCompressMovMskPattern(MachineInstr &MI, MachineBasicBlock &MBB,
-                                     const X86Subtarget &ST,
-                                     SmallVectorImpl<MachineInstr *> &ToErase) {
+// Try to compress mask producer chains:
+//   vpmov*2m %xmm0, %k0       ->  (erase this)
+//   kmov* %k0, %eax           ->  vmovmskp* %xmm0, %eax
+//
+//   vpcmpge* $0, %xmm0, %k0   ->  (erase this)  (X >= 0)
+//   vpcmpgt* $-1, %xmm0, %k0  ->  (erase this)  (X > -1)
+//   kmov* %k0, %eax           ->  vmovmskp* %xmm0, %eax
+//                                bounded complement of %eax
+//
+//   vpmov*2m %xmm0, %k1       ->  (erase this)
+//   vmov* %xmm1, %xmm2 {%k1}  ->  vblendv* %xmm0, %xmm2, %xmm1, %xmm2
+static bool tryCompressMaskProducer(MachineInstr &MI, MachineBasicBlock &MBB,
+                                    const X86Subtarget &ST,
+                                    SmallVectorImpl<MachineInstr *> &ToErase) {
   const X86InstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
@@ -349,15 +352,19 @@ static bool tryCompressMovMskPattern(MachineInstr &MI, MachineBasicBlock &MBB,
 
   if (IsSignMaskCmp) {
     int64_t Pred = MI.getOperand(3).getImm();
+    // VPCMP signed predicates: nlt (5) folds X >= 0, nle (6) folds X > -1.
     if (Pred != 5 && Pred != 6)
       return false;
     Register ConstantReg = MI.getOperand(2).getReg();
     bool Is256Bit = Opc == X86::VPCMPBZ256rri || Opc == X86::VPCMPDZ256rri ||
                     Opc == X86::VPCMPQZ256rri;
+    // The sign-mask fold is valid only for compares against the reaching
+    // zero/all-ones vector definition.
     ConstantDef =
         getSignMaskConstantDef(MI, ConstantReg, Pred == 5, Is256Bit, TRI);
     if (!ConstantDef)
       return false;
+    // If the constant feeds only this compare, erase it with the compare.
     ConstantDefOnlyFeedsCmp = !TRI->regsOverlap(ConstantReg, SrcVecReg);
     for (MachineInstr &UseMI :
          llvm::make_range(std::next(MachineBasicBlock::iterator(*ConstantDef)),
@@ -533,8 +540,8 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
     return false;
 
-  // Specialized mask-producing instruction + KMOV -> MOVMSK folds first.
-  if (tryCompressMovMskPattern(MI, MBB, ST, ToErase))
+  // Specialized mask-producing folds to MOVMSK/VBLENDV first.
+  if (tryCompressMaskProducer(MI, MBB, ST, ToErase))
     return true;
 
   auto IsRedundantNewDataDest = [&](unsigned &Opc) {
