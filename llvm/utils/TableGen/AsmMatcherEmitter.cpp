@@ -3456,6 +3456,32 @@ getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   return Name;
 }
 
+static void emitFeatureCheck(raw_ostream &OS, bool ReportMultipleNearMisses) {
+  OS << "    if (!HasRequiredFeatures) {\n";
+  if (!ReportMultipleNearMisses)
+    OS << "      HadMatchOtherThanFeatures = true;\n";
+
+  OS << "      FeatureBitset NewMissingFeatures = RequiredFeatures & "
+        "~AvailableFeatures;\n";
+  OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target "
+        "features:\";\n";
+  OS << "                      for (unsigned I = 0, E = "
+        "NewMissingFeatures.size(); I != E; ++I)\n";
+  OS << "                        if (NewMissingFeatures[I])\n";
+  OS << "                          dbgs() << ' ' << I;\n";
+  OS << "                      dbgs() << \"\\n\");\n";
+  if (ReportMultipleNearMisses) {
+    OS << "      FeaturesNearMiss = "
+          "NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
+  } else {
+    OS << "      if (NewMissingFeatures.count() <=\n"
+          "          MissingFeatures.count())\n";
+    OS << "        MissingFeatures = NewMissingFeatures;\n";
+    OS << "      continue;\n";
+  }
+  OS << "    }\n";
+}
+
 void AsmMatcherEmitter::run(raw_ostream &OS) {
   CodeGenTarget Target(Records);
   const Record *AsmParser = Target.getAsmParser();
@@ -3523,6 +3549,14 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   bool HasOptionalOperands = Info.hasOptionalOperands();
   bool ReportMultipleNearMisses =
       AsmParser->getValueAsBit("ReportMultipleNearMisses");
+  bool PrioritizeFeatureInMultiMismatchFallback =
+      AsmParser->getValueAsBit("PrioritizeFeatureInMultiMismatchFallback");
+
+  if (PrioritizeFeatureInMultiMismatchFallback && !ReportMultipleNearMisses) {
+    PrintFatalError(AsmParser->getLoc(),
+                    "'PrioritizeFeatureInMultiMismatchFallback' requires "
+                    "'ReportMultipleNearMisses' to be set");
+  }
 
   // Write the output.
 
@@ -4115,10 +4149,15 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    }\n\n";
   }
 
-  if (ReportMultipleNearMisses)
+  if (ReportMultipleNearMisses && PrioritizeFeatureInMultiMismatchFallback) {
+    emitFeatureCheck(OS, ReportMultipleNearMisses);
+  }
+
+  if (ReportMultipleNearMisses) {
     OS << "    if (MultipleInvalidOperands) {\n";
-  else
+  } else {
     OS << "    if (!OperandsValid) {\n";
+  }
   OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Opcode result: "
         "multiple \"\n";
   OS << "                                               \"operand mismatches, "
@@ -4128,35 +4167,26 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "      // Too many invalid operands to report a single near-miss;\n";
     OS << "      // keep the first one as a fallback in case no opcode\n";
     OS << "      // matches more closely.\n";
-    OS << "      if (OperandNearMiss)\n";
-    OS << "        MultiMismatchFallback.push_back(OperandNearMiss);\n";
+    if (PrioritizeFeatureInMultiMismatchFallback) {
+      OS << "      // If the opcode also has missing features, promote the\n";
+      OS << "      // feature near-miss instead of the operand near-miss so\n";
+      OS << "      // that the diagnostic points to the missing extension.\n";
+      OS << "      if (FeaturesNearMiss)\n";
+      OS << "        MultiMismatchFallback.push_back(FeaturesNearMiss);\n";
+      OS << "      else if (OperandNearMiss)\n";
+      OS << "        MultiMismatchFallback.push_back(OperandNearMiss);\n";
+    } else {
+      OS << "      if (OperandNearMiss)\n";
+      OS << "        MultiMismatchFallback.push_back(OperandNearMiss);\n";
+    }
   }
   OS << "      continue;\n";
   OS << "    }\n";
 
-  // Emit check that the required features are available.
-  OS << "    if (!HasRequiredFeatures) {\n";
-  if (!ReportMultipleNearMisses)
-    OS << "      HadMatchOtherThanFeatures = true;\n";
-  OS << "      FeatureBitset NewMissingFeatures = RequiredFeatures & "
-        "~AvailableFeatures;\n";
-  OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target "
-        "features:\";\n";
-  OS << "                      for (unsigned I = 0, E = "
-        "NewMissingFeatures.size(); I != E; ++I)\n";
-  OS << "                        if (NewMissingFeatures[I])\n";
-  OS << "                          dbgs() << ' ' << I;\n";
-  OS << "                      dbgs() << \"\\n\");\n";
-  if (ReportMultipleNearMisses) {
-    OS << "      FeaturesNearMiss = "
-          "NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
-  } else {
-    OS << "      if (NewMissingFeatures.count() <=\n"
-          "          MissingFeatures.count())\n";
-    OS << "        MissingFeatures = NewMissingFeatures;\n";
-    OS << "      continue;\n";
+  if (!PrioritizeFeatureInMultiMismatchFallback) {
+    emitFeatureCheck(OS, ReportMultipleNearMisses);
   }
-  OS << "    }\n";
+
   OS << "\n";
   OS << "    Inst.clear();\n\n";
   OS << "    Inst.setOpcode(it->Opcode);\n";

@@ -12,9 +12,7 @@ qc.outw x5, 2048(10)
 # CHECK-PLUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
 qc.outw x5, x10
 
-# CHECK-MINUS: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-MINUS: :[[@LINE+2]]:13: note: expected '('
-# CHECK-MINUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)
 qc.outw x5, x10
 
 # CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 16380]
@@ -32,13 +30,11 @@ qc.inw x23, 16380(17)
 # CHECK-PLUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
 qc.inw x23, x17
 
-# CHECK-MINUS: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-MINUS: :[[@LINE+2]]:13: note: expected '('
-# CHECK-MINUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)
 qc.inw x23, x17
 
 # CHECK-PLUS: :[[@LINE+2]]:8: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:8: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciio' (Qualcomm uC External Input Output Extension)
 qc.inw x0, 16380(x17)
 
 # CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 16380]
