@@ -511,4 +511,24 @@ TEST(SmallPtrSetTest, MoveAssignInvalidatesIterators) {
   Other = std::move(Set);
   EXPECT_DEATH((void)*It, "invalid iterator access");
 }
+
+TEST(SmallPtrSetTest, IteratorComparability) {
+  SmallPtrSet<int *, 4>::iterator I1, I2;
+  EXPECT_EQ(I1, I2);
+
+  int Vals[2];
+  SmallPtrSet<int *, 4> Set1, Set2;
+  Set1.insert(&Vals[0]);
+  Set2.insert(&Vals[1]);
+  EXPECT_DEATH((void)(Set1.begin() == Set2.begin()), "incomparable iterators");
+}
+
+TEST(SmallPtrSetTest, InsertInvalidatesIteratorComparison) {
+  int Vals[2];
+  SmallPtrSet<int *, 4> Set;
+  Set.insert(&Vals[0]);
+  auto It = Set.begin();
+  Set.insert(&Vals[1]);
+  EXPECT_DEATH((void)(It == Set.end()), "incomparable iterators");
+}
 #endif
