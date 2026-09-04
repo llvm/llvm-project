@@ -2191,8 +2191,10 @@ bool VectorLegalizer::tryExpandVecMathCall(
 
     if (HasMaskArg && I == E - 1) {
       assert(cast<VectorType>(ParamTy)->getElementType()->isIntegerTy(1) &&
+             cast<VectorType(ParamTy)>->getElementCount() ==
+                 CallVT.getVectorElementCount() &&
              "unexpected vector mask type");
-      EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CallVT);
+      EVT MaskVT = EVT::getEVT(ParamTy, /*HandleUnknown=*/true);
       EVT SubMaskVT =
           MaskVT.changeVectorElementCount(Ctx, VT.getVectorElementCount());
       SDValue Mask = DAG.getBoolConstant(true, DL, SubMaskVT, VT);
@@ -2200,7 +2202,7 @@ bool VectorLegalizer::tryExpandVecMathCall(
       if (CallVT != VT)
         Mask = DAG.getInsertSubvector(
             DL, DAG.getBoolConstant(false, DL, MaskVT, CallVT), Mask, 0);
-      Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
+      Args.emplace_back(Mask, ParamTy);
     } else {
       SDValue Op = Node->getOperand(I);
       assert(Op.getValueType() == VT && "mismatch in vector types");
