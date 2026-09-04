@@ -11243,18 +11243,22 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (!Predicates)
     return false;
 
-  // Look through AddRec expressions to improve the precision of added
-  // predicates. An AddRecExpr S is a multiple of M if S starts with a multiple
-  // of M and at every iteration step S only adds multiples of M.
-  if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
-    if (isKnownMultipleOf(AR->getStart(), M, Predicates) &&
-        isKnownMultipleOf(AR->getStepRecurrence(*this), M, Predicates))
+  // Look through AddRec, Add, and Mul expressions to improve the precision of
+  // added predicates. S is a multiple of M if S starts with a multiple of M and
+  // at every iteration step S only adds multiples of M. This doesn't hold in
+  // wrapping arithmetic.
+  if (isa<SCEVAddRecExpr, SCEVAddExpr, SCEVMulExpr>(S))
+    if (cast<SCEVNAryExpr>(S)->getNoWrapFlags() != SCEV::FlagAnyWrap &&
+        all_of(S->operands(), [&](SCEVUse Op) {
+          return isKnownMultipleOf(Op, M, Predicates);
+        }))
       return true;
 
-  // Similarly, look through commutative expressions to improve the precision of
-  // added predicates.
-  if (isa<SCEVCommutativeExpr>(S))
-    if (all_of(S->operands(), [&](SCEVUse Op) {
+  // Similarly, look through MinMax to improve the precision of added
+  // predicates. There is no wrapping arithmetic to consider, as the operations
+  // just return one of its operands.
+  if (isa<SCEVMinMaxExpr>(S))
+    if (any_of(S->operands(), [&](SCEVUse Op) {
           return isKnownMultipleOf(Op, M, Predicates);
         }))
       return true;
