@@ -237,13 +237,9 @@ void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl,
   SetCommonAttributes(AliasDecl, Alias);
 }
 
-// For an implicit __host__ __device__ destructor, this trap body is reachable
-// only when a host-allocated object is destroyed on the device through the
-// vtable. HIP documents that pattern as invalid: an object with virtual
-// member functions constructed on the host cannot be destroyed on the device.
-// Device-side construction either pulls the dtor in as an organic device
-// caller (errors surface in Sema) or compiles cleanly (the real body is
-// emitted, no trap).
+// Invalid implicit H+D functions get a trap body when CodeGen still needs a
+// device symbol, such as a vtable slot or explicit instantiation symbol.
+// Organic device use surfaces the original Sema diagnostics instead.
 bool CodeGenModule::tryEmitCUDADeviceInvalidFunctionBody(GlobalDecl GD,
                                                          llvm::Function *Fn) {
   if (!getLangOpts().CUDAIsDevice)
