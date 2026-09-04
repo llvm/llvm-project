@@ -806,7 +806,9 @@ linalg::packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   // 1. Infer dims that are important for matmul.
   FailureOr<ContractionDimensions> maybeDimensions =
       inferContractionDims(linalgOp);
-  if (failed(maybeDimensions)) {
+  // The inferred m/n/k may be empty when the op is not actually matmul-like.
+  if (failed(maybeDimensions) || maybeDimensions->m.empty() ||
+      maybeDimensions->n.empty() || maybeDimensions->k.empty()) {
     LDBG() << "couldn't infer matmul iterators in: " << linalgOp;
     return rewriter.notifyMatchFailure(linalgOp,
                                        "couldn't infer matmul iterators");
