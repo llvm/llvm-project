@@ -17,7 +17,7 @@
 #include "src/glob/globfree.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcGlobTest, Dummy) {
+TEST(LlvmLibcGlobTest, GlobReturnsNoMatch) {
   glob_t globbuf = {};
   EXPECT_EQ(LIBC_NAMESPACE::glob("/*", 0, nullptr, &globbuf), GLOB_NOMATCH);
 
