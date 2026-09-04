@@ -26,8 +26,8 @@ define hidden void @widget() #0 {
 ; GCN-NEXT:    s_mov_b64 s[18:19], 0
 ; GCN-NEXT:    s_mov_b64 s[20:21], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 21, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s24, v0
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 21, v0
 ; GCN-NEXT:    s_cbranch_vccnz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb2
 ; GCN-NEXT:    s_cmp_eq_u32 s24, 21
@@ -83,13 +83,12 @@ define hidden void @widget() #0 {
 ; GCN-NEXT:    s_mov_b64 s[34:35], s[18:19]
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; GCN-NEXT:    v_readlane_b32 s4, v41, 0
 ; GCN-NEXT:    v_readlane_b32 s6, v41, 2
 ; GCN-NEXT:    v_readlane_b32 s8, v41, 4
 ; GCN-NEXT:    v_readlane_b32 s10, v41, 6
+; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_andn2_b64 s[18:19], s[34:35], exec
-; GCN-NEXT:    s_and_b64 s[20:21], vcc, exec
 ; GCN-NEXT:    v_readlane_b32 s12, v41, 8
 ; GCN-NEXT:    v_readlane_b32 s13, v41, 9
 ; GCN-NEXT:    v_readlane_b32 s14, v41, 10
@@ -99,7 +98,7 @@ define hidden void @widget() #0 {
 ; GCN-NEXT:    v_readlane_b32 s9, v41, 5
 ; GCN-NEXT:    v_readlane_b32 s11, v41, 7
 ; GCN-NEXT:    s_mov_b64 s[16:17], 0
-; GCN-NEXT:    s_or_b64 s[18:19], s[18:19], s[20:21]
+; GCN-NEXT:    s_or_b64 s[18:19], s[18:19], vcc
 ; GCN-NEXT:  .LBB0_6: ; %Flow2
 ; GCN-NEXT:    s_and_saveexec_b64 s[20:21], s[18:19]
 ; GCN-NEXT:    s_xor_b64 s[18:19], exec, s[20:21]

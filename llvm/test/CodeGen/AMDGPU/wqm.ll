@@ -1937,12 +1937,12 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    s_cbranch_scc0 .LBB35_5
 ; GFX9-W64-NEXT:  .LBB35_3: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v8
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v7, v3
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v4, v0
+; GFX9-W64-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v8
 ; GFX9-W64-NEXT:    s_cbranch_vccz .LBB35_1
 ; GFX9-W64-NEXT:  ; %bb.4: ; in Loop: Header=BB35_3 Depth=1
 ; GFX9-W64-NEXT:    s_mov_b64 s[2:3], -1
@@ -1981,12 +1981,12 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB35_5
 ; GFX10-W32-NEXT:  .LBB35_3: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-W32-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x40e00000, v8
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v7, v3
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v6, v2
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-W32-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x40e00000, v8
 ; GFX10-W32-NEXT:    s_cbranch_vccz .LBB35_1
 ; GFX10-W32-NEXT:  ; %bb.4: ; in Loop: Header=BB35_3 Depth=1
 ; GFX10-W32-NEXT:    s_mov_b32 s1, -1

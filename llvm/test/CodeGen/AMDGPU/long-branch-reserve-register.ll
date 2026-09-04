@@ -104,15 +104,14 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_f32_e64 s[2:3], s0, 0
-; GCN-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; GCN-NEXT:    v_cmp_eq_f32_e64 vcc, s0, 0
 ; GCN-NEXT:    s_cbranch_vccz .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
-; GCN-NEXT:    s_getpc_b64 s[8:9]
+; GCN-NEXT:    s_getpc_b64 s[2:3]
 ; GCN-NEXT:  .Lpost_getpc1:
-; GCN-NEXT:    s_add_u32 s8, s8, (.LBB2_2-.Lpost_getpc1)&4294967295
-; GCN-NEXT:    s_addc_u32 s9, s9, (.LBB2_2-.Lpost_getpc1)>>32
-; GCN-NEXT:    s_setpc_b64 s[8:9]
+; GCN-NEXT:    s_add_u32 s2, s2, (.LBB2_2-.Lpost_getpc1)&4294967295
+; GCN-NEXT:    s_addc_u32 s3, s3, (.LBB2_2-.Lpost_getpc1)>>32
+; GCN-NEXT:    s_setpc_b64 s[2:3]
 ; GCN-NEXT:  .LBB2_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:     ; 32 bytes

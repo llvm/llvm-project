@@ -33,9 +33,8 @@ define amdgpu_kernel void @test_if(i32 %b, ptr addrspace(1) %src, ptr addrspace(
 ; SI-NEXT:  ; %bb.4: ; %LeafBlock
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; SI-NEXT:    s_and_b64 s[6:7], vcc, exec
 ; SI-NEXT:    s_mov_b64 s[10:11], exec
-; SI-NEXT:    s_or_b64 s[2:3], s[2:3], s[6:7]
+; SI-NEXT:    s_or_b64 s[2:3], s[2:3], vcc
 ; SI-NEXT:  ; %bb.5: ; %Flow8
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], s[2:3]
@@ -355,8 +354,7 @@ define amdgpu_kernel void @multi_vcond_loop(ptr addrspace(1) noalias nocapture %
 ; SI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v7, vcc
 ; SI-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
 ; SI-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
-; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
-; SI-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; SI-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; SI-NEXT:  .LBB5_4: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB5_2 Depth=1
 ; SI-NEXT:    s_or_b64 exec, exec, s[0:1]

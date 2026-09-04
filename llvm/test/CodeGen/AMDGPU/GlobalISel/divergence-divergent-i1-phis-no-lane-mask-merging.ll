@@ -71,8 +71,7 @@ define amdgpu_ps void @divergent_i1_phi_uniform_branch_simple(ptr addrspace(1) %
 ; GFX10-NEXT:  ; %bb.1: ; %B
 ; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 1, v2
 ; GFX10-NEXT:    s_andn2_b32 s0, s1, exec_lo
-; GFX10-NEXT:    s_and_b32 s1, exec_lo, vcc_lo
-; GFX10-NEXT:    s_or_b32 s1, s0, s1
+; GFX10-NEXT:    s_or_b32 s1, s0, vcc_lo
 ; GFX10-NEXT:  .LBB1_2: ; %exit
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, -1, s1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v2, 2, v2

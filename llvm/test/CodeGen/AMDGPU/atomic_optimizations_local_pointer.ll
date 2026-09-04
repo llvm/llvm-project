@@ -581,12 +581,11 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_add_i32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB2_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -2445,8 +2444,7 @@ define amdgpu_kernel void @add_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_addc_u32 s1, s1, s7
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s6
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[2:3], 0
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB6_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -4827,12 +4825,11 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_add_i32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB10_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -6722,8 +6719,7 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_addc_u32 s1, s1, s7
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s6
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[2:3], 0
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB14_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -7770,12 +7766,11 @@ define amdgpu_kernel void @and_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_and_b32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB15_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -8509,11 +8504,10 @@ define amdgpu_kernel void @and_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s6, v0, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[8:9], 1, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[8:9]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[8:9], s[2:3], 0
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v2, s1, m0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s0, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[8:9]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB16_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -9408,12 +9402,11 @@ define amdgpu_kernel void @or_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_or_b32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB17_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -10119,11 +10112,10 @@ define amdgpu_kernel void @or_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s6, v0, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[8:9], 1, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[8:9]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[8:9], s[2:3], 0
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v2, s1, m0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s0, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_or_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[8:9]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB18_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -11018,12 +11010,11 @@ define amdgpu_kernel void @xor_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_xor_b32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB19_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -11729,11 +11720,10 @@ define amdgpu_kernel void @xor_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s6, v0, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[8:9], 1, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[8:9]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[8:9], s[2:3], 0
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v2, s1, m0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s0, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_xor_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[8:9]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB20_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -12628,12 +12618,11 @@ define amdgpu_kernel void @max_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_max_i32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB21_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -13649,8 +13638,7 @@ define amdgpu_kernel void @max_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_cselect_b32 s0, s0, s10
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[2:3], 0
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB23_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -14833,12 +14821,11 @@ define amdgpu_kernel void @min_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_min_i32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB24_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -15854,8 +15841,7 @@ define amdgpu_kernel void @min_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_cselect_b32 s0, s0, s10
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[2:3], 0
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB26_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -17038,12 +17024,11 @@ define amdgpu_kernel void @umax_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_max_u32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB27_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -18053,8 +18038,7 @@ define amdgpu_kernel void @umax_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_cselect_b32 s0, s0, s10
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[2:3], 0
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB29_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -19225,12 +19209,11 @@ define amdgpu_kernel void @umin_i32_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_ff1_i32_b64 s3, s[0:1]
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s3
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_mov_b32 m0, s3
 ; GFX7LESS_ITERATIVE-NEXT:    v_readlane_b32 s8, v0, s3
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[0:1], 0
 ; GFX7LESS_ITERATIVE-NEXT:    v_writelane_b32 v1, s2, m0
 ; GFX7LESS_ITERATIVE-NEXT:    s_min_u32 s2, s2, s8
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB30_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
@@ -20241,8 +20224,7 @@ define amdgpu_kernel void @umin_i64_varying(ptr addrspace(1) %out) {
 ; GFX7LESS_ITERATIVE-NEXT:    s_cselect_b32 s0, s0, s10
 ; GFX7LESS_ITERATIVE-NEXT:    s_lshl_b64 s[6:7], 1, s8
 ; GFX7LESS_ITERATIVE-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[6:7]
-; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 s[6:7], s[2:3], 0
-; GFX7LESS_ITERATIVE-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; GFX7LESS_ITERATIVE-NEXT:    v_cmp_ne_u64_e64 vcc, s[2:3], 0
 ; GFX7LESS_ITERATIVE-NEXT:    s_cbranch_vccnz .LBB32_1
 ; GFX7LESS_ITERATIVE-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX7LESS_ITERATIVE-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0

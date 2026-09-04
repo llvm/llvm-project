@@ -1574,8 +1574,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x43000000
 ; SI-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[0:1], s1, v0
-; SI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; SI-NEXT:    s_and_b64 vcc, vcc, s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; SI-NEXT:    s_cbranch_vccnz .LBB25_5
 ; SI-NEXT:  ; %bb.1: ; %.preheader1.preheader
@@ -1607,8 +1606,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX10-NEXT:    v_cmp_gt_f32_e64 s[4:5], 0x43000000, s0
 ; GFX10-NEXT:    v_cmp_gt_f32_e64 s[0:1], 0x43000000, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 1.0
-; GFX10-NEXT:    s_and_b64 s[0:1], s[4:5], s[0:1]
-; GFX10-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX10-NEXT:    s_and_b64 vcc, s[4:5], s[0:1]
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB25_5
 ; GFX10-NEXT:  ; %bb.1: ; %.preheader1.preheader
 ; GFX10-NEXT:    v_cmp_ngt_f32_e64 s[0:1], s6, 0
@@ -1639,8 +1637,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX11-NEXT:    v_cmp_gt_f32_e64 s[4:5], 0x43000000, s0
 ; GFX11-NEXT:    v_cmp_gt_f32_e64 s[0:1], 0x43000000, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1.0
-; GFX11-NEXT:    s_and_b64 s[0:1], s[4:5], s[0:1]
-; GFX11-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX11-NEXT:    s_and_b64 vcc, s[4:5], s[0:1]
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB25_5
 ; GFX11-NEXT:  ; %bb.1: ; %.preheader1.preheader
 ; GFX11-NEXT:    v_cmp_ngt_f32_e64 s[0:1], s6, 0
