@@ -563,6 +563,16 @@ INTERCEPTOR(void, _exit, int status) {
   REAL(_exit)(status);
 }
 
+// TODO: Intercept more program-killing functions that behave like exit().
+INTERCEPTOR(void, exit, int status) {
+  if (lsan_inited && common_flags()->detect_leaks &&
+      common_flags()->leak_check_at_exit) {
+    // Capture the boundary before libc runs atexit handlers.
+    RecordExitCallerSP(GET_CURRENT_FRAME());
+  }
+  REAL(exit)(status);
+}
+
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
 #define SIGNAL_INTERCEPTOR_ENTER() ENSURE_LSAN_INITED
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
@@ -600,6 +610,7 @@ void InitializeInterceptors() {
   LSAN_MAYBE_INTERCEPT_TIMEDJOIN;
   LSAN_MAYBE_INTERCEPT_TRYJOIN;
   INTERCEPT_FUNCTION(_exit);
+  INTERCEPT_FUNCTION(exit);
 
   LSAN_MAYBE_INTERCEPT__LWP_EXIT;
   LSAN_MAYBE_INTERCEPT_THR_EXIT;
