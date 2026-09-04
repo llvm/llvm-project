@@ -308,6 +308,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::CoawaitExprClass:
   case Stmt::DependentCoawaitExprClass:
   case Stmt::CoyieldExprClass:
+  case Stmt::CoroutineSuspendParameterBypassExprClass:
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::CXXDefaultArgExprClass:
   case Stmt::CXXDefaultInitExprClass:

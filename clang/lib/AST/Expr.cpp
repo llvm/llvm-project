@@ -3868,6 +3868,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXStdInitializerListExprClass:
   case SubstNonTypeTemplateParmExprClass:
   case MaterializeTemporaryExprClass:
+  case CoroutineSuspendParameterBypassExprClass:
   case ShuffleVectorExprClass:
   case ConvertVectorExprClass:
   case AsTypeExprClass:
@@ -5202,6 +5203,8 @@ const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {
     e = ewc->getSubExpr();
   if (const MaterializeTemporaryExpr *m = dyn_cast<MaterializeTemporaryExpr>(e))
     e = m->getSubExpr();
+  if (const CXXBindTemporaryExpr *bte = dyn_cast<CXXBindTemporaryExpr>(e))
+    e = bte->getSubExpr();
   e = cast<CXXConstructExpr>(e)->getArg(0);
   while (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(e))
     e = ice->getSubExpr();

@@ -1158,6 +1158,12 @@ CXXBindTemporaryExpr *CXXBindTemporaryExpr::Create(const ASTContext &C,
   return new (C) CXXBindTemporaryExpr(Temp, SubExpr);
 }
 
+CoroutineSuspendParameterBypassExpr *
+CoroutineSuspendParameterBypassExpr::Create(const ASTContext &C, Expr *SubExpr,
+                                            Expr *MoveExpr) {
+  return new (C) CoroutineSuspendParameterBypassExpr(SubExpr, MoveExpr);
+}
+
 CXXTemporaryObjectExpr::CXXTemporaryObjectExpr(
     CXXConstructorDecl *Cons, QualType Ty, TypeSourceInfo *TSI,
     ArrayRef<Expr *> Args, SourceRange ParenOrBraceRange,

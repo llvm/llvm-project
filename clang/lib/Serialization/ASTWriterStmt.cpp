@@ -487,6 +487,14 @@ void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
   Code = serialization::EXPR_DEPENDENT_COAWAIT;
 }
 
+void ASTStmtWriter::VisitCoroutineSuspendParameterBypassExpr(
+    CoroutineSuspendParameterBypassExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getSubExpr());
+  Record.AddStmt(E->getMoveExpr());
+  Code = serialization::EXPR_COROUTINE_SUSPEND_PARAMETER_BYPASS;
+}
+
 static void
 addConstraintSatisfaction(ASTRecordWriter &Record,
                           const ASTConstraintSatisfaction &Satisfaction) {
