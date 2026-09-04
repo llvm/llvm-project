@@ -462,13 +462,25 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB, DebugLoc DL) {
   // Transfer latch's successors to the region.
   VPBlockUtils::transferSuccessors(LatchVPBB, R);
 
+  VPBasicBlock *CheckExitVPBB = Plan.getCheckFirstExitBlock();
+  if (CheckExitVPBB) {
+    assert(CheckExitVPBB->empty() &&
+           "check.exit block should be empty before region creation");
+    assert(CheckExitVPBB->getNumSuccessors() == 0 &&
+           "check.exit should have no successors before temporary edge");
+    VPBlockUtils::connectBlocks(CheckExitVPBB, LatchVPBB);
+  }
+
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
 
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
-  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
+  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB)) {
+    if (VPBB == Plan.getScalarPreheader())
+      continue;
     VPBB->setParent(R);
+  }
 
   if (!IsOutermost)
     return;
@@ -1302,7 +1314,8 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, DebugLoc DL) {
 
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
-  TopRegion->getEntryBasicBlock()->setName("vector.body");
+  TopRegion->getEntryBasicBlock()->setName(
+      Plan.getCheckFirstExitBlock() ? "vector.check" : "vector.body");
 }
 
 void VPlanTransforms::foldTailByMasking(VPlan &Plan) {

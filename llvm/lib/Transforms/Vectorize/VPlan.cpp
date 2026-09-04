@@ -1237,6 +1237,18 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
   }
 }
 
+/// Returns the clone of VPBB Old recorded in Old2NewBlocks, or nullptr when
+/// Old is null.
+static VPBasicBlock *
+remapClonedBlock(const DenseMap<VPBlockBase *, VPBlockBase *> &Old2NewBlocks,
+                 VPBasicBlock *Old) {
+  if (!Old)
+    return nullptr;
+  VPBlockBase *New = Old2NewBlocks.lookup(Old);
+  assert(New && "Check-first block not found in cloned plan.");
+  return cast<VPBasicBlock>(New);
+}
+
 VPlan *VPlan::duplicate() {
   unsigned NumBlocksBeforeCloning = CreatedBlocks.size();
   // Clone blocks.
@@ -1325,6 +1337,25 @@ VPlan *VPlan::duplicate() {
         VPB != NewScalarHeader)
       NewPlan->ExitBlocks.push_back(cast<VPIRBasicBlock>(VPB));
   }
+
+  NewPlan->CheckFirst.UsesMaskedReplay = CheckFirst.UsesMaskedReplay;
+  NewPlan->CheckFirst.InclusiveReplayStores = CheckFirst.InclusiveReplayStores;
+
+  // Map each original block to its clone via a single depth-first traversal.
+  DenseMap<VPBlockBase *, VPBlockBase *> Old2NewBlocks;
+  for (const auto &[OldBB, NewBB] :
+       zip_equal(vp_depth_first_deep(Entry), vp_depth_first_deep(NewEntry)))
+    Old2NewBlocks[OldBB] = NewBB;
+
+  // ExitBlocks must list every exit of the original scalar loop, including
+  // currently unreachable ones, which the traversals above do not reach.
+  for (VPIRBasicBlock *EB : ExitBlocks)
+    if (!Old2NewBlocks.contains(EB))
+      NewPlan->ExitBlocks.push_back(
+          NewPlan->createVPIRBasicBlock(EB->getIRBasicBlock()));
+
+  NewPlan->CheckFirst.ExitBlock =
+      remapClonedBlock(Old2NewBlocks, CheckFirst.ExitBlock);
 
   return NewPlan;
 }
