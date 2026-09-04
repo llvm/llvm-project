@@ -490,6 +490,12 @@ public:
   /// already in the folding set.  \p Token must come from lookup for an ID that
   /// \p N profiles identically to.
   void insert(T *N, FoldingSetInsertToken Token) {
+#ifndef NDEBUG
+    FoldingSetNodeID ProfileID;
+    nodeProfile(N, ProfileID);
+    assert(makeInsertToken(ProfileID.computeHash()) == Token &&
+           "node profile must match the insert token");
+#endif
     FoldingSetBase::insert(N, Token);
   }
 
