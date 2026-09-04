@@ -399,6 +399,32 @@ TEST(findCompileArgsInJsonDatabase, FindsEntry) {
   EXPECT_EQ("command4", FoundCommand.CommandLine[0]) << ErrorMessage;
 }
 
+TEST(findCompileArgsInJsonDatabase, FindsEntryRelativeDirectory) {
+  StringRef Directory(".");
+  StringRef FileName("file");
+  StringRef Command("command");
+  std::string JsonDatabase = "[";
+  JsonDatabase +=
+      ("{\"directory\":\"" + Directory + "\"," + "\"command\":\"" + Command +
+       "\","
+       "\"file\":\"" +
+       FileName + "\"}")
+          .str();
+  JsonDatabase += "]";
+
+  SmallString<256> Result;
+  llvm::sys::fs::current_path(Result);
+  llvm::sys::path::append(Result, FileName);
+
+  std::string ErrorMessage;
+  CompileCommand FoundCommand =
+      findCompileArgsInJsonDatabase(Result, JsonDatabase, ErrorMessage);
+
+  EXPECT_EQ(".", FoundCommand.Directory) << ErrorMessage;
+  ASSERT_EQ(1u, FoundCommand.CommandLine.size()) << ErrorMessage;
+  EXPECT_EQ("command", FoundCommand.CommandLine[0]) << ErrorMessage;
+}
+
 TEST(findCompileArgsInJsonDatabase, ParsesCompilerWrappers) {
   std::vector<std::pair<std::string, std::string>> Cases = {
       {"distcc gcc foo.c", "gcc foo.c"},
