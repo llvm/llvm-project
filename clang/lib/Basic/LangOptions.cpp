@@ -74,13 +74,10 @@ unsigned LangOptions::getOpenCLCompatibleVersion() const {
   llvm_unreachable("Unknown OpenCL version");
 }
 
-bool LangOptions::defaultOffloadUniformBlock(const llvm::Triple &T) const {
+bool LangOptions::defaultOffloadUniformBlock() const {
   if (OpenCL)
     return getOpenCLCompatibleVersion() <= 120;
-  if (CUDA || OpenMPIsTargetDevice || SYCLIsDevice)
-    return true;
-  // Direct C/C++ for AMDGPU/NVPTX.
-  return !HLSL && (T.isAMDGPU() || T.isNVPTX());
+  return !HLSL;
 }
 
 void LangOptions::remapPathPrefix(SmallVectorImpl<char> &Path) const {

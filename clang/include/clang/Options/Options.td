@@ -1148,10 +1148,10 @@ def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   LangOpts<"OffloadUniformBlock">,
-  Default<"LangOpts->defaultOffloadUniformBlock(T)">,
+  Default<"LangOpts->defaultOffloadUniformBlock()">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
-  BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP, OpenMP device, SYCL device, AMDGPU/NVPTX C/C++, and OpenCL 1.2)">>;
+  BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true except OpenCL 2.0+)">>;
 
 def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,

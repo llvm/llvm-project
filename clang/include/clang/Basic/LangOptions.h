@@ -823,8 +823,9 @@ public:
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
 
-  /// Languages that launch full work-groups opt in.
-  bool defaultOffloadUniformBlock(const llvm::Triple &T) const;
+  /// Languages that launch full work-groups opt in; leftover groups are
+  /// OpenCL 2.0+.
+  bool defaultOffloadUniformBlock() const;
 
   /// Return the OpenMP version.
   llvm::omp::Version getOpenMPVersion() const {

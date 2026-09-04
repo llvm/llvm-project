@@ -2865,12 +2865,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    // OpenCL v2.0 Work groups may be whether uniform or not.
-    // '-cl-uniform-work-group-size' compile option gets a hint
-    // to the compiler that the global work-size be a multiple of
-    // the work-group size specified to clEnqueueNDRangeKernel
-    // (i.e. work groups are uniform).
-    if (getLangOpts().OffloadUniformBlock)
+    // Leftover work-groups are an OpenCL 2.0+ language feature. Host C/C++
+    // inherit OffloadUniformBlock but must not receive the GPU ABI attribute.
+    if (getLangOpts().OffloadUniformBlock &&
+        (getLangOpts().CUDA || getLangOpts().OpenCL ||
+         getLangOpts().isTargetDevice() || getTarget().getTriple().isGPU()))
       FuncAttrs.addAttribute("uniform-work-group-size");
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
