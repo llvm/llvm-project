@@ -1750,6 +1750,14 @@ public:
       mlir::Value *emittedArgValue = nullptr,
       cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
 
+  /// Emit `cir.atomic.cmpxchg`. Returns the old value, or the success flag
+  /// when `returnBool` is true.
+  mlir::Value emitAtomicCmpXchg(
+      const clang::CallExpr *expr, bool returnBool,
+      cir::MemOrder successOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::MemOrder failureOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::SyncScopeKind scope = cir::SyncScopeKind::System);
+
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
