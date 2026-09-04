@@ -14,6 +14,7 @@
 
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -74,6 +75,53 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
+bool isWholeArraySection(const Object &object,
+                         semantics::SemanticsContext &semaCtx) {
+  if (!object.sym() || !object.ref())
+    return false;
+
+  std::optional<evaluate::DataRef> dataRef =
+      evaluate::ExtractDataRef(*object.ref());
+  if (!dataRef)
+    return false;
+
+  const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef)
+    return false;
+
+  const semantics::ArraySpec *shape = object.sym()->GetUltimate().GetShape();
+  if (!shape || shape->size() != arrayRef->subscript().size())
+    return false;
+
+  auto matchesBaseBound = [&](const auto *sectionBound,
+                              evaluate::MaybeExtentExpr baseBound) {
+    if (!sectionBound)
+      return true;
+    if (!baseBound)
+      return false;
+    evaluate::ExtentExpr foldedSectionBound = evaluate::Fold(
+        semaCtx.foldingContext(), evaluate::ExtentExpr{*sectionBound});
+    evaluate::ExtentExpr foldedBaseBound =
+        evaluate::Fold(semaCtx.foldingContext(), std::move(*baseBound));
+    return evaluate::IsSameOrConvertOf(
+        evaluate::AsGenericExpr(std::move(foldedSectionBound)),
+        evaluate::AsGenericExpr(std::move(foldedBaseBound)));
+  };
+
+  for (auto [dimension, subscript] : llvm::enumerate(arrayRef->subscript())) {
+    const auto *triplet = std::get_if<evaluate::Triplet>(&subscript.u);
+    if (!triplet || evaluate::ToInt64(triplet->GetStride()) != 1 ||
+        !matchesBaseBound(triplet->GetLower(),
+                          evaluate::GetLBOUND(semaCtx.foldingContext(),
+                                              arrayRef->base(), dimension)) ||
+        !matchesBaseBound(triplet->GetUpper(),
+                          evaluate::GetUBOUND(semaCtx.foldingContext(),
+                                              arrayRef->base(), dimension)))
+      return false;
+  }
+  return true;
+}
+
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
