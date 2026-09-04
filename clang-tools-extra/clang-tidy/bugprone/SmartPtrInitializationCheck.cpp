@@ -87,7 +87,7 @@ struct PointerLocation {
   }
 };
 
-enum PointerState : unsigned {
+enum PointerState : std::uint8_t {
   PS_Unknown = 0,
   PS_PlainPointer = 1,
   PS_NewPointer = 2,
@@ -95,9 +95,9 @@ enum PointerState : unsigned {
 };
 
 struct Transition {
-  PointerState fromState;  // 0-3
-  PointerState toState;    // 1-3
-  const clang::Stmt *stmt; // instruction that caused the transition
+  PointerState FromState;  // 0-3
+  PointerState ToState;    // 1-3
+  const clang::Stmt *Stmt; // instruction that caused the transition
 };
 
 class TransitionsFinder;
@@ -112,7 +112,7 @@ class PointerStateVisitor
   using FieldsSet = llvm::SmallPtrSet<const clang::FieldDecl *, 32>;
 
   PointerState getState(const StateMap &M, const PointerLocation &Loc) {
-    auto It = M.find(Loc);
+    const auto It = M.find(Loc);
     return It == M.end() ? PS_Unknown : It->second;
   }
 
@@ -136,7 +136,7 @@ public:
       if (!VD || !PtrVars.count(VD))
         continue;
       if (const clang::Expr *Init = VD->getInit()) {
-        PointerState NewState = classify(Init);
+        const PointerState NewState = classify(Init);
         addTransition(PointerLocation{VD, {}}, NewState, DS);
       }
     }
@@ -153,7 +153,7 @@ public:
     }
     PointerLocation Loc;
     if (resolveLocation(BO->getLHS(), Loc)) {
-      PointerState NewState = classify(BO->getRHS());
+      const PointerState NewState = classify(BO->getRHS());
       addTransition(std::move(Loc), NewState, BO);
     }
     scanForSmartPtrWrap(BO);
@@ -236,7 +236,8 @@ private:
     if (!RD->getDeclName().isIdentifier())
       return false;
 
-    auto SharedPtrMatcher = cxxRecordDecl(hasAnyName(SharedPointers));
+    static const auto SharedPtrMatcher =
+        cxxRecordDecl(hasAnyName(SharedPointers));
 
     return !match(SharedPtrMatcher, *RD, *Context).empty();
   }
@@ -251,7 +252,8 @@ private:
     if (!RD->getDeclName().isIdentifier())
       return false;
 
-    auto UniquePtrMatcher = cxxRecordDecl(hasAnyName(UniquePointers));
+    static const auto UniquePtrMatcher =
+        cxxRecordDecl(hasAnyName(UniquePointers));
 
     return !match(UniquePtrMatcher, *RD, *Context).empty();
   }
@@ -339,7 +341,7 @@ private:
 
   void addTransition(const PointerLocation &&Loc, PointerState NewState,
                      const clang::Stmt *S) {
-    PointerState From = getState(CurrentState, Loc);
+    const PointerState From = getState(CurrentState, Loc);
     if (Sink)
       (*Sink)[Loc].push_back(Transition{From, NewState, S});
     CurrentState[Loc] = NewState;
@@ -421,7 +423,7 @@ class TransitionsFinder {
   using FieldsSet = llvm::SmallPtrSet<const clang::FieldDecl *, 32>;
 
   PointerState getState(const StateMap &M, const PointerLocation &Loc) {
-    auto It = M.find(Loc);
+    const auto It = M.find(Loc);
     return It == M.end() ? PS_Unknown : It->second;
   }
 
@@ -441,7 +443,8 @@ public:
     Options.AddTemporaryDtors = true;
     Options.AddInitializers = true;
 
-    std::unique_ptr<CFG> TheCFG = CFG::buildCFG(Func, Body, Context, Options);
+    const std::unique_ptr<CFG> TheCFG =
+        CFG::buildCFG(Func, Body, Context, Options);
     if (!TheCFG)
       return {};
 
@@ -504,7 +507,7 @@ private:
     for (const clang::CFGBlock *Block : Order) {
       if (!Block)
         continue;
-      StateMap Scratch; // disposable, empty at the entrance of each block
+      const StateMap Scratch; // disposable, empty at the entrance of each block
       runBlockTransfer(*Block, PtrVars, PtrFields, Scratch, /*Sink=*/nullptr);
       for (const auto &KV : Scratch)
         Domain.insert(KV.first);
@@ -531,10 +534,11 @@ private:
   }
   std::map<PointerLocation, std::vector<Transition>>
   findInternally(const VariablesSet &PtrVars, const FieldsSet &PtrFields,
-                 const clang::CFG &cfg) {
+                 const clang::CFG &Cfg) {
     std::map<PointerLocation, std::vector<Transition>> Result;
 
-    std::vector<const clang::CFGBlock *> Order = computeReversePostOrder(cfg);
+    const std::vector<const clang::CFGBlock *> Order =
+        computeReversePostOrder(Cfg);
     if (Order.empty()) {
       for (const clang::VarDecl *VD : PtrVars)
         Result[PointerLocation{VD,
@@ -547,22 +551,22 @@ private:
     for (const PointerLocation &Loc : Domain)
       Result[Loc]; // guarantee the presence of a key even without transitions
 
-    auto initialState = [&]() {
+    const auto InitialState = [&]() {
       StateMap S;
       for (const PointerLocation &Loc : Domain)
         S[Loc] = PS_Unknown;
       return S;
     };
-    auto joinStates = [&](const StateMap &A, const StateMap &B) {
+    const auto JoinStates = [&](const StateMap &A, const StateMap &B) {
       StateMap R;
       for (const PointerLocation &Loc : Domain) {
-        PointerState a = getState(A, Loc);
-        PointerState b = getState(B, Loc);
-        R[Loc] = (a == b) ? a : PS_Unknown;
+        const PointerState StateA = getState(A, Loc);
+        const PointerState StateB = getState(B, Loc);
+        R[Loc] = (StateA == StateB) ? StateA : PS_Unknown;
       }
       return R;
     };
-    auto statesEqual = [&](const StateMap &A, const StateMap &B) {
+    const auto StatesEqual = [&](const StateMap &A, const StateMap &B) {
       for (const PointerLocation &Loc : Domain)
         if (getState(A, Loc) != getState(B, Loc))
           return false;
@@ -583,38 +587,36 @@ private:
       for (const clang::CFGBlock *Block : Order) {
         StateMap NewIn;
         bool HaveAny = false;
-        for (auto PredIt = Block->pred_begin(); PredIt != Block->pred_end();
-             ++PredIt) {
-          const clang::CFGBlock *Pred = *PredIt;
+        for (const clang::CFGBlock *Pred: Block->preds()) {
           if (!Pred)
             continue; // unreachable edge (AdjacentBlock == nullptr)
-          auto It = OutState.find(Pred);
+          const auto It = OutState.find(Pred);
           if (It == OutState.end())
             continue; // the predecessor has not yet been processed in this pass
           if (!HaveAny) {
             NewIn = It->second;
             HaveAny = true;
           } else {
-            NewIn = joinStates(NewIn, It->second);
+            NewIn = JoinStates(NewIn, It->second);
           }
         }
         if (!HaveAny)
-          NewIn = initialState();
+          NewIn = InitialState();
 
-        auto InIt = InState.find(Block);
-        bool InChanged =
-            (InIt == InState.end()) || !statesEqual(InIt->second, NewIn);
+        const auto InIt = InState.find(Block);
+        const bool InChanged =
+            (InIt == InState.end()) || !StatesEqual(InIt->second, NewIn);
         if (InChanged) {
           InState[Block] = NewIn;
           Changed = true;
         }
 
-        StateMap NewOut = runBlockTransfer(*Block, PtrVars, PtrFields,
-                                           InState[Block], /*Sink=*/nullptr);
+        const StateMap NewOut = runBlockTransfer(
+            *Block, PtrVars, PtrFields, InState[Block], /*Sink=*/nullptr);
 
-        auto OutIt = OutState.find(Block);
-        bool OutChanged =
-            (OutIt == OutState.end()) || !statesEqual(OutIt->second, NewOut);
+        const auto OutIt = OutState.find(Block);
+        const bool OutChanged =
+            (OutIt == OutState.end()) || !StatesEqual(OutIt->second, NewOut);
         if (OutChanged) {
           OutState[Block] = NewOut;
           Changed = true;
@@ -624,7 +626,8 @@ private:
 
     // ---- Phase 2: Emission - each block exactly once, with a final IN
     for (const clang::CFGBlock *Block : Order) {
-      StateMap In = InState.count(Block) ? InState[Block] : initialState();
+      const StateMap In =
+          InState.count(Block) ? InState[Block] : InitialState();
       runBlockTransfer(*Block, PtrVars, PtrFields, In, &Result);
     }
 
@@ -636,20 +639,21 @@ private:
 
 class SmartPtrInitializationCheckImpl {
 public:
+  explicit SmartPtrInitializationCheckImpl(SmartPtrInitializationCheck &Check)
+      : Check(Check) {}
   virtual ~SmartPtrInitializationCheckImpl() = default;
   virtual void registerMatchers(ast_matchers::MatchFinder *Finder) = 0;
   virtual void check(const ast_matchers::MatchFinder::MatchResult &Result) = 0;
   virtual bool isStrictMode() = 0;
+
+protected:
+  SmartPtrInitializationCheck &Check;
 };
 
 class SmartPtrInitializationCheckPermissiveMode
     : public SmartPtrInitializationCheckImpl {
-  SmartPtrInitializationCheck &Check;
-
 public:
-  explicit SmartPtrInitializationCheckPermissiveMode(
-      SmartPtrInitializationCheck &Check)
-      : Check(Check) {}
+  using SmartPtrInitializationCheckImpl::SmartPtrInitializationCheckImpl;
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override {
     const auto IsSharedPtr = hasAnyName(Check.SharedPointers);
@@ -660,17 +664,17 @@ public:
     const auto IsUniquePtrRecord = cxxRecordDecl(IsUniquePtr);
     const auto IsSmartPtrRecord = cxxRecordDecl(IsSmartPtr);
 
-    auto ResetCallMatcher = cxxMemberCallExpr(
+    const auto ResetCallMatcher = cxxMemberCallExpr(
         on(hasType(hasUnqualifiedDesugaredType(recordType(
             hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
         callee(cxxMethodDecl(ofClass(IsSmartPtrRecord), hasName("reset"))));
-    auto SmartPtrGetCallMatcher = cxxMemberCallExpr(
+    const auto SmartPtrGetCallMatcher = cxxMemberCallExpr(
         callee(cxxMethodDecl(hasName("get"))),
         on(hasType(hasUnqualifiedDesugaredType(recordType(
             hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))));
 
     // Search for `std::shared_ptr(this);` or `std::shared_ptr(other_sp.get());`
-    auto SmartPtrConstructorMatcher =
+    const auto SmartPtrConstructorMatcher =
         cxxConstructExpr(
             hasDeclaration(cxxConstructorDecl(ofClass(IsSmartPtrRecord))),
             hasArgument(0, anyOf(ignoringParenCasts(cxxThisExpr()),
@@ -678,7 +682,7 @@ public:
             .bind("dangerous-ctor");
 
     // Search for `sp.reset(this);` or `sp.reset(other_sp.get())`
-    auto ResetCallWithThisMatcher =
+    const auto ResetCallWithThisMatcher =
         cxxMemberCallExpr(
             on(hasType(hasUnqualifiedDesugaredType(recordType(
                 hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
@@ -763,11 +767,11 @@ private:
 
     TransitionsFinder Finder(Result.Context, Check.SharedPointers,
                              Check.UniquePointers);
-    const auto transitions = Finder.find(PtrVars, PtrFields, Func, Body);
-    for (const auto &[var, transList] : transitions) {
-      for (const auto &t : transList) {
-        if (t.fromState == t.toState && t.fromState == PS_SmartPtrWrapper) {
-          if (const auto *E = dyn_cast<const Expr>(t.stmt))
+    const auto Transitions = Finder.find(PtrVars, PtrFields, Func, Body);
+    for (const auto &[_, TransList] : Transitions) {
+      for (const auto &T : TransList) {
+        if (T.FromState == T.ToState && T.FromState == PS_SmartPtrWrapper) {
+          if (const auto *E = dyn_cast<const Expr>(T.Stmt))
             Check.emitDiagnostic(*Result.Context, E);
         }
       }
@@ -777,12 +781,12 @@ private:
 
 class SmartPtrInitializationCheckStrictMode
     : public SmartPtrInitializationCheckImpl {
-  SmartPtrInitializationCheck &Check;
-
 public:
-  explicit SmartPtrInitializationCheckStrictMode(
-      SmartPtrInitializationCheck &Check)
-      : Check(Check) {}
+  using SmartPtrInitializationCheckImpl::SmartPtrInitializationCheckImpl;
+
+  static StatementMatcher releaseCallMatcher() {
+    return cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))));
+  }
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override {
     const auto IsSharedPtr = hasAnyName(Check.SharedPointers);
@@ -794,11 +798,9 @@ public:
     const auto IsUniquePtrRecord = cxxRecordDecl(IsUniquePtr);
     const auto IsSmartPtrRecord = cxxRecordDecl(IsSmartPtr);
 
-    auto ReleaseCallMatcher =
-        cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))));
-
     // Array automatically decays to pointer
-    auto PointerArg = expr(anyOf(hasType(pointerType()), hasType(arrayType())));
+    const auto PointerArg =
+        expr(anyOf(hasType(pointerType()), hasType(arrayType())));
 
     // Matcher for unique_ptr types with custom deleters
     auto UniquePtrWithCustomDeleter = classTemplateSpecializationDecl(
@@ -818,19 +820,20 @@ public:
                        IsDefaultDeleter)))))))));
 
     // Matcher for smart pointer constructors
-    auto HasCustomDeleter = anyOf(
+    const auto HasCustomDeleter = anyOf(
         SharedPtrWithCustomDeleter,
         allOf(hasType(hasUnqualifiedDesugaredType(
                   recordType(hasDeclaration(UniquePtrWithCustomDeleter)))),
               hasDeclaration(cxxConstructorDecl(ofClass(IsUniquePtrRecord)))));
 
-    auto AllowedArguments = anyOf(ignoringParenCasts(cxxNewExpr()),
-                                  ignoringParenCasts(ReleaseCallMatcher));
+    const auto AllowedArguments =
+        anyOf(ignoringParenCasts(cxxNewExpr()),
+              ignoringParenCasts(releaseCallMatcher()));
 
-    auto OptionalCondOp =
+    const auto OptionalCondOp =
         optionally(ignoringParenCasts(conditionalOperator().bind("cond-op")));
 
-    auto SmartPtrConstructorMatcher =
+    const auto SmartPtrConstructorMatcher =
         cxxConstructExpr(
             hasDeclaration(cxxConstructorDecl(ofClass(IsSmartPtrRecord))),
             hasArgument(0, PointerArg), unless(HasCustomDeleter),
@@ -841,7 +844,7 @@ public:
     // For reset() - we need to check the type of the smart pointer
     // If it's shared_ptr with custom deleter (2+ args in constructor)
     // or unique_ptr with custom deleter type
-    auto SmartPtrWithCustomDeleterType = anyOf(
+    const auto SmartPtrWithCustomDeleterType = anyOf(
         // shared_ptr with custom deleter - check if the type has a second
         // template argument that is NOT std::default_delete
         classTemplateSpecializationDecl(
@@ -852,7 +855,7 @@ public:
                            IsDefaultDeleter)))))))),
         UniquePtrWithCustomDeleter);
 
-    auto HasCustomDeleterInReset =
+    const auto HasCustomDeleterInReset =
         anyOf(on(hasType(hasUnqualifiedDesugaredType(
                   recordType(hasDeclaration(SmartPtrWithCustomDeleterType))))),
               // Also check if reset call has 2 arguments (second is deleter)
@@ -862,7 +865,7 @@ public:
 
     // Actually, for simplicity, let's just check if the smart pointer type
     // has a custom deleter. If it does, we skip the warning.
-    auto SmartPtrWithDefaultDeleter = classTemplateSpecializationDecl(
+    const auto SmartPtrWithDefaultDeleter = classTemplateSpecializationDecl(
         IsSmartPtr,
         anyOf(
             // shared_ptr with default deleter (1 template arg or 2nd is
@@ -885,7 +888,7 @@ public:
                                              classTemplateSpecializationDecl(
                                                  IsDefaultDeleter)))))))))));
 
-    auto ResetCallMatcher =
+    const auto ResetCallMatcher =
         cxxMemberCallExpr(
             on(hasType(hasUnqualifiedDesugaredType(
                 recordType(hasDeclaration(SmartPtrWithDefaultDeleter))))),
@@ -925,30 +928,27 @@ private:
                                    const ConditionalOperator *Cond) {
     assert(Cond);
 
-    static const auto ReleaseCallMatcher =
-        cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))));
-
     static const StatementMatcher Matcher =
         anyOf(integerLiteral(equals(0)), cxxNullPtrLiteralExpr(), cxxNewExpr(),
-              ReleaseCallMatcher);
+              releaseCallMatcher());
 
-    auto isValidExpr = [&](const Expr *E) -> bool {
+    const auto IsValidExpr = [&](const Expr *E) -> bool {
       if (!E)
         return false;
 
       E = E->IgnoreParenCasts();
 
-      // Если это вложенный тернарный оператор - проверяем рекурсивно
+      // If this is a nested ternary operator, we check recursively.
       if (const auto *NestedCond = dyn_cast<ConditionalOperator>(E))
         return validateConditionalOperator(Context, NestedCond);
 
-      // Иначе проверяем через матчер
+      // Otherwise, we check through the matcher
       const auto Matches = match(Matcher, *E, Context);
       return !Matches.empty();
     };
 
-    return isValidExpr(Cond->getTrueExpr()) &&
-           isValidExpr(Cond->getFalseExpr());
+    return IsValidExpr(Cond->getTrueExpr()) &&
+           IsValidExpr(Cond->getFalseExpr());
   }
 };
 
@@ -956,8 +956,7 @@ static std::unique_ptr<SmartPtrInitializationCheckImpl>
 makeImpl(bool StrictMode, SmartPtrInitializationCheck &Check) {
   if (StrictMode)
     return std::make_unique<SmartPtrInitializationCheckStrictMode>(Check);
-  else
-    return std::make_unique<SmartPtrInitializationCheckPermissiveMode>(Check);
+  return std::make_unique<SmartPtrInitializationCheckPermissiveMode>(Check);
 }
 
 SmartPtrInitializationCheck::SmartPtrInitializationCheck(
