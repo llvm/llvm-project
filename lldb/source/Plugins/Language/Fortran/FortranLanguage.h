@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the Fortran language Plugin.
+/// This file defines the Fortran language plugin.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -32,9 +32,8 @@ public:
   lldb::LanguageType GetLanguageType() const override {
     return lldb::eLanguageTypeFortran90;
   }
-  //------------------------------------------------------------------
+
   // Static Functions
-  //------------------------------------------------------------------
   static void Initialize();
 
   static void Terminate();
@@ -43,9 +42,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic();
 
-  //------------------------------------------------------------------
   // PluginInterface protocol
-  //------------------------------------------------------------------
   llvm::StringRef GetPluginName() override;
 
   uint32_t GetPluginVersion();

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements the Fortran language Plugin.
+/// This file implements the Fortran language plugin.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -53,7 +53,8 @@ Language *FortranLanguage::CreateInstance(LanguageType language) {
 }
 
 bool FortranLanguage::IsSourceFile(StringRef file_path) const {
-  const auto suffixes = {".f90", ".f", ".f95", ".f03", ".f08", ".f18"};
+  const auto suffixes = {".f90", ".f",   ".f95", ".f03", ".f08",
+                         ".f18", ".for", ".ftn", ".fpp", ",f77"};
   for (auto suffix : suffixes) {
     if (file_path.ends_with_insensitive(suffix))
       return true;
