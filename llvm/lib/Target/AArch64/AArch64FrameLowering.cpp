@@ -2917,7 +2917,8 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
       CSI.push_back(VGInfo);
   }
 
-  if (!IsWindows)
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  if (!IsWindows && enableMultiVectorSpillFill(Subtarget, MF))
     // The Windows stack layout is not supported by this reordering function
     // yet.
     orderZPRCalleeSavesForPairs(MF, RegInfo, CSI);
