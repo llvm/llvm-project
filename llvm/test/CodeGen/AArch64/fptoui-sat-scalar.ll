@@ -705,14 +705,20 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_unsigned_i100_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    fcvtzu x0, s0
+; CHECK-GI-CVT-NEXT:    mov x8, #68719476735 // =0xfffffffff
+; CHECK-GI-CVT-NEXT:    fcvtzu x9, s0
+; CHECK-GI-CVT-NEXT:    cmn x9, #1
+; CHECK-GI-CVT-NEXT:    csinv x0, x9, xzr, ne
+; CHECK-GI-CVT-NEXT:    csel x1, x8, xzr, eq
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_unsigned_i100_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    fcvtzu x9, h0
+; CHECK-GI-FP16-NEXT:    mov x8, #68719476735 // =0xfffffffff
+; CHECK-GI-FP16-NEXT:    cmn x9, #1
+; CHECK-GI-FP16-NEXT:    csinv x0, x9, xzr, ne
+; CHECK-GI-FP16-NEXT:    csel x1, x8, xzr, eq
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i100 @llvm.fptoui.sat.i100.f16(half %f)
     ret i100 %x
@@ -741,14 +747,14 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_unsigned_i128_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
 ; CHECK-GI-CVT-NEXT:    fcvtzu x0, s0
+; CHECK-GI-CVT-NEXT:    asr x1, x0, #63
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_unsigned_i128_f16:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    fcvtzu x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    asr x1, x0, #63
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i128 @llvm.fptoui.sat.i128.f16(half %f)
     ret i128 %x
