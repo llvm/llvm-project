@@ -2963,10 +2963,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly)
           K->mergeDIAssignID(J);
         break;
-      case LLVMContext::MD_tbaa:
-        if (DoesKMove)
-          K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
-        break;
       case LLVMContext::MD_alias_scope:
         if (DoesKMove)
           K->setMetadata(Kind, MDNode::getMostGenericAliasScope(JMD, KMD));
@@ -3006,9 +3002,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
         break;
-      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
-      // from being removed as unknown metadata. The actual merging is handled
-      // separately below.
+      // Keep empty cases for tbaa, prof, mmra, memprof, and callsite to prevent
+      // them from being removed as unknown metadata. The actual merging is
+      // handled separately below.
+      case LLVMContext::MD_tbaa:
       case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
       case LLVMContext::MD_memprof:
@@ -3110,6 +3107,27 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (!AAOnly && (JProf || KProf)) {
     K->setMetadata(LLVMContext::MD_prof,
                    MDNode::getMergedProfMetadata(KProf, JProf, K, J));
+  }
+
+  // Merge TBAA metadata. Handled separately to also cover the case where only
+  // one instruction has a tag. A one-sided tag is copied onto K only when K is
+  // guaranteed to execute exactly where J did, so we never assert a type on a
+  // path that never had it.
+  MDNode *JTBAA = J->getMetadata(LLVMContext::MD_tbaa);
+  MDNode *KTBAA = K->getMetadata(LLVMContext::MD_tbaa);
+  if (KTBAA) {
+    if (DoesKMove)
+      K->setMetadata(LLVMContext::MD_tbaa,
+                     MDNode::getMostGenericTBAA(JTBAA, KTBAA));
+  } else if (!AAOnly && !DoesKMove && JTBAA &&
+             isa<LoadInst, StoreInst, CallInst, VAArgInst, AtomicRMWInst,
+                 AtomicCmpXchgInst>(K) &&
+             K->getParent() == J->getParent()) {
+    const Instruction *First = K->comesBefore(J) ? K : J;
+    const Instruction *Second = First == K ? J : K;
+    if (isGuaranteedToTransferExecutionToSuccessor(
+            std::next(First->getIterator()), Second->getIterator()))
+      K->setMetadata(LLVMContext::MD_tbaa, JTBAA);
   }
 }
 
