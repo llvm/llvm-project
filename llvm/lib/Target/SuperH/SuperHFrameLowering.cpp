@@ -161,7 +161,7 @@ SuperHFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 //===--------------------------------------------------------------------------===//
 
 void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const {
-  LLVM_DEBUG(dbgs() << "Emitting prologue...\n");
+  LLVM_DEBUG(dbgs() << "Emitting prologue for " << MF.getName() << "...\n");
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -181,6 +181,7 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &M
 
   // Store previous frame pointer.
   if (HasFP) {
+    adjustFrameOffsetDown(StackSize);
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLM), FP)
       .addReg(SP)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -212,9 +213,9 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &M
 }
 
 void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const {
-  LLVM_DEBUG(dbgs() << "Emitting epilogue...\n");
+  LLVM_DEBUG(dbgs() << "Emitting epilogue for " << MF.getName() << "...\n");
 
-  MachineBasicBlock::iterator MBBI = MBB.begin();
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
   const SuperHInstrInfo &TII = *STI.getInstrInfo();
@@ -223,6 +224,7 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
   Register FP = RII.getFrameRegister();
   DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
   bool HasFP = hasFP(MF);
+  
 
   // Get stack frame size.
   int64_t StackSize = MFI.getStackSize();
@@ -230,6 +232,7 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
 
   // Restore stack frame
   if (HasFP) {
+    adjustFrameOffsetDown(StackSize);
     emitFrameAdjust(FP, MF, MBB, MBBI, StackSize);
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), SP)
       .addReg(FP)
@@ -264,7 +267,6 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &M
 
 void SuperHFrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                         RegScavenger *RS) const {
-  LLVM_DEBUG(dbgs() << "determineCalleeSaves\n");
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 }
 
@@ -342,6 +344,7 @@ SuperHFrameLowering::eliminateCallFramePseudoInstr(MachineFunction &MF,
   if (Amount == 0) {
     return MBB.erase(MI);
   }
+
   return MBB.erase(MI);
 }
 

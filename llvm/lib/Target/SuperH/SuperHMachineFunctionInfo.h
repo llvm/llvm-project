@@ -59,6 +59,7 @@ public:
   //     a PC-relative load.
   SuperHConstantPoolConstant *tryGetConstant(GlobalAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
   SuperHConstantPoolConstant *tryGetConstant(BlockAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolConstant *tryGetConstant(ConstantSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
   SuperHConstantPoolSymbol *tryGetConstant(ExternalSymbolSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
 
 private:
