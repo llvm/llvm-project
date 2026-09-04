@@ -7622,6 +7622,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
       if (!DL.contains("-p9") && !DL.starts_with("p9"))
         Res.append("-p9:192:256:256:32");
+
+      // Add sizing for address space 10 through 15.
+      // AS 10-14 are reserved and defaulted to 32:32
+      // AS 15 is in use and is 32:32.
+      for (StringRef AS : {"p10", "p11", "p12", "p13", "p14", "p15"}) {
+        if (!DL.contains(("-" + AS).str()) && !DL.starts_with(AS))
+          Res.append(("-" + AS + ":32:32").str());
+      }
     }
 
     // Upgrade the ELF mangling mode.

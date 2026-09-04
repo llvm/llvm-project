@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
 
@@ -75,9 +76,19 @@ static TargetExtType *getTargetExtType(const GlobalVariable &GV) {
 }
 
 TargetExtType *isNamedBarrier(const GlobalVariable &GV) {
+  if (GV.getAddressSpace() != AMDGPUAS::BARRIER)
+    return nullptr;
   if (TargetExtType *Ty = getTargetExtType(GV))
     return Ty->getName() == "amdgcn.named.barrier" ? Ty : nullptr;
   return nullptr;
+}
+
+unsigned getNumNamedBarriersDeclared(const DataLayout &DL,
+                                     const GlobalVariable &GV) {
+  assert(isNamedBarrier(GV));
+  unsigned GVSize = GV.getGlobalSize(DL);
+  assert(GVSize && (GVSize % NamedBarrierTypeSizeInBytes == 0));
+  return GVSize / NamedBarrierTypeSizeInBytes;
 }
 
 bool isDynamicLDS(const GlobalVariable &GV) {
@@ -290,15 +301,6 @@ GVUsesInfoTy getTransitiveUsesOfLDSForLowering(const CallGraph &CG, Module &M) {
             AMDGPU::isDynamicLDS(*GV) && UsesInfo.DirectAccess.contains(Fn);
         if (IsDirectMapDynLDSGV)
           continue;
-
-        // TODO: Remove once barriers are no longer in the LDS AS.
-        if (isNamedBarrier(*GV)) {
-          if (IsAbsolute) {
-            UsesInfo.DirectAccess[Fn].erase(GV);
-            UsesInfo.IndirectAccess[Fn].erase(GV);
-          }
-          continue;
-        }
 
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
