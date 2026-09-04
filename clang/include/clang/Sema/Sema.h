@@ -7394,20 +7394,18 @@ public:
   bool CheckAlignasTypeArgument(StringRef KWName, TypeSourceInfo *TInfo,
                                 SourceLocation OpLoc, SourceRange R);
 
-  /// Build a sizeof or alignof expression given a type operand.
+  /// Build a unary expression or type trait given a type operand.
   ExprResult CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
                                             SourceLocation OpLoc,
                                             UnaryExprOrTypeTrait ExprKind,
                                             SourceRange R);
 
-  /// Build a sizeof or alignof expression given an expression
-  /// operand.
+  /// Build a unary expression or type trait given an expression operand.
   ExprResult CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
-                                            UnaryExprOrTypeTrait ExprKind);
+                                            UnaryExprOrTypeTrait ExprKind,
+                                            SourceLocation RParenLoc = {});
 
-  /// ActOnUnaryExprOrTypeTraitExpr - Handle @c sizeof(type) and @c sizeof @c
-  /// expr and the same for @c alignof and @c __alignof
-  /// Note that the ArgRange is invalid if isType is false.
+  /// Handle a unary expression or type trait.
   ExprResult ActOnUnaryExprOrTypeTraitExpr(SourceLocation OpLoc,
                                            UnaryExprOrTypeTrait ExprKind,
                                            bool IsType, void *TyOrEx,

@@ -4578,6 +4578,15 @@ void CXXNameMangler::mangleType(const TypeOfExprType *T) {
   Out << "u6typeof";
 }
 
+static bool isUnparenthesizedIdOrMemberExpr(const Expr *E) {
+  // This is the exhaustive list used for decltype's entity form. Do not
+  // ignore parentheses because they change the meaning of decltype and
+  // __addrspaceof.
+  return isa<DeclRefExpr, MemberExpr, UnresolvedLookupExpr,
+             DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr,
+             UnresolvedMemberExpr>(E);
+}
+
 void CXXNameMangler::mangleType(const DecltypeType *T) {
   Expr *E = T->getUnderlyingExpr();
 
@@ -4585,16 +4594,7 @@ void CXXNameMangler::mangleType(const DecltypeType *T) {
   //                             #   or class member access
   //      ::= DT <expression> E  # decltype of an expression
 
-  // This purports to be an exhaustive list of id-expressions and
-  // class member accesses.  Note that we do not ignore parentheses;
-  // parentheses change the semantics of decltype for these
-  // expressions (and cause the mangler to use the other form).
-  if (isa<DeclRefExpr>(E) ||
-      isa<MemberExpr>(E) ||
-      isa<UnresolvedLookupExpr>(E) ||
-      isa<DependentScopeDeclRefExpr>(E) ||
-      isa<CXXDependentScopeMemberExpr>(E) ||
-      isa<UnresolvedMemberExpr>(E))
+  if (isUnparenthesizedIdOrMemberExpr(E))
     Out << "Dt";
   else
     Out << "DT";
@@ -5510,6 +5510,22 @@ recurse:
       MangleAlignofSizeofArg();
       break;
 
+    case UETT_AddrSpaceOf: {
+      if (SAE->isArgumentType()) {
+        MangleExtensionBuiltin(SAE);
+        break;
+      }
+
+      // Normal expression mangling ignores parentheses, but __addrspaceof(x)
+      // and __addrspaceof((x)) can have different values. Record whether the
+      // operand uses the entity form before mangling the operand itself.
+      mangleVendorType(getTraitSpelling(SAE->getKind()));
+      bool IsEntity = isUnparenthesizedIdOrMemberExpr(SAE->getArgumentExpr());
+      Out << (IsEntity ? "Lb1E" : "Lb0E");
+      mangleTemplateArgExpr(SAE->getArgumentExpr());
+      Out << 'E';
+      break;
+    }
     case UETT_CountOf:
     case UETT_VectorElements:
     case UETT_OpenMPRequiredSimdAlign:

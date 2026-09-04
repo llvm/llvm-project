@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HLSLRuntime.h"
@@ -913,6 +914,25 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_DEVICE", "2");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES", "3");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_SUB_GROUP", "4");
+
+  auto DefineAddressSpaceMacro = [&](StringRef Name, AddressSpaceQuery::ID AS) {
+    Builder.defineMacro(Name, Twine(static_cast<unsigned>(AS)));
+  };
+
+  DefineAddressSpaceMacro("__ADDRSPACE_DEFAULT", AddressSpaceQuery::Default);
+  DefineAddressSpaceMacro("__ADDRSPACE_GLOBAL", AddressSpaceQuery::Global);
+  DefineAddressSpaceMacro("__ADDRSPACE_LOCAL", AddressSpaceQuery::Local);
+  DefineAddressSpaceMacro("__ADDRSPACE_CONSTANT", AddressSpaceQuery::Constant);
+  DefineAddressSpaceMacro("__ADDRSPACE_PRIVATE", AddressSpaceQuery::Private);
+  DefineAddressSpaceMacro("__ADDRSPACE_GENERIC", AddressSpaceQuery::Generic);
+  DefineAddressSpaceMacro("__ADDRSPACE_HLSL_INPUT",
+                          AddressSpaceQuery::HLSLInput);
+  DefineAddressSpaceMacro("__ADDRSPACE_HLSL_OUTPUT",
+                          AddressSpaceQuery::HLSLOutput);
+  DefineAddressSpaceMacro("__ADDRSPACE_HLSL_PUSH_CONSTANT",
+                          AddressSpaceQuery::HLSLPushConstant);
+  DefineAddressSpaceMacro("__ADDRSPACE_TARGET_OFFSET",
+                          AddressSpaceQuery::TargetOffset);
 
   // Define macros for floating-point data classes, used in __builtin_isfpclass.
   Builder.defineMacro("__FPCLASS_SNAN", "0x0001");

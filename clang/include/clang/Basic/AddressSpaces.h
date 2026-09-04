@@ -118,6 +118,95 @@ inline bool isPtrSizeAddressSpace(LangAS AS) {
           AS == LangAS::ptr64);
 }
 
+namespace AddressSpaceQuery {
+
+enum ID : unsigned {
+  Default = 0,
+  Global = 1,
+  Local = 2,
+  Constant = 3,
+  Private = 4,
+  Generic = 5,
+  HLSLInput = 6,
+  HLSLOutput = 7,
+  HLSLPushConstant = 8,
+  Ptr32Sptr = 9,
+  Ptr32Uptr = 10,
+  Ptr64 = 11,
+  WasmFuncRef = 12,
+  AMDGPUBarrier = 13,
+
+  TargetOffset = 0x1000000
+};
+
+inline unsigned encode(LangAS AS) {
+  if (isTargetAddressSpace(AS))
+    return TargetOffset + toTargetAddressSpace(AS);
+
+  switch (AS) {
+  case LangAS::Default:
+    return Default;
+  case LangAS::opencl_global:
+    return Global;
+  case LangAS::opencl_local:
+    return Local;
+  case LangAS::opencl_constant:
+    return Constant;
+  case LangAS::opencl_private:
+    return Private;
+  case LangAS::opencl_generic:
+    return Generic;
+  case LangAS::opencl_global_device:
+  case LangAS::opencl_global_host:
+    return Global;
+  case LangAS::cuda_device:
+    return Global;
+  case LangAS::cuda_constant:
+    return Constant;
+  case LangAS::cuda_shared:
+    return Local;
+  case LangAS::sycl_global:
+  case LangAS::sycl_global_device:
+  case LangAS::sycl_global_host:
+    return Global;
+  case LangAS::sycl_local:
+    return Local;
+  case LangAS::sycl_private:
+    return Private;
+  case LangAS::ptr32_sptr:
+    return Ptr32Sptr;
+  case LangAS::ptr32_uptr:
+    return Ptr32Uptr;
+  case LangAS::ptr64:
+    return Ptr64;
+  case LangAS::hlsl_groupshared:
+    return Local;
+  case LangAS::hlsl_constant:
+    return Constant;
+  case LangAS::hlsl_private:
+    return Private;
+  case LangAS::hlsl_device:
+    return Global;
+  case LangAS::hlsl_input:
+    return HLSLInput;
+  case LangAS::hlsl_output:
+    return HLSLOutput;
+  case LangAS::hlsl_push_constant:
+    return HLSLPushConstant;
+  case LangAS::wasm_funcref:
+    return WasmFuncRef;
+  case LangAS::amdgpu_barrier:
+    return AMDGPUBarrier;
+  case LangAS::FirstTargetAddressSpace:
+    break;
+  }
+
+  assert(false && "unknown language address space");
+  return Default;
+}
+
+} // namespace AddressSpaceQuery
+
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_ADDRESSSPACES_H

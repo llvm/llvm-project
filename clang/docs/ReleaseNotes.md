@@ -232,6 +232,12 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
+- Added the `__addrspaceof` operator, which returns a Clang address-space
+  identifier for a type, directly named entity, or lvalue expression. It can
+  report CUDA/HIP storage address spaces for known `__device__`, `__shared__`,
+  and `__constant__` variables. Clang also now emits predefined
+  `__ADDRSPACE_*` macros for these values.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics

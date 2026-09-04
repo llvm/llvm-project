@@ -2739,6 +2739,8 @@ public:
     return isArgumentType() ? getArgumentType() : getArgumentExpr()->getType();
   }
 
+  unsigned getAddressSpaceQueryResult(const ASTContext &Ctx) const;
+
   SourceLocation getOperatorLoc() const { return OpLoc; }
   void setOperatorLoc(SourceLocation L) { OpLoc = L; }
 
