@@ -2889,6 +2889,15 @@ static void genAllocateDirOp(lower::AbstractConverter &converter,
                    sym->name().ToString() + "'");
       continue;
     }
+    if (semantics::IsDummy(ultimate)) {
+      if (semaCtx.langOptions().OpenMPVersion < 60) {
+        mlir::emitWarning(
+            loc, "TODO : OpenMP declarative ALLOCATE on dummy arguments is "
+                 "not yet supported, ignoring the ALLOCATE directive for '" +
+                     sym->name().ToString() + "'");
+      }
+      continue;
+    }
     supportedObjects.push_back(object);
   }
 

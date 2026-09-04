@@ -216,3 +216,23 @@ llvm.func @test_allocate_dynamic_runtime_count(%count: i64) {
   omp.allocate_free (%arr : !llvm.ptr)
   llvm.return
 }
+
+// -----
+
+// Verifies dynamic array size uses ABI alloc size (stride), not store size.
+// For x86_fp80 on x86_64, store size is 10 bytes but alloc size is 16 bytes.
+//
+// CHECK-LABEL: define void @test_allocate_x86_fp80_array
+// CHECK-SAME: (i64 %[[COUNT:.*]])
+// CHECK:   %[[MUL:.*]] = mul i64 %[[COUNT]], 16
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 {{.*}}, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_x86_fp80_array(%count: i64) {
+  %arr = llvm.alloca %count x f80 : (i64) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr)
+  omp.allocate_free (%arr : !llvm.ptr)
+  llvm.return
+}

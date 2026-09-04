@@ -6959,7 +6959,7 @@ static std::optional<llvm::Value *> getDynamicAllocatedSize(
       llvm::Value *numElems = moduleTranslation.lookupValue(arraySize);
       if (!numElems->getType()->isIntegerTy(64))
         numElems = builder.CreateZExt(numElems, builder.getInt64Ty());
-      uint64_t elemSize = dataLayout.getTypeStoreSize(elemTy).getFixedValue();
+      uint64_t elemSize = dataLayout.getTypeAllocSize(elemTy).getFixedValue();
       return builder.CreateMul(numElems, builder.getInt64(elemSize));
     }
   }
@@ -6968,7 +6968,7 @@ static std::optional<llvm::Value *> getDynamicAllocatedSize(
       if (allocaInst->isArrayAllocation() &&
           !llvm::isa<llvm::ArrayType>(allocaInst->getAllocatedType())) {
         uint64_t elemSize =
-            dataLayout.getTypeStoreSize(allocaInst->getAllocatedType())
+            dataLayout.getTypeAllocSize(allocaInst->getAllocatedType())
                 .getFixedValue();
         return builder.CreateMul(allocaInst->getArraySize(),
                                  builder.getInt64(elemSize));
@@ -10309,20 +10309,12 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     if (std::optional<llvm::Value *> dynamicSize = getDynamicAllocatedSize(
             var, baseVar, moduleTranslation, builder, dataLayout)) {
       size = *dynamicSize;
-    } else if (auto arrTy = llvm::dyn_cast<llvm::ArrayType>(typeToInspect)) {
-      llvm::Value *elementCount = builder.getInt64(1);
-      llvm::Type *currentType = arrTy;
-      while (auto nestedArrTy = llvm::dyn_cast<llvm::ArrayType>(currentType)) {
-        elementCount = builder.CreateMul(
-            elementCount, builder.getInt64(nestedArrTy->getNumElements()));
-        currentType = nestedArrTy->getElementType();
-      }
-      uint64_t elemSizeInBits = dataLayout.getTypeSizeInBits(currentType);
-      size =
-          builder.CreateMul(elementCount, builder.getInt64(elemSizeInBits / 8));
+    } else if (typeToInspect->isArrayTy()) {
+      size = builder.getInt64(
+          dataLayout.getTypeAllocSize(typeToInspect).getFixedValue());
     } else {
       size = builder.getInt64(
-          dataLayout.getTypeStoreSize(typeToInspect).getFixedValue());
+          dataLayout.getTypeAllocSize(typeToInspect).getFixedValue());
     }
 
     uint64_t alignValue =
