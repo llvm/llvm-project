@@ -26,27 +26,8 @@ class AArch64RegisterInfo;
 
 class AArch64GenRegisterBankInfo : public RegisterBankInfo {
 protected:
-  enum PartialMappingIdx {
-    PMI_None = -1,
-    PMI_FPR16 = 1,
-    PMI_FPR32,
-    PMI_FPR64,
-    PMI_FPR128,
-    PMI_FPR256,
-    PMI_FPR512,
-    PMI_GPR32,
-    PMI_GPR64,
-    PMI_GPR128,
-    PMI_FirstGPR = PMI_GPR32,
-    PMI_LastGPR = PMI_GPR128,
-    PMI_FirstFPR = PMI_FPR16,
-    PMI_LastFPR = PMI_FPR512,
-    PMI_Min = PMI_FirstFPR,
-  };
-
-  static const RegisterBankInfo::PartialMapping PartMappings[];
   static const RegisterBankInfo::ValueMapping ValMappings[];
-  static const PartialMappingIdx BankIDToCopyMapIdx[];
+  static const AArch64::PartialMappingIdx BankIDToCopyMapIdx[];
 
   enum ValueMappingIdx {
     InvalidIdx = 0,
@@ -67,9 +48,10 @@ protected:
                               unsigned ValLength, const RegisterBank &RB);
   static bool checkValueMapImpl(unsigned Idx, unsigned FirstInBank,
                                 unsigned Size, unsigned Offset);
-  static bool checkPartialMappingIdx(PartialMappingIdx FirstAlias,
-                                     PartialMappingIdx LastAlias,
-                                     ArrayRef<PartialMappingIdx> Order);
+  static bool
+  checkPartialMappingIdx(AArch64::PartialMappingIdx FirstAlias,
+                         AArch64::PartialMappingIdx LastAlias,
+                         ArrayRef<AArch64::PartialMappingIdx> Order);
 
   static unsigned getRegBankBaseIdxOffset(unsigned RBIdx, TypeSize Size);
 
@@ -79,9 +61,9 @@ protected:
   /// The returned mapping works for instructions with the same kind of
   /// operands for up to 3 operands.
   ///
-  /// \pre \p RBIdx != PartialMappingIdx::None
+  /// \pre \p RBIdx != AArch64::PartialMappingIdx::None
   static const RegisterBankInfo::ValueMapping *
-  getValueMapping(PartialMappingIdx RBIdx, TypeSize Size);
+  getValueMapping(AArch64::PartialMappingIdx RBIdx, TypeSize Size);
 
   /// Get the pointer to the ValueMapping of the operands of a copy
   /// instruction from the \p SrcBankID register bank to the \p DstBankID
