@@ -55,9 +55,16 @@ struct VectorizerParams {
   LLVM_ABI static bool HoistRuntimeChecks;
 };
 
-/// Maps a pointer to its symbolic (non-constant) stride. Strides are loop
-/// invariant, which collectStridedAccess checks before inserting.
-using SymbolicStrideMap = DenseMap<Value *, const SCEVUnknown *>;
+/// A symbolic (non-constant) stride together with the constant it is speculated
+/// to equal. The stride is loop invariant, which collectStridedAccess checks
+/// before inserting.
+struct SymbolicStride {
+  const SCEVUnknown *Stride = nullptr;
+  unsigned SpeculatedValue = 1;
+};
+
+/// Maps a pointer to its symbolic (non-constant) stride.
+using SymbolicStrideMap = DenseMap<Value *, SymbolicStride>;
 
 /// Checks memory dependences among accesses to the same underlying
 /// object to determine whether there vectorization is legal or not (and at
@@ -900,8 +907,20 @@ private:
   SymbolicStrideMap SymbolicStrides;
 };
 
+/// Return the constant that makes the symbolic stride \p Stride an interleaved
+/// group in \p L, or std::nullopt when \p L holds no such group. Integral casts
+/// on \p Stride are ignored.
+///
+/// Based on a loop's access analysis, when the pointer induction stepping
+/// by that stride is gap-free, a more educated guess can be made in order
+/// to turn the run into a dense interleaved group which can potentially
+/// vectorize the loop.
+LLVM_ABI std::optional<unsigned>
+getSpeculatedInterleaveStride(const Loop &L, ScalarEvolution &SE,
+                              const SCEV *Stride);
+
 /// Return the SCEV corresponding to a pointer with the symbolic stride
-/// replaced with constant one, assuming the SCEV predicate associated with
+/// replaced with a constant, assuming the SCEV predicate associated with
 /// \p PSE is true.
 ///
 /// If necessary this method will version the stride of the pointer according

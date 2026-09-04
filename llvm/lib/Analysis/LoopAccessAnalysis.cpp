@@ -153,6 +153,82 @@ bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
 
+std::optional<unsigned>
+llvm::getSpeculatedInterleaveStride(const Loop &L, ScalarEvolution &SE,
+                                    const SCEV *Stride) {
+  // Casts on the stride do not change the value being guessed.
+  match(Stride, m_scev_IgnoreCasts(m_SCEV(Stride)));
+
+  // Matches anything that walks the loop by Stride, which is the induction
+  // itself and every access sitting at a fixed offset off it.
+  const SCEV *Start;
+  auto StridedBy = m_scev_AffineAddRec(
+      m_SCEV(Start), m_scev_IgnoreCasts(m_scev_Specific(Stride)),
+      m_SpecificLoop(&L));
+
+  // Find the pointer induction stepping by Stride. More than one of them makes
+  // "the run off the induction" ambiguous, so don't guess.
+  const SCEV *Base = nullptr;
+  for (PHINode &Phi : L.getHeader()->phis()) {
+    if (!Phi.getType()->isPointerTy() || !match(SE.getSCEV(&Phi), StridedBy))
+      continue;
+    if (Base)
+      return std::nullopt;
+    Base = Start;
+  }
+  if (!Base)
+    return std::nullopt;
+
+  // Collect the distinct element indices accessed off that induction. All
+  // members of an interleaved group have the same type, so a mismatched or
+  // misaligned width rules the group out rather than just skipping the access.
+  const DataLayout &DL = L.getHeader()->getDataLayout();
+  SmallSet<int64_t, 8> Indices;
+  int64_t MaxIdx = 0;
+  uint64_t EltSize = 0;
+  for (BasicBlock *BB : L.blocks()) {
+    for (Instruction &I : *BB) {
+      Value *Ptr = getLoadStorePointerOperand(&I);
+      if (!Ptr || !match(SE.getSCEV(Ptr), StridedBy))
+        continue;
+      // An access at an unknown offset off the induction is not part of the run
+      // and says nothing about how dense it is.
+      const APInt *Off;
+      if (!match(SE.getMinusSCEV(Start, Base), m_scev_APInt(Off)) ||
+          !Off->isSignedIntN(32))
+        continue;
+      TypeSize TS = DL.getTypeStoreSize(getLoadStoreType(&I));
+      if (TS.isScalable())
+        return std::nullopt;
+      if (EltSize && EltSize != TS.getFixedValue())
+        return std::nullopt;
+      EltSize = TS.getFixedValue();
+      if (Off->getSExtValue() % static_cast<int64_t>(EltSize))
+        return std::nullopt;
+      // The base pointer of an interleaved group is its first member, so an
+      // access before the induction means the run is not rooted there.
+      int64_t Idx = Off->getSExtValue() / static_cast<int64_t>(EltSize);
+      if (Idx < 0)
+        return std::nullopt;
+      if (!Indices.insert(Idx).second)
+        continue;
+      MaxIdx = std::max(MaxIdx, Idx);
+    }
+  }
+
+  // The count has to be a factor an interleaved group is allowed to have.
+  if (!InterleavedAccessInfo::isStrided(Indices.size()) ||
+      MaxIdx + 1 != int64_t(Indices.size()))
+    return std::nullopt;
+
+  // The stride has to be representable in its own type: a 'zext i1' step can
+  // only ever be 0 or 1.
+  uint64_t StrideValue = Indices.size() * EltSize;
+  if (!isUIntN(Stride->getType()->getScalarSizeInBits(), StrideValue))
+    return std::nullopt;
+  return StrideValue;
+}
+
 const SCEV *
 llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                                 const SymbolicStrideMap &PtrToStride,
@@ -160,15 +236,16 @@ llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
-  // symbolic stride replaced by one.
-  const SCEVUnknown *StrideSCEV = PtrToStride.lookup(Ptr);
-  if (!StrideSCEV)
+  // symbolic stride replaced by the speculated constant.
+  auto It = PtrToStride.find(Ptr);
+  if (It == PtrToStride.end())
     // For a non-symbolic stride, just return the original expression.
     return OrigSCEV;
 
+  const SymbolicStride &SS = It->second;
   ScalarEvolution *SE = PSE.getSE();
-  const SCEV *CT = SE->getOne(StrideSCEV->getType());
-  PSE.addPredicate(*SE->getEqualPredicate(StrideSCEV, CT));
+  const SCEV *CT = SE->getConstant(SS.Stride->getType(), SS.SpeculatedValue);
+  PSE.addPredicate(*SE->getEqualPredicate(SS.Stride, CT));
   const SCEV *Expr = PSE.getSCEV(Ptr);
 
   LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
@@ -3155,8 +3232,7 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
 
   if (Ptr != OrigPtr)
     // Strip off casts.
-    while (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
-      V = C->getOperand();
+    match(V, m_scev_IgnoreCasts(m_SCEV(V)));
 
   if (!match(V, m_scev_AffineAddRec(m_SCEV(), m_SCEV(V), m_SpecificLoop(Lp))))
     return nullptr;
@@ -3254,7 +3330,10 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
     StrideBase = C->getOperand();
   assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
          "users of the map rely on the stride being loop invariant");
-  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
+  const auto *Stride = cast<SCEVUnknown>(StrideBase);
+  unsigned SpeculatedValue =
+      getSpeculatedInterleaveStride(*TheLoop, *SE, Stride).value_or(1);
+  SymbolicStrides[Ptr] = {Stride, SpeculatedValue};
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,

@@ -2698,8 +2698,8 @@ void VPlanTransforms::replaceSymbolicStrides(
     return VPDT.dominates(Header, R->getParent());
   };
   ValueToSCEVMapTy RewriteMap;
-  for (const SCEVUnknown *Stride : StridesMap.values()) {
-    Value *StrideV = Stride->getValue();
+  for (const SymbolicStride &SS : StridesMap.values()) {
+    Value *StrideV = SS.Stride->getValue();
     const APInt *StrideConst;
     const SCEV *StrideExpr = PSE.getSCEV(StrideV);
     if (!match(StrideExpr, m_scev_APInt(StrideConst)))
