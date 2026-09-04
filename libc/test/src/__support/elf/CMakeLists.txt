@@ -146,3 +146,13 @@ if(LIBC_ENABLE_SHARED)
       libc.src.__support.elf.registry
   )
 endif()
+
+add_libc_test(
+  startup_stack_test
+  SUITE
+    libc-support-tests
+  SRCS
+    startup_stack_test.cpp
+  DEPENDS
+    libc.src.__support.elf.startup_stack
+)

@@ -207,3 +207,18 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  startup_stack
+  HDRS
+    startup_stack.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
