@@ -69,9 +69,6 @@ static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
       .getResult();
 }
 
-/// Lower __nvvm_bar0_{and,or,popc} like classic codegen:
-/// icmp ne %arg, 0; call nvvm.barrier.cta.red.*.aligned.all(0, pred);
-/// zext i1 to i32 for and/or.
 static mlir::Value emitBar0Reduction(CIRGenFunction &cgf, const CallExpr *expr,
                                      llvm::StringRef intrinsicName,
                                      bool returnsPred) {
