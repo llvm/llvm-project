@@ -207,7 +207,7 @@ define { float, i32 } @frexp_inf() {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x7f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { float, i32 } @llvm.frexp.f32.i32(float 0x7FF0000000000000)
+  %ret = call { float, i32 } @llvm.frexp.f32.i32(float +inf)
   ret { float, i32 } %ret
 }
 
@@ -218,7 +218,7 @@ define { float, i32 } @frexp_neginf() {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0xff800000
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { float, i32 } @llvm.frexp.f32.i32(float 0xFFF0000000000000)
+  %ret = call { float, i32 } @llvm.frexp.f32.i32(float -inf)
   ret { float, i32 } %ret
 }
 
@@ -301,7 +301,7 @@ define { <2 x float>, <2 x i32> } @frexp_splat_inf() {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>)
+  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float +inf, float +inf>)
   ret { <2 x float>, <2 x i32> } %ret
 }
 
@@ -314,7 +314,7 @@ define { <2 x float>, <2 x i32> } @frexp_splat_neginf() {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000>)
+  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float -inf, float -inf>)
   ret { <2 x float>, <2 x i32> } %ret
 }
 
@@ -327,6 +327,6 @@ define { <2 x float>, <2 x i32> } @frexp_splat_undef_inf() {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x7f800000
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float undef, float 0x7FF0000000000000>)
+  %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float undef, float +inf>)
   ret { <2 x float>, <2 x i32> } %ret
 }

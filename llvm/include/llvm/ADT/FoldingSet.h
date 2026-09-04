@@ -16,6 +16,8 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -109,69 +111,18 @@ namespace llvm {
 ///
 /// The result indicates whether the node existed in the folding set.
 
-class FoldingSetNodeID;
 class StringRef;
+template <typename T, typename Enable = void> struct FoldingSetTrait;
 
 //===----------------------------------------------------------------------===//
-
-/// This class provides default implementations for FoldingSetTrait
-/// implementations.
-template <typename T> struct DefaultFoldingSetTrait {
-  struct ContextStorage {};
-
-  static void Profile(const T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
-  static void Profile(T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
-
-  // Equals - Test if the profile for X would match ID, using TempID
-  // to compute a temporary ID if necessary. The default implementation
-  // just calls Profile and does a regular comparison. Implementations
-  // can override this to provide more efficient implementations.
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
-                            FoldingSetNodeID &TempID);
-};
-
-/// This trait class is used to define behavior of how to "profile" (in the
-/// FoldingSet parlance) an object of a given type.
-/// The default behavior is to invoke a 'Profile' method on an object, but
-/// through template specialization the behavior can be tailored for specific
-/// types.  Combined with the FoldingSetNodeWrapper class, one can add objects
-/// to FoldingSets that were not originally designed to have that behavior.
-template <typename T, typename Enable = void>
-struct FoldingSetTrait : public DefaultFoldingSetTrait<T> {};
-
-/// Like DefaultFoldingSetTrait, but for ContextualFoldingSets.
-template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
-  struct ContextStorage {
-    Ctx Context;
-    explicit ContextStorage(Ctx Context) : Context(Context) {}
-    Ctx getContext() const { return Context; }
-  };
-
-  static void Profile(T &X, FoldingSetNodeID &ID, Ctx Context) {
-    X.Profile(ID, Context);
-  }
-
-  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
-                            FoldingSetNodeID &TempID, Ctx Context);
-};
-
-/// Like FoldingSetTrait, but for ContextualFoldingSets.
-template <typename T, typename Ctx>
-struct ContextualFoldingSetTrait : DefaultContextualFoldingSetTrait<T, Ctx> {};
-
-//===--------------------------------------------------------------------===//
 /// This class describes a reference to an interned FoldingSetNodeID, which can
 /// be a useful to store node id data rather than using plain FoldingSetNodeIDs,
 /// since the 32-element SmallVector is often much larger than necessary, and
 /// the possibility of heap allocation means it requires a non-trivial
 /// destructor call.
-class FoldingSetNodeIDRef {
-  const unsigned *Data = nullptr;
-  size_t Size = 0;
-
+class FoldingSetNodeIDRef : public ArrayRef<unsigned> {
 public:
-  FoldingSetNodeIDRef() = default;
-  FoldingSetNodeIDRef(const unsigned *D, size_t S) : Data(D), Size(S) {}
+  using ArrayRef<unsigned>::ArrayRef;
 
   static constexpr unsigned NotAHash = 0;
 
@@ -180,8 +131,7 @@ public:
   // Never returns NotAHash: FoldingSetBase reserves it for the empty insert
   // token and for a node belonging to no set.
   unsigned computeHash() const {
-    unsigned Hash =
-        static_cast<unsigned>(hash_combine_range(Data, Data + Size));
+    unsigned Hash = static_cast<unsigned>(hash_value(*this));
     return Hash == NotAHash ? 1 : Hash;
   }
 
@@ -189,23 +139,21 @@ public:
   // on-disk serialization.
   unsigned computeStableHash() const {
     return static_cast<unsigned>(xxh3_64bits(
-        reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size));
+        reinterpret_cast<const uint8_t *>(data()), sizeof(unsigned) * size()));
   }
-
-  bool operator==(FoldingSetNodeIDRef RHS) const {
-    return Size == RHS.Size &&
-           memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
-  }
-
-  bool operator!=(FoldingSetNodeIDRef RHS) const { return !(*this == RHS); }
-
-  /// Used to compare the "ordering" of two nodes as defined by the
-  /// profiled bits and their ordering defined by memcmp().
-  LLVM_ABI bool operator<(FoldingSetNodeIDRef) const;
-
-  const unsigned *getData() const { return Data; }
-  size_t getSize() const { return Size; }
 };
+
+inline bool operator==(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+  return LHS.equals(RHS);
+}
+
+inline bool operator!=(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+  return !(LHS == RHS);
+}
+
+/// Used to compare the "ordering" of two nodes as defined by the
+/// profiled bits and their ordering defined by memcmp().
+LLVM_ABI bool operator<(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS);
 
 //===--------------------------------------------------------------------===//
 /// This class is used to gather all the unique data bits of a node.  When all
@@ -227,8 +175,7 @@ class FoldingSetNodeID {
 public:
   FoldingSetNodeID() = default;
 
-  FoldingSetNodeID(FoldingSetNodeIDRef Ref)
-      : Bits(Ref.getData(), Ref.getData() + Ref.getSize()) {}
+  FoldingSetNodeID(FoldingSetNodeIDRef Ref) : Bits(Ref) {}
 
   /// Add* - Add various data types to Bit data.
   void AddPointer(const void *Ptr) {
@@ -258,42 +205,80 @@ public:
   /// object to be used to compute a new profile.
   inline void clear() { Bits.clear(); }
 
+  /// The accumulated profile, valid until this object is next modified.
+  FoldingSetNodeIDRef getRef() const { return Bits; }
+
   // Compute a strong hash value for this FoldingSetNodeID, used to lookup the
   // node in the FoldingSetBase. The hash value is not guaranteed to be
   // deterministic across processes.
-  unsigned computeHash() const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).computeHash();
-  }
+  unsigned computeHash() const { return getRef().computeHash(); }
 
   // Compute a deterministic hash value across processes that is suitable for
   // on-disk serialization.
-  unsigned computeStableHash() const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()).computeStableHash();
-  }
+  unsigned computeStableHash() const { return getRef().computeStableHash(); }
 
-  /// operator== - Used to compare two nodes to each other.
-  bool operator==(const FoldingSetNodeID &RHS) const {
-    return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
-  }
-  bool operator==(const FoldingSetNodeIDRef RHS) const {
-    return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
-  }
-
-  bool operator!=(const FoldingSetNodeID &RHS) const { return !(*this == RHS); }
-  bool operator!=(const FoldingSetNodeIDRef RHS) const {
-    return !(*this == RHS);
-  }
-
-  /// Used to compare the "ordering" of two nodes as defined by the
-  /// profiled bits and their ordering defined by memcmp().
-  LLVM_ABI bool operator<(const FoldingSetNodeID &RHS) const;
-  LLVM_ABI bool operator<(const FoldingSetNodeIDRef RHS) const;
+  operator FoldingSetNodeIDRef() const { return Bits; }
 
   /// Copy this node's data to a memory region allocated from the
   /// given allocator and return a FoldingSetNodeIDRef describing the
   /// interned data.
   LLVM_ABI FoldingSetNodeIDRef Intern(BumpPtrAllocator &Allocator) const;
 };
+
+//===----------------------------------------------------------------------===//
+
+/// This class provides default implementations for FoldingSetTrait
+/// implementations.
+template <typename T> struct DefaultFoldingSetTrait {
+  struct ContextStorage {};
+
+  static void Profile(const T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
+  static void Profile(T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
+
+  // Equals - Test if the profile for X would match ID, using TempID
+  // to compute a temporary ID if necessary. The default implementation
+  // just calls Profile and does a regular comparison. Implementations
+  // can override this to provide more efficient implementations.
+  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
+                            FoldingSetNodeID &TempID) {
+    FoldingSetTrait<T>::Profile(X, TempID);
+    return TempID == ID;
+  }
+};
+
+/// This trait class is used to define behavior of how to "profile" (in the
+/// FoldingSet parlance) an object of a given type.
+/// The default behavior is to invoke a 'Profile' method on an object, but
+/// through template specialization the behavior can be tailored for specific
+/// types.  Combined with the FoldingSetNodeWrapper class, one can add objects
+/// to FoldingSets that were not originally designed to have that behavior.
+template <typename T, typename Enable>
+struct FoldingSetTrait : public DefaultFoldingSetTrait<T> {};
+
+template <typename T, typename Ctx> struct ContextualFoldingSetTrait;
+
+/// Like DefaultFoldingSetTrait, but for ContextualFoldingSets.
+template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
+  struct ContextStorage {
+    Ctx Context;
+    explicit ContextStorage(Ctx Context) : Context(Context) {}
+    Ctx getContext() const { return Context; }
+  };
+
+  static void Profile(T &X, FoldingSetNodeID &ID, Ctx Context) {
+    X.Profile(ID, Context);
+  }
+
+  static inline bool Equals(T &X, const FoldingSetNodeID &ID,
+                            FoldingSetNodeID &TempID, Ctx Context) {
+    ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
+    return TempID == ID;
+  }
+};
+
+/// Like FoldingSetTrait, but for ContextualFoldingSets.
+template <typename T, typename Ctx>
+struct ContextualFoldingSetTrait : DefaultContextualFoldingSetTrait<T, Ctx> {};
 
 /// Insertion token: a failed lookup fills it in, the matching insert consumes
 /// it.
@@ -409,26 +394,16 @@ protected:
   /// already in the folding set.  \p Token must come from lookup for an ID that
   /// \p N profiles identically to.
   LLVM_ABI void insert(Node *N, FoldingSetInsertToken Token);
+
+  /// Wrap \p Hash, which must not be NotAHash, as the token insert takes.
+  static FoldingSetInsertToken makeInsertToken(uint32_t Hash) {
+    return FoldingSetInsertToken(Hash);
+  }
 };
 
 // Convenience type to hide the implementation of the folding set.
 using FoldingSetNode = FoldingSetBase::Node;
 template <class T> class FoldingSetIterator;
-
-// Definitions of FoldingSetTrait and ContextualFoldingSetTrait functions, which
-// require the definition of FoldingSetNodeID.
-template <typename T>
-inline bool DefaultFoldingSetTrait<T>::Equals(T &X, const FoldingSetNodeID &ID,
-                                              FoldingSetNodeID &TempID) {
-  FoldingSetTrait<T>::Profile(X, TempID);
-  return TempID == ID;
-}
-template <typename T, typename Ctx>
-inline bool DefaultContextualFoldingSetTrait<T, Ctx>::Equals(
-    T &X, const FoldingSetNodeID &ID, FoldingSetNodeID &TempID, Ctx Context) {
-  ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
-  return TempID == ID;
-}
 
 //===----------------------------------------------------------------------===//
 /// An implementation detail that lets us share code between FoldingSet and
@@ -680,6 +655,105 @@ public:
 
   operator T &() { return data; }
   operator const T &() const { return data; }
+};
+
+//===----------------------------------------------------------------------===//
+/// The default UniquingSet Info: \p T supplies its own key.
+template <typename T> struct UniquingSetInfo {
+  using KeyTy = remove_cvref_t<decltype(std::declval<const T &>().getKey())>;
+  static KeyTy getKey(const T &N) { return N.getKey(); }
+  static unsigned getHashValue(const KeyTy &Key) {
+    return DenseMapInfo<KeyTy>::getHashValue(Key);
+  }
+  static bool isEqual(const KeyTy &Key, const T &N) {
+    return Key == N.getKey();
+  }
+};
+
+/// A uniquing set that compares nodes against a typed key rather than a
+/// serialized FoldingSetNodeID.
+///
+/// \p T must derive from FoldingSetNode and provide a getKey() whose result is
+/// comparable with == and for which DenseMapInfo<KeyTy>::getHashValue exists.
+/// \p Info overrides that:
+///
+/// \code
+///   using KeyTy = ...;
+///   static KeyTy getKey(const T &N);
+///   static unsigned getHashValue(const KeyTy &K);
+///   static bool isEqual(const KeyTy &K, const T &N);
+/// \endcode
+///
+/// Override isEqual when comparing a key against a node's fields is cheaper
+/// than building a key from the node, which is what the default does.
+///
+/// Derive \p Info from UniquingSetInfo<T> to override only the hash.  The
+/// default Info needs \p T complete wherever UniquingSet<T> is instantiated;
+/// FoldingSet does not.  A key may alias storage owned by the node; it is only
+/// used within a single lookup().
+///
+/// Prefer FoldingSet when a key cannot be read cheaply out of a node: a
+/// FoldingSetNodeID cannot disagree with itself, whereas getKey and the code
+/// that builds a key to look up must be kept in step by hand.
+template <typename T, typename Info = UniquingSetInfo<T>>
+class UniquingSet : public FoldingSetBase {
+public:
+  using KeyTy = typename Info::KeyTy;
+
+  explicit UniquingSet(unsigned Log2InitSize = 6)
+      : FoldingSetBase(Log2InitSize) {}
+
+  using iterator = FoldingSetIterator<T>;
+  iterator begin() { return iterator(Buckets, Buckets + NumBuckets, this); }
+  iterator end() {
+    return iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
+  }
+
+  using const_iterator = FoldingSetIterator<const T>;
+  const_iterator begin() const {
+    return const_iterator(Buckets, Buckets + NumBuckets, this);
+  }
+  const_iterator end() const {
+    return const_iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
+  }
+
+  /// Look up \p Key.  On a hit \p Token is cleared; on a miss it receives a
+  /// token for insert().
+  T *lookup(const KeyTy &Key, FoldingSetInsertToken &Token) {
+    return static_cast<T *>(probe(hashKey(Key), Token, [&](Node *N) {
+      return Info::isEqual(Key, *static_cast<T *>(N));
+    }));
+  }
+
+  /// Insert \p N, which must key identically to the lookup that produced
+  /// \p Token.
+  void insert(T *N, FoldingSetInsertToken Token) {
+    assert(Token && "Invalid token!");
+    assert(makeInsertToken(hashKey(Info::getKey(*N))) == Token &&
+           "N does not key as the lookup that produced Token did");
+    FoldingSetBase::insert(N, Token);
+  }
+
+  /// Look \p N up by its own key, inserting it if absent, and return the node
+  /// in the set.  Out of line so that callers do not inherit the key's inline
+  /// storage; some of them recurse.
+  LLVM_ATTRIBUTE_NOINLINE T *getOrInsert(T *N) {
+    FoldingSetInsertToken Token;
+    if (T *E = lookup(Info::getKey(*N), Token))
+      return E;
+    FoldingSetBase::insert(N, Token);
+    return N;
+  }
+
+  /// Remove \p N, returning whether it was present.
+  bool erase(T *N) { return FoldingSetBase::erase(N); }
+
+private:
+  // Never NotAHash, for the reason FoldingSetNodeIDRef::computeHash gives.
+  static uint32_t hashKey(const KeyTy &Key) {
+    uint32_t Hash = Info::getHashValue(Key);
+    return Hash == FoldingSetNodeIDRef::NotAHash ? 1 : Hash;
+  }
 };
 
 //===----------------------------------------------------------------------===//

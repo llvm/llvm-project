@@ -3975,7 +3975,6 @@ class SCEVSequentialMinMaxDeduplicatingVisitor final
     : public SCEVVisitor<SCEVSequentialMinMaxDeduplicatingVisitor,
                          std::optional<const SCEV *>> {
   using RetVal = std::optional<const SCEV *>;
-  using Base = SCEVVisitor<SCEVSequentialMinMaxDeduplicatingVisitor, RetVal>;
 
   ScalarEvolution &SE;
   const SCEVTypes RootKind; // Must be a sequential min/max expression.
@@ -3988,33 +3987,30 @@ class SCEVSequentialMinMaxDeduplicatingVisitor final
     return RootKind == Kind || NonSequentialRootKind == Kind;
   };
 
-  RetVal visitAnyMinMaxExpr(const SCEV *S) {
-    assert((isa<SCEVMinMaxExpr>(S) || isa<SCEVSequentialMinMaxExpr>(S)) &&
-           "Only for min/max expressions.");
-    SCEVTypes Kind = S->getSCEVType();
-
-    if (!canRecurseInto(Kind))
-      return S;
-
-    auto *NAry = cast<SCEVNAryExpr>(S);
-    SmallVector<SCEVUse> NewOps;
-    bool Changed = visit(Kind, NAry->operands(), NewOps);
-
-    if (!Changed)
-      return S;
-    if (NewOps.empty())
-      return std::nullopt;
-
-    return isa<SCEVSequentialMinMaxExpr>(S)
-               ? SE.getSequentialMinMaxExpr(Kind, NewOps)
-               : SE.getMinMaxExpr(Kind, NewOps);
-  }
-
   RetVal visit(const SCEV *S) {
     // Has the whole operand been seen already?
     if (!SeenOps.insert(S).second)
       return std::nullopt;
-    return Base::visit(S);
+    if (isa<SCEVMinMaxExpr, SCEVSequentialMinMaxExpr>(S)) {
+      SCEVTypes Kind = S->getSCEVType();
+
+      if (!canRecurseInto(Kind))
+        return S;
+
+      auto *NAry = cast<SCEVNAryExpr>(S);
+      SmallVector<SCEVUse> NewOps;
+      bool Changed = visit(Kind, NAry->operands(), NewOps);
+
+      if (!Changed)
+        return S;
+      if (NewOps.empty())
+        return std::nullopt;
+
+      return isa<SCEVSequentialMinMaxExpr>(S)
+                 ? SE.getSequentialMinMaxExpr(Kind, NewOps)
+                 : SE.getMinMaxExpr(Kind, NewOps);
+    }
+    return S;
   }
 
 public:
@@ -4043,50 +4039,6 @@ public:
       NewOps = std::move(Ops);
     return Changed;
   }
-
-  RetVal visitConstant(const SCEVConstant *Constant) { return Constant; }
-
-  RetVal visitVScale(const SCEVVScale *VScale) { return VScale; }
-
-  RetVal visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) { return Expr; }
-
-  RetVal visitTruncateExpr(const SCEVTruncateExpr *Expr) { return Expr; }
-
-  RetVal visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) { return Expr; }
-
-  RetVal visitSignExtendExpr(const SCEVSignExtendExpr *Expr) { return Expr; }
-
-  RetVal visitAddExpr(const SCEVAddExpr *Expr) { return Expr; }
-
-  RetVal visitMulExpr(const SCEVMulExpr *Expr) { return Expr; }
-
-  RetVal visitUDivExpr(const SCEVUDivExpr *Expr) { return Expr; }
-
-  RetVal visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
-
-  RetVal visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    return visitAnyMinMaxExpr(Expr);
-  }
-
-  RetVal visitUMaxExpr(const SCEVUMaxExpr *Expr) {
-    return visitAnyMinMaxExpr(Expr);
-  }
-
-  RetVal visitSMinExpr(const SCEVSMinExpr *Expr) {
-    return visitAnyMinMaxExpr(Expr);
-  }
-
-  RetVal visitUMinExpr(const SCEVUMinExpr *Expr) {
-    return visitAnyMinMaxExpr(Expr);
-  }
-
-  RetVal visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
-    return visitAnyMinMaxExpr(Expr);
-  }
-
-  RetVal visitUnknown(const SCEVUnknown *Expr) { return Expr; }
-
-  RetVal visitCouldNotCompute(const SCEVCouldNotCompute *Expr) { return Expr; }
 };
 
 } // namespace
@@ -8414,23 +8366,29 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  std::optional<unsigned> Res;
-  for (auto *ExitingBB : ExitingBlocks) {
-    unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
-    if (!Res)
-      Res = Multiple;
-    Res = std::gcd(*Res, Multiple);
-  }
-  return Res.value_or(1);
-}
-
-unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
-                                                       const SCEV *ExitCount) {
-  if (isa<SCEVCouldNotCompute>(ExitCount))
+  // An exit with an uncomputable exit count makes the result 1.
+  if (ExitingBlocks.empty() ||
+      any_of(ExitingBlocks, [this, L](BasicBlock *ExitingBB) {
+        return isa<SCEVCouldNotCompute>(getExitCount(L, ExitingBB));
+      }))
     return 1;
 
+  LoopGuards Guards = LoopGuards::collect(L, *this);
+  unsigned Res = 0;
+  for (BasicBlock *ExitingBB : ExitingBlocks)
+    Res = std::gcd(
+        Res, getSmallConstantTripMultiple(getExitCount(L, ExitingBB), Guards));
+  return Res;
+}
+
+unsigned
+ScalarEvolution::getSmallConstantTripMultiple(const SCEV *ExitCount,
+                                              const LoopGuards &Guards) {
+  assert(!isa<SCEVCouldNotCompute>(ExitCount) && "Must be computable!");
+
   // Get the trip count
-  const SCEV *TCExpr = getTripCountFromExitCount(applyLoopGuards(ExitCount, L));
+  const SCEV *TCExpr =
+      getTripCountFromExitCount(applyLoopGuards(ExitCount, Guards));
 
   APInt Multiple = getNonZeroConstantMultiple(TCExpr);
   // If a trip multiple is huge (>=2^32), the trip count is still divisible by
@@ -8438,6 +8396,14 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   return Multiple.getActiveBits() > 32
              ? 1U << std::min(31U, Multiple.countTrailingZeros())
              : (unsigned)Multiple.getZExtValue();
+}
+
+unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
+                                                       const SCEV *ExitCount) {
+  if (isa<SCEVCouldNotCompute>(ExitCount))
+    return 1;
+
+  return getSmallConstantTripMultiple(ExitCount, LoopGuards::collect(L, *this));
 }
 
 /// Returns the largest constant divisor of the trip count of this loop as a
@@ -9722,9 +9688,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
 /// Return true if we can constant fold an instruction of the specified type,
 /// assuming that all operands were constants.
 static bool CanConstantFold(const Instruction *I) {
-  if (isa<BinaryOperator>(I) || isa<CmpInst>(I) ||
-      isa<SelectInst>(I) || isa<CastInst>(I) || isa<GetElementPtrInst>(I) ||
-      isa<LoadInst>(I) || isa<ExtractValueInst>(I))
+  if (isa<BinaryOperator, UnaryOperator, GEPOperator, FreezeInst, CmpInst,
+          SelectInst, CastInst, LoadInst, ExtractElementInst, InsertElementInst,
+          ExtractValueInst, InsertValueInst>(I))
     return true;
 
   if (const CallInst *CI = dyn_cast<CallInst>(I))
@@ -12854,6 +12820,31 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   return SE.isKnownPredicate(Pred, LStart, RStart);
 }
 
+/// Is LHS `Pred` RHS true because one of them is an AddRec that is known not to
+/// go below its own start value?
+static bool IsKnownPredicateViaAddRecMonotonicity(ScalarEvolution &SE,
+                                                  CmpPredicate Pred,
+                                                  const SCEV *LHS,
+                                                  const SCEV *RHS) {
+  // Normalize to (AddRec Pred Start).
+  if (!isa<SCEVAddRecExpr>(LHS) && isa<SCEVAddRecExpr>(RHS)) {
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+    std::swap(LHS, RHS);
+  }
+
+  // The recurrence is equal to Start in the first iteration, so only the
+  // non-strict predicate holds.
+  if (Pred != ICmpInst::ICMP_UGE && Pred != ICmpInst::ICMP_SGE)
+    return false;
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  if (!AR || AR->getStart() != RHS)
+    return false;
+
+  return SE.getMonotonicPredicateType(AR, Pred) ==
+         ScalarEvolution::MonotonicallyIncreasing;
+}
+
 /// Is LHS `Pred` RHS true on the virtue of LHS or RHS being a Min or Max
 /// expression?
 static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
@@ -13114,6 +13105,7 @@ bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
          isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
          IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS) ||
+         IsKnownPredicateViaAddRecMonotonicity(*this, Pred, LHS, RHS) ||
          isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
 }
 
@@ -15469,7 +15461,7 @@ SCEVWrapPredicate::getImpliedFlags(const SCEVAddRecExpr *AR,
 /// Union predicates don't get cached so create a dummy set ID for it.
 SCEVUnionPredicate::SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds,
                                        ScalarEvolution &SE)
-    : SCEVPredicate(FoldingSetNodeIDRef(nullptr, 0), P_Union) {
+    : SCEVPredicate(FoldingSetNodeIDRef(), P_Union) {
   for (const auto *P : Preds)
     add(P, SE);
 }
