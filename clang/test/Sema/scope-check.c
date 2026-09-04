@@ -264,3 +264,18 @@ d:  // expected-note {{possible target of asm goto statement}}
   (void)a[0];
 }
 
+// Ensure that we don't trigger 'jump bypasses initialization' errors for non
+// destructed types.
+void GH68746(int cond) {
+  struct TrivialCL {int a;} s;
+  switch (cond) {
+  case 0:
+    s = (struct TrivialCL){ .a = 1 };
+    break;
+  case 1:
+    s = (struct TrivialCL){ .a = 2 };
+    break;
+  default:
+    break;
+  }
+}
