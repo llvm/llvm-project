@@ -1635,6 +1635,7 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
 
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo
+      libc.src.netdb.gai_strerror
       libc.src.netdb.getaddrinfo
 
       # regex.h entrypoints
