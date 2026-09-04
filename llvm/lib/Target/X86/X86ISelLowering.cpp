@@ -53888,7 +53888,6 @@ static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
 static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
-  assert(N->getOpcode() == ISD::OR && "Invalid Node. Expected OR.");
 
   // If optimizing for code size, run irrespective of slow SHLD.
   // If not optimizing for code size and SHLD is slow, then bail.
