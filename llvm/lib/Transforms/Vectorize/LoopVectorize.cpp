@@ -198,13 +198,6 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
              "value are vectorized only if no scalar iteration overheads "
              "are incurred."));
 
-// Keep the default in sync with -stencil-merge-check-threshold in
-// LoopAccessAnalysis.cpp, which starts merging stencil runtime checks once
-// the count goes above this limit.
-static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
-    "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
-    cl::desc("The maximum allowed number of runtime memory checks"));
-
 static cl::opt<bool> ForcePartialAliasingVectorization(
     "force-partial-aliasing-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Replace pointer diff checks with alias masks."));
@@ -1598,8 +1591,8 @@ public:
     // runtime checks needs to be generated.
     // TODO: Skip cutoff if the loop is guaranteed to execute, e.g. due to
     // profile info.
-    CostTooHigh =
-        LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold;
+    CostTooHigh = LAI.getNumRuntimePointerChecks() >
+                  VectorizerParams::VectorizeMemoryCheckThreshold;
     if (CostTooHigh) {
       // Mark runtime checks as never succeeding when they exceed the threshold.
       MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
@@ -7341,7 +7334,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
     // TODO: Should we rename VectorizeMemoryCheckThreshold?
-    if (RtC > VectorizeMemoryCheckThreshold) {
+    if (RtC > VectorizerParams::VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");

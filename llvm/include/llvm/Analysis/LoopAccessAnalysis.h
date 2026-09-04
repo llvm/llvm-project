@@ -47,6 +47,10 @@ struct VectorizerParams {
   /// make more than this number of comparisons.
   LLVM_ABI static unsigned RuntimeMemoryCheckThreshold;
 
+  /// The maximum allowed number of runtime memory checks. Above this many
+  /// checks the vectorizer gives up on the loop.
+  LLVM_ABI static unsigned VectorizeMemoryCheckThreshold;
+
   // When creating runtime checks for nested loops, where possible try to
   // write the checks in a form that allows them to be easily hoisted out of
   // the outermost loop. For example, we can do this by expanding the range of

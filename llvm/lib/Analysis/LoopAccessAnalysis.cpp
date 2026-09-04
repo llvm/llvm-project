@@ -95,6 +95,13 @@ static cl::opt<unsigned, true> RuntimeMemoryCheckThreshold(
     cl::location(VectorizerParams::RuntimeMemoryCheckThreshold), cl::init(8));
 unsigned VectorizerParams::RuntimeMemoryCheckThreshold;
 
+static cl::opt<unsigned, true> VectorizeMemoryCheckThreshold(
+    "vectorize-memory-check-threshold", cl::Hidden,
+    cl::desc("The maximum allowed number of runtime memory checks"),
+    cl::location(VectorizerParams::VectorizeMemoryCheckThreshold),
+    cl::init(128));
+unsigned VectorizerParams::VectorizeMemoryCheckThreshold;
+
 /// The maximum iterations used to merge memory checks
 static cl::opt<unsigned> MemoryCheckMergeThreshold(
     "memory-check-merge-threshold", cl::Hidden,
@@ -113,20 +120,10 @@ static cl::opt<StencilMergePolicy> StencilMerge(
                    "Disable stencil merge (default)"),
         clEnumValN(StencilMergePolicy::Auto, "auto",
                    "Enable stencil merge when runtime check count exceeds "
-                   "the threshold"),
+                   "-vectorize-memory-check-threshold"),
         clEnumValN(StencilMergePolicy::Force, "force",
                    "Always attempt stencil merge regardless of check "
                    "count")));
-
-// Keep the default in sync with -vectorize-memory-check-threshold in
-// LoopVectorize.cpp. Above that many checks the vectorizer gives up on the
-// loop, so that is where merging starts to matter.
-static cl::opt<unsigned> StencilMergeCheckThreshold(
-    "stencil-merge-check-threshold", cl::Hidden,
-    cl::desc("Auto-trigger stencil group merging when runtime check count "
-             "exceeds this threshold (default = 128). Only used when "
-             "-stencil-runtime-check-merge is auto."),
-    cl::init(128));
 
 static cl::opt<unsigned> StencilMergeMaxGroups(
     "stencil-merge-max-groups", cl::Hidden,
@@ -1155,7 +1152,9 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
         if (needsChecking(CheckingGroups[I], CheckingGroups[J]))
           ++TotalChecks;
 
-    if (TotalChecks <= StencilMergeCheckThreshold) {
+    // Above this many checks the vectorizer gives up on the loop, so that is
+    // where merging starts to matter.
+    if (TotalChecks <= VectorizerParams::VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(dbgs() << "LAA: " << TotalChecks
                         << " checks <= threshold, skipping stencil merge\n");
       return;
