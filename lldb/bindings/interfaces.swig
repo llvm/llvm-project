@@ -93,6 +93,7 @@
 
 /* Method replacements, must be called before the including API headers. */
 REPLACE_BUF_GETTER_WITH_STRING(SBStructuredData, GetStringValue)
+REPLACE_BUF_GETTER_WITH_STRING(SBFileSpec, GetPath)
 
 /* API headers */
 %include "lldb/API/SBAddress.h"
