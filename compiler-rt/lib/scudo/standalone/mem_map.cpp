@@ -67,7 +67,7 @@ s64 MemMapDefault::getResidentPagesImpl(UNUSED uptr From, UNUSED uptr Size) {
 }
 
 bool ReservedMemoryDefault::createImpl(uptr Addr, uptr Size, const char *Name,
-                                       uptr Flags) {
+                                       uptr Flags, UNUSED uptr AlignmentPages) {
   void *Reserved = ::scudo::map(reinterpret_cast<void *>(Addr), Size, Name,
                                 Flags | MAP_NOACCESS, &Data);
   if (Reserved == nullptr)

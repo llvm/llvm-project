@@ -150,6 +150,30 @@ template <typename SizeClassMapT> struct TestConfig5 {
   };
 };
 
+template <typename SizeClassMapT> struct MultiRegionsConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+    static const bool EnableMultiRegions = true;
+    static const bool EnableContiguousRegions = false;
+    static const bool EnableRandomOffset = false;
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 16U;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+#endif
+  };
+};
+
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct Config : public BaseConfig<SizeClassMapT> {};
 
@@ -157,10 +181,24 @@ template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct SizeClassAllocator
     : public scudo::SizeClassAllocator64<
           scudo::PrimaryConfig<Config<BaseConfig, SizeClassMapT>>> {};
+
 template <typename SizeClassMapT>
 struct SizeClassAllocator<TestConfig1, SizeClassMapT>
     : public scudo::SizeClassAllocator32<
           scudo::PrimaryConfig<Config<TestConfig1, SizeClassMapT>>> {};
+
+template <typename SizeClassMapT>
+#if SCUDO_CAN_USE_PRIMARY64
+struct SizeClassAllocator<MultiRegionsConfig, SizeClassMapT>
+    : public scudo::SizeClassAllocator64<
+          scudo::PrimaryConfig<Config<MultiRegionsConfig, SizeClassMapT>>> {
+};
+#else
+struct SizeClassAllocator<MultiRegionsConfig, SizeClassMapT>
+    : public scudo::SizeClassAllocator32<
+          scudo::PrimaryConfig<Config<MultiRegionsConfig, SizeClassMapT>>> {
+};
+#endif
 
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
@@ -191,7 +229,8 @@ struct ScudoPrimaryTest : public Test {};
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)                            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, MultiRegionsConfig)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -568,3 +607,27 @@ TEST(ScudoPrimaryTest, PushBlocksDifferentGroups) {
   SizeClassAllocator.destroy(nullptr);
 }
 #endif
+
+// Verify that it's possible to keep creating new regions.
+TEST(ScudoPrimaryTest, MultiRegionGrowth) {
+  using Primary = TestAllocator<MultiRegionsConfig, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::SizeClassAllocatorT SizeClassAllocator;
+  SizeClassAllocator.init(nullptr, Allocator.get());
+
+  // This loop will create numerous new regions.
+  std::vector<void *> Pointers;
+  for (size_t I = 0; I < 1000000; I++) {
+    void *P = SizeClassAllocator.allocate(1);
+    EXPECT_NE(P, nullptr);
+    Pointers.push_back(P);
+  }
+
+  // Freeing so many pointers will create numerous BatchClassID regions.
+  for (void *P : Pointers) {
+    SizeClassAllocator.deallocate(1, P);
+  }
+
+  SizeClassAllocator.destroy(nullptr);
+}

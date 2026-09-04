@@ -52,7 +52,8 @@ public:
   uptr getCapacityImpl() { return MapCapacity; }
 
   // These threes are specific to `ReservedMemory`.
-  bool createImpl(uptr Addr, uptr Size, const char *Name, uptr Flags);
+  bool createImpl(uptr Addr, uptr Size, const char *Name, uptr Flags,
+                  uptr AlignmentPages);
   void releaseImpl();
   MemMapT dispatchImpl(uptr Addr, uptr Size);
 
