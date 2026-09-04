@@ -14,6 +14,27 @@ body[data-theme="dark"] {
   --clang-code-comparison-good-border: #3fb950;
 }
 
+/* Use the full viewport on ordinary desktop displays, where Furo's fixed
+   content width leaves little room after both sidebars. Once the content area
+   reaches 90em (84em plus padding), grow symmetric outer margins instead. */
+@media (min-width: 67em) {
+  .page .sidebar-drawer {
+    width: max(15em, calc(50% - 45em));
+  }
+
+  .main > .content {
+    width: min(84em, calc(100vw - 36em));
+  }
+}
+
+/* Furo moves the page-local TOC into a drawer below 82em, freeing its 15em
+   column for the main content. */
+@media (min-width: 67em) and (max-width: 82em) {
+  .main > .content {
+    width: calc(100vw - 21em);
+  }
+}
+
 .content img.light-background {
   background-color: #fff;
 }
