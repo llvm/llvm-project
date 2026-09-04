@@ -82,6 +82,44 @@ gpu.module @truncf_bf16_f8 [#xevm.target<chip = "cri">] {
 
 // -----
 
+// A source wider than one conversion group is converted a group at a time and
+// the packed results are concatenated. 32 bf16 -> 32 fp4 is two groups of 16,
+// each packed into vector<8xi8>.
+
+// CHECK-LABEL: gpu.func @truncf_bf16_e2m1_wide
+// CHECK-SAME: (%[[ARG0:.*]]: vector<32xbf16>)
+gpu.module @truncf_bf16_e2m1_wide [#xevm.target<chip = "cri">] {
+  gpu.func @truncf_bf16_e2m1_wide(%a: vector<32xbf16>) kernel {
+    // CHECK: %[[ZERO:.*]] = arith.constant dense<0> : vector<16xi8>
+    // CHECK: %[[S0:.*]] = vector.extract_strided_slice %[[ARG0]] offsets = [0], sizes = [16], strides = [1] : vector<32xbf16> to vector<16xbf16>
+    // CHECK: %[[T0:.*]] = xevm.truncf %[[S0]] {src_etype = bf16, dst_etype = e2m1} : (vector<16xbf16>) -> vector<8xi8>
+    // CHECK: %[[P0:.*]] = vector.insert_strided_slice %[[T0]], %[[ZERO]] offsets = [0], strides = [1] : vector<8xi8> into vector<16xi8>
+    // CHECK: %[[S1:.*]] = vector.extract_strided_slice %[[ARG0]] offsets = [16], sizes = [16], strides = [1] : vector<32xbf16> to vector<16xbf16>
+    // CHECK: %[[T1:.*]] = xevm.truncf %[[S1]] {src_etype = bf16, dst_etype = e2m1} : (vector<16xbf16>) -> vector<8xi8>
+    // CHECK: %[[P1:.*]] = vector.insert_strided_slice %[[T1]], %[[P0]] offsets = [8], strides = [1] : vector<8xi8> into vector<16xi8>
+    // CHECK: %{{.*}} = vector.bitcast %[[P1]] : vector<16xi8> to vector<32xi4>
+    %r = arith.truncf %a : vector<32xbf16> to vector<32xf4E2M1FN>
+    gpu.return
+  }
+}
+
+// -----
+
+// A source that is not a whole number of conversion groups has no xevm.truncf
+// lowering and is left for the regular arith-to-LLVM path.
+
+// CHECK-LABEL: gpu.func @truncf_partial_group
+gpu.module @truncf_partial_group [#xevm.target<chip = "cri">] {
+  gpu.func @truncf_partial_group(%a: vector<24xbf16>) kernel {
+    // CHECK: %{{.*}} = arith.truncf %{{.*}} : vector<24xbf16> to vector<24xf4E2M1FN>
+    // CHECK-NOT: xevm.truncf
+    %r = arith.truncf %a : vector<24xbf16> to vector<24xf4E2M1FN>
+    gpu.return
+  }
+}
+
+// -----
+
 // Plain float extensions/truncations are not micro-scaling and must be left
 // untouched for the regular arith-to-LLVM lowering.
 
