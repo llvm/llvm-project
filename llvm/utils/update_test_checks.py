@@ -72,7 +72,8 @@ def update_test(ti: common.TestInfo):
             continue
 
         tool_cmd_args = tool_cmd[len(tool_basename) :].strip()
-        tool_cmd_args = tool_cmd_args.replace("< %s", "").replace("%s", "").strip()
+        tool_cmd_args = re.sub(r"(?:^|\s)< %s(?=\s|$)", "", tool_cmd_args)
+        tool_cmd_args = re.sub(r"(?:^|\s)%s(?=\s|$)", "", tool_cmd_args).strip()
         check_prefixes = common.get_check_prefixes(filecheck_cmd)
 
         # FIXME: We should use multiple check prefixes to common check lines. For
