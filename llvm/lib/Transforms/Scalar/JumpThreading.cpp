@@ -549,6 +549,119 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
   return dyn_cast<ConstantInt>(Val);
 }
 
+static bool getUniqueIncomingValueForBlock(PHINode *PN, BasicBlock *IncomingBB,
+                                           Value *&IncomingValue) {
+  IncomingValue = nullptr;
+  bool SeenIncoming = false;
+  for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
+    if (PN->getIncomingBlock(I) != IncomingBB)
+      continue;
+
+    Value *CurrentValue = PN->getIncomingValue(I);
+    if (!SeenIncoming) {
+      IncomingValue = CurrentValue;
+      SeenIncoming = true;
+      continue;
+    }
+
+    if (IncomingValue != CurrentValue)
+      return false;
+  }
+
+  return SeenIncoming;
+}
+
+static std::optional<bool>
+getIncomingBlockConditionValue(Value *Cond, PHINode *GuardPN,
+                               unsigned IncomingIdx) {
+  BasicBlock *PhiBB = GuardPN->getParent();
+  BasicBlock *IncomingBB = GuardPN->getIncomingBlock(IncomingIdx);
+
+  auto *Cmp = dyn_cast<ICmpInst>(Cond);
+  if (!Cmp)
+    return std::nullopt;
+
+  PHINode *CmpPN = dyn_cast<PHINode>(Cmp->getOperand(0));
+  bool GuardOnLHS = true;
+  if (!CmpPN || CmpPN->getParent() != PhiBB) {
+    CmpPN = dyn_cast<PHINode>(Cmp->getOperand(1));
+    GuardOnLHS = false;
+  }
+
+  if (CmpPN != GuardPN)
+    return std::nullopt;
+
+  Value *LHS = GuardOnLHS
+                   ? GuardPN->getIncomingValue(IncomingIdx)
+                   : Cmp->getOperand(0)->DoPHITranslation(PhiBB, IncomingBB);
+  Value *RHS = GuardOnLHS
+                   ? Cmp->getOperand(1)->DoPHITranslation(PhiBB, IncomingBB)
+                   : GuardPN->getIncomingValue(IncomingIdx);
+  if (auto *C = dyn_cast_or_null<ConstantInt>(simplifyCmpInst(
+          Cmp->getPredicate(), LHS, RHS, {PhiBB->getDataLayout()})))
+    return !C->isZero();
+  return std::nullopt;
+}
+
+/// Try to infer a PHI value on the edge FromBB -> ToBB by using another PHI in
+/// the same block that controls the branch in FromBB. If the branch condition
+/// makes exactly one incoming block feasible, use the corresponding incoming
+/// value of V.
+static Constant *
+getKnownConstantFromCorrelatedPHI(Value *V, BasicBlock *FromBB,
+                                  BasicBlock *ToBB,
+                                  ConstantPreference Preference) {
+  auto *ValPN = dyn_cast<PHINode>(V);
+  if (!ValPN)
+    return nullptr;
+
+  auto *BI = dyn_cast<CondBrInst>(FromBB->getTerminator());
+  if (!BI || BI->getSuccessor(0) == BI->getSuccessor(1))
+    return nullptr;
+
+  const bool IsTrueDest = BI->getSuccessor(0) == ToBB;
+  if (!IsTrueDest && BI->getSuccessor(1) != ToBB)
+    return nullptr;
+
+  auto *Cond = BI->getCondition();
+  auto *Cmp = dyn_cast<ICmpInst>(Cond);
+  if (!Cmp)
+    return nullptr;
+
+  PHINode *GuardPN = dyn_cast<PHINode>(Cmp->getOperand(0));
+  if (!GuardPN || GuardPN->getParent() != ValPN->getParent())
+    GuardPN = dyn_cast<PHINode>(Cmp->getOperand(1));
+  if (!GuardPN || GuardPN->getParent() != ValPN->getParent())
+    return nullptr;
+
+  SmallPtrSet<BasicBlock *, 4> SeenIncomingBlocks;
+  SmallVector<BasicBlock *, 2> CandidateIncomingBlocks;
+  for (unsigned I = 0, E = GuardPN->getNumIncomingValues(); I != E; ++I) {
+    BasicBlock *IncomingBB = GuardPN->getIncomingBlock(I);
+    if (!SeenIncomingBlocks.insert(IncomingBB).second)
+      return nullptr;
+
+    std::optional<bool> CondValue =
+        getIncomingBlockConditionValue(Cond, GuardPN, I);
+    if (CondValue && *CondValue != IsTrueDest)
+      continue;
+
+    CandidateIncomingBlocks.push_back(IncomingBB);
+    if (CandidateIncomingBlocks.size() > 1)
+      return nullptr;
+  }
+
+  if (CandidateIncomingBlocks.size() != 1)
+    return nullptr;
+
+  Value *IncomingValue = nullptr;
+  if (!getUniqueIncomingValueForBlock(ValPN, CandidateIncomingBlocks.front(),
+                                      IncomingValue))
+    return nullptr;
+
+  return getKnownConstant(IncomingValue, Preference);
+}
+
 /// computeValueKnownInPredecessors - Given a basic block BB and a value V, see
 /// if we can infer that the value is a known ConstantInt/BlockAddress or undef
 /// in any of our predecessors.  If so, return the known list of value and pred
@@ -588,6 +701,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       // If the value is known by LazyValueInfo to be a constant in a
       // predecessor, use that information to try to thread this block.
       Constant *PredCst = LVI->getConstantOnEdge(V, P, BB, CxtI);
+      if (!PredCst)
+        PredCst = getKnownConstantFromCorrelatedPHI(V, P, BB, Preference);
       // If I is a non-local compare-with-constant instruction, use more-rich
       // 'getPredicateOnEdge' method. This would be able to handle value
       // inequalities better, for example if the compare is "X < 4" and "X < 3"
