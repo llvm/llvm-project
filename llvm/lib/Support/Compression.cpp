@@ -23,6 +23,9 @@
 #if LLVM_ENABLE_ZSTD
 #include <zstd.h>
 #endif
+#if LLVM_ENABLE_LZMA
+#include <lzma.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::compression;
@@ -241,4 +244,126 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
                        size_t UncompressedSize) {
   llvm_unreachable("zstd::decompress is unavailable");
 }
+#endif
+
+#if LLVM_ENABLE_LZMA
+
+bool xz::isAvailable() { return true; }
+
+// Returns a C string rather than a StringRef because every caller feeds the
+// result to a printf-style "%s", which requires NUL termination.
+static const char *convertLZMACodeToString(lzma_ret Code) {
+  switch (Code) {
+  case LZMA_STREAM_END:
+    return "lzma error: LZMA_STREAM_END";
+  case LZMA_NO_CHECK:
+    return "lzma error: LZMA_NO_CHECK";
+  case LZMA_UNSUPPORTED_CHECK:
+    return "lzma error: LZMA_UNSUPPORTED_CHECK";
+  case LZMA_GET_CHECK:
+    return "lzma error: LZMA_GET_CHECK";
+  case LZMA_MEM_ERROR:
+    return "lzma error: LZMA_MEM_ERROR";
+  case LZMA_MEMLIMIT_ERROR:
+    return "lzma error: LZMA_MEMLIMIT_ERROR";
+  case LZMA_FORMAT_ERROR:
+    return "lzma error: LZMA_FORMAT_ERROR";
+  case LZMA_OPTIONS_ERROR:
+    return "lzma error: LZMA_OPTIONS_ERROR";
+  case LZMA_DATA_ERROR:
+    return "lzma error: LZMA_DATA_ERROR";
+  case LZMA_BUF_ERROR:
+    return "lzma error: LZMA_BUF_ERROR";
+  case LZMA_PROG_ERROR:
+    return "lzma error: LZMA_PROG_ERROR";
+  default:
+    llvm_unreachable("unknown or unexpected lzma status code");
+  }
+}
+
+static Expected<uint64_t> getUncompressedSize(ArrayRef<uint8_t> InputBuffer) {
+  lzma_stream_flags opts{};
+  if (InputBuffer.size() < LZMA_STREAM_HEADER_SIZE) {
+    return createStringError(
+        inconvertibleErrorCode(),
+        "size of xz-compressed blob (%zu bytes) is smaller than the "
+        "LZMA_STREAM_HEADER_SIZE (%zu bytes)",
+        InputBuffer.size(), size_t(LZMA_STREAM_HEADER_SIZE));
+  }
+
+  // Decode xz footer.
+  lzma_ret xzerr = lzma_stream_footer_decode(
+      &opts, InputBuffer.take_back(LZMA_STREAM_HEADER_SIZE).data());
+  if (xzerr != LZMA_OK) {
+    return createStringError(inconvertibleErrorCode(),
+                             "lzma_stream_footer_decode()=%s",
+                             convertLZMACodeToString(xzerr));
+  }
+  if (InputBuffer.size() < (opts.backward_size + LZMA_STREAM_HEADER_SIZE)) {
+    return createStringError(
+        inconvertibleErrorCode(),
+        "xz-compressed buffer size (%zu bytes) too small (required at "
+        "least %" PRIu64 " bytes) ",
+        InputBuffer.size(),
+        uint64_t(opts.backward_size + LZMA_STREAM_HEADER_SIZE));
+  }
+
+  // Decode xz index.
+  lzma_index *xzindex;
+  uint64_t memlimit(UINT64_MAX);
+  size_t inpos = 0;
+  ArrayRef<uint8_t> IndexBuffer = InputBuffer.drop_back(LZMA_STREAM_HEADER_SIZE)
+                                      .take_back(opts.backward_size);
+  xzerr =
+      lzma_index_buffer_decode(&xzindex, &memlimit, nullptr, IndexBuffer.data(),
+                               &inpos, IndexBuffer.size());
+  if (xzerr != LZMA_OK) {
+    return createStringError(inconvertibleErrorCode(),
+                             "lzma_index_buffer_decode()=%s",
+                             convertLZMACodeToString(xzerr));
+  }
+
+  // Get size of uncompressed file to construct an in-memory buffer of the
+  // same size on the calling end (if needed).
+  uint64_t uncompressedSize = lzma_index_uncompressed_size(xzindex);
+
+  // Deallocate xz index as it is no longer needed.
+  lzma_index_end(xzindex, nullptr);
+
+  return uncompressedSize;
+}
+
+Error xz::decompress(ArrayRef<uint8_t> Input,
+                     SmallVectorImpl<uint8_t> &Output) {
+  Expected<uint64_t> uncompressedSize = getUncompressedSize(Input);
+
+  if (auto err = uncompressedSize.takeError())
+    return err;
+
+  Output.resize(*uncompressedSize);
+
+  // Decompress xz buffer to buffer.
+  uint64_t memlimit = UINT64_MAX;
+  size_t inpos = 0;
+  size_t outpos = 0;
+  lzma_ret ret = lzma_stream_buffer_decode(&memlimit, 0, nullptr, Input.data(),
+                                           &inpos, Input.size(), Output.data(),
+                                           &outpos, Output.size());
+  if (ret != LZMA_OK) {
+    return createStringError(inconvertibleErrorCode(),
+                             "lzma_stream_buffer_decode()=%s",
+                             convertLZMACodeToString(ret));
+  }
+
+  return Error::success();
+}
+
+#else
+
+bool xz::isAvailable() { return false; }
+Error xz::decompress(ArrayRef<uint8_t> Input,
+                     SmallVectorImpl<uint8_t> &Output) {
+  llvm_unreachable("xz::decompress is unavailable");
+}
+
 #endif

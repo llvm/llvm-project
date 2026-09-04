@@ -20,7 +20,6 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Host/LZMA.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
@@ -44,6 +43,7 @@
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -2235,7 +2235,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (!section)
     return nullptr;
 
-  if (!lldb_private::lzma::isAvailable()) {
+  if (!llvm::compression::xz::isAvailable()) {
     GetModule()->ReportWarning(
         "no LZMA support found for reading .gnu_debugdata section");
     return nullptr;
@@ -2245,7 +2245,8 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   DataExtractor data;
   section->GetSectionData(data);
   llvm::SmallVector<uint8_t, 0> uncompressedData;
-  auto err = lldb_private::lzma::uncompress(data.GetData(), uncompressedData);
+  auto err =
+      llvm::compression::xz::decompress(data.GetData(), uncompressedData);
   if (err) {
     GetModule()->ReportWarning(
         "an error occurred while decompressing the section {0}: {1}",
