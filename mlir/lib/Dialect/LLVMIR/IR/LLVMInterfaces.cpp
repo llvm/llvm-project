@@ -117,9 +117,15 @@ SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
 }
 
 SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
-  return llvm::filter_to_vector(getArgOperands(), [](Value arg) {
-    return isa<LLVMPointerType>(arg.getType());
-  });
+  // Note: This must not use `getArgOperands`, which excludes the variadic
+  // arguments of a call to a variadic callee. Those are passed to the callee
+  // and may well be accessed by it.
+  Operation::operand_range operands = getCalleeOperands();
+  // In an indirect call, the first callee operand is the callee itself.
+  if (!getCallee().has_value() && !operands.empty())
+    operands = operands.drop_front();
+  return llvm::filter_to_vector(
+      operands, [](Value arg) { return isa<LLVMPointerType>(arg.getType()); });
 }
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"

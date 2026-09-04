@@ -7,6 +7,11 @@
 ; RUN: llc -mtriple=amdgpu11 -mcpu=gfx1100 -filetype=null %s
 ; RUN: llc -mtriple=amdgpu11.7 -mcpu=gfx1170 -filetype=null %s
 
+; RUN: llc -mtriple=amdgpu12.5 -mcpu=gfx1250 -filetype=null %s
+; RUN: llc -mtriple=amdgpu12.5 -mcpu=gfx1251 -filetype=null %s
+; RUN: llc -mtriple=amdgpu12.50 -mcpu=gfx1250 -filetype=null %s
+; RUN: llc -mtriple=amdgpu12.50s -mcpu=gfx1250-strict -filetype=null %s
+
 ; Test legacy missing subarch
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx950 -filetype=null %s
 ; RUN: llc -mtriple=amdgpu -mcpu=gfx950 -filetype=null %s
@@ -31,6 +36,13 @@
 ; RUN: sed 's/TARGET_CPU/gfx908/g' < %s | not llc -mtriple=amdgpu9 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: sed 's/TARGET_CPU/gfx1170/g' < %s | not llc -mtriple=amdgpu11 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: sed 's/TARGET_CPU/gfx1100/g' < %s | not llc -mtriple=amdgpu11.7 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+
+; RUN: sed 's/TARGET_CPU/gfx1250-strict/g' < %s | not llc -mtriple=amdgpu12.5 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: sed 's/TARGET_CPU/gfx1250-strict/g' < %s | not llc -mtriple=amdgpu12.50 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: sed 's/TARGET_CPU/gfx1250-strict/g' < %s | not llc -mtriple=amdgpu12.51 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: sed 's/TARGET_CPU/gfx1250-strict/g' < %s | not llc -mtriple=amdgpu12 -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: sed 's/TARGET_CPU/gfx1250/g' < %s | not llc -mtriple=amdgpu12.50s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: sed 's/TARGET_CPU/gfx1251/g' < %s | not llc -mtriple=amdgpu12.50s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; Check that subtargets not covered by the subarch are rejected. This
 ; tests the error on subtarget construction, which is different from

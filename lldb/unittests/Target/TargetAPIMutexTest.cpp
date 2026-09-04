@@ -14,6 +14,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Policy.h"
 #include "gtest/gtest.h"
 
 #include <thread>
@@ -120,6 +121,15 @@ TEST_F(TargetAPIMutexTargetTest, BareHandleDoesNotAutoUnlockOnDestruction) {
     EXPECT_FALSE(background_lock.try_lock());
   });
   t.join();
+
+  // Unlock the original locked mutex.
+  // Calling try_lock() resolves the underlying mutex and re-enters it on this
+  // thread (incrementing the recursive count), so we unlock twice to fully
+  // release both acquisitions.
+  TargetAPIMutex cleanup_lock(target_sp);
+  ASSERT_TRUE(cleanup_lock.try_lock());
+  cleanup_lock.unlock();
+  cleanup_lock.unlock();
 }
 
 TEST_F(TargetAPIMutexTargetTest, LockGuardReleasesOnScopeExit) {
@@ -192,4 +202,64 @@ TEST_F(TargetAPIMutexTargetTest, ResolvesFreshOnEachLockCall) {
   });
   contended.join();
   lock.unlock();
+}
+
+TEST_F(TargetAPIMutexTargetTest,
+       UnlockReplaysLockResolutionAcrossPolicyChange) {
+  // lock() and unlock() must agree on which mutex they touch even if the
+  // calling thread's policy changes in between: unlock() replays lock()'s
+  // resolution rather than re-resolving from the current policy.
+  TargetSP target_sp = CreateTarget();
+  ASSERT_TRUE(target_sp);
+
+  TargetAPIMutex lock(target_sp);
+  lock.lock();
+
+  // If unlock() re-resolved here it would see the bypass and skip releasing
+  // the mutex it actually locked.
+  {
+    PolicyStack::Guard guard = PolicyStack::Get().PushScriptedExtensionCall();
+    lock.unlock();
+  }
+
+  // The real mutex must have actually been released: a fresh acquisition
+  // from a different thread (outside the bypass policy) must succeed
+  // immediately. A same-thread try_lock() would pass even if unlock() had
+  // incorrectly no-op'd, since std::recursive_mutex lets the same thread
+  // reenter a lock it still holds.
+  std::thread t([target_sp]() {
+    TargetAPIMutex background_lock(target_sp);
+    EXPECT_TRUE(background_lock.try_lock());
+    background_lock.unlock();
+  });
+  t.join();
+}
+
+TEST_F(TargetAPIMutexTargetTest, BypassPolicyMakesTryLockANoOp) {
+  TargetSP target_sp = CreateTarget();
+  ASSERT_TRUE(target_sp);
+
+  TargetAPIMutex holder(target_sp);
+  holder.lock();
+
+  // The contention has to come from another thread: std::recursive_mutex lets
+  // the owning thread reenter a lock it already holds, so a same-thread
+  // try_lock() would succeed whether or not the bypass is in effect.
+  std::thread contended([target_sp]() {
+    TargetAPIMutex background_lock(target_sp);
+    EXPECT_FALSE(background_lock.try_lock());
+  });
+  contended.join();
+
+  // The bypass touches no primitive, so the same acquisition succeeds while
+  // the real mutex is held elsewhere.
+  std::thread bypassed([target_sp]() {
+    PolicyStack::Guard guard = PolicyStack::Get().PushScriptedExtensionCall();
+    TargetAPIMutex background_lock(target_sp);
+    EXPECT_TRUE(background_lock.try_lock());
+    background_lock.unlock();
+  });
+  bypassed.join();
+
+  holder.unlock();
 }

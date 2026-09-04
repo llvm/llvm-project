@@ -73,12 +73,12 @@ end module
 ! module-scoped name (getScopedUserReductionName, byte-identical on the clause
 ! side) and bound; no clause aborts the compile. The scoped name embeds the
 ! operator's mangled spelling (op.+, op.*, op.AND, op.OR, op.EQV, op.NEQV).
-! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" : !fir.ref
-! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*op\.\*[A-Za-z0-9_.]*}}" : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.AND[A-Za-z0-9_.]*}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.OR[A-Za-z0-9_.]*}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.EQV[A-Za-z0-9_.]*}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.NEQV[A-Za-z0-9_.]*}} : !fir.ref
+! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*op\.\*[A-Za-z0-9_.]*}}" byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.AND[A-Za-z0-9_.]*}} byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.OR[A-Za-z0-9_.]*}} byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.EQV[A-Za-z0-9_.]*}} byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*op\.NEQV[A-Za-z0-9_.]*}} byref_element_type({{.*}}) : !fir.ref
 ! CHECK-NOT: not yet implemented
 program main
   use m, only: t, operator(+), operator(*), operator(.and.), &

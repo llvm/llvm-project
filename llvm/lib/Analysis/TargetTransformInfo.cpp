@@ -248,8 +248,8 @@ int TargetTransformInfo::getInlinerVectorBonusPercent() const {
 
 InstructionCost TargetTransformInfo::getGEPCost(
     Type *PointeeType, const Value *Ptr, ArrayRef<const Value *> Operands,
-    Type *AccessType, TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
+    TTI::TargetCostKind CostKind, Type *AccessType) const {
+  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, CostKind, AccessType);
 }
 
 InstructionCost TargetTransformInfo::getPointersChainCost(
@@ -839,10 +839,6 @@ unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
   return TTIImpl->getMinVectorRegisterBitWidth();
 }
 
-std::optional<unsigned> TargetTransformInfo::getMaxVScale() const {
-  return TTIImpl->getMaxVScale();
-}
-
 std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
 }
@@ -1020,9 +1016,8 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   // ReplaceWithVecLib pass.
   if (TLibInfo && Opcode == Instruction::FRem) {
     VectorType *VecTy = dyn_cast<VectorType>(Ty);
-    LibFunc Func;
-    if (VecTy &&
-        TLibInfo->getLibFunc(Instruction::FRem, Ty->getScalarType(), Func) &&
+    LibFunc Func = TLibInfo->getLibFunc(Instruction::FRem, Ty->getScalarType());
+    if (VecTy && Func != NotLibFunc &&
         TLibInfo->isFunctionVectorizable(TLibInfo->getName(Func),
                                          VecTy->getElementCount()))
       return getCallInstrCost(nullptr, VecTy, {VecTy, VecTy}, CostKind);
@@ -1044,16 +1039,17 @@ InstructionCost TargetTransformInfo::getAltInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getShuffleCost(
-    ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy, ArrayRef<int> Mask,
-    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
   assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
          "Expected the same scalar types");
   InstructionCost Cost = TTIImpl->getShuffleCost(
-      Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp, Args, CxtI);
+      Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp, Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

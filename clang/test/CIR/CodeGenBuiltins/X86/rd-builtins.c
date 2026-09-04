@@ -7,9 +7,6 @@
 
 #include <x86intrin.h>
 
-// CIR-LABEL: @__rdpmc
-// CIR: cir.call_llvm_intrinsic "x86.rdpmc" %{{.*}} : (!s32i) -> !u64i
-
 unsigned long long test_rdpmc(int a) {
     // CIR-LABEL: test_rdpmc
     // CIR: cir.call @__rdpmc
@@ -26,6 +23,9 @@ unsigned long long test_rdpmc(int a) {
     // OGCG: ret i64 %{{.*}}
     return _rdpmc(a);
 }
+
+// CIR-LABEL: cir.func{{.*}} @__rdpmc(
+// CIR: cir.call_llvm_intrinsic "x86.rdpmc" %{{.*}} : (!s32i) -> !u64i
 
 unsigned long long test_rdtsc(void) {
   // CIR-LABEL: @test_rdtsc

@@ -36,13 +36,13 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 97
     %7 = LXSSPX %0, killed %6, implicit $rm
     ; CHECK:  lfs [[REG1:[0-9]+]], 97(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -92
     %12 = LXSSPX %0, killed %11, implicit $rm
     ; CHECK-NEXT:  lfs [[REG2:[0-9]+]], -92(3)
@@ -83,13 +83,13 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 99
     %7 = LXSDX %0, killed %6, implicit $rm
     ; CHECK:  lfd [[REG1:[0-9]+]], 99(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -120
     %12 = LXSDX %0, killed %11, implicit $rm
     ; CHECK-NEXT:  lfd [[REG2:[0-9]+]], -120(3)

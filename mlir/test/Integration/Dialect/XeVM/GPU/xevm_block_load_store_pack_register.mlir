@@ -48,7 +48,7 @@ module @gemm attributes {gpu.container_module} {
       %loaded_f16_modified = vector.insert %thread_x_f16, %loaded_packed_f16 [0,0,1] : f16 into vector<8x1x2xf16> // Both loaded_packed_f16 and loaded_f16 can be used here
       // We can only store [1,2,4,8]x[16] shapes for f16, so we have to do 2 stores
       %loaded_f16_modified_slice_0 = vector.extract_strided_slice %loaded_f16_modified
-          {offsets = [0, 0, 0], sizes = [4, 1, 2], strides = [1, 1, 1]} : vector<8x1x2xf16> to vector<4x1x2xf16>
+          offsets = [0, 0, 0], sizes = [4, 1, 2], strides = [1, 1, 1] : vector<8x1x2xf16> to vector<4x1x2xf16>
       %loaded_f16_modified_slice_0_flat = vector.shape_cast %loaded_f16_modified_slice_0 : vector<4x1x2xf16> to vector<8xf16>
       %base_height_store = arith.constant 8 : i32 // number of rows
       %base_width_store = arith.constant 32 : i32 // bytewidth of the block
@@ -57,7 +57,7 @@ module @gemm attributes {gpu.container_module} {
           <{elem_size_in_bits=16 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xf16>)
 
       %loaded_f16_modified_slice_1 = vector.extract_strided_slice %loaded_f16_modified
-          {offsets = [4, 0, 0], sizes = [4, 1, 2], strides = [1, 1, 1]} : vector<8x1x2xf16> to vector<4x1x2xf16>
+          offsets = [4, 0, 0], sizes = [4, 1, 2], strides = [1, 1, 1] : vector<8x1x2xf16> to vector<4x1x2xf16>
       %loaded_f16_modified_slice_1_flat = vector.shape_cast %loaded_f16_modified_slice_1 : vector<4x1x2xf16> to vector<8xf16>
 
       %second_half_offset = arith.muli %base_pitch_store, %base_height_store : i32

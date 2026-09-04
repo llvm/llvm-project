@@ -1,6 +1,7 @@
 include(ExternalProject)
 include(CompilerRTUtils)
 include(HandleCompilerRT)
+include(LLVMVersion)
 
 function(set_target_output_directories target output_dir)
   # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
@@ -22,6 +23,43 @@ function(set_target_output_directories target output_dir)
         LIBRARY_OUTPUT_DIRECTORY ${output_dir}
         RUNTIME_OUTPUT_DIRECTORY ${output_dir})
   endif()
+endfunction()
+
+function(add_compiler_rt_windows_version_resource_file OUT_VAR RESOURCE_VAR name)
+  set(sources ${ARGN})
+  if(MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+    set(resource_file
+      "${COMPILER_RT_SOURCE_DIR}/resources/windows_version_resource.rc")
+    set(target_resource_file
+      "${CMAKE_CURRENT_BINARY_DIR}/${name}_windows_version_resource.rc")
+    configure_file("${resource_file}" "${target_resource_file}" COPYONLY)
+    list(APPEND sources "${target_resource_file}")
+    source_group("Resource Files" "${target_resource_file}")
+    set(${RESOURCE_VAR} "${target_resource_file}" PARENT_SCOPE)
+  endif()
+  set(${OUT_VAR} ${sources} PARENT_SCOPE)
+endfunction()
+
+function(set_compiler_rt_windows_version_resource_properties name resource_file)
+  if(DEFINED PACKAGE_VERSION AND NOT "${PACKAGE_VERSION}" STREQUAL "")
+    set(version_string "${PACKAGE_VERSION}")
+  else()
+    set(version_string
+      "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}")
+  endif()
+
+  set_property(SOURCE ${resource_file}
+               PROPERTY COMPILE_FLAGS /nologo)
+  set_property(SOURCE ${resource_file}
+               PROPERTY COMPILE_DEFINITIONS
+               "RC_VERSION_FIELD_1=${LLVM_VERSION_MAJOR}"
+               "RC_VERSION_FIELD_2=${LLVM_VERSION_MINOR}"
+               "RC_VERSION_FIELD_3=${LLVM_VERSION_PATCH}"
+               "RC_VERSION_FIELD_4=0"
+               "RC_FILE_VERSION=\"${version_string}\""
+               "RC_INTERNAL_NAME=\"${name}\""
+               "RC_PRODUCT_NAME=\"compiler-rt\""
+               "RC_PRODUCT_VERSION=\"${version_string}\"")
 endfunction()
 
 # Tries to add an "object library" target for a given list of OSs and/or
@@ -362,7 +400,17 @@ function(add_compiler_rt_runtime name type)
         DESTINATION ${install_dir_${libname}}
         ${COMPONENT_OPTION})
     else()
+      unset(windows_resource_file)
+      if(type STREQUAL "SHARED")
+        add_compiler_rt_windows_version_resource_file(
+          sources_${libname} windows_resource_file ${libname}
+          ${sources_${libname}})
+      endif()
       add_library(${libname} ${type} ${sources_${libname}})
+      if(windows_resource_file)
+        set_compiler_rt_windows_version_resource_properties(${libname}
+          ${windows_resource_file})
+      endif()
       set_target_compile_flags(${libname} ${extra_cflags_${libname}})
       set_target_link_flags(${libname} ${extra_link_flags_${libname}})
       set_property(TARGET ${libname} APPEND PROPERTY

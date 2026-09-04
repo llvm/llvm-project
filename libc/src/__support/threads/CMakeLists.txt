@@ -19,8 +19,32 @@ add_header_library(
     libc.src.__support.CPP.atomic
 )
 
+add_header_library(
+  thread_attributes
+  HDRS
+    thread_attributes.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
+endif()
+
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.tcb)
+  add_header_library(
+    tcb
+    HDRS
+      tcb.h
+    DEPENDS
+      .${LIBC_TARGET_OS}.tcb
+      libc.src.__support.macros.properties.os
+  )
 endif()
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
@@ -111,6 +135,7 @@ add_header_library(
   HDRS
     thread.h
   DEPENDS
+    .thread_attributes
     libc.hdr.stdint_proxy
     libc.hdr.types.struct_sched_param
     libc.src.__support.common

@@ -21,6 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
@@ -28,11 +29,45 @@
 
 namespace clang::CIRGen {
 
+/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
+/// markers. Mirror of CodeGenFunction::shouldEmitLifetimeMarkers.
+static bool shouldEmitLifetimeMarkers(const CodeGenOptions &cgOpts,
+                                      const LangOptions &langOpts) {
+
+  if (cgOpts.DisableLifetimeMarkers)
+    return false;
+
+  // Sanitizers may use markers.
+  if (cgOpts.SanitizeAddressUseAfterScope ||
+      langOpts.Sanitize.has(SanitizerKind::HWAddress) ||
+      langOpts.Sanitize.has(SanitizerKind::Memory) ||
+      langOpts.Sanitize.has(SanitizerKind::MemtagStack))
+    return true;
+
+  return cgOpts.OptimizationLevel != 0;
+}
+
+/// Does the statement tree rooted at \p s contain a label, switch, or indirect
+/// goto that could bypass a local's initialization? A coarse stand-in for
+/// classic CodeGen's per-decl bypass analysis (PR28267).
+static bool functionMightHaveBypass(const Stmt *s) {
+  if (!s)
+    return false;
+  if (isa<LabelStmt, SwitchStmt, IndirectGotoStmt>(s))
+    return true;
+  for (const Stmt *child : s->children())
+    if (functionMightHaveBypass(child))
+      return true;
+  return false;
+}
+
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
       curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
+  shouldEmitLifetimeMarkers = CIRGen::shouldEmitLifetimeMarkers(
+      cgm.getCodeGenOpts(), getContext().getLangOpts());
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -748,6 +783,9 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
       llvm::append_range(fnArgs, funcDecl->parameters());
 
+    if (shouldEmitLifetimeMarkers)
+      fnHasBypassStmt = functionMightHaveBypass(body);
+
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);
     } else if (isa<CXXConstructorDecl>(funcDecl)) {
@@ -935,10 +973,21 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
+    bool needsVTableInit =
+        !CodeGenUtils::canSkipVTablePointerInitialization(getContext(), dtor);
+    // Launder 'this' if necessary.
+    if (needsVTableInit && cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0) {
+      cxxThisValue = cir::LaunderOp::create(
+          builder, getLoc(dtor->getBeginLoc()), loadCXXThis());
+    }
+
     // Enter the cleanup scopes for fields and non-virtual bases.
     enterDtorCleanups(dtor, Dtor_Base);
 
-    assert(!cir::MissingFeatures::vtableInitialization());
+    // Initialize the vtable pointers before entering the body.
+    if (needsVTableInit)
+      initializeVTablePointers(getLoc(dtor->getBeginLoc()), dtor->getParent());
 
     if (isTryBody) {
       cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");

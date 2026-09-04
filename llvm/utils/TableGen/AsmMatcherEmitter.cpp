@@ -2578,7 +2578,8 @@ static void emitGetRegClassFromMatchKindFunc(AsmMatcherInfo &Info,
   // it for all non-ambiguous RegisterOperands.
   // Many targets reuse the same ParserMatchClass for different register
   // classes so we can't emit a these unconditionally.
-  std::map<const ClassInfo *, const ClassInfo *> UserClassToRegClassMap;
+  std::map<const ClassInfo *, const ClassInfo *, deref<std::less<>>>
+      UserClassToRegClassMap;
   for (const Record *RO :
        Info.Records.getAllDerivedDefinitions("RegisterOperand")) {
     const RecordVal *R = RO->getValue("ParserMatchClass");

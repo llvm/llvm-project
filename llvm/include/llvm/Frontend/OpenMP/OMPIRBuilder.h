@@ -2842,9 +2842,9 @@ public:
     omp::OMPTgtExecModeFlags ExecFlags =
         omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
     SmallVector<int32_t, 3> MaxTeams = {-1};
-    int32_t MinTeams = 1;
+    SmallVector<int32_t, 3> MinTeams = {1};
     SmallVector<int32_t, 3> MaxThreads = {-1};
-    int32_t MinThreads = 1;
+    SmallVector<int32_t, 3> MinThreads = {1};
     int32_t ReductionDataSize = 0;
   };
 
@@ -2855,13 +2855,13 @@ public:
   /// launch OpenMP RTL function.
   struct TargetKernelRuntimeAttrs {
     SmallVector<Value *, 3> MaxTeams = {nullptr};
-    Value *MinTeams = nullptr;
+    SmallVector<Value *, 3> MinTeams = {nullptr};
     SmallVector<Value *, 3> TargetThreadLimit = {nullptr};
     SmallVector<Value *, 3> TeamsThreadLimit = {nullptr};
 
     /// 'parallel' construct 'num_threads' clause value, if present and it is an
     /// SPMD kernel.
-    Value *MaxThreads = nullptr;
+    SmallVector<Value *> MaxThreads = {nullptr};
 
     /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
     /// it is a generic kernel.
@@ -2890,7 +2890,8 @@ public:
     bool HasNoWait = false;
     /// True if the kernel strictly requires the number of blocks and threads
     /// above to run.
-    bool StrictBlocksAndThreads = false;
+    bool StrictBlocks = false;
+    bool StrictThreads = false;
     /// The fallback mechanism for the shared memory.
     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
         omp::OMPDynGroupprivateFallbackType::Abort;
@@ -2900,12 +2901,13 @@ public:
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
-                     bool HasNoWait, bool StrictBlocksAndThreads,
+                     bool HasNoWait, bool StrictBlocks, bool StrictThreads,
                      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
-          HasNoWait(HasNoWait), StrictBlocksAndThreads(StrictBlocksAndThreads),
+          HasNoWait(HasNoWait), StrictBlocks(StrictBlocks),
+          StrictThreads(StrictThreads),
           DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
@@ -3816,6 +3818,11 @@ public:
   /// cgroup.
   /// \param DynCGroupMem The fallback mechanism to execute if the requested
   /// cgroup memory cannot be provided.
+  /// \param OutlinedFnLoc Location scoped to the DISubprogram that the caller
+  ///        will attach to the outlined function. \p Loc is scoped to the
+  ///        parent function, so it cannot be used for code emitted inside the
+  ///        outlined function. If this is empty, such code is emitted without a
+  ///        debug location.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3831,7 +3838,8 @@ public:
       const DependenciesInfo &Dependencies = {}, bool HasNowait = false,
       Value *DynCGroupMem = nullptr,
       omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
-          omp::OMPDynGroupprivateFallbackType::Abort);
+          omp::OMPDynGroupprivateFallbackType::Abort,
+      DebugLoc OutlinedFnLoc = {});
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

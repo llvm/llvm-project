@@ -148,7 +148,6 @@ define half @scvtf_f16i64_neg(<2 x i64> %x) {
 define <1 x half> @scvtf_f16i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: scvtf_f16i64_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    scvtf h0, d0
 ; CHECK-NEXT:    ret
 ;
@@ -203,7 +202,6 @@ define float @scvtf_f32i64_neg(<2 x i64> %x) {
 define <1 x float> @scvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: scvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    scvtf s0, d0
 ; CHECK-NEXT:    mov v1.s[0], v0.s[0]
@@ -363,7 +361,6 @@ define half @ucvtf_f16i64_neg(<2 x i64> %x) {
 define <1 x half> @ucvtf_f16i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: ucvtf_f16i64_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ucvtf h0, d0
 ; CHECK-NEXT:    ret
 ;
@@ -418,7 +415,6 @@ define float @ucvtf_f32i64_neg(<2 x i64> %x) {
 define <1 x float> @ucvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: ucvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    ucvtf s0, d0
 ; CHECK-NEXT:    mov v1.s[0], v0.s[0]

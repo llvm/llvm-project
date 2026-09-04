@@ -12,7 +12,7 @@
 
 #include <__assert>
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_output.h>
@@ -55,7 +55,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void set_debug_format() { __parser_.__type_ = __format_spec::__type::__debug; }
 #  endif
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__left};
+  __format_spec::__parser<_CharT> __parser_{
+      __format_spec::__parser_data<_CharT>{.__alignment_ = __format_spec::__alignment::__left}};
 };
 
 // Formatter const char*.

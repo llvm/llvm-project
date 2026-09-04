@@ -2185,6 +2185,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitBuiltinWithOneOverloadedType<5>(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_add);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
     return emitBuiltinWithOneOverloadedType<5>(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd);

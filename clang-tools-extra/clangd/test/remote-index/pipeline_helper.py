@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # ===- pipeline_helper.py - Remote Index pipeline Helper *- python -------*--===#
 #

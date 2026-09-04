@@ -2378,6 +2378,55 @@ void testExplicitThreadPools(void) {
   mlirLlvmThreadPoolDestroy(threadPool);
 }
 
+void testContextTransientScope(void) {
+  MlirContext ctx = mlirContextCreate();
+  fprintf(stderr, "@test_context_transient_scope\n");
+
+  // CHECK-LABEL: @test_context_transient_scope
+  // CHECK: is_in_transient_scope before: 0
+  fprintf(stderr, "is_in_transient_scope before: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType i32Type =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+
+  mlirContextBeginTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope during: 1
+  fprintf(stderr, "is_in_transient_scope during: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType transientVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  MlirAttribute transientStrAttr =
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("transient_str"));
+
+  // CHECK: transient vector valid: 1
+  fprintf(stderr, "transient vector valid: %d\n",
+          !mlirTypeIsNull(transientVectorType));
+  // CHECK: transient str attr valid: 1
+  fprintf(stderr, "transient str attr valid: %d\n",
+          !mlirAttributeIsNull(transientStrAttr));
+
+  mlirContextEndTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope after: 0
+  fprintf(stderr, "is_in_transient_scope after: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType postResetI32 =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+  // CHECK: base i32 equal: 1
+  fprintf(stderr, "base i32 equal: %d\n", mlirTypeEqual(i32Type, postResetI32));
+
+  MlirType newVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  // CHECK: new vector valid: 1
+  fprintf(stderr, "new vector valid: %d\n", !mlirTypeIsNull(newVectorType));
+
+  mlirContextDestroy(ctx);
+}
+
 void testLocation(void) {
   MlirContext ctx = mlirContextCreate();
   fprintf(stderr, "@test_location\n");
@@ -3342,6 +3391,7 @@ int main(void) {
     return 16;
 
   testExplicitThreadPools();
+  testContextTransientScope();
   testLocation();
   testDiagnostics();
 

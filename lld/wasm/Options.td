@@ -88,7 +88,7 @@ defm fatal_warnings: B<"fatal-warnings",
     "Do not treat warnings as errors (default)">;
 
 defm gc_sections: B<"gc-sections",
-    "Enable garbage collection of unused sections (defualt)",
+    "Enable garbage collection of unused sections (default)",
     "Disable garbage collection of unused sections">;
 
 defm merge_data_segments: BB<"merge-data-segments",

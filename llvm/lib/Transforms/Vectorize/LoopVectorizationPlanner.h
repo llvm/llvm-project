@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
+#include <optional>
 
 namespace {
 class GeneratedRTChecks;
@@ -55,8 +56,12 @@ extern cl::opt<bool> PreferInLoopReductions;
 
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
-std::optional<unsigned> getMaxVScale(const Function &F,
-                                     const TargetTransformInfo &TTI);
+std::optional<unsigned> getMaxVScale(const Function &F);
+
+/// \return The upper bound for the runtime value of \p EC, or std::nullopt
+/// if the upper bound is unknown.
+std::optional<uint64_t>
+getMaxRuntimeElementCount(ElementCount EC, const Function &F);
 
 // Utility functions that are used by different vectorization classes
 namespace LoopVectorizationUtils {
@@ -299,13 +304,18 @@ public:
     return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
   }
 
+  /// Create a select of \p TrueVal and \p FalseVal based on \p Cond, using the
+  /// default flags for the result type, unless \p Flags is set.
   VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
                               VPValue *FalseVal,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "",
-                              const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPInstruction(
-        Instruction::Select, {Cond, TrueVal, FalseVal}, Flags, {}, DL, Name));
+                              std::optional<VPIRFlags> Flags = std::nullopt) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
+                          Flags.value_or(VPIRFlags::getDefaultFlags(
+                              Instruction::Select, TrueVal->getScalarType())),
+                          {}, DL, Name));
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
@@ -359,12 +369,18 @@ public:
                           GEPNoWrapFlags::none(), {}, DL, Name));
   }
 
+  /// Create a phi with \p IncomingValues, using the default flags for the
+  /// result type, unless \p Flags is set.
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         const Twine &Name = "",
+                         std::optional<VPIRFlags> Flags = std::nullopt,
                          Type *ResultTy = nullptr) {
-    return tryInsertInstruction(
-        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
+    Type *ScalarTy = ResultTy ? ResultTy : IncomingValues[0]->getScalarType();
+    return tryInsertInstruction(new VPPhi(
+        IncomingValues,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Instruction::PHI, ScalarTy)),
+        DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -375,15 +391,22 @@ public:
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
     VPlan &Plan = getPlan();
-    VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
+    unsigned MinEC = EC.getKnownMinValue();
     if (EC.isScalable()) {
       VPValue *VScale = createVScale(Ty);
-      RuntimeEC = EC.getKnownMinValue() == 1
-                      ? VScale
-                      : createOverflowingOp(Instruction::Mul,
-                                            {VScale, RuntimeEC}, {true, false});
+      if (MinEC == 1)
+        return VScale;
+      // TODO: Move this optimization into createOverflowingOp directly.
+      if (isPowerOf2_32(MinEC)) {
+        VPValue *ShtAmt = Plan.getConstantInt(Ty, Log2_32(MinEC));
+        return createOverflowingOp(Instruction::Shl, {VScale, ShtAmt},
+                                   {true, false});
+      }
+      VPValue *MulAmt = Plan.getConstantInt(Ty, MinEC);
+      return createOverflowingOp(Instruction::Mul, {VScale, MulAmt},
+                                 {true, false});
     }
-    return RuntimeEC;
+    return Plan.getConstantInt(Ty, MinEC);
   }
 
   /// Convert \p Current to \p Start + \p Current * \p Step.
@@ -404,18 +427,11 @@ public:
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
+                                  std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Op, ResultTy, VPIRFlags::getDefaultFlags(Opcode), Metadata,
-        DL));
-  }
-
-  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                  Type *ResultTy, DebugLoc DL,
-                                  const VPIRFlags &Flags,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+        Opcode, Op, ResultTy,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)), Metadata, DL));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -458,7 +474,7 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+  VPValue *createScalarFreeze(VPValue *Op, DebugLoc DL) {
     return tryInsertInstruction(
         new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
   }
@@ -740,6 +756,13 @@ public:
   /// \return The loop being analyzed.
   const Loop *getLoop() const { return TheLoop; }
 
+  /// \return The vectorization hints for the loop being analyzed.
+  const LoopVectorizeHints &getHints() const { return *Hints; }
+
+  /// Returns true if epilogue vectorization is considered profitable for a
+  /// main loop with vectorization factor \p VF and interleave count \p IC.
+  bool isEpilogueVectorizationProfitable(ElementCount VF, unsigned IC) const;
+
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 
@@ -853,8 +876,8 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitability analysis.
-  LoopVectorizationCostModel &CM;
+  /// The profitability analysis. Cleared after making cost based decisions.
+  std::unique_ptr<LoopVectorizationCostModel> CM;
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
@@ -863,8 +886,6 @@ class LoopVectorizationPlanner {
   InterleavedAccessInfo &IAI;
 
   PredicatedScalarEvolution &PSE;
-
-  const LoopVectorizeHints &Hints;
 
   OptimizationRemarkEmitter *ORE;
 
@@ -896,11 +917,20 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
-      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+      std::unique_ptr<LoopVectorizationCostModel> CM,
+      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE);
+
+  ~LoopVectorizationPlanner();
+
+  /// Return the cost model. Must not be called after clearCostModel().
+  LoopVectorizationCostModel &getCostModel() {
+    assert(CM && "Cost model has already been cleared");
+    return *CM;
+  }
+
+  /// Destroy the cost model.
+  void clearCostModel();
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -964,9 +994,12 @@ public:
   /// \return A VPlan for the most profitable epilogue vectorization, with its
   /// VF narrowed to the chosen factor. The returned plan is a duplicate.
   /// Returns nullptr if epilogue vectorization is not supported or not
-  /// profitable for the loop.
-  std::unique_ptr<VPlan>
-  selectBestEpiloguePlan(VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC);
+  /// profitable for the loop. \p ScalarEpilogueAllowed indicates whether the
+  /// epilogue lowering policy permits creating a scalar epilogue at all.
+  std::unique_ptr<VPlan> selectBestEpiloguePlan(VPlan &MainPlan,
+                                                ElementCount MainLoopVF,
+                                                unsigned IC,
+                                                bool ScalarEpilogueAllowed);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
@@ -975,10 +1008,6 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
-
-  /// Returns true if \p Plan requires a scalar epilogue after the vector
-  /// loop. Asserts that the VPlan decision matches the legacy cost model.
-  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

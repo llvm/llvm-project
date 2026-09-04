@@ -4554,3 +4554,144 @@ entry:
   %cond = select i1 %tobool.not, i64 0, i64 %x
   ret i64 %cond
 }
+
+define i64 @neg1(i64 %rs1, i1 zeroext %rc) {
+; RV32I-LABEL: neg1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bnez a2, .LBB66_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    snez a2, a0
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    sub a1, a1, a2
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:  .LBB66_2:
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: neg1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    bnez a1, .LBB66_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:  .LBB66_2:
+; RV64I-NEXT:    ret
+;
+; RV32XVENTANACONDOPS-LABEL: neg1:
+; RV32XVENTANACONDOPS:       # %bb.0:
+; RV32XVENTANACONDOPS-NEXT:    neg a3, a1
+; RV32XVENTANACONDOPS-NEXT:    snez a4, a0
+; RV32XVENTANACONDOPS-NEXT:    sub a3, a3, a4
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a4, a0, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskc a1, a1, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a2, a3, a2
+; RV32XVENTANACONDOPS-NEXT:    sub a0, a0, a4
+; RV32XVENTANACONDOPS-NEXT:    or a1, a1, a2
+; RV32XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XVENTANACONDOPS-LABEL: neg1:
+; RV64XVENTANACONDOPS:       # %bb.0:
+; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a2, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    sub a0, a0, a2
+; RV64XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XTHEADCONDMOV-LABEL: neg1:
+; RV64XTHEADCONDMOV:       # %bb.0:
+; RV64XTHEADCONDMOV-NEXT:    neg a2, a0
+; RV64XTHEADCONDMOV-NEXT:    th.mveqz a0, a2, a1
+; RV64XTHEADCONDMOV-NEXT:    ret
+;
+; RV32ZICOND-LABEL: neg1:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    neg a3, a1
+; RV32ZICOND-NEXT:    snez a4, a0
+; RV32ZICOND-NEXT:    sub a3, a3, a4
+; RV32ZICOND-NEXT:    czero.nez a4, a0, a2
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
+; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
+; RV32ZICOND-NEXT:    czero.nez a2, a3, a2
+; RV32ZICOND-NEXT:    sub a0, a0, a4
+; RV32ZICOND-NEXT:    or a1, a1, a2
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: neg1:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    czero.nez a2, a0, a1
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
+; RV64ZICOND-NEXT:    sub a0, a0, a2
+; RV64ZICOND-NEXT:    ret
+  %neg = sub i64 0, %rs1
+  %sel = select i1 %rc, i64 %rs1, i64 %neg
+  ret i64 %sel
+}
+
+define i64 @neg2(i64 %rs1, i1 zeroext %rc) {
+; RV32I-LABEL: neg2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a2, .LBB67_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    snez a2, a0
+; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    sub a1, a1, a2
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:  .LBB67_2:
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: neg2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a1, .LBB67_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:  .LBB67_2:
+; RV64I-NEXT:    ret
+;
+; RV32XVENTANACONDOPS-LABEL: neg2:
+; RV32XVENTANACONDOPS:       # %bb.0:
+; RV32XVENTANACONDOPS-NEXT:    neg a3, a1
+; RV32XVENTANACONDOPS-NEXT:    snez a4, a0
+; RV32XVENTANACONDOPS-NEXT:    sub a3, a3, a4
+; RV32XVENTANACONDOPS-NEXT:    vt.maskc a4, a0, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a1, a1, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskc a2, a3, a2
+; RV32XVENTANACONDOPS-NEXT:    sub a0, a0, a4
+; RV32XVENTANACONDOPS-NEXT:    or a1, a2, a1
+; RV32XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XVENTANACONDOPS-LABEL: neg2:
+; RV64XVENTANACONDOPS:       # %bb.0:
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc a2, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    sub a0, a0, a2
+; RV64XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XTHEADCONDMOV-LABEL: neg2:
+; RV64XTHEADCONDMOV:       # %bb.0:
+; RV64XTHEADCONDMOV-NEXT:    neg a2, a0
+; RV64XTHEADCONDMOV-NEXT:    th.mvnez a0, a2, a1
+; RV64XTHEADCONDMOV-NEXT:    ret
+;
+; RV32ZICOND-LABEL: neg2:
+; RV32ZICOND:       # %bb.0:
+; RV32ZICOND-NEXT:    neg a3, a1
+; RV32ZICOND-NEXT:    snez a4, a0
+; RV32ZICOND-NEXT:    sub a3, a3, a4
+; RV32ZICOND-NEXT:    czero.eqz a4, a0, a2
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
+; RV32ZICOND-NEXT:    czero.nez a1, a1, a2
+; RV32ZICOND-NEXT:    czero.eqz a2, a3, a2
+; RV32ZICOND-NEXT:    sub a0, a0, a4
+; RV32ZICOND-NEXT:    or a1, a2, a1
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: neg2:
+; RV64ZICOND:       # %bb.0:
+; RV64ZICOND-NEXT:    czero.eqz a2, a0, a1
+; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV64ZICOND-NEXT:    sub a0, a0, a2
+; RV64ZICOND-NEXT:    ret
+  %neg = sub i64 0, %rs1
+  %sel = select i1 %rc, i64 %neg, i64 %rs1
+  ret i64 %sel
+}
+

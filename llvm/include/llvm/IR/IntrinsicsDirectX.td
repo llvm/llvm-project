@@ -36,6 +36,12 @@ def int_dx_resource_handlefromimplicitbinding
           [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
           [IntrNoMem]>;
 
+// Create resource handle from a descriptor heap. Returns a `target("dx.")`
+// type appropriate for the kind of resource given a heap index. Type of
+// heap is determined by the intrinsic's resource overload type.
+def int_dx_resource_handlefromheap
+    : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_i32_ty], [IntrNoMem]>;
+
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
                             [IntrConvergent, IntrNoMem]>;
@@ -142,6 +148,12 @@ def int_dx_resource_samplelevel
 def int_dx_resource_load_level
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty,
+                             llvm_any_ty],
+                            [IntrReadMem]>;
+
+def int_dx_resource_load_ms
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_i32_ty,
                              llvm_any_ty],
                             [IntrReadMem]>;
 
@@ -255,7 +267,6 @@ def int_dx_legacyf32tof16 : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0
 
 def int_dx_imad : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_umad : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
-def int_dx_normalize : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
 def int_dx_wave_prefix_bit_count : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;
 def int_dx_rsqrt  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_active_countbits : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;

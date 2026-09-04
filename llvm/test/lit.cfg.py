@@ -228,6 +228,7 @@ tools = [
     ToolSubst("%lli", FindTool("lli"), post=".", extra_args=lli_args),
     ToolSubst("%llc_dwarf", FindTool("llc"), extra_args=llc_args),
     ToolSubst("%gold", config.gold_executable, unresolved="ignore"),
+    ToolSubst("%ld_bfd", config.ld_bfd_executable, unresolved="ignore"),
     ToolSubst("%ld64", ld64_cmd, unresolved="ignore"),
     ToolSubst("%ocamlc", ocamlc_command, unresolved="ignore"),
     ToolSubst("%ocamlopt", ocamlopt_command, unresolved="ignore"),
@@ -584,6 +585,9 @@ if config.link_llvm_dylib:
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
 
+if getattr(config, "have_mlir_lowering", False):
+    config.available_features.add("have_mlir_lowering")
+
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
 
@@ -646,14 +650,18 @@ if config.have_llvm_driver:
 import subprocess
 
 
-def have_ld_plugin_support():
+def have_ld_plugin_support(ld_executable, name):
     if not os.path.exists(
         os.path.join(config.llvm_shlib_dir, "LLVMgold" + config.llvm_shlib_ext)
     ):
         return False
 
+    # CMake was not able to find the linker executable.
+    if ld_executable.endswith("NOTFOUND"):
+        return False
+
     ld_cmd = subprocess.Popen(
-        [config.gold_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
     ld_out = ld_cmd.stdout.read().decode()
     ld_cmd.wait()
@@ -676,18 +684,20 @@ def have_ld_plugin_support():
         config.available_features.add("ld_emu_elf32ppc")
 
     ld_version = subprocess.Popen(
-        [config.gold_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
-    if not "GNU gold" in ld_version.stdout.read().decode():
+    if not name in ld_version.stdout.read().decode():
         return False
     ld_version.wait()
 
     return True
 
 
-if have_ld_plugin_support():
+if have_ld_plugin_support(config.ld_bfd_executable, "GNU ld"):
     config.available_features.add("ld_plugin")
 
+if have_ld_plugin_support(config.gold_executable, "GNU gold"):
+    config.available_features.add("gold_linker")
 
 def have_ld64_plugin_support():
     if not os.path.exists(
@@ -749,6 +759,25 @@ def host_unwind_supports_jit():
 
 if host_unwind_supports_jit():
     config.available_features.add("host-unwind-supports-jit")
+
+
+# The triple that lli's JIT will target. This can be more specific than either
+# the host or the default target triple: e.g. an arm64e build of lli reports
+# arm64e-apple-darwin, while both CMake triples describe the machine as arm64.
+def host_jit_triple():
+    lli = lit.util.which("lli", config.llvm_tools_dir)
+    if not lli:
+        return None
+    try:
+        return subprocess.check_output([lli, "-host-jit-triple"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        lit_config.warning("could not determine host JIT triple from lli")
+        return None
+
+
+config.host_jit_triple = host_jit_triple()
+if config.host_jit_triple:
+    config.available_features.add("host-jit-triple=" + config.host_jit_triple)
 
 # Ask llvm-config about asserts
 llvm_config.feature_config(

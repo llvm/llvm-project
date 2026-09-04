@@ -165,6 +165,17 @@ def ApplyExtractSliceSinkingPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplySwapExtractSliceWithFillPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.swap_extract_slice_with_fill",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns to swap `tensor.extract_slice(linalg.fill(...))` with
+    `linalg.fill(tensor.extract_slice(...))`.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//

@@ -1010,8 +1010,8 @@ define i8 @abs_diff_sle_y_x(i8 %x, i8 %y) {
 
 define i1 @abs_cmp_ule_no_poison(i32 %x) {
 ; CHECK-LABEL: @abs_cmp_ule_no_poison(
-; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
@@ -1058,8 +1058,8 @@ define i1 @abs_cmp_ule_poison_multiuse(i32 %x) {
 
 define i1 @abs_cmp_ult_no_poison(i32 %x) {
 ; CHECK-LABEL: @abs_cmp_ult_no_poison(
-; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)

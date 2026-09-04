@@ -297,7 +297,26 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
   if (sizeHintKeyword.succeeded())
     if (parser.parseEqual() || parser.parseOperand(sizeHintOperand))
       return failure();
-  if (parser.parseOptionalAttrDict(result.attributes) || parser.parseColon())
+
+  Attribute parsedProperties;
+  if (AllocTensorOp::genericParseProperties(parser, parsedProperties))
+    return failure();
+  auto propertyDictionary = dyn_cast_or_null<DictionaryAttr>(parsedProperties);
+  if (parsedProperties && !propertyDictionary)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected properties dictionary");
+
+  auto attrsLoc = parser.getCurrentLocation();
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  for (StringRef attrName : AllocTensorOp::getAttributeNames()) {
+    if (result.attributes.get(attrName))
+      return parser.emitError(attrsLoc)
+             << "inherent attribute '" << attrName
+             << "' cannot be parsed from attr-dict when strict properties in "
+                "assembly format is enabled";
+  }
+  if (parser.parseColon())
     return failure();
 
   TensorType type;
@@ -314,11 +333,24 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
   if (sizeHintKeyword.succeeded())
     if (parser.resolveOperand(sizeHintOperand, indexType, result.operands))
       return failure();
-  result.addAttribute(AllocTensorOp::getOperandSegmentSizeAttr(),
-                      parser.getBuilder().getDenseI32ArrayAttr(
-                          {static_cast<int32_t>(dynamicSizesOperands.size()),
-                           static_cast<int32_t>(copyKeyword.succeeded()),
-                           static_cast<int32_t>(sizeHintKeyword.succeeded())}));
+  Builder &builder = parser.getBuilder();
+  NamedAttrList properties(propertyDictionary ? propertyDictionary
+                                              : builder.getDictionaryAttr({}));
+  properties.set(AllocTensorOp::getOperandSegmentSizeAttr(),
+                 builder.getDenseI32ArrayAttr(
+                     {static_cast<int32_t>(dynamicSizesOperands.size()),
+                      static_cast<int32_t>(copyKeyword.succeeded()),
+                      static_cast<int32_t>(sizeHintKeyword.succeeded())}));
+  propertyDictionary = properties.getDictionary(builder.getContext());
+  auto emitError = [&]() {
+    return mlir::emitError(result.location, "invalid properties ")
+           << propertyDictionary << " for op " << result.name.getStringRef()
+           << ": ";
+  };
+  if (failed(AllocTensorOp::setPropertiesFromParsedAttr(
+          result.getOrAddProperties<Properties>(), propertyDictionary,
+          emitError)))
+    return failure();
   return success();
 }
 
@@ -328,8 +360,9 @@ void AllocTensorOp::print(OpAsmPrinter &p) {
     p << " copy(" << getCopy() << ")";
   if (getSizeHint())
     p << " size_hint=" << getSizeHint();
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
-                              AllocTensorOp::getOperandSegmentSizeAttr()});
+  AllocTensorOp::printProperties(getContext(), p, getProperties(),
+                                 /*elidedProps=*/getOperandSegmentSizeAttr());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " : ";
   auto type = getResult().getType();
   if (auto validType = llvm::dyn_cast<::mlir::TensorType>(type))

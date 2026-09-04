@@ -327,15 +327,17 @@ void AArch64PointerAuthImpl::authenticateLR(
   int64_t Offset = -ArgumentStackToRestore;
   SmallVector<MachineInstr *, 2> SPMods;
   if (ArgumentStackToRestore > 0) {
-    for (auto I = MBBI; I->getFlag(MachineInstr::FrameDestroy); --I) {
-      if ((I->getOpcode() == AArch64::ADDXri ||
-           I->getOpcode() == AArch64::SUBXri) &&
-          I->getOperand(0).getReg() == AArch64::SP &&
-          I->getOperand(1).getReg() == AArch64::SP) {
-        SPMods.push_back(&*I);
-        int64_t Imm = I->getOperand(2).getImm()
-                      << AArch64_AM::getShiftValue(I->getOperand(3).getImm());
-        Offset += I->getOpcode() == AArch64::ADDXri ? Imm : -Imm;
+    for (MachineInstr &MI : make_range(MBBI.getReverse(), MBB.rend())) {
+      if (!MI.getFlag(MachineInstr::FrameDestroy))
+        break;
+      if ((MI.getOpcode() == AArch64::ADDXri ||
+           MI.getOpcode() == AArch64::SUBXri) &&
+          MI.getOperand(0).getReg() == AArch64::SP &&
+          MI.getOperand(1).getReg() == AArch64::SP) {
+        SPMods.push_back(&MI);
+        int64_t Imm = MI.getOperand(2).getImm()
+                      << AArch64_AM::getShiftValue(MI.getOperand(3).getImm());
+        Offset += MI.getOpcode() == AArch64::ADDXri ? Imm : -Imm;
       }
     }
   }

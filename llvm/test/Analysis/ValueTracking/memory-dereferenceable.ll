@@ -230,8 +230,8 @@ define void @byval(ptr byval(i8) %i8_byval,
 }
 
 ; CHECK-LABEL: 'f_0'
-; GLOBAL: %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
-; POINT-NOT: %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
+; GLOBAL: %ptr = inttoptr i32 %val to ptr, !dereferenceable !{{[0-9]+}}
+; POINT-NOT: %ptr = inttoptr i32 %val to ptr, !dereferenceable !{{[0-9]+}}
 define i32 @f_0(i32 %val) {
   %ptr = inttoptr i32 %val to ptr, !dereferenceable !0
   call void @mayfree()
@@ -296,6 +296,23 @@ define void @infer_missing_noalias1(ptr dereferenceable(8) nofree %p) {
 ; GLOBAL: %p
 ; POINT-NOT: %p
 define void @infer_missing_noalias2(ptr dereferenceable(8) readonly %p) {
+  call void @mayfree()
+  %v = load i32, ptr %p
+  ret void
+}
+
+; CHECK-LABEL: 'nofreeobj_arg'
+; CHECK: %p
+define void @nofreeobj_arg(ptr dereferenceable(8) nofreeobj %p) {
+  call void @mayfree()
+  %v = load i32, ptr %p
+  ret void
+}
+
+; CHECK-LABEL: 'nofreeobj_ret'
+; CHECK: %p
+define void @nofreeobj_ret() {
+  %p = call dereferenceable(8) nofreeobj ptr @foo()
   call void @mayfree()
   %v = load i32, ptr %p
   ret void

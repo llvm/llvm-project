@@ -34,6 +34,11 @@ S0 main1(float4 input : A) : B {
   return output;
 }
 
+// CHECK-DXIL: !dx.semantic.signatures = !{![[#ENTRY_SIG:]]}
+// CHECK-DXIL: ![[#ENTRY_SIG]] = !{ptr @main1, ![[#INPUT_SIG:]], ![[#OUTPUT_SIG:]]}
+// CHECK-DXIL: ![[#INPUT_SIG]] = !{![[#INPUT_ELEMENT:]]}
+// CHECK-DXIL: ![[#OUTPUT_SIG]] = !{![[#OUTPUT_ELEMENT_0:]], ![[#OUTPUT_ELEMENT_1:]]}
+
 // CHECK-SPIRV-DAG: ![[#METADATA_0]] = !{![[#METADATA_1:]]}
 // CHECK-SPIRV-DAG: ![[#METADATA_1]] = !{i32 30, i32 0}
 //                                            |      `- Location index

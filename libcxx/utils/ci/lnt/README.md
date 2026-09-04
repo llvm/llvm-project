@@ -37,7 +37,7 @@ select-anchor-commits --since 2023-01-02 --every week > anchor-commits.txt
 
 # What is missing from LNT (we want at least 3 samples for each commit).
 plan-benchmarks --commit-list anchor-commits.txt                                \
-                --lnt-url http://lnt.llvm.org --test-suite libcxx               \
+                --lnt-url https://lnt.llvm.org --test-suite libcxx              \
                 --machine <machine> --samples 3 > plan.jsonl
 
 # Request the corresponding workflow runs, at most 4 at a time to be a good citizen.

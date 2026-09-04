@@ -11,8 +11,6 @@ add_libc_test(
     libc-support-tests
   SRCS
     file_test.cpp
-  LINK_LIBRARIES
-    LibcMemoryHelpers
   DEPENDS
     libc.include.stdio
     libc.hdr.wchar_macros
@@ -21,6 +19,7 @@ add_libc_test(
     libc.src.__support.CPP.new
     libc.src.__support.File.file
     libc.src.__support.error_or
+    libc.test.UnitTest.MemoryMatcher
 )
 
 add_libc_test(

@@ -55,7 +55,6 @@ static_library("Orc") {
     "LinkGraphLinkingLayer.cpp",
     "LoadLinkableFile.cpp",
     "LookupAndApply.cpp",
-    "LookupAndRecordAddrs.cpp",
     "MachO.cpp",
     "MachOPlatform.cpp",
     "Mangling.cpp",

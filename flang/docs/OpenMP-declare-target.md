@@ -79,7 +79,7 @@ would find on the `declare target` directive i.e. device type (`nohost`,
 
 ```
 fir.global internal @_QFEi {omp.declare_target =
-#omp.declaretarget<device_type = (any), capture_clause = (to)>} : f32 {
+#omp.declaretarget<device_type = any, capture_clause = to>} : f32 {
     %0 = fir.undefined f32
     fir.has_value %0 : f32
 }

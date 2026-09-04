@@ -68,6 +68,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -127,6 +128,11 @@ static cl::opt<unsigned> ScanUsersLimit(
 static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
     cl::desc("Max number of dependences to attempt Load PRE (default = 100)"));
+
+static cl::opt<uint32_t> MaxNumReachingBlocks(
+    "gvn-max-num-reaching-blocks", cl::Hidden, cl::init(200),
+    cl::desc("Max number of blocks scanned per load in the MemorySSA "
+             "reaching-value analysis (default = 200)"));
 
 // This is based on IsValueFullyAvailableInBlockNumSpeculationsMax stat.
 static cl::opt<uint32_t> MaxBBSpeculations(
@@ -504,6 +510,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
     return NextValueNumber++;
   }
 
+  // Conservatively assign unique value numbers to calls with operand bundles.
+  // TODO: Bundle names could be included in the value numbering expression to
+  // allow combining calls with identical bundles.
+  if (C->hasOperandBundles()) {
+    ValueNumbering[C] = NextValueNumber;
+    return NextValueNumber++;
+  }
+
   if (AA->doesNotAccessMemory(C)) {
     Expression Exp = createExpr(C);
     uint32_t E = assignExpNewValueNum(Exp).first;
@@ -869,6 +883,11 @@ bool GVNPass::isLoadPRESplitBackedgeEnabled() const {
 }
 
 bool GVNPass::isMemDepEnabled() const {
+  // MemDep and MemorySSA are mutually exclusive. parseGVNOptions() enforces
+  // this for pass parameters, but the -enable-gvn-{memdep,memoryssa} cl::opt
+  // overrides default independently, so honor MemorySSA winning here too.
+  if (isMemorySSAEnabled())
+    return Options.AllowMemDep.value_or(false);
   return Options.AllowMemDep.value_or(GVNEnableMemDep);
 }
 
@@ -2665,6 +2684,9 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
   // Do a bottom-up DFS.
   auto Worklist = InitialWorklist;
   while (!Worklist.empty()) {
+    // Match MemDep's cutoff for expensive non-local queries.
+    if (Blocks.size() > MaxNumReachingBlocks)
+      return false;
     auto *BB = Worklist.pop_back_val();
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
 
@@ -3456,6 +3478,15 @@ bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                       const TargetLibraryInfo &RunTLI, AAResults &RunAA,
                       MemoryDependenceResults *RunMD, LoopInfo &LI,
                       OptimizationRemarkEmitter *RunORE, MemorySSA *MSSA) {
+  // MemDep and MemorySSA are mutually exclusive. isMemDepEnabled() silently
+  // lets MemorySSA win for the common single-flag case, but an explicit
+  // request for both via -enable-gvn-{memdep,memoryssa} is a contradiction we
+  // reject rather than resolve arbitrarily.
+  if (GVNEnableMemDep.getNumOccurrences() && GVNEnableMemDep &&
+      GVNEnableMemorySSA.getNumOccurrences() && GVNEnableMemorySSA)
+    report_fatal_error("GVN: -enable-gvn-memdep and -enable-gvn-memoryssa are "
+                       "mutually exclusive",
+                       /*gen_crash_diag=*/false);
   AC = &RunAC;
   DT = &RunDT;
   VN.setDomTree(DT);

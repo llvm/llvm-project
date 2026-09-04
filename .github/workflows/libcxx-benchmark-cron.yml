@@ -126,10 +126,10 @@ jobs:
         with:
           python-version: '3.14'
           cache: pip
-          cache-dependency-path: libcxx/utils/requirements.txt
+          cache-dependency-path: libcxx/utils/ci/lnt/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r libcxx/utils/requirements.txt
+        run: pip install -r libcxx/utils/ci/lnt/requirements.txt
 
       - name: Determine anchor commits
         if: ${{ steps.restore-anchors.outputs.cache-hit != 'true' }}

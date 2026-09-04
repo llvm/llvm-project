@@ -4782,7 +4782,22 @@ namespace UnreachableExitTest {
 class FemmeFatale {
 public:
   FemmeFatale();
+  template <typename T>
+  FemmeFatale& operator<<(const T&) { return *this; }
   ~FemmeFatale() __attribute__((noreturn));
+};
+
+class NonFatal {
+public:
+  NonFatal();
+  template <typename T>
+  NonFatal& operator<<(const T&) { return *this; }
+  ~NonFatal();
+};
+
+struct Voidify {
+  template <typename T>
+  void operator&&(T&&) const&&;
 };
 
 void exitNow() __attribute__((noreturn));
@@ -4811,6 +4826,46 @@ void test3() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
 
 void test4() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
   exitDestruct("foo");
+}
+
+void test5() {
+  fatalmu_.TryLock() ? (void)0 : (void)FemmeFatale();
+  fatalmu_.Unlock();
+}
+
+void test6() {
+  fatalmu_.TryLock() ? (void)0 : Voidify() && FemmeFatale() << "foo";
+  fatalmu_.Unlock();
+}
+
+void test7() {
+  fatalmu_.TryLock() ? (void)0 : Voidify() && NonFatal() << "foo"; // \
+    // expected-warning {{mutex 'fatalmu_' is not held on every path through here}} \
+    // expected-note {{mutex acquired here}}
+  fatalmu_.Unlock(); // expected-warning {{releasing mutex 'fatalmu_' that was not held}}
+}
+
+void test8() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
+  c ? (void)0 : (void)FemmeFatale();
+}
+
+void test9() EXCLUSIVE_LOCKS_REQUIRED(fatalmu_) {
+  c ? (void)FemmeFatale() : (void)0;
+}
+
+void test10() {
+  !fatalmu_.TryLock() ? (void)FemmeFatale() : (void)0;
+  fatalmu_.Unlock();
+}
+
+void test11() {
+  !fatalmu_.TryLock() ? (void)FemmeFatale() : (void)NonFatal();
+  fatalmu_.Unlock();
+}
+
+void test12() {
+  fatalmu_.TryLock() ? (void)NonFatal() : (void)FemmeFatale();
+  fatalmu_.Unlock();
 }
 
 }   // end namespace UnreachableExitTest

@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                       -run-pass=regbankselect %s -o - | FileCheck %s
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                       -run-pass=reg-bank-select %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -regbankselect-greedy -run-pass=reg-bank-select %s -o - | FileCheck %s
 
 --- |
 

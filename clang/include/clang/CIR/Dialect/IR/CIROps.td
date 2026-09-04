@@ -121,6 +121,24 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
   LoweringBuilders customLLVMLoweringConstructorDecl = ?;
 }
 
+// Base class for structured control flow ops whose regions take no inputs and
+// yield the parent's results on the way out. Users still have to define
+// `getSuccessorRegions` themselves.
+class CIR_RegionBranchOpBase<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([
+        DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                  ["getSuccessorInputs"]>], traits)> {
+  let extraClassDefinition = [{
+    ValueRange $cppClass::getSuccessorInputs(
+        mlir::RegionSuccessor successor) {
+      // Regions take no inputs; returning to the parent yields its results.
+      return successor.isOperation()
+                 ? ValueRange(getOperation()->getResults())
+                 : ValueRange();
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Operation Traits
 //===----------------------------------------------------------------------===//
@@ -242,7 +260,11 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // Enums below are specific to CIR and don't have a correspondence to classic
   // codegen:
   I32EnumAttrCase<"bool_to_float", 1000>,
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CastKindAttr : CIR_EnumAttr<CIR_CastKind, "cast">;
 
 def CIR_CastOp : CIR_Op<"cast", !listconcat([
   DeclareOpInterfaceMethods<PromotableOpInterface>
@@ -302,12 +324,12 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     ```
   }];
 
-  let arguments = (ins CIR_CastKind:$kind, CIR_AnyType:$src,
+  let arguments = (ins CIR_CastKindAttr:$kind, CIR_AnyType:$src,
                        OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    $kind $src `:` type($src) `->` type($result) attr-dict
+    enum($kind) $src `:` type($src) `->` type($result) attr-dict
   }];
 
   let builders = [
@@ -395,7 +417,12 @@ def CIR_DynamicCastKind : CIR_I32EnumAttr<
   "DynamicCastKind", "dynamic cast kind", [
     I32EnumAttrCase<"Ptr", 0, "ptr">,
     I32EnumAttrCase<"Ref", 1, "ref">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_DynamicCastKindAttr
+    : CIR_EnumAttr<CIR_DynamicCastKind, "dynamic_cast">;
 
 def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   let summary = "Perform dynamic cast on record pointers";
@@ -450,7 +477,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   }];
 
   let arguments = (ins
-    CIR_DynamicCastKind:$kind,
+    CIR_DynamicCastKindAttr:$kind,
     CIR_PtrToRecordType:$src,
     OptionalAttr<CIR_DynamicCastInfoAttr>:$info,
     UnitAttr:$relative_layout
@@ -461,7 +488,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let assemblyFormat = [{
-    $kind (`relative_layout` $relative_layout^)? $src
+    enum($kind) (`relative_layout` $relative_layout^)? $src
     `:` qualified(type($src)) `->` qualified(type($result))
     (qualified($info)^)? attr-dict
   }];
@@ -983,8 +1010,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 // IfOp
 //===----------------------------------------------------------------------===//
 
-def CIR_IfOp : CIR_Op<"if", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_IfOp : CIR_RegionBranchOpBase<"if", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "the if-then-else operation";
@@ -1057,8 +1083,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
     Example:
 
     ```
-    cir.for cond {
-      cir.condition(%val) // Branches to `step` region or exits.
+    cir.for : cond {
+      cir.condition(%val) // Branches to `body` region or exits.
     } body {
       cir.yield
     } step {
@@ -1275,8 +1301,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 // ScopeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ScopeOp : CIR_Op<"scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_ScopeOp : CIR_RegionBranchOpBase<"scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1345,7 +1370,7 @@ def CIR_CleanupKind : CIR_I32EnumAttr<"CleanupKind", "cleanup kind", [
   let genSpecializedAttr = 0;
 }
 
-def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
+def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup"> {
   let summary = "Cleanup kind attribute";
   let description = [{
     Cleanup kind attributes.
@@ -1361,10 +1386,6 @@ def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
     }]>
   ];
 
-  let assemblyFormat = [{
-    $value
-  }];
-
   let extraClassDeclaration = [{
     bool isNormal() const {
       return getValue() == CleanupKind::Normal ||
@@ -1377,8 +1398,7 @@ def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
   }];
 }
 
-def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1427,7 +1447,7 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
   let skipDefaultBuilders = 1;
 
   let assemblyFormat = [{
-    $bodyRegion `cleanup` $cleanupKind $cleanupRegion attr-dict
+    $bodyRegion `cleanup` enum($cleanupKind) $cleanupRegion attr-dict
   }];
 
   let builders = [
@@ -1517,10 +1537,13 @@ def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
   I32EnumAttrCase<"Equal", 1, "equal">,
   I32EnumAttrCase<"Anyof", 2, "anyof">,
   I32EnumAttrCase<"Range", 3, "range">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
 
-def CIR_CaseOp : CIR_Op<"case", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CaseOpKindAttr : CIR_EnumAttr<CIR_CaseOpKind, "case">;
+
+def CIR_CaseOp : CIR_RegionBranchOpBase<"case", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "Case operation";
@@ -1541,10 +1564,11 @@ def CIR_CaseOp : CIR_Op<"case", [
     Each case region must be explicitly terminated.
   }];
 
-  let arguments = (ins ArrayAttr:$value, CIR_CaseOpKind:$kind);
+  let arguments = (ins ArrayAttr:$value, CIR_CaseOpKindAttr:$kind);
   let regions = (region AnyRegion:$caseRegion);
 
-  let assemblyFormat = "`(` $kind `,` $value `)` $caseRegion attr-dict";
+  let assemblyFormat =
+      "`(` enum($kind) `,` $value `)` $caseRegion attr-dict";
 
   let skipDefaultBuilders = 1;
   let builders = [
@@ -1556,9 +1580,8 @@ def CIR_CaseOp : CIR_Op<"case", [
   let hasLLVMLowering = false;
 }
 
-def CIR_SwitchOp : CIR_Op<"switch", [
+def CIR_SwitchOp : CIR_RegionBranchOpBase<"switch", [
   SameVariadicOperandSize,
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -2296,7 +2319,7 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
   let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
                         MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
-    $cond `do` $body (`cleanup` $cleanupKind $cleanup^)? attr-dict
+    $cond `do` $body (`cleanup` enum($cleanupKind) $cleanup^)? attr-dict
   }];
 
   let description = [{
@@ -2316,11 +2339,17 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 
     ```
     cir.while {
-      cir.break
-    ^bb2:
-      cir.yield
+      cir.condition(%cond)
     } do {
-      cir.condition %cond : cir.bool
+      cir.yield
+    }
+
+    cir.while {
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup all {
+      cir.yield
     }
     ```
   }];
@@ -2388,7 +2417,7 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
     ^bb2:
       cir.yield
     } while {
-      cir.condition %cond : cir.bool
+      cir.condition(%cond)
     }
     ```
   }];
@@ -2419,13 +2448,23 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     Example:
 
     ```
-    cir.for cond {
+    cir.for : cond {
       cir.condition(%val)
     } body {
       cir.break
     ^bb2:
       cir.yield
     } step {
+      cir.yield
+    }
+
+    cir.for : cond {
+      cir.condition(%val)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    } cleanup all {
       cir.yield
     }
     ```
@@ -2440,7 +2479,7 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     `:` `cond` $cond
     `body` $body
     `step` $step
-    (`cleanup` $cleanupKind $cleanup^)?
+    (`cleanup` enum($cleanupKind) $cleanup^)?
     attr-dict
   }];
 
@@ -2510,7 +2549,11 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"ne", 5>,
   I32EnumAttrCase<"one", 6>,
   I32EnumAttrCase<"uno", 7>
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CmpOpKindAttr : CIR_EnumAttr<CIR_CmpOpKind, "cmp">;
 
 def CIR_CmpOp : CIR_Op<"cmp",
     !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
@@ -2549,7 +2592,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
   }];
 
   let arguments = (ins
-    CIR_CmpOpKind:$kind,
+    CIR_CmpOpKindAttr:$kind,
     CIR_ComparableType:$lhs,
     CIR_ComparableType:$rhs,
     OptionalAttr<CIR_FenvAttr>:$fenv
@@ -2558,7 +2601,7 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    $kind $lhs `,` $rhs `:` type($lhs) attr-dict
+    enum($kind) $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
 
   let builders = [
@@ -3208,8 +3251,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TernaryOp : CIR_Op<"ternary", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_TernaryOp : CIR_RegionBranchOpBase<"ternary", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
@@ -3318,8 +3360,8 @@ def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
   }];
 }
 
-def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
+  SymbolName, SymbolVisibility,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   NoRegionArguments
 ]> {
@@ -3343,6 +3385,12 @@ def CIR_GlobalOp : CIR_Op<"global", [
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
     environment. LoweringPrepare forwards it to the `strictfp` attribute of the
     generated `__cxx_global_var_init` function.
+
+    The `init_priority` attribute records the priority specified by a
+    C++ `init_priority` attribute on the source variable declaration.
+    LoweringPrepare uses it to place the dynamic initializer emitted from
+    `ctorRegion` into a priority-specific `_GLOBAL__I_<priority>` function
+    instead of the default `_GLOBAL__sub_I_*` function.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -3366,10 +3414,12 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
+                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       UnitAttr:$strictfp
+                       UnitAttr:$strictfp,
+                       OptionalAttr<I32Attr>:$init_priority
                        );
 
   let regions = (region AnyRegion:$ctorRegion,
@@ -3381,11 +3431,11 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
-    (`tls_model` `=` $tls_model^)?
+    (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
-    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
+    (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
     (`alias` `(` $aliasee^ `)`)?
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
@@ -4147,7 +4197,8 @@ def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
 ]>;
 
 def CIR_FuncOp : CIR_Op<"func", [
-  AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
+  AutomaticAllocationScope, CallableOpInterface, SymbolName, SymbolVisibility,
+  FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   HasAtMostOneOfAttrs<["global_ctor_priority", "global_dtor_priority"]>,
   IsolatedFromAbove
@@ -4331,7 +4382,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
 
     void lowerFuncAttributes(
-        cir::FuncOp func, bool filterArgAndResAttrs,
+        cir::FuncOp func, bool includeFunctionOnlyAttrs,
         mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
     mlir::LogicalResult
@@ -4696,10 +4747,13 @@ def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
   I32EnumAttrCase<"User", 1, "user">,
   I32EnumAttrCase<"Yield", 2, "yield">,
   I32EnumAttrCase<"Final", 3, "final">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
 
-def CIR_AwaitOp : CIR_Op<"await",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_AwaitKindAttr : CIR_EnumAttr<CIR_AwaitKind, "await">;
+
+def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
   RecursivelySpeculatable, NoRegionArguments
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
@@ -4752,12 +4806,12 @@ def CIR_AwaitOp : CIR_Op<"await",[
     as part of the enclosing await scope.
   }];
 
-  let arguments = (ins CIR_AwaitKind:$kind);
+  let arguments = (ins CIR_AwaitKindAttr:$kind);
   let regions = (region SizedRegion<1>:$ready,
                         SizedRegion<1>:$suspend,
                         SizedRegion<1>:$resume);
   let assemblyFormat = [{
-    `(` $kind `,`
+    `(` enum($kind) `,`
     `ready` `:` $ready `,`
     `suspend` `:` $suspend `,`
     `resume` `:` $resume `,`
@@ -4784,8 +4838,7 @@ def CIR_AwaitOp : CIR_Op<"await",[
 //===----------------------------------------------------------------------===//
 // CoroBody
 //===----------------------------------------------------------------------===//
-def CIR_CoroBodyOp : CIR_Op<"coro.body", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_CoroBodyOp : CIR_RegionBranchOpBase<"coro.body", [
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -5897,7 +5950,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
   }];
 
   let arguments = (ins
-    CIR_CmpOpKind:$kind,
+    CIR_CmpOpKindAttr:$kind,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs,
     OptionalAttr<CIR_FenvAttr>:$fenv
@@ -5906,7 +5959,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
     qualified(type($result)) attr-dict
   }];
 
@@ -6480,20 +6533,26 @@ def CIR_ComplexRangeKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Improved", 1, "improved">,
     I32EnumAttrCase<"Promoted", 2, "promoted">,
     I32EnumAttrCase<"Basic", 3, "basic">,
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_ComplexRangeKindAttr
+    : CIR_EnumAttr<CIR_ComplexRangeKind, "complex_range">;
 
 class CIR_ComplexRangeBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let arguments = (ins
     CIR_ComplexType:$lhs,
     CIR_ComplexType:$rhs,
-    CIR_ComplexRangeKind:$range
+    CIR_ComplexRangeKindAttr:$range
   );
 
   let results = (outs CIR_ComplexType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+    $lhs `,` $rhs `range` `(` enum($range) `)` `:` qualified(type($result))
+    attr-dict
   }];
 
   let hasLLVMLowering = false;
@@ -8103,8 +8162,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 // TryOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TryOp : CIR_Op<"try",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "C++ try block";
@@ -8681,7 +8739,11 @@ def CIR_InitCatchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Objc", 3, "objc">,
     I32EnumAttrCase<"TrivialCopy", 4, "trivial_copy">,
     I32EnumAttrCase<"NonTrivialCopy", 5, "non_trivial_copy">,
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
 
 def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let summary = "Initialize a catch parameter from the exception pointer";
@@ -8711,11 +8773,11 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let arguments = (ins
       CIR_PointerType:$exn_ptr,
       CIR_PointerType:$param_addr,
-      CIR_InitCatchKind:$kind
+      CIR_InitCatchKindAttr:$kind
   );
 
   let assemblyFormat = [{
-    $kind $exn_ptr `to` $param_addr `:`
+    enum($kind) $exn_ptr `to` $param_addr `:`
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
@@ -8761,12 +8823,12 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
   let arguments = (ins
       CIR_EhTokenType:$eh_token,
       CIR_PointerType:$param_addr,
-      CIR_InitCatchKind:$kind,
+      CIR_InitCatchKindAttr:$kind,
       OptionalAttr<FlatSymbolRefAttr>:$copy_fn
   );
 
   let assemblyFormat = [{
-    $kind $eh_token `to` $param_addr `using` ($copy_fn^)? `:`
+    enum($kind) $eh_token `to` $param_addr `using` ($copy_fn^)? `:`
       qualified(type($param_addr)) attr-dict
   }];
 
@@ -9175,31 +9237,43 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
 // MemChrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
+def CIR_MemChrOp : CIR_Op<"libc.memchr",
+    [AllTypesMatch<["src", "result"]>]> {
   let summary = "libc's `memchr`";
   let description = [{
     Search for `pattern` in data range from `src` to `src` + `len`.
     `len` provides a bound to the search in `src`. `result` is a pointer to
     found `pattern` or a null pointer.
 
+    `pattern` has the width of the target int and `len` has the width of
+    the target size_t. The module records these widths as
+    `cir.int_type_width` and `cir.size_type_width`, each a signless i32
+    holding a fundamental integer width, and the verifier checks the
+    operands against them. `src` must be a void pointer in the default
+    address space and `result` has the same type as `src`.
+
     Examples:
 
     ```
-    %p = cir.libc.memchr(%src, %pattern, %len)
+    %p = cir.libc.memchr(%src, %pattern, %len) : !cir.ptr<!void>, !s32i, !u64i
     ```
   }];
 
   let arguments = (ins
     Arg<CIR_VoidPtrType, "", [MemRead]>:$src,
-    CIR_SInt32:$pattern,
-    CIR_UInt64:$len
+    CIR_AnyFundamentalSIntType:$pattern,
+    CIR_AnyFundamentalUIntType:$len
   );
 
   let results = (outs CIR_VoidPtrType:$result);
 
   let assemblyFormat = [{
     `(` $src `,` $pattern `,` $len `)` attr-dict
+    `:` qualified(type($src)) `,` qualified(type($pattern)) `,`
+    qualified(type($len))
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

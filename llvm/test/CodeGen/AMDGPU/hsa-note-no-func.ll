@@ -2,28 +2,18 @@
 ; RUN: llc < %s -mtriple=amdgpu6.01-- | FileCheck --check-prefixes=NONHSA-SI601 %s
 ; RUN: llc < %s -mtriple=amdgpu6.02-- | FileCheck --check-prefixes=NONHSA-SI602 %s
 ; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | FileCheck --check-prefix=HSA-CI700 %s
-; RUN: llc < %s -mtriple=amdgpu7.00--amdhsa | FileCheck --check-prefix=HSA-CI700 %s
-; RUN: llc < %s -mtriple=amdgpu7.01--amdhsa | FileCheck --check-prefix=HSA-CI701 %s
 ; RUN: llc < %s -mtriple=amdgpu7.01--amdhsa | FileCheck --check-prefix=HSA-CI701 %s
 ; RUN: llc < %s -mtriple=amdgpu7.02--amdhsa | FileCheck --check-prefix=HSA-CI702 %s
 ; RUN: llc < %s -mtriple=amdgpu7.03--amdhsa | FileCheck --check-prefix=HSA-CI703 %s
-; RUN: llc < %s -mtriple=amdgpu7.03--amdhsa | FileCheck --check-prefix=HSA-CI703 %s
-; RUN: llc < %s -mtriple=amdgpu7.03--amdhsa | FileCheck --check-prefix=HSA-CI703 %s
-; RUN: llc < %s -mtriple=amdgpu7.04--amdhsa | FileCheck --check-prefix=HSA-CI704 %s
 ; RUN: llc < %s -mtriple=amdgpu7.04--amdhsa | FileCheck --check-prefix=HSA-CI704 %s
 ; RUN: llc < %s -mtriple=amdgpu7.05--amdhsa | FileCheck --check-prefix=HSA-CI705 %s
 ; RUN: llc < %s -mtriple=amdgpu8.01--amdhsa | FileCheck --check-prefix=HSA-VI801 %s
 ; RUN: llc < %s -mtriple=amdgpu8.01--amdhsa -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI801 %s
 ; RUN: llc < %s -mtriple=amdgpu8.02--amdhsa | FileCheck --check-prefix=HSA-VI802 %s
 ; RUN: llc < %s -mtriple=amdgpu8.02--amdhsa -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI802 %s
-; RUN: llc < %s -mtriple=amdgpu8.02--amdhsa -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI802 %s
 ; RUN: llc < %s -mtriple=amdgpu8.03--amdhsa | FileCheck --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgpu8.03--amdhsa -mattr=-flat-for-global | FileCheck --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgpu8.03--amdhsa | FileCheck --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgpu8.03--amdhsa | FileCheck --check-prefix=HSA-VI803 %s
 ; RUN: llc < %s -mtriple=amdgpu8.05--amdhsa | FileCheck --check-prefix=HSA-VI805 %s
-; RUN: llc < %s -mtriple=amdgpu8.05--amdhsa | FileCheck --check-prefix=HSA-VI805 %s
-; RUN: llc < %s -mtriple=amdgpu8.10--amdhsa | FileCheck --check-prefix=HSA-VI810 %s
 ; RUN: llc < %s -mtriple=amdgpu8.10--amdhsa | FileCheck --check-prefix=HSA-VI810 %s
 ; RUN: llc < %s -mtriple=amdgpu9.00--amdhsa --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX900 %s
 ; RUN: llc < %s -mtriple=amdgpu9.00--amdhsa | FileCheck --check-prefix=HSA-GFX901 %s

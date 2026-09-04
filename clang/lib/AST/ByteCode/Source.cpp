@@ -31,15 +31,3 @@ SourceRange SourceInfo::getRange() const {
     return D->getSourceRange();
   return SourceRange();
 }
-
-const Expr *SourceMapper::getExpr(CodePtr PC) const {
-  return getSource(PC).asExpr();
-}
-
-SourceLocation SourceMapper::getLocation(CodePtr PC) const {
-  return getSource(PC).getLoc();
-}
-
-SourceRange SourceMapper::getRange(CodePtr PC) const {
-  return getSource(PC).getRange();
-}

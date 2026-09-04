@@ -35,7 +35,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -699,19 +698,7 @@ public:
 
   // Different targets may support a different maximum width for the _BitInt
   // type, depending on what operations are supported.
-  virtual size_t getMaxBitIntWidth() const {
-    // Consider -fexperimental-max-bitint-width= first.
-    if (MaxBitIntWidth)
-      return std::min<size_t>(*MaxBitIntWidth, llvm::IntegerType::MAX_INT_BITS);
-
-    // FIXME: this value should be llvm::IntegerType::MAX_INT_BITS, which is
-    // maximum bit width that LLVM claims its IR can support. However, most
-    // backends currently have a bug where they only support float to int
-    // conversion (and vice versa) on types that are <= 128 bits and crash
-    // otherwise. We're setting the max supported value to 128 to be
-    // conservative.
-    return 128;
-  }
+  virtual size_t getMaxBitIntWidth() const;
 
   /// Determine whether the target has fast native support for operations
   /// on half types.

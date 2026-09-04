@@ -190,5 +190,5 @@ void CIRGenOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *fd,
       llvm::cast<mlir::omp::DeclareTargetInterface>(funcOp.getOperation());
   declTargetIface.setDeclareTarget(convertDeviceType(attr->getDevType()),
                                    convertCaptureClause(attr->getMapType()),
-                                   /*automap=*/false);
+                                   /*automap=*/false, /*implicit=*/false);
 }

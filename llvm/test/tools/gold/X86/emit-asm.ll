@@ -1,11 +1,11 @@
 ; RUN: llvm-as %s -o %t.o
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=emit-asm \
 ; RUN:    -shared %t.o -o %t2.s
 ; RUN: FileCheck --input-file %t2.s %s
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 --plugin-opt=emit-asm --plugin-opt=lto-partitions=2\
 ; RUN:    -shared %t.o -o %t2.s
 ; RUN: cat %t2.s %t2.s1 > %t3.s

@@ -42,6 +42,7 @@
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
 #include "clang/Analysis/PathDiagnostic.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 

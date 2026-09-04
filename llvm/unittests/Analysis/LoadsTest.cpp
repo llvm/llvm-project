@@ -100,8 +100,8 @@ TEST(LoadsTest, CanReplacePointersIfEqual) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"IR(
-@y = common global [1 x i32] zeroinitializer, align 4
-@x = common global [1 x i32] zeroinitializer, align 4
+@y = constant [1 x i32] zeroinitializer, align 4
+@x = constant [1 x i32] zeroinitializer, align 4
 declare void @use(ptr)
 
 define void @f(ptr %p1, ptr %p2, i64 %i, ptr addrspace(1) %p1as1) {

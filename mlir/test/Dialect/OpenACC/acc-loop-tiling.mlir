@@ -14,9 +14,9 @@
 // CHECK:           %[[MIN_UB:.*]] = arith.minsi %[[NEW_UB]], %[[C10]] : index
 // CHECK:           acc.loop control(%[[INNER_IV:.*]] : index) = (%[[IV]] : index) to (%[[MIN_UB]] : index) step (%[[C1]] : index) {
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @single_loop_tile(%arg0: memref<10xf32>) {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
@@ -27,7 +27,7 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<10xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -49,9 +49,9 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
 // Element-group loop with vector.
 // CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to (%[[MUB0]], %[[MUB1]] : index, index) step (%[[C1]], %[[C1]] : index, index) {
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -65,7 +65,7 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -81,9 +81,9 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
 // CHECK:           acc.loop control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
 // CHECK-NOT:         gang
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -98,7 +98,7 @@ func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -116,9 +116,9 @@ func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
 // CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
 // CHECK-NOT:         worker
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @worker_num_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -133,7 +133,7 @@ func.func @worker_num_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -162,7 +162,7 @@ func.func @unknown_tile_size(%arg0: memref<1000xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<1000xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -179,7 +179,7 @@ func.func @no_tile_values() {
   %c1 = arith.constant 1 : index
   acc.loop control(%i : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -213,6 +213,6 @@ func.func @body_with_nested_region(%arg0: memref<10xi32>) {
     }
     memref.store %val, %arg0[%i] : memref<10xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }

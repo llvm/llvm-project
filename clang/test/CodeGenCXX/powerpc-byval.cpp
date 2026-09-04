@@ -9,4 +9,4 @@ void byval(S one, S two) {
   one = two;
 }
 
-// CHECK: define{{.*}} void @_Z5byval1SS_(ptr nofree noundef align 1 dereferenceable(1) %one, ptr nofree noundef align 1 dereferenceable(1) %two)
+// CHECK: define{{.*}} void @_Z5byval1SS_(ptr nofreeobj noundef align 1 dereferenceable(1) %one, ptr nofreeobj noundef align 1 dereferenceable(1) %two)

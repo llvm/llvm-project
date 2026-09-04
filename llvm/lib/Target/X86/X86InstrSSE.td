@@ -7315,6 +7315,7 @@ let Predicates = [HasAVX1Only] in {
   defm : vperm2x128_lowering<"VPERM2F128", v8i32,  loadv8i32>;
   defm : vperm2x128_lowering<"VPERM2F128", v16i16, loadv16i16>;
   defm : vperm2x128_lowering<"VPERM2F128", v16f16, loadv16f16>;
+  defm : vperm2x128_lowering<"VPERM2F128", v16bf16, loadv16bf16>;
   defm : vperm2x128_lowering<"VPERM2F128", v32i8,  loadv32i8>;
 }
 
@@ -7372,7 +7373,6 @@ let Predicates = [HasAVX1Only] in {
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v4i32, v8i32,  loadv4i32, loadv8i32>;
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v8i16, v16i16, loadv8i16, loadv16i16>;
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v8f16, v16f16, loadv8f16, loadv16f16>;
-  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v16i8, v32i8,  loadv16i8, loadv32i8>;
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v16i8, v32i8,  loadv16i8, loadv32i8>;
 }
 
@@ -7995,7 +7995,7 @@ let Predicates = [HasAVX2] in {
   defm : vperm2x128_lowering<"VPERM2I128", v8i32,  loadv8i32>;
   defm : vperm2x128_lowering<"VPERM2I128", v16i16, loadv16i16>;
   defm : vperm2x128_lowering<"VPERM2I128", v16f16, loadv16f16>;
-  defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
+  defm : vperm2x128_lowering<"VPERM2I128", v16bf16, loadv16bf16>;
   defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
 }
 
@@ -8019,7 +8019,6 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v4i32, v8i32,  loadv4i32,  loadv8i32>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8i16, v16i16, loadv8i16,  loadv16i16>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8f16, v16f16, loadv8f16,  loadv16f16>;
-  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
 

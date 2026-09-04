@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
+#include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -300,13 +301,20 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   return MaxVF;
 }
 
-std::optional<unsigned> llvm::getMaxVScale(const Function &F,
-                                           const TargetTransformInfo &TTI) {
-  if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
-    return MaxVScale;
-
+std::optional<unsigned> llvm::getMaxVScale(const Function &F) {
   if (F.hasFnAttribute(Attribute::VScaleRange))
     return F.getFnAttribute(Attribute::VScaleRange).getVScaleRangeMax();
+
+  return std::nullopt;
+}
+
+std::optional<uint64_t>
+llvm::getMaxRuntimeElementCount(ElementCount EC, const Function &F) {
+  if (EC.isFixed())
+    return EC.getFixedValue();
+
+  if (std::optional<unsigned> MaxVScale = getMaxVScale(F))
+    return uint64_t(EC.getKnownMinValue()) * *MaxVScale;
 
   return std::nullopt;
 }
@@ -358,7 +366,7 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
     return false;
   }
 
-  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F, TTI)) {
+  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(F)) {
     reportVectorizationInfo("The target does not provide maximum vscale value "
                             "for safe distance analysis.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
@@ -379,7 +387,7 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
   if (Legal->isSafeForAnyVectorWidth())
     return MaxScalableVF;
 
-  std::optional<unsigned> MaxVScale = getMaxVScale(F, TTI);
+  std::optional<unsigned> MaxVScale = getMaxVScale(F);
   // Limit MaxScalableVF by the maximum safe dependence distance.
   MaxScalableVF = ElementCount::getScalable(MaxSafeElements / *MaxVScale);
 
@@ -531,6 +539,15 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
           MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
     }
   }
+
+  // If the loop has no loads/stores or reductions (e.g. a search loop with an
+  // early exit), MinWidth is never updated and is left at its sentinel value.
+  // Fall back to MaxWidth to keep the SmallestType <= WidestType invariant, so
+  // callers such as the max-bandwidth VF computation don't divide by the
+  // sentinel and collapse the VF to zero.
+  if (MinWidth == -1U)
+    MinWidth = MaxWidth;
+
   return {MinWidth, MaxWidth};
 }
 
@@ -701,7 +718,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   InstructionCost CostB = B.Cost;
 
   // When there is a hint to always prefer scalable vectors, honour that hint.
-  if (Hints.isScalableVectorizationAlwaysPreferred())
+  if (Config.getHints().isScalableVectorizationAlwaysPreferred())
     if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
         !B.Width.isScalar())
       return true;
@@ -846,4 +863,62 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
   LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
                     << "VF " << VF << " to build VPlans.\n");
   return FixedScalableVFPair(VF);
+}
+
+/// \returns true if the VPlan contains header phi recipes that are not
+/// currently supported for epilogue vectorization.
+static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
+  return any_of(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+      [](VPRecipeBase &R) {
+        switch (R.getVPRecipeID()) {
+        case VPRecipeBase::VPFirstOrderRecurrencePHISC:
+          // TODO: Add support for fixed-order recurrences.
+          return true;
+        case VPRecipeBase::VPWidenIntOrFpInductionSC:
+          return !cast<VPWidenIntOrFpInductionRecipe>(&R)->getPHINode();
+        case VPRecipeBase::VPReductionPHISC: {
+          auto *RedPhi = cast<VPReductionPHIRecipe>(&R);
+          // TODO: Support FMinNum/FMaxNum, FindLast reductions, and reductions
+          // without underlying values.
+          RecurKind Kind = RedPhi->getRecurrenceKind();
+          if (RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind) ||
+              RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) ||
+              !RedPhi->getUnderlyingValue())
+            return true;
+          // TODO: Add support for FindIV reductions with sunk expressions: the
+          // resume value from the main loop is in expression domain (e.g.,
+          // mul(ReducedIV, 3)), but the epilogue tracks raw IV values. A sunk
+          // expression is identified by a non-VPInstruction user of
+          // ComputeReductionResult.
+          if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
+            auto *RdxResult = vputils::findComputeReductionResult(RedPhi);
+            assert(RdxResult &&
+                   "FindIV reduction must have ComputeReductionResult");
+            return any_of(RdxResult->users(),
+                          std::not_fn(IsaPred<VPInstruction>));
+          }
+          return false;
+        }
+        default:
+          return false;
+        };
+      });
+}
+
+bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
+    VPlan &MainPlan) const {
+  // Bail out if the plan contains header phi recipes not yet supported
+  // for epilogue vectorization.
+  if (hasUnsupportedHeaderPhiRecipe(MainPlan))
+    return false;
+
+  // Epilogue vectorization code has not been auditted to ensure it handles
+  // non-latch exits properly.  It may be fine, but it needs auditted and
+  // tested.
+  // TODO: Add support for loops with an early exit.
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+    return false;
+
+  return true;
 }

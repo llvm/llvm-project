@@ -1059,6 +1059,21 @@ AMDGPUToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
+    return PTID;
+  }
+
+  if (getTriple().getSubArch() != llvm::Triple::NoSubArch &&
+      PTID.OptionalGPUArch) {
+    llvm::AMDGPU::GPUKind Kind =
+        llvm::AMDGPU::parseArchAMDGCN(*PTID.OptionalGPUArch);
+    llvm::Triple::SubArchType KindSubArch =
+        static_cast<llvm::Triple::SubArchType>(llvm::AMDGPU::getSubArch(Kind));
+    if (getTriple().getSubArch() != KindSubArch &&
+        getTriple().getSubArch() !=
+            llvm::AMDGPU::getMajorSubArch(KindSubArch)) {
+      getDriver().Diag(clang::diag::err_target_unsupported_arch)
+          << *PTID.OptionalGPUArch << getTriple().getArchName();
+    }
   }
   return PTID;
 }
@@ -1349,11 +1364,12 @@ static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
     return false;
   llvm::StringRef Processor = getProcessorFromTargetID(TT, TargetID);
   llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
-  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ProcKind);
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(ProcKind);
 
   // If processor has xnack but doesn't support on/off modes, xnack is always on
-  bool XnackAlwaysOn = (Features & llvm::AMDGPU::FEATURE_XNACK) &&
-                       !(Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES);
+  bool XnackAlwaysOn = Features.test(llvm::AMDGPU::FEAT_XNACK_SUPPORT) &&
+                       !Features.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES);
   if (XnackAlwaysOn)
     return true;
 

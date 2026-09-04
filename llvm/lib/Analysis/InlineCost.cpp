@@ -1588,10 +1588,9 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
       // being too pessimistic and prevent inlining non-problematic code. This
       // could result in unintended perf regressions. A better overall strategy
       // is needed to track stack usage during inlining.
-      Type *Ty = I.getAllocatedType();
       AllocatedSize = SaturatingMultiplyAdd(
           AllocSize->getLimitedValue(),
-          DL.getTypeAllocSize(Ty).getKnownMinValue(), AllocatedSize);
+          I.getAllocationBaseSize(DL).getKnownMinValue(), AllocatedSize);
       if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline)
         HasDynamicAlloca = true;
       return false;
@@ -2437,8 +2436,11 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
 
 bool CallAnalyzer::isLoweredToCall(Function *F, CallBase &Call) {
   const TargetLibraryInfo *TLI = GetTLI ? &GetTLI(*F) : nullptr;
-  LibFunc LF;
-  if (!TLI || !TLI->getLibFunc(*F, LF) || !TLI->has(LF))
+  if (!TLI)
+    return TTI.isLoweredToCall(F);
+
+  LibFunc LF = TLI->getLibFunc(*F);
+  if (!TLI->has(LF))
     return TTI.isLoweredToCall(F);
 
   switch (LF) {

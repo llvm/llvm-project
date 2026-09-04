@@ -133,6 +133,18 @@ static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
   return result;
 }
 
+/// Set attributes on an operation using its inherent/discardable split.
+static void setConvertedAttrs(Operation *op, DictionaryAttr attrs) {
+  SmallVector<NamedAttribute> discardableAttrs;
+  for (NamedAttribute attr : attrs) {
+    if (op->getInherentAttr(attr.getName()).has_value())
+      op->setInherentAttr(attr.getName(), attr.getValue());
+    else
+      discardableAttrs.push_back(attr);
+  }
+  op->setDiscardableAttrs(discardableAttrs);
+}
+
 /// Convert the destination block signature (if necessary) and lower the branch
 /// op to llvm.br.
 struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
@@ -148,12 +160,12 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
                           TypeRange(ValueRange(flattenedAdaptor)));
     if (failed(convertedBlock))
       return failure();
-    DictionaryAttr attrs = op->getAttrDictionary();
+    DictionaryAttr attrs = op->getDiscardableAttrDictionary();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
         op, flattenedAdaptor, *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(attrs);
+    setConvertedAttrs(newOp, attrs);
     return success();
   }
 };
@@ -191,7 +203,7 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
         *convertedTrueBlock, *convertedFalseBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setDiscardableAttrs(attrs);
+    setConvertedAttrs(newOp, attrs);
     return success();
   }
 };

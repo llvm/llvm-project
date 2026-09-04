@@ -11,14 +11,14 @@ llvm.func @sqrt_f32(%a : f32) -> f32 {
   // CHECK: call float @llvm.nvvm.sqrt.rz.ftz.f(float %{{.*}})
   // CHECK: call float @llvm.nvvm.sqrt.rm.ftz.f(float %{{.*}})
   // CHECK: call float @llvm.nvvm.sqrt.rp.ftz.f(float %{{.*}})
-  %r1 = nvvm.sqrt %a  {rnd = #nvvm.fp_rnd_mode<rn>} : f32
-  %r2 = nvvm.sqrt %r1 {rnd = #nvvm.fp_rnd_mode<rz>} : f32
-  %r3 = nvvm.sqrt %r2 {rnd = #nvvm.fp_rnd_mode<rm>} : f32
-  %r4 = nvvm.sqrt %r3 {rnd = #nvvm.fp_rnd_mode<rp>} : f32
-  %r5 = nvvm.sqrt %r4 {rnd = #nvvm.fp_rnd_mode<rn>, ftz = true} : f32
-  %r6 = nvvm.sqrt %r5 {rnd = #nvvm.fp_rnd_mode<rz>, ftz = true} : f32
-  %r7 = nvvm.sqrt %r6 {rnd = #nvvm.fp_rnd_mode<rm>, ftz = true} : f32
-  %r8 = nvvm.sqrt %r7 {rnd = #nvvm.fp_rnd_mode<rp>, ftz = true} : f32
+  %r1 = nvvm.sqrt %a, rnd = <rn> : f32
+  %r2 = nvvm.sqrt %r1, rnd = <rz> : f32
+  %r3 = nvvm.sqrt %r2, rnd = <rm> : f32
+  %r4 = nvvm.sqrt %r3, rnd = <rp> : f32
+  %r5 = nvvm.sqrt %r4, rnd = <rn> ftz = true : f32
+  %r6 = nvvm.sqrt %r5, rnd = <rz> ftz = true : f32
+  %r7 = nvvm.sqrt %r6, rnd = <rm> ftz = true : f32
+  %r8 = nvvm.sqrt %r7, rnd = <rp> ftz = true : f32
   llvm.return %r8 : f32
 }
 
@@ -29,10 +29,10 @@ llvm.func @sqrt_f64(%a : f64) -> f64 {
   // CHECK: call double @llvm.nvvm.sqrt.rz.d(double %{{.*}})
   // CHECK: call double @llvm.nvvm.sqrt.rm.d(double %{{.*}})
   // CHECK: call double @llvm.nvvm.sqrt.rp.d(double %{{.*}})
-  %r1 = nvvm.sqrt %a  {rnd = #nvvm.fp_rnd_mode<rn>} : f64
-  %r2 = nvvm.sqrt %r1 {rnd = #nvvm.fp_rnd_mode<rz>} : f64
-  %r3 = nvvm.sqrt %r2 {rnd = #nvvm.fp_rnd_mode<rm>} : f64
-  %r4 = nvvm.sqrt %r3 {rnd = #nvvm.fp_rnd_mode<rp>} : f64
+  %r1 = nvvm.sqrt %a, rnd = <rn> : f64
+  %r2 = nvvm.sqrt %r1, rnd = <rz> : f64
+  %r3 = nvvm.sqrt %r2, rnd = <rm> : f64
+  %r4 = nvvm.sqrt %r3, rnd = <rp> : f64
   llvm.return %r4 : f64
 }
 
@@ -42,6 +42,6 @@ llvm.func @sqrt_approx(%a : f32) -> f32 {
   // CHECK: call float @llvm.nvvm.sqrt.approx.f(float %{{.*}})
   // CHECK: call float @llvm.nvvm.sqrt.approx.ftz.f(float %{{.*}})
   %r1 = nvvm.sqrt.approx %a  : f32
-  %r2 = nvvm.sqrt.approx %r1 {ftz = true} : f32
+  %r2 = nvvm.sqrt.approx %r1 ftz = true : f32
   llvm.return %r2 : f32
 }

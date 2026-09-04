@@ -62,6 +62,12 @@ struct Outer {
 // LLVM-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
 // LLVM-DAG: %struct.OuterAllEmpty = type { i8 }
 // LLVM-DAG: @oae = {{(dso_local )?}}global %struct.OuterAllEmpty zeroinitializer, align 1
+// LLVM-DAG: %struct.OuterUnionBitPad = type { %struct.UnionBitAndWide.base, i8, [6 x i8] }
+// LLVM-DAG: %struct.UnionBitAndWide.base = type <{ double, i8 }>
+// LLVM-DAG: %struct.OuterAllEmptyBits = type { %struct.UnionAllEmptyBits.base, i8, [4 x i8] }
+// LLVM-DAG: %struct.UnionAllEmptyBits.base = type { [3 x i8] }
+// LLVM-DAG: @oubp = {{(dso_local )?}}global %struct.OuterUnionBitPad zeroinitializer, align 8
+// LLVM-DAG: @oaeb = {{(dso_local )?}}global %struct.OuterAllEmptyBits zeroinitializer, align 8
 // OGCG-DAG: %struct.OuterUnion = type { %union.UnionForNUA, i32 }
 // OGCG-DAG: %union.UnionForNUA = type { i64 }
 // OGCG-DAG: %struct.OuterFinal = type { %struct.FinalForNUA, i8 }
@@ -82,6 +88,12 @@ struct Outer {
 // OGCG-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
 // OGCG-DAG: %struct.OuterAllEmpty = type { i8 }
 // OGCG-DAG: @oae = {{(dso_local )?}}global %struct.OuterAllEmpty zeroinitializer, align 1
+// OGCG-DAG: %struct.OuterUnionBitPad = type { %union.UnionBitAndWide.base, i8, [6 x i8] }
+// OGCG-DAG: %union.UnionBitAndWide.base = type <{ double, i8 }>
+// OGCG-DAG: %struct.OuterAllEmptyBits = type { %union.UnionAllEmptyBits.base, i8, [4 x i8] }
+// OGCG-DAG: %union.UnionAllEmptyBits.base = type { [3 x i8] }
+// OGCG-DAG: @oubp = {{(dso_local )?}}global %struct.OuterUnionBitPad zeroinitializer, align 8
+// OGCG-DAG: @oaeb = {{(dso_local )?}}global %struct.OuterAllEmptyBits zeroinitializer, align 8
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
@@ -183,6 +195,76 @@ struct OuterUnionPadAfterStorage {
 };
 
 OuterUnionPadAfterStorage oupas;
+
+// The stand-in member takes a bit-field unit mark as soon as any variant is a
+// unit, even where the storage type comes from a variant that is not one.
+struct WideTail {
+  WideTail();
+
+private:
+  double d;
+  char c;
+};
+
+union UnionBitAndWide {
+  UnionBitAndWide();
+  [[no_unique_address]] WideTail w;
+  unsigned b : 3;
+  double d;
+};
+
+struct OuterUnionBitPad {
+  [[no_unique_address]] UnionBitAndWide u;
+  bool tail;
+};
+
+OuterUnionBitPad oubp;
+
+// No variant holds data and one is a unit, so the stand-in is an empty unit.
+struct alignas(8) EmptyBitsTail {
+  EmptyBitsTail();
+
+private:
+  int : 24;
+};
+
+union UnionAllEmptyBits {
+  UnionAllEmptyBits();
+  [[no_unique_address]] EmptyBitsTail e;
+  unsigned : 3;
+};
+
+struct OuterAllEmptyBits {
+  [[no_unique_address]] UnionAllEmptyBits u;
+  bool tail;
+};
+
+OuterAllEmptyBits oaeb;
+
+// The only variant holding data is a unit, so the stand-in holds data because
+// of a unit mark rather than a data mark.
+union OnlyBitData {
+  OnlyBitData();
+  [[no_unique_address]] EmptyBitsTail e;
+  unsigned b : 3;
+};
+
+struct OuterOnlyBitData {
+  [[no_unique_address]] OnlyBitData u;
+  bool tail;
+};
+
+OuterOnlyBitData oobd;
+
+// CIR-NUA-DAG: !rec_OnlyBitData2Ebase = !cir.struct<"OnlyBitData.base" {bitfield !cir.array<!u8i x 3>}>
+// CIR-NUA-DAG: !rec_OuterOnlyBitData = !cir.struct<"OuterOnlyBitData" {data !rec_OnlyBitData2Ebase, data !cir.bool, pad !cir.array<!u8i x 4>}>
+// CIR-NUA-DAG: cir.global external @oobd = #cir.zero : !rec_OuterOnlyBitData
+// CIR-NUA-DAG: !rec_UnionBitAndWide2Ebase = !cir.struct<"UnionBitAndWide.base" packed {bitfield !cir.double, pad !u8i}>
+// CIR-NUA-DAG: !rec_OuterUnionBitPad = !cir.struct<"OuterUnionBitPad" {data !rec_UnionBitAndWide2Ebase, data !cir.bool, pad !cir.array<!u8i x 6>}>
+// CIR-NUA-DAG: !rec_UnionAllEmptyBits2Ebase = !cir.struct<"UnionAllEmptyBits.base" {empty !cir.array<!u8i x 3>}>
+// CIR-NUA-DAG: !rec_OuterAllEmptyBits = !cir.struct<"OuterAllEmptyBits" {empty !rec_UnionAllEmptyBits2Ebase, data !cir.bool, pad !cir.array<!u8i x 4>}>
+// CIR-NUA-DAG: cir.global external @oubp = #cir.zero : !rec_OuterUnionBitPad
+// CIR-NUA-DAG: cir.global external @oaeb = #cir.zero : !rec_OuterAllEmptyBits
 
 // CIR-NUA-DAG: !rec_FinalForNUA = !cir.struct<"FinalForNUA" {data !s32i, data !s8i}>
 // CIR-NUA-DAG: !rec_UnionForNUA = !cir.union<"UnionForNUA" {data !s32i, data !s64i}>

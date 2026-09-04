@@ -1176,48 +1176,54 @@ unsigned getWavefrontSize(const MCSubtargetInfo &STI) {
   return 64;
 }
 
-unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
-  unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
-
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". So the effective local memory size is doubled in
-  // WGP mode on gfx10.
-  if (isGFX10Plus(STI) && !STI.getFeatureBits().test(FeatureCuMode))
-    BytesPerCU *= 2;
-
-  return BytesPerCU;
-}
-
-unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
+// Maximum LDS a single work-group can address. This is a fixed HW cap. It does
+// not depend on how many SIMDs a work-group runs on.
+static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 196608;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
   return 32768;
 }
 
-unsigned getEUsPerCU(const MCSubtargetInfo &STI) {
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share".
+// Total physical size of LDS on the block, in bytes. On targets with
+// FeatureHalfAddressablePhysicalLocalMemory the physical block is twice the
+// addressable size (gfx10/11/12, 128k physical and 64k addressable). On other
+// targets it is equal to the addressable size.
+static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
+  unsigned Addressable = getMaxHWAddressableLocalMemorySize(STI);
+  if (STI.getFeatureBits().test(FeatureHalfAddressablePhysicalLocalMemory))
+    return 2 * Addressable;
+  return Addressable;
+}
 
-  // GFX12.5 only supports CU mode, which contains four SIMDs.
-  if (isGFX1250(STI)) {
-    assert(STI.getFeatureBits().test(FeatureCuMode));
-    return 4;
-  }
+// Sizes in use, by generation (addressable / physical block):
+//   gfx6              :  32 KiB
+//   gfx7 / gfx8 / gfx9:  64 KiB
+//   gfx9.5 (gfx950)   : 160 KiB
+//   gfx10 / 11 / 12   :  64 KiB addressable, 128 KiB physical block
+//   gfx12.5 (gfx1250) : 320 KiB (always runs on four SIMDs)
+//   gfx13             : 192 KiB on four SIMDs, 96 KiB on two
+// Total available in the current mode. The physical size is halved when a
+// work-group runs on two SIMDs.
+unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
+  unsigned Size = getPhysicalLocalMemorySize(STI);
+  if (!isFullSIMDMode(STI))
+    Size /= 2;
+  return Size;
+}
 
-  // For gfx10 in CU mode the functional block is the CU, which contains
-  // two SIMDs.
-  if (isGFX10Plus(STI) && STI.getFeatureBits().test(FeatureCuMode))
-    return 2;
-
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
-  // contains two CUs, so a total of four SIMDs.
-  return 4;
+// What one work-group can allocate in the current mode. This is the HW
+// addressable cap, but never more than the total available in the current mode.
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
+  return std::min(getMaxHWAddressableLocalMemorySize(STI),
+                  getLocalMemorySize(STI));
 }
 
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
@@ -1225,7 +1231,9 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
   assert(FlatWorkGroupSize != 0);
   if (!STI.getTargetTriple().isAMDGCN())
     return 8;
-  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned MaxWaves =
+      getMaxWavesPerEU(Kind) * getNumWorkGroupSIMDs(isFullSIMDMode(STI));
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
   if (N == 1) {
     // Single-wave workgroups don't consume barrier resources.
@@ -1239,24 +1247,11 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
   return std::min(MaxWaves / N, MaxBarriers);
 }
 
-unsigned getMinWavesPerEU(const MCSubtargetInfo &STI) { return 1; }
-
-unsigned getMaxWavesPerEU(const MCSubtargetInfo &STI) {
-  // FIXME: Need to take scratch memory into account.
-  if (isGFX90A(STI))
-    return 8;
-  if (!isGFX10Plus(STI))
-    return 10;
-  return hasGFX10_3Insts(STI) ? 16 : 20;
-}
-
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize) {
   return divideCeil(getWavesPerWorkGroup(STI, FlatWorkGroupSize),
-                    getEUsPerCU(STI));
+                    getNumWorkGroupSIMDs(isFullSIMDMode(STI)));
 }
-
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }
 
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize) {
@@ -1291,10 +1286,10 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   if (Version.Major >= 10)
     return 0;
 
-  if (WavesPerEU >= getMaxWavesPerEU(STI))
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  if (WavesPerEU >= getMaxWavesPerEU(Kind))
     return 0;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   unsigned MinNumSGPRs =
       getSGPRBudgetPerWave(getTotalNumSGPRs(Kind), WavesPerEU + 1,
                            getSGPRTrapHandlerReserve(STI),
@@ -1444,7 +1439,7 @@ unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
                                       unsigned DynamicVGPRBlockSize) {
   return getNumWavesPerEUWithNumVGPRs(
       NumVGPRs, getVGPRAllocGranule(STI, DynamicVGPRBlockSize),
-      getMaxWavesPerEU(STI), getTotalNumVGPRs(STI));
+      getMaxWavesPerEU(parseArchAMDGCN(STI.getCPU())), getTotalNumVGPRs(STI));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1467,12 +1462,12 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
 }
 
 unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
-  unsigned MaxWaves = getMaxWavesPerEU(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned MaxWaves = getMaxWavesPerEU(Kind);
 
   if (!isSGPROccupancyLimited(STI))
     return MaxWaves;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(Kind),
                                   getSGPRAllocGranule(Kind),
                                   getSGPRTrapHandlerReserve(STI));
@@ -1490,7 +1485,7 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   if (DynamicVGPREnabled)
     return 0;
 
-  unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
+  unsigned MaxWavesPerEU = getMaxWavesPerEU(parseArchAMDGCN(STI.getCPU()));
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
 
@@ -2601,6 +2596,10 @@ bool isGFX1250(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
 }
 
+bool isFullSIMDMode(const MCSubtargetInfo &STI) {
+  return isGFX1250(STI) || !STI.getFeatureBits().test(FeatureCuMode);
+}
+
 bool isGFX1250Plus(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
 }
@@ -2684,6 +2683,10 @@ bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
   const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
          Reg == AMDGPU::SCC;
+}
+
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getRegClass(AMDGPU::RsrcReg32RegClassID).contains(Reg);
 }
 
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
@@ -3344,7 +3347,7 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
-           CB->paramHasAttr(ArgNo, Attribute::ByVal);
+           CB->isByValArgument(ArgNo);
   default:
     return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
@@ -3730,6 +3733,8 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
     return 64;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 128;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 256;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 320;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))

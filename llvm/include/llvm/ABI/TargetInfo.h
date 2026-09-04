@@ -83,6 +83,10 @@ protected:
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
+  /// If Ty is a transparent union, return its first field type; otherwise
+  /// return Ty unchanged.
+  LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
+
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
 };

@@ -112,7 +112,9 @@ add_object_library(
     libc.config.app_h
     libc.hdr.elf_proxy
     libc.hdr.link_macros
+    libc.hdr.pthread_macros
     libc.hdr.stdint_proxy
+    libc.hdr.sys_auxv_macros
     libc.hdr.sys_mman_macros
     libc.hdr.types.struct_link_map
     libc.hdr.types.struct_r_debug

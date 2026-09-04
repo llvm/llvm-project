@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir -std=c++17 -fcxx-exceptions -fexceptions -o %t.cir
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -emit-cir -std=c++17 -fcxx-exceptions -fexceptions -o %t.cir
 // RUN: FileCheck -check-prefixes=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t-cir.ll
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t-cir.ll
 // RUN: FileCheck -check-prefixes=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t.ll
 // RUN: FileCheck -check-prefixes=OGCG --input-file=%t.ll %s
@@ -58,7 +56,7 @@ void while_cond_var(int n) {
 // LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM:       [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
@@ -174,7 +172,7 @@ void while_cond_var_break() {
 // LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM:       [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
@@ -275,7 +273,7 @@ void while_cond_var_continue() {
 // LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM:       [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
@@ -382,7 +380,7 @@ void for_cond_var_break() {
 // LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM:       [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
@@ -484,7 +482,7 @@ void for_cond_var_continue() {
 // LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM:       [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
@@ -598,7 +596,7 @@ void for_cond_var(int n) {
 // LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM:       [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
@@ -690,9 +688,9 @@ void while_cond_var_temp(int n) {
 // CIR:     cir.while {
 // CIR:       %[[FALSE:.*]] = cir.const #false
 // CIR:       cir.store %[[FALSE]], %[[FLAG]]
-// CIR:       cir.call @_Z5makeSv() : () -> !rec_S
+// CIR:       cir.call @_Z5makeSv(%[[TMP]]) : (!cir.ptr<!rec_S> {{.*}}llvm.sret = !rec_S{{.*}}) -> ()
 // CIR:       cir.cleanup.scope {
-// CIR:         cir.call @_Z6chainSRK1S(%[[TMP]])
+// CIR:         cir.call @_Z6chainSRK1S(%[[S]], %[[TMP]]) : (!cir.ptr<!rec_S> {{.*}}llvm.sret = !rec_S{{.*}}, !cir.ptr<!rec_S> {{.*}}) -> ()
 // CIR:       } cleanup all {
 // CIR:         cir.call @_ZN1SD1Ev(%[[TMP]]) nothrow
 // CIR:         cir.yield
@@ -720,14 +718,12 @@ void while_cond_var_temp(int n) {
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
 // LLVM:         store i8 0, ptr %[[FLAG]], align 1
-// LLVM:         %[[MK:.*]] = invoke %struct.S @_Z5makeSv()
+// LLVM:         invoke void @_Z5makeSv(ptr {{.*}} sret(%struct.S) {{.*}} %[[TMP]])
 // LLVM-NEXT:            to label %[[MK_CONT:.*]] unwind label %[[LPAD_OUTER:.*]]
 // LLVM:       [[MK_CONT]]:
-// LLVM:         store %struct.S %[[MK]], ptr %[[TMP]], align 1
-// LLVM:         %[[CH:.*]] = invoke %struct.S @_Z6chainSRK1S(ptr {{.*}} %[[TMP]])
+// LLVM:         invoke void @_Z6chainSRK1S(ptr {{.*}} sret(%struct.S) {{.*}} %[[S]], ptr {{.*}} %[[TMP]])
 // LLVM-NEXT:            to label %[[CH_CONT:.*]] unwind label %[[LPAD_TMP:.*]]
 // LLVM:       [[CH_CONT]]:
-// LLVM:         store %struct.S %[[CH]], ptr %[[S]], align 1
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM:       [[LPAD_TMP]]:
 // LLVM:         landingpad { ptr, i32 }
@@ -735,7 +731,7 @@ void while_cond_var_temp(int n) {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVM:         br label %[[EHCOMMON:.*]]
 // LLVM:         store i8 1, ptr %[[FLAG]], align 1
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[CALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD_OUTER]]
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
@@ -888,7 +884,7 @@ void while_cond_var_nested(int n) {
 // LLVM-NEXT:            to label %[[ICTOR_CONT:.*]] unwind label %[[INNER_LPAD:.*]]
 // LLVM:       [[ICTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG_INNER]], align 1
-// LLVM:         %[[TCALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[T]])
+// LLVM:         %[[TCALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[T]])
 // LLVM-NEXT:            to label %[[TCVB_CONT:.*]] unwind label %[[INNER_LPAD]]
 // LLVM:       [[TCVB_CONT]]:
 // LLVM:         br i1 %[[TCALL]], label %[[IBODY:.*]], label %[[ICOND_FALSE:.*]]
@@ -933,7 +929,7 @@ void while_cond_var_nested(int n) {
 // LLVM-NEXT:            to label %[[OCTOR_CONT:.*]] unwind label %[[OUTER_LPAD:.*]]
 // LLVM:       [[OCTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG_OUTER]], align 1
-// LLVM:         %[[SCALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
+// LLVM:         %[[SCALL:.*]] = invoke zeroext i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[SCVB_CONT:.*]] unwind label %[[OUTER_LPAD]]
 // LLVM:       [[SCVB_CONT]]:
 // LLVM:         br i1 %[[SCALL]], label %[[OBODY:.*]], label %[[OCOND_FALSE:.*]]

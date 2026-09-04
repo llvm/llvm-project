@@ -56,6 +56,8 @@ public:
   }
 
 private:
+  void Resolve();
+
   /// An aliasing shared_ptr into m_target_sp's own mutex, resolved fresh
   /// on every lock()/try_lock() call. Shares m_target_sp's control block
   /// (keeping the Target alive) while pointing at the mutex living inside

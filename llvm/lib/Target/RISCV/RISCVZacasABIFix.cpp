@@ -101,7 +101,7 @@ INITIALIZE_PASS_END(RISCVZacasABIFixLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 char RISCVZacasABIFixLegacy::ID = 0;
 
-FunctionPass *llvm::createRISCVZacasABIFixPass() {
+FunctionPass *llvm::createRISCVZacasABIFixLegacyPass() {
   return new RISCVZacasABIFixLegacy();
 }
 

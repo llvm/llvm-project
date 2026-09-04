@@ -16,13 +16,13 @@ module attributes {llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:6
     %6 = llvm.mlir.addressof @_QFEa : !llvm.ptr
     %7 = llvm.mlir.addressof @_QFECnz : !llvm.ptr
     %8 = llvm.getelementptr %6[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-    %9 = omp.map.info var_ptr(%6 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%8 : !llvm.ptr, i32) -> !llvm.ptr {name = ""}
-    %10 = omp.map.info var_ptr(%6 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(to) capture(ByRef) members(%9 : [0] : !llvm.ptr) -> !llvm.ptr {name = "a"}
-    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "b"}
-    %12 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "k"}
-    %13 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "nz"}
+    %9 = omp.map.info var_ptr(%6 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%8 : !llvm.ptr, i32) name("") -> !llvm.ptr
+    %10 = omp.map.info var_ptr(%6 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(to) capture(ByRef) members(%9 : [0] : !llvm.ptr) name("a") -> !llvm.ptr
+    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("b") -> !llvm.ptr
+    %12 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("k") -> !llvm.ptr
+    %13 = omp.map.info var_ptr(%7 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("nz") -> !llvm.ptr
     omp.target kernel_type(spmd) map_entries(%10 -> %arg0, %11 -> %arg1, %12 -> %arg2, %13 -> %arg3, %9 -> %arg4 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
-      %14 = llvm.mlir.constant(0 : index) : i64
+      %14 = llvm.mlir.constant(0 : i64) : i64
       %15 = llvm.mlir.constant(13 : i32) : i32
       %16 = llvm.mlir.constant(1000 : i32) : i32
       %17 = llvm.mlir.constant(1 : i32) : i32

@@ -42,6 +42,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -135,6 +136,9 @@ private:
   void emitSled(const MachineInstr *MI, SledKind Kind);
 
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+
+  MaybeAlign
+  getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) override;
 };
 } // namespace
 
@@ -1321,6 +1325,26 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
   OutStreamer->emitValue(Expr, Size);
+}
+
+MaybeAlign
+RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
+  const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
+  if (!GV.getValueType()->isSized())
+    return std::nullopt;
+
+  uint64_t Size = GV.getGlobalSize(getDataLayout());
+  if (MCSTI.hasFeature(RISCV::FeatureVendorXCheriot))
+    return CHERIoTCapabilityFormat::getRequiredAlignment(Size);
+
+  if (MCSTI.hasFeature(RISCV::FeatureStdExtY)) {
+    if (MCSTI.hasFeature(RISCV::Feature64Bit))
+      return RV64YCapabilityFormat::getRequiredAlignment(Size);
+    else
+      return RV32YCapabilityFormat::getRequiredAlignment(Size);
+  }
+
+  return std::nullopt;
 }
 
 char RISCVAsmPrinter::ID = 0;

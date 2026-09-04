@@ -689,7 +689,8 @@ define amdgpu_ps float @fpext_hif16_to_32(<2 x half> inreg %val) {
 ;
 ; GFX12-LABEL: fpext_hif16_to_32:
 ; GFX12:  ; %bb.0:
-; GFX12:    s_cvt_hi_f32_f16 s0, s0
+; GFX12:    s_lshr_b32 s0, s0, 16
+; GFX12:    s_cvt_f32_f16 s0, s0
 ; GFX12:    v_mov_b32_e32 v0, s0
 ; GFX12:    ; return to shader part epilog
   %hielt = extractelement <2 x half> %val, i32 1

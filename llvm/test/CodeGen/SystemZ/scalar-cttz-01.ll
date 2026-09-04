@@ -23,12 +23,11 @@ define i64 @f0(i64 %arg) {
 define i64 @f1(i64 %arg) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lay %r0, -1(%r2)
-; CHECK-NEXT:    ngr %r2, %r0
-; CHECK-NEXT:    xgr %r2, %r0
-; CHECK-NEXT:    flogr %r0, %r2
-; CHECK-NEXT:    lghi %r2, 64
-; CHECK-NEXT:    sgr %r2, %r0
+; CHECK-NEXT:    lcgr %r0, %r2
+; CHECK-NEXT:    ngr %r0, %r2
+; CHECK-NEXT:    flogr %r2, %r0
+; CHECK-NEXT:    xilf %r2, 63
+; CHECK-NEXT:    # kill: def $r2d killed $r2d killed $r2q
 ; CHECK-NEXT:    br %r14
   %1 = tail call i64 @llvm.cttz.i64(i64 %arg, i1 true)
   ret i64 %1

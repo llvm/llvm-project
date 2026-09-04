@@ -338,8 +338,10 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
   if (llvm::Error PE = ParseSource(Path, CI.getCompilerInstance(), Consumers))
     return std::move(PE);
   CI.getDiagnosticClient().EndSourceFile();
-  if (ShouldDumpIR)
+  if (ShouldDumpIR) {
+    CG.GetModule()->renumberMetadataForAssembly();
     CG.GetModule()->print(llvm::outs(), nullptr);
+  }
   if (CI.getDiagnosticClient().getNumErrors())
     return llvm::make_error<llvm::StringError>(
         "Errors occurred while parsing the expression.", std::error_code());

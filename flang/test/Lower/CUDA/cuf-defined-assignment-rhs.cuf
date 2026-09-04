@@ -1,0 +1,77 @@
+! RUN: rm -rf %t && mkdir -p %t
+! RUN: bbc -emit-hlfir -fcuda --module=%t %s -o - | FileCheck %s
+
+module defined_assignment_device_rhs
+  type t
+    real :: x(100)
+  end type
+
+  interface assignment(=)
+    module procedure assign_t
+  end interface
+
+contains
+  subroutine assign_t(host_t, dev_x)
+    type(t), intent(inout) :: host_t
+    real, device, intent(in) :: dev_x(:)
+
+    host_t%x = dev_x
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMdefined_assignment_device_rhsPassign_t(
+! CHECK-SAME: %[[HOST_T_ARG:.*]]: !fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}> {{.*}}, %[[DEV_X_ARG:.*]]: !fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "dev_x"})
+! CHECK: %[[DEV_X:.*]]:2 = hlfir.declare %[[DEV_X_ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {data_attr = #cuf.cuda<device>
+! CHECK: %[[HOST_T:.*]]:2 = hlfir.declare %[[HOST_T_ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}}
+! CHECK: %[[X_COMPONENT:.*]] = hlfir.designate %[[HOST_T]]#0{"x"}
+! CHECK: cuf.data_transfer %[[DEV_X]]#0 to %[[X_COMPONENT]] {transfer_kind = #cuf.cuda_transfer<device_host>}
+
+subroutine test_device_rhs
+  use defined_assignment_device_rhs
+  real :: y(100)
+  real, device :: x(100)
+  type(t) :: tee
+
+  x = y
+  tee = x
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_device_rhs()
+! CHECK: %[[TEE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_device_rhsEtee"}
+! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_device_rhsEx"}
+! CHECK: %[[Y:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_device_rhsEy"}
+! CHECK: cuf.data_transfer %[[Y]]#0 to %[[X]]#0 {transfer_kind = #cuf.cuda_transfer<host_device>}
+! CHECK-NOT: hlfir.region_assign
+! CHECK: fir.call @_QMdefined_assignment_device_rhsPassign_t(%[[TEE]]#0, %{{.*}}) {{.*}}: (!fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}>>, !fir.box<!fir.array<?xf32>>) -> ()
+
+subroutine test_device_rhs_section
+  use defined_assignment_device_rhs
+  real, device :: x(100)
+  type(t) :: tee
+
+  tee = x(2:100)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_device_rhs_section()
+! CHECK: %[[TEE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_device_rhs_sectionEtee"}
+! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_device_rhs_sectionEx"}
+! CHECK-NOT: hlfir.region_assign
+! CHECK: %[[SECTION:.*]] = hlfir.designate %[[X]]#0 (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.ref<!fir.array<100xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<99xf32>>
+! CHECK-NOT: hlfir.region_assign
+! CHECK: fir.call @_QMdefined_assignment_device_rhsPassign_t(%[[TEE]]#0, %{{.*}}) {{.*}}: (!fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}>>, !fir.box<!fir.array<?xf32>>) -> ()
+
+subroutine test_device_rhs_pointer
+  use defined_assignment_device_rhs
+  real, device, target :: x(100)
+  real, device, pointer :: p(:)
+  type(t) :: tee
+
+  p => x
+  tee = p
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_device_rhs_pointer()
+! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_device_rhs_pointerEp"}
+! CHECK: %[[TEE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_device_rhs_pointerEtee"}
+! CHECK-NOT: hlfir.region_assign
+! CHECK: fir.call @_QMdefined_assignment_device_rhsPassign_t(%[[TEE]]#0, %{{.*}}) {{.*}}: (!fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}>>, !fir.box<!fir.array<?xf32>>) -> ()

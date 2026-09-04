@@ -486,9 +486,12 @@ void OMPClauseProfiler::VisitOMPFinalClause(const OMPFinalClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPNumThreadsClause(const OMPNumThreadsClause *C) {
+  Profiler->VisitInteger(C->getPrescriptivenessModifier());
+  Profiler->VisitInteger(C->getDimsModifier());
+  if (const Expr *Modifier = C->getDimsModifierExpr())
+    Profiler->VisitStmt(Modifier);
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  if (C->getNumThreads())
-    Profiler->VisitStmt(C->getNumThreads());
 }
 
 void OMPClauseProfiler::VisitOMPAlignClause(const OMPAlignClause *C) {
@@ -1775,7 +1778,7 @@ void StmtProfiler::VisitAtomicExpr(const AtomicExpr *S) {
 void StmtProfiler::VisitConceptSpecializationExpr(
                                            const ConceptSpecializationExpr *S) {
   VisitExpr(S);
-  VisitDecl(S->getNamedConcept());
+  VisitTemplateName(S->getNamedConcept());
   for (const TemplateArgument &Arg : S->getTemplateArguments())
     VisitTemplateArgument(Arg);
 }
@@ -2240,7 +2243,11 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
     else if (auto *FD = dyn_cast<FunctionDecl>(SubDecl))
       Call = FD;
 
-    if (!Call)
+    // Ignore implicit conversion functions and __invoke. They are not
+    // part of the lambda signature.
+    // Semantically, it is better to use `getLambdaCallOperator` but that may
+    // not be properly deserialized yet.
+    if (!Call || Call->getOverloadedOperator() != OO_Call)
       continue;
 
     Hasher.AddFunctionDecl(Call, /*SkipBody=*/true);
@@ -2351,6 +2358,14 @@ void StmtProfiler::VisitCXXUnresolvedConstructExpr(
   VisitExpr(S);
   VisitType(S->getTypeAsWritten());
   ID.AddInteger(S->isListInitialization());
+}
+
+void StmtProfiler::VisitDependentTemplateIdExpr(
+    const DependentTemplateIdExpr *S) {
+  VisitExpr(S);
+  VisitTemplateName(S->getTemplateName());
+  VisitTemplateArguments(S->template_arguments().data(),
+                         S->getNumTemplateArgs());
 }
 
 void StmtProfiler::VisitCXXDependentScopeMemberExpr(
