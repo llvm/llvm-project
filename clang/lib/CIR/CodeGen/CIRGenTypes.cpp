@@ -838,17 +838,13 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If this is an enum being completed, then we flush all non-struct types
   // from the cache. This allows function types and other things that may be
   // derived from the enum to be recomputed.
-  if ([[maybe_unused]] const auto *ed = dyn_cast<EnumDecl>(td)) {
-    // Classic codegen clears the type cache if it contains an entry for this
-    // enum type that doesn't use i32 as the underlying type, but I can't find
-    // a test case that meets that condition. C++ doesn't allow forward
-    // declaration of enums, and C doesn't allow an incomplete forward
-    // declaration with a non-default type.
-    assert(
-        !typeCache.count(
-            ed->getASTContext().getCanonicalTagType(ed)->getTypePtr()) ||
-        (convertType(ed->getIntegerType()) ==
-         typeCache[ed->getASTContext().getCanonicalTagType(ed)->getTypePtr()]));
+  if (const auto *ed = dyn_cast<EnumDecl>(td)) {
+    const clang::Type *key = astContext.getCanonicalTagType(ed)->getTypePtr();
+    // Converting the enum before it was complete cached a guessed placeholder
+    // for its underlying type.
+    if (typeCache.count(key) &&
+        convertType(ed->getIntegerType()) != typeCache.lookup(key))
+      typeCache.clear();
     // If necessary, provide the full definition of a type only used with a
     // declaration so far.
     assert(!cir::MissingFeatures::generateDebugInfo());
