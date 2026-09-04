@@ -116,8 +116,6 @@ struct LTOToolDiagnosticHandler : public DiagnosticHandler {
   }
 };
 
-static SmallVector<const char *> RuntimeLibcallSymbols;
-
 // Initialize the configured targets if they have not been initialized.
 static void lto_initialize() {
   if (!initialized) {
@@ -138,7 +136,6 @@ static void lto_initialize() {
     LTOContext = &Context;
     LTOContext->setDiagnosticHandler(
         std::make_unique<LTOToolDiagnosticHandler>(), true);
-    RuntimeLibcallSymbols = lto::LTO::getRuntimeLibcallSymbols(Triple());
     initialized = true;
   }
 }
@@ -175,6 +172,7 @@ struct LibLTOCodeGenerator : LTOCodeGenerator {
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LibLTOCodeGenerator, lto_code_gen_t)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThinLTOCodeGenerator, thinlto_code_gen_t)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LTOModule, lto_module_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Triple, llvm_triple_t)
 
 // Convert the subtarget features into a string to pass to LTOCodeGenerator.
 static void lto_add_attrs(lto_code_gen_t cg) {
@@ -748,7 +746,21 @@ extern const char *lto_input_get_dependent_library(lto_input_t input,
   return LTOModule::getDependentLibrary(unwrap(input), index, size);
 }
 
+namespace {
+const char *const *get_runtime_lib_symbols_list_for_triple(size_t *size,
+                                                           Triple TT) {
+  static SmallVector<const char *> RTCallSymbols =
+      lto::LTO::getRuntimeLibcallSymbols(TT);
+  *size = RTCallSymbols.size();
+  return RTCallSymbols.data();
+}
+} // namespace
+
 extern const char *const *lto_runtime_lib_symbols_list(size_t *size) {
-  *size = RuntimeLibcallSymbols.size();
-  return RuntimeLibcallSymbols.data();
+  return get_runtime_lib_symbols_list_for_triple(size, Triple());
+}
+
+extern const char *const *
+lto_runtime_lib_symbols_list_for_triple(size_t *size, llvm_triple_t LTT) {
+  return get_runtime_lib_symbols_list_for_triple(size, *unwrap(LTT));
 }
