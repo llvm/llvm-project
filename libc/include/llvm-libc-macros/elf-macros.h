@@ -39,12 +39,14 @@
 // resolver at that address and stores what it returns.
 
 // x86_64
+#define R_X86_64_64 1
 #define R_X86_64_RELATIVE 8
 #define R_X86_64_GLOB_DAT 6
 #define R_X86_64_JUMP_SLOT 7
 #define R_X86_64_IRELATIVE 37
 
 // aarch64
+#define R_AARCH64_ABS64 257
 #define R_AARCH64_RELATIVE 1027
 #define R_AARCH64_GLOB_DAT 1025
 #define R_AARCH64_JUMP_SLOT 1026
@@ -54,6 +56,7 @@
 #define R_AARCH64_TLS_DTPREL 1029
 
 // arm
+#define R_ARM_ABS32 2
 #define R_ARM_RELATIVE 23
 #define R_ARM_GLOB_DAT 21
 #define R_ARM_JUMP_SLOT 22
@@ -61,6 +64,7 @@
 #define R_ARM_COPY 20
 
 // riscv
+#define R_RISCV_64 2
 #define R_RISCV_RELATIVE 3
 #define R_RISCV_JUMP_SLOT 5
 #define R_RISCV_IRELATIVE 58
