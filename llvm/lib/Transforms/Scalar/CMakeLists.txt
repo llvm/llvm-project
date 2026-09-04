@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMScalarOpts
   ConstraintElimination.cpp
   CorrelatedValuePropagation.cpp
   DCE.cpp
+  DeadBranchElimination.cpp
   DeadStoreElimination.cpp
   DFAJumpThreading.cpp
   DivRemPairs.cpp

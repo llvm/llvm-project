@@ -93,6 +93,7 @@
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
 #include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
+#include "llvm/Transforms/Scalar/DeadBranchElimination.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
 #include "llvm/Transforms/Scalar/DivRemPairs.h"
 #include "llvm/Transforms/Scalar/DropUnnecessaryAssumes.h"
@@ -203,6 +204,10 @@ static cl::opt<bool>
 static cl::opt<bool> EnableGlobalAnalyses(
     "enable-global-analyses", cl::init(true), cl::Hidden,
     cl::desc("Enable inter-procedural analyses"));
+
+static cl::opt<bool> EnableDeadBranchElimination(
+    "enable-dead-branch-elim", cl::init(true), cl::Hidden,
+    cl::desc("Enable dead branch elimination (circular-dependency branches)"));
 
 static cl::opt<bool> RunPartialInlining("enable-partial-inlining",
                                         cl::init(false), cl::Hidden,
@@ -1224,6 +1229,14 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Optimize globals to try and fold them into constants.
   MPM.addPass(GlobalOptPass());
 
+  // Remove branches that are provably dead only under the assumption that
+  // they are dead (circular dependencies). This must run while the CFG still
+  // reflects the source control flow: the SimplifyCFG below speculates
+  // branch bodies into selects, turning such branches into data dependencies
+  // that can no longer be removed by CFG reasoning.
+  if (EnableDeadBranchElimination)
+    MPM.addPass(DeadBranchEliminationPass());
+
   // Create a small function pass pipeline to cleanup after all the global
   // optimizations.
   FunctionPassManager GlobalCleanupPM;
@@ -1508,6 +1521,15 @@ ModulePassManager
 PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                                              ThinOrFullLTOPhase LTOPhase) {
   ModulePassManager MPM;
+
+  // A second dead-branch-elimination run, now that inlining has exposed
+  // checks whose circular dependencies span function boundaries (e.g. a
+  // container's grow-on-full check after its accessors were inlined). Such
+  // branches survive to this point because their bodies contain calls, which
+  // SimplifyCFG cannot speculate into selects. Running before the loop
+  // passes lets the vectorizer see the cleaned loops.
+  if (EnableDeadBranchElimination)
+    MPM.addPass(DeadBranchEliminationPass());
 
   // Run partial inlining pass to partially inline functions that have
   // large bodies.
