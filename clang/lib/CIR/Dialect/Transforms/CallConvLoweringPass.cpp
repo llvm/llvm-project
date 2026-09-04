@@ -578,7 +578,8 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
       return ArgClassification::getDirect();
-    ArgClassification classified = ArgClassification::getDirect(coerced, offset);
+    ArgClassification classified =
+        ArgClassification::getDirect(coerced, offset);
     classified.canFlatten = info.getCanBeFlattened();
     return classified;
   }
