@@ -477,6 +477,17 @@ LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
                                    ArrayRef<Value *> Vecs);
 
+/// Repeat a vector \p Factor times into a wider vector.
+///
+/// \pre Vec is a fixed-length vector
+/// \pre Factor is scalable or known greater than 1
+LLVM_ABI Value *repeatVector(IRBuilderBase &Builder, Value *Vec,
+                             ElementCount Factor);
+
+/// Broadcast a scalar value or repeat a fixed-length vector \p Factor times.
+LLVM_ABI Value *broadcastOrRepeatValue(IRBuilderBase &Builder, Value *V,
+                                       ElementCount Factor);
+
 /// Given a mask vector of i1, Return true if any of the elements of this
 /// predicate mask are known to be true or undef.  That is, return true if at
 /// least one lane can be assumed active.
