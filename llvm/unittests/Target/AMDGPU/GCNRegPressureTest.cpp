@@ -56,8 +56,8 @@ body:             |
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
   MachineBasicBlock &MBB1 = *MF.getBlockNumbered(1);
   GCNRPTracker::LiveRegSet MBB1LiveIns =
-      getLiveRegs(LIS.getInstructionIndex(*MBB0.rbegin()).getDeadSlot(), LIS,
-                  MF.getRegInfo());
+      getVirtLiveRegs(LIS.getInstructionIndex(*MBB0.rbegin()).getDeadSlot(),
+                      LIS, MF.getRegInfo());
 
   // Track pressure across MBB1.
   {
@@ -124,8 +124,8 @@ body:             |
   // MBB1 live-in pressure is equivalent to MBB0 live-out pressure.
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
   GCNRPTracker::LiveRegSet MBB1LiveIns =
-      getLiveRegs(LIS.getInstructionIndex(*MBB0.rbegin()).getDeadSlot(), LIS,
-                  MF.getRegInfo());
+      getVirtLiveRegs(LIS.getInstructionIndex(*MBB0.rbegin()).getDeadSlot(),
+                      LIS, MF.getRegInfo());
 
   MachineBasicBlock &MBB1 = *MF.getBlockNumbered(1);
   GCNDownwardRPTracker RPTracker(LIS), RPTrackerNoLiveIns(LIS);
