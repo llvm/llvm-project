@@ -248,8 +248,13 @@ protected:
   // Called when an ignored pass is encountered.
   virtual void handleIgnored(StringRef PassID, std::string &Name) = 0;
 
-  // Stack of IRs before passes.
-  std::vector<IRUnitT> BeforeStack;
+  struct BeforeIR {
+    IRUnitT Data;
+    bool IsInteresting = false;
+  };
+
+  // Stack of IRs before passes and whether they matched the filters.
+  std::vector<BeforeIR> BeforeStack;
   // Is this the first IR seen?
   bool InitialIR = true;
 
