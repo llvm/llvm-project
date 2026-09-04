@@ -1119,13 +1119,21 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Returns true if Dst is in Opc's HwMode-resolved destination operand class.
+  auto IsDstInCopyInstrClass = [&](unsigned Opc, MCRegister Dst) {
+    int16_t RCID = getOpRegClassID(get(Opc).operands()[0]);
+    return RCID >= 0 && RI.getRegClass(RCID)->contains(Dst);
+  };
+
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
-    if (ST.hasVMovB64Inst()) {
+    if (ST.hasVMovB64Inst() &&
+        IsDstInCopyInstrClass(AMDGPU::V_MOV_B64_e32, DestReg)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
     }
-    if (ST.hasPkMovB32()) {
+    if (ST.hasPkMovB32() &&
+        IsDstInCopyInstrClass(AMDGPU::V_PK_MOV_B32, DestReg)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
         .addReg(SrcReg)
@@ -1166,15 +1174,25 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   } else if (RI.hasVGPRs(RC) && RI.isAGPRClass(SrcRC)) {
     Opcode = AMDGPU::V_ACCVGPR_READ_B32_e64;
   } else if ((Size % 64 == 0) && RI.hasVGPRs(RC) &&
-             (RI.isProperlyAlignedRC(*RC) &&
-              (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
+             (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
     // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
-    if (ST.hasVMovB64Inst()) {
-      Opcode = AMDGPU::V_MOV_B64_e32;
-      EltSize = 8;
-    } else if (ST.hasPkMovB32()) {
-      Opcode = AMDGPU::V_PK_MOV_B32;
-      EltSize = 8;
+    unsigned NewOpcode = AMDGPU::INSTRUCTION_LIST_END;
+    if (ST.hasVMovB64Inst())
+      NewOpcode = AMDGPU::V_MOV_B64_e32;
+    else if (ST.hasPkMovB32())
+      NewOpcode = AMDGPU::V_PK_MOV_B32;
+
+    if (NewOpcode != AMDGPU::INSTRUCTION_LIST_END) {
+      // Tuple components share alignment; test sub0_sub1 for wider registers.
+      MCRegister WideDst = Size == 64
+                               ? DestReg.asMCReg()
+                               : RI.getSubReg(DestReg, AMDGPU::sub0_sub1);
+      // If the move cannot be used, the loop below expands element-wise with
+      // V_MOV_B32.
+      if (IsDstInCopyInstrClass(NewOpcode, WideDst)) {
+        Opcode = NewOpcode;
+        EltSize = 8;
+      }
     }
   }
 
