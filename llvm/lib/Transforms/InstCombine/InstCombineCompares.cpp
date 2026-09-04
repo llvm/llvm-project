@@ -8544,10 +8544,15 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
     }
   }
 
+  Value *X = LHSI->getOperand(0);
+
   // Lower this FP comparison into an appropriate integer version of the
   // comparison.
-  return new ICmpInst(Pred, LHSI->getOperand(0),
-                      ConstantInt::get(LHSI->getOperand(0)->getType(), RHSInt));
+  auto *NewCmp = new ICmpInst(Pred, X, ConstantInt::get(X->getType(), RHSInt));
+  if (LHSUnsigned && cast<PossiblyNonNegInst>(LHSI)->hasNonNeg() &&
+      RHSInt.isSignBitClear())
+    NewCmp->setSameSign();
+  return NewCmp;
 }
 
 /// Fold fcmp/icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
@@ -9173,11 +9178,17 @@ static bool isMinMaxCmpSelectEliminable(SelectPatternFlavor Flavor, Value *A,
     return false;
 
   bool IsUnsigned = I->getOpcode() == Instruction::UIToFP;
+  bool IsNonNegUIToFP = IsUnsigned && cast<PossiblyNonNegInst>(I)->hasNonNeg();
   unsigned BitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
-  APSInt IntBoundary = (Flavor == SPF_FMAXNUM)
-                           ? APSInt::getMinValue(BitWidth, IsUnsigned)
-                           : APSInt::getMaxValue(BitWidth, IsUnsigned);
-  APSInt ConvertedInt(BitWidth, IsUnsigned);
+  APSInt LowerBoundary = APSInt::getMinValue(BitWidth, IsUnsigned);
+  // The defined upper bound of uitofp nneg is signed max because negative
+  // signed inputs produce poison.
+  APSInt UpperBoundary =
+      IsNonNegUIToFP
+          ? APSInt(APInt::getSignedMaxValue(BitWidth), /*isUnsigned=*/true)
+          : APSInt::getMaxValue(BitWidth, IsUnsigned);
+  APSInt IntBoundary = Flavor == SPF_FMAXNUM ? LowerBoundary : UpperBoundary;
+  APSInt ConvertedInt(BitWidth, IntBoundary.isUnsigned());
   bool IsExact;
   APFloat::opStatus Status =
       APF->convertToInteger(ConvertedInt, APFloat::rmTowardZero, &IsExact);
