@@ -1742,31 +1742,6 @@ public:
   /// Notify t he runtime about a mapping that has been deleted.
   int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
 
-  /// Copy data to the given device.
-  int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                      int64_t Size);
-
-  /// Copy data to the given device asynchronously.
-  int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
-
-  /// Copy data from the given device.
-  int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                        int64_t Size);
-
-  /// Copy data from the given device asynchronously.
-  int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                              int64_t Size, __tgt_async_info *AsyncInfoPtr);
-
-  /// Exchange memory addresses between two devices.
-  int32_t data_exchange(int32_t SrcDeviceId, void *SrcPtr, int32_t DstDeviceId,
-                        void *DstPtr, int64_t Size);
-
-  /// Exchange memory addresses between two devices asynchronously.
-  int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
-                              int DstDeviceId, void *DstPtr, int64_t Size,
-                              __tgt_async_info *AsyncInfo);
-
   /// Places a fence between previous data movements and following data
   /// movements if necessary on the device
   int32_t data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo);
@@ -1775,12 +1750,6 @@ public:
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                         KernelLaunchArgsTy &LaunchArgs,
                         __tgt_async_info *AsyncInfoPtr);
-
-  /// Synchronize an asyncrhonous queue with the plugin runtime.
-  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Query the current state of an asynchronous queue.
-  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
 
   /// Obtain information about the given device.
   InfoTreeNode obtain_device_info(int32_t DeviceId);

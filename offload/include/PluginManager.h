@@ -149,6 +149,8 @@ struct PluginManager {
     return count;
   }
 
+  ol_device_handle_t getHostDevice();
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
@@ -180,6 +182,10 @@ private:
   std::list<llvm::SmallVector<__tgt_device_image, 0>> LegacyImages;
   llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
+
+  // Platform and device handles for host device operations.
+  ol_platform_handle_t HostPlatform = nullptr;
+  ol_device_handle_t HostDevice = nullptr;
 };
 
 /// Initialize the plugin manager and OpenMP runtime.
