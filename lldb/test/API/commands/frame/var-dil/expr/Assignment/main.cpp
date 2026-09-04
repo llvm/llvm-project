@@ -12,6 +12,8 @@ int main(int argc, char **argv) {
   float farr[2] = {1.0f, 2.0f};
   int arr[2] = {1, 2};
 
+  int &iref = i;
+
   enum Enum { ONE, TWO };
   Enum eOne = ONE;
   Enum eTwo = TWO;

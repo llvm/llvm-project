@@ -332,6 +332,8 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
+  case llvm::Triple::spir:
+  case llvm::Triple::spir64:
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
@@ -1061,10 +1063,10 @@ static bool isViewOnGlobal(cir::GlobalOp glob, cir::GlobalViewAttr view) {
   return view.getSymbol().getValue() == glob.getSymName();
 }
 
-static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
-                                               cir::GlobalOp newGlob,
-                                               cir::GlobalViewAttr attr,
-                                               mlir::Type oldTy) {
+static mlir::Attribute createNewGlobalView(CIRGenModule &cgm,
+                                           cir::GlobalOp newGlob,
+                                           cir::GlobalViewAttr attr,
+                                           mlir::Type oldTy) {
   // If the attribute does not require indexes or it is not a global view on
   // the global we're replacing, keep the original attribute.
   if (!attr.getIndices() || !isViewOnGlobal(newGlob, attr))
@@ -1078,7 +1080,11 @@ static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
 
   uint64_t offset =
       bld.computeOffsetFromGlobalViewIndices(layout, oldTy, oldInds);
-  bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout, newInds);
+  if (!bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout,
+                                                  newInds))
+    return cir::GlobalOffsetAttr::get(attr.getType(), attr.getSymbol(),
+                                      static_cast<int64_t>(offset));
+
   cir::PointerType newPtrTy;
 
   if (isa<cir::RecordType>(oldTy))
@@ -1100,6 +1106,11 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
                                        mlir::Attribute oldInit) {
   if (auto oldView = mlir::dyn_cast<cir::GlobalViewAttr>(oldInit))
     return createNewGlobalView(cgm, newGlob, oldView, oldTy);
+
+  // A byte offset from a symbol doesn't depend on the symbol's type, so it
+  // remains valid when the global is replaced.
+  if (mlir::isa<cir::GlobalOffsetAttr>(oldInit))
+    return oldInit;
 
   auto getNewInitElements =
       [&](mlir::ArrayAttr oldElements) -> mlir::ArrayAttr {
@@ -3222,11 +3233,7 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  // TODO(cir): Set the calling convention computed by constructAttributeList
-  // on the function. FuncOp supports calling_conv, but target-specific
-  // CodeGen is needed to set it correctly (e.g., AMDGPU kernel functions
-  // should be marked with AMDGPUKernel).
-  assert(!cir::MissingFeatures::opFuncCallingConv());
+  func.setCallingConv(callingConv);
 }
 
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,

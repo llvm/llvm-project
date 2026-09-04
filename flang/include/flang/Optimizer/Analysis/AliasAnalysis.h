@@ -287,6 +287,10 @@ struct AliasAnalysis {
     /// Return true, if Pointer attribute is set.
     bool isPointer() const;
 
+    /// Return true if the source originates at a Fortran variable declaration
+    /// with the ALLOCATABLE attribute.
+    bool isDeclaredAllocatable() const;
+
     /// Return true, if CrayPointer attribute is set.
     bool isCrayPointer() const;
 

@@ -342,6 +342,8 @@ public:
 
   bool isVReg32OrOff() const { return isOff() || isVReg32(); }
 
+  bool isRsrcReg32() const { return isRegClass(AMDGPU::RsrcReg32RegClassID); }
+
   bool isNull() const { return isRegKind() && getReg() == AMDGPU::SGPR_NULL; }
 
   bool isAV_LdSt_32_Align2_RegOp() const {
@@ -1705,6 +1707,7 @@ public:
                                             bool AllowImm = true);
   ParseStatus parseRegWithFPInputMods(OperandVector &Operands);
   ParseStatus parseRegWithIntInputMods(OperandVector &Operands);
+  ParseStatus parseRsrcReg(OperandVector &Operands);
   ParseStatus parseVReg32OrOff(OperandVector &Operands);
   ParseStatus tryParseIndexKey(OperandVector &Operands,
                                AMDGPUOperand::ImmTy ImmTy);
@@ -3602,6 +3605,35 @@ ParseStatus AMDGPUAsmParser::parseRegWithIntInputMods(OperandVector &Operands) {
   return parseRegOrImmWithIntInputMods(Operands, false);
 }
 
+ParseStatus AMDGPUAsmParser::parseRsrcReg(OperandVector &Operands) {
+  // Without the marker, fall back to plain register parsing so the legacy
+  // bare-register form (e.g. `s8`, `v8`) still assembles for indexed
+  // buffer/image instructions.
+  if (!trySkipId("rsrcidx"))
+    return parseReg(Operands);
+
+  if (!skipToken(AsmToken::LParen, "expected left paren after rsrcidx"))
+    return ParseStatus::Failure;
+
+  SMLoc RegLoc = getLoc();
+  std::unique_ptr<AMDGPUOperand> Reg = parseRegister();
+  if (!Reg)
+    return ParseStatus::Failure;
+
+  // Enforce that the inner register is a valid index register. The matcher
+  // predicate alone is not sufficient: if it fails, the matcher will fall back
+  // to a non-indexed instruction variant whose resource operand happens to
+  // accept the same register, silently dropping the `rsrcidx` intent.
+  if (!Reg->isRsrcReg32())
+    return Error(RegLoc, "rsrcidx operand must be a 32-bit SGPR or VGPR");
+
+  if (!skipToken(AsmToken::RParen, "expected closing parenthesis"))
+    return ParseStatus::Failure;
+
+  Operands.push_back(std::move(Reg));
+  return ParseStatus::Success;
+}
+
 ParseStatus AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) {
   auto Loc = getLoc();
   if (trySkipId("off")) {
@@ -5120,7 +5152,8 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
           (Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_REG_IMM_FP64 &&
            HasMandatoryLiteral);
-      unsigned OpTy = Desc.operands()[OpIdx].OperandType;
+      AMDGPU::OperandType OpTy =
+          static_cast<AMDGPU::OperandType>(Desc.operands()[OpIdx].OperandType);
       bool IsFP64 =
           (IsForcedFP64 || (AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
                             OpTy != AMDGPU::OPERAND_REG_IMM_V2INT64)) &&
@@ -5145,8 +5178,11 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
         return false;
       }
 
-      if (IsFP64 && IsValid32Op && !IsForcedFP64)
-        Value = Hi_32(Value);
+      // Compare values using the word encoded by a 32-bit literal.
+      if (IsValid32Op && !IsForcedFP64 && !IsForcedLit64) {
+        Value = static_cast<uint32_t>(
+            AMDGPU::encode32BitLiteral(Value, OpTy, IsForcedLit));
+      }
 
       IsAnotherLiteral = !LiteralValue || *LiteralValue != Value;
       LiteralValue = Value;

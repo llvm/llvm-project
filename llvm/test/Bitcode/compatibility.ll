@@ -1712,7 +1712,7 @@ define void @instructions.memops(ptr %base) {
 }
 
 ; Instructions -- Conversion Operations
-define void @instructions.conversions() {
+define void @instructions.conversions(ptr %pop) {
   trunc i32 -1 to i1
   ; CHECK: trunc i32 -1 to i1
   zext i32 -1 to i64
@@ -1747,6 +1747,8 @@ define void @instructions.conversions() {
   ; CHECK: bitcast i32 0 to i32
   addrspacecast ptr null to ptr addrspace(1)
   ; CHECK: addrspacecast ptr null to ptr addrspace(1)
+  addrspacecast nonnull ptr %pop to ptr addrspace(1)
+  ; CHECK: addrspacecast nonnull ptr %pop to ptr addrspace(1)
 
   ret void
 }

@@ -30,6 +30,8 @@
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 
+#include <utility>
+
 using namespace mlir;
 using namespace mlir::gpu;
 using namespace mlir::transform;
@@ -177,12 +179,12 @@ commonLinearIdBuilderFn(int64_t multiplicity = 1,
                           computeProduct(forallMappingSizes) * multiplicity,
                           computeProduct(originalBasis), errorMsg);
       if (succeeded(maybePredicateOps))
-        predicateOps = *maybePredicateOps;
+        predicateOps = std::move(*maybePredicateOps);
     }
 
-    return IdBuilderResult{/*errorMsg=*/errorMsg,
-                           /*mappingIdOps=*/ids,
-                           /*predicateOps=*/predicateOps};
+    return IdBuilderResult{/*errorMsg=*/std::move(errorMsg),
+                           /*mappingIdOps=*/std::move(ids),
+                           /*predicateOps=*/std::move(predicateOps)};
   };
 
   return res;
@@ -216,11 +218,11 @@ static GpuIdBuilderFnType common3DIdBuilderFn(int64_t multiplicity = 1) {
         buildPredicates(rewriter, loc, ids, forallMappingSizeInOriginalBasis,
                         originalBasis, errorMsg);
     if (succeeded(maybePredicateOps))
-      predicateOps = *maybePredicateOps;
+      predicateOps = std::move(*maybePredicateOps);
 
-    return IdBuilderResult{/*errorMsg=*/errorMsg,
-                           /*mappingIdOps=*/scaledIds,
-                           /*predicateOps=*/predicateOps};
+    return IdBuilderResult{/*errorMsg=*/std::move(errorMsg),
+                           /*mappingIdOps=*/std::move(scaledIds),
+                           /*predicateOps=*/std::move(predicateOps)};
   };
   return res;
 }
@@ -263,11 +265,11 @@ static GpuIdBuilderFnType laneIdBuilderFn(int64_t warpSize) {
         rewriter, loc, cast<Value>(laneId), computeProduct(forallMappingSizes),
         computeProduct(originalBasis), errorMsg);
     if (succeeded(maybePredicateOps))
-      predicateOps = *maybePredicateOps;
+      predicateOps = std::move(*maybePredicateOps);
 
-    return IdBuilderResult{/*errorMsg=*/errorMsg,
-                           /*mappingIdOps=*/ids,
-                           /*predicateOps=*/predicateOps};
+    return IdBuilderResult{/*errorMsg=*/std::move(errorMsg),
+                           /*mappingIdOps=*/std::move(ids),
+                           /*predicateOps=*/std::move(predicateOps)};
   };
 
   return res;

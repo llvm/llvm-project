@@ -311,6 +311,40 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
   ret <vscale x 16 x i1> %r
 }
 
+define <vscale x 16 x i1> @match_nxv16i8_v32i8_vscale_range(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_nxv16i8_v32i8_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.q, q2
+; CHECK-NEXT:    mov z1.q, q1
+; CHECK-NEXT:    match p1.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask)
+  ret <vscale x 16 x i1> %r
+}
+
+define <16 x i1> @match_v16i8_v32i8_vscale_range(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_v16i8_v32i8_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v3.16b, v3.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z3.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.b, p2/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask)
+  ret <16 x i1> %r
+}
+
 define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v16i8_v32i8:
 ; CHECK:       // %bb.0:
@@ -513,6 +547,51 @@ define <3 x i1> @match_v3i8_v3i1(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask) #
 ; CHECK-NEXT:    ret
   %r = tail call <3 x i1> @llvm.experimental.vector.match(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask)
   ret <3 x i1> %r
+}
+
+define <8 x i1> @match_v8i32_v8i32_vscale_range(<8 x i32> %op1, <8 x i32> %op2, <8 x i1> %mask) #0 vscale_range(2, 2) {
+; CHECK-LABEL: match_v8i32_v8i32_vscale_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2_z3 def $z2_z3
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    splice z2.s, p0, { z2.s, z3.s }
+; CHECK-NEXT:    splice z0.s, p0, { z0.s, z1.s }
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, z2.s[1]
+; CHECK-NEXT:    mov z3.s, s2
+; CHECK-NEXT:    mov z5.s, z2.s[2]
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z1.s, z2.s[3]
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z5.s
+; CHECK-NEXT:    mov z3.s, z2.s[4]
+; CHECK-NEXT:    mov p1.b, p2/m, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, z2.s[5]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z3.s, z2.s[6]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, z2.s[7]
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmpeq p3.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    shl v1.8b, v4.8b, #7
+; CHECK-NEXT:    sel p0.b, p1, p1.b, p3.b
+; CHECK-NEXT:    cmlt v1.8b, v1.8b, #0
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p2.b
+; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i32> %op1, <8 x i32> %op2, <8 x i1> %mask)
+  ret <8 x i1> %r
 }
 
 attributes #0 = { "target-features"="+sve2" }

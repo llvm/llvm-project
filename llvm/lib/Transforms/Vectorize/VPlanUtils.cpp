@@ -378,8 +378,8 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
 unsigned vputils::getOpcode(const VPValue *V) {
   return TypeSwitch<const VPValue *, unsigned>(V)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
-            VPReplicateRecipe, VPWidenPHIRecipe>(
-          [](auto *I) { return I->getOpcode(); })
+            VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
+            VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -608,7 +608,7 @@ vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
 VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
     VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
