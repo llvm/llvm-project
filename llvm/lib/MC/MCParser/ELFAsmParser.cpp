@@ -601,6 +601,8 @@ EndStmt:
       Type = ELF::SHT_FINI_ARRAY;
     else if (hasPrefix(SectionName, ".preinit_array"))
       Type = ELF::SHT_PREINIT_ARRAY;
+    else if (hasPrefix(SectionName, ".llvm.callgraph"))
+      Type = ELF::SHT_LLVM_CALL_GRAPH;
   } else {
     if (TypeName == "init_array")
       Type = ELF::SHT_INIT_ARRAY;
