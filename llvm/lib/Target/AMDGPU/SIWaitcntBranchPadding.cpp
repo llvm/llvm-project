@@ -95,9 +95,7 @@ class SIWaitcntBranchPadding {
   unsigned NextGeneration = 1;
   bool ChangedCFG = false;
 
-  WaitcntPaddingState startNewGeneration() {
-    return {NextGeneration++, 0};
-  }
+  WaitcntPaddingState startNewGeneration() { return {NextGeneration++, 0}; }
 
   unsigned getCounterMax() const {
     AMDGPU::HardwareLimits Limits(AMDGPU::getIsaVersion(ST.getCPU()));
@@ -118,8 +116,8 @@ class SIWaitcntBranchPadding {
   WaitcntPaddingState transferBlock(MachineBasicBlock &MBB,
                                     WaitcntPaddingState State,
                                     unsigned MaxEventCount);
-  void emitPadding(MachineBasicBlock &MBB,
-                   MachineBasicBlock::iterator InsertPt, unsigned Count) const;
+  void emitPadding(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+                   unsigned Count) const;
   bool plan();
   bool materialize();
 
@@ -143,9 +141,7 @@ public:
     return SIWaitcntBranchPadding(MF, MLI).run();
   }
 
-  StringRef getPassName() const override {
-    return "SI Waitcnt Branch Padding";
-  }
+  StringRef getPassName() const override { return "SI Waitcnt Branch Padding"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -157,8 +153,7 @@ public:
 
 // Waits establish a new relative baseline; calls and inline asm make the prior
 // LOAD_CNT history unknowable.
-bool SIWaitcntBranchPadding::startsNewGeneration(
-    const MachineInstr &MI) const {
+bool SIWaitcntBranchPadding::startsNewGeneration(const MachineInstr &MI) const {
   if (MI.isCall() || MI.isInlineAsm())
     return true;
 
@@ -178,8 +173,7 @@ bool SIWaitcntBranchPadding::startsNewGeneration(
 }
 
 WaitcntPaddingState SIWaitcntBranchPadding::transferBlock(
-    MachineBasicBlock &MBB, WaitcntPaddingState State,
-    unsigned MaxEventCount) {
+    MachineBasicBlock &MBB, WaitcntPaddingState State, unsigned MaxEventCount) {
   for (MachineInstr &MI : MBB) {
     if (startsNewGeneration(MI)) {
       State = startNewGeneration();
@@ -199,9 +193,9 @@ WaitcntPaddingState SIWaitcntBranchPadding::transferBlock(
   return State;
 }
 
-void SIWaitcntBranchPadding::emitPadding(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
-    unsigned Count) const {
+void SIWaitcntBranchPadding::emitPadding(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator InsertPt,
+                                         unsigned Count) const {
   DebugLoc DL = MBB.findDebugLoc(InsertPt);
   for (unsigned I = 0; I != Count; ++I)
     BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::BUFFER_INV)).addImm(0);
@@ -255,8 +249,7 @@ bool SIWaitcntBranchPadding::plan() {
     // state for every predecessor and no incoming edge crosses a loop boundary.
     // Loop headers are excluded because their backedges are visited later.
     bool Comparable = MBB != &MF.front() && !MLI.isLoopHeader(MBB) &&
-                      !Incoming.empty() &&
-                      Incoming.size() == MBB->pred_size();
+                      !Incoming.empty() && Incoming.size() == MBB->pred_size();
     if (Comparable) {
       unsigned Generation = Incoming.front().Generation;
       for (unsigned I = 0, E = Incoming.size(); I != E; ++I)
@@ -288,8 +281,7 @@ bool SIWaitcntBranchPadding::plan() {
           if (!Count)
             continue;
           MachineBasicBlock *Pred = Preds[I];
-          if (Pred->succ_size() > 1 &&
-              !Pred->canSplitCriticalEdge(MBB, &MLI)) {
+          if (Pred->succ_size() > 1 && !Pred->canSplitCriticalEdge(MBB, &MLI)) {
             CanPad = false;
             break;
           }
@@ -297,11 +289,10 @@ bool SIWaitcntBranchPadding::plan() {
         }
 
         if (CanPad) {
-          LLVM_DEBUG(dbgs() << "Waitcnt branch padding join bb."
-                            << MBB->getNumber()
-                            << ": target=" << TargetEventCount
-                            << ", padded_edges=" << JoinPlan.Edges.size()
-                            << '\n');
+          LLVM_DEBUG(dbgs()
+                     << "Waitcnt branch padding join bb." << MBB->getNumber()
+                     << ": target=" << TargetEventCount
+                     << ", padded_edges=" << JoinPlan.Edges.size() << '\n');
           Padding.push_back(std::move(JoinPlan));
           // Propagate the virtual post-padding event count to downstream
           // blocks.
@@ -337,11 +328,10 @@ bool SIWaitcntBranchPadding::materialize() {
     // rewriting machine PHIs by retaining independent blocks in that case.
     bool CanSharePadding = Join->empty() || !Join->front().isPHI();
     if (CanSharePadding)
-      llvm::stable_sort(JoinPlan.Edges,
-                        [](const WaitcntEdgePadding &LHS,
-                           const WaitcntEdgePadding &RHS) {
-                          return LHS.Count > RHS.Count;
-                        });
+      llvm::stable_sort(JoinPlan.Edges, [](const WaitcntEdgePadding &LHS,
+                                           const WaitcntEdgePadding &RHS) {
+        return LHS.Count > RHS.Count;
+      });
 
     for (WaitcntEdgePadding &Edge : JoinPlan.Edges) {
       MachineBasicBlock *InsertBB = Edge.Pred;
@@ -380,8 +370,7 @@ bool SIWaitcntBranchPadding::materialize() {
     // A larger padding delta can reuse the next smaller suffix.
     for (unsigned I = 0, E = SharedBlocks.size(); I != E; ++I) {
       SharedPaddingBlock &PaddingBlock = SharedBlocks[I];
-      unsigned SuffixCount =
-          I + 1 == E ? 0 : SharedBlocks[I + 1].Edge->Count;
+      unsigned SuffixCount = I + 1 == E ? 0 : SharedBlocks[I + 1].Edge->Count;
       MachineBasicBlock::iterator InsertPt =
           PaddingBlock.MBB->getFirstTerminator();
       unsigned Count = PaddingBlock.Edge->Count - SuffixCount;
@@ -411,8 +400,9 @@ FunctionPass *llvm::createSIWaitcntBranchPaddingPass() {
   return new SIWaitcntBranchPaddingLegacy();
 }
 
-PreservedAnalyses SIWaitcntBranchPaddingPass::run(
-    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+PreservedAnalyses
+SIWaitcntBranchPaddingPass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
   auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
   SIWaitcntBranchPadding Padding(MF, MLI);
   if (!Padding.run())
