@@ -1820,7 +1820,44 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const PHINode *P = cast<PHINode>(I);
     BinaryOperator *BO = nullptr;
     Value *R = nullptr, *L = nullptr;
-    if (matchSimpleRecurrence(P, BO, R, L)) {
+    if (!matchSimpleRecurrence(P, BO, R, L) && P->getNumIncomingValues() == 2) {
+      // Match a conditional recurrence where the backedge value is a PHI
+      // selecting between the outer PHI (identity) and a BinaryOperator
+      // applied to the outer PHI (conditional step). For example:
+      //   %iv = phi [0, %entry], [%merge, %backedge]
+      //   %merge = phi [%iv, %block1], [%iv.next, %block2]
+      //   %iv.next = add nsw %iv, 1
+      // The inductive known-bits reasoning (trailing zeros, nsw
+      // non-negativity) is valid for conditional steps because the identity
+      // path trivially preserves any inductive property.
+      for (unsigned Idx = 0; Idx != 2; ++Idx) {
+        auto *IncPhi = dyn_cast<PHINode>(P->getIncomingValue(Idx));
+        if (!IncPhi || IncPhi->getNumIncomingValues() != 2)
+          continue;
+
+        Value *Inc0 = IncPhi->getIncomingValue(0);
+        Value *Inc1 = IncPhi->getIncomingValue(1);
+        if (Inc0 != P && Inc1 != P)
+          continue;
+
+        Value *StepOp = (Inc0 == P) ? Inc1 : Inc0;
+        auto *Op = dyn_cast<BinaryOperator>(StepOp);
+        if (!Op)
+          continue;
+
+        Value *StepLHS = Op->getOperand(0);
+        Value *StepRHS = Op->getOperand(1);
+        if (StepLHS != P && StepRHS != P)
+          continue;
+
+        BO = Op;
+        R = P->getIncomingValue(1 - Idx);
+        L = (StepLHS == P) ? StepRHS : StepLHS;
+        break;
+      }
+    }
+
+    if (BO) {
       // Handle the case of a simple two-predecessor recurrence PHI.
       // There's a lot more that could theoretically be done here, but
       // this is sufficient to catch some interesting cases.
