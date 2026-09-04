@@ -72,4 +72,33 @@
 #define R_RISCV_TLS_DTPMOD64 7
 #define R_RISCV_TLS_DTPREL64 9
 
+// The no-op relocation is type zero on every architecture, and the absolute
+// data relocations below are what object file tools match against.
+
+#define R_386_NONE 0
+#define R_386_32 1
+
+#define R_X86_64_NONE 0
+
+#define R_AARCH64_NONE 0
+
+#define R_ARM_NONE 0
+
+#define R_MIPS_32 2
+#define R_MIPS_64 18
+
+#define R_PPC_ADDR32 1
+#define R_PPC64_ADDR64 38
+
+#define R_390_64 22
+
+#define R_SH_DIR32 1
+
+#define R_SPARC_64 32
+
+#define R_LARCH_32 1
+#define R_LARCH_64 2
+#define R_LARCH_MARK_LA 20
+#define R_LARCH_SOP_PUSH_PLT_PCREL 29
+
 #endif // LLVM_LIBC_MACROS_ELF_MACROS_H

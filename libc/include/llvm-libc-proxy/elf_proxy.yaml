@@ -75,18 +75,70 @@ macros:
     macro_value: '0xffff'
   - macro_name: EM_NONE
     macro_value: 0
+  - macro_name: EM_M32
+    macro_value: 1
+  - macro_name: EM_SPARC
+    macro_value: 2
   - macro_name: EM_386
     macro_value: 3
+  - macro_name: EM_68K
+    macro_value: 4
+  - macro_name: EM_88K
+    macro_value: 5
+  - macro_name: EM_860
+    macro_value: 7
+  - macro_name: EM_MIPS
+    macro_value: 8
+  - macro_name: EM_S370
+    macro_value: 9
+  - macro_name: EM_MIPS_RS3_LE
+    macro_value: 10
+  - macro_name: EM_PARISC
+    macro_value: 15
+  - macro_name: EM_SPARC32PLUS
+    macro_value: 18
+  - macro_name: EM_PPC
+    macro_value: 20
   - macro_name: EM_PPC64
     macro_value: 21
+  - macro_name: EM_S390
+    macro_value: 22
+  - macro_name: EM_SPU
+    macro_value: 23
+  - macro_name: EM_SH
+    macro_value: 42
+  - macro_name: EM_SPARCV9
+    macro_value: 43
+  - macro_name: EM_IA_64
+    macro_value: 50
   - macro_name: EM_ARM
     macro_value: 40
   - macro_name: EM_X86_64
     macro_value: 62
   - macro_name: EM_AARCH64
     macro_value: 183
+  - macro_name: EM_MICROBLAZE
+    macro_value: 189
+  - macro_name: EM_XTENSA
+    macro_value: 94
+  - macro_name: EM_BLACKFIN
+    macro_value: 106
+  - macro_name: EM_ALTERA_NIOS2
+    macro_value: 113
+  - macro_name: EM_TI_C6000
+    macro_value: 140
+  - macro_name: EM_TILEPRO
+    macro_value: 188
+  - macro_name: EM_TILEGX
+    macro_value: 191
   - macro_name: EM_RISCV
     macro_value: 243
+  - macro_name: EM_BPF
+    macro_value: 247
+  - macro_name: EM_CSKY
+    macro_value: 252
+  - macro_name: EM_LOONGARCH
+    macro_value: 258
   - macro_name: EV_NONE
     macro_value: 0
   - macro_name: EV_CURRENT
