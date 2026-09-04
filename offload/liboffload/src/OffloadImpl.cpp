@@ -1306,12 +1306,34 @@ Error olCreateProgram_impl(ol_context_handle_t Context,
 Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, bool *IsValid) {
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-  auto DeviceOrErr = Device->getDevice();
-  if (!DeviceOrErr)
-    return DeviceOrErr.takeError();
-  auto *DeviceImpl = *DeviceOrErr;
   *IsValid =
-      DeviceImpl->Plugin.isDeviceCompatible(DeviceImpl->getDeviceId(), Buffer);
+      Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum, Buffer);
+  return Error::success();
+}
+
+Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
+                                      ol_device_iterate_cb_t Callback,
+                                      void *UserData) {
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Platform->Plugin || !Platform->Plugin->isPluginCompatible(Buffer))
+      continue;
+
+    // If  the image is compatible, initialize the platform.
+    if (auto Err = Platform->init())
+      return Err;
+
+    for (auto &Device : Platform->Devices) {
+      if (!Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum,
+                                                       Buffer))
+        continue;
+
+      if (!Callback(Device.get(), UserData))
+        return Error::success();
+    }
+  }
+
   return Error::success();
 }
 
