@@ -1239,7 +1239,6 @@ void SymtabSection::emitStabs() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       // Excluded symbols should have been filtered out in finalizeContents().
       assert(defined->includeInSymtab);
-
       if (defined->isAbsolute())
         continue;
 
@@ -1263,10 +1262,22 @@ void SymtabSection::emitStabs() {
 
   llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
+  std::vector<ObjFile *> stabFiles;
+  for (const SortingPair &pair : symbolsNeedingStabs) {
+    ObjFile *file = cast<ObjFile>(pair.first->originalIsec->getFile());
+    if (stabFiles.empty() || stabFiles.back() != file)
+      stabFiles.push_back(file);
+  }
+  std::vector<std::string> stabSourceFiles(stabFiles.size());
+  parallelFor(0, stabFiles.size(), [&](size_t i) {
+    stabSourceFiles[i] = stabFiles[i]->sourceFile();
+  });
+
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they
   // originated.
   InputFile *lastFile = nullptr;
+  size_t stabFileIdx = 0;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
     // When emitting STABS entries for a symbol, always use the original
@@ -1282,7 +1293,8 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(file->sourceFile());
+      assert(stabFiles[stabFileIdx] == file);
+      emitBeginSourceStab(stabSourceFiles[stabFileIdx++]);
       emitObjectFileStab(file);
     }
 
