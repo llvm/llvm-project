@@ -219,10 +219,12 @@ std::string clang::GetResourcesPath(StringRef BinaryPath) {
   if (!ConfiguredResourceDir.empty()) {
     // FIXME: We should fix the behavior of llvm::sys::path::append so we don't
     // need to check for absolute paths here.
-    if (llvm::sys::path::is_absolute(ConfiguredResourceDir))
+    if (llvm::sys::path::is_absolute(ConfiguredResourceDir)) {
       P = ConfiguredResourceDir;
-    else
+    } else {
       llvm::sys::path::append(P, ConfiguredResourceDir);
+      llvm::sys::path::remove_dots(P, true);
+    }
   } else {
     // On Windows, libclang.dll is in bin/.
     // On non-Windows, libclang.so/.dylib is in lib/.
