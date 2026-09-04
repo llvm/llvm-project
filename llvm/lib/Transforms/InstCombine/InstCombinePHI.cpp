@@ -858,7 +858,77 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
   CI->setDebugLoc(DebugLoc::getDropped());
   return CI;
 }
+Instruction *InstCombinerImpl::foldPHIArgZextIntoZext(PHINode &PN) {
+  // Cannot create new instruction after an EHPad
+  ZExtInst *Template = nullptr;
 
+  if (Instruction *TI = PN.getParent()->getTerminator())
+    if (TI->isEHPad())
+      return nullptr;
+
+  // Now there is guaranteed to be an insertion point
+  for (Value *V : PN.incoming_values()) {
+    if (auto *Z = dyn_cast<ZExtInst>(V)) {
+      Template = Z;
+      break;
+    }
+  }
+
+  if (!Template)
+    return nullptr;
+  Value *cond = Template->getOperand(0);
+
+  for (unsigned int i = 0; i < PN.getNumIncomingValues(); i++) {
+    SwitchInst *SI = nullptr;
+    BasicBlock *EdgeTarget = nullptr;
+    /* Place them here for soundness sake */
+
+    Value *V = PN.getIncomingValue(i);
+    if (V == Template) {
+      continue;
+    } // Just zext(cond)
+
+    BasicBlock *BB = PN.getIncomingBlock(i);
+
+    if (auto *S = dyn_cast<SwitchInst>(BB->getTerminator())) {
+      SI = S;
+      EdgeTarget = PN.getParent();
+    } // Base case: switch goes straight to Phi Block
+    else if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+      SI = dyn_cast<SwitchInst>(Pred->getTerminator());
+      EdgeTarget = BB;
+    } // Switch can arrive at BB via a different block
+      //
+    if (!SI || SI->getCondition() != cond)
+      return nullptr;
+    if (SI->getDefaultDest() == EdgeTarget)
+      return nullptr; // x is unconstrained on the default path
+                      //
+    // EdgeTarget is a non-default successor of the switch, so at least one case
+    // targets it
+    auto *VC = dyn_cast<ConstantInt>(V);
+    if (!VC)
+      return nullptr;
+
+    // Now for actual folding checks
+    for (auto &Case : SI->cases()) {
+      ConstantInt *CV = Case.getCaseValue(); // x's value on this case (i16)
+      if (Case.getCaseSuccessor() != EdgeTarget)
+        continue;
+      // does zext(CV) == V
+      if (CV->getValue().zext(VC->getBitWidth()) != VC->getValue())
+        return nullptr;
+    }
+  } /* Find the switch terminator and confirm its conditioned on cond, same as
+       zext */
+  if (!DT.dominates(cond, &PN)) // Moved here to solve regressions
+    return nullptr;
+  Builder.SetInsertPoint(PN.getParent()->getFirstInsertionPt());
+  // We can now set the insert point because we know non-null
+
+  Value *newZext = Builder.CreateZExt(cond, PN.getType());
+  return replaceInstUsesWith(PN, newZext);
+}
 /// If all operands to a PHI node are the same "unary" operator and they all are
 /// only used by the PHI, PHI together their inputs, and do the operation once,
 /// to the result of the PHI.
@@ -1406,6 +1476,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     return replaceInstUsesWith(PN, V);
 
   if (Instruction *Result = foldPHIArgZextsIntoPHI(PN))
+    return Result;
+
+  if (Instruction *Result = foldPHIArgZextIntoZext(PN))
     return Result;
 
   if (Instruction *Result = foldPHIArgIntToPtrToPHI(PN))
