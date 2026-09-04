@@ -1,10 +1,13 @@
-; RUN: opt -mtriple=amdgpu-- -passes=amdgpu-attributor -o %t.bc %s
-; RUN: llc -mtriple=amdgpu7.01 < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
-; RUN: llc -mtriple=amdgpu7.01-unknown-mesa3d < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -mtriple=amdgpu8.02-unknown-mesa3d -mattr=-flat-for-global < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -mtriple=amdgpu9.0a-unknown-amdhsa < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -mtriple=amdgpu11.00-unknown-amdhsa -amdgpu-enable-vopd=0 < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-attributor -o %t.v4.ll
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-attributor -o %t.v6.ll
+; RUN: llc -global-isel -mtriple=amdgpu7.00-unknown-amdhsa < %t.v4.ll | FileCheck --check-prefixes=ALL,HSA,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01-- -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02-- -mattr=+flat-for-global < %t.v4.ll | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01-unknown-mesa3d -mattr=+flat-for-global < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02-unknown-mesa3d < %t.v4.ll | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
+; RUN: llc -global-isel -mtriple=amdgpu9.0a-unknown-amdhsa < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00-unknown-amdhsa -amdgpu-enable-vopd=0 < %t.v4.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -mtriple=amdgpu11-unknown-amdhsa --amdhsa-code-object-version=6 -amdgpu-enable-vopd=0 < %t.v6.ll | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -63,6 +66,69 @@ define amdgpu_kernel void @test_workitem_id_z(ptr addrspace(1) %out) #1 {
   ret void
 }
 
+; ALL-LABEL: {{^}}test_workitem_id_x_usex2:
+; ALL-NOT: v0
+; ALL: {{flat|global}}_store_{{dword|b32}} v{{.*}}, v0
+; ALL-NOT: v0
+; ALL: {{flat|global}}_store_{{dword|b32}} v{{.*}}, v0
+define amdgpu_kernel void @test_workitem_id_x_usex2(ptr addrspace(1) %out) #1 {
+  %id0 = call i32 @llvm.amdgcn.workitem.id.x()
+  store volatile i32 %id0, ptr addrspace(1) %out
+
+  %id1 = call i32 @llvm.amdgcn.workitem.id.x()
+  store volatile i32 %id1, ptr addrspace(1) %out
+  ret void
+}
+
+; ALL-LABEL: {{^}}test_workitem_id_x_use_outside_entry:
+; ALL-NOT: v0
+; ALL: {{flat|global}}_store_{{dword|b32}}
+; ALL-NOT: v0
+; ALL: {{flat|global}}_store_{{dword|b32}} v{{.*}}, v0
+define amdgpu_kernel void @test_workitem_id_x_use_outside_entry(ptr addrspace(1) %out, i32 %arg) #1 {
+bb0:
+  store volatile i32 0, ptr addrspace(1) %out
+  %cond = icmp eq i32 %arg, 0
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  store volatile i32 %id, ptr addrspace(1) %out
+  br label %bb2
+
+bb2:
+  ret void
+}
+
+; ALL-LABEL: {{^}}test_workitem_id_x_func:
+; ALL: s_waitcnt
+; HSA-NEXT: v_and_b32_e32 v2, 0x3ff, v31
+; MESA-NEXT: v_and_b32_e32 v2, 0x3ff, v31
+define void @test_workitem_id_x_func(ptr addrspace(1) %out) #1 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  store i32 %id, ptr addrspace(1) %out
+  ret void
+}
+
+; ALL-LABEL: {{^}}test_workitem_id_y_func:
+; HSA: v_bfe_u32 v2, v31, 10, 10
+; MESA: v_bfe_u32 v2, v31, 10, 10
+define void @test_workitem_id_y_func(ptr addrspace(1) %out) #1 {
+  %id = call i32 @llvm.amdgcn.workitem.id.y()
+  store i32 %id, ptr addrspace(1) %out
+  ret void
+}
+
+; ALL-LABEL: {{^}}test_workitem_id_z_func:
+; HSA: v_bfe_u32 v2, v31, 20, 10
+; MESA: v_bfe_u32 v2, v31, 20, 10
+define void @test_workitem_id_z_func(ptr addrspace(1) %out) #1 {
+  %id = call i32 @llvm.amdgcn.workitem.id.z()
+  store i32 %id, ptr addrspace(1) %out
+  ret void
+}
+
+; FIXME: Should be able to avoid enabling in kernel inputs
 ; FIXME: Packed tid should avoid the and
 ; ALL-LABEL: {{^}}test_reqd_workgroup_size_x_only:
 ; MESA3D: enable_vgpr_workitem_id = 0
@@ -131,9 +197,9 @@ define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) "amdgpu-fla
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 
-!llvm.module.flags = !{!3}
-
 !0 = !{i32 64, i32 1, i32 1}
 !1 = !{i32 1, i32 64, i32 1}
 !2 = !{i32 1, i32 1, i32 64}
-!3 = !{i32 1, !"amdhsa_code_object_version", i32 400}
+
+!llvm.module.flags = !{!99}
+!99 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}
