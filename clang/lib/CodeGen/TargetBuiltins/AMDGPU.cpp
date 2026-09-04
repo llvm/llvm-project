@@ -211,15 +211,16 @@ static Value *emitAMDGPUWorkGroupSizeV4(CodeGenFunction &CGF, unsigned Index) {
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
 /// COV_5+   : Emit code to use implicitarg ptr
-/// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
-///            and use its value for COV_4 or COV_5+ approach. It is used for
-///            compiling device libraries in an ABI-agnostic way.
+/// COV_NONE : OpenCL emits a load of "__oclc_ABI_version" and selects COV_4 or
+///            COV_5+ so ROCm device-libs stay ABI-agnostic. Other languages
+///            treat none as COV_5+.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
-  // Do not emit __oclc_ABI_version references with non-empt environment.
+  // OpenCL + COV_None (no env) keeps the __oclc_ABI_version select for ockl.
   if (Cov == CodeObjectVersionKind::COV_None &&
-      CGF.getTarget().getTriple().hasEnvironment())
+      (CGF.getTarget().getTriple().hasEnvironment() ||
+       !CGF.getLangOpts().OpenCL))
     Cov = CodeObjectVersionKind::COV_6;
 
   if (Cov == CodeObjectVersionKind::COV_None) {
