@@ -616,6 +616,22 @@ protected:
     RHS.resetToSmall();
   }
 
+  void moveConstructFrom(SmallVectorImpl &&RHS) {
+    assert(this->empty() && "move construction requires an empty vector");
+    if (!RHS.isSmall()) {
+      assignRemote(std::move(RHS));
+      return;
+    }
+
+    // Construct inline elements directly instead of requiring T to be move
+    // assignable through the general move-assignment implementation.
+    size_type RHSSize = RHS.size();
+    reserve(RHSSize);
+    this->uninitialized_move(RHS.begin(), RHS.end(), this->begin());
+    this->set_size(RHSSize);
+    RHS.clear();
+  }
+
   ~SmallVectorImpl() {
     // Subclass has already destructed this vector's elements.
     // If this wasn't grown from the inline copy, deallocate the old space.
@@ -1281,14 +1297,27 @@ public:
     return *this;
   }
 
+  // Reuse the move-assignment instantiation for trivially move-assignable
+  // elements. Calling moveConstructFrom unconditionally would emit an
+  // additional per-T wrapper at -O0, increasing object size.
+  // std::is_move_assignable_v<T> is too broad: it can be a false positive for
+  // types with an unconstrained assignment operator whose body is ill-formed.
   SmallVector(SmallVector &&RHS) : SmallVectorImpl<T>(N) {
-    if (!RHS.empty())
-      SmallVectorImpl<T>::operator=(::std::move(RHS));
+    if (!RHS.empty()) {
+      if constexpr (std::is_trivially_move_assignable_v<T>)
+        SmallVectorImpl<T>::operator=(::std::move(RHS));
+      else
+        this->moveConstructFrom(::std::move(RHS));
+    }
   }
 
   SmallVector(SmallVectorImpl<T> &&RHS) : SmallVectorImpl<T>(N) {
-    if (!RHS.empty())
-      SmallVectorImpl<T>::operator=(::std::move(RHS));
+    if (!RHS.empty()) {
+      if constexpr (std::is_trivially_move_assignable_v<T>)
+        SmallVectorImpl<T>::operator=(::std::move(RHS));
+      else
+        this->moveConstructFrom(::std::move(RHS));
+    }
   }
 
   SmallVector &operator=(SmallVector &&RHS) {

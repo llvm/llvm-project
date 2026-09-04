@@ -111,8 +111,8 @@ class CompilerInstance {
   /// @}
 
 public:
-  explicit CompilerInstance(std::shared_ptr<CompilerInvocation> invocation =
-                                std::make_shared<CompilerInvocation>());
+  CompilerInstance();
+  explicit CompilerInstance(std::shared_ptr<CompilerInvocation> invocation);
 
   ~CompilerInstance();
 
