@@ -776,6 +776,105 @@ for.cond.cleanup:
   ret void
 }
 
+; A low constant trip count loop that needs memory runtime checks.
+define void @low_trip_count_needs_runtime_checks(ptr %p, ptr %q) {
+; DEFAULT-LABEL: define void @low_trip_count_needs_runtime_checks(
+; DEFAULT-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; DEFAULT:       [[VECTOR_MEMCHECK]]:
+; DEFAULT-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 48
+; DEFAULT-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[Q]], i64 48
+; DEFAULT-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P]], [[SCEVGEP1]]
+; DEFAULT-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[Q]], [[SCEVGEP]]
+; DEFAULT-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; DEFAULT-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; DEFAULT-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[INDEX]]
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META7:![0-9]+]], !noalias [[META10:![0-9]+]]
+; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[INDEX]]
+; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !alias.scope [[META10]]
+; DEFAULT-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
+; DEFAULT-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP0]], align 4, !alias.scope [[META7]], !noalias [[META10]]
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
+; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
+; DEFAULT:       [[SCALAR_PH]]:
+; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
+; DEFAULT:       [[FOR_BODY]]:
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IV]]
+; DEFAULT-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; DEFAULT-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[IV]]
+; DEFAULT-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; DEFAULT-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]]
+; DEFAULT-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
+; DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 12
+; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; DEFAULT:       [[FOR_COND_CLEANUP]]:
+; DEFAULT-NEXT:    ret void
+;
+; OPTSIZE-LABEL: define void @low_trip_count_needs_runtime_checks(
+; OPTSIZE-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; OPTSIZE-NEXT:  [[ENTRY:.*]]:
+; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
+; OPTSIZE:       [[FOR_BODY]]:
+; OPTSIZE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; OPTSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IV]]
+; OPTSIZE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; OPTSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[IV]]
+; OPTSIZE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; OPTSIZE-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; OPTSIZE-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
+; OPTSIZE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; OPTSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 12
+; OPTSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY]]
+; OPTSIZE:       [[FOR_COND_CLEANUP]]:
+; OPTSIZE-NEXT:    ret void
+;
+; MINSIZE-LABEL: define void @low_trip_count_needs_runtime_checks(
+; MINSIZE-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; MINSIZE-NEXT:  [[ENTRY:.*]]:
+; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
+; MINSIZE:       [[FOR_BODY]]:
+; MINSIZE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; MINSIZE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IV]]
+; MINSIZE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MINSIZE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[IV]]
+; MINSIZE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; MINSIZE-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; MINSIZE-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4
+; MINSIZE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; MINSIZE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 12
+; MINSIZE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY]]
+; MINSIZE:       [[FOR_COND_CLEANUP]]:
+; MINSIZE-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %q, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
+  %add = add i32 %0, %1
+  store i32 %add, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 12
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}

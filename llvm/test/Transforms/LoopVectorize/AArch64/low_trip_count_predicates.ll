@@ -17,8 +17,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; DEBUG-VS2: Main Loop VF:vscale x 8, Main Loop UF:1, Epilogue Loop VF:8, Epilogue Loop UF:1
 
 ; DEBUG-LABEL: LV: Checking a loop in 'trip_count_too_small'
-; DEBUG: LV: Found a loop with a very small trip count. This loop is worth vectorizing only if no scalar iteration overheads are incurred.
-; DEBUG: LV: Not vectorizing: Runtime SCEV check is required with -Os/-Oz.
+; DEBUG: LV: Found a loop with a very small trip count. This loop is worth vectorizing only if no scalar epilogue is required.
+; DEBUG: LV: Not vectorizing: The trip count is below the minial threshold value..
 
 ; DEBUG-LABEL: LV: Checking a loop in 'too_many_runtime_checks'
 ; DEBUG: LV: Found trip count: 0
