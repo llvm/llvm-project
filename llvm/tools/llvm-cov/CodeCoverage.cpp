@@ -119,6 +119,9 @@ private:
   /// Load the coverage mapping data. Return nullptr if an error occurred.
   std::unique_ptr<CoverageMapping> load();
 
+  /// Scan all source files for inline exclusion markers.
+  void scanSourcesForExclusionMarkers(const CoverageMapping &Coverage);
+
   /// Create a mapping from files in the Coverage data to local copies
   /// (path-equivalence).
   void remapPathNames(const CoverageMapping &Coverage);
@@ -284,6 +287,7 @@ ErrorOr<const MemoryBuffer &>
 CodeCoverageTool::getSourceFile(StringRef SourceFile) {
   // If we've remapped filenames, look up the real location for this file.
   std::unique_lock<std::mutex> Guard{LoadedSourceFilesLock};
+  StringRef OriginalFile = SourceFile;
   if (!RemappedFilenames.empty()) {
     auto Loc = RemappedFilenames.find(SourceFile);
     if (Loc != RemappedFilenames.end())
@@ -299,7 +303,17 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
   }
   LoadedSourceFiles.emplace_back(std::string(SourceFile),
                                  std::move(Buffer.get()));
-  return *LoadedSourceFiles.back().second;
+  auto &LoadedBuf = *LoadedSourceFiles.back().second;
+  ViewOpts.scanForExclusionMarkers(OriginalFile, LoadedBuf);
+  return LoadedBuf;
+}
+
+void CodeCoverageTool::scanSourcesForExclusionMarkers(
+    const CoverageMapping &Coverage) {
+  if (!ViewOpts.ExcludeLineRE && !ViewOpts.ExcludeRegionStartRE)
+    return;
+  for (StringRef SF : Coverage.getUniqueSourceFiles())
+    getSourceFile(SF);
 }
 
 void CodeCoverageTool::attachExpansionSubViews(
@@ -740,6 +754,22 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                "given regular expression"),
       cl::cat(FilteringCategory));
 
+  cl::opt<std::string> ExcludeLineRegex(
+      "exclude-line-regex", cl::Optional,
+      cl::desc("Exclude lines matching this regex from coverage totals"),
+      cl::init("LCOV_EXCL_LINE"), cl::cat(FilteringCategory));
+
+  cl::opt<std::string> ExcludeRegionStartRegex(
+      "exclude-region-start-regex", cl::Optional,
+      cl::desc("Start of an excluded region (lines until stop marker are "
+               "excluded from coverage totals)"),
+      cl::init("LCOV_EXCL_START"), cl::cat(FilteringCategory));
+
+  cl::opt<std::string> ExcludeRegionStopRegex(
+      "exclude-region-stop-regex", cl::Optional,
+      cl::desc("End of an excluded region"), cl::init("LCOV_EXCL_STOP"),
+      cl::cat(FilteringCategory));
+
   cl::opt<double> RegionCoverageLtFilter(
       "region-coverage-lt", cl::Optional,
       cl::desc("Show code coverage only for functions with region coverage "
@@ -950,6 +980,33 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     for (const auto &RE : IncludeFilenameRegexFilters)
       FilenameFilters.push_back(std::make_unique<NameRegexCoverageFilter>(
           RE, NameRegexCoverageFilter::FilterType::Include));
+
+    if (!ExcludeLineRegex.empty()) {
+      ViewOpts.ExcludeLineRE = std::make_shared<Regex>(ExcludeLineRegex);
+      std::string RegexError;
+      if (!ViewOpts.ExcludeLineRE->isValid(RegexError)) {
+        error("invalid --exclude-line-regex: " + RegexError);
+        return 1;
+      }
+    }
+    if (!ExcludeRegionStartRegex.empty()) {
+      ViewOpts.ExcludeRegionStartRE =
+          std::make_shared<Regex>(ExcludeRegionStartRegex);
+      std::string RegexError;
+      if (!ViewOpts.ExcludeRegionStartRE->isValid(RegexError)) {
+        error("invalid --exclude-region-start-regex: " + RegexError);
+        return 1;
+      }
+    }
+    if (!ExcludeRegionStopRegex.empty()) {
+      ViewOpts.ExcludeRegionStopRE =
+          std::make_shared<Regex>(ExcludeRegionStopRegex);
+      std::string RegexError;
+      if (!ViewOpts.ExcludeRegionStopRE->isValid(RegexError)) {
+        error("invalid --exclude-region-stop-regex: " + RegexError);
+        return 1;
+      }
+    }
 
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
@@ -1292,6 +1349,8 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   if (!Coverage)
     return 1;
 
+  scanSourcesForExclusionMarkers(*Coverage);
+
   CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
@@ -1367,6 +1426,8 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     error("could not load coverage information");
     return 1;
   }
+
+  scanSourcesForExclusionMarkers(*Coverage);
 
   std::unique_ptr<CoverageExporter> Exporter;
 
