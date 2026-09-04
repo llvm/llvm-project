@@ -320,7 +320,7 @@ let Definition = "process", Path = "target.process" in {
              "threads are suspended during single-stepping operations.">;
   def UseDelayedBreakpoints
       : Property<"use-delayed-breakpoints", "Boolean">,
-        DefaultTrue,
+        DefaultFalse,
         Desc<"Specify whether updating breakpoints may be delayed until the "
              "process is about to resume.">;
 }
