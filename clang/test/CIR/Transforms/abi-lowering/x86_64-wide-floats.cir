@@ -1,0 +1,75 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!rec_SLD = !cir.struct<"SLD" {data !cir.long_double<!cir.f80>}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  // A half occupies one SSE eightbyte and passes in its natural type.
+  cir.func @half(%arg0: !cir.f16) -> !cir.f16 {
+    cir.return %arg0 : !cir.f16
+  }
+
+  // CHECK: cir.func{{.*}} @half(%arg0: !cir.f16) -> !cir.f16
+
+  // bfloat16 classifies SSE the same way.
+  cir.func @bfloat(%arg0: !cir.bf16) -> !cir.bf16 {
+    cir.return %arg0 : !cir.bf16
+  }
+
+  // CHECK: cir.func{{.*}} @bfloat(%arg0: !cir.bf16) -> !cir.bf16
+
+  // f128 spans an SSE/SSEUP pair, which still passes in one xmm register pair
+  // rather than memory, so the signature is unchanged.
+  cir.func @quad(%arg0: !cir.f128) -> !cir.f128 {
+    cir.return %arg0 : !cir.f128
+  }
+
+  // CHECK: cir.func{{.*}} @quad(%arg0: !cir.f128) -> !cir.f128
+
+  // x87 long double is the X87/X87UP pair: returned in st0, and passed in
+  // memory only once it sits inside an aggregate.
+  cir.func @x87(%arg0: !cir.long_double<!cir.f80>) -> !cir.long_double<!cir.f80> {
+    cir.return %arg0 : !cir.long_double<!cir.f80>
+  }
+
+  // CHECK: cir.func{{.*}} @x87(%arg0: !cir.long_double<!cir.f80>) -> !cir.long_double<!cir.f80>
+
+  // A bare f80 without the long_double wrapper classifies identically.
+  cir.func @raw_f80(%arg0: !cir.f80) -> !cir.f80 {
+    cir.return %arg0 : !cir.f80
+  }
+
+  // CHECK: cir.func{{.*}} @raw_f80(%arg0: !cir.f80) -> !cir.f80
+
+  // A struct holding an x87 long double merges to MEMORY, so the argument is
+  // byval.
+  cir.func @take_sld(%arg0: !rec_SLD) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_sld(%arg0: !cir.ptr<!rec_SLD> {{.*}}llvm.byval = !rec_SLD{{.*}})
+
+  cir.func @call_half(%arg0: !cir.f16) -> !cir.f16 {
+    %0 = cir.call @half(%arg0) : (!cir.f16) -> !cir.f16
+    cir.return %0 : !cir.f16
+  }
+
+  // CHECK: cir.call @half(%arg0) : (!cir.f16) -> !cir.f16
+}
+
+// LLVM: define half @half(half %{{.+}})
+// LLVM: define bfloat @bfloat(bfloat %{{.+}})
+// LLVM: define fp128 @quad(fp128 %{{.+}})
+// LLVM: define x86_fp80 @x87(x86_fp80 %{{.+}})
+// LLVM: define x86_fp80 @raw_f80(x86_fp80 %{{.+}})
+// LLVM: define void @take_sld(ptr noundef byval(%struct.SLD) align 16 %{{.+}})

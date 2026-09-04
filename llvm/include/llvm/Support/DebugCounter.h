@@ -11,15 +11,15 @@
 /// thing happening.
 ///
 /// To give a use case: Imagine you have a file, very large, and you
-/// are trying to understand the minimal transformation that breaks it. Bugpoint
-/// and bisection is often helpful here in narrowing it down to a specific pass,
-/// but it's still a very large file, and a very complicated pass to try to
-/// debug.  That is where debug counting steps in.  You can instrument the pass
-/// with a debug counter before it does a certain thing, and depending on the
-/// counts, it will either execute that thing or not.  The debug counter itself
-/// consists of a list of chunks (inclusive numeric intervals). `shouldExecute`
-/// returns true iff the list is empty or the current count is in one of the
-/// chunks.
+/// are trying to understand the minimal transformation that breaks it.
+/// llvm-reduce and bisection is often helpful here in narrowing it down to a
+/// specific pass, but it's still a very large file, and a very complicated pass
+/// to try to debug.  That is where debug counting steps in.  You can instrument
+/// the pass with a debug counter before it does a certain thing, and depending
+/// on the counts, it will either execute that thing or not.  The debug counter
+/// itself consists of a list of chunks (inclusive numeric intervals).
+/// `shouldExecute` returns true iff the list is empty or the current count is
+/// in one of the chunks.
 ///
 /// Note that a counter set to a negative number will always execute. For a
 /// concrete example, during predicateinfo creation, the renaming pass replaces

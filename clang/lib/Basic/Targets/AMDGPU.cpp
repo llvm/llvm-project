@@ -16,6 +16,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetID.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 using namespace clang;
@@ -56,6 +57,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
     {LangAS::hlsl_input, llvm::AMDGPUAS::PRIVATE_ADDRESS},
     {LangAS::hlsl_output, llvm::AMDGPUAS::PRIVATE_ADDRESS},
     {LangAS::hlsl_push_constant, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::amdgpu_barrier, llvm::AMDGPUAS::LOCAL_ADDRESS},
 };
 
 } // namespace targets
@@ -196,12 +198,13 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                             Triple.getSubArch())
                                       : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
                   : llvm::AMDGPU::parseArchR600(Opts.CPU)),
-      GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
+      GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::FEATURE_NONE
                                     : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout();
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;
   UseAddrSpaceMapMangling = true;
+  HasAMDGPUTypes = true;
 
   if (Triple.isAMDGCN()) {
     // __bf16 is always available as a load/store only type on AMDGCN.
@@ -213,7 +216,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   // should just be assumed true for the dummy target.
   HasFastHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
+  WavefrontSize = llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+                      llvm::AMDGPU::FEAT_SUPPORTS_WAVE32)
+                      ? 32
+                      : 64;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -222,12 +228,17 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
+    Int64Type = SignedLong;
+    IntMaxType = SignedLong;
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-  CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
+  CUMode = !llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+      llvm::AMDGPU::FEAT_SUPPORTS_WGP);
 
-  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"}) {
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts", "supports-wgp",
+                 "supports-wave32", "xnack-support", "sramecc-support",
+                 "xnack-on-off-modes"}) {
     if (GPUKind != llvm::AMDGPU::GK_NONE)
       ReadOnlyFeatures.insert(F);
   }

@@ -62,7 +62,7 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
 
   // Binds to a string_view (either absl or std) that was passed by value and
   // constructed from string literal.
-  auto StringViewArg = ignoringElidableConstructorCall(ignoringImpCasts(
+  const auto StringViewArg = ignoringElidableConstructorCall(ignoringImpCasts(
       cxxConstructExpr(hasType(recordDecl(hasName("::absl::string_view"))),
                        hasArgument(0, ignoringParenImpCasts(SingleChar)))));
 

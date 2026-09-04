@@ -3,47 +3,68 @@
 // RUN:   -internal-isystem %S/../../lib/Headers \
 // RUN:   -triple amdgpu9.0a-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -x hip -fcuda-is-device -fsyntax-only -verify %s \
-// RUN:   -include __clang_gpu_device_functions.h
+// RUN:   -include __clang_gpu_runtime_wrapper.h \
+// RUN:   -include __clang_gpu_builtin_vars.h \
+// RUN:   -include __clang_gpu_device_functions.h \
+// RUN:   -include __clang_gpu_intrinsics.h
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
 // RUN:   -triple amdgpu11.00-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -x hip -fcuda-is-device -fsyntax-only -verify %s \
-// RUN:   -include __clang_gpu_device_functions.h
+// RUN:   -include __clang_gpu_runtime_wrapper.h \
+// RUN:   -include __clang_gpu_builtin_vars.h \
+// RUN:   -include __clang_gpu_device_functions.h \
+// RUN:   -include __clang_gpu_intrinsics.h
 
 // HIP on SPIR-V.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
 // RUN:   -triple spirv64-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -x hip -fcuda-is-device -fsyntax-only -verify %s \
-// RUN:   -include __clang_gpu_device_functions.h
+// RUN:   -include __clang_gpu_runtime_wrapper.h \
+// RUN:   -include __clang_gpu_builtin_vars.h \
+// RUN:   -include __clang_gpu_device_functions.h \
+// RUN:   -include __clang_gpu_intrinsics.h
 
 // CUDA on NVPTX.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
 // RUN:   -triple nvptx64-nvidia-cuda -aux-triple x86_64-unknown-unknown \
 // RUN:   -x cuda -fcuda-is-device -target-cpu sm_70 -fsyntax-only -verify %s \
-// RUN:   -include __clang_gpu_device_functions.h
+// RUN:   -include __clang_gpu_runtime_wrapper.h \
+// RUN:   -include __clang_gpu_builtin_vars.h \
+// RUN:   -include __clang_gpu_device_functions.h \
+// RUN:   -include __clang_gpu_intrinsics.h
 
 // HIP host compilation.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
 // RUN:   -triple x86_64-unknown-unknown -aux-triple amdgpu9.0a-amd-amdhsa \
 // RUN: -x hip -fsyntax-only -verify %s \
-// RUN:   -include __clang_gpu_device_functions.h
+// RUN:   -include __clang_gpu_runtime_wrapper.h \
+// RUN:   -include __clang_gpu_builtin_vars.h \
+// RUN:   -include __clang_gpu_device_functions.h \
+// RUN:   -include __clang_gpu_intrinsics.h
 //
 // HIP host compilation with a SPIR-V device.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
 // RUN:   -triple x86_64-unknown-unknown -aux-triple spirv64-amd-amdhsa \
 // RUN:   -x hip -fsyntax-only -verify %s \
-// RUN:   -include __clang_gpu_device_functions.h
+// RUN:   -include __clang_gpu_runtime_wrapper.h \
+// RUN:   -include __clang_gpu_builtin_vars.h \
+// RUN:   -include __clang_gpu_device_functions.h \
+// RUN:   -include __clang_gpu_intrinsics.h
 //
 // CUDA host compilation.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
 // RUN:   -triple x86_64-unknown-unknown -aux-triple nvptx64-nvidia-cuda \
 // RUN:   -aux-target-cpu sm_70 -x cuda -fsyntax-only -verify %s \
-// RUN:   -include __clang_gpu_device_functions.h
+// RUN:   -include __clang_gpu_runtime_wrapper.h \
+// RUN:   -include __clang_gpu_builtin_vars.h \
+// RUN:   -include __clang_gpu_device_functions.h \
+// RUN:   -include __clang_gpu_intrinsics.h
 
 // expected-no-diagnostics
 

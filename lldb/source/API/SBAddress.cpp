@@ -11,9 +11,11 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBThread.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
@@ -110,7 +112,8 @@ lldb::addr_t SBAddress::GetLoadAddress(const SBTarget &target) const {
   TargetSP target_sp(target.GetSP());
   if (target_sp) {
     if (m_opaque_up->IsValid()) {
-      std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+      TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       addr = m_opaque_up->GetLoadAddress(target_sp.get());
     }
   }
@@ -259,4 +262,42 @@ SBLineEntry SBAddress::GetLineEntry() {
       sb_line_entry.SetLineEntry(line_entry);
   }
   return sb_line_entry;
+}
+
+SBProcessAddress::SBProcessAddress(const SBProcessAddress &rhs)
+    : m_opaque_up(new ProcessAddress(rhs.ref())) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBProcessAddress::SBProcessAddress(lldb::addr_t load_addr)
+    : m_opaque_up(new ProcessAddress(load_addr)) {
+  LLDB_INSTRUMENT_VA(this, load_addr);
+}
+
+SBProcessAddress::SBProcessAddress(lldb::addr_t addr,
+                                   lldb::addr_space_t address_space_id)
+    : m_opaque_up(new ProcessAddress(addr, address_space_id)) {
+  LLDB_INSTRUMENT_VA(this, addr, address_space_id);
+}
+
+SBProcessAddress::SBProcessAddress(lldb::addr_t addr,
+                                   lldb::addr_space_t address_space_id,
+                                   lldb::SBThread thread)
+    : m_opaque_up(
+          new ProcessAddress(addr, address_space_id, thread.GetThreadID())) {
+  LLDB_INSTRUMENT_VA(this, addr, address_space_id, thread);
+}
+
+SBProcessAddress::~SBProcessAddress() = default;
+
+ProcessAddress &SBProcessAddress::ref() { return *m_opaque_up; }
+
+const ProcessAddress &SBProcessAddress::ref() const { return *m_opaque_up; }
+
+const SBProcessAddress &
+SBProcessAddress::operator=(const SBProcessAddress &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
+  return *this;
 }

@@ -22,11 +22,8 @@
 #include "SIPeepholeSDWA.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include <optional>
 
 using namespace llvm;
@@ -63,6 +60,9 @@ private:
   // value operand and the matching SDWA selector (WORD_0 / BYTE_0).
   std::optional<std::pair<MachineOperand *, AMDGPU::SDWA::SdwaSel>>
   matchAndMask(MachineInstr &MI) const;
+
+  // VOPC SDWA instructions carry the SDWA TSFlag but have no dst_sel operand.
+  bool isSDWAWithDstSel(const MachineInstr &Inst) const;
 
   void matchSDWAOperands(MachineBasicBlock &MBB);
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
@@ -693,6 +693,11 @@ SIPeepholeSDWA::matchAndMask(MachineInstr &MI) const {
   return std::make_pair(ValSrc, *Imm == 0x0000ffff ? WORD_0 : BYTE_0);
 }
 
+bool SIPeepholeSDWA::isSDWAWithDstSel(const MachineInstr &Inst) const {
+  return TII->isSDWA(Inst) &&
+         AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::dst_sel);
+}
+
 std::unique_ptr<SDWAOperand>
 SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
@@ -870,7 +875,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
           return CheckRetType(std::nullopt);
 
         MachineInstr *Op1Inst = Op1Def->getParent();
-        if (!TII->isSDWA(*Op1Inst))
+        if (!isSDWAWithDstSel(*Op1Inst))
           return CheckRetType(std::nullopt);
 
         MachineOperand *Op2Def = findSingleRegDef(Op2, MRI);
@@ -920,7 +925,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     // For now this only works with SDWA instructions. For regular instructions
     // there is no way to determine if the instruction writes only 8/16/24-bit
     // out of full register size and all registers are at min 32-bit wide.
-    if (!TII->isSDWA(*OtherInst))
+    if (!isSDWAWithDstSel(*OtherInst))
       break;
 
     SdwaSel DstSel = static_cast<SdwaSel>(
@@ -1049,6 +1054,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
+  if (MISucc.getParent() != &MBB)
+    return; // Loop depends on MI and MISucc in same MBB.
   MachineBasicBlock::LivenessQueryResult Liveness =
       MBB.computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 25);
   if (Liveness != MachineBasicBlock::LQR_Dead)
@@ -1171,7 +1178,8 @@ bool isConvertibleToSDWA(MachineInstr &MI,
     return false;
 
   // Check if target supports this SDWA opcode
-  if (TII->pseudoToMCOpcode(Opc) == -1)
+  if (TII->pseudoToMCOpcode(Opc) == -1 ||
+      TII->pseudoToMCOpcode(AMDGPU::getSDWAOp(Opc)) == -1)
     return false;
 
   if (MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)) {

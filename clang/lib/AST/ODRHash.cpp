@@ -159,12 +159,20 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     AddDependentTemplateName(*Name.getAsDependentTemplateName());
     break;
   }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    AddTemplateName(PI->getPattern());
+    AddStmt(PI->getIndexExpr());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
+    break;
   case TemplateName::UsingTemplate:
+    AddDecl(Name.getAsUsingShadowDecl()->getTargetDecl());
     break;
   case TemplateName::DeducedTemplate:
     llvm_unreachable("Unexpected DeducedTemplate");
@@ -220,6 +228,11 @@ void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {
   for (auto *ND : TPL->asArray()) {
     AddSubDecl(ND);
   }
+
+  const Expr *RequiresClause = TPL->getRequiresClause();
+  AddBoolean(RequiresClause);
+  if (RequiresClause)
+    AddStmt(RequiresClause);
 }
 
 void ODRHash::clear() {
@@ -473,6 +486,26 @@ public:
     Hash.AddBoolean(D->isPackExpansion());
   }
 
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    for (const TemplateParameterList *TPL : D->getTemplateParameterLists())
+      Hash.AddTemplateParameterList(TPL);
+
+    bool IsTemplateFriend =
+        D->getFriendKind() ==
+        FriendTemplateDecl::FriendTemplateEntityKind::Template;
+    Hash.AddBoolean(!IsTemplateFriend);
+    if (!IsTemplateFriend) {
+      VisitFriendDecl(D);
+      if (D->getFriendKind() ==
+              FriendTemplateDecl::FriendTemplateEntityKind::Type &&
+          !D->getFriendTemplateName().isNull())
+        Hash.AddTemplateName(D->getFriendTemplateName());
+    } else {
+      Hash.AddTemplateName(D->getFriendTemplateName());
+      Hash.AddBoolean(D->isPackExpansion());
+    }
+  }
+
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
     // Only care about default arguments as part of the definition.
     const bool hasDefaultArgument =
@@ -557,6 +590,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::EnumConstant: // Only found in EnumDecl's.
     case Decl::Field:
     case Decl::Friend:
+    case Decl::FriendTemplate:
     case Decl::FunctionTemplate:
     case Decl::StaticAssert:
     case Decl::TypeAlias:
@@ -1011,7 +1045,7 @@ public:
     ID.AddInteger((unsigned)T->getKeyword());
     ID.AddInteger(T->isConstrained());
     if (T->isConstrained()) {
-      AddDecl(T->getTypeConstraintConcept());
+      Hash.AddTemplateName(T->getTypeConstraintConcept());
       ID.AddInteger(T->getTypeConstraintArguments().size());
       for (const auto &TA : T->getTypeConstraintArguments())
         Hash.AddTemplateArgument(TA);

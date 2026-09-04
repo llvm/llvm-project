@@ -63,15 +63,15 @@ module attributes {
       // CHECK: %[[STRIDE1_1:.*]] = spirv.Constant 4 : i32
       // CHECK: %[[UPDATE1_1:.*]] = spirv.IMul %[[INDEX1]], %[[STRIDE1_1]] : i32
       // CHECK: %[[OFFSET1_2:.*]] = spirv.IAdd %[[INDEX2]], %[[UPDATE1_1]] : i32
-      // CHECK: %[[PTR1:.*]] = spirv.AccessChain %[[ARG0]]{{\[}}%[[ZERO]], %[[OFFSET1_2]]{{\]}}
+      // CHECK: %[[PTR1:.*]] = spirv.InBoundsAccessChain %[[ARG0]]{{\[}}%[[ZERO]], %[[OFFSET1_2]]{{\]}}
       // CHECK-NEXT: %[[VAL1:.*]] = spirv.Load "StorageBuffer" %[[PTR1]]
       %14 = memref.load %arg0[%12, %13] : memref<12x4xf32, #spirv.storage_class<StorageBuffer>>
-      // CHECK: %[[PTR2:.*]] = spirv.AccessChain %[[ARG1]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
+      // CHECK: %[[PTR2:.*]] = spirv.InBoundsAccessChain %[[ARG1]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: %[[VAL2:.*]] = spirv.Load "StorageBuffer" %[[PTR2]]
       %15 = memref.load %arg1[%12, %13] : memref<12x4xf32, #spirv.storage_class<StorageBuffer>>
       // CHECK: %[[VAL3:.*]] = spirv.FAdd %[[VAL1]], %[[VAL2]]
       %16 = arith.addf %14, %15 : f32
-      // CHECK: %[[PTR3:.*]] = spirv.AccessChain %[[ARG2]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
+      // CHECK: %[[PTR3:.*]] = spirv.InBoundsAccessChain %[[ARG2]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: spirv.Store "StorageBuffer" %[[PTR3]], %[[VAL3]]
       memref.store %16, %arg2[%12, %13] : memref<12x4xf32, #spirv.storage_class<StorageBuffer>>
       gpu.return

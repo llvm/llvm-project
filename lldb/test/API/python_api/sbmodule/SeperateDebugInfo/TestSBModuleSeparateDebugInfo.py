@@ -53,7 +53,7 @@ class SBModuleSeparateDebugInfoCase(TestBase):
         self.assertTrue(module_specs[0].GetFileSpec().Exists())
 
     @no_debug_info_test
-    @skipUnlessPlatform(["darwin"])
+    @requirePlatform(["darwin"])
     def test_darwin_oso(self):
         """DWARF in .o files (no dSYM) -- returns .o file paths."""
         self.build(debug_info="dwarf")

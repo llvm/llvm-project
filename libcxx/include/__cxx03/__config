@@ -221,7 +221,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 #  if defined(_WIN32)
 #    define _LIBCPP_WIN32API
-#    define _LIBCPP_SHORT_WCHAR 1
 // Both MinGW and native MSVC provide a "MSVC"-like environment
 #    define _LIBCPP_MSVCRT_LIKE
 // If mingw not explicitly detected, assume using MS C runtime only if
@@ -231,11 +230,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    endif
 #    define _LIBCPP_HAS_OPEN_WITH_WCHAR
 #  endif // defined(_WIN32)
-
-#  if defined(_AIX) && !defined(__64BIT__)
-// The size of wchar is 2 byte on 32-bit mode on AIX.
-#    define _LIBCPP_SHORT_WCHAR 1
-#  endif
 
 // Libc++ supports various implementations of std::random_device.
 //
@@ -264,26 +258,17 @@ _LIBCPP_HARDENING_MODE_DEBUG
 //      When this option is used, the token passed to `std::random_device`'s
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 //
-// _LIBCPP_USING_NACL_RANDOM
-//      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
-//      including accesses to the special files under `/dev`. This implementation
-//      uses the NaCL syscall `nacl_secure_random_init()` to get entropy.
-//      When this option is used, the token passed to `std::random_device`'s
-//      constructor *must* be "/dev/urandom" -- anything else is an error.
-//
 // _LIBCPP_USING_WIN32_RANDOM
 //      Use rand_s(), for use on Windows.
 //      When this option is used, the token passed to `std::random_device`'s
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 #  if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||                     \
-      defined(__DragonFly__)
+      defined(__DragonFly__) || defined(__BIONIC__)
 #    define _LIBCPP_USING_ARC4_RANDOM
 #  elif defined(__wasi__) || defined(__EMSCRIPTEN__)
 #    define _LIBCPP_USING_GETENTROPY
 #  elif defined(__Fuchsia__)
 #    define _LIBCPP_USING_FUCHSIA_CPRNG
-#  elif defined(__native_client__)
-#    define _LIBCPP_USING_NACL_RANDOM
 #  elif defined(_LIBCPP_WIN32API)
 #    define _LIBCPP_USING_WIN32_RANDOM
 #  else

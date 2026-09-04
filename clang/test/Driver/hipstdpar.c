@@ -31,7 +31,7 @@
 // RUN:   -nogpulib -nogpuinc -c %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-NEW-DRV %s
 // HIPSTDPAR-NEW-DRV: {{".*clang-linker-wrapper"}}
-// HIPSTDPAR-NEW-DRV-SAME: "--device-compiler=amdgcn-amd-amdhsa=--hipstdpar"
+// HIPSTDPAR-NEW-DRV-SAME: "--device-compiler=amdgpu-amd-amdhsa=--hipstdpar"
 
 // Check that the base AMDGPU toolchain translates --hipstdpar to the backend
 // flag. This is the path taken by the inner clang invocation from the linker

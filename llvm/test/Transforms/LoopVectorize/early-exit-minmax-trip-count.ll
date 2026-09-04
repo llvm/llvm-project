@@ -23,7 +23,7 @@ define ptr @deref_umin_trip_count_and_length(i32 %length, ptr %ptr, i64 %count) 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TRIP_COUNT]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

@@ -31,6 +31,8 @@
 
 namespace fir {
 
+class GlobalOp;
+
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
 template <typename F, typename OP>
@@ -61,11 +63,25 @@ void addNestedPassConditionally(mlir::PassManager &pm,
 }
 
 template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor);
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
+                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
+                     fir::GlobalOp>(pm, ctor);
+}
 
 template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor);
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
+  if (!disabled)
+    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
+}
+
+template <typename F>
+void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
+  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
+  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
+  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
+}
 
 /// Add MLIR Canonicalizer pass with region simplification disabled.
 /// FIR does not support the promotion of some SSA value to block arguments (or
@@ -120,6 +136,16 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 /// e.g. --mlir-print-ir-before=<pass> and similar.
 void registerFlangPipelinePasses();
 
+/// Create a pass pipeline for default FIR optimizations that run before CFG
+/// conversion.
+void createDefaultFIRPreCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
+/// Create a pass pipeline for default FIR optimizations that run after CFG
+/// conversion.
+void createDefaultFIRPostCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
 ///
@@ -140,6 +166,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
+  /// Whether only OpenMP simd constructs are being honored.
+  bool isSimdOnly;
+
   /// Whether code is being generated for a target device rather than the host
   /// device
   bool isTargetDevice;

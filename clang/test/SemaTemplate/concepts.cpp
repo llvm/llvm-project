@@ -160,6 +160,8 @@ namespace NoConstantFolding {
   int n;
   template <class T> concept C = &n + 3 - 3 == &n; // expected-error {{non-constant expression}} expected-note {{cannot refer to element 3 of non-array object}}
   static_assert(C<void>); // expected-note {{while checking}}
+  // expected-error@-1 {{static assertion failed}}
+  // expected-note@-2 {{because 'void' does not satisfy 'C'}}
 }
 
 namespace PR50337 {
@@ -1545,6 +1547,26 @@ concept C = sizeof(T) == 42;
 
 static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overloaded function could not be resolved;}}
 // expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
+// expected-note@-2 {{because 'void' does not satisfy 'C'}}
+// expected-note@-5 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+
+}
+
+namespace invalid_expression_in_instantiation {
+
+template <class T, class U>
+concept is_same = __is_same(T, U);
+
+template <class T, class U>
+concept is_same_2 = is_same<T&, U&>;
+
+template <class T, class U>
+constexpr bool is_same_value() {
+  return is_same_2<T, U>;
+}
+
+// This should be SFINAE rather than a hard error.
+static_assert(!is_same_value<void, void>());
 
 }
 
@@ -1824,6 +1846,7 @@ namespace instantiation_dependent {
   template <class V> requires C<X<V&>> struct Y {};
   Y<void> y;
   // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because 'X<V &>' (aka 'int') does not satisfy 'C'}} \
   // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
 } // namespace instantiation_dependent
 
@@ -2069,6 +2092,9 @@ struct quantity {};
 
 auto x = quantity<reference<int>{}, int>{};
 // expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<int>{}, $1 = int]}}
+// expected-note@-5 {{because 'representation_of<type-parameter-0-1, get_spec(V)>' evaluated to false}}
+// expected-note@-7 {{because 'decltype(V)' does not satisfy 'repr_impl'}}
+// expected-note@-7 {{because substituted constraint expression is ill-formed: non-type template argument is not a constant expression}}
 
 } // namespace CannotResolve1
 

@@ -36,6 +36,10 @@ void test() {
     std::is_lteq(oRes); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::is_gt(oRes);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::is_gteq(oRes); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#  if TEST_STD_VER > 23 && __has_builtin(__builtin_type_order)
+    std::type_order<int, char>()();
+    // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+#  endif
   }
 #endif
 
@@ -150,7 +154,9 @@ void test() {
   { // <initializer_list>
     std::initializer_list<int> il{94, 82, 49};
 
+    il.data();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.size();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    il.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
@@ -217,6 +223,9 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     ::operator new[](0, std::align_val_t{1}, std::nothrow);
 #endif // _LIBCPP_HAS_ALIGNED_ALLOCATION
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::get_new_handler();
   }
 
 #if TEST_STD_VER >= 17

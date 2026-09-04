@@ -1594,3 +1594,93 @@ define void @store_lane_i64_from_global_address(<2 x i64> %v) {
   store i64 %x, ptr @gv_i64
   ret void
 }
+
+;===----------------------------------------------------------------------------
+; Floating-point lane stores
+;===----------------------------------------------------------------------------
+
+define void @store_lane_f32_no_offset(<4 x float> %v, ptr %p) {
+; CHECK-LABEL: store_lane_f32_no_offset:
+; CHECK:         .functype store_lane_f32_no_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store32_lane 0, 2
+; CHECK-NEXT:    # fallthrough-return
+;
+; MEM64-LABEL: store_lane_f32_no_offset:
+; MEM64:         .functype store_lane_f32_no_offset (v128, i64) -> ()
+; MEM64-NEXT:  # %bb.0:
+; MEM64-NEXT:    local.get 1
+; MEM64-NEXT:    local.get 0
+; MEM64-NEXT:    v128.store32_lane 0, 2
+; MEM64-NEXT:    # fallthrough-return
+  %x = extractelement <4 x float> %v, i32 2
+  store float %x, ptr %p
+  ret void
+}
+
+define void @store_lane_f32_with_folded_gep_offset(<4 x float> %v, ptr %p) {
+; CHECK-LABEL: store_lane_f32_with_folded_gep_offset:
+; CHECK:         .functype store_lane_f32_with_folded_gep_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store32_lane 24, 2
+; CHECK-NEXT:    # fallthrough-return
+;
+; MEM64-LABEL: store_lane_f32_with_folded_gep_offset:
+; MEM64:         .functype store_lane_f32_with_folded_gep_offset (v128, i64) -> ()
+; MEM64-NEXT:  # %bb.0:
+; MEM64-NEXT:    local.get 1
+; MEM64-NEXT:    local.get 0
+; MEM64-NEXT:    v128.store32_lane 24, 2
+; MEM64-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds float, ptr %p, i32 6
+  %x = extractelement <4 x float> %v, i32 2
+  store float %x, ptr %s
+  ret void
+}
+
+define void @store_lane_f64_no_offset(<2 x double> %v, ptr %p) {
+; CHECK-LABEL: store_lane_f64_no_offset:
+; CHECK:         .functype store_lane_f64_no_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store64_lane 0, 1
+; CHECK-NEXT:    # fallthrough-return
+;
+; MEM64-LABEL: store_lane_f64_no_offset:
+; MEM64:         .functype store_lane_f64_no_offset (v128, i64) -> ()
+; MEM64-NEXT:  # %bb.0:
+; MEM64-NEXT:    local.get 1
+; MEM64-NEXT:    local.get 0
+; MEM64-NEXT:    v128.store64_lane 0, 1
+; MEM64-NEXT:    # fallthrough-return
+  %x = extractelement <2 x double> %v, i32 1
+  store double %x, ptr %p
+  ret void
+}
+
+define void @store_lane_f64_with_folded_gep_offset(<2 x double> %v, ptr %p) {
+; CHECK-LABEL: store_lane_f64_with_folded_gep_offset:
+; CHECK:         .functype store_lane_f64_with_folded_gep_offset (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store64_lane 48, 1
+; CHECK-NEXT:    # fallthrough-return
+;
+; MEM64-LABEL: store_lane_f64_with_folded_gep_offset:
+; MEM64:         .functype store_lane_f64_with_folded_gep_offset (v128, i64) -> ()
+; MEM64-NEXT:  # %bb.0:
+; MEM64-NEXT:    local.get 1
+; MEM64-NEXT:    local.get 0
+; MEM64-NEXT:    v128.store64_lane 48, 1
+; MEM64-NEXT:    # fallthrough-return
+  %s = getelementptr inbounds double, ptr %p, i32 6
+  %x = extractelement <2 x double> %v, i32 1
+  store double %x, ptr %s
+  ret void
+}

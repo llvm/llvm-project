@@ -30,7 +30,7 @@ jobs:
         # other configurations in Debug only.
         include:
           - name: linux-x86_64-Debug
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             build_type: Debug
             c_compiler: clang-23
             cpp_compiler: clang++-23
@@ -38,7 +38,7 @@ jobs:
             include_scudo: ON
             testing: BUILD
           - name: linux-x86_64-Release
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
@@ -46,7 +46,7 @@ jobs:
             include_scudo: ON
             build_fuzzing_tests: ON
           - name: linux-x86_64-MinSizeRel
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
@@ -88,12 +88,19 @@ jobs:
             cpp_compiler: clang++-23
             target: armv7em-none-eabi
             testing: SKIP
-          - name: baremetal-armv8m
+          - name: baremetal-armv8m-softfp
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
+            testing: SKIP
+          - name: baremetal-armv8m-hard
+            os: ubuntu-24.04
+            build_type: MinSizeRel
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            target: armv8m.main-none-eabihf
             testing: SKIP
           - name: baremetal-armv8.1m
             os: ubuntu-24.04

@@ -8,7 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorDylibManager.h"
 
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/NativeDylibManagerSPSCI.h"
 
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -69,45 +69,32 @@ Error SimpleExecutorDylibManager::shutdown() {
 
 void SimpleExecutorDylibManager::addBootstrapSymbols(
     StringMap<ExecutorAddr> &M) {
-  M[rt::SimpleExecutorDylibManagerInstanceName] = ExecutorAddr::fromPtr(this);
-  M[rt::SimpleExecutorDylibManagerOpenWrapperName] =
-      ExecutorAddr::fromPtr(&openWrapper);
-  M[rt::SimpleExecutorDylibManagerResolveWrapperName] =
-      ExecutorAddr::fromPtr(&resolveWrapper);
-
-  {
-    // Also provide NativeDylibManager symbols for compatibility with
-    // controllers configured to use the ORC runtime's NativeDylibManager
-    // interface.
-    // FIXME: We should codify a "simple" dylib manager interface and make
-    // SimpleExecutorDylibManager its LLVM-based implementation, and
-    // NativeDylibManager its ORC-runtime implementation.
-    const auto &SNs = rt::orc_rt_NativeDylibManagerSPSSymbols;
-    M[SNs.InstanceName] = ExecutorAddr::fromPtr(this);
-    M[SNs.OpenName] = ExecutorAddr::fromPtr(&openWrapper);
-    M[SNs.ResolveName] = ExecutorAddr::fromPtr(&resolveWrapper);
-  }
+  // SimpleExecutorDylibManager is the LLVM-side implementation of the runtime's
+  // NativeDylibManager controller interface, so it publishes its bootstrap
+  // symbols under the NativeDylibManager_* names. The class itself will be
+  // renamed to NativeDylibManager to match in a future cleanup.
+  M[rt::sps_ci::NativeDylibManagerInstanceName] = ExecutorAddr::fromPtr(this);
+  M[rt::sps_ci::DylibMgrOpen::Name] = ExecutorAddr::fromPtr(&openWrapper);
+  M[rt::sps_ci::DylibMgrResolve::Name] = ExecutorAddr::fromPtr(&resolveWrapper);
 }
 
 llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorDylibManager::openWrapper(const char *ArgData, size_t ArgSize) {
-  return shared::
-      WrapperFunction<rt::SPSSimpleExecutorDylibManagerOpenSignature>::handle(
+  return shared::WrapperFunction<rt::sps_ci::DylibMgrOpen::SPSSig>::handle(
              ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorDylibManager::open))
-          .release();
+      .release();
 }
 
 llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorDylibManager::resolveWrapper(const char *ArgData,
                                            size_t ArgSize) {
-  return shared::WrapperFunction<
-             rt::SPSSimpleExecutorDylibManagerResolveSignature>::
-      handle(ArgData, ArgSize,
+  return shared::WrapperFunction<rt::sps_ci::DylibMgrResolve::SPSSig>::handle(
+             ArgData, ArgSize,
              shared::makeMethodWrapperHandler(
                  &SimpleExecutorDylibManager::resolve))
-          .release();
+      .release();
 }
 
 } // namespace rt_bootstrap

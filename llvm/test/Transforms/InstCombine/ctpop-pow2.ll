@@ -11,9 +11,7 @@ declare void @llvm.assume(i1)
 
 define i16 @ctpop_x_and_negx(i16 %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx(
-; CHECK-NEXT:    [[V0:%.*]] = sub i16 0, [[X:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = and i16 [[X]], [[V0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i16 [[V1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i16 [[X:%.*]], 0
 ; CHECK-NEXT:    [[CNT:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[CNT]]
 ;
@@ -73,9 +71,7 @@ define i8 @ctpop_imin_plus1_lshr_nz(i8 %x) {
 
 define i64 @ctpop_x_and_negx_nz(i64 %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx_nz(
-; CHECK-NEXT:    [[V0:%.*]] = sub i64 0, [[X:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = and i64 [[X]], [[V0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[V1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i64 1
 ;
@@ -126,9 +122,7 @@ define <2 x i32> @ctpop_shl2_1_vec_nz(<2 x i32> %x) {
 
 define <2 x i64> @ctpop_x_and_negx_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[X]], [[SUB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[CNT:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CNT]]
 ;

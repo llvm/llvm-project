@@ -56,7 +56,11 @@ public:
   }
   S7 &operator=(S7 &s) {
     int k;
+#if defined(OMP5) || defined(OMP51)
 #pragma omp target teams distribute simd allocate(a) private(a) private(this->a) linear(k) allocate(k)
+#else
+#pragma omp target teams distribute simd private(a) private(this->a) linear(k)
+#endif
     for (k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
@@ -78,7 +82,9 @@ public:
   }
 };
 // CHECK: #pragma omp target teams distribute simd private(this->a) private(this->a) private(T::a)
-// CHECK: #pragma omp target teams distribute simd allocate(this->a) private(this->a) private(this->a) linear(k) allocate(k)
+// OMP45: #pragma omp target teams distribute simd private(this->a) private(this->a) linear(k)
+// OMP50: #pragma omp target teams distribute simd allocate(this->a) private(this->a) private(this->a) linear(k) allocate(k)
+// OMP51: #pragma omp target teams distribute simd allocate(this->a) private(this->a) private(this->a) linear(k) allocate(k)
 // CHECK: #pragma omp target teams distribute simd private(b) firstprivate(argv) shared(d) reduction(+: c) reduction(max: e) num_teams(f) thread_limit(d)
 // CHECK: #pragma omp target teams distribute simd simdlen(slen1) safelen(slen2) aligned(arr: alen)
 // CHECK: #pragma omp target teams distribute simd private(this->a) private(this->a) private(this->S::a)

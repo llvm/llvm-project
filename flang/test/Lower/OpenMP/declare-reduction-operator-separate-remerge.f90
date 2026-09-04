@@ -90,9 +90,9 @@ end module
 ! All three reductions are materialized as distinct ops keyed by their source
 ! module (the int and real ones reached only through the nested inner facade),
 ! and every clause binds, so no TODO aborts the compile.
-! CHECK-DAG: omp.declare_reduction @{{.*m_int.*op\.shared\..*}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{.*m_real.*op\.shared\..*}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{.*m_cplx.*op\.shared\..*}} : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{.*m_int.*op\.shared\..*}} byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{.*m_real.*op\.shared\..*}} byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{.*m_cplx.*op\.shared\..*}} byref_element_type({{.*}}) : !fir.ref
 ! CHECK-NOT: not yet implemented
 program test_remerge
   use m_facade_outer

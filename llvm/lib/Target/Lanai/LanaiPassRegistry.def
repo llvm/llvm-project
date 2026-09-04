@@ -13,9 +13,17 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("lanai-asm-printer-begin", LanaiAsmPrinterBeginPass())
+MODULE_PASS("lanai-asm-printer-end", LanaiAsmPrinterEndPass())
+#undef MODULE_PASS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("lanai-asm-printer", LanaiAsmPrinterPass())
 MACHINE_FUNCTION_PASS("lanai-delay-slot-fillter", LanaiDelaySlotFillerPass())
 MACHINE_FUNCTION_PASS("lanai-isel", LanaiISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("lanai-mem-alu-combiner", LanaiMemAluCombinerPass())

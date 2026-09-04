@@ -2726,15 +2726,14 @@ define amdgpu_ps <2 x i32> @s_exp10_f64(double inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x979a371
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x400a934f
 ; SI-GISEL-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
-; SI-GISEL-NEXT:    s_mov_b32 s5, 0x43300000
+; SI-GISEL-NEXT:    s_mov_b32 s6, 0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
 ; SI-GISEL-NEXT:    s_brev_b32 s7, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s4, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s5, 0x43300000
 ; SI-GISEL-NEXT:    s_and_b64 s[6:7], s[2:3], s[6:7]
-; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; SI-GISEL-NEXT:    v_add_f64 v[2:3], v[0:1], s[4:5]
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v4, -1
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v5, 0x432fffff
@@ -3203,15 +3202,14 @@ define amdgpu_ps <4 x i32> @s_exp10_v2f64(<2 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x979a371
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x400a934f
 ; SI-GISEL-NEXT:    v_mul_f64 v[2:3], s[0:1], v[0:1]
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0x43300000
+; SI-GISEL-NEXT:    s_mov_b32 s8, 0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s4, v2
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
-; SI-GISEL-NEXT:    s_mov_b32 s8, 0
 ; SI-GISEL-NEXT:    s_brev_b32 s9, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s6, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s7, 0x43300000
 ; SI-GISEL-NEXT:    s_and_b64 s[10:11], s[4:5], s[8:9]
-; SI-GISEL-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
+; SI-GISEL-NEXT:    s_or_b64 s[10:11], s[10:11], s[6:7]
 ; SI-GISEL-NEXT:    v_add_f64 v[4:5], v[2:3], s[10:11]
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v6, -1
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v7, 0x432fffff
@@ -3287,7 +3285,7 @@ define amdgpu_ps <4 x i32> @s_exp10_v2f64(<2 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s5, v1
 ; SI-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; SI-GISEL-NEXT:    s_and_b64 s[8:9], s[4:5], s[8:9]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
+; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], s[6:7]
 ; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[10:11], s[10:11]
 ; SI-GISEL-NEXT:    v_add_f64 v[0:1], v[0:1], -s[6:7]
@@ -3873,15 +3871,14 @@ define amdgpu_ps <6 x i32> @s_exp10_v3f64(<3 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x979a371
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x400a934f
 ; SI-GISEL-NEXT:    v_mul_f64 v[2:3], s[0:1], v[0:1]
-; SI-GISEL-NEXT:    s_mov_b32 s7, 0x43300000
+; SI-GISEL-NEXT:    s_mov_b32 s8, 0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s10, v2
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s11, v3
-; SI-GISEL-NEXT:    s_mov_b32 s8, 0
 ; SI-GISEL-NEXT:    s_brev_b32 s9, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s6, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s7, 0x43300000
 ; SI-GISEL-NEXT:    s_and_b64 s[12:13], s[10:11], s[8:9]
-; SI-GISEL-NEXT:    s_or_b64 s[12:13], s[6:7], s[12:13]
+; SI-GISEL-NEXT:    s_or_b64 s[12:13], s[12:13], s[6:7]
 ; SI-GISEL-NEXT:    v_add_f64 v[4:5], v[2:3], s[12:13]
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v6, -1
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v7, 0x432fffff
@@ -3956,7 +3953,7 @@ define amdgpu_ps <6 x i32> @s_exp10_v3f64(<3 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s13, v37
 ; SI-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; SI-GISEL-NEXT:    s_and_b64 s[14:15], s[12:13], s[8:9]
-; SI-GISEL-NEXT:    s_or_b64 s[14:15], s[6:7], s[14:15]
+; SI-GISEL-NEXT:    s_or_b64 s[14:15], s[14:15], s[6:7]
 ; SI-GISEL-NEXT:    v_add_f64 v[38:39], v[36:37], s[14:15]
 ; SI-GISEL-NEXT:    v_cmp_ngt_f64_e32 vcc, s[2:3], v[18:19]
 ; SI-GISEL-NEXT:    v_add_f64 v[38:39], v[38:39], -s[14:15]
@@ -3995,7 +3992,7 @@ define amdgpu_ps <6 x i32> @s_exp10_v3f64(<3 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s13, v1
 ; SI-GISEL-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
 ; SI-GISEL-NEXT:    s_and_b64 s[8:9], s[12:13], s[8:9]
-; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
+; SI-GISEL-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; SI-GISEL-NEXT:    v_add_f64 v[36:37], v[0:1], s[6:7]
 ; SI-GISEL-NEXT:    v_cmp_ngt_f64_e32 vcc, s[4:5], v[18:19]
 ; SI-GISEL-NEXT:    v_add_f64 v[36:37], v[36:37], -s[6:7]
@@ -4728,15 +4725,14 @@ define amdgpu_ps <8 x i32> @s_exp10_v4f64(<4 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x979a371
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x400a934f
 ; SI-GISEL-NEXT:    v_mul_f64 v[2:3], s[0:1], v[0:1]
-; SI-GISEL-NEXT:    s_mov_b32 s9, 0x43300000
+; SI-GISEL-NEXT:    s_mov_b32 s10, 0
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s12, v2
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s13, v3
-; SI-GISEL-NEXT:    s_mov_b32 s10, 0
 ; SI-GISEL-NEXT:    s_brev_b32 s11, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s8, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s9, 0x43300000
 ; SI-GISEL-NEXT:    s_and_b64 s[14:15], s[12:13], s[10:11]
-; SI-GISEL-NEXT:    s_or_b64 s[14:15], s[8:9], s[14:15]
+; SI-GISEL-NEXT:    s_or_b64 s[14:15], s[14:15], s[8:9]
 ; SI-GISEL-NEXT:    v_add_f64 v[4:5], v[2:3], s[14:15]
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v6, -1
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v7, 0x432fffff
@@ -4811,7 +4807,7 @@ define amdgpu_ps <8 x i32> @s_exp10_v4f64(<4 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s15, v37
 ; SI-GISEL-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; SI-GISEL-NEXT:    s_and_b64 s[16:17], s[14:15], s[10:11]
-; SI-GISEL-NEXT:    s_or_b64 s[16:17], s[8:9], s[16:17]
+; SI-GISEL-NEXT:    s_or_b64 s[16:17], s[16:17], s[8:9]
 ; SI-GISEL-NEXT:    v_add_f64 v[38:39], v[36:37], s[16:17]
 ; SI-GISEL-NEXT:    v_cmp_ngt_f64_e32 vcc, s[2:3], v[18:19]
 ; SI-GISEL-NEXT:    v_add_f64 v[38:39], v[38:39], -s[16:17]
@@ -4850,7 +4846,7 @@ define amdgpu_ps <8 x i32> @s_exp10_v4f64(<4 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s15, v37
 ; SI-GISEL-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
 ; SI-GISEL-NEXT:    s_and_b64 s[16:17], s[14:15], s[10:11]
-; SI-GISEL-NEXT:    s_or_b64 s[16:17], s[8:9], s[16:17]
+; SI-GISEL-NEXT:    s_or_b64 s[16:17], s[16:17], s[8:9]
 ; SI-GISEL-NEXT:    v_add_f64 v[38:39], v[36:37], s[16:17]
 ; SI-GISEL-NEXT:    v_cmp_ngt_f64_e32 vcc, s[4:5], v[18:19]
 ; SI-GISEL-NEXT:    v_add_f64 v[38:39], v[38:39], -s[16:17]
@@ -4889,7 +4885,7 @@ define amdgpu_ps <8 x i32> @s_exp10_v4f64(<4 x double> inreg %in) #0 {
 ; SI-GISEL-NEXT:    v_readfirstlane_b32 s15, v1
 ; SI-GISEL-NEXT:    s_cselect_b64 s[4:5], s[4:5], 0
 ; SI-GISEL-NEXT:    s_and_b64 s[10:11], s[14:15], s[10:11]
-; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[8:9], s[10:11]
+; SI-GISEL-NEXT:    s_or_b64 s[8:9], s[10:11], s[8:9]
 ; SI-GISEL-NEXT:    v_add_f64 v[36:37], v[0:1], s[8:9]
 ; SI-GISEL-NEXT:    v_cmp_ngt_f64_e32 vcc, s[6:7], v[18:19]
 ; SI-GISEL-NEXT:    v_add_f64 v[36:37], v[36:37], -s[8:9]

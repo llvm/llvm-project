@@ -11,11 +11,11 @@ please check <https://clang.llvm.org/docs/CrossCompilation.html>.
 This document describes cross-building a compiler in a single stage, using an
 existing `clang` install as the host compiler.
 
-```{note}
+:::{note}
 These instructions have been tested for targeting 32-bit ARM, AArch64, or
 64-bit RISC-V from an x86_64 Linux host. But should be equally applicable to
 any other target.
-```
+:::
 
 ## Setting up a sysroot
 
@@ -118,7 +118,7 @@ important:
 
 - `CMAKE_SYSTEM_NAME`: Perhaps surprisingly, explicitly setting this
   variable [causes CMake to set
-  CMAKE_CROSSCOMPIILING](https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html#variable:CMAKE_CROSSCOMPILING).
+  CMAKE_CROSSCOMPILING](https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html#variable:CMAKE_CROSSCOMPILING).
 - `CMAKE_{C,CXX}_COMPILER_TARGET`: This will be used to set the
   `--target` argument to `clang`. The triple should match the triple used
   within the sysroot (i.e. `$SYSROOT/usr/lib/$TARGET` should exist).
@@ -198,11 +198,11 @@ InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
 
 ## Installing and using
 
-```{note}
+:::{note}
 Use of the `install` target requires that you have set
 `CMAKE_INSTALL_PREFIX` otherwise it will attempt to install in
 directories under `/` on your host.
-```
+:::
 
 If you want to transfer a copy of the built compiler to another machine, you
 can first install it to a location on the host via:

@@ -60,7 +60,7 @@ void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto ConstructorMatcher =
+  const auto ConstructorMatcher =
       cxxConstructExpr(
           argumentCountIs(0),
           hasDeclaration(cxxConstructorDecl(
@@ -74,7 +74,7 @@ void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
 
   auto HasUnionAsParent = hasParent(recordDecl(isUnion()));
 
-  auto HasTypeEqualToConstructorClass = hasType(qualType(
+  const auto HasTypeEqualToConstructorClass = hasType(qualType(
       hasCanonicalType(qualType(hasDeclaration(equalsBoundNode("class"))))));
 
   Finder->addMatcher(
@@ -103,7 +103,7 @@ void RedundantMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field")) {
     const Expr *Init = Field->getInClassInitializer();
-    auto Diag =
+    const auto Diag =
         diag(Construct->getExprLoc(), "initializer for member %0 is redundant")
         << Field;
     if (!Init->getBeginLoc().isMacroID() && !Init->getEndLoc().isMacroID())

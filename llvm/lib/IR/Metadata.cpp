@@ -21,6 +21,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -649,6 +650,8 @@ StringRef MDString::getString() const {
 void *MDNode::operator new(size_t Size, size_t NumOps, StorageType Storage) {
   // uint64_t is the most aligned type we need support (ensured by static_assert
   // above)
+  static_assert(sizeof(Header) == sizeof(size_t) + 2 * sizeof(uint32_t),
+                "MDNode header fields poorly packed");
   size_t AllocSize =
       alignTo(Header::getAllocSize(Storage, NumOps), alignof(uint64_t));
   char *Mem = reinterpret_cast<char *>(::operator new(AllocSize + Size));
@@ -666,6 +669,8 @@ void MDNode::operator delete(void *N) {
 MDNode::MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
                ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2)
     : Metadata(ID, Storage), Context(Context) {
+  getHeader().MetadataPrintID = Context.pImpl->allocateMetadataPrintID();
+
   unsigned Op = 0;
   for (Metadata *MD : Ops1)
     setOperand(Op++, MD);
@@ -780,6 +785,9 @@ void MDNode::countUnresolvedOperands() {
 void MDNode::makeUniqued() {
   assert(isTemporary() && "Expected this to be temporary");
   assert(!isResolved() && "Expected this to be unresolved");
+  bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+  assert(WasTracked && "Temporary node not tracked");
+  (void)WasTracked;
 
   // Enable uniquing callbacks.
   for (auto &Op : mutable_operands())
@@ -980,6 +988,11 @@ void MDNode::handleChangedOperand(void *Ref, Metadata *New) {
 }
 
 void MDNode::deleteAsSubclass() {
+  if (isTemporary()) {
+    bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+    assert(WasTracked && "Temporary node not tracked");
+    (void)WasTracked;
+  }
   switch (getMetadataID()) {
   default:
     llvm_unreachable("Invalid subclass of MDNode");
@@ -1065,6 +1078,11 @@ void MDNode::deleteTemporary(MDNode *N) {
 void MDNode::storeDistinctInContext() {
   assert(!Context.hasReplaceableUses() && "Unexpected replaceable uses");
   assert(!getNumUnresolved() && "Unexpected unresolved nodes");
+  if (isTemporary()) {
+    bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+    assert(WasTracked && "Temporary node not tracked");
+    (void)WasTracked;
+  }
   Storage = Distinct;
   assert(isResolved() && "Expected this to be resolved");
 
@@ -1330,6 +1348,46 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(const MDNode *A, const MDNode *B) {
   AddUniqueCallees(A);
   AddUniqueCallees(B);
   return MDNode::get(A->getContext(), AB);
+}
+
+MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
+  // Drop !alloc_token metadata if either instruction lacks it to avoid mis-
+  // classifying unclassified allocations, where the fallback token must be
+  // used instead.
+  if (!A || !B)
+    return nullptr;
+  if (A == B)
+    return const_cast<MDNode *>(A);
+  if (A->getNumOperands() != 2 || B->getNumOperands() != 2)
+    return nullptr;
+  auto *CIA = mdconst::dyn_extract_or_null<ConstantInt>(A->getOperand(1));
+  auto *CIB = mdconst::dyn_extract_or_null<ConstantInt>(B->getOperand(1));
+  if (!CIA || !CIB)
+    return nullptr;
+
+  MDString *NameA = dyn_cast<MDString>(A->getOperand(0));
+  MDString *NameB = dyn_cast<MDString>(B->getOperand(0));
+  if (!NameA || !NameB)
+    return nullptr;
+
+  if (NameA == NameB)
+    return CIA->isOne() ? const_cast<MDNode *>(A) : const_cast<MDNode *>(B);
+
+  LLVMContext &Ctx = A->getContext();
+  StringRef StrA = NameA->getString();
+  StringRef StrB = NameB->getString();
+
+  SmallString<64> Buffer;
+  Buffer.reserve(StrA.size() + 1 + StrB.size());
+  Buffer.append(StrA);
+  Buffer.push_back('|');
+  Buffer.append(StrB);
+
+  bool MergedContainsPointer = CIA->isOne() || CIB->isOne();
+  Metadata *Ops[] = {MDString::get(Ctx, Buffer),
+                     ConstantAsMetadata::get(ConstantInt::get(
+                         Type::getInt1Ty(Ctx), MergedContainsPointer))};
+  return MDNode::get(Ctx, Ops);
 }
 
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {

@@ -55,19 +55,20 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let Size = 4;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
-  let SchedRW            = ps.SchedRW;
-  let mayLoad            = ps.mayLoad;
-  let mayStore           = ps.mayStore;
-  let isTerminator       = ps.isTerminator;
-  let isReturn           = ps.isReturn;
-  let isCall             = ps.isCall;
-  let isBranch           = ps.isBranch;
-  let isBarrier          = ps.isBarrier;
-  let Uses               = ps.Uses;
-  let Defs               = ps.Defs;
-  let isConvergent       = ps.isConvergent;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let isTerminator         = ps.isTerminator;
+  let isReturn             = ps.isReturn;
+  let isCall               = ps.isCall;
+  let isBranch             = ps.isBranch;
+  let isBarrier            = ps.isBarrier;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
+  let isConvergent         = ps.isConvergent;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
 
   // encoding
   bits<7> sdst;
@@ -2148,7 +2149,7 @@ def : GCNPat<
 }
 
 // v2i64 shl is legal, we need a way to select scalar code
-let SubtargetPredicate = HasPackedU64Ops in {
+let SubtargetPredicate = HasAnyPackedU64Ops in {
 def : GCNPat<
   (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
   (v2i64 (REG_SEQUENCE SReg_128,

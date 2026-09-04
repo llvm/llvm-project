@@ -52,9 +52,7 @@ define dso_local void @tbaa(ptr %0) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected an access group node to be empty and distinct
-; CHECK:      error: unsupported access group node: !0 = !{}
+; CHECK: Access scope must be 'distinct'
 define void @access_group(ptr %arg1) {
   %1 = load i32, ptr %arg1, !llvm.access.group !0
   ret void
@@ -67,7 +65,7 @@ define void @access_group(ptr %arg1) {
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected all loop properties to be either debug locations or metadata nodes
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, i32 42}
+; CHECK-SAME: warning: unhandled metadata: ![[LOOP_ID:[0-9]+]] = distinct !{![[LOOP_ID]], i32 42}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -82,7 +80,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import empty loop property
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[EMPTY_LOOP:[0-9]+]] = distinct !{![[EMPTY_LOOP]], ![[EMPTY_PROP:[0-9]+]]}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -98,7 +96,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import loop property without a name
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[UNNAMED_LOOP:[0-9]+]] = distinct !{![[UNNAMED_LOOP]], ![[UNNAMED_PROP:[0-9]+]]}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -114,7 +112,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import loop properties with duplicated names llvm.loop.disable_nonforced
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[DUP_LOOP:[0-9]+]] = distinct !{![[DUP_LOOP]], ![[DUP_PROP:[0-9]+]], ![[DUP_PROP]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -130,7 +128,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.disable_nonforced to hold no value
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[VALUE_LOOP:[0-9]+]] = distinct !{![[VALUE_LOOP]], ![[VALUE_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -146,7 +144,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata nodes llvm.loop.unroll.enable and llvm.loop.unroll.disable to be mutually exclusive
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
+; CHECK-SAME: warning: unhandled metadata: ![[EXCLUSIVE_LOOP:[0-9]+]] = distinct !{![[EXCLUSIVE_LOOP]], ![[ENABLE_PROP:[0-9]+]], ![[DISABLE_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -161,25 +159,9 @@ end:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.enable to hold a boolean value
-; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
-define void @unsupported_loop_annotation(i64 %n, ptr %A) {
-entry:
-  br label %end, !llvm.loop !0
-end:
-  ret void
-}
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable"}
-
-; // -----
-
-; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.width to hold an i32 value
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[WIDTH_LOOP:[0-9]+]] = distinct !{![[WIDTH_LOOP]], ![[WIDTH_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -195,7 +177,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.followup_all to hold an MDNode
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[FOLLOWUP_LOOP:[0-9]+]] = distinct !{![[FOLLOWUP_LOOP]], ![[FOLLOWUP_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -211,7 +193,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.parallel_accesses to hold one or multiple MDNodes
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
+; CHECK-SAME: warning: unhandled metadata: ![[PARALLEL_LOOP:[0-9]+]] = distinct !{![[PARALLEL_LOOP]], ![[PARALLEL_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -227,7 +209,7 @@ end:
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: unknown loop annotation llvm.loop.typo
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
+; CHECK-SAME: warning: unhandled metadata: ![[UNKNOWN_LOOP:[0-9]+]] = distinct !{![[UNKNOWN_LOOP]], ![[KNOWN_PROP:[0-9]+]], ![[UNKNOWN_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
   br label %end, !llvm.loop !0
@@ -259,7 +241,7 @@ end:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPE_LIST:[0-9]+]])
 define void @unused_scope() {
   call void @llvm.experimental.noalias.scope.decl(metadata !0)
   ret void
@@ -338,7 +320,7 @@ bb1:
 !10 = !{ i32 1, !"foo", i32 1 }
 !11 = !{ i32 4, !"bar", i32 37 }
 !12 = !{ i32 2, !"qux", i32 42 }
-; CHECK: unsupported module flag value for key 'qux' : !4 = !{!"foo", i32 1}
+; CHECK: unsupported module flag value for key 'qux' : ![[FLAG_VALUE:[0-9]+]] = !{!"foo", i32 1}
 !13 = !{ i32 3, !"qux", !{ !"foo", i32 1 }}
 !llvm.module.flags = !{ !10, !11, !12, !13 }
 
@@ -459,6 +441,31 @@ bb1:
 
 ; // -----
 
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!"sp"}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = distinct !{!"sp"}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = !{!{{[0-9]+}}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @nested_distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{!1}
+!1 = distinct !{!"sp"}
+
+; // -----
+
 ; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!{{[0-9]+}}}
 declare i32 @llvm.read_register.i32(metadata)
 
@@ -468,3 +475,95 @@ define i32 @cyclic_metadata_as_value() {
 }
 
 !0 = distinct !{!0}
+
+; // -----
+
+; Local values cannot be represented by symbol-backed metadata attributes.
+; CHECK: error: unsupported metadata: i32 %{{.*}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @local_value_metadata(i32 %arg) {
+  %r = call i32 @llvm.read_register.i32(metadata i32 %arg)
+  ret i32 %r
+}
+
+; // -----
+
+; Intrinsics with dedicated import conversions have no imported symbol for a
+; metadata symbol reference to target.
+; CHECK: error: unsupported metadata: ptr @llvm.memcpy.p0.p0.i64
+declare i32 @llvm.read_register.i32(metadata)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly, ptr noalias readonly, i64, i1 immarg)
+
+define i32 @skipped_intrinsic_metadata() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr @llvm.memcpy.p0.p0.i64}
+
+; // -----
+
+; CHECK: error: unsupported metadata: ptr @llvm.global_ctors
+declare i32 @llvm.read_register.i32(metadata)
+define void @ctor() {
+  ret void
+}
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @ctor, ptr null }]
+
+define i32 @metadata_ref_global_ctors() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr @llvm.global_ctors}
+
+; // -----
+
+; CHECK: error: unsupported metadata: ptr @llvm.global_dtors
+declare i32 @llvm.read_register.i32(metadata)
+define void @dtor() {
+  ret void
+}
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @dtor, ptr null }]
+
+define i32 @metadata_ref_global_dtors() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr @llvm.global_dtors}
+
+; // -----
+
+; CHECK: warning: expected string metadata value for key 'ProfileFormat'
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", i64 0}
+!3 = !{!"TotalCount", i64 1}
+!4 = !{!"MaxCount", i64 1}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1}
+!7 = !{!"NumCounts", i64 1}
+!8 = !{!"NumFunctions", i64 1}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11}
+!11 = !{i32 10000, i64 1, i32 1}
+
+; // -----
+
+; CHECK: warning: expected string metadata value for key 'ProfileFormat': null
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", null}
+!3 = !{!"TotalCount", i64 1}
+!4 = !{!"MaxCount", i64 1}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1}
+!7 = !{!"NumCounts", i64 1}
+!8 = !{!"NumFunctions", i64 1}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11}
+!11 = !{i32 10000, i64 1, i32 1}

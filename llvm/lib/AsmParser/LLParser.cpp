@@ -72,6 +72,52 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
+/// Return whether skipped trivia contains a block comment that crosses the
+/// boundary between two metadata definitions.
+static bool blockCommentCrossesBoundary(SMLoc BeginLoc, SMLoc EndLoc,
+                                        SMLoc BoundaryLoc) {
+  const char *Begin = BeginLoc.getPointer();
+  const char *End = EndLoc.getPointer();
+  const char *Boundary = BoundaryLoc.getPointer();
+  const char *BlockCommentStart = nullptr;
+  bool InLineComment = false;
+
+  for (const char *Ptr = Begin; Ptr < End;) {
+    if (BlockCommentStart) {
+      if (Ptr + 1 < End && Ptr[0] == '*' && Ptr[1] == '/') {
+        Ptr += 2;
+        if (BlockCommentStart < Boundary && Ptr > Boundary)
+          return true;
+        BlockCommentStart = nullptr;
+        continue;
+      }
+      ++Ptr;
+      continue;
+    }
+
+    if (InLineComment) {
+      if (*Ptr == '\n' || *Ptr == '\r')
+        InLineComment = false;
+      ++Ptr;
+      continue;
+    }
+
+    if (*Ptr == ';') {
+      InLineComment = true;
+      ++Ptr;
+      continue;
+    }
+    if (Ptr + 1 < End && Ptr[0] == '/' && Ptr[1] == '*') {
+      BlockCommentStart = Ptr;
+      Ptr += 2;
+      continue;
+    }
+    ++Ptr;
+  }
+
+  return BlockCommentStart && BlockCommentStart < Boundary && End > Boundary;
+}
+
 /// Run: module ::= toplevelentity*
 bool LLParser::Run(bool UpgradeDebugInfo,
                    DataLayoutCallbackTy DataLayoutCallback) {
@@ -134,6 +180,43 @@ bool LLParser::parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
   Read = End.getPointer() - Start.getPointer();
 
   return Status;
+}
+
+bool LLParser::parseMetadataDefinitions(SlotMapping &Slots,
+                                        ArrayRef<SMLoc> DefinitionEnds) {
+  restoreParsingState(&Slots);
+  Lex.Lex();
+
+  for (SMLoc End : DefinitionEnds) {
+    if (Lex.getLoc().getPointer() >= End.getPointer())
+      return error(End, "expected end of metadata definition");
+    if (Lex.getKind() != lltok::exclaim)
+      return tokError("expected a metadata definition");
+    if (parseStandaloneMetadata())
+      return true;
+    if (Lex.getPrevTokEndLoc().getPointer() > End.getPointer() ||
+        (Lex.getKind() != lltok::Eof &&
+         Lex.getLoc().getPointer() < End.getPointer()) ||
+        blockCommentCrossesBoundary(Lex.getPrevTokEndLoc(), Lex.getLoc(), End))
+      return error(End, "expected end of metadata definition");
+  }
+
+  if (Lex.getKind() != lltok::Eof)
+    return tokError("expected end of metadata definitions");
+
+  if (!ForwardRefMDNodes.empty())
+    return error(ForwardRefMDNodes.begin()->second.second,
+                 "use of undefined metadata '!" +
+                     Twine(ForwardRefMDNodes.begin()->first) + "'");
+
+  for (auto &[_, MD] : NumberedMetadata)
+    if (MD && !MD->isResolved())
+      MD->resolveCycles();
+  DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+  NewDistinctSPs.clear();
+
+  Slots.MetadataNodes = std::move(NumberedMetadata);
+  return false;
 }
 
 void LLParser::restoreParsingState(const SlotMapping *Slots) {
@@ -6700,6 +6783,24 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseDIProperty:
+///   ::= !DIProperty(name: "x", file: !1, line: 7, type: !2,
+///                   backing_storage: !3)
+bool LLParser::parseDIProperty(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(type, MDField, );                                                   \
+  OPTIONAL(backing_storage, MDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIProperty, (Context, name.Val, file.Val, line.Val,
+                                        type.Val, backing_storage.Val));
+  return false;
+}
+
 /// parseDIImportedEntity:
 ///   ::= !DIImportedEntity(tag: DW_TAG_imported_module, scope: !0, entity: !1,
 ///                         line: 7, name: "foo", elements: !2)
@@ -7769,9 +7870,16 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
       cast<TruncInst>(Inst)->setHasNoSignedWrap(true);
     return false;
   }
+  case lltok::kw_addrspacecast: {
+    bool NonNull = EatIfPresent(lltok::kw_nonnull);
+    if (parseCast(Inst, PFS, KeywordVal))
+      return true;
+    if (NonNull)
+      cast<AddrSpaceCastInst>(Inst)->setNonNull();
+    return false;
+  }
   case lltok::kw_sext:
   case lltok::kw_bitcast:
-  case lltok::kw_addrspacecast:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
@@ -9033,10 +9141,11 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
 /// parseStore
 
 ///   ::= 'store' 'volatile'? TypeAndValue ',' TypeAndValue (',' 'align' i32)?
-///   ::= 'store' 'atomic' 'volatile'? TypeAndValue ',' TypeAndValue
-///       'singlethread'? AtomicOrdering (',' 'align' i32)?
+///   ::= 'store' 'atomic' 'volatile'? 'elementwise'? TypeAndValue ','
+///       TypeAndValue 'singlethread'? AtomicOrdering (',' 'align' i32)?
 int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
-  Value *Val, *Ptr; LocTy Loc, PtrLoc;
+  Value *Val, *Ptr;
+  LocTy Loc, PtrLoc;
   MaybeAlign Alignment;
   bool AteExtraComma = false;
   bool isAtomic = false;
@@ -9051,6 +9160,12 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
   bool isVolatile = false;
   if (Lex.getKind() == lltok::kw_volatile) {
     isVolatile = true;
+    Lex.Lex();
+  }
+
+  bool IsElementwise = false;
+  if (Lex.getKind() == lltok::kw_elementwise) {
+    IsElementwise = true;
     Lex.Lex();
   }
 
@@ -9070,13 +9185,28 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
   if (Ordering == AtomicOrdering::Acquire ||
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic store cannot use Acquire ordering");
+
+  if (IsElementwise && !isAtomic)
+    return error(Loc, "elementwise store must be atomic");
+
+  if (IsElementwise && !isa<FixedVectorType>(Val->getType()))
+    return error(
+        Loc, "atomic elementwise store operand must have fixed vector type");
+
+  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
+    return error(Loc,
+                 "atomic elementwise store cannot be sequentially consistent");
+
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Val->getType()->isSized(&Visited))
     return error(Loc, "storing unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Val->getType());
 
-  Inst = new StoreInst(Val, Ptr, isVolatile, *Alignment, Ordering, SSID);
+  Inst = new StoreInst(Val, Ptr,
+                       LoadStoreInstProperties{isVolatile, *Alignment, Ordering,
+                                               SSID, IsElementwise},
+                       /*InsertBefore=*/nullptr);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 

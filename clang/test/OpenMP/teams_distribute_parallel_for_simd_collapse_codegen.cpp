@@ -46,7 +46,7 @@ int teams_template_struct(void) {
 
 }
 
-// CK4: !{!"llvm.loop.vectorize.enable", i1 true}
+// CK4: !{!"llvm.loop.vectorize.enable"}
 
 #endif // CK1
 
@@ -103,7 +103,7 @@ int main (int argc, char **argv) {
 // discard loop variables not needed here
 
 
-// CK4: !{!"llvm.loop.vectorize.enable", i1 true}
+// CK4: !{!"llvm.loop.vectorize.enable"}
 
 #endif // CK2
 #endif // #ifndef HEADER

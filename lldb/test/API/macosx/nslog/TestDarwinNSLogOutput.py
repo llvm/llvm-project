@@ -120,7 +120,7 @@ class DarwinNSLogOutputTestCase(TestBase):
 
     @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
     @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_displayed(self):
         """Test that NSLog() output shows up in the command-line debugger."""
@@ -136,7 +136,7 @@ class DarwinNSLogOutputTestCase(TestBase):
 
     @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
     @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_suppressed_with_env_var(self):
         """Test that NSLog() output does not show up with the ignore env var."""

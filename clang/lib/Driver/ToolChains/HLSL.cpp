@@ -533,6 +533,15 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
       continue;
     }
 
+    if (A->getOption().getID() ==
+            options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order &&
+        getArch() != llvm::Triple::spirv) {
+      getDriver().Diag(diag::err_drv_argument_only_allowed_with)
+          << A->getAsString(Args) << "-spirv";
+      A->claim();
+      continue;
+    }
+
     if (A->getOption().getID() == options::OPT_enable_16bit_types) {
       // Translate -enable-16bit-types into -fnative-half-type and
       // -fnative-int16-type

@@ -45,14 +45,8 @@ public:
   ///   this off allows minimal debugging based on raw symbol names, but it
   ///   comes with significant overhead for release configurations.
   ///
-  /// AutoRegisterCode:
-  ///   Notify the debugger for each new debug object. This is a good default
-  ///   mode, but it may cause significant overhead when adding many modules in
-  ///   sequence. Otherwise the user must call __jit_debug_register_code() in
-  ///   the debug session manually.
-  ///
   ELFDebugObjectPlugin(ExecutionSession &ES, bool RequireDebugSections,
-                       bool AutoRegisterCode, Error &Err);
+                       Error &Err);
   ~ELFDebugObjectPlugin() override;
 
   void notifyMaterializing(MaterializationResponsibility &MR,
@@ -81,7 +75,6 @@ private:
 
   ExecutorAddr RegistrationAction;
   bool RequireDebugSections;
-  bool AutoRegisterCode;
 
   DebugObject *getPendingDebugObj(MaterializationResponsibility &MR);
 };

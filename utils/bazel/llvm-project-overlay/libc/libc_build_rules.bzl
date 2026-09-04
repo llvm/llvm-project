@@ -291,11 +291,13 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
 def libc_header_info(
         name,
         has_def_template = False,
+        proxy = False,
         other_srcs = []):
     return struct(
         target_name = "include_{}_h".format(name.replace("/", "_")),
         staging_path = "staging/include/{}.h".format(name),
         yaml_template = "include/{}.yaml".format(name),
+        proxy = proxy,
         other_srcs = other_srcs + (["include/{}.h.def".format(name)] if has_def_template else []),
     )
 

@@ -111,7 +111,7 @@ attributes #7 = { builtin }
 ; DUMP: CCG before cloning:
 ; DUMP: Callsite Context Graph:
 ; DUMP: Node [[BAR:0x[a-z0-9]+]]
-; DUMP: 	  %call = call noalias noundef nonnull dereferenceable(10) ptr @_Znam(i64 noundef 10) #7, !heapallocsite !7	(clone 0)
+; DUMP: 	  %call = call noalias noundef nonnull dereferenceable(10) ptr @_Znam(i64 noundef 10) #7, !heapallocsite !{{[0-9]+}}	(clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:

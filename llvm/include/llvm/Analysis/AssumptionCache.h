@@ -163,6 +163,8 @@ public:
   }
 
   /// Access the list of assumptions which affect this value.
+  ///
+  /// No more than -max-assumes-per-value of them are cached.
   MutableArrayRef<ResultElem> assumptionsFor(const Value *V) {
     if (!Scanned)
       scanFunction();

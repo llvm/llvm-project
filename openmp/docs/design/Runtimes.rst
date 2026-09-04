@@ -741,6 +741,7 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_REPLACEMENT_MODULE=<in:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_JIT_SAVE_IMAGE_FILENAME=<out:Filename> (device image file)``
     * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
     * ``LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)``
     * ``OFFLOAD_TRACK_ALLOCATION_TRACES=[TRUE/FALSE] (default FALSE)``
@@ -783,11 +784,12 @@ LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD
 """""""""""""""""""""""""""""""""""""
 
 ``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD`` sets the threshold size for which the
-``libomptarget`` memory manager will handle the allocation. Any allocations
-larger than this threshold will not use the memory manager and be freed after
-the device kernel exits. The default threshold value is ``8KB``. If
-``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD`` is set to ``0`` the memory manager
-will be completely disabled.
+``libomptarget`` device memory manager will handle the allocation. Any
+allocations larger than this threshold will not use the memory manager and be
+freed after the device kernel exits. The default threshold value is ``8KB``. If
+``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD`` is set to ``0`` the device memory
+manager will be completely disabled.
+This has no effect on the host or shared memory managers.
 
 .. _libomptarget_info:
 
@@ -1162,6 +1164,14 @@ which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 :ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
 
+.. _libomptarget_jit_save_image_filename:
+
+LIBOMPTARGET_JIT_SAVE_IMAGE_FILENAME
+""""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to save the device image produced by the
+device JIT after target-specific post-processing. The value is expected to be a
+filename into which the binary device image is written.
 
 LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT
 """""""""""""""""""""""""""""""""""""""""""

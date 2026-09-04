@@ -13,6 +13,7 @@
 // The constructor is now `private` (exposition-only) per P3059R2.
 
 #include <ranges>
+#include <type_traits>
 
 #include "test_iterators.h"
 #include "../types.h"
@@ -21,5 +22,5 @@ using View           = minimal_view<int*, sentinel_wrapper<int*>>;
 using FilterView     = std::ranges::filter_view<View, AlwaysTrue>;
 using FilterSentinel = std::ranges::sentinel_t<FilterView>;
 
-static_assert(!std::constructible_from<FilterSentinel, FilterView>);
-static_assert(!std::convertible_to<FilterView, FilterSentinel>);
+static_assert(!std::is_constructible_v<FilterSentinel, FilterView>);
+static_assert(!std::is_convertible_v<FilterView, FilterSentinel>);

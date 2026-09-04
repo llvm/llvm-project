@@ -12,6 +12,11 @@
 // RUN: cp "%s" "%t/test.cpp"
 // clang-check will produce an error code if the mock library is not found.
 // RUN: clang-check -p "%t" "%t/test.cpp"
+//
+// Resolve a driver without a path through PATH.
+// RUN: chmod +x %t/mock-libcxx/bin/clang
+// RUN: echo '[{"directory":"%t","command":"clang -stdlib=libc++ -target x86_64-apple-darwin -c test.cpp","file":"test.cpp"}]' | sed -e 's/\\/\//g' > %t/compile_commands.json
+// RUN: env "PATH=%t/mock-libcxx/bin%{pathsep}%PATH%" clang-check -p "%t" "%t/test.cpp"
 
 #include <mock_vector>
 vector v;

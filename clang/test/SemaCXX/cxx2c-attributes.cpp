@@ -6,7 +6,8 @@
 // wg21.link/P2552
 static_assert(__has_cpp_attribute(assume));
 
-// The standard does not prescribe a behavior for [[carries_dependency]]
+// [[carries_dependency]] was removed from the standard by P3475R2
+static_assert(!__has_cpp_attribute(carries_dependency));
 
 static_assert(__has_cpp_attribute(deprecated));
 static_assert(__has_cpp_attribute(fallthrough));

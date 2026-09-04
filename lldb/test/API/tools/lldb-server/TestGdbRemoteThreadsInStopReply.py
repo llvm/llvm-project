@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 @skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
     ENABLE_THREADS_IN_STOP_REPLY_ENTRIES = [
@@ -34,6 +34,7 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         result = dict()
         result["pc_register"] = hw_info["pc_register"]
         result["little_endian"] = hw_info["little_endian"]
+        result["ptrsize"] = hw_info["ptrsize"]
         for key_field in field_names:
             result[key_field] = kv_dict.get(key_field)
 
@@ -85,9 +86,11 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         hw_info = dict()
         hw_info["pc_register"] = pc_lldb_reg_index
         hw_info["little_endian"] = endian == "little"
+        hw_info["ptrsize"] = int(process_info.get("ptrsize", 0))
         return hw_info
 
-    def gather_threads_info_pcs(self, pc_register, little_endian):
+    def gather_threads_info(self):
+        """The parsed jThreadsInfo reply: one dict per thread."""
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
             [
@@ -104,10 +107,12 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
         threads_info = context.get("threads_info")
+        # A literal '}' is escaped as '}]' on the wire.
+        return json.loads(re.sub(r"}]", "}", threads_info))
+
+    def gather_threads_info_pcs(self, pc_register, little_endian):
+        jthreads_info = self.gather_threads_info()
         register = str(pc_register)
-        # The jThreadsInfo response is not valid JSON data, so we have to
-        # clean it up first.
-        jthreads_info = json.loads(re.sub(r"}]", "}", threads_info))
         thread_pcs = dict()
         for thread_info in jthreads_info:
             tid = thread_info["tid"]
@@ -175,6 +180,78 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Ensure each thread in q{f,s}ThreadInfo appears in stop reply threads
         for tid in threads:
             self.assertIn(tid, stop_reply_threads)
+
+    @add_test_categories(["debugserver"])
+    def test_stop_reply_expedites_frame_pointer_backchain(self):
+        """The stop reply expedites at most the two innermost backchain
+        entries, one `memory:` entry each of 2 * ptrsize bytes."""
+        self.build()
+        self.set_inferior_startup_launch()
+        results = self.gather_stop_reply_fields(1, ["memory"])
+
+        memory = results["memory"]
+        self.assertIsNotNone(memory, "the stop reply carried no memory: entry")
+        # parse_key_val_dict promotes a repeated key to a list.
+        entries = memory if isinstance(memory, list) else [memory]
+
+        # A backchain entry is 2 pointers at $fp: the previous FP and PC.
+        backchain_entry_size = 2 * results["ptrsize"]
+        for entry in entries:
+            addr, sep, hex_bytes = entry.partition("=")
+            self.assertEqual(sep, "=", "malformed memory entry %r" % entry)
+            self.assertEqual(
+                len(hex_bytes),
+                2 * backchain_entry_size,
+                "memory:%s= should carry %d bytes (2 * ptrsize), got %d: %r"
+                % (addr, backchain_entry_size, len(hex_bytes) // 2, entry),
+            )
+        # The stop reply caps the backchain at 2 entries.  How many it actually
+        # walks depends on where the backchain terminates.
+        self.assertLessEqual(len(entries), 2, "expected at most 2 backchain entries")
+
+    # Frame 0's stack memory is expedited only by a debugserver built from this
+    # tree; an older system debugserver sends the backchain alone.
+    @skipIfOutOfTreeDebugserver
+    @add_test_categories(["debugserver"])
+    def test_threads_info_expedites_stopped_frame_stack(self):
+        """jThreadsInfo expedites every thread's frame pointer backchain, plus
+        frame 0's stack memory for the stopped thread only."""
+        self.build()
+        self.set_inferior_startup_launch()
+        results = self.gather_stop_reply_fields(5, ["thread"])
+        backchain_entry_size = 2 * results["ptrsize"]
+        stopped_tid = int(results["thread"], 16)
+
+        # Chunk sizes tell the two apart: a backchain entry is 2 pointers,
+        # frame 0's stack memory is a larger range.
+        def classify(thread_info):
+            sizes = [len(m["bytes"]) // 2 for m in thread_info.get("memory", [])]
+            stack_backchain = [n for n in sizes if n == backchain_entry_size]
+            frame_0_stack_memory = [n for n in sizes if n != backchain_entry_size]
+            return sizes, stack_backchain, frame_0_stack_memory
+
+        saw_stopped = False
+        for thread_info in self.gather_threads_info():
+            sizes, stack_backchain, frame_0_stack_memory = classify(thread_info)
+            where = "thread %x, chunk sizes %s" % (thread_info["tid"], sizes)
+            self.assertGreaterEqual(
+                len(stack_backchain), 1, "no backchain entry for %s" % where
+            )
+            if thread_info["tid"] == stopped_tid:
+                saw_stopped = True
+                # One chunk, or two when $fp is usable.
+                self.assertIn(
+                    len(frame_0_stack_memory),
+                    (1, 2),
+                    "no frame 0 stack memory for stopped %s" % where,
+                )
+            else:
+                self.assertEqual(
+                    frame_0_stack_memory,
+                    [],
+                    "unexpected frame 0 stack memory for %s" % where,
+                )
+        self.assertTrue(saw_stopped, "no jThreadsInfo entry for the stopped thread")
 
     @skipIfNetBSD
     @skipIfWindows  # Flaky on Windows

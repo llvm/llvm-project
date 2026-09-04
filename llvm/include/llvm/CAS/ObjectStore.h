@@ -30,6 +30,7 @@ namespace cas {
 
 class ObjectStore;
 class ObjectProxy;
+class ActionCache;
 
 /// Content-addressable storage for objects.
 ///
@@ -81,7 +82,9 @@ class ObjectProxy;
 /// lifetime tradeoffs:
 ///
 /// - \a getData() accesses data without exposing lifetime at all.
-/// - \a getMemoryBuffer() returns a \a MemoryBuffer whose lifetime
+/// - \a getMemoryBuffer() returns a \a MemoryBuffer that may alias storage
+///   owned by the CAS, so it must not outlive the \a ObjectStore.
+/// - \a getStandaloneMemoryBuffer() returns a \a MemoryBuffer whose lifetime
 ///   is independent of the CAS (it can live longer).
 /// - \a getDataString() return StringRef with lifetime is guaranteed to last as
 ///   long as \a ObjectStore.
@@ -169,6 +172,17 @@ protected:
   storeFromOpenFileImpl(sys::fs::file_t FD,
                         std::optional<sys::fs::file_status> Status);
 
+  /// Customization point for \a getStandaloneMemoryBuffer(). The default
+  /// implementation copies the data, which always satisfies the lifetime
+  /// requirement; implementations that can hand out storage outliving
+  /// themselves, e.g. a mapping of a file they do not keep open, should
+  /// override this to avoid the copy. Must not return \c nullptr: fall back
+  /// to \c ObjectStore::getStandaloneMemoryBufferImpl() where the cheaper
+  /// path does not apply.
+  virtual std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBufferImpl(ObjectHandle Node, StringRef Name,
+                                bool RequiresNullTerminator);
+
   /// Get a lifetime-extended StringRef pointing at \p Data.
   ///
   /// Depending on the CAS implementation, this may involve in-memory storage
@@ -177,13 +191,24 @@ protected:
     return toStringRef(getData(Node));
   }
 
-  /// Get a lifetime-extended MemoryBuffer pointing at \p Data.
+  /// Get a MemoryBuffer pointing at \p Data.
   ///
-  /// Depending on the CAS implementation, this may involve in-memory storage
-  /// overhead.
+  /// The buffer may alias storage owned by this ObjectStore, in which case it
+  /// is only valid for as long as the store is.
   std::unique_ptr<MemoryBuffer>
   getMemoryBuffer(ObjectHandle Node, StringRef Name = "",
                   bool RequiresNullTerminator = true);
+
+  /// Get a MemoryBuffer for \p Node that stays valid after this ObjectStore is
+  /// destroyed.
+  ///
+  /// May be more expensive than \a getMemoryBuffer(), which is free to alias
+  /// storage the store already has mapped; prefer that one whenever the buffer
+  /// cannot outlive the store. Never returns \c nullptr: copying the data
+  /// always satisfies the lifetime requirement.
+  std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBuffer(ObjectHandle Node, StringRef Name = "",
+                            bool RequiresNullTerminator = true);
 
   /// Read all the refs from object in a SmallVector.
   virtual void readRefs(ObjectHandle Node,
@@ -317,6 +342,11 @@ public:
   getMemoryBuffer(StringRef Name = "",
                   bool RequiresNullTerminator = true) const;
 
+  /// Get a MemoryBuffer that stays valid after the CAS is destroyed.
+  LLVM_ABI std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBuffer(StringRef Name = "",
+                            bool RequiresNullTerminator = true) const;
+
   /// Get the content of the node. Valid as long as the CAS is valid.
   StringRef getData() const { return CAS->getDataString(H); }
 
@@ -363,6 +393,20 @@ LLVM_ABI bool isOnDiskCASEnabled();
 /// Create a persistent on-disk path at \p Path.
 LLVM_ABI Expected<std::unique_ptr<ObjectStore>>
 createOnDiskCAS(const Twine &Path);
+
+/// Create \c ObjectStore and \c ActionCache instances backed by a plugin that
+/// implements the C API in \c "llvm-c/CAS/PluginAPI_functions.h".
+///
+/// \param PluginPath path of the dynamic library to load.
+/// \param OnDiskPath local path that the plugin should use for any on-disk
+/// resources/caches.
+/// \param PluginArgs name/value pairs passed to the plugin as custom options;
+/// they are opaque to the client.
+LLVM_ABI Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+createPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs);
 
 } // namespace cas
 } // namespace llvm

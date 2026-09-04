@@ -11,8 +11,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/AnyCall.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -103,6 +106,76 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
+}
+
+FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
+  if (!Call)
+    return;
+
+  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
+  if (!AC)
+    return;
+
+  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
+  if (!FD)
+    return;
+
+  Args = AC->arguments();
+}
+
+std::optional<LifetimeBoundParamInfo>
+getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
+                  unsigned I) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD || I >= Args.size())
+    return std::nullopt;
+
+  const ParmVarDecl *PVD = nullptr;
+
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
+    if (I == 0) {
+      // For the 'this' argument, the attribute is on the method itself.
+      if (implicitObjectParamIsLifetimeBound(Method) ||
+          shouldTrackImplicitObjectArg(*Args[0], Method,
+                                       /*RunningUnderLifetimeSafety=*/true))
+        return LifetimeBoundParamInfo(Method);
+      return std::nullopt;
+    }
+    if ((I - 1) < Method->getNumParams())
+      // For explicit arguments, find the corresponding parameter declaration.
+      PVD = Method->getParamDecl(I - 1);
+  } else if (I == 0 && shouldTrackFirstArgument(FD)) {
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
+  } else if (I == 1 && shouldTrackSecondArgument(FD)) {
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
+  } else if (I < FD->getNumParams()) {
+    // For free functions or static methods.
+    PVD = FD->getParamDecl(I);
+  }
+
+  if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+    return LifetimeBoundParamInfo(PVD);
+
+  return std::nullopt;
+}
+
+std::optional<LifetimeBoundParamInfo>
+getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
+  if (!Call || !Source)
+    return std::nullopt;
+
+  auto [FD, Args] = FunctionCallInfo(Call);
+  if (!FD)
+    return std::nullopt;
+
+  for (unsigned I = 0; I < Args.size(); ++I)
+    if (Args[I]->IgnoreParenImpCasts() == Source->IgnoreParenImpCasts())
+      if (std::optional<LifetimeBoundParamInfo> ParamInfo =
+              getTrackedArgInfo(FD, Args, I))
+        return ParamInfo;
+
+  return std::nullopt;
 }
 
 bool isInStlNamespace(const Decl *D) {

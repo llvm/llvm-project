@@ -85,6 +85,10 @@ public:
   /// Get the string offset byte size for this GSYM file.
   virtual uint8_t getStringOffsetSize() const = 0;
 
+  /// Get the raw UUID bytes for this GSYM file, or an empty ref if none.
+  /// In v1 the UUID lives in the header; in v2 it is an optional data section.
+  virtual StringRef getUUID() const = 0;
+
   /// Construct a GsymReader from a file on disk.
   ///
   /// \param Path The file path the GSYM file to read.
@@ -198,6 +202,20 @@ public:
   ///
   /// \param  OS The output stream to dump to.
   virtual void dump(raw_ostream &OS) = 0;
+
+  enum class StatisticsFormat { Text, JSON, PrettyJSON };
+
+  /// Dump statistics about the GSYM data contained in this object.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param Format Output format: Text, JSON (dense), or PrettyJSON.
+  ///
+  /// \param GSYMPath Optional file path, used only as a display label in the
+  /// output (empty for in-memory GSYM data).
+  LLVM_ABI void dumpStatistics(raw_ostream &OS,
+                               StatisticsFormat Format = StatisticsFormat::Text,
+                               StringRef GSYMPath = "");
 
   /// Dump a FunctionInfo object.
   ///

@@ -1046,41 +1046,56 @@ struct ReorderElementwiseOpsOnBroadcast final
 
     Type resultElemType = resultType.getElementType();
 
-    // Get the type of the first non-constant operand
+    // Select the source shape for the reordered computation. Prefer the first
+    // non-constant vector source so that scalar sources can be broadcast to its
+    // shape. The compatibility check below ensures that all vector sources have
+    // the same shape and scalable dimensions.
     Value broadcastSource;
+    Value firstBroadcastSource;
     for (Value operand : op->getOperands()) {
       Operation *definingOp = operand.getDefiningOp();
       if (!definingOp)
         return failure();
       if (definingOp->hasTrait<OpTrait::ConstantLike>())
         continue;
-      broadcastSource = getBroadcastLikeSource(operand);
-      break;
+      Value source = getBroadcastLikeSource(operand);
+      if (!source)
+        return failure();
+      if (!firstBroadcastSource)
+        firstBroadcastSource = source;
+      if (isa<VectorType>(source.getType())) {
+        broadcastSource = source;
+        break;
+      }
     }
+    // If all non-constant operands are scalar, choose the first source.
+    if (!broadcastSource)
+      broadcastSource = firstBroadcastSource;
     if (!broadcastSource)
       return failure();
     Type unbroadcastResultType =
         cloneOrReplace(broadcastSource.getType(), resultElemType);
 
-    // Some ops, e.g. `vector.fma`, only accept vector types. For such ops the
-    // reordering is only possible when the broadcast source is a vector as
-    // well; sinking past a broadcast from a scalar would create an invalid op.
-    // TODO: It may be better to support scalar sources by promoting the scalar
-    // to a single element vector.
+    // Some ops, e.g. `vector.fma`, only accept vector types. For such ops, a
+    // vector broadcast source is needed to determine the type of the reordered
+    // op. Scalar sources can then be promoted to that vector type.
+    // TODO: Support the case where all broadcast sources are scalars by
+    // promoting them to single element vectors.
     if (isa<vector::FMAOp>(op) && !isa<VectorType>(unbroadcastResultType)) {
       return rewriter.notifyMatchFailure(
           op, "Op only accepts vector types, but the broadcast source is a "
               "scalar");
     }
 
-    // Make sure that all operands are broadcast from identically-shaped types:
-    //  * scalar (`vector.broadcast`), or
-    //  * vector (`vector.broadcast`).
-    // Otherwise the re-ordering wouldn't be safe.
+    // Make sure that all operands are broadcasts from compatible source types.
+    // Scalar sources are allowed when a vector source is available and are
+    // promoted to the vector source type selected above.
     if (!llvm::all_of(op->getOperands(), [broadcastSource](Value val) {
           if (auto source = getBroadcastLikeSource(val))
             return haveSameShapeAndScaling(source.getType(),
-                                           broadcastSource.getType());
+                                           broadcastSource.getType()) ||
+                   (isa<VectorType>(broadcastSource.getType()) &&
+                    !isa<VectorType>(source.getType()));
           SplatElementsAttr splatConst;
           return matchPattern(val, m_Constant(&splatConst));
         })) {
@@ -1108,7 +1123,14 @@ struct ReorderElementwiseOpsOnBroadcast final
                 rewriter, newConst, newType, operand.getLoc());
         srcValues.push_back(newConstOp->getResult(0));
       } else {
-        srcValues.push_back(operand.getDefiningOp()->getOperand(0));
+        Value source = operand.getDefiningOp()->getOperand(0);
+        if (isa<VectorType>(broadcastSource.getType()) &&
+            !isa<VectorType>(source.getType()))
+          source = vector::BroadcastOp::create(
+              rewriter, operand.getLoc(),
+              cloneOrReplace(broadcastSource.getType(), source.getType()),
+              source);
+        srcValues.push_back(source);
       }
     }
 

@@ -45,6 +45,8 @@ public:
   const uint32_t NameIdx;
   const uint32_t RegSizeInBits;
   const uint16_t RegsSize;
+  /// Register denoted by first bit in RegSet.
+  const MCPhysReg RegSetBegin;
   const uint16_t RegSetSize;
   const uint16_t ID;
   const uint8_t CopyCost;
@@ -102,11 +104,11 @@ public:
   /// contains - Return true if the specified register is included in this
   /// register class.  This does not include virtual registers.
   bool contains(MCRegister Reg) const {
-    unsigned RegNo = Reg.id();
-    unsigned InByte = RegNo % 8;
-    unsigned Byte = RegNo / 8;
-    if (Byte >= RegSetSize)
+    unsigned RegSetIdx = Reg.id() - RegSetBegin;
+    if (RegSetIdx >= RegSetSize)
       return false;
+    unsigned InByte = RegSetIdx % 8;
+    unsigned Byte = RegSetIdx / 8;
     const uint8_t *RegSet = reinterpret_cast<const uint8_t *>(this) + RegSetOff;
     return (RegSet[Byte] & (1 << InByte)) != 0;
   }

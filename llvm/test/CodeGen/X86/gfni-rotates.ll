@@ -123,15 +123,12 @@ define <16 x i8> @var_rotr_v16i8(<16 x i8> %a, <16 x i8> %amt) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_rotr_v16i8:
 ; GFNIAVX512BW:       # %bb.0:
+; GFNIAVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; GFNIAVX512BW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; GFNIAVX512BW-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
-; GFNIAVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
-; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; GFNIAVX512BW-NEXT:    vpsrlvw %xmm2, %xmm3, %xmm2
-; GFNIAVX512BW-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; GFNIAVX512BW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; GFNIAVX512BW-NEXT:    vpsrlvw %xmm1, %xmm0, %xmm0
-; GFNIAVX512BW-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; GFNIAVX512BW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; GFNIAVX512BW-NEXT:    vpsrlvw %ymm1, %ymm0, %ymm0
 ; GFNIAVX512BW-NEXT:    vpmovwb %ymm0, %xmm0
 ; GFNIAVX512BW-NEXT:    vzeroupper
 ; GFNIAVX512BW-NEXT:    retq
@@ -480,8 +477,8 @@ define <32 x i8> @var_rotl_v32i8(<32 x i8> %a, <32 x i8> %amt) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_rotl_v32i8:
 ; GFNIAVX512BW:       # %bb.0:
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; GFNIAVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15],ymm1[24],ymm2[24],ymm1[25],ymm2[25],ymm1[26],ymm2[26],ymm1[27],ymm2[27],ymm1[28],ymm2[28],ymm1[29],ymm2[29],ymm1[30],ymm2[30],ymm1[31],ymm2[31]
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; GFNIAVX512BW-NEXT:    vpsllvw %ymm3, %ymm4, %ymm3
@@ -595,8 +592,8 @@ define <32 x i8> @var_rotr_v32i8(<32 x i8> %a, <32 x i8> %amt) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_rotr_v32i8:
 ; GFNIAVX512BW:       # %bb.0:
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; GFNIAVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15],ymm1[24],ymm2[24],ymm1[25],ymm2[25],ymm1[26],ymm2[26],ymm1[27],ymm2[27],ymm1[28],ymm2[28],ymm1[29],ymm2[29],ymm1[30],ymm2[30],ymm1[31],ymm2[31]
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} ymm4 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; GFNIAVX512BW-NEXT:    vpsrlvw %ymm3, %ymm4, %ymm3
@@ -1159,8 +1156,8 @@ define <64 x i8> @var_rotl_v64i8(<64 x i8> %a, <64 x i8> %amt) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_rotl_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm1[8],zmm2[8],zmm1[9],zmm2[9],zmm1[10],zmm2[10],zmm1[11],zmm2[11],zmm1[12],zmm2[12],zmm1[13],zmm2[13],zmm1[14],zmm2[14],zmm1[15],zmm2[15],zmm1[24],zmm2[24],zmm1[25],zmm2[25],zmm1[26],zmm2[26],zmm1[27],zmm2[27],zmm1[28],zmm2[28],zmm1[29],zmm2[29],zmm1[30],zmm2[30],zmm1[31],zmm2[31],zmm1[40],zmm2[40],zmm1[41],zmm2[41],zmm1[42],zmm2[42],zmm1[43],zmm2[43],zmm1[44],zmm2[44],zmm1[45],zmm2[45],zmm1[46],zmm2[46],zmm1[47],zmm2[47],zmm1[56],zmm2[56],zmm1[57],zmm2[57],zmm1[58],zmm2[58],zmm1[59],zmm2[59],zmm1[60],zmm2[60],zmm1[61],zmm2[61],zmm1[62],zmm2[62],zmm1[63],zmm2[63]
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm4 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; GFNIAVX512BW-NEXT:    vpsllvw %zmm3, %zmm4, %zmm3
@@ -1352,8 +1349,8 @@ define <64 x i8> @var_rotr_v64i8(<64 x i8> %a, <64 x i8> %amt) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_rotr_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm1[8],zmm2[8],zmm1[9],zmm2[9],zmm1[10],zmm2[10],zmm1[11],zmm2[11],zmm1[12],zmm2[12],zmm1[13],zmm2[13],zmm1[14],zmm2[14],zmm1[15],zmm2[15],zmm1[24],zmm2[24],zmm1[25],zmm2[25],zmm1[26],zmm2[26],zmm1[27],zmm2[27],zmm1[28],zmm2[28],zmm1[29],zmm2[29],zmm1[30],zmm2[30],zmm1[31],zmm2[31],zmm1[40],zmm2[40],zmm1[41],zmm2[41],zmm1[42],zmm2[42],zmm1[43],zmm2[43],zmm1[44],zmm2[44],zmm1[45],zmm2[45],zmm1[46],zmm2[46],zmm1[47],zmm2[47],zmm1[56],zmm2[56],zmm1[57],zmm2[57],zmm1[58],zmm2[58],zmm1[59],zmm2[59],zmm1[60],zmm2[60],zmm1[61],zmm2[61],zmm1[62],zmm2[62],zmm1[63],zmm2[63]
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm4 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; GFNIAVX512BW-NEXT:    vpsrlvw %zmm3, %zmm4, %zmm3

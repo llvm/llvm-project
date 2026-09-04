@@ -14,11 +14,12 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 namespace {
 
 template <size_t N>
-void BM_adjacent_full(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_adjacent_full(benchmark::State& state) {
   const std::vector<int> inputs(1000000, 42);
   auto view = inputs | std::views::adjacent<N>;
   for (auto _ : state) {
@@ -33,7 +34,7 @@ BENCHMARK(BM_adjacent_full<100>)->Name("rng::adjacent_view::begin()/100 (full vi
 BENCHMARK(BM_adjacent_full<1000>)->Name("rng::adjacent_view::begin()/1000 (full view)");
 
 template <size_t N>
-void BM_adjacent_empty(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_adjacent_empty(benchmark::State& state) {
   const std::vector<int> inputs;
   auto view = inputs | std::views::adjacent<N>;
   for (auto _ : state) {

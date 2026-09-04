@@ -131,7 +131,8 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
     ActiveOpenACCLoopRAII activeLoop{*this, &op};
 
-    stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
+    if (s.getLoop())
+      stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
     mlir::acc::YieldOp::create(builder, end);
   }
 

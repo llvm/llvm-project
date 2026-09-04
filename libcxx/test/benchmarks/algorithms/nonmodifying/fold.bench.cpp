@@ -20,6 +20,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_ranges_fold_left = [](auto first, auto last, auto init, auto func) {
@@ -39,7 +40,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto fold) {
       benchmark::RegisterBenchmark(
           name,
-          [fold](auto& st) {
+          [fold](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             static_assert(std::is_unsigned_v<ValueType>,

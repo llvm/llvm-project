@@ -133,10 +133,16 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                                               raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   auto Range = RISCVSysReg::lookupSysRegByEncoding(Imm);
+  bool PreferFeatureSpecific = llvm::any_of(Range, [&](const auto &Reg) {
+    return !Reg.IsAltName && !Reg.IsDeprecatedName &&
+           Reg.FeaturesRequired.any() &&
+           Reg.haveRequiredFeatures(STI.getFeatureBits());
+  });
   for (auto &Reg : Range) {
     if (Reg.IsAltName || Reg.IsDeprecatedName)
       continue;
-    if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
+    if (Reg.haveRequiredFeatures(STI.getFeatureBits()) &&
+        (!PreferFeatureSpecific || Reg.FeaturesRequired.any())) {
       markup(O, Markup::Register) << RISCVSysReg::getSysRegStr(Reg.Name);
       return;
     }

@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03, libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-fast
 
 // <streambuf>
 

@@ -30,14 +30,12 @@ c.sdsp t1, -8(sp) # CHECK: :[[@LINE]]:12: error: immediate must be a multiple of
 c.ld  s0, -8(sp)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:7: note: register must be a GPR from x8 to x15
-# CHECK: :[[@LINE-3]]:11: note: invalid operand for instruction
-# CHECK: :[[@LINE-4]]:11: note: immediate must be a multiple of 8 bytes in the range [0, 248]
+# CHECK: :[[@LINE-3]]:11: note: immediate must be a multiple of 8 bytes in the range [0, 248]
 
 c.sd  s0, 256(sp)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:7: note: register must be a GPR from x8 to x15
-# CHECK: :[[@LINE-3]]:11: note: invalid operand for instruction
-# CHECK: :[[@LINE-4]]:11: note: immediate must be a multiple of 8 bytes in the range [0, 248]
+# CHECK: :[[@LINE-3]]:11: note: immediate must be a multiple of 8 bytes in the range [0, 248]
 
 # Invalid register names
 c.ld a1, 4(sp) # CHECK: :[[@LINE]]:6: error: register must be even

@@ -42,6 +42,10 @@ public:
   /// Controlled by: --ssaf-global-scope-analysis-result
   std::string GlobalScopeAnalysisResult;
 
+  /// Stable identifier of the link unit that this compilation unit was
+  /// linked into. Controlled by: --ssaf-link-unit-id
+  std::string LinkUnitId;
+
   /// Path of the source-edit output file produced by the source
   /// transformation.
   /// Controlled by: --ssaf-src-edit-file

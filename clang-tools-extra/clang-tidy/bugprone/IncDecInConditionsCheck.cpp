@@ -31,7 +31,7 @@ AST_MATCHER(CXXOperatorCallExpr, isPrePostOperator) {
 } // namespace
 
 void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
-  auto OperatorMatcher = expr(
+  const auto OperatorMatcher = expr(
       anyOf(binaryOperator(anyOf(isComparisonOperator(), isLogicalOperator())),
             cxxOperatorCallExpr(isComparisonOperator())));
 

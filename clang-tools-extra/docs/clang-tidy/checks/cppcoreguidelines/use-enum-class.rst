@@ -4,7 +4,8 @@ cppcoreguidelines-use-enum-class
 ================================
 
 Finds unscoped (non-class) ``enum`` declarations and suggests using
-``enum class`` instead.
+``enum class`` instead. Unnamed enum are ignored and will be handled by check implementing `Enum.6
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#enum6-avoid-unnamed-enumerations>`_.
 
 This check implements `Enum.3
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#renum-class>`_

@@ -39,7 +39,7 @@ class NSIndexPathDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
         commands()
 
-    @skipUnlessDarwin
+    @requireDarwin
     @expectedFailureAll(archs=["i386"], bugnumber="rdar://28656605")
     @expectedFailureAll(
         archs=["armv7", "armv7k", "arm64_32"], bugnumber="rdar://problem/34561607"

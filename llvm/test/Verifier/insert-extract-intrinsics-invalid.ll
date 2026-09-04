@@ -78,6 +78,23 @@ define <vscale x 8 x i32> @insert_overrun_scalable_fixed(<vscale x 8 x i32> %vec
   ret <vscale x 8 x i32> %1
 }
 
+;
+; Test that extractions/insertions of a scalable vector from/into a fixed vector
+; are captured.
+;
+
+; CHECK: cannot vector_extract a scalable vector from a fixed vector.
+define <vscale x 4 x i32> @extract_scalable_from_fixed(<8 x i32> %vec) {
+  %1 = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.v8i32(<8 x i32> %vec, i64 0)
+  ret <vscale x 4 x i32> %1
+}
+
+; CHECK: cannot vector_insert a scalable vector into a fixed vector.
+define <8 x i32> @insert_scalable_into_fixed(<8 x i32> %vec, <vscale x 4 x i32> %subvec) {
+  %1 = call <8 x i32> @llvm.vector.insert.v8i32.nxv4i32(<8 x i32> %vec, <vscale x 4 x i32> %subvec, i64 0)
+  ret <8 x i32> %1
+}
+
 declare <vscale x 3 x i32> @llvm.vector.extract.nxv8i32.nxv3i32(<vscale x 8 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv3i32(<vscale x 8 x i32>, <vscale x 3 x i32>, i64)
 declare <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.v3i32(<vscale x 8 x i32>, <3 x i32>, i64)

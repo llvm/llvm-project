@@ -11,7 +11,7 @@ class TargetSymbolsAddCommand(TestBase):
         self.source = "main.c"
 
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_target_symbols_add(self):
         """Test that 'target symbols add' can load the symbols
         even if gnu.build-id and gnu_debuglink are not present in the module.

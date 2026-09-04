@@ -86,10 +86,6 @@ LogicalResult loopUnrollJamUpToFactor(AffineForOp forOp,
 /// was known to have a single iteration.
 LogicalResult promoteIfSingleIteration(AffineForOp forOp);
 
-/// Promotes all single iteration AffineForOp's in the Function, i.e., moves
-/// their body into the containing Block.
-void promoteSingleIterationLoops(func::FuncOp f);
-
 /// Skew the operations in an affine.for's body with the specified
 /// operation-wise shifts. The shifts are with respect to the original execution
 /// order, and are multiplied by the loop 'step' before being applied. If

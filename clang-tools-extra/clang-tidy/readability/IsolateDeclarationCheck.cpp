@@ -246,7 +246,7 @@ createIsolatedDecls(llvm::ArrayRef<StringRef> Snippets) {
 void IsolateDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *WholeDecl = Result.Nodes.getNodeAs<DeclStmt>("decl_stmt");
 
-  auto Diag =
+  const auto Diag =
       diag(WholeDecl->getBeginLoc(),
            "multiple declarations in a single statement reduces readability");
 

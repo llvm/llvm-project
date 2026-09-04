@@ -354,8 +354,8 @@ static bool DefersSameTypeParameters(
 // arguments.
 static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
     "__builtin_c_f_pointer", "__builtin_c_loc", "__builtin_show_descriptor",
-    "allocated", "associated", "kind", "lbound", "loc", "present", "shape",
-    "size", "sizeof", "ubound"};
+    "allocated", "associated", "kind", "len", "lbound", "loc", "present",
+    "shape", "size", "sizeof", "ubound"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -832,6 +832,25 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         (intrinsic && intrinsic->name == "loc")) {
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
         context.NoteDefinedSymbol(named->GetFirstSymbol());
+      }
+    }
+  }
+
+  // An INTENT(IN) dummy argument must not be defined during the invocation
+  // and execution of its procedure (F'2023 8.5.10 p2), but a dummy argument
+  // with no INTENT attribute may be defined by its procedure.  Passing the
+  // former to the latter is thus a latent violation of INTENT(IN), and the
+  // optimizer is entitled to assume that it doesn't happen.
+  if (dummy.intent == common::Intent::Default && !dummyIsValue && !intrinsic &&
+      !procedure.IsPure() && actualFirstSymbol) {
+    const Symbol &actualRoot{GetAssociationRoot(*actualFirstSymbol)};
+    if (IsIntentIn(actualRoot) && !IsValue(actualRoot)) {
+      if (auto *msg{foldingContext.Warn(
+              common::UsageWarning::IntentInActualForDefaultIntent,
+              "INTENT(IN) dummy argument '%s' is associated with %s, which has no INTENT attribute and could be defined"_warn_en_US,
+              actualRoot.name(), dummyName)}) {
+        msg->Attach(
+            actualRoot.name(), "Declaration of '%s'"_en_US, actualRoot.name());
       }
     }
   }

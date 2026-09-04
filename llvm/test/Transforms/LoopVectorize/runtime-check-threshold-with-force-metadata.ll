@@ -79,12 +79,12 @@ exit:
 !0 = distinct !{!0, !2, !3}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 
 ;.
 ; LIMIT0: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; LIMIT0: [[META1]] = !{!"llvm.loop.vectorize.width", i32 2}
-; LIMIT0: [[META2]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; LIMIT0: [[META2]] = !{!"llvm.loop.vectorize.enable"}
 ;.
 ; LIMIT1: [[META0]] = !{[[META1:![0-9]+]]}
 ; LIMIT1: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

@@ -3028,6 +3028,11 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, "__SVCount_t", {"__clang"});
     break;
 
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+    Error(Range.getBegin(), "SPIR-V built-in type") << Range;
+    break;
+
   // Issue an error for any type not explicitly handled.
   default:
     Error(Range.getBegin(), "built-in type: ",

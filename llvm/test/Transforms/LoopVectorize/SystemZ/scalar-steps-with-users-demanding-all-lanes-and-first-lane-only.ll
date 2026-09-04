@@ -25,10 +25,10 @@ define void @test_scalar_iv_steps_used_by_replicate_and_first_lane_only_vpinst(p
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP13]], i8 [[TMP10]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[TMP11]], i64 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <4 x i8> [[TMP19]], zeroinitializer
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr getelementptr inbounds nuw (i8, ptr @src, i64 16), align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP20]], i64 0

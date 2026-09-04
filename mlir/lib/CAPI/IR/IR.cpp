@@ -127,6 +127,18 @@ MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
   return wrap(&unwrap(context)->getThreadPool());
 }
 
+void mlirContextBeginTransientScope(MlirContext context) {
+  unwrap(context)->beginTransientScope();
+}
+
+void mlirContextEndTransientScope(MlirContext context) {
+  unwrap(context)->endTransientScope();
+}
+
+bool mlirContextIsInTransientScope(MlirContext context) {
+  return unwrap(context)->isInTransientScope();
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
@@ -661,6 +673,25 @@ size_t mlirOperationHashValue(MlirOperation op) {
   return OperationEquivalence::computeHash(unwrap(op));
 }
 
+/// Translates the C equivalence flags to mlir::OperationEquivalence::Flags. The
+/// enumerator values mirror each other.
+static OperationEquivalence::Flags unwrapEquivalenceFlags(uint32_t flags) {
+  return static_cast<OperationEquivalence::Flags>(flags);
+}
+
+bool mlirOperationIsStructurallyEquivalent(MlirOperation lhs, MlirOperation rhs,
+                                           uint32_t flags) {
+  return OperationEquivalence::isEquivalentTo(unwrap(lhs), unwrap(rhs),
+                                              unwrapEquivalenceFlags(flags));
+}
+
+size_t mlirOperationStructuralHashValue(MlirOperation op, uint32_t flags) {
+  return OperationEquivalence::computeHash(
+      unwrap(op), /*hashOperands=*/OperationEquivalence::directHashValue,
+      /*hashResults=*/OperationEquivalence::ignoreHashValue,
+      unwrapEquivalenceFlags(flags));
+}
+
 MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }
@@ -787,13 +818,13 @@ void mlirOperationSetInherentAttributeByName(MlirOperation op,
 
 intptr_t mlirOperationGetNumDiscardableAttributes(MlirOperation op) {
   return static_cast<intptr_t>(
-      llvm::range_size(unwrap(op)->getDiscardableAttrs()));
+      llvm::range_size(unwrap(op)->getDiscardableAttrDictionary().getValue()));
 }
 
 MlirNamedAttribute mlirOperationGetDiscardableAttribute(MlirOperation op,
                                                         intptr_t pos) {
-  NamedAttribute attr =
-      *std::next(unwrap(op)->getDiscardableAttrs().begin(), pos);
+  NamedAttribute attr = *std::next(
+      unwrap(op)->getDiscardableAttrDictionary().getValue().begin(), pos);
   return MlirNamedAttribute{wrap(attr.getName()), wrap(attr.getValue())};
 }
 
@@ -1223,6 +1254,16 @@ void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
 }
 
+void mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
+                                MlirOpOperandReplaceFilterCallback filter,
+                                void *userData) {
+  assert(filter && "expected non-null filter callback");
+  unwrap(of).replaceUsesWithIf(unwrap(with),
+                               [filter, userData](OpOperand &operand) -> bool {
+                                 return filter(wrap(&operand), userData);
+                               });
+}
+
 MlirLocation mlirValueGetLocation(MlirValue v) {
   return wrap(unwrap(v).getLoc());
 }
@@ -1362,11 +1403,11 @@ MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
 //===----------------------------------------------------------------------===//
 
 MlirStringRef mlirSymbolTableGetSymbolAttributeName() {
-  return wrap(SymbolTable::getSymbolAttrName());
+  return wrap(llvm::StringRef("sym_name"));
 }
 
-MlirStringRef mlirSymbolTableGetVisibilityAttributeName() {
-  return wrap(SymbolTable::getVisibilityAttrName());
+MlirStringRef mlirSymbolTableGetDefaultVisibilityAttributeName() {
+  return wrap(SymbolOpInterface::getDefaultVisibilityAttrName());
 }
 
 MlirSymbolTable mlirSymbolTableCreate(MlirOperation operation) {

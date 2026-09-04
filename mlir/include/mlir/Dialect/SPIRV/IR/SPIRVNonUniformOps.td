@@ -18,7 +18,7 @@
 
 class SPIRV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
       list<Trait> traits = []> : SPIRV_Op<mnemonic, !listconcat([
-        SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>
+        SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>
       ], traits)> {
 
   let arguments = (ins
@@ -42,7 +42,7 @@ class SPIRV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
 // -----
 
 def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot",[
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Result is a bitfield value combining the Predicate value from all
@@ -61,7 +61,7 @@ def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot",[
     size of the group) is the higher bit number of the last bitmask needed
     to represent all bits of the group invocations.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     Predicate must be a Boolean type.
 
@@ -98,7 +98,7 @@ def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot",[
 // -----
 
 def SPIRV_GroupNonUniformBallotFindLSBOp : SPIRV_Op<"GroupNonUniformBallotFindLSB", [
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Find the least significant bit set to 1 in Value, considering only the
@@ -158,7 +158,7 @@ def SPIRV_GroupNonUniformBallotFindLSBOp : SPIRV_Op<"GroupNonUniformBallotFindLS
 // -----
 
 def SPIRV_GroupNonUniformBallotFindMSBOp : SPIRV_Op<"GroupNonUniformBallotFindMSB", [
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Find the most significant bit set to 1 in Value, considering only the
@@ -219,7 +219,7 @@ def SPIRV_GroupNonUniformBallotFindMSBOp : SPIRV_Op<"GroupNonUniformBallotFindMS
 
 def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast", [
   Pure, AllTypesMatch<["value", "result"]>,
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Result is the Value of the invocation identified by the id Id to all
@@ -230,7 +230,7 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast", [
     Result Type  must be a scalar or vector of floating-point type, integer
     type, or Boolean type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The type of Value must be the same as Result Type.
 
@@ -249,7 +249,7 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast", [
     %vector_value = ... : vector<4xf32>
     %id = ... : i32
     %0 = spirv.GroupNonUniformBroadcast <Subgroup> %scalar_value, %id : f32, i32
-    %1 = spirv.GroupNonUniformBroadcast <Workgroup> %vector_value, %id :
+    %1 = spirv.GroupNonUniformBroadcast <Subgroup> %vector_value, %id :
       vector<4xf32>, i32
     ```
   }];
@@ -335,7 +335,7 @@ def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFi
 // -----
 
 def SPIRV_GroupNonUniformElectOp : SPIRV_Op<"GroupNonUniformElect", [
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Result is true only in the active invocation with the lowest id in the
@@ -345,12 +345,12 @@ def SPIRV_GroupNonUniformElectOp : SPIRV_Op<"GroupNonUniformElect", [
   let description = [{
     Result Type must be a Boolean type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     #### Example:
 
     ```mlir
-    %0 = spirv.GroupNonUniformElect <Workgroup> : i1
+    %0 = spirv.GroupNonUniformElect <Subgroup> : i1
     ```
   }];
 
@@ -385,7 +385,7 @@ def SPIRV_GroupNonUniformFAddOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of floating-point type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is 0. If Operation is ClusteredReduce,
     ClusterSize must be specified.
@@ -408,7 +408,7 @@ def SPIRV_GroupNonUniformFAddOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %scalar : f32 -> f32
+    %0 = spirv.GroupNonUniformFAdd <Subgroup> <Reduce> %scalar : f32 -> f32
     %1 = spirv.GroupNonUniformFAdd <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xf32>, i32 -> vector<4xf32>
     ```
   }];
@@ -432,7 +432,7 @@ def SPIRV_GroupNonUniformFMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of floating-point type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is -INF. If Operation is ClusteredReduce,
     ClusterSize must be specified.
@@ -458,7 +458,7 @@ def SPIRV_GroupNonUniformFMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %scalar : f32 -> f32
+    %0 = spirv.GroupNonUniformFMax <Subgroup> <Reduce> %scalar : f32 -> f32
     %1 = spirv.GroupNonUniformFMax <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xf32>, i32 -> vector<4xf32>
     ```
   }];
@@ -482,7 +482,7 @@ def SPIRV_GroupNonUniformFMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of floating-point type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is +INF. If Operation is ClusteredReduce,
     ClusterSize must be specified.
@@ -508,7 +508,7 @@ def SPIRV_GroupNonUniformFMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spirv.GroupNonUniformFMin <Workgroup> <Reduce> %scalar : f32 -> i32
+    %0 = spirv.GroupNonUniformFMin <Subgroup> <Reduce> %scalar : f32 -> i32
     %1 = spirv.GroupNonUniformFMin <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xf32>, i32 -> vector<4xf32>
     ```
   }];
@@ -532,7 +532,7 @@ def SPIRV_GroupNonUniformFMulOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of floating-point type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is 1. If Operation is ClusteredReduce,
     ClusterSize must be specified.
@@ -555,7 +555,7 @@ def SPIRV_GroupNonUniformFMulOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %scalar : f32 -> f32
+    %0 = spirv.GroupNonUniformFMul <Subgroup> <Reduce> %scalar : f32 -> f32
     %1 = spirv.GroupNonUniformFMul <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xf32>, i32 -> vector<4xf32>
     ```
   }];
@@ -579,7 +579,7 @@ def SPIRV_GroupNonUniformIAddOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of integer type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is 0. If Operation is ClusteredReduce,
     ClusterSize must be specified.
@@ -600,7 +600,7 @@ def SPIRV_GroupNonUniformIAddOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformIAdd <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformIAdd <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
   }];
@@ -624,7 +624,7 @@ def SPIRV_GroupNonUniformIMulOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of integer type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is 1. If Operation is ClusteredReduce,
     ClusterSize must be specified.
@@ -645,7 +645,7 @@ def SPIRV_GroupNonUniformIMulOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformIMul <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformIMul <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformIMul <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
   }];
@@ -671,7 +671,7 @@ def SPIRV_GroupNonUniformSMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of integer type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is INT_MIN. If Operation is
     ClusteredReduce, ClusterSize must be specified.
@@ -692,7 +692,7 @@ def SPIRV_GroupNonUniformSMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformSMax <Workgroup> <Reduce> %scalar : i32
+    %0 = spirv.GroupNonUniformSMax <Subgroup> <Reduce> %scalar : i32
     %1 = spirv.GroupNonUniformSMax <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
   }];
@@ -718,7 +718,7 @@ def SPIRV_GroupNonUniformSMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
   let description = [{
     Result Type  must be a scalar or vector of integer type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is INT_MAX. If Operation is
     ClusteredReduce, ClusterSize must be specified.
@@ -739,7 +739,7 @@ def SPIRV_GroupNonUniformSMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformSMin <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformSMin <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformSMin <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
   }];
@@ -756,7 +756,7 @@ def SPIRV_GroupNonUniformSMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
 
 def SPIRV_GroupNonUniformShuffleOp : SPIRV_Op<"GroupNonUniformShuffle", [
   Pure, AllTypesMatch<["value", "result"]>,
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Result is the Value of the invocation identified by the id Id.
@@ -766,7 +766,7 @@ def SPIRV_GroupNonUniformShuffleOp : SPIRV_Op<"GroupNonUniformShuffle", [
     Result Type  must be a scalar or vector of floating-point type, integer
     type, or Boolean type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
      The type of Value must be the same as Result Type.
 
@@ -810,7 +810,7 @@ def SPIRV_GroupNonUniformShuffleOp : SPIRV_Op<"GroupNonUniformShuffle", [
 
 def SPIRV_GroupNonUniformShuffleDownOp : SPIRV_Op<"GroupNonUniformShuffleDown", [
   Pure, AllTypesMatch<["value", "result"]>,
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Result is the Value of the invocation identified by the current
@@ -821,7 +821,7 @@ def SPIRV_GroupNonUniformShuffleDownOp : SPIRV_Op<"GroupNonUniformShuffleDown", 
     Result Type  must be a scalar or vector of floating-point type, integer
     type, or Boolean type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
      The type of Value must be the same as Result Type.
 
@@ -867,7 +867,7 @@ def SPIRV_GroupNonUniformShuffleDownOp : SPIRV_Op<"GroupNonUniformShuffleDown", 
 
 def SPIRV_GroupNonUniformShuffleUpOp : SPIRV_Op<"GroupNonUniformShuffleUp", [
   Pure, AllTypesMatch<["value", "result"]>,
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Result is the Value of the invocation identified by the current
@@ -878,7 +878,7 @@ def SPIRV_GroupNonUniformShuffleUpOp : SPIRV_Op<"GroupNonUniformShuffleUp", [
     Result Type  must be a scalar or vector of floating-point type, integer
     type, or Boolean type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
      The type of Value must be the same as Result Type.
 
@@ -923,7 +923,7 @@ def SPIRV_GroupNonUniformShuffleUpOp : SPIRV_Op<"GroupNonUniformShuffleUp", [
 
 def SPIRV_GroupNonUniformShuffleXorOp : SPIRV_Op<"GroupNonUniformShuffleXor", [
   Pure, AllTypesMatch<["value", "result"]>,
-  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Workgroup", "Subgroup"]>]> {
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>]> {
 
   let summary = [{
     Result is the Value of the invocation identified by the current
@@ -934,7 +934,7 @@ def SPIRV_GroupNonUniformShuffleXorOp : SPIRV_Op<"GroupNonUniformShuffleXor", [
     Result Type  must be a scalar or vector of floating-point type, integer
     type, or Boolean type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
      The type of Value must be the same as Result Type.
 
@@ -989,7 +989,7 @@ def SPIRV_GroupNonUniformUMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     Result Type  must be a scalar or vector of integer type, whose
     Signedness operand is 0.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is 0. If Operation is ClusteredReduce,
     ClusterSize must be specified.
@@ -1010,7 +1010,7 @@ def SPIRV_GroupNonUniformUMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformUMax <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformUMax <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformUMax <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
   }];
@@ -1037,7 +1037,7 @@ def SPIRV_GroupNonUniformUMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     Result Type  must be a scalar or vector of integer type, whose
     Signedness operand is 0.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The identity I for Operation is UINT_MAX. If Operation is
     ClusteredReduce, ClusterSize must be specified.
@@ -1058,7 +1058,7 @@ def SPIRV_GroupNonUniformUMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformUMin <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformUMin <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformUMin <Subgroup> <ClusteredReduce> %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
   }];
@@ -1084,7 +1084,7 @@ def SPIRV_GroupNonUniformBitwiseAndOp :
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
     The identity I for Operation is ~0. If Operation is ClusteredReduce,
     ClusterSize must be present.
@@ -1105,7 +1105,7 @@ def SPIRV_GroupNonUniformBitwiseAndOp :
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformBitwiseAnd <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformBitwiseAnd <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformBitwiseAnd <Subgroup> <ClusteredReduce>
            %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
@@ -1134,7 +1134,7 @@ def SPIRV_GroupNonUniformBitwiseOrOp :
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
     The identity I for Operation is 0. If Operation is ClusteredReduce,
     ClusterSize must be present.
@@ -1155,7 +1155,7 @@ def SPIRV_GroupNonUniformBitwiseOrOp :
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformBitwiseOr <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformBitwiseOr <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformBitwiseOr <Subgroup> <ClusteredReduce>
            %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
@@ -1184,7 +1184,7 @@ def SPIRV_GroupNonUniformBitwiseXorOp :
   let description = [{
     Result Type must be a scalar or vector of integer type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
     The identity I for Operation is 0. If Operation is ClusteredReduce,
     ClusterSize must be present.
@@ -1205,7 +1205,7 @@ def SPIRV_GroupNonUniformBitwiseXorOp :
     %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spirv.GroupNonUniformBitwiseXor <Workgroup> <Reduce> %scalar : i32 -> i32
+    %0 = spirv.GroupNonUniformBitwiseXor <Subgroup> <Reduce> %scalar : i32 -> i32
     %1 = spirv.GroupNonUniformBitwiseXor <Subgroup> <ClusteredReduce>
            %vector cluster_size(%four) : vector<4xi32>, i32 -> vector<4xi32>
     ```
@@ -1234,7 +1234,7 @@ def SPIRV_GroupNonUniformLogicalAndOp :
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
     The identity I for Operation is ~0. If Operation is ClusteredReduce,
     ClusterSize must be present.
@@ -1255,7 +1255,7 @@ def SPIRV_GroupNonUniformLogicalAndOp :
     %four = spirv.Constant 4 : i32
     %scalar = ... : i1
     %vector = ... : vector<4xi1>
-    %0 = spirv.GroupNonUniformLogicalAnd <Workgroup> <Reduce> %scalar : i1 -> i1
+    %0 = spirv.GroupNonUniformLogicalAnd <Subgroup> <Reduce> %scalar : i1 -> i1
     %1 = spirv.GroupNonUniformLogicalAnd <Subgroup> <ClusteredReduce>
            %vector cluster_size(%four) : vector<4xi1>, i32 -> vector<4xi1>
     ```
@@ -1284,7 +1284,7 @@ def SPIRV_GroupNonUniformLogicalOrOp :
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
     The identity I for Operation is 0. If Operation is ClusteredReduce,
     ClusterSize must be present.
@@ -1305,7 +1305,7 @@ def SPIRV_GroupNonUniformLogicalOrOp :
     %four = spirv.Constant 4 : i32
     %scalar = ... : i1
     %vector = ... : vector<4xi1>
-    %0 = spirv.GroupNonUniformLogicalOr <Workgroup> <Reduce> %scalar : i1 -> i1
+    %0 = spirv.GroupNonUniformLogicalOr <Subgroup> <Reduce> %scalar : i1 -> i1
     %1 = spirv.GroupNonUniformLogicalOr <Subgroup> <ClusteredReduce>
            %vector cluster_size(%four) : vector<4xi1>, i32 -> vector<4xi1>
     ```
@@ -1334,7 +1334,7 @@ def SPIRV_GroupNonUniformLogicalXorOp :
   let description = [{
     Result Type must be a scalar or vector of Boolean type.
 
-    Execution is a Scope. It must be either Workgroup or Subgroup.
+    Execution is a Scope. It must be Subgroup.
 
     The identity I for Operation is 0. If Operation is ClusteredReduce,
     ClusterSize must be present.
@@ -1355,7 +1355,7 @@ def SPIRV_GroupNonUniformLogicalXorOp :
     %four = spirv.Constant 4 : i32
     %scalar = ... : i1
     %vector = ... : vector<4xi1>
-    %0 = spirv.GroupNonUniformLogicalXor <Workgroup> <Reduce> %scalar : i1 -> i1
+    %0 = spirv.GroupNonUniformLogicalXor <Subgroup> <Reduce> %scalar : i1 -> i1
     %1 = spirv.GroupNonUniformLogicalXor <Subgroup> <ClusteredReduce>
            %vector cluster_size(%four) : vector<4xi1>, i32 -> vector<4xi1>
     ```

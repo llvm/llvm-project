@@ -1002,7 +1002,7 @@ public:
     bool m_match_name_after_lookup = false;
 
   private:
-    LookupInfo(ConstString name, ConstString lookup_name,
+    LookupInfo(ConstString name, ConstString lookup_name_override,
                lldb::FunctionNameType name_type_mask,
                lldb::LanguageType lang_type);
   };
@@ -1122,6 +1122,7 @@ protected:
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symfile{false};
   std::atomic<bool> m_did_set_uuid{false};
+  std::atomic<bool> m_did_preload_symbols{false};
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
                                     /// was initially opened.

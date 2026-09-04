@@ -21,6 +21,7 @@
 #include <__atomic/atomic.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__exception/terminate.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -30,14 +31,22 @@
 #include <__memory/unique_ptr.h>
 #include <__new/exceptions.h>
 #include <__numeric/reduce.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/cpu_algos/fill.h>
+#include <__pstl/cpu_algos/find_end.h>
 #include <__pstl/cpu_algos/find_if.h>
 #include <__pstl/cpu_algos/for_each.h>
+#include <__pstl/cpu_algos/is_heap_until.h>
 #include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/min_element.h>
 #include <__pstl/cpu_algos/mismatch.h>
+#include <__pstl/cpu_algos/reverse.h>
+#include <__pstl/cpu_algos/search.h>
+#include <__pstl/cpu_algos/search_n.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
@@ -45,7 +54,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <optional>
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -358,6 +366,10 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 
 // Mandatory implementations of the computational basis
 template <class _ExecutionPolicy>
+struct __find_end<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_find_end<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
 struct __find_if<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_find_if<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
@@ -366,12 +378,32 @@ struct __for_each<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_for_each<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
+struct __is_heap_until<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_is_heap_until<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
 struct __merge<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_merge<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
+struct __min_element<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_min_element<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
 struct __mismatch<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_mismatch<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __reverse<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_reverse<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __search<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_search<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __search_n<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_search_n<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __stable_sort<__libdispatch_backend_tag, _ExecutionPolicy>

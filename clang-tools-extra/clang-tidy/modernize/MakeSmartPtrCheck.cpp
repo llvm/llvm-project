@@ -70,7 +70,7 @@ void MakeSmartPtrCheck::registerPPCallbacks(const SourceManager &SM,
 void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Calling make_smart_ptr from within a member function of a type with a
   // private or protected constructor would be ill-formed.
-  auto CanCallCtor = unless(has(ignoringImpCasts(
+  const auto CanCallCtor = unless(has(ignoringImpCasts(
       cxxConstructExpr(hasDeclaration(decl(unless(isPublic())))))));
 
   auto IsPlacement = hasAnyPlacementArg(anything());
@@ -256,7 +256,7 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM, ASTContext *Ctx,
 bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
                                    const CXXNewExpr *New, SourceManager &SM,
                                    ASTContext *Ctx) {
-  auto SkipParensParents = [&](const Expr *E) {
+  const auto SkipParensParents = [&](const Expr *E) {
     const TraversalKindScope RAII(*Ctx, TK_AsIs);
 
     for (const Expr *OldE = nullptr; E != OldE;) {
@@ -292,7 +292,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
   //   Foo(Bar{1, 2}) => true
   //   Foo(1) => false
   //   Foo{1} => false
-  auto HasListInitializedArgument = [](const CXXConstructExpr *CE) {
+  const auto HasListInitializedArgument = [](const CXXConstructExpr *CE) {
     for (const auto *Arg : CE->arguments()) {
       Arg = Arg->IgnoreImplicit();
 
@@ -347,10 +347,10 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     //   std::make_smart_ptr<S>(std::initializer_list<int>({}), 1);
     //   std::make_smart_ptr<S2>(std::vector<int>({1}));
     //   std::make_smart_ptr<S3>(S2{1, 2}, 3);
-    if (const auto *CE = New->getConstructExpr()) {
-      if (HasListInitializedArgument(CE))
-        return false;
-    }
+    if (const auto *CE = New->getConstructExpr();
+        CE && HasListInitializedArgument(CE))
+      return false;
+
     if (ArraySizeExpr.empty()) {
       const SourceRange InitRange = New->getDirectInitRange();
       Diag << FixItHint::CreateRemoval(
@@ -406,14 +406,14 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       // Pair. If we found any invisible or deleted copy/move constructor, we
       // stop generating fixes -- as the C++ rule is complicated and we are less
       // certain about the correct fixes.
-      if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl()) {
-        if (llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
-              return Ctor->isCopyOrMoveConstructor() &&
-                     (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
-            })) {
-          return false;
-        }
+      if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl();
+          RD && llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+            return Ctor->isCopyOrMoveConstructor() &&
+                   (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
+          })) {
+        return false;
       }
+
       InitRange = SourceRange(
           New->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
           New->getInitializer()->getSourceRange().getEnd());

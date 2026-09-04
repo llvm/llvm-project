@@ -11,6 +11,6 @@
 ! INVALID_VERSION: error: invalid integral value '3' in '-mcode-object-version=3'
 ! UNUSED_PARAM: warning: argument unused during compilation: '-mcode-object-version=3' [-Wunused-command-line-argument]
 
-! VALID_USE: "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! VALID_USE: "-fc1" "-triple" "amdgpu9.08-amd-amdhsa"
 ! VALID_USE-SAME: "-mcode-object-version=5"
 ! VALID_USE-SAME: "-mllvm" "--amdhsa-code-object-version=5"

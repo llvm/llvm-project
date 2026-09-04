@@ -11,9 +11,9 @@
 // This provides an alternative to stack-based trampolines for internal
 // procedures with host association. Instead of requiring the stack to be
 // both writable and executable (violating W^X security policies), this
-// implementation uses a pool of pre-assembled trampolines in a separate
-// executable (but not writable) memory region, paired with writable (but
-// not executable) data entries.
+// implementation uses a pool of trampoline stubs generated during pool
+// initialization in a separate executable (but not writable) memory region,
+// paired with writable (but not executable) data entries.
 //
 // See flang/docs/InternalProcedureTrampolines.md for design details.
 //
@@ -33,15 +33,14 @@ extern "C" {
 /// \p calleeAddress with the static chain pointer \p staticChainAddress
 /// set in the appropriate register (per target ABI).
 ///
-/// \p scratch is reserved for future use (e.g., fallback to stack
-/// trampolines). Pass nullptr for pool-based allocation.
+/// \p scratch is currently ignored, and Flang lowering passes nullptr.
 ///
-/// The returned handle must be passed to FreeTrampoline() when the
+/// The returned handle must be passed to TrampolineFree() when the
 /// host procedure exits.
 ///
-/// Pool capacity: The pool is fixed-size (default 1024 slots, configurable
-/// via FLANG_TRAMPOLINE_POOL_SIZE env var). If all slots are in use, the
-/// runtime issues a fatal error. Dynamic slab growth may be added later.
+/// Pool capacity is fixed after initialization: 1024 slots by default,
+/// configurable via FLANG_TRAMPOLINE_POOL_SIZE. Allocating from a full pool
+/// issues a fatal error.
 ///
 /// Architecture support: Currently x86-64 and AArch64. On unsupported
 /// architectures, calling this function issues a fatal diagnostic.

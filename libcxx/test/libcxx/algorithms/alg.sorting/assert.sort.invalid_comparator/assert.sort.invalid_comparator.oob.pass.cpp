@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // In the debug mode, the comparator validations will notice that it doesn't satisfy strict weak ordering before the
 // algorithm actually runs and goes out of bounds, so the test will terminate before the tested assertions are
 // triggered.
-// UNSUPPORTED: libcpp-hardening-mode=none, libcpp-hardening-mode=debug
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=debug
 
 #include <algorithm>
 #include <cassert>

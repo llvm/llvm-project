@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-unknown-linux-gnu -force-vector-width=2 -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-unknown-linux-gnu -force-vector-width=2 -epilogue-vectorization-force-VF=2  -pass-remarks-analysis=loop-vectorize -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
 ; RUN: FileCheck %s --check-prefix=CHECK-REMARKS < %t
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
@@ -28,4 +28,4 @@ for.end:
 declare void @foo(ptr)
 
 !0 = !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.scalable.enable"}

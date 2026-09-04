@@ -16,7 +16,7 @@ class TypeLookupTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.mm", "// break here")
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(archs=["i386"])
     def test_type_lookup(self):
         """Test type lookup command."""

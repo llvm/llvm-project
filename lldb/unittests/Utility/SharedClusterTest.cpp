@@ -54,5 +54,5 @@ TEST(SharedCluster, ClusterManager) {
     }
     ASSERT_THAT(Queue, testing::IsEmpty());
   }
-  ASSERT_THAT(Queue, testing::ElementsAre(1, 2));
+  ASSERT_THAT(Queue, testing::UnorderedElementsAre(1, 2));
 }

@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_equal_range = [](auto first, auto last, auto const& value) { return std::equal_range(first, last, value); };
@@ -29,7 +30,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto equal_range) {
       benchmark::RegisterBenchmark(
           name,
-          [equal_range](auto& st) {
+          [equal_range](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::vector<int> data(size);
             std::iota(data.begin(), data.end(), 0);
@@ -62,7 +63,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto equal_range) {
       benchmark::RegisterBenchmark(
           name,
-          [equal_range](auto& st) {
+          [equal_range](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             std::size_t const subrange_size = size / 2;
             std::size_t const left_flank    = (size - subrange_size) / 2;
@@ -99,7 +100,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto equal_range) {
       benchmark::RegisterBenchmark(
           name,
-          [equal_range](auto& st) {
+          [equal_range](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::vector<int> data(size);
             std::iota(data.begin(), data.end(), 0);

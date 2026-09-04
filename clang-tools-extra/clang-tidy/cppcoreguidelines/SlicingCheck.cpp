@@ -89,12 +89,10 @@ void SlicingCheck::diagnoseSlicedOverriddenMethods(
     }
   }
   // Recursively process bases.
-  for (const auto &Base : DerivedDecl.bases()) {
-    if (const auto *BaseRecord = Base.getType()->getAsCXXRecordDecl()) {
-      if (BaseRecord->isCompleteDefinition())
-        diagnoseSlicedOverriddenMethods(Call, *BaseRecord, BaseDecl);
-    }
-  }
+  for (const auto &Base : DerivedDecl.bases())
+    if (const auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
+        BaseRecord && BaseRecord->isCompleteDefinition())
+      diagnoseSlicedOverriddenMethods(Call, *BaseRecord, BaseDecl);
 }
 
 void SlicingCheck::check(const MatchFinder::MatchResult &Result) {

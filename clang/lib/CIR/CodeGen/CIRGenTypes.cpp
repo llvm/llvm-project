@@ -1,6 +1,7 @@
 #include "CIRGenTypes.h"
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenCall.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -311,6 +312,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
               cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
         return ty;
     } else if (type->isCUDADeviceBuiltinTextureType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinTextureDeviceType())
+        return ty;
+
       assert(!cir::MissingFeatures::cudaTextureType());
     }
   }
@@ -659,9 +664,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       auto paddingArray =
           cir::ArrayType::get(cgm.sInt8Ty, (atomicSize - valueSize) / 8);
       mlir::Type elements[] = {resultType, paddingArray};
-      resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
-                                        /*packed=*/false, /*padded=*/false,
-                                        /*is_class=*/false);
+      cir::RecordMemberKind kinds[] = {cir::RecordMemberKind::Data,
+                                       cir::RecordMemberKind::Pad};
+      resultType =
+          cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                               /*packed=*/false, /*is_class=*/false, kinds);
     }
 
     break;
@@ -750,6 +757,22 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+cir::CallingConv
+CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
+  switch (cc) {
+  case CC_C:
+    // SPIR/SPIR-V lowers the default CC to spir_func, not plain C.
+    if (cgm.getTriple().isSPIROrSPIRV())
+      return cir::CallingConv::SpirFunction;
+    return cir::CallingConv::C;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  default:
+    // TODO(cir): Support the remaining target-specific calling conventions.
+    return cir::CallingConv::C;
+  }
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
@@ -761,8 +784,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
                               argTypes);
 
-  void *insertPos = nullptr;
-  CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
+  llvm::FoldingSetInsertToken insertToken;
+  CIRGenFunctionInfo *fi = functionInfos.lookup(id, insertToken);
   if (fi) {
     // We found a matching function info based on id. These asserts verify that
     // it really is a match.
@@ -773,14 +796,28 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     return *fi;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  cir::CallingConv cirCC = clangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
-                                  required);
-  functionInfos.InsertNode(fi, insertPos);
+  fi = CIRGenFunctionInfo::create(cirCC, info, isInstanceMethod, returnType,
+                                  argTypes, required);
+  functionInfos.insert(fi, insertToken);
 
   return *fi;
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeDeviceKernelCallerDeclaration(QualType resultType,
+                                                  const FunctionArgList &args) {
+  SmallVector<CanQualType, 16> argTypes;
+  for (const VarDecl *arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg->getType()));
+
+  // Classic CodeGen passes FnInfoOpts::None here; that is the no-op case, so
+  // nothing is needed even once CIR models FnInfoOpts.
+  return arrangeCIRFunctionInfo(
+      resultType->getCanonicalTypeUnqualified(), /*isInstanceMethod=*/false,
+      argTypes, FunctionType::ExtInfo(CC_DeviceKernel), RequiredArgs::All);
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {

@@ -1,0 +1,12 @@
+# RUN: llc -run-pass=machineverifier %s -o /dev/null
+
+--- |
+  target triple = "thumbv7m-none-eabi"
+  define coldcc void @f() { unreachable }
+...
+---
+name: f
+body: |
+  bb.0:
+    tBX_RET 14, $noreg
+...

@@ -61,6 +61,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -1106,7 +1107,7 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
+    SmallSetVector<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -1135,7 +1136,7 @@ private:
   /// the predecessors, and phis in the successor blocks.
   void createExitPath(DefMap &NewDefs, const ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallSetVector<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();

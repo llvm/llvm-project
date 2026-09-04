@@ -144,7 +144,7 @@ func.func @dma_wait_non_affine_tag_index(%arg0 : index) {
 // -----
 
 func.func @invalid_symbol() {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<23x26xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<23x26xf32>
   affine.for %arg1 = 0 to 1 {
     affine.for %arg2 = 0 to 26 {
       affine.for %arg3 = 0 to 23 {

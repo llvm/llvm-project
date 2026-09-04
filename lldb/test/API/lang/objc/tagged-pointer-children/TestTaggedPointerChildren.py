@@ -26,7 +26,7 @@ class TaggedPointerChildrenTestCase(TestBase):
             )
             self.assert_no_unreadable_children(child)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(archs=["i386", "i686"])
     def test(self):
         """
@@ -67,7 +67,7 @@ class TaggedPointerChildrenTestCase(TestBase):
         self.assertGreater(heap.GetNumChildren(), 0, "real object still has children")
         self.assert_no_unreadable_children(heap)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(archs=["i386", "i686"])
     def test_registered_synthetic_takes_precedence(self):
         """

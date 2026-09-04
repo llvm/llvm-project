@@ -51,7 +51,7 @@ func.func @test_convert_input_parameters(%arg0: tensor<1x3xf64>) -> tensor<1x3xf
   // FUNCBOUND: %[[IDENTITY:.*]] = tosa.identity %[[IN]] : (tensor<1x3xf32>) -> tensor<1x3xf32>
   %0 = tosa.identity %arg0 : (tensor<1x3xf64>) -> tensor<1x3xf64>
   // COMMON: %[[TO_F32:.*]] = tosa.cast %[[IDENTITY]] : (tensor<1x3xf32>) -> tensor<1x3xf32>
-  %1 = tosa.cast %0 : (tensor<1x3xf64>) -> tensor<1x3xf32>
+  %1 = tosa.cast %0 {input_unsigned = false} : (tensor<1x3xf64>) -> tensor<1x3xf32>
   // DEFAULT: return %[[TO_F32]] : tensor<1x3xf32>
   // FUNCBOUND: return %[[TO_F32]] : tensor<1x3xf32>
   return %1 : tensor<1x3xf32>

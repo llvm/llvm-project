@@ -150,6 +150,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
     opts.setDebugInfo(val.value());
     if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::DebugDirectivesOnly &&
         val != llvm::codegenoptions::FullDebugInfo &&
         val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
@@ -173,6 +174,23 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.DebugInfoForProfiling =
       args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_compress_debug_sections_EQ)) {
+    auto type = llvm::StringSwitch<std::optional<llvm::DebugCompressionType>>(
+                    a->getValue())
+                    .Case("none", llvm::DebugCompressionType::None)
+                    .Case("zlib", llvm::DebugCompressionType::Zlib)
+                    .Case("zstd", llvm::DebugCompressionType::Zstd)
+                    .Default(std::nullopt);
+    if (type) {
+      opts.setCompressDebugSections(*type);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+      return false;
+    }
+  }
 
   return true;
 }
@@ -299,12 +317,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_safe_trampoline, false))
     opts.EnableSafeTrampoline = 1;
 
-  if (args.hasFlag(clang::options::OPT_freal_sum_reassociation,
-                   clang::options::OPT_fno_real_sum_reassociation, false))
+  if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
+                   clang::options::OPT_fno_fp_sum_reassociation, false))
     opts.SplitSumExpressionTree = 1;
 
-  if (args.getLastArg(clang::options::OPT_floop_interchange))
-    opts.InterchangeLoops = 1;
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
+  opts.InterchangeLoops =
+      args.hasFlag(clang::options::OPT_floop_interchange,
+                   clang::options::OPT_fno_loop_interchange, true);
 
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
@@ -480,8 +501,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.IsPIE = 1;
   }
 
-  if (args.hasArg(clang::options::OPT_fprofile_generate)) {
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_fprofile_generate,
+                          clang::options::OPT_fprofile_generate_EQ)) {
     opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    if (a->getOption().matches(clang::options::OPT_fprofile_generate_EQ)) {
+      llvm::SmallString<128> path(a->getValue());
+      llvm::sys::path::append(path, "default_%m.profraw");
+      opts.InstrProfileOutput = std::string(path);
+    }
   }
 
   if (auto A = args.getLastArg(clang::options::OPT_fprofile_use_EQ)) {
@@ -592,6 +620,9 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
       opts.EnableAIXExtendedAltivecABI = false;
     }
   }
+
+  opts.SplitMachineFunctions =
+      args.hasArg(clang::options::OPT_fsplit_machine_functions);
 
   opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
                                  clang::options::OPT_fno_verbose_asm, false);
@@ -763,6 +794,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   opts.outputFile = args.getLastArgValue(clang::options::OPT_o);
+  opts.dependencyOutputFile =
+      args.getLastArgValue(clang::options::OPT_dependency_file);
+  opts.dependencyTargets = args.getAllArgValues(clang::options::OPT_MT);
   opts.showHelp = args.hasArg(clang::options::OPT_help);
   opts.showVersion = args.hasArg(clang::options::OPT_version);
   opts.printSupportedCPUs =
@@ -885,6 +919,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -f{no-}out-of-bounds-subscripts
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
+      args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
+                   clang::options::OPT_fno_out_of_bounds_subscripts, true));
+
   // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
   opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
                        args.hasFlag(clang::options::OPT_fenumeration_type,
@@ -909,6 +949,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
                    clang::options::OPT_fno_openacc_multiple_names_in_routine,
                    true));
+
+  // -f{no-}prefer-intrinsic-module-use-association
+  if (const auto *arg = args.getLastArg(
+          clang::options::OPT_fprefer_intrinsic_module_use_association,
+          clang::options::OPT_fno_prefer_intrinsic_module_use_association)) {
+    opts.features.Enable(
+        Fortran::common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+        arg->getOption().matches(
+            clang::options::OPT_fprefer_intrinsic_module_use_association));
+  }
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
@@ -1264,7 +1314,10 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
-    llvm::ArrayRef<unsigned> ompVersions = llvm::omp::getOpenMPVersions();
+    llvm::SmallVector<unsigned> ompVersions;
+    for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
+      ompVersions.push_back(static_cast<unsigned>(v));
+    }
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
 
@@ -1411,6 +1464,54 @@ static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// Set the IEEE Floating point rounding modes, underflow mode and halting mode.
+///
+/// Initial halting mode:
+/// -ffpe-trap= sets the initial floating-point exception halting mode for the
+/// main program. Only the last -ffpe-trap= on the command line is effective.
+/// The value is a comma-separated set of exception mnemonics: "invalid",
+/// "zero", "overflow", "underflow", and "inexact" correspond to the Fortran
+/// 2023 IEEE_FLAG_TYPE values (F2023 17.2), and "denormal" is a non-standard,
+/// gfortran-compatible extension. "none", as well as an empty list, requests no
+/// halting and resets any earlier request.
+///
+/// TODO:
+/// Rounding modes
+/// Underflow mode
+///
+/// The value and the target-support warnings are validated in the driver (see
+/// addIEEEFPModesOptions() in clang/lib/Driver/ToolChains/Flang.cpp);
+/// here we only translate the already-validated list, so an unrecognized
+/// mnemonic maps to 0 and is ignored rather than re-diagnosed.
+static void setIEEEFPModesArgs(Fortran::common::LangOptions &opts,
+                               llvm::opt::ArgList &args) {
+  const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_ffpe_trap_EQ);
+  if (!a)
+    return;
+
+  using LangOptions = Fortran::common::LangOptions;
+  unsigned traps = 0;
+  llvm::SmallVector<llvm::StringRef> trapList;
+  llvm::StringRef(a->getValue())
+      .split(trapList, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (llvm::StringRef trap : trapList) {
+    if (trap == "none") {
+      // Reset to no halting; a later mnemonic can re-enable.
+      traps = 0;
+      continue;
+    }
+    traps |= llvm::StringSwitch<unsigned>(trap)
+                 .Case("invalid", LangOptions::FPE_Invalid)
+                 .Case("denormal", LangOptions::FPE_Denormal)
+                 .Case("zero", LangOptions::FPE_DivByZero)
+                 .Case("overflow", LangOptions::FPE_Overflow)
+                 .Case("underflow", LangOptions::FPE_Underflow)
+                 .Case("inexact", LangOptions::FPE_Inexact)
+                 .Default(0);
+  }
+  opts.FPExceptionTraps = traps;
+}
+
 /// Parses all floating point related arguments and populates the
 /// CompilerInvocation accordingly.
 /// Returns false if new errors are generated.
@@ -1484,6 +1585,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     if (arg->getOption().matches(clang::options::OPT_fno_fast_real_mod))
       opts.FastRealMod = false;
   }
+
+  // Set the initial IEEE floating point modes
+  setIEEEFPModesArgs(opts, args);
 
   return true;
 }
@@ -1862,8 +1966,9 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
-                                    fortranOptions.predefinitions);
+    Fortran::common::setOpenMPMacro(
+        static_cast<unsigned>(getLangOpts().getOpenMPVersion()),
+        fortranOptions.predefinitions);
   }
 
   if (frontendOptions.features.IsEnabled(
@@ -1898,6 +2003,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::aarch64:
     fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
     fortranOptions.predefinitions.emplace_back("__aarch64", "1");
+    break;
+  case llvm::Triple::ArchType::systemz:
+    fortranOptions.predefinitions.emplace_back("__s390x__", "1");
+    fortranOptions.predefinitions.emplace_back("__s390x", "1");
     break;
   }
 }
@@ -2026,4 +2135,6 @@ void CompilerInvocation::setLoweringOptions() {
       codegenOpts.getComplexRange() ==
           CodeGenOptions::ComplexRangeKind::CX_Basic)
     loweringOpts.setComplexDivisionToRuntime(false);
+
+  loweringOpts.setFPExceptionTraps(langOptions.FPExceptionTraps);
 }

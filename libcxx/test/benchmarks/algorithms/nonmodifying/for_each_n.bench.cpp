@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_for_each_n = [](auto first, auto n, auto f) { return std::for_each_n(first, n, f); };
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
       using ElemType = typename Container::value_type;
       benchmark::RegisterBenchmark(
           name,
-          [for_each_n](auto& st) {
+          [for_each_n](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const n = st.range(0);
             Container c(n, 1);
             auto first = c.begin();
@@ -55,7 +56,7 @@ int main(int argc, char** argv) {
       using ElemType = typename C1::value_type;
       benchmark::RegisterBenchmark(
           name,
-          [for_each_n](auto& st) {
+          [for_each_n](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size     = st.range(0);
             std::size_t const seg_size = 256;
             std::size_t const segments = (size + seg_size - 1) / seg_size;

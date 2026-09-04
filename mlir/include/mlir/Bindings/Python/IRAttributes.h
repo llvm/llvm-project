@@ -131,11 +131,16 @@ public:
     PyDenseArrayIterator dunderIter() { return *this; }
 
     /// Return the next element.
-    EltTy dunderNext() {
-      // Throw if the index has reached the end.
-      if (nextIndex >= mlirDenseArrayGetNumElements(attr.get()))
-        throw nanobind::stop_iteration();
-      return DerivedT::getElement(attr.get(), nextIndex++);
+    nanobind::typed<nanobind::object, EltTy> dunderNext() {
+      // Set StopIteration if the index has reached the end. Signaling
+      // exhaustion via the Python error indicator rather than a C++ exception
+      // avoids the cost of stack unwinding on every iteration.
+      if (nextIndex >= mlirDenseArrayGetNumElements(attr.get())) {
+        PyErr_SetNone(PyExc_StopIteration);
+        // python functions should return NULL after setting any exception
+        return nanobind::object();
+      }
+      return nanobind::cast(DerivedT::getElement(attr.get(), nextIndex++));
     }
 
     /// Bind the iterator class.

@@ -22,5 +22,5 @@ body: |
 
     ; CHECK-LABEL: test
 
-    $r29r28 = FRMIDX $r31r30, 0, implicit-def $sreg
+    $r29r28 = FRMIDX $r31r30, 0, $r31r30, implicit-def $sreg
 ...

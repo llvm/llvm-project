@@ -20,7 +20,7 @@ void test(void *p) {
 // CIR-NEXT:    cir.store align(4) %[[P3]], %[[P2]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM:    define{{.*}} void @_Z4testPv(ptr{{.*}} %[[ARG:.*]])
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:   %[[P:.*]] = alloca ptr, align 8
 // LLVM-NEXT:   store ptr %[[ARG]], ptr %[[P]], align 8
 // LLVM-NEXT:   %[[P1:.*]] = load ptr, ptr %[[P]], align 8
 // LLVM-NEXT:   store i32 0, ptr %[[P1]], align 4

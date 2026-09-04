@@ -145,9 +145,11 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
 
       // Skip if function either has local linkage or is not a known library
       // function.
-      LibFunc LF;
-      if (CalledFunc->hasLocalLinkage() ||
-          !TLI->getLibFunc(*CalledFunc, LF) || !TLI->has(LF))
+      if (CalledFunc->hasLocalLinkage())
+        continue;
+
+      LibFunc LF = TLI->getLibFunc(*CalledFunc);
+      if (!TLI->has(LF))
         continue;
 
       switch (LF) {

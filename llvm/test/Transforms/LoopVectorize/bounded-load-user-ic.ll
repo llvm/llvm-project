@@ -13,7 +13,7 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 7
 ; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
-; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
+; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:
@@ -22,7 +22,7 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
-; IC4-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 8
+; IC4-NEXT:    [[TMP2:%.*]] = and i32 [[INDEX]], 7
 ; IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
 ; IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 8
@@ -81,7 +81,7 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC3-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; IC3-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; IC3-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
-; IC3-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 8
+; IC3-NEXT:    [[TMP2:%.*]] = and i32 [[INDEX]], 7
 ; IC3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; IC3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
 ; IC3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 8

@@ -186,13 +186,6 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (GV->hasCommonLinkage()) {
-    OutContext.reportError(SMLoc(),
-                           "common symbols are not yet implemented for Wasm: " +
-                               getSymbol(GV)->getName());
-    return;
-  }
-
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
     AsmPrinter::emitGlobalVariable(GV);
     return;
@@ -814,7 +807,7 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 char WebAssemblyAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
-                "WebAssembly Assmebly Printer", false, false)
+                "WebAssembly Assembly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void

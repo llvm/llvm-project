@@ -30,10 +30,10 @@ define void @generic_32xi8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_32xi8_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_32xi8_param_0];
 ; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_32xi8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_32xi8_param_1];
 ; CHECK-NEXT:    st.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -49,10 +49,10 @@ define void @generic_16xi16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_16xi16_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_16xi16_param_0];
 ; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_16xi16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_16xi16_param_1];
 ; CHECK-NEXT:    st.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -68,10 +68,10 @@ define void @generic_16xhalf(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_16xhalf_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_16xhalf_param_0];
 ; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_16xhalf_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_16xhalf_param_1];
 ; CHECK-NEXT:    st.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -87,10 +87,10 @@ define void @generic_16xbfloat(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_16xbfloat_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_16xbfloat_param_0];
 ; CHECK-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_16xbfloat_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_16xbfloat_param_1];
 ; CHECK-NEXT:    st.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -106,10 +106,10 @@ define void @generic_8xi32(ptr %a, ptr %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [generic_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [generic_8xi32_param_0];
 ; SM90-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [generic_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [generic_8xi32_param_1];
 ; SM90-NEXT:    st.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -119,10 +119,10 @@ define void @generic_8xi32(ptr %a, ptr %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [generic_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [generic_8xi32_param_0];
 ; SM100-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [generic_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [generic_8xi32_param_1];
 ; SM100-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -137,10 +137,10 @@ define void @generic_4xi64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_4xi64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_4xi64_param_0];
 ; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [generic_4xi64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [generic_4xi64_param_1];
 ; CHECK-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -156,10 +156,10 @@ define void @generic_8xfloat(ptr %a, ptr %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [generic_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [generic_8xfloat_param_0];
 ; SM90-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [generic_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [generic_8xfloat_param_1];
 ; SM90-NEXT:    st.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -169,10 +169,10 @@ define void @generic_8xfloat(ptr %a, ptr %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [generic_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [generic_8xfloat_param_0];
 ; SM100-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [generic_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [generic_8xfloat_param_1];
 ; SM100-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -187,10 +187,10 @@ define void @generic_4xdouble(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_4xdouble_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_4xdouble_param_0];
 ; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [generic_4xdouble_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [generic_4xdouble_param_1];
 ; CHECK-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -208,10 +208,10 @@ define void @generic_volatile_32xi8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_32xi8_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_32xi8_param_0];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_volatile_32xi8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_volatile_32xi8_param_1];
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -227,10 +227,10 @@ define void @generic_volatile_16xi16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_16xi16_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_16xi16_param_0];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_volatile_16xi16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_volatile_16xi16_param_1];
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -246,10 +246,10 @@ define void @generic_volatile_16xhalf(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_16xhalf_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_16xhalf_param_0];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_volatile_16xhalf_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_volatile_16xhalf_param_1];
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -265,10 +265,10 @@ define void @generic_volatile_16xbfloat(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_16xbfloat_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_16xbfloat_param_0];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [generic_volatile_16xbfloat_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [generic_volatile_16xbfloat_param_1];
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -284,10 +284,10 @@ define void @generic_volatile_8xi32(ptr %a, ptr %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [generic_volatile_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_8xi32_param_0];
 ; SM90-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [generic_volatile_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [generic_volatile_8xi32_param_1];
 ; SM90-NEXT:    st.volatile.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -297,10 +297,10 @@ define void @generic_volatile_8xi32(ptr %a, ptr %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [generic_volatile_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_8xi32_param_0];
 ; SM100-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.volatile.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [generic_volatile_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [generic_volatile_8xi32_param_1];
 ; SM100-NEXT:    st.volatile.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.volatile.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -315,10 +315,10 @@ define void @generic_volatile_4xi64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_4xi64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_4xi64_param_0];
 ; CHECK-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [generic_volatile_4xi64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [generic_volatile_4xi64_param_1];
 ; CHECK-NEXT:    st.volatile.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.volatile.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -334,10 +334,10 @@ define void @generic_volatile_8xfloat(ptr %a, ptr %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [generic_volatile_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_8xfloat_param_0];
 ; SM90-NEXT:    ld.volatile.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [generic_volatile_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [generic_volatile_8xfloat_param_1];
 ; SM90-NEXT:    st.volatile.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -347,10 +347,10 @@ define void @generic_volatile_8xfloat(ptr %a, ptr %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [generic_volatile_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_8xfloat_param_0];
 ; SM100-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.volatile.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [generic_volatile_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [generic_volatile_8xfloat_param_1];
 ; SM100-NEXT:    st.volatile.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.volatile.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -365,10 +365,10 @@ define void @generic_volatile_4xdouble(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_4xdouble_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [generic_volatile_4xdouble_param_0];
 ; CHECK-NEXT:    ld.volatile.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [generic_volatile_4xdouble_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [generic_volatile_4xdouble_param_1];
 ; CHECK-NEXT:    st.volatile.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.volatile.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -388,10 +388,10 @@ define void @global_32xi8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_32xi8_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_32xi8_param_0];
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_32xi8_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_32xi8_param_1];
 ; SM90-NEXT:    st.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -402,9 +402,9 @@ define void @global_32xi8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_32xi8_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_32xi8_param_0];
 ; SM100-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_32xi8_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_32xi8_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load <32 x i8>, ptr addrspace(1) %a
@@ -419,10 +419,10 @@ define void @global_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_16xi16_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_16xi16_param_0];
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_16xi16_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_16xi16_param_1];
 ; SM90-NEXT:    st.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -433,9 +433,9 @@ define void @global_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_16xi16_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_16xi16_param_0];
 ; SM100-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_16xi16_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_16xi16_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load <16 x i16>, ptr addrspace(1) %a
@@ -450,10 +450,10 @@ define void @global_16xhalf(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_16xhalf_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_16xhalf_param_0];
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_16xhalf_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_16xhalf_param_1];
 ; SM90-NEXT:    st.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -464,9 +464,9 @@ define void @global_16xhalf(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_16xhalf_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_16xhalf_param_0];
 ; SM100-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_16xhalf_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_16xhalf_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load <16 x half>, ptr addrspace(1) %a
@@ -481,10 +481,10 @@ define void @global_16xbfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_16xbfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_16xbfloat_param_0];
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_16xbfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_16xbfloat_param_1];
 ; SM90-NEXT:    st.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -495,9 +495,9 @@ define void @global_16xbfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_16xbfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_16xbfloat_param_0];
 ; SM100-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_16xbfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_16xbfloat_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load <16 x bfloat>, ptr addrspace(1) %a
@@ -512,10 +512,10 @@ define void @global_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_param_0];
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_8xi32_param_1];
 ; SM90-NEXT:    st.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -525,9 +525,9 @@ define void @global_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_param_0];
 ; SM100-NEXT:    ld.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_8xi32_param_1];
 ; SM100-NEXT:    st.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load <8 x i32>, ptr addrspace(1) %a
@@ -541,10 +541,10 @@ define void @global_4xi64(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_4xi64_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_4xi64_param_0];
 ; SM90-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM90-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [global_4xi64_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd6, [global_4xi64_param_1];
 ; SM90-NEXT:    st.global.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM90-NEXT:    st.global.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM90-NEXT:    ret;
@@ -554,9 +554,9 @@ define void @global_4xi64(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_4xi64_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_4xi64_param_0];
 ; SM100-NEXT:    ld.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_4xi64_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_4xi64_param_1];
 ; SM100-NEXT:    st.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load <4 x i64>, ptr addrspace(1) %a
@@ -571,10 +571,10 @@ define void @global_8xfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_8xfloat_param_0];
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_8xfloat_param_1];
 ; SM90-NEXT:    st.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -584,9 +584,9 @@ define void @global_8xfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_8xfloat_param_0];
 ; SM100-NEXT:    ld.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_8xfloat_param_1];
 ; SM100-NEXT:    st.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load <8 x float>, ptr addrspace(1) %a
@@ -600,10 +600,10 @@ define void @global_4xdouble(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_4xdouble_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_4xdouble_param_0];
 ; SM90-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM90-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [global_4xdouble_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd6, [global_4xdouble_param_1];
 ; SM90-NEXT:    st.global.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM90-NEXT:    st.global.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM90-NEXT:    ret;
@@ -613,9 +613,9 @@ define void @global_4xdouble(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_4xdouble_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_4xdouble_param_0];
 ; SM100-NEXT:    ld.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_4xdouble_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_4xdouble_param_1];
 ; SM100-NEXT:    st.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load <4 x double>, ptr addrspace(1) %a
@@ -632,10 +632,10 @@ define void @global_volatile_32xi8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_32xi8_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_32xi8_param_0];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_volatile_32xi8_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_volatile_32xi8_param_1];
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -646,9 +646,9 @@ define void @global_volatile_32xi8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_32xi8_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_32xi8_param_0];
 ; SM100-NEXT:    ld.volatile.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_volatile_32xi8_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_volatile_32xi8_param_1];
 ; SM100-NEXT:    st.volatile.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <32 x i8>, ptr addrspace(1) %a
@@ -663,10 +663,10 @@ define void @global_volatile_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_16xi16_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_16xi16_param_0];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_volatile_16xi16_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_volatile_16xi16_param_1];
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -677,9 +677,9 @@ define void @global_volatile_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_16xi16_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_16xi16_param_0];
 ; SM100-NEXT:    ld.volatile.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_volatile_16xi16_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_volatile_16xi16_param_1];
 ; SM100-NEXT:    st.volatile.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <16 x i16>, ptr addrspace(1) %a
@@ -694,10 +694,10 @@ define void @global_volatile_16xhalf(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_16xhalf_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_16xhalf_param_0];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_volatile_16xhalf_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_volatile_16xhalf_param_1];
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -708,9 +708,9 @@ define void @global_volatile_16xhalf(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_16xhalf_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_16xhalf_param_0];
 ; SM100-NEXT:    ld.volatile.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_volatile_16xhalf_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_volatile_16xhalf_param_1];
 ; SM100-NEXT:    st.volatile.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <16 x half>, ptr addrspace(1) %a
@@ -725,10 +725,10 @@ define void @global_volatile_16xbfloat(ptr addrspace(1) %a, ptr addrspace(1) %b)
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_16xbfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_16xbfloat_param_0];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_volatile_16xbfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_volatile_16xbfloat_param_1];
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -739,9 +739,9 @@ define void @global_volatile_16xbfloat(ptr addrspace(1) %a, ptr addrspace(1) %b)
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_16xbfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_16xbfloat_param_0];
 ; SM100-NEXT:    ld.volatile.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_volatile_16xbfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_volatile_16xbfloat_param_1];
 ; SM100-NEXT:    st.volatile.global.v8.b32 [%rd2], {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <16 x bfloat>, ptr addrspace(1) %a
@@ -756,10 +756,10 @@ define void @global_volatile_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_8xi32_param_0];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_volatile_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_volatile_8xi32_param_1];
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -769,9 +769,9 @@ define void @global_volatile_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_8xi32_param_0];
 ; SM100-NEXT:    ld.volatile.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_volatile_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_volatile_8xi32_param_1];
 ; SM100-NEXT:    st.volatile.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <8 x i32>, ptr addrspace(1) %a
@@ -785,10 +785,10 @@ define void @global_volatile_4xi64(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_4xi64_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_4xi64_param_0];
 ; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [global_volatile_4xi64_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd6, [global_volatile_4xi64_param_1];
 ; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM90-NEXT:    ret;
@@ -798,9 +798,9 @@ define void @global_volatile_4xi64(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_4xi64_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_4xi64_param_0];
 ; SM100-NEXT:    ld.volatile.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_volatile_4xi64_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_volatile_4xi64_param_1];
 ; SM100-NEXT:    st.volatile.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <4 x i64>, ptr addrspace(1) %a
@@ -815,10 +815,10 @@ define void @global_volatile_8xfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_8xfloat_param_0];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_volatile_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_volatile_8xfloat_param_1];
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.global.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -828,9 +828,9 @@ define void @global_volatile_8xfloat(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_8xfloat_param_0];
 ; SM100-NEXT:    ld.volatile.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_volatile_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_volatile_8xfloat_param_1];
 ; SM100-NEXT:    st.volatile.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <8 x float>, ptr addrspace(1) %a
@@ -844,10 +844,10 @@ define void @global_volatile_4xdouble(ptr addrspace(1) %a, ptr addrspace(1) %b) 
 ; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_volatile_4xdouble_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_volatile_4xdouble_param_0];
 ; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [global_volatile_4xdouble_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd6, [global_volatile_4xdouble_param_1];
 ; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM90-NEXT:    ret;
@@ -857,9 +857,9 @@ define void @global_volatile_4xdouble(ptr addrspace(1) %a, ptr addrspace(1) %b) 
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_volatile_4xdouble_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_volatile_4xdouble_param_0];
 ; SM100-NEXT:    ld.volatile.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [global_volatile_4xdouble_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [global_volatile_4xdouble_param_1];
 ; SM100-NEXT:    st.volatile.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load volatile <4 x double>, ptr addrspace(1) %a
@@ -878,10 +878,10 @@ define void @shared_32xi8(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_32xi8_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_32xi8_param_0];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_32xi8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_32xi8_param_1];
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -897,10 +897,10 @@ define void @shared_16xi16(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_16xi16_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_16xi16_param_0];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_16xi16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_16xi16_param_1];
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -916,10 +916,10 @@ define void @shared_16xhalf(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_16xhalf_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_16xhalf_param_0];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_16xhalf_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_16xhalf_param_1];
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -935,10 +935,10 @@ define void @shared_16xbfloat(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_16xbfloat_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_16xbfloat_param_0];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_16xbfloat_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_16xbfloat_param_1];
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -954,10 +954,10 @@ define void @shared_8xi32(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [shared_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [shared_8xi32_param_0];
 ; SM90-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [shared_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [shared_8xi32_param_1];
 ; SM90-NEXT:    st.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -967,10 +967,10 @@ define void @shared_8xi32(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [shared_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [shared_8xi32_param_0];
 ; SM100-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [shared_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [shared_8xi32_param_1];
 ; SM100-NEXT:    st.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -985,10 +985,10 @@ define void @shared_4xi64(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_4xi64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_4xi64_param_0];
 ; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [shared_4xi64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [shared_4xi64_param_1];
 ; CHECK-NEXT:    st.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1004,10 +1004,10 @@ define void @shared_8xfloat(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [shared_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [shared_8xfloat_param_0];
 ; SM90-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [shared_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [shared_8xfloat_param_1];
 ; SM90-NEXT:    st.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -1017,10 +1017,10 @@ define void @shared_8xfloat(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [shared_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [shared_8xfloat_param_0];
 ; SM100-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [shared_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [shared_8xfloat_param_1];
 ; SM100-NEXT:    st.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -1035,10 +1035,10 @@ define void @shared_4xdouble(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_4xdouble_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_4xdouble_param_0];
 ; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [shared_4xdouble_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [shared_4xdouble_param_1];
 ; CHECK-NEXT:    st.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1056,10 +1056,10 @@ define void @shared_volatile_32xi8(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_32xi8_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_32xi8_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_volatile_32xi8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_volatile_32xi8_param_1];
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1075,10 +1075,10 @@ define void @shared_volatile_16xi16(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_16xi16_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_16xi16_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_volatile_16xi16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_volatile_16xi16_param_1];
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1094,10 +1094,10 @@ define void @shared_volatile_16xhalf(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_16xhalf_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_16xhalf_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_volatile_16xhalf_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_volatile_16xhalf_param_1];
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1113,10 +1113,10 @@ define void @shared_volatile_16xbfloat(ptr addrspace(3) %a, ptr addrspace(3) %b)
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_16xbfloat_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_16xbfloat_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [shared_volatile_16xbfloat_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [shared_volatile_16xbfloat_param_1];
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.volatile.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1132,10 +1132,10 @@ define void @shared_volatile_8xi32(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [shared_volatile_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_8xi32_param_0];
 ; SM90-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [shared_volatile_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [shared_volatile_8xi32_param_1];
 ; SM90-NEXT:    st.volatile.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -1145,10 +1145,10 @@ define void @shared_volatile_8xi32(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [shared_volatile_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_8xi32_param_0];
 ; SM100-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.volatile.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [shared_volatile_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [shared_volatile_8xi32_param_1];
 ; SM100-NEXT:    st.volatile.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.volatile.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -1163,10 +1163,10 @@ define void @shared_volatile_4xi64(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_4xi64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_4xi64_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [shared_volatile_4xi64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [shared_volatile_4xi64_param_1];
 ; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1182,10 +1182,10 @@ define void @shared_volatile_8xfloat(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [shared_volatile_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_8xfloat_param_0];
 ; SM90-NEXT:    ld.volatile.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.volatile.shared.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [shared_volatile_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [shared_volatile_8xfloat_param_1];
 ; SM90-NEXT:    st.volatile.shared.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.volatile.shared.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -1195,10 +1195,10 @@ define void @shared_volatile_8xfloat(ptr addrspace(3) %a, ptr addrspace(3) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [shared_volatile_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_8xfloat_param_0];
 ; SM100-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.volatile.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [shared_volatile_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [shared_volatile_8xfloat_param_1];
 ; SM100-NEXT:    st.volatile.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.volatile.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -1213,10 +1213,10 @@ define void @shared_volatile_4xdouble(ptr addrspace(3) %a, ptr addrspace(3) %b) 
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_4xdouble_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [shared_volatile_4xdouble_param_0];
 ; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.volatile.shared.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [shared_volatile_4xdouble_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [shared_volatile_4xdouble_param_1];
 ; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.volatile.shared.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1236,10 +1236,10 @@ define void @local_32xi8(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_32xi8_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_32xi8_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_32xi8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_32xi8_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1255,10 +1255,10 @@ define void @local_16xi16(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_16xi16_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_16xi16_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_16xi16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_16xi16_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1274,10 +1274,10 @@ define void @local_16xhalf(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_16xhalf_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_16xhalf_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_16xhalf_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_16xhalf_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1293,10 +1293,10 @@ define void @local_16xbfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_16xbfloat_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_16xbfloat_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_16xbfloat_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_16xbfloat_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1312,10 +1312,10 @@ define void @local_8xi32(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [local_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [local_8xi32_param_0];
 ; SM90-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [local_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [local_8xi32_param_1];
 ; SM90-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -1325,10 +1325,10 @@ define void @local_8xi32(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [local_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [local_8xi32_param_0];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [local_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [local_8xi32_param_1];
 ; SM100-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -1343,10 +1343,10 @@ define void @local_4xi64(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_4xi64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_4xi64_param_0];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [local_4xi64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [local_4xi64_param_1];
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1362,10 +1362,10 @@ define void @local_8xfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [local_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [local_8xfloat_param_0];
 ; SM90-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [local_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [local_8xfloat_param_1];
 ; SM90-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -1375,10 +1375,10 @@ define void @local_8xfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [local_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [local_8xfloat_param_0];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [local_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [local_8xfloat_param_1];
 ; SM100-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -1393,10 +1393,10 @@ define void @local_4xdouble(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_4xdouble_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_4xdouble_param_0];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [local_4xdouble_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [local_4xdouble_param_1];
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1414,10 +1414,10 @@ define void @local_volatile_32xi8(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_32xi8_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_volatile_32xi8_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_32xi8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_volatile_32xi8_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1433,10 +1433,10 @@ define void @local_volatile_16xi16(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_16xi16_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_volatile_16xi16_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_16xi16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_volatile_16xi16_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1452,10 +1452,10 @@ define void @local_volatile_16xhalf(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_16xhalf_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_volatile_16xhalf_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_16xhalf_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_volatile_16xhalf_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1471,10 +1471,10 @@ define void @local_volatile_16xbfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_16xbfloat_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_volatile_16xbfloat_param_0];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_16xbfloat_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [local_volatile_16xbfloat_param_1];
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
@@ -1490,10 +1490,10 @@ define void @local_volatile_8xi32(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [local_volatile_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [local_volatile_8xi32_param_0];
 ; SM90-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [local_volatile_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [local_volatile_8xi32_param_1];
 ; SM90-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -1503,10 +1503,10 @@ define void @local_volatile_8xi32(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [local_volatile_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [local_volatile_8xi32_param_0];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [local_volatile_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [local_volatile_8xi32_param_1];
 ; SM100-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -1521,10 +1521,10 @@ define void @local_volatile_4xi64(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_4xi64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_volatile_4xi64_param_0];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [local_volatile_4xi64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [local_volatile_4xi64_param_1];
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1540,10 +1540,10 @@ define void @local_volatile_8xfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [local_volatile_8xfloat_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [local_volatile_8xfloat_param_0];
 ; SM90-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; SM90-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd2, [local_volatile_8xfloat_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [local_volatile_8xfloat_param_1];
 ; SM90-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
 ; SM90-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; SM90-NEXT:    ret;
@@ -1553,10 +1553,10 @@ define void @local_volatile_8xfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [local_volatile_8xfloat_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [local_volatile_8xfloat_param_0];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM100-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM100-NEXT:    ld.param.b64 %rd6, [local_volatile_8xfloat_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [local_volatile_8xfloat_param_1];
 ; SM100-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM100-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM100-NEXT:    ret;
@@ -1571,10 +1571,10 @@ define void @local_volatile_4xdouble(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_4xdouble_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [local_volatile_4xdouble_param_0];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [local_volatile_4xdouble_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [local_volatile_4xdouble_param_1];
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1589,10 +1589,10 @@ define void @test_i256_global(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [test_i256_global_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [test_i256_global_param_0];
 ; SM90-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM90-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [test_i256_global_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd6, [test_i256_global_param_1];
 ; SM90-NEXT:    st.global.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM90-NEXT:    st.global.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM90-NEXT:    ret;
@@ -1602,9 +1602,9 @@ define void @test_i256_global(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [test_i256_global_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [test_i256_global_param_0];
 ; SM100-NEXT:    ld.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [test_i256_global_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [test_i256_global_param_1];
 ; SM100-NEXT:    st.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load i256, ptr addrspace(1) %a, align 32
@@ -1619,10 +1619,10 @@ define void @test_i256_global_unaligned(ptr addrspace(1) %a, ptr addrspace(1) %b
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_i256_global_unaligned_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_i256_global_unaligned_param_0];
 ; CHECK-NEXT:    ld.global.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [test_i256_global_unaligned_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [test_i256_global_unaligned_param_1];
 ; CHECK-NEXT:    st.global.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.global.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1637,10 +1637,10 @@ define void @test_i256_generic(ptr %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_i256_generic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_i256_generic_param_0];
 ; CHECK-NEXT:    ld.v2.b64 {%rd2, %rd3}, [%rd1];
 ; CHECK-NEXT:    ld.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; CHECK-NEXT:    ld.param.b64 %rd6, [test_i256_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [test_i256_generic_param_1];
 ; CHECK-NEXT:    st.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; CHECK-NEXT:    st.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
@@ -1655,10 +1655,10 @@ define void @test_i256_global_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b)
 ; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [test_i256_global_volatile_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [test_i256_global_volatile_param_0];
 ; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd2, %rd3}, [%rd1];
 ; SM90-NEXT:    ld.volatile.global.v2.b64 {%rd4, %rd5}, [%rd1+16];
-; SM90-NEXT:    ld.param.b64 %rd6, [test_i256_global_volatile_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd6, [test_i256_global_volatile_param_1];
 ; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6+16], {%rd4, %rd5};
 ; SM90-NEXT:    st.volatile.global.v2.b64 [%rd6], {%rd2, %rd3};
 ; SM90-NEXT:    ret;
@@ -1668,9 +1668,9 @@ define void @test_i256_global_volatile(ptr addrspace(1) %a, ptr addrspace(1) %b)
 ; SM100-NEXT:    .reg .b64 %rd<7>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [test_i256_global_volatile_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [test_i256_global_volatile_param_0];
 ; SM100-NEXT:    ld.volatile.global.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd6, [test_i256_global_volatile_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd6, [test_i256_global_volatile_param_1];
 ; SM100-NEXT:    st.volatile.global.v4.b64 [%rd6], {%rd2, %rd3, %rd4, %rd5};
 ; SM100-NEXT:    ret;
   %a.load = load volatile i256, ptr addrspace(1) %a, align 32

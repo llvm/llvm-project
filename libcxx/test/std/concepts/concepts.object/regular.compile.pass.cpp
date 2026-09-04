@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "type_classification/moveconstructible.h"

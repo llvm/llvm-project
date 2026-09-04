@@ -21,4 +21,5 @@ void test() {
   std::list<operator_hijacker> lo;
   std::list<operator_hijacker> l;
   l = lo;
+  (void)l;
 }

@@ -94,7 +94,7 @@ bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
 
 uint64_t PtrType::getABIAlignment(const DataLayout &dataLayout,
                                   DataLayoutEntryListRef params) const {
-  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+  auto defaultMemorySpace = llvm::dyn_cast_if_present<MemorySpaceAttrInterface>(
       dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace))
     return spec.getAbi() / kBitsInByte;
@@ -105,7 +105,7 @@ uint64_t PtrType::getABIAlignment(const DataLayout &dataLayout,
 std::optional<uint64_t>
 PtrType::getIndexBitwidth(const DataLayout &dataLayout,
                           DataLayoutEntryListRef params) const {
-  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+  auto defaultMemorySpace = llvm::dyn_cast_if_present<MemorySpaceAttrInterface>(
       dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace)) {
     return spec.getIndex() == SpecAttr::kOptionalSpecValue ? spec.getSize()
@@ -117,7 +117,7 @@ PtrType::getIndexBitwidth(const DataLayout &dataLayout,
 
 llvm::TypeSize PtrType::getTypeSizeInBits(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
-  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+  auto defaultMemorySpace = llvm::dyn_cast_if_present<MemorySpaceAttrInterface>(
       dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace))
     return llvm::TypeSize::getFixed(spec.getSize());
@@ -129,7 +129,7 @@ llvm::TypeSize PtrType::getTypeSizeInBits(const DataLayout &dataLayout,
 
 uint64_t PtrType::getPreferredAlignment(const DataLayout &dataLayout,
                                         DataLayoutEntryListRef params) const {
-  auto defaultMemorySpace = llvm::cast_if_present<MemorySpaceAttrInterface>(
+  auto defaultMemorySpace = llvm::dyn_cast_if_present<MemorySpaceAttrInterface>(
       dataLayout.getDefaultMemorySpace());
   if (SpecAttr spec = getPointerSpec(params, *this, defaultMemorySpace))
     return spec.getPreferred() / kBitsInByte;

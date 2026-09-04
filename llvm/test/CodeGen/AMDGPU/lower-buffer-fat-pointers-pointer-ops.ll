@@ -353,11 +353,44 @@ define ptr addrspace(7) @inttoptr_long(i256 %v) {
 define ptr addrspace(7) @inttoptr_offset(i32 %v) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @inttoptr_offset
 ; CHECK-SAME: (i32 [[V:%.*]]) {
-; CHECK-NEXT:    [[RET:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, i32 [[V]], 1
+; CHECK-NEXT:    [[RET:%.*]] = insertvalue { ptr addrspace(8), i32 } { ptr addrspace(8) null, i32 poison }, i32 [[V]], 1
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[RET]]
 ;
   %ret = inttoptr i32 %v to ptr addrspace(7)
   ret ptr addrspace(7) %ret
+}
+
+define ptr addrspace(7) @inttoptr_narrow(i16 %v) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @inttoptr_narrow
+; CHECK-SAME: (i16 [[V:%.*]]) {
+; CHECK-NEXT:    [[RET_OFF:%.*]] = zext i16 [[V]] to i32
+; CHECK-NEXT:    [[RET:%.*]] = insertvalue { ptr addrspace(8), i32 } { ptr addrspace(8) null, i32 poison }, i32 [[RET_OFF]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[RET]]
+;
+  %ret = inttoptr i16 %v to ptr addrspace(7)
+  ret ptr addrspace(7) %ret
+}
+
+define <2 x ptr addrspace(7)> @inttoptr_narrow_vec(<2 x i16> %v) {
+; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @inttoptr_narrow_vec
+; CHECK-SAME: (<2 x i16> [[V:%.*]]) {
+; CHECK-NEXT:    [[RET_OFF:%.*]] = zext <2 x i16> [[V]] to <2 x i32>
+; CHECK-NEXT:    [[RET:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } { <2 x ptr addrspace(8)> splat (ptr addrspace(8) null), <2 x i32> poison }, <2 x i32> [[RET_OFF]], 1
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } [[RET]]
+;
+  %ret = inttoptr <2 x i16> %v to <2 x ptr addrspace(7)>
+  ret <2 x ptr addrspace(7)> %ret
+}
+
+define i64 @inttoptr_offset_roundtrip(i32 %v) {
+; CHECK-LABEL: define i64 @inttoptr_offset_roundtrip
+; CHECK-SAME: (i32 [[V:%.*]]) {
+; CHECK-NEXT:    [[RET:%.*]] = zext i32 [[V]] to i64
+; CHECK-NEXT:    ret i64 [[RET]]
+;
+  %p = inttoptr i32 %v to ptr addrspace(7)
+  %ret = ptrtoint ptr addrspace(7) %p to i64
+  ret i64 %ret
 }
 
 define ptr addrspace(7) @addrspacecast(ptr addrspace(8) %buf) {
@@ -442,17 +475,17 @@ define <2 x ptr addrspace(7)> @addrspacecast_poison_vec() {
   ret <2 x ptr addrspace(7)> %ret
 }
 
-declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1), i16, i64, i32)
+declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1), i16, i64, i32)
 
 define ptr addrspace(7) @make_buffer_rsrc(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @make_buffer_rsrc
 ; CHECK-SAME: (ptr addrspace(1) [[BUF:%.*]], i16 [[STRIDE:%.*]], i64 [[NUMRECORDS:%.*]], i32 [[FLAGS:%.*]]) {
-; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i64 [[NUMRECORDS]], i32 [[FLAGS]])
+; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i64 [[NUMRECORDS]], i32 [[FLAGS]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[RET]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 0, 1
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
 ;
-  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags)
+  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %buf, i16 %stride, i64 %numRecords, i32 %flags)
   ret ptr addrspace(7) %ret
 }
 

@@ -2579,8 +2579,8 @@ define <8 x i32> @masked_gather_v8i32_v8i32(i8 %trigger) {
 ; AVX512F-NEXT:    movzbl %dil, %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    kmovw %k1, %k2
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    kmovw %k1, %k2
 ; AVX512F-NEXT:    vpgatherdd c+12(,%zmm0), %zmm1 {%k2}
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpgatherdd c+28(,%zmm0), %zmm2 {%k1}

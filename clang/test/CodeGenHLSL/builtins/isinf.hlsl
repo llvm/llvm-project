@@ -60,3 +60,8 @@ bool3 test_isinf_float3(float3 p0) { return isinf(p0); }
 // CHECK: %hlsl.isinf = call <4 x i1> @llvm.[[ICF]].isinf.v4f32
 // CHECK: ret <4 x i1> %hlsl.isinf
 bool4 test_isinf_float4(float4 p0) { return isinf(p0); }
+
+// CHECK: define hidden [[FN_TYPE]]noundef <5 x i1> @
+// CHECK: %hlsl.isinf = call <5 x i1> @llvm.[[ICF]].isinf.v5f32
+// CHECK: ret <5 x i1> %hlsl.isinf
+vector<bool, 5> test_isinf_float5(vector<float, 5> p0) { return isinf(p0); }

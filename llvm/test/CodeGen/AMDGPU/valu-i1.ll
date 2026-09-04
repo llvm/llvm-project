@@ -324,12 +324,12 @@ define amdgpu_kernel void @multi_vcond_loop(ptr addrspace(1) noalias nocapture %
 ; SI-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; SI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v7, vcc
 ; SI-NEXT:    s_mov_b64 s[2:3], 0
-; SI-NEXT:    s_mov_b32 s8, s10
-; SI-NEXT:    s_mov_b32 s9, s10
 ; SI-NEXT:    s_mov_b64 s[6:7], 0
 ; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; SI-NEXT:  .LBB5_2: ; %bb10
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SI-NEXT:    s_mov_b32 s8, s10
+; SI-NEXT:    s_mov_b32 s9, s10
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    buffer_load_dword v8, v[6:7], s[8:11], 0 addr64
 ; SI-NEXT:    buffer_load_dword v9, v[4:5], s[8:11], 0 addr64
@@ -355,8 +355,8 @@ define amdgpu_kernel void @multi_vcond_loop(ptr addrspace(1) noalias nocapture %
 ; SI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v7, vcc
 ; SI-NEXT:    v_cmp_ge_i64_e32 vcc, s[6:7], v[0:1]
 ; SI-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
-; SI-NEXT:    s_and_b64 s[12:13], vcc, exec
-; SI-NEXT:    s_or_b64 s[4:5], s[4:5], s[12:13]
+; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
+; SI-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
 ; SI-NEXT:  .LBB5_4: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB5_2 Depth=1
 ; SI-NEXT:    s_or_b64 exec, exec, s[0:1]

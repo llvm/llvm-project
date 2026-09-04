@@ -89,27 +89,20 @@ namespace __unicode {
 // The names of these concepts are modelled after P2728R0, but the
 // implementation is not. char16_t may contain 32-bits so depending on the
 // number of bits is an issue.
-#      ifdef _LIBCPP_SHORT_WCHAR
 template <class _Tp>
 concept __utf16_code_unit =
     same_as<_Tp, char16_t>
-#        if _LIBCPP_HAS_WIDE_CHARACTERS
-    || same_as<_Tp, wchar_t>
-#        endif
+#      if _LIBCPP_HAS_WIDE_CHARACTERS
+    || (sizeof(wchar_t) == sizeof(char16_t) && same_as<_Tp, wchar_t>)
+#      endif
     ;
-template <class _Tp>
-concept __utf32_code_unit = same_as<_Tp, char32_t>;
-#      else // _LIBCPP_SHORT_WCHAR
-template <class _Tp>
-concept __utf16_code_unit = same_as<_Tp, char16_t>;
 template <class _Tp>
 concept __utf32_code_unit =
     same_as<_Tp, char32_t>
-#        if _LIBCPP_HAS_WIDE_CHARACTERS
-    || same_as<_Tp, wchar_t>
-#        endif
+#      if _LIBCPP_HAS_WIDE_CHARACTERS
+    || (sizeof(wchar_t) == sizeof(char32_t) && same_as<_Tp, wchar_t>)
+#      endif
     ;
-#      endif // _LIBCPP_SHORT_WCHAR
 
 // Pass by reference since an output_iterator may not be copyable.
 template <class _OutIt>
@@ -382,6 +375,9 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  endif // _LIBCPP_STD_VER >= 23
 
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER >= 20 && _LIBCPP_STD_VER <= 23
+#    include <optional>
+#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_PRINT

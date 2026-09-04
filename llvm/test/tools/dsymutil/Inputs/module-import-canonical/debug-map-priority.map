@@ -1,0 +1,10 @@
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: 3.o
+    symbols:
+      - { sym: _main3, objAddr: 0x0, binAddr: 0x30000, size: 0x10 }
+  - filename: 1.o
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

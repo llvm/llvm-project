@@ -19,20 +19,20 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE6:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE6]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[PRED_LOAD_CONTINUE6]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP32:%.*]], %[[PRED_LOAD_CONTINUE6]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = urem <4 x i32> [[VEC_IND]], splat (i32 128)
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
+; CHECK-NEXT:    [[TMP28:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 127)
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
+; CHECK-NEXT:    br i1 [[TMP29]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP28]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> poison, i32 [[TMP8]], i64 0
@@ -42,7 +42,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2:.*]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP28]], i64 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP14]], i64 1
@@ -52,7 +52,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[PRED_LOAD_IF3:.*]], label %[[PRED_LOAD_CONTINUE4:.*]]
 ; CHECK:       [[PRED_LOAD_IF3]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP28]], i64 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP20]], i64 2
@@ -62,21 +62,21 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP23]], label %[[PRED_LOAD_IF5:.*]], label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_IF5]]:
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP28]], i64 3
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i32> [[TMP22]], i32 [[TMP26]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP28:%.*]] = phi <4 x i32> [ [[TMP22]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP27]], %[[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP28]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP29]] = add <4 x i32> [[VEC_PHI]], [[PREDPHI]]
+; CHECK-NEXT:    [[TMP33:%.*]] = phi <4 x i32> [ [[TMP22]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP27]], %[[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP33]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP32]] = add <4 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP29]])
+; CHECK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP32]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -114,7 +114,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
 ; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
-; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
+; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:
@@ -135,10 +135,10 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[TMP3]], zeroinitializer
 ; IC4-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[TMP4]], zeroinitializer
 ; IC4-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i32> [[TMP5]], zeroinitializer
-; IC4-NEXT:    [[TMP10:%.*]] = urem <4 x i32> [[VEC_IND]], splat (i32 128)
-; IC4-NEXT:    [[TMP11:%.*]] = urem <4 x i32> [[STEP_ADD]], splat (i32 128)
-; IC4-NEXT:    [[TMP12:%.*]] = urem <4 x i32> [[STEP_ADD_2]], splat (i32 128)
-; IC4-NEXT:    [[TMP13:%.*]] = urem <4 x i32> [[STEP_ADD_3]], splat (i32 128)
+; IC4-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 127)
+; IC4-NEXT:    [[TMP11:%.*]] = and <4 x i32> [[STEP_ADD]], splat (i32 127)
+; IC4-NEXT:    [[TMP12:%.*]] = and <4 x i32> [[STEP_ADD_2]], splat (i32 127)
+; IC4-NEXT:    [[TMP13:%.*]] = and <4 x i32> [[STEP_ADD_3]], splat (i32 127)
 ; IC4-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP6]], i64 0
 ; IC4-NEXT:    br i1 [[TMP14]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; IC4:       [[PRED_LOAD_IF]]:
@@ -353,7 +353,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
 ; IC8-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC8:       [[VECTOR_PH]]:
-; IC8-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 32
+; IC8-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 31
 ; IC8-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC8:       [[VECTOR_BODY]]:
@@ -390,14 +390,14 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[TMP15:%.*]] = icmp eq <4 x i32> [[TMP7]], zeroinitializer
 ; IC8-NEXT:    [[TMP16:%.*]] = icmp eq <4 x i32> [[TMP8]], zeroinitializer
 ; IC8-NEXT:    [[TMP17:%.*]] = icmp eq <4 x i32> [[TMP9]], zeroinitializer
-; IC8-NEXT:    [[TMP18:%.*]] = urem <4 x i32> [[VEC_IND]], splat (i32 128)
-; IC8-NEXT:    [[TMP19:%.*]] = urem <4 x i32> [[STEP_ADD]], splat (i32 128)
-; IC8-NEXT:    [[TMP20:%.*]] = urem <4 x i32> [[STEP_ADD_2]], splat (i32 128)
-; IC8-NEXT:    [[TMP21:%.*]] = urem <4 x i32> [[STEP_ADD_3]], splat (i32 128)
-; IC8-NEXT:    [[TMP22:%.*]] = urem <4 x i32> [[STEP_ADD_4]], splat (i32 128)
-; IC8-NEXT:    [[TMP23:%.*]] = urem <4 x i32> [[STEP_ADD_5]], splat (i32 128)
-; IC8-NEXT:    [[TMP24:%.*]] = urem <4 x i32> [[STEP_ADD_6]], splat (i32 128)
-; IC8-NEXT:    [[TMP25:%.*]] = urem <4 x i32> [[STEP_ADD_7]], splat (i32 128)
+; IC8-NEXT:    [[TMP18:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 127)
+; IC8-NEXT:    [[TMP19:%.*]] = and <4 x i32> [[STEP_ADD]], splat (i32 127)
+; IC8-NEXT:    [[TMP20:%.*]] = and <4 x i32> [[STEP_ADD_2]], splat (i32 127)
+; IC8-NEXT:    [[TMP21:%.*]] = and <4 x i32> [[STEP_ADD_3]], splat (i32 127)
+; IC8-NEXT:    [[TMP22:%.*]] = and <4 x i32> [[STEP_ADD_4]], splat (i32 127)
+; IC8-NEXT:    [[TMP23:%.*]] = and <4 x i32> [[STEP_ADD_5]], splat (i32 127)
+; IC8-NEXT:    [[TMP24:%.*]] = and <4 x i32> [[STEP_ADD_6]], splat (i32 127)
+; IC8-NEXT:    [[TMP25:%.*]] = and <4 x i32> [[STEP_ADD_7]], splat (i32 127)
 ; IC8-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP10]], i64 0
 ; IC8-NEXT:    br i1 [[TMP26]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; IC8:       [[PRED_LOAD_IF]]:
@@ -820,7 +820,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -829,7 +829,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[PRED_LOAD_CONTINUE6]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = urem <4 x i32> [[VEC_IND]], splat (i32 16)
+; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 15)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
@@ -915,7 +915,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
 ; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
-; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
+; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:
@@ -936,10 +936,10 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[TMP3]], zeroinitializer
 ; IC4-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[TMP4]], zeroinitializer
 ; IC4-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i32> [[TMP5]], zeroinitializer
-; IC4-NEXT:    [[TMP10:%.*]] = urem <4 x i32> [[VEC_IND]], splat (i32 16)
-; IC4-NEXT:    [[TMP11:%.*]] = urem <4 x i32> [[STEP_ADD]], splat (i32 16)
-; IC4-NEXT:    [[TMP12:%.*]] = urem <4 x i32> [[STEP_ADD_2]], splat (i32 16)
-; IC4-NEXT:    [[TMP13:%.*]] = urem <4 x i32> [[STEP_ADD_3]], splat (i32 16)
+; IC4-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 15)
+; IC4-NEXT:    [[TMP11:%.*]] = and <4 x i32> [[STEP_ADD]], splat (i32 15)
+; IC4-NEXT:    [[TMP12:%.*]] = and <4 x i32> [[STEP_ADD_2]], splat (i32 15)
+; IC4-NEXT:    [[TMP13:%.*]] = and <4 x i32> [[STEP_ADD_3]], splat (i32 15)
 ; IC4-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP6]], i64 0
 ; IC4-NEXT:    br i1 [[TMP14]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; IC4:       [[PRED_LOAD_IF]]:
@@ -1154,7 +1154,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
 ; IC8-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC8:       [[VECTOR_PH]]:
-; IC8-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 32
+; IC8-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 31
 ; IC8-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC8:       [[VECTOR_BODY]]:
@@ -1191,14 +1191,14 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[TMP15:%.*]] = icmp eq <4 x i32> [[TMP7]], zeroinitializer
 ; IC8-NEXT:    [[TMP16:%.*]] = icmp eq <4 x i32> [[TMP8]], zeroinitializer
 ; IC8-NEXT:    [[TMP17:%.*]] = icmp eq <4 x i32> [[TMP9]], zeroinitializer
-; IC8-NEXT:    [[TMP18:%.*]] = urem <4 x i32> [[VEC_IND]], splat (i32 16)
-; IC8-NEXT:    [[TMP19:%.*]] = urem <4 x i32> [[STEP_ADD]], splat (i32 16)
-; IC8-NEXT:    [[TMP20:%.*]] = urem <4 x i32> [[STEP_ADD_2]], splat (i32 16)
-; IC8-NEXT:    [[TMP21:%.*]] = urem <4 x i32> [[STEP_ADD_3]], splat (i32 16)
-; IC8-NEXT:    [[TMP22:%.*]] = urem <4 x i32> [[STEP_ADD_4]], splat (i32 16)
-; IC8-NEXT:    [[TMP23:%.*]] = urem <4 x i32> [[STEP_ADD_5]], splat (i32 16)
-; IC8-NEXT:    [[TMP24:%.*]] = urem <4 x i32> [[STEP_ADD_6]], splat (i32 16)
-; IC8-NEXT:    [[TMP25:%.*]] = urem <4 x i32> [[STEP_ADD_7]], splat (i32 16)
+; IC8-NEXT:    [[TMP18:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 15)
+; IC8-NEXT:    [[TMP19:%.*]] = and <4 x i32> [[STEP_ADD]], splat (i32 15)
+; IC8-NEXT:    [[TMP20:%.*]] = and <4 x i32> [[STEP_ADD_2]], splat (i32 15)
+; IC8-NEXT:    [[TMP21:%.*]] = and <4 x i32> [[STEP_ADD_3]], splat (i32 15)
+; IC8-NEXT:    [[TMP22:%.*]] = and <4 x i32> [[STEP_ADD_4]], splat (i32 15)
+; IC8-NEXT:    [[TMP23:%.*]] = and <4 x i32> [[STEP_ADD_5]], splat (i32 15)
+; IC8-NEXT:    [[TMP24:%.*]] = and <4 x i32> [[STEP_ADD_6]], splat (i32 15)
+; IC8-NEXT:    [[TMP25:%.*]] = and <4 x i32> [[STEP_ADD_7]], splat (i32 15)
 ; IC8-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP10]], i64 0
 ; IC8-NEXT:    br i1 [[TMP26]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; IC8:       [[PRED_LOAD_IF]]:

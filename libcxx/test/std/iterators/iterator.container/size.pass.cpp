@@ -29,29 +29,29 @@
 template<typename C>
 void test_container( C& c)
 {
-//  Can't say noexcept here because the container might not be
-    assert ( std::size(c)   == c.size());
+  static_assert(noexcept(std::size(c)) == noexcept(c.size()));
+  assert(std::size(c) == c.size());
 }
 
 template<typename C>
 void test_const_container( const C& c )
 {
-//  Can't say noexcept here because the container might not be
-    assert ( std::size(c)   == c.size());
+  static_assert(noexcept(std::size(c)) == noexcept(c.size()));
+  assert(std::size(c) == c.size());
 }
 
 template<typename T>
 void test_const_container( const std::initializer_list<T>& c)
 {
-    LIBCPP_ASSERT_NOEXCEPT(std::size(c)); // our std::size is conditionally noexcept
-    assert ( std::size(c)   == c.size());
+  ASSERT_NOEXCEPT(std::size(c));
+  assert(std::size(c) == c.size());
 }
 
 template<typename T>
 void test_container( std::initializer_list<T>& c )
 {
-    LIBCPP_ASSERT_NOEXCEPT(std::size(c)); // our std::size is conditionally noexcept
-    assert ( std::size(c)   == c.size());
+  ASSERT_NOEXCEPT(std::size(c));
+  assert(std::size(c) == c.size());
 }
 
 template<typename T, std::size_t Sz>

@@ -136,6 +136,18 @@ void UpdateVCEPass::runOnOperation() {
       }
     }
 
+    // Op max version requirements
+    if (auto maxVersionIfx = dyn_cast<spirv::QueryMaxVersionInterface>(op)) {
+      std::optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
+      if (maxVersion && *maxVersion < allowedVersion) {
+        return op->emitError("'")
+               << op->getName() << "' is missing after version "
+               << spirv::stringifyVersion(*maxVersion)
+               << " but target environment is "
+               << spirv::stringifyVersion(allowedVersion);
+      }
+    }
+
     // Op extension requirements
     if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op))
       if (failed(checkAndUpdateExtensionRequirements(
@@ -244,11 +256,8 @@ void UpdateVCEPass::runOnOperation() {
     }
   }
 
-  // TODO: verify that the deduced version is consistent with
-  // SPIR-V ops' maximal version requirements.
-
   auto triple = spirv::VerCapExtAttr::get(
       deducedVersion, deducedCapabilities.getArrayRef(),
       deducedExtensions.getArrayRef(), &getContext());
-  module->setAttr(spirv::ModuleOp::getVCETripleAttrName(), triple);
+  module.setVceTripleAttr(triple);
 }

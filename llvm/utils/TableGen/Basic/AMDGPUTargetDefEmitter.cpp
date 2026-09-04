@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -30,6 +33,16 @@ using namespace llvm;
 // Derive the GPUKind enum from a processor name, e.g. "gfx90a" -> "GK_GFX90A".
 static void emitGPUKindEnum(raw_ostream &OS, StringRef Name) {
   OS << "GK_";
+  for (char C : Name)
+    OS << ((C == '-') ? '_' : toUpper(C));
+}
+
+// Feature string to enumerator, e.g. "16-bit-insts" -> "FEAT_16_BIT_INSTS". The
+// FEAT_ prefix (rather than FEATURE_) avoids colliding with the legacy
+// ArchFeatureKind enumerators (e.g. FEATURE_XNACK_ON_OFF_MODES) during the
+// migration off that bitfield.
+static void emitFeatureEnum(raw_ostream &OS, StringRef Name) {
+  OS << "FEAT_";
   for (char C : Name)
     OS << ((C == '-') ? '_' : toUpper(C));
 }
@@ -52,14 +65,35 @@ static void emitSubArchForName(raw_ostream &OS, StringRef Name) {
   emitSubArchSuffix(OS, Name);
 }
 
+// The explicit subarch spelling for a GPU whose subarch is not derivable from
+// its name, or empty. Optional so test stubs may omit it.
+static std::optional<StringRef> getSubArchSpelling(const Record *Rec) {
+  return Rec->getValueAsOptionalString("SubArchSpelling");
+}
+
+// Emit a subarch enumerator suffix for a spelling, dropping '.' and upcasing,
+// e.g. "12.50s" -> "1250S", matching the sibling name-derived enumerators.
+static void emitSpellingSuffix(raw_ostream &OS, StringRef Spelling) {
+  for (char C : Spelling)
+    if (C != '.')
+      OS << static_cast<char>(toUpper(C));
+}
+
 // Derive the Triple::SubArchType for a canonical GPU record. A pseudo target
-// represents no hardware and maps to Triple::NoSubArch; otherwise the subarch
-// is derived from the name.
+// maps to Triple::NoSubArch; an explicit SubArchSpelling maps to that (e.g.
+// "4.67q" -> AMDGPUSubArch4_67Q); otherwise it is derived from the name.
 static void emitSubArch(raw_ostream &OS, const Record *Rec) {
   if (Rec->getValueAsBit("IsPseudoTarget")) {
     OS << "Triple::NoSubArch";
     return;
   }
+
+  if (std::optional<StringRef> Spelling = getSubArchSpelling(Rec)) {
+    OS << "Triple::AMDGPUSubArch";
+    emitSpellingSuffix(OS, *Spelling);
+    return;
+  }
+
   emitSubArchForName(OS, Rec->getValueAsString("Name"));
 }
 
@@ -70,17 +104,23 @@ static bool isGenericTarget(const Record *Rec) {
   return !Rec->getValueAsListOfDefs("CoveredGPUs").empty();
 }
 
-// The gfx family for a canonical GPU record: the "-generic" family prefix (e.g.
-// "gfx9-4-generic" -> "gfx9"), or the name with its last two chars dropped for
-// a concrete GPU (e.g. "gfx90a" -> "gfx9", "gfx1030" -> "gfx10"). Empty for a
-// pseudo target.
-static StringRef getArchFamily(const Record *Rec) {
+// Emit the gfx family for a canonical GPU record: "gfx" + the ISA major version
+// (e.g. "gfx90a"/[9,0,10] -> "gfx9", "gfx1250"/[12,5,0] -> "gfx12").
+// Nothing for a pseudo target.
+static void emitArchFamily(raw_ostream &OS, const Record *Rec) {
   if (Rec->getValueAsBit("IsPseudoTarget"))
-    return "";
-  StringRef Name = Rec->getValueAsString("Name");
-  if (isGenericTarget(Rec))
-    return Name.take_front(Name.find('-'));
-  return Name.drop_back(2);
+    return;
+  OS << "gfx" << Rec->getValueAsListOfInts("IsaVersion")[0];
+}
+
+// Emit the canonical GPU name for a variant (empty for a non-variant GPU). The
+// stepping is the trailing single hex character of the device name (validated
+// by emitIsaVersion).
+static void emitBaseName(raw_ostream &OS, const Record *Rec) {
+  if (!getSubArchSpelling(Rec))
+    return;
+  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
+  OS << "gfx" << V[0] << V[1] << hexdigit(V[2], /*LowerCase=*/true);
 }
 
 // Emit the ISA version tuple as "major, minor, stepping" wrapped in \p Open and
@@ -96,20 +136,30 @@ static void emitIsaVersion(raw_ostream &OS, const Record *Rec, char Open,
                         "IsaVersion");
   }
 
-  OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
-}
+  // Each component is stored in a uint8_t field, and the stepping is
+  // additionally spelled as a single lowercase hex digit in the device and
+  // subarch names. Reject out-of-range values.
+  for (int64_t Component : V) {
+    if (!isUInt<8>(Component)) {
+      PrintFatalError(Rec->getLoc(),
+                      "GPU '" + Rec->getValueAsString("Name") +
+                          "' IsaVersion components must each fit in a byte");
+    }
+  }
 
-// Emit the triple subarch name for a concrete GPU, e.g. gfx90c / [9, 0, 12] ->
-// "amdgpu9.0c" (stepping is a single lowercase hex digit).
-static void emitConcreteSubArchTripleName(raw_ostream &OS, const Record *Rec) {
-  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
-
-  // Assuming emitIsaVersion validated the number of elements.
-  if (V[2] < 0 || V[2] > 15) {
+  if (!isUInt<4>(V[2])) {
     PrintFatalError(Rec->getLoc(), "GPU '" + Rec->getValueAsString("Name") +
                                        "' stepping must be a single hex digit");
   }
 
+  OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
+}
+
+// Emit the triple subarch name for a concrete GPU, e.g. gfx90c / [9, 0, 12] ->
+// "amdgpu9.0c". The stepping is spelled as a single lowercase hex digit
+// (validated by emitIsaVersion).
+static void emitConcreteSubArchTripleName(raw_ostream &OS, const Record *Rec) {
+  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
   OS << "amdgpu" << V[0] << '.' << V[1] << hexdigit(V[2], /*LowerCase=*/true);
 }
 
@@ -151,6 +201,29 @@ static void emitFeatureExpr(raw_ostream &OS, const Record *Rec,
 
   if (!Any)
     OS << NoneSpelling;
+}
+
+// The frontend-visible features, bit order matching the list. Empty for R600
+// (no AMDGPUFrontendVisibleFeatures def).
+static std::vector<const Record *>
+collectFrontendFeatures(const RecordKeeper &RK) {
+  const Record *List = RK.getDef("AMDGPUFrontendVisibleFeatures");
+  if (!List)
+    return {};
+  return List->getValueAsListOfDefs("Features");
+}
+
+// The transitive closure of a GPU's SubtargetFeatures, following the Implies
+// edges (a feature enables everything it implies).
+static void collectFeatureClosure(const Record *GPU,
+                                  SetVector<const Record *> &Closure) {
+  std::vector<const Record *> Worklist = GPU->getValueAsListOfDefs("Features");
+  while (!Worklist.empty()) {
+    const Record *F = Worklist.back();
+    Worklist.pop_back();
+    if (Closure.insert(F))
+      append_range(Worklist, F->getValueAsListOfDefs("Implies"));
+  }
 }
 
 // Collect canonical GPUs and their aliases, in TableGen definition order. R600
@@ -350,10 +423,167 @@ static void emitAMDGPUAliases(raw_ostream &OS, const RecordKeeper &RK,
         "#endif // GET_AMDGPU_GPU_ALIAS_TABLE\n\n";
 }
 
+// Emit the frontend feature enum (GET_AMDGPU_FEATURE_ENUM), interning each
+// feature name into \p Names. Returns the name offsets indexed by feature bit.
+static std::vector<unsigned>
+emitAMDGPUFeatureEnum(raw_ostream &OS, ArrayRef<const Record *> Features,
+                      StringToOffsetTable &Names) {
+  std::vector<unsigned> Offsets;
+  if (Features.empty())
+    return Offsets;
+  Offsets.reserve(Features.size());
+
+  OS << "#ifdef GET_AMDGPU_FEATURE_ENUM\n"
+        "#undef GET_AMDGPU_FEATURE_ENUM\n";
+  for (const Record *F : Features) {
+    StringRef Name = F->getValueAsString("Name");
+    OS << "  ";
+    emitFeatureEnum(OS, Name);
+    OS << ",\n";
+    Offsets.push_back(Names.GetOrAddStringOffset(Name));
+  }
+  OS << "  NUM_FEATURES\n"
+        "#endif // GET_AMDGPU_FEATURE_ENUM\n\n";
+  return Offsets;
+}
+
+// Emit AMDGPUFeatureNames (GET_AMDGPU_FEATURE_NAME_TABLE): bit -> name offset.
+static void emitAMDGPUFeatureNames(raw_ostream &OS,
+                                   ArrayRef<unsigned> Offsets) {
+  if (Offsets.empty())
+    return;
+  OS << "#ifdef GET_AMDGPU_FEATURE_NAME_TABLE\n"
+        "#undef GET_AMDGPU_FEATURE_NAME_TABLE\n"
+        "static constexpr StringTable::Offset AMDGPUFeatureNames[] = {\n";
+  for (unsigned O : Offsets)
+    OS << "  " << O << ",\n";
+  OS << "};\n"
+        "#endif // GET_AMDGPU_FEATURE_NAME_TABLE\n\n";
+}
+
+// The set of frontend features that end up in the emitted bitset.
+static SetVector<const Record *>
+collectVisibleFeatures(const Record *GPU,
+                       const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+  SetVector<const Record *> Visible;
+  for (const Record *F : Closure) {
+    if (FeatureIdx.contains(F))
+      Visible.insert(F);
+  }
+
+  return Visible;
+}
+
+// Make sure a "gfxN-generic" processor doesn't expose a frontend-visible
+// feature missing from any covered processor.
+//
+// FIXME: The check should cover all SubtargetFeatures, not just the
+// frontend-visible ones. It is limited to those because a generic legitimately
+// carries some features a covered GPU lacks (bug/hazard workarounds and
+// worst-case-valued features); those cases need to be marked to opt out of the
+// check, plus min-value handling for numeric features.
+static void
+validateGenericFeatures(const Record *GPU,
+                        const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  std::vector<const Record *> Covered =
+      GPU->getValueAsListOfDefs("CoveredGPUs");
+  if (Covered.empty())
+    return;
+
+  SetVector<const Record *> GenericFeatures =
+      collectVisibleFeatures(GPU, FeatureIdx);
+  for (const Record *Member : Covered) {
+    SetVector<const Record *> MemberFeatures =
+        collectVisibleFeatures(Member, FeatureIdx);
+    for (const Record *F : GenericFeatures) {
+      if (!MemberFeatures.contains(F)) {
+        PrintFatalError(GPU->getLoc(),
+                        "generic target '" + GPU->getValueAsString("Name") +
+                            "' exposes feature '" +
+                            F->getValueAsString("Name") +
+                            "' not supported by covered GPU '" +
+                            Member->getValueAsString("Name") + "'");
+      }
+    }
+  }
+}
+
+static void validateAMDGPU(const RecordKeeper &RK) {
+  DenseMap<const Record *, unsigned> FeatureIdx;
+  for (const auto &[Idx, F] : enumerate(collectFrontendFeatures(RK)))
+    FeatureIdx[F] = Idx;
+
+  for (const Record *GPU : RK.getAllDerivedDefinitions("AMDGPUGPUInfo"))
+    validateGenericFeatures(GPU, FeatureIdx);
+}
+
+// Emit a GPU's feature bitset initializer: its feature closure intersected with
+// the frontend-visible set \p FeatureIdx, e.g.
+// "AMDGPUFeatureBitset({FEATURE_DPP, FEATURE_CI_INSTS})".
+static void
+emitFeatureBitset(raw_ostream &OS, const Record *GPU,
+                  const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+
+  // Sort by bit index for stable output.
+  SmallVector<std::pair<unsigned, StringRef>> Bits;
+  for (const Record *F : Closure) {
+    auto It = FeatureIdx.find(F);
+    if (It != FeatureIdx.end())
+      Bits.emplace_back(It->second, F->getValueAsString("Name"));
+  }
+  sort(Bits);
+
+  OS << "AMDGPUFeatureBitset({";
+  ListSeparator LS(", ");
+  for (const auto &[Idx, Name] : Bits) {
+    OS << LS;
+    emitFeatureEnum(OS, Name);
+  }
+  OS << "})";
+}
+
+// The value of the SubtargetFeature in \p GPU's closure that sets \p FieldName,
+// or \p Default if it has none. Two features setting the same field to
+// different values is an error: SubtargetFeature silently takes the larger.
+static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
+                               int64_t Default) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+
+  const Record *Found = nullptr;
+  int64_t Value = Default;
+  for (const Record *F : Closure) {
+    if (F->getValueAsString("FieldName") != FieldName)
+      continue;
+
+    int64_t V;
+    if (!to_integer(F->getValueAsString("Value"), V)) {
+      PrintFatalError(F->getLoc(), "feature '" + F->getValueAsString("Name") +
+                                       "' must have an integer value");
+    }
+    if (Found && V != Value) {
+      PrintFatalError(GPU->getLoc(),
+                      "GPU '" + GPU->getValueAsString("Name") +
+                          "' gets conflicting '" + FieldName +
+                          "' values from '" + Found->getValueAsString("Name") +
+                          "' and '" + F->getValueAsString("Name") + "'");
+    }
+    Found = F;
+    Value = V;
+  }
+  return Value;
+}
+
 /// Emit a GPUInfo table indexed by (GPUKind - AMDGPUFirstGPUKind). Name and
 /// family strings are stored as offsets into the shared \p Names table.
-static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
-                            StringToOffsetTable &Names) {
+static void
+emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
+                StringToOffsetTable &Names,
+                const DenseMap<const Record *, unsigned> &FeatureIdx) {
   std::vector<const Record *> Canon = collectAMDGPUCanonicals(RK);
   if (Canon.empty())
     return;
@@ -371,8 +601,20 @@ static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     OS << ", ";
     emitFeatureExpr(OS, R, "FEATURE_NONE");
     OS << ", ";
+    emitFeatureBitset(OS, R, FeatureIdx);
+    OS << ", ";
     emitIsaVersion(OS, R, '{', '}');
-    OS << ", " << Names.GetOrAddStringOffset(getArchFamily(R)) << "},\n";
+    SmallString<16> Family;
+    raw_svector_ostream FamilyOS(Family);
+    emitArchFamily(FamilyOS, R);
+    OS << ", " << Names.GetOrAddStringOffset(Family) << ", ";
+    SmallString<16> BaseName;
+    raw_svector_ostream BaseNameOS(BaseName);
+    emitBaseName(BaseNameOS, R);
+    OS << Names.GetOrAddStringOffset(BaseName) << ", "
+       << getFeatureValue(R, "MaxWavesPerEU", 10) << ", "
+       << getFeatureValue(R, "AddressableLocalMemorySize", 32768) << ", "
+       << getFeatureValue(R, "LDSBankCount", 32) << "},\n";
   }
   OS << "};\n"
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";
@@ -450,19 +692,29 @@ static void emitAMDGPUSubArchNames(raw_ostream &OS, const RecordKeeper &RK,
       continue;
     SubArchEntry Entry;
     Entry.GPUName = E.Rec->getValueAsString("Name");
-    {
-      raw_svector_ostream SubArchOS(Entry.Suffix);
-      emitSubArchSuffix(SubArchOS, Entry.GPUName);
-    }
 
-    // A "gfxN-generic" target maps to the major-family subarch, so it takes the
-    // family triple name; a concrete GPU derives it from the ISA version.
     SmallString<16> TripleName;
     raw_svector_ostream TripleOS(TripleName);
-    if (isGenericTarget(E.Rec))
-      emitFamilySubArchTripleName(TripleOS, Entry.Suffix);
-    else
-      emitConcreteSubArchTripleName(TripleOS, E.Rec);
+
+    // An explicit subarch spelling supplies the enumerator suffix and triple
+    // name, rather than the name/ISA version.
+    if (std::optional<StringRef> Spelling = getSubArchSpelling(E.Rec)) {
+      raw_svector_ostream SubArchOS(Entry.Suffix);
+      emitSpellingSuffix(SubArchOS, *Spelling);
+      TripleOS << "amdgpu" << *Spelling;
+    } else {
+      {
+        raw_svector_ostream SubArchOS(Entry.Suffix);
+        emitSubArchSuffix(SubArchOS, Entry.GPUName);
+      }
+
+      // A "gfxN-generic" target maps to the major-family subarch, so it takes
+      // the family triple name; a concrete GPU derives it from the ISA version.
+      if (isGenericTarget(E.Rec))
+        emitFamilySubArchTripleName(TripleOS, Entry.Suffix);
+      else
+        emitConcreteSubArchTripleName(TripleOS, E.Rec);
+    }
     Entry.TripleNameOffset = Names.GetOrAddStringOffset(TripleName);
 
     Entries.push_back(std::move(Entry));
@@ -507,6 +759,8 @@ static void emitAMDGPUSubArchNames(raw_ostream &OS, const RecordKeeper &RK,
 }
 
 static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
+  validateAMDGPU(RK);
+
   OS << "// Autogenerated by AMDGPUTargetDefEmitter.cpp\n\n";
   // R600.td and AMDGPU.td are separate top-level files, so a run sees exactly
   // one family; the other family's sections emit nothing.
@@ -536,7 +790,18 @@ static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     StringToOffsetTable Names;
     std::string Tables;
     raw_string_ostream TablesOS(Tables);
-    emitAMDGPUTable(TablesOS, RK, Names);
+
+    // The frontend feature enum and per-GPU bitsets share the AMDGPU string
+    // pool (feature names live alongside GPU names).
+    std::vector<const Record *> Features = collectFrontendFeatures(RK);
+    DenseMap<const Record *, unsigned> FeatureIdx;
+    for (const auto &[Idx, F] : enumerate(Features))
+      FeatureIdx[F] = Idx;
+
+    std::vector<unsigned> FeatureOffsets =
+        emitAMDGPUFeatureEnum(TablesOS, Features, Names);
+    emitAMDGPUTable(TablesOS, RK, Names, FeatureIdx);
+    emitAMDGPUFeatureNames(TablesOS, FeatureOffsets);
     emitAMDGPUAliases(TablesOS, RK, Names);
     emitAMDGPUSubArchNames(TablesOS, RK, Names);
     if (!Tables.empty()) {

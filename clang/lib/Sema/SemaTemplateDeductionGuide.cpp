@@ -889,14 +889,15 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<TemplateArgument> DeducedArgs) {
 
   llvm::SmallBitVector ReferencedTemplateParams(TemplateParamsList->size());
-  SemaRef.MarkUsedTemplateParameters(
-      DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  SemaRef.MarkUsedTemplateParameters(DeducedArgs, /*OnlyDeduced=*/false,
+                                     TemplateParamsList->getDepth(),
+                                     ReferencedTemplateParams);
 
   auto MarkDefaultArgs = [&](auto *Param) {
     if (!Param->hasDefaultArgument())
       return;
     SemaRef.MarkUsedTemplateParameters(
-        Param->getDefaultArgument().getArgument(),
+        Param->getDefaultArgument().getArgument(), /*OnlyDeduced=*/false,
         TemplateParamsList->getDepth(), ReferencedTemplateParams);
   };
 
@@ -1593,7 +1594,7 @@ CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
   ID.AddPointer(Template);
   for (auto &T : ParamTypes)
     T.getCanonicalType().Profile(ID);
-  unsigned Hash = ID.ComputeHash();
+  unsigned Hash = ID.computeHash();
 
   auto Found = AggregateDeductionCandidates.find(Hash);
   if (Found != AggregateDeductionCandidates.end())
@@ -1606,6 +1607,7 @@ CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
       AggregateDeductionCandidates[Hash] = GD;
       return GD;
     }
+    return nullptr;
   }
 
   if (CXXRecordDecl *DefRecord =

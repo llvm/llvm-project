@@ -42,6 +42,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -233,6 +234,52 @@ std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
   L.range = halfOpenToRange(
       SM, CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(TokLen)));
   return L;
+}
+
+std::optional<LocatedSymbol>
+locateModuleReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
+                     llvm::StringRef MainFilePath) {
+  const SourceManager &SM = AST.getSourceManager();
+  const ASTContext &Context = AST.getASTContext();
+
+  const Module *ResultModule = nullptr;
+
+  for (const ImportDecl *Import : Context.local_imports()) {
+    const Module *Imported = Import->getImportedModule();
+    ArrayRef<SourceLocation> IdentifierLocs = Import->getIdentifierLocs();
+    if (!Imported || !Imported->isNamedModule() || IdentifierLocs.empty())
+      continue;
+
+    const SourceLocation NameBegin = SM.getSpellingLoc(IdentifierLocs.front());
+    // Imports are visited in source order; bail out once we pass the cursor.
+    if (SM.isBeforeInTranslationUnit(TouchedIdentifier.location(), NameBegin))
+      break;
+
+    const std::string FullName = Imported->getFullModuleName();
+    const SourceLocation NameEnd =
+        NameBegin.getLocWithOffset(FullName.size() - 1);
+
+    if (SM.isPointWithin(TouchedIdentifier.location(), NameBegin, NameEnd)) {
+      ResultModule = Imported;
+      break;
+    }
+  }
+
+  if (!ResultModule)
+    return std::nullopt;
+
+  const SourceLocation DefinitionLoc =
+      SM.getSpellingLoc(ResultModule->DefinitionLoc);
+  auto Definition = makeLocation(Context, DefinitionLoc, MainFilePath);
+
+  if (!Definition)
+    return std::nullopt;
+
+  LocatedSymbol Result;
+  Result.Name = ResultModule->getFullModuleName();
+  Result.PreferredDeclaration = *Definition;
+  Result.Definition = *Definition;
+  return Result;
 }
 
 // Treat #included files as symbols, to enable go-to-definition on them.
@@ -864,6 +911,11 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
       }
     }
   }
+
+  if (TouchedIdentifier)
+    if (auto Module =
+            locateModuleReferent(*TouchedIdentifier, AST, MainFilePath))
+      return {*std::move(Module)};
 
   ASTNodeKind NodeKind;
   auto ASTResults = locateASTReferent(*CurLoc, TouchedIdentifier, AST,
@@ -1844,8 +1896,9 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
-  // FIXME: Populate HI.detail the way we do in symbolToHierarchyItem?
+  HI.detail = printQualifiedName(ND);
   HI.kind = SK;
+  HI.tags = getSymbolTags(ND);
   HI.range = Range{sourceLocToPosition(SM, DeclRange->getBegin()),
                    sourceLocToPosition(SM, DeclRange->getEnd())};
   HI.selectionRange = Range{NameBegin, NameEnd};
@@ -1899,6 +1952,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   HI.detail = S.Scope.empty() ? std::string()
                               : S.Scope.drop_back(2).str(); // Trailing "::"
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo);
+  HI.tags = getSymbolTags(S);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
   // (https://github.com/clangd/clangd/issues/59).
@@ -1924,8 +1978,6 @@ symbolToCallHierarchyItem(const Symbol &S, PathRef TUPath) {
   if (!Result)
     return Result;
   Result->data = S.ID.str();
-  if (S.Flags & Symbol::Deprecated)
-    Result->tags.push_back(SymbolTag::Deprecated);
   return Result;
 }
 
@@ -2174,7 +2226,7 @@ static void unwrapFindType(
     return;
 
   // If there's a specific type alias, point at that rather than unwrapping.
-  if (const auto* TDT = T->getAs<TypedefType>())
+  if (const auto *TDT = T->getAs<TypedefType>())
     return Out.push_back(QualType(TDT, 0));
 
   // Pointers etc => pointee type.
@@ -2337,24 +2389,23 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
 
 std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
-  std::vector<TypeHierarchyItem> Results;
-  if (!Item.data.parents)
+  if (!Index || !Item.data.parents)
     return std::nullopt;
-  if (Item.data.parents->empty())
-    return Results;
   LookupRequest Req;
   llvm::DenseMap<SymbolID, const TypeHierarchyItem::ResolveParams *> IDToData;
   for (const auto &Parent : *Item.data.parents) {
     Req.IDs.insert(Parent.symbolID);
     IDToData[Parent.symbolID] = &Parent;
   }
+  std::vector<TypeHierarchyItem> Results;
   Index->lookup(Req, [&Item, &Results, &IDToData](const Symbol &S) {
     if (auto THI = symbolToTypeHierarchyItem(S, Item.uri.file())) {
       THI->data = *IDToData.lookup(S.ID);
       Results.emplace_back(std::move(*THI));
     }
   });
-  return Results;
+  return Results.empty() ? std::nullopt
+                         : std::make_optional(std::move(Results));
 }
 
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,

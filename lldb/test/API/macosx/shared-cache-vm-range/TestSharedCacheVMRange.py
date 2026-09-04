@@ -14,7 +14,7 @@ class SharedCacheVMRangeTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfOutOfTreeDebugserver  # debugserver returns shared_cache_size
     def test_shared_cache_vm_range(self):
         """Test that the shared cache VM range contains a known libc function"""

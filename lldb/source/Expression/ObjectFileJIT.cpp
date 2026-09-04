@@ -167,6 +167,12 @@ ArchSpec ObjectFileJIT::GetArchitecture() {
   return ArchSpec();
 }
 
+TargetSP ObjectFileJIT::GetTargetSP() {
+  if (ObjectFileJITDelegateSP delegate_sp = m_delegate_wp.lock())
+    return delegate_sp->GetTargetSP();
+  return nullptr;
+}
+
 bool ObjectFileJIT::SetLoadAddress(Target &target, lldb::addr_t value,
                                    bool value_is_offset) {
   size_t num_loaded_sections = 0;

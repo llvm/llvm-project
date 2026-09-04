@@ -534,6 +534,11 @@ public:
   /// Emit the specified global variable to the .s file.
   virtual void emitGlobalVariable(const GlobalVariable *GV);
 
+  /// Emit the specified global variable to the .s file, with an explicit
+  /// alignment granule applied to both address and size.
+  virtual void emitGlobalVariable(const GlobalVariable *GV,
+                                  MaybeAlign AlignmentGranule);
+
   /// Check to see if the specified global is a special global used by LLVM. If
   /// so, emit it and return true, otherwise do nothing and return false.
   bool emitSpecialLLVMGlobal(const GlobalVariable *GV);
@@ -1021,6 +1026,15 @@ protected:
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;
   }
+
+  /// Returns a optional minimum alignment that applies to both the address and
+  /// the allocation size of the global. This is used for systems like CHERI and
+  /// MTE that impose a minimum alignment, and require globals to be padded to
+  /// that alignment.
+  virtual MaybeAlign
+  getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
+    return std::nullopt;
+  };
 };
 
 LLVM_ABI void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,

@@ -13,11 +13,12 @@ module {
   // Same width: the cast carries no resize and is dropped entirely, so the
   // argument flows straight to the return.
   // CHECK-LABEL: llvm.func @cast_noop
-  // CHECK-SAME: (%[[ARG:.*]]: i32)
-  // CHECK-NEXT: llvm.return %[[ARG]] : i32
-  cir.func @cast_noop(%arg0: i32) -> !s32i {
-    %0 = cir.builtin_int_cast %arg0 : i32 -> !s32i
-    cir.return %0 : !s32i
+  // CHECK-NEXT: %[[VAL:.*]] = llvm.mlir.constant(42 : i32) : i32
+  // CHECK-NEXT: llvm.return %[[VAL]] : i32
+  cir.func @cast_noop() -> !s32i {
+    %0 = llvm.mlir.constant(42 : i32) : i32
+    %1 = cir.builtin_int_cast %0 : i32 -> !s32i
+    cir.return %1 : !s32i
   }
 
   // index (i64) down to a narrower CIR integer: truncation.
@@ -25,9 +26,10 @@ module {
   // CHECK-SAME: (%[[ARG:.*]]: i64)
   // CHECK-NEXT: %[[T:.*]] = llvm.trunc %[[ARG]] : i64 to i16
   // CHECK-NEXT: llvm.return %[[T]] : i16
-  cir.func @cast_trunc(%arg0: index) -> !s16i {
-    %0 = cir.builtin_int_cast %arg0 : index -> !s16i
-    cir.return %0 : !s16i
+  cir.func @cast_trunc(%arg0: !u64i) -> !s16i {
+    %0 = cir.builtin_int_cast %arg0 : !u64i -> index
+    %1 = cir.builtin_int_cast %0 : index -> !s16i
+    cir.return %1 : !s16i
   }
 
   // Signed CIR integer widened through index: sign extension. The trailing

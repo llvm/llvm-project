@@ -1986,8 +1986,11 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_GNU_template_template_param:
     return;
 
-  // Object members aren't globally visible.
+  // Object members aren't globally visible. Properties are accessed through
+  // their containing subprogram/type, not looked up globally by name, so
+  // they belong in the same category.
   case DW_TAG_member:
+  case DW_TAG_property:
     return;
 
   // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.

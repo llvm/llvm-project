@@ -1,6 +1,6 @@
 add_custom_target(libc_netinet_unittests)
 
-add_libc_unittest(
+add_libc_test(
   in_test
   SUITE
     libc_netinet_unittests
@@ -25,7 +25,7 @@ add_libc_unittest(
     libc.src.string.memcmp
 )
 
-add_libc_unittest(
+add_libc_test(
   udp_test
   SUITE
     libc_netinet_unittests

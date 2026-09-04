@@ -2378,6 +2378,55 @@ void testExplicitThreadPools(void) {
   mlirLlvmThreadPoolDestroy(threadPool);
 }
 
+void testContextTransientScope(void) {
+  MlirContext ctx = mlirContextCreate();
+  fprintf(stderr, "@test_context_transient_scope\n");
+
+  // CHECK-LABEL: @test_context_transient_scope
+  // CHECK: is_in_transient_scope before: 0
+  fprintf(stderr, "is_in_transient_scope before: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType i32Type =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+
+  mlirContextBeginTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope during: 1
+  fprintf(stderr, "is_in_transient_scope during: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType transientVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  MlirAttribute transientStrAttr =
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("transient_str"));
+
+  // CHECK: transient vector valid: 1
+  fprintf(stderr, "transient vector valid: %d\n",
+          !mlirTypeIsNull(transientVectorType));
+  // CHECK: transient str attr valid: 1
+  fprintf(stderr, "transient str attr valid: %d\n",
+          !mlirAttributeIsNull(transientStrAttr));
+
+  mlirContextEndTransientScope(ctx);
+
+  // CHECK: is_in_transient_scope after: 0
+  fprintf(stderr, "is_in_transient_scope after: %d\n",
+          mlirContextIsInTransientScope(ctx));
+
+  MlirType postResetI32 =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("i32"));
+  // CHECK: base i32 equal: 1
+  fprintf(stderr, "base i32 equal: %d\n", mlirTypeEqual(i32Type, postResetI32));
+
+  MlirType newVectorType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("vector<4xi32>"));
+  // CHECK: new vector valid: 1
+  fprintf(stderr, "new vector valid: %d\n", !mlirTypeIsNull(newVectorType));
+
+  mlirContextDestroy(ctx);
+}
+
 void testLocation(void) {
   MlirContext ctx = mlirContextCreate();
   fprintf(stderr, "@test_location\n");
@@ -2543,6 +2592,28 @@ static MlirSpeculatability conditionallySpeculatableCallback(MlirOperation op,
   return MlirSpeculatabilityRecursivelySpeculatable;
 }
 
+typedef struct {
+  intptr_t callbackCount;
+  intptr_t effectCount;
+} MemoryEffectsCallbackData;
+
+static void memoryEffectsCallback(intptr_t numEffects,
+                                  MlirMemoryEffectInstance *effects,
+                                  void *userData) {
+  MemoryEffectsCallbackData *data = (MemoryEffectsCallbackData *)userData;
+  ++data->callbackCount;
+  data->effectCount += numEffects;
+  for (intptr_t i = 0; i < numEffects; ++i) {
+    MlirMemoryEffectInstance clone = mlirMemoryEffectInstanceClone(effects[i]);
+    assert(clone.ptr && "expected a cloned memory effect instance");
+    assert(mlirMemoryEffectInstanceGetEffect(clone).ptr &&
+           "expected a memory effect");
+    assert(mlirMemoryEffectInstanceGetResource(clone).ptr &&
+           "expected a side effect resource");
+    mlirMemoryEffectInstanceDestroy(clone);
+  }
+}
+
 int testInterfaces(MlirContext ctx) {
   // CHECK-LABEL: @testInterfaces
   fprintf(stderr, "@testInterfaces\n");
@@ -2590,7 +2661,8 @@ int testInterfaces(MlirContext ctx) {
 
   MlirOperationState storeState = mlirOperationStateGet(storeName, loc);
   MlirValue constantResult = mlirOperationGetResult(constantOp, 0);
-  mlirOperationStateAddOperands(&storeState, 1, &constantResult);
+  MlirValue storeOperands[] = {constantResult, constantResult};
+  mlirOperationStateAddOperands(&storeState, 2, storeOperands);
   MlirOperation storeOp = mlirOperationCreate(&storeState);
   if (mlirOperationImplementsInterface(storeOp, condSpecTypeID)) {
     fprintf(stderr, "ERROR: Expected memref.store instance to not implement "
@@ -2621,6 +2693,23 @@ int testInterfaces(MlirContext ctx) {
   // CHECK: memref.store speculatability: 2
   // CHECK: callback count: 1
 
+  MlirTypeID memoryEffectsTypeID = mlirMemoryEffectsOpInterfaceTypeID();
+  if (!mlirOperationImplementsInterface(storeOp, memoryEffectsTypeID)) {
+    fprintf(
+        stderr,
+        "ERROR: Expected memref.store to implement MemoryEffectsOpInterface\n");
+    return 6;
+  }
+  MemoryEffectsCallbackData memoryEffectsData = {0};
+  mlirMemoryEffectsOpInterfaceGetEffects(storeOp, memoryEffectsCallback,
+                                         &memoryEffectsData);
+  fprintf(stderr, "memory effects callback count: %" PRIdPTR "\n",
+          memoryEffectsData.callbackCount);
+  fprintf(stderr, "memory effects count: %" PRIdPTR "\n",
+          memoryEffectsData.effectCount);
+  // CHECK: memory effects callback count: 1
+  // CHECK: memory effects count: 1
+
   MlirMemoryEffect allocate = mlirMemoryEffectsAllocateGet();
   MlirMemoryEffect free = mlirMemoryEffectsFreeGet();
   MlirMemoryEffect read = mlirMemoryEffectsReadGet();
@@ -2631,6 +2720,27 @@ int testInterfaces(MlirContext ctx) {
     fprintf(stderr, "ERROR: Expected memory effect components\n");
     return 6;
   }
+
+  MlirTypeID effectIDs[] = {
+      mlirMemoryEffectGetEffectID(allocate),
+      mlirMemoryEffectGetEffectID(free),
+      mlirMemoryEffectGetEffectID(read),
+      mlirMemoryEffectGetEffectID(write),
+  };
+  for (intptr_t i = 0; i < 4; ++i) {
+    if (mlirTypeIDIsNull(effectIDs[i])) {
+      fprintf(stderr, "ERROR: Expected a non-null memory effect ID\n");
+      return 6;
+    }
+    for (intptr_t j = 0; j < i; ++j) {
+      if (mlirTypeIDEqual(effectIDs[i], effectIDs[j])) {
+        fprintf(stderr, "ERROR: Expected distinct memory effect IDs\n");
+        return 6;
+      }
+    }
+  }
+  fprintf(stderr, "memory effect IDs are distinct\n");
+  // CHECK: memory effect IDs are distinct
 
   MlirAttribute nullParameters = {NULL};
   MlirOpOperand opOperand = mlirOperationGetOpOperand(storeOp, 0);
@@ -2651,16 +2761,38 @@ int testInterfaces(MlirContext ctx) {
       mlirMemoryEffectInstanceCreateForSymbol(read, symbol, zero, 4, true,
                                               defaultResource),
   };
+  MlirMemoryEffect expectedEffects[] = {allocate, read, write, free, read};
+  MlirValue expectedValues[] = {
+      {NULL}, constantResult, constantResult, blockArgument, {NULL}};
   for (intptr_t i = 0; i < 5; ++i) {
     if (!instances[i].ptr) {
       fprintf(stderr, "ERROR: Expected memory effect instance\n");
       return 7;
     }
-    mlirMemoryEffectInstanceDestroy(instances[i]);
+    if (!mlirTypeIDEqual(mlirMemoryEffectGetEffectID(
+                             mlirMemoryEffectInstanceGetEffect(instances[i])),
+                         mlirMemoryEffectGetEffectID(expectedEffects[i])) ||
+        mlirMemoryEffectInstanceGetStage(instances[i]) != i ||
+        mlirMemoryEffectInstanceGetEffectOnFullRegion(instances[i]) !=
+            (i == 4) ||
+        !mlirValueEqual(mlirMemoryEffectInstanceGetValue(instances[i]),
+                        expectedValues[i])) {
+      fprintf(stderr, "ERROR: Unexpected memory effect instance properties\n");
+      return 7;
+    }
   }
+  if (!mlirAttributeEqual(mlirMemoryEffectInstanceGetSymbolRef(instances[4]),
+                          symbol) ||
+      !mlirAttributeEqual(mlirMemoryEffectInstanceGetParameters(instances[4]),
+                          zero)) {
+    fprintf(stderr, "ERROR: Unexpected symbol memory effect properties\n");
+    return 7;
+  }
+  for (intptr_t i = 0; i < 5; ++i)
+    mlirMemoryEffectInstanceDestroy(instances[i]);
   mlirBlockDestroy(block);
-  fprintf(stderr, "memory effect instances constructed\n");
-  // CHECK: memory effect instances constructed
+  fprintf(stderr, "memory effect instance properties verified\n");
+  // CHECK: memory effect instance properties verified
 
   mlirOperationDestroy(storeOp);
   mlirOperationDestroy(constantOp);
@@ -2943,6 +3075,278 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+// Replace-uses filter that accepts only uses whose owner is an `arith.addi`.
+static bool useOwnerIsAddi(MlirOpOperand opOperand, void *userData) {
+  (void)userData;
+  MlirStringRef name =
+      mlirIdentifierStr(mlirOperationGetName(mlirOpOperandGetOwner(opOperand)));
+  return mlirStringRefEqual(name, mlirStringRefCreateFromCString("arith.addi"));
+}
+
+// User data threaded through mlirValueReplaceUsesWithIf below.
+struct ReplaceUsesFilterData {
+  // Only uses at this operand number are replaced.
+  intptr_t operandNumber;
+  // Every visited use is expected to be a use of this value.
+  MlirValue expectedValue;
+  // Number of times the filter has been invoked.
+  int numCalls;
+};
+
+// Replace-uses filter that accepts a single operand number, and checks along
+// the way that the use it is handed carries the value being replaced.
+static bool useIsAtOperandNumber(MlirOpOperand opOperand, void *userData) {
+  struct ReplaceUsesFilterData *data = (struct ReplaceUsesFilterData *)userData;
+  assert(mlirValueEqual(mlirOpOperandGetValue(opOperand), data->expectedValue));
+  data->numCalls++;
+  return mlirOpOperandGetOperandNumber(opOperand) == data->operandNumber;
+}
+
+int testReplaceUsesWithIf(MlirContext ctx) {
+  fprintf(stderr, "@testReplaceUsesWithIf\n");
+  // CHECK-LABEL: @testReplaceUsesWithIf
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32, %arg1: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                          "  %1 = arith.muli %arg0, %arg0 : i32\n"
+                          "  %2 = arith.addi %0, %1 : i32\n"
+                          "  %3 = arith.muli %arg1, %arg1 : i32\n"
+                          "  return %2 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirValue arg0 = mlirBlockGetArgument(funcBody, 0);
+  MlirValue arg1 = mlirBlockGetArgument(funcBody, 1);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation mulOp = mlirOperationGetNextInBlock(addOp);
+
+  // Replace arg0 with arg1, but only in arith.addi ops.
+  mlirValueReplaceUsesWithIf(arg0, arg1, useOwnerIsAddi, NULL);
+
+  // The first addi now uses arg1 for both operands.
+  assert(mlirValueEqual(mlirOperationGetOperand(addOp, 0), arg1));
+  assert(mlirValueEqual(mlirOperationGetOperand(addOp, 1), arg1));
+
+  // The muli is not an addi, so its operands are untouched (still arg0).
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 0), arg0));
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 1), arg0));
+
+  // The filter can also discriminate between the individual uses inside a
+  // single operation: arg0 is now only used by the muli, twice, and only the
+  // use at operand number 1 is replaced. `userData` is threaded through to the
+  // callback, which records how many uses it saw.
+  struct ReplaceUsesFilterData data = {/*operandNumber=*/1,
+                                       /*expectedValue=*/arg0,
+                                       /*numCalls=*/0};
+  mlirValueReplaceUsesWithIf(arg0, arg1, useIsAtOperandNumber, &data);
+  assert(data.numCalls == 2);
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 0), arg0));
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 1), arg1));
+
+  // Replacing the uses of a value that has none never invokes the filter.
+  MlirOperation unusedOp = mlirOperationGetNextInBlock(
+      mlirOperationGetNextInBlock(mulOp)); // %3 = muli %arg1, %arg1
+  MlirValue unused = mlirOperationGetResult(unusedOp, 0);
+  data.expectedValue = unused;
+  data.numCalls = 0;
+  mlirValueReplaceUsesWithIf(unused, arg1, useIsAtOperandNumber, &data);
+  assert(data.numCalls == 0);
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testReplaceUsesWithIf: PASSED
+  fprintf(stderr, "testReplaceUsesWithIf: PASSED\n");
+  return 0;
+}
+
+int testOperationEquivalence(MlirContext ctx) {
+  fprintf(stderr, "@testOperationEquivalence\n");
+  // CHECK-LABEL: @testOperationEquivalence
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                          "  %0 = arith.constant 42 : i32\n"
+                          "  %1 = arith.constant 42 : i32\n"
+                          "  %2 = arith.constant 7 : i32\n"
+                          "  %3 = arith.subi %0, %2 : i32\n"
+                          "  %4 = arith.subi %0, %2 : i32\n"
+                          "  %5 = arith.subi %2, %0 : i32\n"
+                          "  %6 = arith.subi %0, %2 {dialect.discardable} : "
+                          "i32\n"
+                          "  %7 = arith.addi %0, %2 : i32\n"
+                          "  %8 = arith.addi %2, %0 : i32\n"
+                          "  return %0 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+
+  MlirOperation c42a = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation c42b = mlirOperationGetNextInBlock(c42a);
+  MlirOperation c7 = mlirOperationGetNextInBlock(c42b);
+  MlirOperation sub3 = mlirOperationGetNextInBlock(c7);
+  MlirOperation sub4 = mlirOperationGetNextInBlock(sub3);
+  MlirOperation sub5 = mlirOperationGetNextInBlock(sub4);
+  MlirOperation sub6 = mlirOperationGetNextInBlock(sub5);
+  MlirOperation add7 = mlirOperationGetNextInBlock(sub6);
+  MlirOperation add8 = mlirOperationGetNextInBlock(add7);
+
+  // Two identical constants are structurally equivalent when locations are
+  // ignored, even though their result SSA values and source locations differ.
+  assert(mlirOperationIsStructurallyEquivalent(
+      c42a, c42b, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // Without ignoring locations they differ, since they sit on distinct lines.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      c42a, c42b, MLIR_OPERATION_EQUIVALENCE_NONE));
+
+  // A constant with a different value is not equivalent.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      c42a, c7, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // Equivalence is reflexive.
+  assert(mlirOperationIsStructurallyEquivalent(
+      c42a, c42a, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // `%3 = subi %0, %2` and `%4 = subi %0, %2` use the exact same operands, so
+  // they are equivalent.
+  assert(mlirOperationIsStructurallyEquivalent(
+      sub3, sub4, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // `%5 = subi %2, %0` is not equivalent to `%3 = subi %0, %2`: `subi` is not
+  // commutative, so operands are compared pairwise, and the very first pair
+  // (`%0` = 42 vs `%2` = 7) already mismatches. See the `addi` pair below for
+  // the commutative path.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      sub3, sub5, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // A constant and a subtraction are different operations.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      c42a, sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // `%6 = subi %0, %2 {dialect.discardable}` carries a discardable attribute
+  // that `%3 = subi %0, %2` does not, so the two differ unless discardable
+  // attributes are ignored as well. This also exercises OR-ing flags together.
+  assert(!mlirOperationIsStructurallyEquivalent(
+      sub3, sub6, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(mlirOperationIsStructurallyEquivalent(
+      sub3, sub6,
+      MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+          MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS));
+
+  // `%7 = addi %0, %2` and `%8 = addi %2, %0` have swapped operands, but `addi`
+  // is commutative, so they are equivalent through the commutative path and
+  // only differ once commutativity is explicitly ignored.
+  assert(mlirOperationIsStructurallyEquivalent(
+      add7, add8, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(!mlirOperationIsStructurallyEquivalent(
+      add7, add8,
+      MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+          MLIR_OPERATION_EQUIVALENCE_IGNORE_COMMUTATIVITY));
+
+  // The `value` of arith.constant is an inherent attribute held in the
+  // operation's properties, so ignoring properties makes constants with
+  // different values equivalent.
+  assert(mlirOperationIsStructurallyEquivalent(
+      c42a, c7,
+      MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+          MLIR_OPERATION_EQUIVALENCE_IGNORE_PROPERTIES));
+
+  // The structural hash pairs with the equivalence above: operations that are
+  // equivalent under a set of flags hash equally under the same flags.
+  assert(mlirOperationStructuralHashValue(
+             c42a, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) ==
+         mlirOperationStructuralHashValue(
+             c42b, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(mlirOperationStructuralHashValue(
+             sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) ==
+         mlirOperationStructuralHashValue(
+             sub4, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+  assert(mlirOperationStructuralHashValue(
+             sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+                       MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS) ==
+         mlirOperationStructuralHashValue(
+             sub6, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS |
+                       MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS));
+  // Commutative operands are folded into the hash in an order-insensitive way,
+  // matching the commutative equivalence above.
+  assert(mlirOperationStructuralHashValue(
+             add7, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) ==
+         mlirOperationStructuralHashValue(
+             add8, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // The flags are threaded through to the hash: locations and discardable
+  // attributes are hashed unless the corresponding flag is set. Hash
+  // inequality is not part of the contract, but these inputs do differ.
+  assert(
+      mlirOperationStructuralHashValue(c42a, MLIR_OPERATION_EQUIVALENCE_NONE) !=
+      mlirOperationStructuralHashValue(c42b, MLIR_OPERATION_EQUIVALENCE_NONE));
+  assert(mlirOperationStructuralHashValue(
+             sub3, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS) !=
+         mlirOperationStructuralHashValue(
+             sub6, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  mlirModuleDestroy(module);
+
+  // Operands defined *inside* the compared regions need not be the same SSA
+  // values: recursing into the regions marks the two inner constants
+  // equivalent, and the `addi` operands are then matched through that mapping.
+  const char *regionModuleStr = "func.func @g() {\n"
+                                "  %r0 = scf.execute_region -> i32 {\n"
+                                "    %c = arith.constant 1 : i32\n"
+                                "    %d = arith.addi %c, %c : i32\n"
+                                "    scf.yield %d : i32\n"
+                                "  }\n"
+                                "  %r1 = scf.execute_region -> i32 {\n"
+                                "    %c = arith.constant 1 : i32\n"
+                                "    %d = arith.addi %c, %c : i32\n"
+                                "    scf.yield %d : i32\n"
+                                "  }\n"
+                                "  return\n"
+                                "}\n";
+  MlirModule regionModule = mlirModuleCreateParse(
+      ctx, mlirStringRefCreateFromCString(regionModuleStr));
+  assert(!mlirModuleIsNull(regionModule));
+  MlirBlock regionFuncBody = mlirRegionGetFirstBlock(mlirOperationGetRegion(
+      mlirBlockGetFirstOperation(mlirModuleGetBody(regionModule)), 0));
+  MlirOperation exec0 = mlirBlockGetFirstOperation(regionFuncBody);
+  MlirOperation exec1 = mlirOperationGetNextInBlock(exec0);
+  assert(mlirOperationIsStructurallyEquivalent(
+      exec0, exec1, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  // The nested `addi` operations compared on their own are *not* equivalent:
+  // the value mapping starts out empty, so operands defined outside the
+  // compared operation must be the exact same SSA values.
+  MlirBlock exec0Body =
+      mlirRegionGetFirstBlock(mlirOperationGetRegion(exec0, 0));
+  MlirBlock exec1Body =
+      mlirRegionGetFirstBlock(mlirOperationGetRegion(exec1, 0));
+  MlirOperation innerAdd0 =
+      mlirOperationGetNextInBlock(mlirBlockGetFirstOperation(exec0Body));
+  MlirOperation innerAdd1 =
+      mlirOperationGetNextInBlock(mlirBlockGetFirstOperation(exec1Body));
+  assert(!mlirOperationIsStructurallyEquivalent(
+      innerAdd0, innerAdd1, MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS));
+
+  mlirModuleDestroy(regionModule);
+
+  // CHECK: testOperationEquivalence: PASSED
+  fprintf(stderr, "testOperationEquivalence: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2987,6 +3391,7 @@ int main(void) {
     return 16;
 
   testExplicitThreadPools();
+  testContextTransientScope();
   testLocation();
   testDiagnostics();
 
@@ -2998,6 +3403,10 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testReplaceUsesWithIf(ctx))
+    return 21;
+  if (testOperationEquivalence(ctx))
+    return 22;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

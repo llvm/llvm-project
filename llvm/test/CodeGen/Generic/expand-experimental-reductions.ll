@@ -299,6 +299,36 @@ entry:
   ret double %r
 }
 
+define double @fmaximum_num_f64(<4 x double> %vec) {
+; CHECK-LABEL: @fmaximum_num_f64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x double> [[VEC:%.*]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> [[VEC]], <4 x double> [[RDX_SHUF]])
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x double> [[RDX_MINMAX]], <4 x double> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x double> @llvm.maximumnum.v4f64(<4 x double> [[RDX_MINMAX]], <4 x double> [[RDX_SHUF1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x double> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    ret double [[TMP0]]
+;
+entry:
+  %r = call double @llvm.vector.reduce.fmaximumnum.v4f64(<4 x double> %vec)
+  ret double %r
+}
+
+define double @fminimum_num_f64(<4 x double> %vec) {
+; CHECK-LABEL: @fminimum_num_f64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x double> [[VEC:%.*]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> [[VEC]], <4 x double> [[RDX_SHUF]])
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x double> [[RDX_MINMAX]], <4 x double> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x double> @llvm.minimumnum.v4f64(<4 x double> [[RDX_MINMAX]], <4 x double> [[RDX_SHUF1]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x double> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    ret double [[TMP0]]
+;
+entry:
+  %r = call double @llvm.vector.reduce.fminimumnum.v4f64(<4 x double> %vec)
+  ret double %r
+}
+
 ; FIXME: Why is this not expanded?
 
 ; Test when the vector size is not power of two.

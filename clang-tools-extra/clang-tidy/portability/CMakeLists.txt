@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyPortabilityModule STATIC
+  AvoidPragmaCommentCheck.cpp
   AvoidPragmaOnceCheck.cpp
   NoAssemblerCheck.cpp
   PortabilityTidyModule.cpp

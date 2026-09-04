@@ -189,7 +189,7 @@ const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
 static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
                                         const EHPersonality &personality) {
   // Create the personality function type: i32 (...)
-  mlir::Type i32Ty = cgm.getBuilder().getI32Type();
+  mlir::Type i32Ty = cgm.getBuilder().getSInt32Ty();
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
@@ -387,7 +387,7 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
   cir::InitCatchKind kind;
-  bool shouldInitFromExnDirectly;
+  bool shouldInitFromExnDirectly = false;
 
   // If we're catching by reference, we can just cast the object
   // pointer to the appropriate pointer.

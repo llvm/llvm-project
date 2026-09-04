@@ -1,0 +1,172 @@
+// RUN: cir-opt %s --cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+!u16i = !cir.int<u, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+!rec_Plain = !cir.struct<"Plain" {data !s32i, data !s32i}>
+!rec_Trail =
+    !cir.struct<"Trail" {data !s32i, data !u8i, pad !cir.array<!u8i x 3>}>
+!rec_MultiPad = !cir.struct<"MultiPad" {data !u16i, pad !u8i, pad !u8i}>
+!rec_Interior =
+    !cir.struct<"Interior" {data !u8i, pad !cir.array<!u8i x 3>, data !s32i}>
+!rec_TailEmpty = !cir.struct<"TailEmpty" {data !u8i, empty !u8i}>
+!rec_Packed = !cir.struct<"Packed" packed {data !u8i, data !s32i, pad !u8i}>
+!rec_AllPad = !cir.struct<"AllPad" {pad !u8i}>
+!rec_InteriorPacked =
+    !cir.struct<"InteriorPacked" packed {data !u8i, pad !cir.array<!u8i x 3>,
+                                        data !s32i}>
+!rec_Nest =
+    !cir.struct<"Nest" {data !rec_Trail, data !u8i, pad !cir.array<!u8i x 3>}>
+!rec_AlignasTail =
+    !cir.struct<"AlignasTail" {data !s8i, pad !cir.array<!u8i x 7>, data !s32i,
+                               pad !cir.array<!u8i x 4>}>
+!rec_TailZw =
+    !cir.struct<"TailZw" {data !s8i, pad !cir.array<!u8i x 3>,
+                          empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0,
+                                                                  unnamed>]>}>
+!rec_ZwAlign =
+    !cir.struct<"ZwAlign" {data !s8i,
+                           empty !cir.bitfield<[#cir.bitfield_decl<!s64i, 0,
+                                                                    unnamed>]>,
+                           data !s8i}>
+!rec_SpanMixed =
+    !cir.struct<"SpanMixed" {data !u8i, pad !cir.array<!u8i x 3>, empty !u8i,
+                             pad !cir.array<!u8i x 3>}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu",
+                   dlti.dl_spec = #dlti.dl_spec<>} {
+  // A record with no pad member has no tail padding to skip.
+  // CHECK-LABEL: llvm.func @plain
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(8 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @plain(%arg0: !cir.ptr<!rec_Plain>, %arg1: !cir.ptr<!rec_Plain>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_Plain>
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @trail
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(5 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @trail(%arg0: !cir.ptr<!rec_Trail>, %arg1: !cir.ptr<!rec_Trail>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_Trail>
+    cir.return
+  }
+
+  // Every member of the trailing run drops, not only the last one.
+  // CHECK-LABEL: llvm.func @multi_pad
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @multi_pad(%arg0: !cir.ptr<!rec_MultiPad>,
+                      %arg1: !cir.ptr<!rec_MultiPad>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_MultiPad>
+    cir.return
+  }
+
+  // Padding before a data member is not tail padding, so nothing drops.
+  // CHECK-LABEL: llvm.func @interior_pad
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(8 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @interior_pad(%arg0: !cir.ptr<!rec_Interior>,
+                         %arg1: !cir.ptr<!rec_Interior>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_Interior>
+    cir.return
+  }
+
+  // An empty member is declared storage a derived class may not reuse, so it
+  // stays inside the data size.
+  // CHECK-LABEL: llvm.func @tail_empty
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @tail_empty(%arg0: !cir.ptr<!rec_TailEmpty>,
+                       %arg1: !cir.ptr<!rec_TailEmpty>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_TailEmpty>
+    cir.return
+  }
+
+  // A packed record sums its members at alignment one.
+  // CHECK-LABEL: llvm.func @packed
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(5 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @packed(%arg0: !cir.ptr<!rec_Packed>, %arg1: !cir.ptr<!rec_Packed>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_Packed>
+    cir.return
+  }
+
+  // An empty C++ class lays out as one padding byte and has no data at all.
+  // CHECK-LABEL: llvm.func @all_pad
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @all_pad(%arg0: !cir.ptr<!rec_AllPad>,
+                    %arg1: !cir.ptr<!rec_AllPad>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_AllPad>
+    cir.return
+  }
+
+  // Interior padding again, packed so that no realignment refills the hole.
+  // Dropping the pad here would change the answer.
+  // CHECK-LABEL: llvm.func @interior_pad_packed
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(8 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @interior_pad_packed(%arg0: !cir.ptr<!rec_InteriorPacked>,
+                                %arg1: !cir.ptr<!rec_InteriorPacked>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_InteriorPacked>
+    cir.return
+  }
+
+  // Only the outermost object's tail padding is skippable, so a record member
+  // contributes its full size.
+  // CHECK-LABEL: llvm.func @nested
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(9 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @nested(%arg0: !cir.ptr<!rec_Nest>, %arg1: !cir.ptr<!rec_Nest>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_Nest>
+    cir.return
+  }
+
+  // Interior and trailing padding together: the run stops at the data member.
+  // CHECK-LABEL: llvm.func @alignas_tail
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(12 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @alignas_tail(%arg0: !cir.ptr<!rec_AlignasTail>,
+                         %arg1: !cir.ptr<!rec_AlignasTail>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_AlignasTail>
+    cir.return
+  }
+
+  // A zero-width bit-field holds no storage, so it neither ends the trailing
+  // run nor keeps the padding ahead of it inside the data size.
+  // CHECK-LABEL: llvm.func @tail_zero_width
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @tail_zero_width(%arg0: !cir.ptr<!rec_TailZw>,
+                            %arg1: !cir.ptr<!rec_TailZw>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_TailZw>
+    cir.return
+  }
+
+  // Nor does it lend the record its declared type's alignment, which would
+  // otherwise push the member after it up to offset eight.
+  // CHECK-LABEL: llvm.func @zero_width_align
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @zero_width_align(%arg0: !cir.ptr<!rec_ZwAlign>,
+                             %arg1: !cir.ptr<!rec_ZwAlign>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_ZwAlign>
+    cir.return
+  }
+
+  // The run stops at the empty member: the pad after it drops, the pad
+  // before it does not.
+  // CHECK-LABEL: llvm.func @span_mixed
+  // CHECK:         %[[N:.*]] = llvm.mlir.constant(5 : i64) : i64
+  // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])
+  cir.func @span_mixed(%arg0: !cir.ptr<!rec_SpanMixed>,
+                       %arg1: !cir.ptr<!rec_SpanMixed>) {
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!rec_SpanMixed>
+    cir.return
+  }
+}

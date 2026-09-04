@@ -32,17 +32,21 @@ void f() {
   {
     using C = std::set<int, BadCompare>;
     C s;
+    (void)s;
   }
   {
     using C = std::multiset<long, BadCompare>;
     C s;
+    (void)s;
   }
   {
     using C = std::map<int, int, BadCompare>;
     C s;
+    (void)s;
   }
   {
     using C = std::multimap<long, int, BadCompare>;
     C s;
+    (void)s;
   }
 }

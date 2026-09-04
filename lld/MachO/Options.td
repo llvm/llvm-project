@@ -78,6 +78,9 @@ def no_deduplicate_strings: Flag<["--"], "no-deduplicate-strings">,
 def dead_strip_duplicates: Flag<["--"], "dead-strip-duplicates">,
     HelpText<"Do not error on duplicate symbols that will be dead stripped.">,
     Group<grp_lld>;
+defm strip_swift_force_load: BB<"strip-swift-force-load",
+  "Strip the swift FORCE_LOAD sections containing fixups",
+  "Do not strip the the swift FORCE_LOAD sections (default)">, Group<grp_lld>;
 def print_dylib_search: Flag<["--"], "print-dylib-search">,
     HelpText<"Print which paths lld searched when trying to find dylibs">,
     Group<grp_lld>;

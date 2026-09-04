@@ -25,14 +25,14 @@ int main(int argc, char** argv) {
 
   // {std,ranges}::copy_n(normal container)
   {
-    auto bm = []<class Container>(std::string name, auto copy_backward) {
-      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) {
+    auto bm = []<class InputContainer, class OutputContainer>(std::string name, auto copy_backward) {
+      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const n = st.range(0);
-        using ValueType     = typename Container::value_type;
-        Container c;
+        using ValueType     = typename InputContainer::value_type;
+        InputContainer c;
         std::generate_n(std::back_inserter(c), n, [] { return Generate<ValueType>::random(); });
 
-        std::vector<ValueType> out(n);
+        OutputContainer out(n);
 
         for ([[maybe_unused]] auto _ : st) {
           benchmark::DoNotOptimize(c);
@@ -42,15 +42,19 @@ int main(int argc, char** argv) {
         }
       })->Range(8, 1 << 20);
     };
-    bm.operator()<std::vector<int>>("std::copy_backward(vector<int>)", std_copy_backward);
-    bm.operator()<std::deque<int>>("std::copy_backward(deque<int>)", std_copy_backward);
-    bm.operator()<std::list<int>>("std::copy_backward(list<int>)", std_copy_backward);
+    // clang-format off
+    bm.operator()<std::vector<int>, std::vector<int>>("std::copy_backward(vector<int>, vector<int>::iterator)", std_copy_backward);
+    bm.operator()<std::vector<int>, std::deque<int>>("std::copy_backward(vector<int>, deque<int>::iterator)", std_copy_backward);
+    bm.operator()<std::deque<int>, std::vector<int>>("std::copy_backward(deque<int>, vector<int>::iterator)", std_copy_backward);
+    bm.operator()<std::deque<int>, std::deque<int>>("std::copy_backward(deque<int>, deque<int>::iterator)", std_copy_backward);
+    bm.operator()<std::list<int>, std::vector<int>>("std::copy_backward(list<int>, vector<int>::iterator)", std_copy_backward);
+    // clang-format on
   }
 
   // {std,ranges}::copy_n(vector<bool>)
   {
     auto bm = []<bool Aligned>(std::string name, auto copy_backward) {
-      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) {
+      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const n = st.range(0);
         std::vector<bool> in(n, true);
         std::vector<bool> out(Aligned ? n : n + 8);
@@ -66,8 +70,8 @@ int main(int argc, char** argv) {
         }
       })->Range(64, 1 << 20);
     };
-    bm.operator()<true>("std::copy_backward(vector<bool>) (aligned)", std_copy_backward);
-    bm.operator()<false>("std::copy_backward(vector<bool>) (unaligned)", std_copy_backward);
+    bm.operator()<true>("std::copy_backward(vector<bool>, vector<bool>::iterator) (aligned)", std_copy_backward);
+    bm.operator()<false>("std::copy_backward(vector<bool>, vector<bool>::iterator) (unaligned)", std_copy_backward);
   }
 
   benchmark::Initialize(&argc, argv);

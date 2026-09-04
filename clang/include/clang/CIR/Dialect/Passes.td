@@ -260,6 +260,10 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
              clEnumValN(llvm::abi::X86AVXABILevel::AVX, "avx", "AVX"),
              clEnumValN(llvm::abi::X86AVXABILevel::AVX512, "avx512", "AVX512")
            )}]>,
+    Option<"allowsX86TargetAttrAvx", "x86-target-attr-avx", "bool",
+           /*default=*/"true",
+           "Let a function's own target features raise its AVX ABI level "
+           "above x86-avx-abi-level">,
   ];
 }
 

@@ -14,7 +14,6 @@
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;

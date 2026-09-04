@@ -21,7 +21,7 @@ entry:
   ret void
 }
 
-; This is a dummy dlmalloc implemenation only to make compiler pass, because an
+; This is a dummy dlmalloc implementation only to make compiler pass, because an
 ; alias (malloc) has to point an actual definition.
 define ptr @dlmalloc(i32) {
   %p = inttoptr i32 0 to ptr

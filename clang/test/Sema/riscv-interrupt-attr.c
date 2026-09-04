@@ -42,7 +42,10 @@ struct a test __attribute__((interrupt)); // expected-warning {{'interrupt' attr
 __attribute__((interrupt)) int foo3(void) {return 0;} // expected-warning {{RISC-V 'interrupt' attribute only applies to functions that have a 'void' return type}}
 __attribute__((interrupt())) void foo5(int a) {} // expected-warning {{RISC-V 'interrupt' attribute only applies to functions that have no parameters}}
 
-__attribute__((interrupt("machine", "supervisor", "machine"))) void foo15(void) {} // expected-error {{'interrupt' attribute takes no more than 2 arguments}}
+__attribute__((interrupt("machine", "supervisor", "machine"))) void foo15(void) {} // expected-warning {{RISC-V 'interrupt' attribute type 'machine' specified more than once}} \
+  // expected-error {{RISC-V 'interrupt' attribute contains invalid combination of interrupt types}}
+
+__attribute__((interrupt("machine", "machine", "machine", "machine"))) void foo_too_many_args(void) {} // expected-error {{'interrupt' attribute takes no more than 3 arguments}}
 
 __attribute__((interrupt(42))) void foo0(void) {} // expected-error {{expected string literal as argument of 'interrupt' attribute}}
 __attribute__((interrupt("machine", 1))) void foo2(void) {} // expected-error {{expected string literal as argument of 'interrupt' attribute}}
@@ -66,8 +69,10 @@ __attribute__((interrupt("machine"))) void foo12(void) {}
 __attribute__((interrupt())) void foo13(void) {}
 __attribute__((interrupt)) void foo14(void) {}
 
-__attribute__((interrupt("machine", "machine"))) void foo_machine_twice(void) {}
-__attribute__((interrupt("supervisor", "supervisor"))) void foo_supervisor_supervisor(void) {}
+__attribute__((interrupt("machine", "machine"))) void foo_machine_twice(void) {} // expected-warning {{RISC-V 'interrupt' attribute type 'machine' specified more than once}}
+__attribute__((interrupt("supervisor", "supervisor"))) void foo_supervisor_supervisor(void) {} // expected-warning {{RISC-V 'interrupt' attribute type 'supervisor' specified more than once}}
+__attribute__((interrupt("machine", "machine", "machine"))) void foo_three_machine_args(void) {} // expected-warning {{RISC-V 'interrupt' attribute type 'machine' specified more than once}}
+__attribute__((interrupt("supervisor", "supervisor", "supervisor"))) void foo_three_supervisor_args(void) {} // expected-warning {{RISC-V 'interrupt' attribute type 'supervisor' specified more than once}}
 
 
 #endif

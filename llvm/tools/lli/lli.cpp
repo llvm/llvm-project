@@ -67,6 +67,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cerrno>
 #include <optional>
@@ -176,6 +177,10 @@ static cl::opt<char>
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
                       "(default = '-O2')"),
              cl::Prefix, cl::init('2'));
+
+static cl::opt<bool> HostJITTriple("host-jit-triple",
+                                   cl::desc("Print process triple and exit"),
+                                   cl::init(false));
 
 static cl::opt<std::string>
     TargetTriple("mtriple", cl::desc("Override target triple for module"));
@@ -430,6 +435,11 @@ int main(int argc, char **argv, char * const *envp) {
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm interpreter & dynamic compiler\n");
 
+  if (HostJITTriple) {
+    outs() << sys::getProcessTriple() << "\n";
+    return 0;
+  }
+
   // If the user doesn't want core files, disable them.
   if (DisableCoreFiles)
     sys::Process::PreventCoreFiles();
@@ -511,12 +521,21 @@ int main(int argc, char **argv, char * const *envp) {
 
   TargetOptions Options =
       codegen::InitTargetOptionsFromCodeGenFlags(Triple(TargetTriple));
-  if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+
+  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls();
+      ABI != FloatABI::Default && !Mod->getModuleFlag("float-abi")) {
+    Mod->addModuleFlag(Module::Error, "float-abi",
+                       MDString::get(Context, FloatABI::getABITypeName(ABI)));
+  }
 
   builder.setTargetOptions(Options);
 
-  std::unique_ptr<ExecutionEngine> EE(builder.create());
+  // Resolve the target the JIT will compile for and record it in the module
+  TargetMachine *TM = builder.selectTarget();
+  if (TM && Mod->getTargetTriple().empty())
+    Mod->setTargetTriple(TM->getTargetTriple());
+
+  std::unique_ptr<ExecutionEngine> EE(builder.create(TM));
   if (!EE) {
     if (!ErrorMsg.empty())
       WithColor::error(errs(), argv[0])
@@ -701,7 +720,7 @@ int main(int argc, char **argv, char * const *envp) {
     abort();
   } else {
     // else == "if (RemoteMCJIT)"
-    std::unique_ptr<orc::ExecutorProcessControl> EPC = ExitOnErr(launchRemote());
+    orc::ExecutionSession ES(ExitOnErr(launchRemote()));
 
     // Remote target MCJIT doesn't (yet) support static constructors. No reason
     // it couldn't. This is a limitation of the LLI implementation, not the
@@ -710,7 +729,7 @@ int main(int argc, char **argv, char * const *envp) {
     // Create a remote memory manager.
     auto RemoteMM = ExitOnErr(
         orc::EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
-            *EPC));
+            ES.getExecutorProcessControl()));
 
     // Forward MCJIT's memory manager calls to the remote memory manager.
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setMemMgr(
@@ -718,7 +737,7 @@ int main(int argc, char **argv, char * const *envp) {
 
     // Forward MCJIT's symbol resolution calls to the remote.
     static_cast<ForwardingMemoryManager *>(RTDyldMM)->setResolver(
-        ExitOnErr(RemoteResolver::Create(*EPC)));
+        ExitOnErr(RemoteResolver::Create(ES)));
     // Grab the target address of the JIT'd main function on the remote and call
     // it.
     // FIXME: argv and envp handling.
@@ -727,7 +746,7 @@ int main(int argc, char **argv, char * const *envp) {
     EE->finalizeObject();
     LLVM_DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
                       << format("%llx", Entry.getValue()) << "\n");
-    Result = ExitOnErr(EPC->runAsMain(Entry, {}));
+    Result = ExitOnErr(ES.getExecutorProcessControl().runAsMain(Entry, {}));
 
     // Like static constructors, the remote target MCJIT support doesn't handle
     // this yet. It could. FIXME.
@@ -738,7 +757,7 @@ int main(int argc, char **argv, char * const *envp) {
     EE.reset();
 
     // Signal the remote target that we're done JITing.
-    ExitOnErr(EPC->disconnect());
+    ExitOnErr(ES.endSession());
   }
 
   return Result;

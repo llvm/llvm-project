@@ -328,7 +328,8 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
       if (Readers)
         Readers->insert(LI->getParent()->getParent());
     } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-      if (V == SI->getOperand(1)) {
+      // Check the pointer operand use of the store.
+      if (&U == &SI->getOperandUse(1)) {
         if (Writers)
           Writers->insert(SI->getParent()->getParent());
       } else if (SI->getOperand(1) != OkayStoreDest) {
@@ -497,9 +498,9 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     const std::vector<CallGraphNode *> &SCC = *I;
     assert(!SCC.empty() && "SCC with no functions?");
 
-    Function *F = SCC[0]->getFunction();
+    Function *FirstF = SCC[0]->getFunction();
 
-    if (!F || !F->isDefinitionExact()) {
+    if (!FirstF || !FirstF->isDefinitionExact()) {
       // Calls externally or not exact - can't say anything useful. Remove any
       // existing function records (may have been created when scanning
       // globals).
@@ -508,8 +509,8 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
       continue;
     }
 
-    FunctionInfo &FI = FunctionInfos[F];
-    Handles.emplace_front(*this, F);
+    FunctionInfo &FI = FunctionInfos[FirstF];
+    Handles.emplace_front(*this, FirstF);
     Handles.front().I = Handles.begin();
     bool KnowNothing = false;
 
@@ -528,6 +529,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     // Collect the mod/ref properties due to called functions.  We only compute
     // one mod-ref set.
     for (unsigned i = 0, e = SCC.size(); i != e && !KnowNothing; ++i) {
+      Function *F = SCC[i]->getFunction();
       if (!F) {
         KnowNothing = true;
         break;

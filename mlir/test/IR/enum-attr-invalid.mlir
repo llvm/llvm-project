@@ -1,17 +1,15 @@
 // RUN: mlir-opt -verify-diagnostics -split-input-file %s
 
 func.func @test_invalid_enum_case() -> () {
-  // expected-error@+2 {{expected test::TestEnum to be one of: first, second, third}}
-  // expected-error@+1 {{failed to parse TestEnumAttr}}
-  test.op_with_enum #test<enum fourth>
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'value' [first, second, third]}}
+  test.op_with_enum #test.enum<fourth>
 }
 
 // -----
 
 func.func @test_invalid_enum_case() -> () {
-  // expected-error@+1 {{expected test::TestEnum to be one of: first, second, third}}
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'value' [first, second, third]}}
   test.op_with_enum fourth
-  // expected-error@+1 {{failed to parse TestEnumAttr}}
 }
 
 // -----
@@ -24,8 +22,7 @@ func.func @test_invalid_attr() -> () {
 // -----
 
 func.func @test_parse_invalid_attr() -> () {
-  // expected-error@+2 {{expected valid keyword}}
-  // expected-error@+1 {{failed to parse TestEnumAttr parameter 'value'}}
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'value' [first, second, third]}}
   test.op_with_enum 1 : index
 }
 
@@ -65,7 +62,7 @@ func.func @test_bit_enum_prop_not_keyword() -> () {
 // -----
 
 func.func @test_bit_enum_prop_wrong_keyword() -> () {
-  // expected-error@+2 {{expected one of [read, write, execute] for a test bit enum, got: chroot}}
+  // expected-error@+2 {{expected one of [none, read, write, execute] for a test bit enum, got: chroot}}
   // expected-error@+1 {{invalid value for property value1, expected a test bit enum}}
   test.op_with_bit_enum_prop read, chroot : ()
   return

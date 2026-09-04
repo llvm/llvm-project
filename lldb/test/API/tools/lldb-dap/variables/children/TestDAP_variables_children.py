@@ -1,4 +1,4 @@
-from lldbsuite.test.decorators import expectedFailureAll
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
@@ -40,6 +40,7 @@ class TestDAP_variables_children(DAPTestCaseBase):
         self.assertIn("['Indexed']", resp_body.result)
 
     @expectedFailureAll(archs=["arm$", "arm64", "aarch64"])
+    @skipIfWasm  # there is no ABI plugin for Wasm to find a return value with
     def test_return_variable_with_children(self):
         """
         Test the stepping out of a function with return value show the children correctly

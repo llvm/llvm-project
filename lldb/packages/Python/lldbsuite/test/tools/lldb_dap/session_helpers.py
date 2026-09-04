@@ -1630,7 +1630,7 @@ class DAPTestSession(Session):
         response = self.send_request(info_args).result()
         return response.body
 
-    def do_restart(self, arguments: LaunchArgs | AttachArgs | None = None):
+    def restart(self, arguments: LaunchArgs | AttachArgs | None = None):
         restart_args = RestartArgs(arguments)
         return self.send_request(restart_args).result()
 

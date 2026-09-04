@@ -164,6 +164,7 @@ struct MIToken {
     md_noalias,
     md_noalias_addrspace,
     md_range,
+    md_mem_cache_hint,
     md_diexpr,
     md_dilocation,
 

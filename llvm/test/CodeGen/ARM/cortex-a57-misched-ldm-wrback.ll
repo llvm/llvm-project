@@ -6,9 +6,9 @@
 @b = dso_local global i32 0, align 4
 @c = dso_local global i32 0, align 4
 
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; We need second, post-ra scheduling to have LDM instruction combined from single-loads
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       LDMIA_UPD
 ; CHECK:       rdefs left
 ; CHECK-NEXT:  Latency            : 4

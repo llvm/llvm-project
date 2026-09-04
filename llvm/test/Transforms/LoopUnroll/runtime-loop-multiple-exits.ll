@@ -4755,7 +4755,6 @@ declare ptr addrspace(1) @foo(i32)
 define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-LABEL: @test9(
 ; EPILOG-NEXT:  bb:
-; EPILOG-NEXT:    %0 = add i32 %n, -1
 ; EPILOG-NEXT:    br label %outerloopHdr
 ; EPILOG:       outerloopHdr:
 ; EPILOG-NEXT:    %trip = add i32 %n, -1
@@ -4763,13 +4762,13 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; EPILOG:       preheader:
 ; EPILOG-NEXT:    %i4 = zext i32 0 to i64
-; EPILOG-NEXT:    %1 = freeze i32 %0
-; EPILOG-NEXT:    %2 = add i32 %1, -1
-; EPILOG-NEXT:    %xtraiter = and i32 %1, 7
-; EPILOG-NEXT:    %3 = icmp ult i32 %2, 7
-; EPILOG-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
+; EPILOG-NEXT:    %0 = freeze i32 %trip
+; EPILOG-NEXT:    %1 = add i32 %0, -1
+; EPILOG-NEXT:    %xtraiter = and i32 %0, 7
+; EPILOG-NEXT:    %2 = icmp ult i32 %1, 7
+; EPILOG-NEXT:    br i1 %2, label %header.epil.preheader, label %preheader.new
 ; EPILOG:       preheader.new:
-; EPILOG-NEXT:    %unroll_iter = sub i32 %1, %xtraiter
+; EPILOG-NEXT:    %unroll_iter = sub i32 %0, %xtraiter
 ; EPILOG-NEXT:    br label %header
 ; EPILOG:       header:
 ; EPILOG-NEXT:    %phi = phi i64 [ %i4, %preheader.new ], [ %iv.next.7, %latch.7 ]
@@ -4834,20 +4833,19 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ;
 ; EPILOG-BLOCK-LABEL: @test9(
 ; EPILOG-BLOCK-NEXT:  bb:
-; EPILOG-BLOCK-NEXT:    %0 = add i32 %n, -1
 ; EPILOG-BLOCK-NEXT:    br label %outerloopHdr
 ; EPILOG-BLOCK:       outerloopHdr:
 ; EPILOG-BLOCK-NEXT:    %trip = add i32 %n, -1
 ; EPILOG-BLOCK-NEXT:    %outercnd = icmp slt i32 0, %trip
 ; EPILOG-BLOCK-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; EPILOG-BLOCK:       preheader:
-; EPILOG-BLOCK-NEXT:    %1 = freeze i32 %0
-; EPILOG-BLOCK-NEXT:    %2 = add i32 %1, -1
-; EPILOG-BLOCK-NEXT:    %xtraiter = and i32 %1, 1
-; EPILOG-BLOCK-NEXT:    %3 = icmp ult i32 %2, 1
-; EPILOG-BLOCK-NEXT:    br i1 %3, label %header.epil.preheader, label %preheader.new
+; EPILOG-BLOCK-NEXT:    %0 = freeze i32 %trip
+; EPILOG-BLOCK-NEXT:    %1 = add i32 %0, -1
+; EPILOG-BLOCK-NEXT:    %xtraiter = and i32 %0, 1
+; EPILOG-BLOCK-NEXT:    %2 = icmp ult i32 %1, 1
+; EPILOG-BLOCK-NEXT:    br i1 %2, label %header.epil.preheader, label %preheader.new
 ; EPILOG-BLOCK:       preheader.new:
-; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i32 %1, %xtraiter
+; EPILOG-BLOCK-NEXT:    %unroll_iter = sub i32 %0, %xtraiter
 ; EPILOG-BLOCK-NEXT:    br label %header
 ; EPILOG-BLOCK:       header:
 ; EPILOG-BLOCK-NEXT:    %phi = phi i64 [ 0, %preheader.new ], [ %iv.next.1, %latch.1 ]
@@ -4894,13 +4892,13 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; EPILOG-BLOCK-NEXT:    %outercnd.1 = icmp slt i32 0, %trip.1
 ; EPILOG-BLOCK-NEXT:    br i1 %outercnd.1, label %preheader.1, label %outerLatch.1
 ; EPILOG-BLOCK:       preheader.1:
-; EPILOG-BLOCK-NEXT:    %4 = freeze i32 %0
-; EPILOG-BLOCK-NEXT:    %5 = add i32 %4, -1
-; EPILOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %4, 1
-; EPILOG-BLOCK-NEXT:    %6 = icmp ult i32 %5, 1
-; EPILOG-BLOCK-NEXT:    br i1 %6, label %header.epil.preheader.1, label %preheader.new.1
+; EPILOG-BLOCK-NEXT:    %3 = freeze i32 %trip.1
+; EPILOG-BLOCK-NEXT:    %4 = add i32 %3, -1
+; EPILOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %3, 1
+; EPILOG-BLOCK-NEXT:    %5 = icmp ult i32 %4, 1
+; EPILOG-BLOCK-NEXT:    br i1 %5, label %header.epil.preheader.1, label %preheader.new.1
 ; EPILOG-BLOCK:       preheader.new.1:
-; EPILOG-BLOCK-NEXT:    %unroll_iter.1 = sub i32 %4, %xtraiter.1
+; EPILOG-BLOCK-NEXT:    %unroll_iter.1 = sub i32 %3, %xtraiter.1
 ; EPILOG-BLOCK-NEXT:    br label %header.1
 ; EPILOG-BLOCK:       header.1:
 ; EPILOG-BLOCK-NEXT:    %phi.1 = phi i64 [ 0, %preheader.new.1 ], [ %iv.next.1.1, %latch.1.1 ]
@@ -4931,7 +4929,6 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ;
 ; PROLOG-LABEL: @test9(
 ; PROLOG-NEXT:  bb:
-; PROLOG-NEXT:    %0 = add i32 %n, -1
 ; PROLOG-NEXT:    br label %outerloopHdr
 ; PROLOG:       outerloopHdr:
 ; PROLOG-NEXT:    %trip = add i32 %n, -1
@@ -4939,9 +4936,9 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; PROLOG:       preheader:
 ; PROLOG-NEXT:    %i4 = zext i32 0 to i64
-; PROLOG-NEXT:    %1 = freeze i32 %0
-; PROLOG-NEXT:    %2 = add i32 %1, -1
-; PROLOG-NEXT:    %xtraiter = and i32 %1, 7
+; PROLOG-NEXT:    %0 = freeze i32 %trip
+; PROLOG-NEXT:    %1 = add i32 %0, -1
+; PROLOG-NEXT:    %xtraiter = and i32 %0, 7
 ; PROLOG-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; PROLOG-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
 ; PROLOG:       header.prol.preheader:
@@ -4963,8 +4960,8 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
 ; PROLOG-NEXT:    %phi.unr = phi i64 [ %i4, %preheader ], [ %phi.unr.ph, %header.prol.loopexit.unr-lcssa ]
-; PROLOG-NEXT:    %3 = icmp ult i32 %2, 7
-; PROLOG-NEXT:    br i1 %3, label %outerLatch.loopexit, label %preheader.new
+; PROLOG-NEXT:    %2 = icmp ult i32 %1, 7
+; PROLOG-NEXT:    br i1 %2, label %outerLatch.loopexit, label %preheader.new
 ; PROLOG:       preheader.new:
 ; PROLOG-NEXT:    br label %header
 ; PROLOG:       header:
@@ -5010,16 +5007,15 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ;
 ; PROLOG-BLOCK-LABEL: @test9(
 ; PROLOG-BLOCK-NEXT:  bb:
-; PROLOG-BLOCK-NEXT:    %0 = add i32 %n, -1
 ; PROLOG-BLOCK-NEXT:    br label %outerloopHdr
 ; PROLOG-BLOCK:       outerloopHdr:
 ; PROLOG-BLOCK-NEXT:    %trip = add i32 %n, -1
 ; PROLOG-BLOCK-NEXT:    %outercnd = icmp slt i32 0, %trip
 ; PROLOG-BLOCK-NEXT:    br i1 %outercnd, label %preheader, label %outerLatch
 ; PROLOG-BLOCK:       preheader:
-; PROLOG-BLOCK-NEXT:    %1 = freeze i32 %0
-; PROLOG-BLOCK-NEXT:    %2 = add i32 %1, -1
-; PROLOG-BLOCK-NEXT:    %xtraiter = and i32 %1, 1
+; PROLOG-BLOCK-NEXT:    %0 = freeze i32 %trip
+; PROLOG-BLOCK-NEXT:    %1 = add i32 %0, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter = and i32 %0, 1
 ; PROLOG-BLOCK-NEXT:    %lcmp.mod = icmp ne i32 %xtraiter, 0
 ; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod, label %header.prol.preheader, label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.preheader:
@@ -5030,8 +5026,8 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
 ; PROLOG-BLOCK-NEXT:    %phi.unr = phi i64 [ 0, %preheader ], [ 1, %latch.prol ]
-; PROLOG-BLOCK-NEXT:    %3 = icmp ult i32 %2, 1
-; PROLOG-BLOCK-NEXT:    br i1 %3, label %outerLatch.loopexit, label %preheader.new
+; PROLOG-BLOCK-NEXT:    %2 = icmp ult i32 %1, 1
+; PROLOG-BLOCK-NEXT:    br i1 %2, label %outerLatch.loopexit, label %preheader.new
 ; PROLOG-BLOCK:       preheader.new:
 ; PROLOG-BLOCK-NEXT:    br label %header
 ; PROLOG-BLOCK:       header:
@@ -5071,9 +5067,9 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-BLOCK-NEXT:    %outercnd.1 = icmp slt i32 0, %trip.1
 ; PROLOG-BLOCK-NEXT:    br i1 %outercnd.1, label %preheader.1, label %outerLatch.1
 ; PROLOG-BLOCK:       preheader.1:
-; PROLOG-BLOCK-NEXT:    %4 = freeze i32 %0
-; PROLOG-BLOCK-NEXT:    %5 = add i32 %4, -1
-; PROLOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %4, 1
+; PROLOG-BLOCK-NEXT:    %3 = freeze i32 %trip.1
+; PROLOG-BLOCK-NEXT:    %4 = add i32 %3, -1
+; PROLOG-BLOCK-NEXT:    %xtraiter.1 = and i32 %3, 1
 ; PROLOG-BLOCK-NEXT:    %lcmp.mod.1 = icmp ne i32 %xtraiter.1, 0
 ; PROLOG-BLOCK-NEXT:    br i1 %lcmp.mod.1, label %header.prol.preheader.1, label %header.prol.loopexit.1
 ; PROLOG-BLOCK:       header.prol.preheader.1:
@@ -5084,8 +5080,8 @@ define ptr addrspace(1) @test9(ptr nocapture readonly %arg, i32 %n) {
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit.1
 ; PROLOG-BLOCK:       header.prol.loopexit.1:
 ; PROLOG-BLOCK-NEXT:    %phi.unr.1 = phi i64 [ 0, %preheader.1 ], [ 1, %latch.prol.1 ]
-; PROLOG-BLOCK-NEXT:    %6 = icmp ult i32 %5, 1
-; PROLOG-BLOCK-NEXT:    br i1 %6, label %outerLatch.loopexit.1, label %preheader.new.1
+; PROLOG-BLOCK-NEXT:    %5 = icmp ult i32 %4, 1
+; PROLOG-BLOCK-NEXT:    br i1 %5, label %outerLatch.loopexit.1, label %preheader.new.1
 ; PROLOG-BLOCK:       preheader.new.1:
 ; PROLOG-BLOCK-NEXT:    br label %header.1
 ; PROLOG-BLOCK:       header.1:
