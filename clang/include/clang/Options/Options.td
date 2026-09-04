@@ -3736,10 +3736,10 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
 defm modules_unique_gmf_internal_linkage : BoolOption<"f",
   "modules-unique-gmf-internal-linkage",
   LangOpts<"ModulesUniqueGMFInternalLinkage">, DefaultTrue,
-  PosFlag<SetTrue, [], [CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Use distinct internal-linkage identities for functions in global "
           "module fragments.">,
-  NegFlag<SetFalse, [], [CC1Option],
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Use ordinary internal-linkage identities for functions in global "
           "module fragments.">>,
   Group<f_Group>;

@@ -518,7 +518,7 @@ By default, Clang keeps internal-linkage functions from global module
 fragments in different named module units distinct and includes the
 module-unit owner in their mangled names. This is a practical, non-conforming
 strategy for C-style `static inline` functions in real-world headers. Specify
-`-Xclang -fno-modules-unique-gmf-internal-linkage` to restore the ordinary
+`-fno-modules-unique-gmf-internal-linkage` to restore the ordinary
 internal-linkage identity and mangling. This behavior is independent of
 whether global module fragment ODR checking is enabled.
 
