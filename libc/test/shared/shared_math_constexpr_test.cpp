@@ -392,21 +392,21 @@ static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaxf128(Float128(0.0), Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminf128(Float128(0.0), Float128(0.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fmaximum_magf128(Float128(0.0),
-                                                       Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaximumf128(Float128(0.0),
                                                    Float128(0.0)));
 static_assert(Float128(0.0) ==
-              LIBC_NAMESPACE::shared::fmaximum_numf128(Float128(0.0),
+              LIBC_NAMESPACE::shared::fmaximum_magf128(Float128(0.0),
                                                        Float128(0.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fminimum_magf128(Float128(0.0),
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximum_numf128(Float128(0.0),
                                                        Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimumf128(Float128(0.0),
                                                    Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fminimum_magf128(Float128(0.0),
+                                                       Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_numf128(Float128(0.0),
                                                        Float128(0.0)));
