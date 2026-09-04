@@ -103,6 +103,12 @@ functions:
       - type: const char *
       - type: uid_t
       - type: gid_t
+  - name: chroot
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: const char *
   - name: confstr
     standards:
       - posix
@@ -257,6 +263,18 @@ functions:
       - type: int
       - type: __getoptargv_t
       - type: const char *
+  - name: getpgid
+    standards:
+      - posix
+    return_type: pid_t
+    arguments:
+      - type: pid_t
+  - name: getpgrp
+    standards:
+      - posix
+    return_type: pid_t
+    arguments:
+      - type: void
   - name: getpid
     standards:
       - posix
@@ -409,6 +427,13 @@ functions:
     return_type: int
     arguments:
       - type: gid_t
+  - name: setpgid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pid_t
+      - type: pid_t
   - name: setregid
     standards:
       - posix

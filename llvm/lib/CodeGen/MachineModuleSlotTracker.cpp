@@ -16,6 +16,11 @@
 
 using namespace llvm;
 
+bool MachineModuleSlotTracker::shouldPrintDebugLocationInline(
+    const DILocation *DL) const {
+  return InlineDebugLocations.contains(DL);
+}
+
 void MachineModuleSlotTracker::collectMachineFunctionMetadata(
     SmallVectorImpl<const MDNode *> &Metadata, const MachineFunction &MF,
     SmallVectorImpl<const MDNode *> *DebugLocations) const {

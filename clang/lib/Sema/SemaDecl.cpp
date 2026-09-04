@@ -1658,6 +1658,17 @@ bool Sema::isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
   return IdResolver.isDeclInScope(D, Ctx, S, AllowInlineNamespace);
 }
 
+bool Sema::isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
+                                     bool AllowInlineNamespace) const {
+  if (isDeclInScope(D, Ctx, S, AllowInlineNamespace))
+    return true;
+
+  if (auto *Shadow = dyn_cast<UsingShadowDecl>(D))
+    return isDeclInScope(Shadow->getTargetDecl(), Ctx, S, AllowInlineNamespace);
+
+  return false;
+}
+
 Scope *Sema::getScopeForDeclContext(Scope *S, DeclContext *DC) {
   DeclContext *TargetDC = DC->getPrimaryContext();
   do {
@@ -2666,6 +2677,27 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
                                     OldTD->getUnderlyingType());
       else
         New->setTypeSourceInfo(OldTD->getTypeSourceInfo());
+
+      // An anonymous enum is recognized as a redeclaration only when its
+      // typedef name gets merged, at which point the new enum and its
+      // enumerators already have a distinct canonical type. Link the enum
+      // declarations, but also retype the new enumerators because
+      // setPreviousDecl() does not update QualTypes built before the merge;
+      // otherwise the merged typedef and its enumerators disagree on the type
+      // (GH213299).
+      //
+      // FIXME: The global module restriction only limits the impact of this
+      // change; relax it if the issue shows up in other contexts.
+      if (Module *M = OldTag->getOwningModule(); M && M->isGlobalModule()) {
+        if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag)) {
+          if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
+            NewEnum->setPreviousDecl(OldEnum);
+            QualType EnumType = Context.getCanonicalTagType(OldEnum);
+            for (auto *ECD : NewEnum->enumerators())
+              ECD->setType(EnumType);
+          }
+        }
+      }
 
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
@@ -18626,8 +18658,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // in the same scope (so that the definition/declaration completes or
       // rementions the tag), reuse the decl.
       if (TUK == TagUseKind::Reference || TUK == TagUseKind::Friend ||
-          isDeclInScope(DirectPrevDecl, SearchDC, S,
-                        SS.isNotEmpty() || isMemberSpecialization)) {
+          isTagRedeclarationInScope(DirectPrevDecl, SearchDC, S,
+                                    SS.isNotEmpty() ||
+                                        isMemberSpecialization)) {
 
         if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
             RD && RD->isInjectedClassName()) {

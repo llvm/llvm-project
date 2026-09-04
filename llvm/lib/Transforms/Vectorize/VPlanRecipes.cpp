@@ -1485,9 +1485,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // FIXME: The compare could also be removed if TC = M * vscale,
     // VF = N * vscale, and M <= N. Detecting that would require having the
     // trip count as a SCEV though.
-    Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
-    ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
-    if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+    if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
       return 0;
     // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
     Type *ValTy = getOperand(0)->getScalarType();
@@ -3508,7 +3506,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             CondTy, Pred, Ctx.CostKind);
     }
     return CondCost + Ctx.TTI.getPartialReductionCost(
-                          Opcode, ElementTy, ElementTy, ElementTy, VF,
+                          Opcode, ElementTy, nullptr, ElementTy, VF,
                           TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
                           OptionalFMF);
   }

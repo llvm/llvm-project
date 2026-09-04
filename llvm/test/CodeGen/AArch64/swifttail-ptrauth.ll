@@ -5,6 +5,12 @@
 ; RUN:   | llc -mtriple=aarch64 -mattr=v9a \
 ; RUN:   | FileCheck --check-prefixes=CHECK,PAUTH %s
 
+; RUN: llc -mtriple=aarch64 -stop-after=prolog-epilog                            < %s | FileCheck --check-prefixes=MIR,MIR-COMPAT %s
+; RUN: llc -mtriple=aarch64 -stop-after=prolog-epilog -mattr=v9a -mattr=pauth-lr < %s | FileCheck --check-prefixes=MIR,MIR-V9A %s
+; RUN: sed 's/"branch-protection-pauth-lr" //g' %s \
+; RUN:   | llc -mtriple=aarch64 -stop-after=prolog-epilog -mattr=v9a \
+; RUN:   | FileCheck --check-prefixes=MIR,MIR-PAUTH %s
+
 ; These tests cover the interaction between swifttailcc and return-address
 ; signing. The key invariant is that AUTIASP/AUTIBSP uses the current SP as the
 ; discriminator, which must equal the entry SP at the point of signing. When a
@@ -67,6 +73,11 @@ define swifttailcc void @caller_to0_from0() "branch-protection-pauth-lr" "sign-r
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
 ; CHECK-NEXT:    b callee_stack0
+
+; MIR-LABEL:  name: caller_to0_from0
+; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x16{{$}}
+; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp{{$}}
   tail call swifttailcc void @callee_stack0()
   ret void
 }
@@ -132,6 +143,11 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    b callee_stack0
+
+; MIR-LABEL:  name: caller_to0_from8
+; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16{{$}}
   tail call swifttailcc void @callee_stack0()
   ret void
 }
@@ -201,6 +217,11 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
 ; CHECK-NEXT:    b callee_stack8
+
+; MIR-LABEL:  name: caller_to8_from0
+; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16{{$}}
   tail call swifttailcc void @callee_stack8([8 x i64] poison, i64 42)
   ret void
 }
@@ -300,6 +321,10 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; CHECK-NEXT:          add     sp, sp, #80
 ; CHECK-NEXT:          b       callee_stack0
 
+; MIR-LABEL:  name: crash_tc
+; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16{{$}}
 entry:
   br i1 %c, label %work, label %exit
 

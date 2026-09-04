@@ -390,12 +390,10 @@ collectAdditionalMetadata(Module &M, const DXILDebugInfoMap &DI) {
 }
 
 static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
-                        DXILResourceTypeMap &DRTM) {
+                        DXILResourceTypeMap &DRTM, const DXILDebugInfoMap &DI) {
   formatted_raw_ostream FOS(OS);
 
   prettyPrintResources(FOS, DRM, DRTM);
-
-  DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
 
   SmallVector<const MDNode *> AdditionalMetadata =
       collectAdditionalMetadata(M, DI);
@@ -433,7 +431,8 @@ PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  prettyPrint(OS, M, DRM, DRTM);
+  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
+  prettyPrint(OS, M, DRM, DRTM, DI);
   return PreservedAnalyses::none();
 }
 
@@ -458,19 +457,20 @@ public:
 
 char DXILPrettyPrinterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                      "DXIL Pretty Printer", true, true)
+                      "DXIL Pretty Printer", true, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                    "DXIL Pretty Printer", true, true)
+                    "DXIL Pretty Printer", true, false)
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   const DXILResourceMap &DRM =
       getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  prettyPrint(OS, M, DRM, DRTM);
-  return false;
+  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
+  prettyPrint(OS, M, DRM, DRTM, DI);
+  return true;
 }
 
 ModulePass *llvm::createDXILPrettyPrinterLegacyPass(raw_ostream &OS) {

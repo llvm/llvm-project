@@ -757,7 +757,7 @@ def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["prio
 
 def ROCDL_SchedBarrier : ROCDL_ConcreteNonMemIntrOp<"sched.barrier", [], 0, [0],["mask"]>,
   Arguments<(ins ROCDL_SchedGroupMaskAttr:$mask)> {
-  let assemblyFormat = "$mask attr-dict";
+  let assemblyFormat = "enum($mask) attr-dict";
   let description = [{
     Insert a scheduling barrier with the given mask. The mask is a
     bitfield that controls which instruction types may be scheduled
@@ -785,7 +785,7 @@ def ROCDL_SchedGroupBarrier
       [0, 1, 2], ["mask", "size", "groupId"]>,
     Arguments<(ins ROCDL_SchedGroupMaskAttr:$mask, I32Attr:$size,
                    I32Attr:$groupId)> {
-  let assemblyFormat = "$mask `,` $size `,` $groupId attr-dict";
+  let assemblyFormat = "enum($mask) `,` $size `,` $groupId attr-dict";
   let description = [{
     Insert a scheduling group barrier. The first parameter uses the same
     scheduling group mask values as `rocdl.sched.barrier`.
@@ -827,7 +827,8 @@ class ROCDL_Mfma_IntrOpBase<string mnemonic, ROCDL_NamedType ABType,
              blgpAttr:$blgp)> {
   let results = (outs CDType:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $cbsz `,` $abid `,` $blgp attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` $cbsz `,` $abid `,` enum($blgp)
+    attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -877,7 +878,9 @@ class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
              I32:$scaleB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $cbsz `,` $blgp `,` $opselA `,` $scaleA `,` $opselB `,` $scaleB attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` enum($cbsz) `,` enum($blgp) `,` $opselA `,`
+    $scaleA `,` $opselB `,` $scaleB attr-dict `:`
+    functional-type(operands, $res)
   }];
   let description = [{
     Scaled matrix fused multiply-add (MFMA) intrinsic with per-operand scaling.
@@ -1115,7 +1118,7 @@ class ROCDL_WMMA_ModsAll_Reuse_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` enum($modC) prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1142,7 +1145,7 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` enum($modC) prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1169,7 +1172,7 @@ class ROCDL_WMMA_ModsC_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : R
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` enum($modC) prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1244,10 +1247,12 @@ class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $scaleA `,` $scaleB `,`
-    `fmtA` `=` $fmtA `,` `fmtB` `=` $fmtB `,`
-    `modC` `=` $modC `,`
-    `scaleAType` `=` $scaleAType `,` `fmtScaleA` `=` $fmtScaleA `,`
-    `scaleBType` `=` $scaleBType `,` `fmtScaleB` `=` $fmtScaleB
+    `fmtA` `=` enum($fmtA) `,` `fmtB` `=` enum($fmtB) `,`
+    `modC` `=` enum($modC) `,`
+    `scaleAType` `=` enum($scaleAType) `,`
+    `fmtScaleA` `=` enum($fmtScaleA) `,`
+    `scaleBType` `=` enum($scaleBType) `,`
+    `fmtScaleB` `=` enum($fmtScaleB)
     prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
@@ -1289,9 +1294,11 @@ class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleEx
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $scaleA `,` $scaleB `,`
-    `modC` `=` $modC `,`
-    `scaleAType` `=` $scaleAType `,` `fmtScaleA` `=` $fmtScaleA `,`
-    `scaleBType` `=` $scaleBType `,` `fmtScaleB` `=` $fmtScaleB
+    `modC` `=` enum($modC) `,`
+    `scaleAType` `=` enum($scaleAType) `,`
+    `fmtScaleA` `=` enum($fmtScaleA) `,`
+    `scaleBType` `=` enum($scaleBType) `,`
+    `fmtScaleB` `=` enum($fmtScaleB)
     prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{

@@ -1501,6 +1501,7 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
 
   case AsmToken::Plus:
   case AsmToken::Minus:
+  case AsmToken::Tilde:
   case AsmToken::Integer:
   case AsmToken::LParen:
   case AsmToken::Dot:
