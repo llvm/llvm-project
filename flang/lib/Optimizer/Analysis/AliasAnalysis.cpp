@@ -1318,16 +1318,24 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           type = SourceKind::Allocate;
           breakFromLoop = true;
         })
-        .Case([&](fir::LoadOp op) {
+        .Case([&](fir::FortranObjectLoadOpInterface op) {
+          // Keyed off the interface rather than fir::LoadOp so that any
+          // operation yielding a value read from memory participates in the
+          // walk. The interface reports provenance only, which is all this
+          // walk needs; it does not promise the operation is a pure load.
+          // Keep this ahead of the FortranObjectViewOpInterface case below,
+          // which would otherwise win for an operation implementing both.
+          mlir::Value loadSource = op.getLoadSource(opResult);
+
           // If load is inside target and it points to mapped item,
           // continue tracking.
-          Operation *loadMemrefOp = op.getMemref().getDefiningOp();
+          Operation *loadMemrefOp = loadSource.getDefiningOp();
           bool isDeclareOp =
               llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
               llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
-            v = op.getMemref();
+            v = loadSource;
             defOp = v.getDefiningOp();
             return;
           }
@@ -1353,7 +1361,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             // Passing true here would stop the inner walk at the declare
             // and force SourceKind::Indirect, which spuriously coarsens
             // getCallModRef (e.g. for box_addr of allocatable dummies).
-            auto boxSrc = getSource(op.getMemref(),
+            auto boxSrc = getSource(loadSource,
                                     /*getLastInstantiationPoint=*/false,
                                     collectScopedOrigins);
             attributes |= boxSrc.attributes;
