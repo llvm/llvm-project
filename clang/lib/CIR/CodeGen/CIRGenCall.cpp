@@ -433,8 +433,12 @@ void CIRGenModule::constructAttributeList(
       }
     }
 
-    // TODO(cir): Quite a few CUDA and OpenCL attributes are added here, like
-    // uniform-work-group-size.
+    // TODO(cir): Quite a few CUDA and OpenCL attributes are added here.
+
+    // -cl-uniform-work-group-size / -foffload-uniform-block: work groups are
+    // uniform (global work-size is a multiple of work-group size).
+    if (langOpts.OffloadUniformBlock)
+      addUnitAttr(cir::CIRDialect::getUniformWorkGroupSizeAttrName());
 
     if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
         targetDecl->hasAttr<CUDAGlobalAttr>()) {

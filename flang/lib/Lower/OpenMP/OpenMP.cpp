@@ -4358,6 +4358,168 @@ static mlir::omp::TargetDataOp genTargetDataOp(
   return targetDataOp;
 }
 
+struct TargetUpdateKernelEntry {
+  mlir::omp::MapInfoOp mapInfo;
+  mlir::Value hostPtr;
+  mlir::Type componentType;
+};
+
+static std::optional<TargetUpdateKernelEntry>
+getTargetUpdateKernelEntry(mlir::Value mapVar) {
+  auto mapInfo = mapVar.getDefiningOp<mlir::omp::MapInfoOp>();
+  if (!mapInfo)
+    return std::nullopt;
+
+  // Keep the fast path to plain synchronous H2D motion. In particular, do not
+  // silently weaken `present` motion modifiers.
+  if (mapInfo.getMapType() != mlir::omp::ClauseMapFlags::to ||
+      mapInfo.getVarPtrPtr() || !mapInfo.getMembers().empty() ||
+      !mapInfo.getBounds().empty() || mapInfo.getMapperId())
+    return std::nullopt;
+
+  mlir::Value hostPtr = mapInfo.getVarPtr();
+  auto designate = hostPtr.getDefiningOp<hlfir::DesignateOp>();
+  if (!designate || !designate.getComponent() ||
+      designate.getComponentShape() || !designate.getIndices().empty() ||
+      !designate.getSubstring().empty() || designate.getComplexPart() ||
+      designate.getShape() || !designate.getTypeparams().empty())
+    return std::nullopt;
+
+  mlir::Type baseType = fir::unwrapRefType(designate.getMemref().getType());
+  auto recordType = mlir::dyn_cast<fir::RecordType>(baseType);
+  if (!recordType || recordType.getNumLenParams() != 0)
+    return std::nullopt;
+
+  llvm::StringRef component = designate.getComponent()->getValue();
+  mlir::Type componentType = recordType.getType(component);
+  if (!componentType || !fir::isa_trivial(componentType))
+    return std::nullopt;
+
+  return TargetUpdateKernelEntry{mapInfo, hostPtr, componentType};
+}
+
+/// Replace several scalar H2D updates with one packed transfer and a target
+/// region that scatters the values to their original device addresses. The
+/// source tuple has one `to` map, while each destination uses a `storage` map
+/// so it resolves an existing device association without copying host data.
+static mlir::omp::TargetOp
+genTargetUpdateKernel(lower::AbstractConverter &converter, mlir::Location loc,
+                      llvm::ArrayRef<TargetUpdateKernelEntry> entries) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::omp::TargetExtOperands targetClauseOps;
+  targetClauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
+      builder.getContext(), mlir::omp::TargetExecMode::generic);
+
+  llvm::SmallVector<mlir::Value> destinationMaps;
+  destinationMaps.reserve(entries.size());
+
+  llvm::SmallVector<mlir::Type> sourceTypes;
+  llvm::transform(
+      entries, std::back_inserter(sourceTypes),
+      [](const TargetUpdateKernelEntry &entry) { return entry.componentType; });
+  mlir::TupleType sourceType =
+      mlir::TupleType::get(builder.getContext(), sourceTypes);
+  mlir::Value sourcePack = builder.createTemporary(loc, sourceType);
+
+  for (auto [i, entry] : llvm::enumerate(entries)) {
+    mlir::Value sourceValue = fir::LoadOp::create(builder, loc, entry.hostPtr);
+    mlir::Value index =
+        builder.createIntegerConstant(loc, builder.getI32Type(), i);
+    mlir::Value sourceAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(entry.componentType), sourcePack,
+        index);
+    fir::StoreOp::create(builder, loc, sourceValue, sourceAddr);
+
+    mlir::Value destinationMap = createMapInfoOp(
+        builder, loc, entry.hostPtr, /*varPtrPtr=*/mlir::Value{},
+        /*name=*/"", /*bounds=*/{}, /*members=*/{},
+        /*membersIndex=*/mlir::ArrayAttr{}, mlir::omp::ClauseMapFlags::storage,
+        mlir::omp::VariableCaptureKind::ByRef, entry.hostPtr.getType());
+    destinationMaps.push_back(destinationMap);
+  }
+
+  mlir::Value sourceMap = createMapInfoOp(
+      builder, loc, sourcePack, /*varPtrPtr=*/mlir::Value{},
+      ".omp.target.update.source", /*bounds=*/{}, /*members=*/{},
+      /*membersIndex=*/mlir::ArrayAttr{}, mlir::omp::ClauseMapFlags::to,
+      mlir::omp::VariableCaptureKind::ByRef, sourcePack.getType());
+  targetClauseOps.mapVars.push_back(sourceMap);
+  targetClauseOps.mapVars.append(destinationMaps);
+
+  auto targetOp = mlir::omp::TargetOp::create(builder, loc, targetClauseOps);
+  llvm::SmallVector<mlir::Value> mapBaseValues;
+  extractMappedBaseValues(targetClauseOps.mapVars, mapBaseValues);
+  ObjectEntryBlockArgs args;
+  args.map.vars = mapBaseValues;
+  genEntryBlock(builder, args.asEntryBlockArgs(), targetOp.getRegion());
+
+  auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
+  llvm::ArrayRef<mlir::BlockArgument> mapBlockArgs = argIface.getMapBlockArgs();
+  assert(mapBlockArgs.size() == entries.size() + 1 &&
+         "expected source and destination map arguments");
+  builder.setInsertionPointToEnd(&targetOp.getRegion().front());
+  for (auto [i, entry] : llvm::enumerate(entries)) {
+    mlir::Value index =
+        builder.createIntegerConstant(loc, builder.getI32Type(), i);
+    mlir::Value sourceAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(entry.componentType),
+        mapBlockArgs.front(), index);
+    mlir::Value sourceValue = fir::LoadOp::create(builder, loc, sourceAddr);
+    fir::StoreOp::create(builder, loc, sourceValue, mapBlockArgs[i + 1]);
+  }
+  mlir::omp::TerminatorOp::create(builder, loc);
+  builder.setInsertionPointAfter(targetOp);
+  return targetOp;
+}
+
+static mlir::Operation *tryGenTargetUpdateKernel(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    mlir::Location loc,
+    mlir::omp::TargetEnterExitUpdateDataOperands &clauseOps) {
+  // Updating several small, discontiguous fields issues one device transfer
+  // for every map entry. Pack their host values and use one target region so
+  // that the runtime performs one H2D transfer followed by the scalar stores.
+  // This addresses the AMDGPU runtime transfer cost and is only enabled when
+  // an AMDGPU image will actually be emitted.
+  mlir::ModuleOp module = converter.getModuleOp();
+  if (!hasOnlyAMDGCNTargets(module) ||
+      requiresUnifiedSharedMemory(module, semaCtx) ||
+      clauseOps.mapVars.size() < 2 || !clauseOps.dependVars.empty() ||
+      !clauseOps.dependIterated.empty() || !clauseOps.mapIterated.empty() ||
+      clauseOps.nowait || clauseOps.device)
+    return nullptr;
+
+  llvm::SmallVector<TargetUpdateKernelEntry> entries;
+  entries.reserve(clauseOps.mapVars.size());
+  for (mlir::Value mapVar : clauseOps.mapVars) {
+    std::optional<TargetUpdateKernelEntry> entry =
+        getTargetUpdateKernelEntry(mapVar);
+    if (!entry)
+      return nullptr;
+    entries.push_back(*entry);
+  }
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Operation *firstGenerated = nullptr;
+
+  if (mlir::Value ifExpr = clauseOps.ifExpr) {
+    auto ifOp = fir::IfOp::create(builder, loc, ifExpr,
+                                  /*withElseRegion=*/false);
+    firstGenerated = ifOp;
+    builder.setInsertionPoint(ifOp.getThenRegion().front().getTerminator());
+    genTargetUpdateKernel(converter, loc, entries);
+    builder.setInsertionPointAfter(ifOp);
+  } else {
+    firstGenerated = genTargetUpdateKernel(converter, loc, entries);
+  }
+
+  for (TargetUpdateKernelEntry &entry : entries)
+    if (entry.mapInfo->use_empty())
+      entry.mapInfo.erase();
+
+  return firstGenerated;
+}
+
 template <typename OpTy>
 static OpTy genTargetEnterExitUpdateDataOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -4383,6 +4545,25 @@ static OpTy genTargetEnterExitUpdateDataOp(
                                       item->clauses, loc, directive, clauseOps);
 
   return OpTy::create(firOpBuilder, loc, clauseOps);
+}
+
+static mlir::Operation *
+genTargetUpdateDataOp(lower::AbstractConverter &converter,
+                      lower::SymMap &symTable, lower::StatementContext &stmtCtx,
+                      semantics::SemanticsContext &semaCtx, mlir::Location loc,
+                      const ConstructQueue &queue,
+                      ConstructQueue::const_iterator item) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::omp::TargetEnterExitUpdateDataOperands clauseOps;
+  genTargetEnterExitUpdateDataClauses(
+      converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
+      llvm::omp::Directive::OMPD_target_update, clauseOps);
+
+  if (mlir::Operation *op =
+          tryGenTargetUpdateKernel(converter, semaCtx, loc, clauseOps))
+    return op;
+
+  return mlir::omp::TargetUpdateOp::create(firOpBuilder, loc, clauseOps);
 }
 
 static mlir::omp::TaskOp
@@ -5569,8 +5750,8 @@ genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
         converter, symTable, stmtCtx, semaCtx, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_target_update:
-    newOp = genTargetEnterExitUpdateDataOp<mlir::omp::TargetUpdateOp>(
-        converter, symTable, stmtCtx, semaCtx, loc, queue, item);
+    newOp = genTargetUpdateDataOp(converter, symTable, stmtCtx, semaCtx, loc,
+                                  queue, item);
     break;
   case llvm::omp::Directive::OMPD_task:
     newOp = genTaskOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
