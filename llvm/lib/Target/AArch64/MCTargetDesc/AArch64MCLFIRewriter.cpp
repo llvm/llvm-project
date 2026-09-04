@@ -157,6 +157,13 @@ static bool mayPrefetch(const MCInst &Inst) {
   }
 }
 
+// Memory hints 48 (stshh keep) & 49 (stshh strm) should be emitted
+// immediately before a store instruction.
+static bool isMemHint(const MCInst &Inst) {
+  return Inst.getOpcode() == AArch64::HINT && Inst.getOperand(0).isImm() &&
+         (Inst.getOperand(0).getImm() > 47 && Inst.getOperand(0).getImm() < 50);
+}
+
 static bool isAuthenticatedBranch(unsigned Opcode) {
   switch (Opcode) {
   case AArch64::BRAA:
@@ -319,10 +326,17 @@ void AArch64MCLFIRewriter::finish(MCStreamer &Out) {
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
     DeferredLRGuard = false;
   }
+
+  // Flush a deferred memory hint instruction.
+  if (PendingMemHintInst && LastSTI)
+    emitPendingMemHintInst(Out, *LastSTI);
 }
 
 void AArch64MCLFIRewriter::emitInst(const MCInst &Inst, MCStreamer &Out,
                                     const MCSubtargetInfo &STI) {
+  if (!isMemHint(Inst) && mayStore(Inst))
+    emitPendingMemHintInst(Out, STI);
+
   // Invalidate the active guard if this instruction modifies the guarded
   // register, modifies x28 itself, or may affect control flow.
   if (ActiveGuardReg) {
@@ -371,6 +385,14 @@ void AArch64MCLFIRewriter::emitPendingTLSDescCall(MCStreamer &Out,
   const MCExpr *Expr = PendingTLSDescCall;
   PendingTLSDescCall = nullptr;
   emitInst(MCInstBuilder(AArch64::TLSDESCCALL).addExpr(Expr), Out, STI);
+}
+
+void AArch64MCLFIRewriter::emitPendingMemHintInst(MCStreamer &Out,
+                                                  const MCSubtargetInfo &STI) {
+  if (!PendingMemHintInst)
+    return;
+  emitInst(*PendingMemHintInst, Out, STI);
+  PendingMemHintInst.reset();
 }
 
 void AArch64MCLFIRewriter::emitMov(MCRegister Dest, MCRegister Src,
@@ -874,6 +896,10 @@ void AArch64MCLFIRewriter::rewriteVASysOp(const MCInst &Inst, MCStreamer &Out,
 // AArch64InstrInfo::getLFIInstSizeInBytes must be updated to match.
 void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
                                          const MCSubtargetInfo &STI) {
+  // Emit any pending hint if the next instruction is not a store.
+  if (!isMemHint(Inst) && !mayStore(Inst))
+    emitPendingMemHintInst(Out, STI);
+
   if (Inst.getOpcode() == AArch64::TLSDESCCALL) {
     PendingTLSDescCall = Inst.getOperand(0).getExpr();
     return;
@@ -953,6 +979,12 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   if (!isFakeMemAccess(Inst) &&
       (mayLoad(Inst) || mayStore(Inst) || mayPrefetch(Inst)))
     return rewriteLoadStore(Inst, Out, STI);
+
+  // Defer stshh hint instructions until rewriting the store.
+  if (isMemHint(Inst)) {
+    PendingMemHintInst = Inst;
+    return;
+  }
 
   emitInst(Inst, Out, STI);
 }

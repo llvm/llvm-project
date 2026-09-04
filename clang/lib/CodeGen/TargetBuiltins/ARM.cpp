@@ -2076,9 +2076,16 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
     llvm_unreachable(
         "Expected integer policy argument to atomic store with hint.");
 
-  StoreInst *Store =
-      Builder.CreateStore(CGF.EmitScalarExpr(E->getArg(1)),            // Value
-                          CGF.EmitPointerWithAlignment(E->getArg(0))); // Ptr;
+  const Expr *Ptr = E->getArg(0);
+  Address Addr = CGF.EmitPointerWithAlignment(Ptr);
+  Addr = Addr.withElementType(
+      CGF.ConvertTypeForMem(Ptr->getType()->getPointeeType()));
+
+  const Expr *Data = E->getArg(1);
+  Value *DataVal = CGF.EmitToMemory(CGF.EmitScalarExpr(Data), Data->getType());
+
+  StoreInst *Store = Builder.CreateStore(DataVal, Addr);
+  Store->setVolatile(Ptr->getType()->getPointeeType().isVolatileQualified());
 
   AtomicOrdering Ordering;
   unsigned OrderingArg = Result.Val.getInt().getExtValue();

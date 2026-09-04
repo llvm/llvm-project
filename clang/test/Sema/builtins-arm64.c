@@ -54,13 +54,18 @@ void test_trap(short s, unsigned short us) {
 
 void test_atomic_store_hint(char *c_ptr, __int128 *inv_ptr, float *f_ptr,
                             char c_data, __int128 inv_data, float f_data,
-                            int inv_int) {
+                            int inv_int, const char *const_c_ptr,
+                            unsigned _BitInt(7) *bit_ptr, unsigned _BitInt(7) *bit_data) {
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0); // expected-error {{too few arguments to function call, expected 4, have 3}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, 0, 0); // expected-error {{too many arguments to function call, expected 4, have 5}}
 
   __builtin_arm_atomic_store_with_hint(0, c_data, 0, 0); // expected-error {{address argument to atomic hint builtin must be a pointer to a scalar integral or floating-point type of 8, 16, 32, or 64 bits ('int' invalid)}}
   __builtin_arm_atomic_store_with_hint(c_ptr, f_data, 0, 0); // expected-error {{arguments are of different types ('char' vs 'float')}}
   __builtin_arm_atomic_store_with_hint(inv_ptr, inv_data, 0, 0); // expected-error {{address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits}}
+
+  __builtin_arm_atomic_store_with_hint(const_c_ptr, c_data, __ATOMIC_RELAXED, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('char' invalid)}}
+
+  __builtin_arm_atomic_store_with_hint(bit_ptr, bit_data, __ATOMIC_RELAXED, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
 
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, inv_int, 0); // expected-error {{invalid memory order argument to atomic hint operation ('int' invalid)}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 2, 0); // expected-error {{invalid memory order argument to atomic hint operation (2 invalid)}}
