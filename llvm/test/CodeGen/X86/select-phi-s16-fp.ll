@@ -12,17 +12,18 @@
 define void @phi_vec1bf16_to_f32_with_const_folding(ptr %dst) #0 {
 ; CHECK-LABEL: phi_vec1bf16_to_f32_with_const_folding:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    jmp LBB0_1
 ; CHECK-NEXT:  LBB0_1: ## %bb
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    callq ___truncsfbf2
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, 2(%rbx)
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    btl $16, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    adcl $32767, %ecx ## imm = 0x7FFF
+; CHECK-NEXT:    orl $4194304, %eax ## imm = 0x400000
+; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    cmovpl %eax, %ecx
+; CHECK-NEXT:    shrl $16, %ecx
+; CHECK-NEXT:    movw %cx, 2(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   br label %bb
@@ -41,19 +42,20 @@ bb:
 define void @phi_vec1bf16_to_f32(ptr %src, ptr %dst) #0 {
 ; CHECK-LABEL: phi_vec1bf16_to_f32:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    jmp LBB1_1
 ; CHECK-NEXT:  LBB1_1: ## %bb
-; CHECK-NEXT:    callq ___truncsfbf2
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, 2(%rbx)
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    btl $16, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    adcl $32767, %ecx ## imm = 0x7FFF
+; CHECK-NEXT:    orl $4194304, %eax ## imm = 0x400000
+; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    cmovpl %eax, %ecx
+; CHECK-NEXT:    shrl $16, %ecx
+; CHECK-NEXT:    movw %cx, 2(%rsi)
 ; CHECK-NEXT:    retq
 entry:
   %input = load <1 x bfloat>, ptr %src
