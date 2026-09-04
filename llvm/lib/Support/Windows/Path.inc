@@ -1826,54 +1826,36 @@ std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
 } // end namespace fs
 
 namespace path {
-static bool getKnownFolderPath(KNOWNFOLDERID folderId,
-                               SmallVectorImpl<char> &result) {
-  wchar_t *path = nullptr;
-  if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
+static bool getEnvPath(StringRef Var, SmallVectorImpl<char> &result) {
+  auto Val = sys::Process::GetEnv(Var);
+  if (!Val)
     return false;
-
-  bool ok = !UTF16ToUTF8(path, ::wcslen(path), result);
-  ::CoTaskMemFree(path);
-  if (ok)
-    llvm::sys::path::make_preferred(result);
-  return ok;
+  result.assign(Val->begin(), Val->end());
+  llvm::sys::path::make_preferred(result);
+  return true;
 }
 
 bool home_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_Profile, result);
+  return getEnvPath("USERPROFILE", result);
 }
 
 bool user_config_directory(SmallVectorImpl<char> &result) {
   // Either local or roaming appdata may be suitable in some cases, depending
   // on the data. Local is more conservative, Roaming may not always be correct.
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
+  return getEnvPath("LOCALAPPDATA", result);
 }
 
 bool cache_directory(SmallVectorImpl<char> &result) {
-  return getKnownFolderPath(FOLDERID_LocalAppData, result);
-}
-
-static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
-  SmallVector<wchar_t, 1024> Buf;
-  size_t Size = 1024;
-  do {
-    Buf.resize_for_overwrite(Size);
-    Size = GetEnvironmentVariableW(Var, Buf.data(), Buf.size());
-    if (Size == 0)
-      return false;
-
-    // Try again with larger buffer.
-  } while (Size > Buf.size());
-  Buf.truncate(Size);
-
-  return !windows::UTF16ToUTF8(Buf.data(), Size, Res);
+  return getEnvPath("LOCALAPPDATA", result);
 }
 
 static bool getTempDirEnvVar(SmallVectorImpl<char> &Res) {
-  const wchar_t *EnvironmentVariables[] = {L"TMP", L"TEMP", L"USERPROFILE"};
-  for (auto *Env : EnvironmentVariables) {
-    if (getTempDirEnvVar(Env, Res))
+  for (StringRef Var : {"TMP", "TEMP", "USERPROFILE"}) {
+    auto Val = sys::Process::GetEnv(Var);
+    if (Val && !Val->empty()) {
+      Res.assign(Val->begin(), Val->end());
       return true;
+    }
   }
   return false;
 }
