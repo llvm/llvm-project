@@ -1587,6 +1587,16 @@ multiclass sve_int_perm_dup_i<string asm> {
               (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), sve_elm_idx_extdup_d:$index)>;
   }
 
+  // Broadcast whole fixed-length vectors to packed SVE types.
+  // See LowerVECTOR_REPEAT for handling of legal unpacked types.
+  foreach VT = [nxv16i8, nxv8i16, nxv8f16, nxv8bf16,
+                nxv4i32, nxv4f32, nxv2i64, nxv2f64] in {
+    def : Pat<(VT (vector_repeat (SVEType<VT>.ZSub V128:$vec))),
+              (!cast<Instruction>(NAME # _Q) (SUBREG_TO_REG $vec, zsub), (i64 0))>;
+    def : Pat<(VT (vector_repeat (SVEType<VT>.DSub V64:$vec))),
+              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), (i64 0))>;
+  }
+
   // When extracting from an unpacked vector the index must be scaled to account
   // for the "holes" in the underlying packed vector type. We get the scaling
   // for free by "promoting" the element type to one whose underlying vector

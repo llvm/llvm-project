@@ -1974,6 +1974,22 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
 
+    // Direct patterns exist for quad broadcasts.
+    for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64,
+                    MVT::nxv8f16, MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Legal);
+
+    // VECTOR_REPEAT to unpacked SVE types require explicit unpacking to add
+    // spacing between elements.
+    for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32, MVT::nxv2bf16,
+                    MVT::nxv4bf16})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
+
+    // VECTOR_REPEAT to nxv1 types is just a VECTOR_SPLAT
+    for (auto VT : {MVT::nxv1f16, MVT::nxv1f32, MVT::nxv1f64, MVT::nxv1bf16,
+                    MVT::nxv1i8, MVT::nxv1i16, MVT::nxv1i32, MVT::nxv1i64})
+      setOperationAction(ISD::VECTOR_REPEAT, VT, Custom);
+
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
@@ -8841,6 +8857,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerEXTEND_VECTOR_INREG(Op, DAG);
   case ISD::ZERO_EXTEND_VECTOR_INREG:
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
+  case ISD::VECTOR_REPEAT:
+    return LowerVECTOR_REPEAT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
@@ -17823,6 +17841,28 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   }
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_REPEAT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  assert(isUnpackedType(VT, DAG) && "Expected an unpacked vector type!");
+
+  // Broadcast into a packed container before extracting the low lanes, which
+  // places the result elements at the spacing required by the unpacked type.
+  EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  unsigned NumConcat =
+      PackedVT.getVectorMinNumElements() / SrcVT.getVectorMinNumElements();
+  SmallVector<SDValue, 8> Ops(NumConcat, Src);
+  EVT PackedSrcVT = SrcVT.changeVectorElementCount(
+      *DAG.getContext(),
+      ElementCount::getFixed(PackedVT.getVectorMinNumElements()));
+  SDValue PackedSrc = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedSrcVT, Ops);
+  SDValue Broadcast = DAG.getNode(ISD::VECTOR_REPEAT, DL, PackedVT, PackedSrc);
+  return DAG.getExtractSubvector(DL, VT, Broadcast, 0);
 }
 
 SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
@@ -32715,6 +32755,18 @@ void AArch64TargetLowering::ReplaceNodeResults(
     SDLoc DL(N);
     SDValue V = DAG.getNode(ISD::VECTOR_MATCH, DL, NewVT, N->ops());
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+    return;
+  }
+  case ISD::VECTOR_REPEAT: {
+    EVT VT = N->getValueType(0);
+    assert(VT.getVectorElementCount() == ElementCount::getScalable(1) &&
+           "Expected an nxv1 type!");
+
+    SDLoc DL(N);
+    SDValue Elt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getVectorElementType(),
+                    N->getOperand(0), DAG.getVectorIdxConstant(0, DL));
+    Results.push_back(DAG.getSplatVector(VT, DL, Elt));
     return;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

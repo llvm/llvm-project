@@ -20605,6 +20605,29 @@ runtime, then the result vector is a {ref}`poison value <poisonvalues>`. The
 `idx` parameter must be a vector index constant type (for most targets this
 will be an integer pointer type).
 
+#### '`llvm.vector.repeat`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare <vscale x 16 x i8> @llvm.vector.repeat.nxv16i8.v16i8(<16 x i8> %vec)
+```
+
+##### Overview:
+
+The '`llvm.vector.repeat.*`' intrinsic repeatedly copies the elements of the
+source fixed-length vector, in order, until the result scalable vector is
+filled. For example, repeating `<A, B>` produces a scalable vector containing
+`vscale` copies of `<A, B>`.
+
+##### Arguments:
+
+The argument must be a fixed-length vector and the result must be a scalable
+vector with the same element type and minimum element count. In other words,
+the result type is formed by adding `vscale x` in front of the argument type's
+element count.
+
 #### '`llvm.vector.reverse`' Intrinsic
 
 ##### Syntax:
