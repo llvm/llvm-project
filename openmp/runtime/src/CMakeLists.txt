@@ -86,6 +86,7 @@ else()
     kmp_atomic.cpp
     kmp_csupport.cpp
     kmp_debug.cpp
+    kmp_device_env.cpp
     kmp_itt.cpp
     kmp_invoke_microtask.cpp
     kmp_environment.cpp

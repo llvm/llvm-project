@@ -53,6 +53,8 @@ VERSION {
         __kmp_thread_pool;
 
 	__kmp_reset_stats;
+        __kmp_resolve_host_env;
+        __kmp_resolve_device_env;
 
 #if USE_ITT_BUILD
         #
