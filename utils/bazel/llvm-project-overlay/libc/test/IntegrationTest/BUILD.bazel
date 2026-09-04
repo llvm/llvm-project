@@ -1,0 +1,25 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# LLVM libc unittest library.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test_library")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test_library(
+    name = "IntegrationTest",
+    srcs = ["test.cpp"],
+    hdrs = ["test.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_cpp_atomic",
+        "//libc:__support_macros_config",
+        "//libc:__support_macros_properties_architectures",
+        "//libc:__support_macros_properties_types",
+        "//libc:hdr_stdint_proxy",
+    ],
+)
