@@ -1951,16 +1951,20 @@ let TargetPrefix = "nvvm" in {
     foreach relu = ["", "_relu"] in {
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ff2bf16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_ff2f16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_f2bf16_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty, llvm_i1_ty], 
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
 
         def int_nvvm_f2f16_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_half_ty], [llvm_float_ty, llvm_i1_ty], 
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
       }
     }
   }
@@ -1970,10 +1974,10 @@ let TargetPrefix = "nvvm" in {
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
 
       def int_nvvm_ff2bf16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
     }
   }
 
@@ -2116,6 +2120,34 @@ let TargetPrefix = "nvvm" in {
 
     def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite # _scale_n2_ue8m0
         : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+  }
+
+  foreach satfinite = ["", "_satfinite"] in {
+    foreach rnd = ["rn", "rz"] in {
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty, llvm_i16_ty]>;
+
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i16_ty]>;
+
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i16_ty]>;
+    }
+
+    def int_nvvm_ff_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+
+    def int_nvvm_f16x2_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+
+    def int_nvvm_bf16x2_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
   }
 
   //

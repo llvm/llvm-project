@@ -226,6 +226,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
+    IO.mapOptional("AfterRequiresExpression", Wrapping.AfterRequiresExpression);
     IO.mapOptional("AfterStruct", Wrapping.AfterStruct);
     IO.mapOptional("AfterUnion", Wrapping.AfterUnion);
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
@@ -1725,6 +1726,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterFunction=*/false,
                             /*AfterNamespace=*/false,
                             /*AfterObjCDeclaration=*/false,
+                            /*AfterRequiresExpression=*/false,
                             /*AfterStruct=*/false,
                             /*AfterUnion=*/false,
                             /*AfterExportBlock=*/false,
@@ -1767,6 +1769,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
     Expanded.BraceWrapping.AfterExportBlock = true;
@@ -1783,6 +1786,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
@@ -1798,6 +1802,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterFunction=*/true,
         /*AfterNamespace=*/true,
         /*AfterObjCDeclaration=*/true,
+        /*AfterRequiresExpression=*/true,
         /*AfterStruct=*/true,
         /*AfterUnion=*/true,
         /*AfterExportBlock=*/true,
@@ -1901,6 +1906,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterFunction=*/false,
                              /*AfterNamespace=*/false,
                              /*AfterObjCDeclaration=*/false,
+                             /*AfterRequiresExpression=*/false,
                              /*AfterStruct=*/false,
                              /*AfterUnion=*/false,
                              /*AfterExportBlock=*/false,
@@ -4211,6 +4217,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   }
 
   SmallVector<StringRef, 4> Matches;
+  SmallVector<tooling::HeaderIncludes::HeaderToInsert, 4> HeadersToInsert;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
     bool Matched =
@@ -4219,19 +4226,17 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                       "'#include ...'");
     (void)Matched;
     auto IncludeName = Matches[2];
-    auto Replace =
-        Includes.insert(IncludeName.trim("\"<>"), IncludeName.starts_with("<"),
-                        tooling::IncludeDirective::Include);
-    if (Replace) {
-      auto Err = Result.add(*Replace);
-      if (Err) {
-        consumeError(std::move(Err));
-        unsigned NewOffset =
-            Result.getShiftedCodePosition(Replace->getOffset());
-        auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
-                                            Replace->getReplacementText());
-        Result = Result.merge(tooling::Replacements(Shifted));
-      }
+    HeadersToInsert.emplace_back(IncludeName,
+                                 tooling::IncludeDirective::Include);
+  }
+  for (const auto &Replace : Includes.insert(HeadersToInsert)) {
+    auto Err = Result.add(Replace);
+    if (Err) {
+      consumeError(std::move(Err));
+      unsigned NewOffset = Result.getShiftedCodePosition(Replace.getOffset());
+      auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
+                                          Replace.getReplacementText());
+      Result = Result.merge(tooling::Replacements(Shifted));
     }
   }
   return Result;
@@ -4387,12 +4392,6 @@ reformat(const FormatStyle &Style, StringRef Code,
     }
   }
 
-  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
-    Passes.emplace_back([&](const Environment &Env) {
-      return DefinitionBlockSeparator(Env, Expanded).process();
-    });
-  }
-
   if (Style.Language == FormatStyle::LK_ObjC &&
       !Style.ObjCPropertyAttributeOrder.empty()) {
     Passes.emplace_back([&](const Environment &Env) {
@@ -4410,6 +4409,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   Passes.emplace_back([&](const Environment &Env) {
     return Formatter(Env, Expanded, Status).process();
   });
+
+  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
 
   if (Style.isJavaScript() &&
       Style.InsertTrailingCommas == FormatStyle::TCS_Wrapped) {

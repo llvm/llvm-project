@@ -115,6 +115,10 @@ public:
     return cir::IntType::get(&getABIInfo().cgt.getMLIRContext(), 64,
                              /*isSigned=*/true);
   }
+
+  mlir::Type getCUDADeviceBuiltinTextureDeviceType() const override {
+    return cir::CUDADeviceTextureType::get(&getABIInfo().cgt.getMLIRContext());
+  }
 };
 
 } // namespace

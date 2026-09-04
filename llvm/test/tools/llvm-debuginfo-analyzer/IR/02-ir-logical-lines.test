@@ -33,9 +33,9 @@
 ; ONE-NEXT: [003]                 {Code} '%retval = alloca i32, align 4'
 ; ONE-NEXT: [003]                 {Code} 'store i32 0, ptr %retval, align 4'
 ; ONE-NEXT: [003]     5           {Line}
-; ONE-NEXT: [003]                 {Code} '%call = call noundef i32 (ptr, ...) @_Z6printfPKcz(ptr noundef @.str), !dbg !22'
+; ONE-NEXT: [003]                 {Code} '%call = call noundef i32 (ptr, ...) @_Z6printfPKcz(ptr noundef @.str), !dbg !{{[0-9]+}}'
 ; ONE-NEXT: [003]     6           {Line}
-; ONE-NEXT: [003]                 {Code} 'ret i32 0, !dbg !23'
+; ONE-NEXT: [003]                 {Code} 'ret i32 0, !dbg !{{[0-9]+}}'
 ; ONE-EMPTY:
 ; ONE-NEXT: Logical View:
 ; ONE-NEXT: [000]           {File} 'hello-world-dwarf-clang.o' -> elf64-x86-64

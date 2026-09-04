@@ -146,6 +146,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+* The DirectX backend is now an official target and has moved from
+  `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
+  default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
+
 ### Changes to TableGen
 
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
@@ -175,6 +179,10 @@ Makes programs 10x faster by doing Special New Thing.
   `numRecords` widths more accurately. If an integer of the incorrect width
   is used, it will be zero-extended or truncated as needed.
 
+* These intrinsics have been removed in favour of `llvm.amdgcn.ballot`:
+  * `llvm.amdgcn.icmp`
+  * `llvm.amdgcn.fcmp`
+
 ### Changes to the ARM Backend
 
 * Using the hard-float procedure call standard without floating-point registers
@@ -184,6 +192,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the AVR Backend
 
 ### Changes to the DirectX Backend
+
+* The DirectX backend has been promoted from experimental to an official,
+  fully supported LLVM target.
 
 ### Changes to the Hexagon Backend
 
@@ -206,11 +217,14 @@ Makes programs 10x faster by doing Special New Thing.
   push/pop extensions.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
+* Added support for `Sspmp`, `Sspmpen` and `Smpmpdeleg` extensions.
 
 ### Changes to the WebAssembly Backend
 
 * Added support for emitting common symbols (.comm) using the WASM_SYMBOL_BINDING_COMMON
   flag (see https://github.com/WebAssembly/tool-conventions/pull/267)
+* Added `@llvm.wasm.memory.copy` and `@llvm.wasm.memory.fill` intrinsics for
+  the WebAssembly `memory.copy` and `memory.fill` instructions.
 
 ### Changes to the Windows Target
 
@@ -224,6 +238,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* Fixed a crash
+  ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
+  compiling a function containing a static alloca of `(size_t)-1` bytes, whose
+  size collided with the sentinel value MachineFrameInfo used to mark dead
+  stack objects.
+
 ### Changes to the Metadata Info
 
 ### Changes to the Debug Info
@@ -233,6 +253,11 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
+
+* `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
+  runtime's command line instead of following it. A runtime that dispatches on a
+  leading subcommand can therefore name that subcommand through this setting,
+  rather than needing a wrapper script.
 
 #### SBAPI
 

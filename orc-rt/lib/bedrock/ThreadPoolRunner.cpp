@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/ThreadPoolRunner.h
+// Contains the implementation of APIs in the orc-rt/bedrock/ThreadPoolRunner.h
 // header.
 //
 //===----------------------------------------------------------------------===//

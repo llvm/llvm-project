@@ -249,7 +249,8 @@ def ConstantOp : Func_Op<"constant",
 
 def FuncOp : Func_Op<"func", [
   AffineScope, AutomaticAllocationScope,
-  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
+  SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+  OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{

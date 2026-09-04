@@ -31,7 +31,8 @@ class Builtin_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 def ModuleOp : Builtin_Op<"module", [
-    AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
+    AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, SymbolName,
+    SymbolVisibility, Symbol,
     OpAsmOpInterface
   ] # GraphRegionNoTerminator.traits> {
   let summary = "A top level container operation";

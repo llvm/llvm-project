@@ -93,15 +93,16 @@ getOrCreateMultiReturnType(ConversionPatternRewriter &rewriter, Location loc,
     auto savedIP = rewriter.saveInsertionPoint();
     rewriter.setInsertionPoint(insertBefore);
 
-    emitc::ClassOp classOp = emitc::ClassOp::create(rewriter, loc, structName,
-                                                    /*final_specifier=*/false,
-                                                    emitc::ClassType::struct_);
+    emitc::ClassOp classOp = emitc::ClassOp::create(
+        rewriter, loc, structName, /*sym_visibility=*/nullptr,
+        /*final_specifier=*/false, emitc::ClassType::struct_);
     rewriter.createBlock(&classOp.getBody());
     rewriter.setInsertionPointToStart(&classOp.getBody().front());
 
     for (auto [i, type] : llvm::enumerate(types)) {
       auto fieldName = rewriter.getStringAttr("field" + std::to_string(i));
-      emitc::FieldOp::create(rewriter, loc, fieldName, TypeAttr::get(type),
+      emitc::FieldOp::create(rewriter, loc, fieldName,
+                             /*sym_visibility=*/nullptr, TypeAttr::get(type),
                              nullptr);
     }
 
@@ -297,18 +298,12 @@ public:
 
     newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
     newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
-    if (StringAttr visibility = funcOp.getSymVisibilityAttr())
-      newFuncOp->setDiscardableAttr(
-          SymbolOpInterface::getDefaultVisibilityAttrName(), visibility);
+    newFuncOp.setVisibility(funcOp.getVisibility());
 
-    // Copy over all attributes other than the function name and type.
+    // Copy over the discardable attributes.
     for (const auto &namedAttr :
-         funcOp->getDiscardableAttrDictionary().getValue()) {
-      if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
-          namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setDiscardableAttr(namedAttr.getName(),
-                                      namedAttr.getValue());
-    }
+         funcOp->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     // Add `extern` to specifiers if `func.func` is declaration only.
     if (funcOp.isDeclaration()) {

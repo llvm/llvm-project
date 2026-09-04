@@ -3,10 +3,10 @@
 
 %struct.foo = type { i32, i64 }
 
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%0> = bitcast ir<%b> to ptr
+; CHECK: Cost of 0 for VF 2: WIDEN-GEP ir<%b> = getelementptr inbounds ir<%in>, ir<%i.012>, ir<1>
 
-; The bitcast below will be scalarized due to the predication in the loop. Bitcasts
-; between pointer types should be treated as free, despite the scalarization.
+; The bitcast below is a no-op between identical pointer types and is folded
+; away, so it costs nothing even though the loop is predicated.
 define void @foo(ptr noalias nocapture %in, ptr noalias nocapture readnone %out, i64 %n) {
 entry:
   br label %for.body

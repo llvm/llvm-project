@@ -12,7 +12,7 @@
 #include "../utils/ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -94,6 +94,7 @@ namespace readability {
     m(LocalConstantPointer) \
     m(LocalPointer) \
     m(LocalVariable) \
+    m(LambdaCapture) \
     m(StaticConstexprVariable) \
     m(StaticConstant) \
     m(StaticVariable) \
@@ -290,8 +291,10 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
   const bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
   const bool CheckAnonFieldInParent =
       Options.get("CheckAnonFieldInParent", false);
+  const bool TypedefInheritAnonTagConfig =
+      Options.get("TypedefInheritAnonTagConfig", false);
   return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
-          CheckAnonFieldInParent};
+          CheckAnonFieldInParent, TypedefInheritAnonTagConfig};
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
@@ -861,6 +864,8 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 MainFileStyle->isIgnoringMainLikeFunction());
   Options.store(Opts, "CheckAnonFieldInParent",
                 MainFileStyle->isCheckingAnonFieldInParentScope());
+  Options.store(Opts, "TypedefInheritAnonTagConfig",
+                MainFileStyle->isTypedefInheritingAnonTagConfig());
 }
 
 bool IdentifierNamingCheck::matchesStyle(
@@ -1116,15 +1121,37 @@ std::string IdentifierNamingCheck::fixupWithStyle(
   return (Style.Prefix + HungarianPrefix + Mid + Style.Suffix).str();
 }
 
+/// Returns \c true if \p Style can reject a name. A Hungarian prefix cannot
+/// (it is empty for a type declaration).
+static bool canConstrainName(
+    const std::optional<IdentifierNamingCheck::NamingStyle> &Style) {
+  return Style &&
+         (Style->Case || !Style->Prefix.empty() || !Style->Suffix.empty());
+}
+
 StyleKind IdentifierNamingCheck::findStyleKind(
     const NamedDecl *D,
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
-    bool IgnoreMainLikeFunctions, bool CheckAnonFieldInParentScope) const {
+    bool IgnoreMainLikeFunctions, bool CheckAnonFieldInParentScope,
+    bool TypedefInheritAnonTagConfig) const {
   assert(D && D->getIdentifier() && !D->getName().empty() && !D->isImplicit() &&
          "Decl must be an explicit identifier with a name.");
 
   if (isa<ObjCIvarDecl>(D) && NamingStyles[SK_ObjcIvar])
     return SK_ObjcIvar;
+
+  // A typedef that provides the only name of an otherwise unnamed tag, as in
+  // `typedef enum {} E;`, names the tag itself, so it can be checked against
+  // the style configured for that tag kind.
+  if (TypedefInheritAnonTagConfig && isa<TypedefDecl, TypeAliasDecl>(D)) {
+    const TagDecl *Tag =
+        cast<TypedefNameDecl>(D)->getUnderlyingType()->getAsTagDecl();
+    if (Tag && Tag->getTypedefNameForAnonDecl() == D) {
+      const StyleKind SK = findStyleKindForTag(Tag, NamingStyles);
+      if (SK != SK_Invalid && canConstrainName(NamingStyles[SK]))
+        return SK;
+    }
+  }
 
   if (isa<TypedefDecl>(D) && NamingStyles[SK_Typedef])
     return SK_Typedef;
@@ -1167,30 +1194,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (Decl->isAnonymousStructOrUnion())
       return SK_Invalid;
 
-    if (const auto *Definition = Decl->getDefinition()) {
-      if (const auto *CxxRecordDecl = dyn_cast<CXXRecordDecl>(Definition)) {
-        if (CxxRecordDecl->isAbstract() && NamingStyles[SK_AbstractClass])
-          return SK_AbstractClass;
-      }
-
-      if (Definition->isStruct() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isStruct() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isUnion() && NamingStyles[SK_Union])
-        return SK_Union;
-
-      if (Definition->isEnum() && NamingStyles[SK_Enum])
-        return SK_Enum;
-    }
+    const StyleKind SK = findStyleKindForTag(Decl, NamingStyles);
+    if (SK != SK_Invalid)
+      return SK;
 
     return undefinedStyle(NamingStyles);
   }
@@ -1244,7 +1250,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   // C++17 structured bindings: treat each binding as if it were a variable
   // with the same storage and qualifiers as the parent DecompositionDecl.
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+    if (const DecompositionDecl *Decomp = BD->getDecomposedDecl();
         Decomp && !BD->getType().isNull())
       return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
     return SK_Invalid;
@@ -1408,7 +1414,8 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
       FileStyle.getStyles(), FileStyle.getHNOption(),
       findStyleKind(Decl, FileStyle.getStyles(),
                     FileStyle.isIgnoringMainLikeFunction(),
-                    FileStyle.isCheckingAnonFieldInParentScope()),
+                    FileStyle.isCheckingAnonFieldInParentScope(),
+                    FileStyle.isTypedefInheritingAnonTagConfig()),
       SM, IgnoreFailedSplit);
 }
 
@@ -1518,9 +1525,47 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
   return undefinedStyle(NamingStyles);
 }
 
+StyleKind IdentifierNamingCheck::findStyleKindForTag(
+    const TagDecl *Tag,
+    ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  if (isa<EnumDecl>(Tag) && NamingStyles[SK_Enum])
+    return SK_Enum;
+
+  const auto *Record = dyn_cast<RecordDecl>(Tag);
+  if (!Record)
+    return SK_Invalid;
+
+  if (const auto *Definition = Record->getDefinition()) {
+    if (const auto *CxxRecordDecl = dyn_cast<CXXRecordDecl>(Definition)) {
+      if (CxxRecordDecl->isAbstract() && NamingStyles[SK_AbstractClass])
+        return SK_AbstractClass;
+    }
+
+    if (Definition->isStruct() && NamingStyles[SK_Struct])
+      return SK_Struct;
+
+    if (Definition->isStruct() && NamingStyles[SK_Class])
+      return SK_Class;
+
+    if (Definition->isClass() && NamingStyles[SK_Class])
+      return SK_Class;
+
+    if (Definition->isClass() && NamingStyles[SK_Struct])
+      return SK_Struct;
+
+    if (Definition->isUnion() && NamingStyles[SK_Union])
+      return SK_Union;
+  }
+
+  return SK_Invalid;
+}
+
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
     ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  if (Var->isInitCapture() && NamingStyles[SK_LambdaCapture])
+    return SK_LambdaCapture;
+
   if (Var->isConstexpr()) {
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstexpr])
       return SK_ClassConstexpr;

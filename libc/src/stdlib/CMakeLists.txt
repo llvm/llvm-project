@@ -782,8 +782,6 @@ add_entrypoint_object(
     atexit.cpp
   HDRS
     atexit.h
-  CXX_STANDARD
-    20 # For constinit
   DEPENDS
     .exit_handler
 )
@@ -794,8 +792,6 @@ add_entrypoint_object(
     at_quick_exit.cpp
   HDRS
     at_quick_exit.h
-  CXX_STANDARD
-    20 # For constinit
   DEPENDS
     .exit_handler
     .atexit

@@ -59,7 +59,7 @@ define spir_kernel void @softmax_kernel(ptr addrspace(1) nocapture writeonly %0,
   br label %49
 
 49:                                               ; preds = %46, %38
-  %50 = phi <1 x float> [ %48, %46 ], [ splat (float 0xFFF0000000000000), %38 ]
+  %50 = phi <1 x float> [ %48, %46 ], [ splat (float -inf), %38 ]
   %51 = extractelement <1 x float> %50, i64 0
   br i1 %19, label %52, label %54
 
@@ -68,7 +68,7 @@ define spir_kernel void @softmax_kernel(ptr addrspace(1) nocapture writeonly %0,
   br label %54
 
 54:                                               ; preds = %52, %49
-  %55 = phi <1 x float> [ %53, %52 ], [ splat (float 0xFFF0000000000000), %49 ]
+  %55 = phi <1 x float> [ %53, %52 ], [ splat (float -inf), %49 ]
   %56 = extractelement <1 x float> %55, i64 0
   br i1 %20, label %57, label %59
 
@@ -77,7 +77,7 @@ define spir_kernel void @softmax_kernel(ptr addrspace(1) nocapture writeonly %0,
   br label %59
 
 59:                                               ; preds = %57, %54
-  %60 = phi <1 x float> [ %58, %57 ], [ splat (float 0xFFF0000000000000), %54 ]
+  %60 = phi <1 x float> [ %58, %57 ], [ splat (float -inf), %54 ]
   %61 = extractelement <1 x float> %60, i64 0
   br i1 %21, label %62, label %64
 
@@ -86,7 +86,7 @@ define spir_kernel void @softmax_kernel(ptr addrspace(1) nocapture writeonly %0,
   br label %64
 
 64:                                               ; preds = %62, %59
-  %65 = phi <1 x float> [ %63, %62 ], [ splat (float 0xFFF0000000000000), %59 ]
+  %65 = phi <1 x float> [ %63, %62 ], [ splat (float -inf), %59 ]
   %66 = extractelement <1 x float> %65, i64 0
   tail call spir_func void @_Z7barrierj(i32 1)
   %67 = tail call float @llvm.maxnum.f32(float %51, float %56)

@@ -1626,9 +1626,9 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost += TTI.getShuffleCost(
-              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), TTI::TCK_RecipThroughput);
+          EmbedCost +=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 FixedVectorType::get(EltTy, 1), CostKind);
         return EmbedCost;
       }
 
@@ -1648,9 +1648,9 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -= TTI.getShuffleCost(
-              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), TTI::TCK_RecipThroughput);
+          EmbedCost -=
+              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+                                 FixedVectorType::get(EltTy, 1), CostKind);
         return EmbedCost;
       }
 
@@ -1658,8 +1658,10 @@ public:
       if (N == 1)
         return InstructionCost(0);
 
-      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0) -
-             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
+      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0,
+                                 CostKind) -
+             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0,
+                                     CostKind);
     };
 
     // Iterate over LHS and operations feeding LHS and check if it is profitable

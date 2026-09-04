@@ -208,9 +208,9 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   if (resultStructType) {
     // Allocate the struct on the stack and pass the pointer.
     Type resultType = cast<LLVM::LLVMFunctionType>(wrapperType).getParamType(0);
-    Value one = LLVM::ConstantOp::create(
-        builder, loc, typeConverter.convertType(builder.getIndexType()),
-        builder.getIntegerAttr(builder.getIndexType(), 1));
+    Type indexType = typeConverter.convertType(builder.getIndexType());
+    Value one = LLVM::ConstantOp::create(builder, loc, indexType,
+                                         builder.getIntegerAttr(indexType, 1));
     Value result =
         LLVM::AllocaOp::create(builder, loc, resultType, resultStructType, one);
     args.push_back(result);
@@ -236,9 +236,9 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                     wrapperArgsRange.take_front(numToDrop));
 
       auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
+      Type indexType = typeConverter.convertType(builder.getIndexType());
       Value one = LLVM::ConstantOp::create(
-          builder, loc, typeConverter.convertType(builder.getIndexType()),
-          builder.getIntegerAttr(builder.getIndexType(), 1));
+          builder, loc, indexType, builder.getIntegerAttr(indexType, 1));
       Value allocated = LLVM::AllocaOp::create(
           builder, loc, ptrTy, packed.getType(), one, /*alignment=*/0);
       LLVM::StoreOp::create(builder, loc, packed, allocated);

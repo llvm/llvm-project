@@ -3587,6 +3587,12 @@ LogicalResult tosa::TransposeOp::verify() {
           constantPerms, [](int32_t v) -> int64_t { return v; })))
     return emitOpError() << "expected valid permutation indices";
 
+  if (isa<BlockScaledType>(getInput1().getType().getElementType()) &&
+      constantPerms.back() != static_cast<int32_t>(constantPerms.size()) - 1) {
+    return emitOpError() << "expected no-op permutation on innermost dimension "
+                            "for block scaled input";
+  }
+
   // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
   if (inputShape.hasStaticShape() && outputShape.hasStaticShape() &&
       inputShape.getNumElements() != outputShape.getNumElements())

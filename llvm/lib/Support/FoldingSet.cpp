@@ -24,16 +24,10 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 // FoldingSetNodeIDRef Implementation
 
-bool FoldingSetNodeIDRef::operator==(FoldingSetNodeIDRef RHS) const {
-  if (Size != RHS.Size)
-    return false;
-  return memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
-}
-
-bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
-  if (Size != RHS.Size)
-    return Size < RHS.Size;
-  return memcmp(Data, RHS.Data, Size * sizeof(*Data)) < 0;
+bool llvm::operator<(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+  if (LHS.size() != RHS.size())
+    return LHS.size() < RHS.size();
+  return memcmp(LHS.data(), RHS.data(), LHS.size() * sizeof(unsigned)) < 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -107,22 +101,6 @@ void FoldingSetNodeID::AddNodeID(const FoldingSetNodeID &ID) {
   Bits.append(ID.Bits.begin(), ID.Bits.end());
 }
 
-bool FoldingSetNodeID::operator==(const FoldingSetNodeID &RHS) const {
-  return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
-}
-
-bool FoldingSetNodeID::operator==(FoldingSetNodeIDRef RHS) const {
-  return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
-}
-
-bool FoldingSetNodeID::operator<(const FoldingSetNodeID &RHS) const {
-  return *this < FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
-}
-
-bool FoldingSetNodeID::operator<(FoldingSetNodeIDRef RHS) const {
-  return FoldingSetNodeIDRef(Bits.data(), Bits.size()) < RHS;
-}
-
 FoldingSetNodeIDRef
 FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
   unsigned *New = Allocator.Allocate<unsigned>(Bits.size());
@@ -133,20 +111,12 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
 
-/// Encode a 32-bit hash as an opaque non-null token for InsertPos.
-static void *encodeHash(uint32_t Hash) {
-  return reinterpret_cast<void *>(static_cast<uintptr_t>(Hash));
-}
-
-static uint32_t decodeHash(void *InsertPos) {
-  return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(InsertPos));
-}
-
 FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
   assert(5 < Log2InitSize && Log2InitSize < 32 &&
          "Initial hash table size out of range");
   NumBuckets = 1 << Log2InitSize;
-  Buckets = static_cast<void **>(safe_calloc(NumBuckets, sizeof(void *)));
+  Buckets = static_cast<FoldingSetNode **>(
+      safe_calloc(NumBuckets, sizeof(FoldingSetNode *)));
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
@@ -175,11 +145,11 @@ void FoldingSetBase::clear() {
   incrementEpoch();
   // Stale hashes are unreachable, so only the occupancy needs resetting.
   if (NumBuckets)
-    memset(Buckets, 0, NumBuckets * sizeof(void *));
+    memset(Buckets, 0, NumBuckets * sizeof(FoldingSetNode *));
   NumNodes = 0;
 }
 
-void FoldingSetBase::placeNode(Node *N, uint32_t Hash) {
+void FoldingSetBase::placeNode(FoldingSetNode *N, uint32_t Hash) {
   unsigned Mask = NumBuckets - 1;
   unsigned I = Hash & Mask;
   while (Buckets[I]) {
@@ -197,9 +167,8 @@ void FoldingSetBase::grow(unsigned MinNumBuckets) {
 
   FoldingSetBase Tmp(llvm::Log2_32(NewBucketCount));
   for (unsigned I = 0; I != NumBuckets; ++I)
-    if (void *N = Buckets[I])
-      Tmp.placeNode(static_cast<Node *>(N),
-                    static_cast<Node *>(N)->getFoldingSetHash());
+    if (FoldingSetNode *N = Buckets[I])
+      Tmp.placeNode(N, N->getFoldingSetHash());
 
   *this = std::move(Tmp);
 }
@@ -211,43 +180,18 @@ void FoldingSetBase::reserve(unsigned N) {
   grow(N + (N + 2) / 3);
 }
 
-LLVM_ATTRIBUTE_NOINLINE bool
-FoldingSetBase::nodeEquals(const FoldingSetInfo &Info,
-                           const FoldingSetBase *Self, Node *N,
-                           const FoldingSetNodeID &ID, unsigned IDHash) {
-  FoldingSetNodeID TempID;
-  return Info.NodeEquals(Self, N, ID, IDHash, TempID);
-}
-
-FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
-    const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
-  unsigned IDHash = ID.ComputeHash();
-  unsigned Mask = NumBuckets - 1;
-  for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
-    Node *N = static_cast<Node *>(Buckets[I]);
-    if (N->getFoldingSetHash() == IDHash &&
-        nodeEquals(Info, this, N, ID, IDHash)) {
-      InsertPos = nullptr;
-      return N;
-    }
-  }
-
-  InsertPos = encodeHash(IDHash);
-  return nullptr;
-}
-
-void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
+void FoldingSetBase::insert(FoldingSetNode *N, FoldingSetInsertToken Token) {
   assert(N && "Cannot insert a null node");
-  assert(InsertPos && "Invalid InsertPos!");
+  assert(Token && "Invalid token!");
   incrementEpoch();
   if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
     grow(NumBuckets * 2);
-  uint32_t Hash = decodeHash(InsertPos);
+  uint32_t Hash = Token.Hash;
   placeNode(N, Hash);
   N->setFoldingSetHash(Hash);
 }
 
-bool FoldingSetBase::RemoveNode(Node *N) {
+bool FoldingSetBase::erase(FoldingSetNode *N) {
   uint32_t Hash = N->getFoldingSetHash();
   if (Hash == FoldingSetNodeIDRef::NotAHash)
     return false; // Never inserted.
@@ -265,7 +209,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   // Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
   // whose probe path crosses the hole.
   for (unsigned J = (I + 1) & Mask; Buckets[J]; J = (J + 1) & Mask) {
-    unsigned Ideal = static_cast<Node *>(Buckets[J])->getFoldingSetHash();
+    unsigned Ideal = Buckets[J]->getFoldingSetHash();
     if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
       Buckets[I] = Buckets[J];
       I = J;
@@ -275,32 +219,4 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   N->setFoldingSetHash(FoldingSetNodeIDRef::NotAHash);
   --NumNodes;
   return true;
-}
-
-FoldingSetBase::Node *
-FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
-  FoldingSetNodeID ID;
-  Info.GetNodeProfile(this, N, ID);
-  void *IP;
-  if (Node *E = FindNodeOrInsertPos(ID, IP, Info))
-    return E;
-  InsertNode(N, IP);
-  return N;
-}
-
-//===----------------------------------------------------------------------===//
-// FoldingSetIteratorImpl Implementation
-
-FoldingSetIteratorImpl::FoldingSetIteratorImpl(const FoldingSetBase *Set,
-                                               unsigned Index)
-    : DebugEpochBase::HandleBase(Set), Set(Set), Index(Index) {
-  while (this->Index < Set->NumBuckets && !Set->Buckets[this->Index])
-    ++this->Index;
-}
-
-void FoldingSetIteratorImpl::advance() {
-  assert(isHandleInSync() && "invalid iterator access!");
-  do
-    ++Index;
-  while (Index < Set->NumBuckets && !Set->Buckets[Index]);
 }

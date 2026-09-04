@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=nvptx64 -enable-new-pm -stop-after=finalize-isel -o - %s | FileCheck %s
 
 ; CHECK: name: test
-; CHECK: LD_i32 {{.*}}&test_param_0
+; CHECK: LD_i32 {{.*}}<mcsymbol test_param_0>
 define i32 @test(i32 %a) {
   ret i32 %a
 }

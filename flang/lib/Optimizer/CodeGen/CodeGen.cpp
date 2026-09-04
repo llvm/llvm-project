@@ -2323,8 +2323,19 @@ static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal,
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
     return isDeviceAllocation(convertOp.getValue(), {},
                               cudaDescriptorAllocFunction);
+  // fir.declare, and the fircg.ext_declare it becomes when debug info keeps it
+  // alive until codegen, are pass-through on their memref operand. The adaptor
+  // value is forwarded too so a declared dummy argument stays recognizable.
+  if (auto declareOp =
+          mlir::dyn_cast_or_null<fir::DeclareOp>(val.getDefiningOp()))
+    return isDeviceAllocation(declareOp.getMemref(), adaptorVal,
+                              cudaDescriptorAllocFunction);
+  if (auto xDeclareOp =
+          mlir::dyn_cast_or_null<fir::cg::XDeclareOp>(val.getDefiningOp()))
+    return isDeviceAllocation(xDeclareOp.getMemref(), adaptorVal,
+                              cudaDescriptorAllocFunction);
   if (!val.getDefiningOp() && adaptorVal) {
-    if (auto blockArg = llvm::cast<mlir::BlockArgument>(adaptorVal)) {
+    if (auto blockArg = llvm::dyn_cast<mlir::BlockArgument>(adaptorVal)) {
       if (blockArg.getOwner() && blockArg.getOwner()->getParentOp() &&
           blockArg.getOwner()->isEntryBlock()) {
         if (auto func = mlir::dyn_cast_or_null<mlir::FunctionOpInterface>(
@@ -2981,12 +2992,23 @@ struct InsertOnRangeOpConversion
 
     auto arrayType = adaptor.getSeq().getType();
 
-    // Iteratively extract the array dimensions from the type.
+    // Extract the dimensions of the array being initialized. Only those are
+    // used to expand a fallback insert chain. Any remaining LLVM array
+    // dimension belongs to an aggregate element type: a CHARACTER element is
+    // itself an array of characters.
     llvm::SmallVector<std::int64_t> dims;
     mlir::Type type = arrayType;
-    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
+    for (std::size_t i = 0, rank = range.getType().getShape().size(); i < rank;
+         ++i) {
+      auto t = mlir::cast<mlir::LLVM::LLVMArrayType>(type);
       dims.push_back(t.getNumElements());
       type = t.getElementType();
+    }
+    llvm::SmallVector<std::int64_t> elementDims;
+    mlir::Type scalarType = type;
+    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(scalarType)) {
+      elementDims.push_back(t.getNumElements());
+      scalarType = t.getElementType();
     }
 
     // Avoid generating long insert chain that are very slow to fold back
@@ -2997,16 +3019,45 @@ struct InsertOnRangeOpConversion
       llvm::FailureOr<mlir::Attribute> cst =
           fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
       if (llvm::succeeded(cst)) {
-        mlir::Attribute dimVal = *cst;
-        for (auto dim : llvm::reverse(dims)) {
-          // Use std::vector in case the number of elements is big.
-          std::vector<mlir::Attribute> elements(dim, dimVal);
-          dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+        if (elementDims.empty()) {
+          mlir::Attribute dimVal = *cst;
+          for (auto dim : llvm::reverse(dims)) {
+            // Use std::vector in case the number of elements is big.
+            std::vector<mlir::Attribute> elements(dim, dimVal);
+            dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+          }
+          // Replace insert chain with constant.
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
+                                                              dimVal);
+          return mlir::success();
         }
-        // Replace insert chain with constant.
-        rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
-                                                            dimVal);
-        return mlir::success();
+        // An array with an aggregate element type cannot be described by a
+        // nested ArrayAttr. A CHARACTER array is a dense array of characters,
+        // so replicate the element data into a dense attribute.
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(*cst)) {
+          llvm::StringRef element = strAttr.getValue();
+          std::int64_t elementSize = 1;
+          for (std::int64_t dim : elementDims)
+            elementSize *= dim;
+          if (scalarType.isInteger(8) &&
+              element.size() == static_cast<std::size_t>(elementSize)) {
+            std::int64_t count = 1;
+            for (std::int64_t dim : dims)
+              count *= dim;
+            std::string data;
+            data.reserve(count * element.size());
+            for (std::int64_t i = 0; i < count; ++i)
+              data.append(element.data(), element.size());
+            llvm::SmallVector<std::int64_t> shape(dims);
+            shape.append(elementDims);
+            auto denseAttr = mlir::DenseElementsAttr::getFromRawBuffer(
+                mlir::RankedTensorType::get(shape, scalarType),
+                llvm::ArrayRef(data.data(), data.size()));
+            rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+                range, arrayType, denseAttr);
+            return mlir::success();
+          }
+        }
       }
     }
 
@@ -3699,7 +3750,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
-    auto linkage = convertLinkage(global.getLinkName());
+    auto linkage = convertLinkage(global.getLinkage());
     auto isConst = global.getConstant().has_value();
     mlir::SymbolRefAttr comdat;
     llvm::ArrayRef<mlir::NamedAttribute> attrs;
@@ -3816,22 +3867,24 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     return mlir::success();
   }
 
-  // TODO: String comparisons should be avoided. Replace linkName with an
-  // enumeration.
   mlir::LLVM::Linkage
-  convertLinkage(std::optional<llvm::StringRef> optLinkage) const {
+  convertLinkage(std::optional<fir::LinkageEnum> optLinkage) const {
     if (optLinkage) {
-      auto name = *optLinkage;
-      if (name == "internal")
+      switch (*optLinkage) {
+      case fir::LinkageEnum::Internal:
         return mlir::LLVM::Linkage::Internal;
-      if (name == "linkonce")
+      case fir::LinkageEnum::Linkonce:
         return mlir::LLVM::Linkage::Linkonce;
-      if (name == "linkonce_odr")
+      case fir::LinkageEnum::LinkonceODR:
         return mlir::LLVM::Linkage::LinkonceODR;
-      if (name == "common")
+      case fir::LinkageEnum::Common:
         return mlir::LLVM::Linkage::Common;
-      if (name == "weak")
+      case fir::LinkageEnum::Weak:
         return mlir::LLVM::Linkage::Weak;
+      case fir::LinkageEnum::External:
+        return mlir::LLVM::Linkage::External;
+      }
+      return mlir::LLVM::Linkage::External;
     }
     return mlir::LLVM::Linkage::External;
   }
@@ -3854,7 +3907,7 @@ private:
     rewriter.setInsertionPointToEnd(&comdatOp.getBody().back());
     auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
         rewriter, comdatOp.getLoc(), global.getSymName(),
-        mlir::LLVM::comdat::Comdat::Any);
+        mlir::LLVM::comdat::Comdat::Any, /*sym_visibility=*/nullptr);
     global.setComdatAttr(mlir::SymbolRefAttr::get(
         rewriter.getContext(), comdatName,
         mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr())));
