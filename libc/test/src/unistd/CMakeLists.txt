@@ -74,6 +74,22 @@ add_libc_test(
 )
 
 add_libc_test(
+  chroot_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    chroot_test.cpp
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.src.errno.errno
+    libc.src.sys.stat.mkdir
+    libc.src.unistd.chroot
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   dup_test
   SUITE
     libc_unistd_unittests
