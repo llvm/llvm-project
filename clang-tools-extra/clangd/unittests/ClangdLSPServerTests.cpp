@@ -223,23 +223,37 @@ TEST_F(LSPTest, ClangTidyRename) {
   ASSERT_TRUE(Diags && !Diags->empty());
   auto RenameDiag = Diags->front();
 
-  auto RenameCommand =
-      (*Client
-            .call("textDocument/codeAction",
-                  llvm::json::Object{
-                      {"textDocument", Client.documentID("foo.cpp")},
-                      {"context",
-                       llvm::json::Object{
-                           {"diagnostics", llvm::json::Array{RenameDiag}}}},
-                      {"range", Source.range()}})
-            .takeValue()
-            .getAsArray())[0];
+  auto CodeActions =
+      *Client
+           .call("textDocument/codeAction",
+                 llvm::json::Object{
+                     {"textDocument", Client.documentID("foo.cpp")},
+                     {"context",
+                      llvm::json::Object{
+                          {"diagnostics", llvm::json::Array{RenameDiag}}}},
+                     {"range", Source.range()}})
+           .takeValue()
+           .getAsArray();
 
-  ASSERT_EQ((*RenameCommand.getAsObject())["title"],
+  // Find the rename code action by title.
+  const llvm::json::Value *RenameCommand = nullptr;
+  for (const auto &CA : CodeActions) {
+    if (const auto *Obj = CA.getAsObject()) {
+      if (auto Title = Obj->getString("title")) {
+        if (Title->starts_with("Apply fix: change")) {
+          RenameCommand = &CA;
+          break;
+        }
+      }
+    }
+  }
+  ASSERT_NE(RenameCommand, nullptr);
+
+  ASSERT_EQ(*RenameCommand->getAsObject()->getString("title"),
             "Apply fix: change 'foo' to 'Foo'");
 
   Client.expectServerCall("workspace/applyEdit");
-  Client.call("workspace/executeCommand", RenameCommand);
+  Client.call("workspace/executeCommand", *RenameCommand);
   Client.sync();
 
   auto Params = Client.takeCallParams("workspace/applyEdit");
@@ -279,6 +293,125 @@ TEST_F(LSPTest, ClangTidyCrash_Issue109367) {
   Client.didOpen("a.cpp", "");
   Client.didOpen("b.cpp", "");
   Client.sync();
+}
+
+TEST_F(LSPTest, ClangTidyNolintCodeAction) {
+  // This test requires clang-tidy checks to be linked in.
+  if (!CLANGD_TIDY_CHECKS)
+    return;
+  Annotations Source(R"cpp(
+    int *$diag[[p]] = 0;$comment[[]]
+  )cpp");
+  constexpr auto ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                                        llvm::StringRef) {
+    ClangTidyOpts.Checks = {"-*,modernize-use-nullptr"};
+  };
+  Opts.ClangTidyProvider = ClangTidyProvider;
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Source.code());
+
+  auto Diags = Client.diagnostics("foo.cpp");
+  ASSERT_TRUE(Diags && !Diags->empty());
+  auto UnusedDiag = Diags->front();
+
+  auto CodeActions =
+      Client
+          .call("textDocument/codeAction",
+                llvm::json::Object{
+                    {"textDocument", Client.documentID("foo.cpp")},
+                    {"context",
+                     llvm::json::Object{
+                         {"diagnostics", llvm::json::Array{UnusedDiag}}}},
+                    {"range", Source.range("diag")}})
+          .takeValue();
+
+  // Find the NOLINT code action.
+  const llvm::json::Object *NolintAction = nullptr;
+  for (const auto &CA : *CodeActions.getAsArray()) {
+    if (const auto *Obj = CA.getAsObject()) {
+      if (auto Title = Obj->getString("title")) {
+        if (Title->contains("NOLINT") && !Title->contains("NOLINTNEXTLINE")) {
+          NolintAction = Obj;
+          break;
+        }
+      }
+    }
+  }
+  ASSERT_NE(NolintAction, nullptr) << "Expected a NOLINT code action";
+  EXPECT_EQ(NolintAction->getString("title"),
+            "Apply fix: suppress this warning with NOLINT");
+
+  auto Uri = [&](llvm::StringRef Path) {
+    return Client.uri(Path).getAsString().value().str();
+  };
+  llvm::json::Array ExpectedArguments = llvm::json::Array{llvm::json::Object{
+      {"changes",
+       llvm::json::Object{{Uri("foo.cpp"),
+                           llvm::json::Array{llvm::json::Object{
+                               {"range", Source.range("comment")},
+                               {"newText", " // NOLINT(modernize-use-nullptr)"},
+                           }}}}}}};
+  EXPECT_EQ(*NolintAction->getArray("arguments"), ExpectedArguments);
+}
+
+TEST_F(LSPTest, ClangTidyNolintNextLineCodeAction) {
+  // This test requires clang-tidy checks to be linked in.
+  if (!CLANGD_TIDY_CHECKS)
+    return;
+  Annotations Source(R"cpp(
+$comment[[]]    int *$diag[[p]] = 0;
+  )cpp");
+  constexpr auto ClangTidyProvider = [](tidy::ClangTidyOptions &ClangTidyOpts,
+                                        llvm::StringRef) {
+    ClangTidyOpts.Checks = {"-*,modernize-use-nullptr"};
+  };
+  Opts.ClangTidyProvider = ClangTidyProvider;
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Source.code());
+
+  auto Diags = Client.diagnostics("foo.cpp");
+  ASSERT_TRUE(Diags && !Diags->empty());
+  auto UnusedDiag = Diags->front();
+
+  auto CodeActions =
+      Client
+          .call("textDocument/codeAction",
+                llvm::json::Object{
+                    {"textDocument", Client.documentID("foo.cpp")},
+                    {"context",
+                     llvm::json::Object{
+                         {"diagnostics", llvm::json::Array{UnusedDiag}}}},
+                    {"range", Source.range("diag")}})
+          .takeValue();
+
+  // Find the NOLINT code action.
+  const llvm::json::Object *NolintAction = nullptr;
+  for (const auto &CA : *CodeActions.getAsArray()) {
+    if (const auto *Obj = CA.getAsObject()) {
+      if (auto Title = Obj->getString("title")) {
+        if (Title->contains("NOLINTNEXTLINE")) {
+          NolintAction = Obj;
+          break;
+        }
+      }
+    }
+  }
+  ASSERT_NE(NolintAction, nullptr) << "Expected a NOLINTNEXTLINE code action";
+  EXPECT_EQ(NolintAction->getString("title"),
+            "Apply fix: suppress this warning with NOLINTNEXTLINE");
+
+  auto Uri = [&](llvm::StringRef Path) {
+    return Client.uri(Path).getAsString().value().str();
+  };
+  llvm::json::Array ExpectedArguments = llvm::json::Array{llvm::json::Object{
+      {"changes",
+       llvm::json::Object{
+           {Uri("foo.cpp"),
+            llvm::json::Array{llvm::json::Object{
+                {"range", Source.range("comment")},
+                {"newText", "    // NOLINTNEXTLINE(modernize-use-nullptr)\n"},
+            }}}}}}};
+  EXPECT_EQ(*NolintAction->getArray("arguments"), ExpectedArguments);
 }
 
 TEST_F(LSPTest, IncomingCalls) {
