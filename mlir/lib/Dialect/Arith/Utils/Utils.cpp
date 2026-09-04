@@ -291,8 +291,8 @@ Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
   else
     elementBitWidth = cast<ShapedType>(type).getElementTypeBitWidth();
 
-  return createScalarOrSplatConstant(builder, loc, type,
-                                     APInt(elementBitWidth, value));
+  return createScalarOrSplatConstant(
+      builder, loc, type, APInt(elementBitWidth, value, /*isSigned=*/true));
 }
 
 Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
