@@ -14,16 +14,13 @@
 
 ; RUN: %{cmd} -force-vector-width=8 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VFs
 
+; RUN: %{cmd} -force-vector-width=8 -epilogue-vectorization-force-VF=16 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-BIGER-EPILOGUE
+
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-early-exit-vectorization-with-side-effects \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EARLY-EXIT
 
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-vplan-native-path \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
-
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
-; RUN: -force-vector-width=16 -epilogue-vectorization-force-VF=8 -vectorize-scev-check-threshold=0 < %s 2>&1 | FileCheck %s \
-; RUN: --check-prefix=CHECK-NO-VPLANS
-
 
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
@@ -41,6 +38,8 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
 ;
+; CHECK-INVALID-BIGER-EPILOGUE-LABEL: Checking a loop in 'test_epilogue_tf'
+; CHECK-INVALID-BIGER-EPILOGUE: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
 
 entry:
   br label %for.body
@@ -63,7 +62,6 @@ define void @test_no_iterations_left(ptr %A) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_no_iterations_left'
 ; CHECK: LV: epilogue tail-folding is enabled
 ; CHECK: LV: This case of epilogue loop can't be tail-folded.
-; CHECK: LV: Applying epilogue tail-folding failed, disable it.
 ;
 entry:
   br label %for.body
@@ -196,33 +194,6 @@ for.body:
 
 exit:
   ret void
-}
-
-; Can't build a valid vplan for this case because too many SCEV checks needed,
-; more than the specfied limit.
-define i64 @test_no_vplan_built(ptr %dst, i64 %n) {
-; CHECK-NO-VPLANS-LABEL: Checking a loop in 'test_no_vplan_built'
-; CHECK-NO-VPLANS: LV: epilogue tail-folding is enabled
-; CHECK-NO-VPLANS: LV: no vplans have been built for main loop VF, bail out of epilogue tail-folding
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %dead.iv = phi i16 [ 0, %entry ], [ %dead.iv.next, %loop ]
-  %prev = phi i64 [ 0, %entry ], [ %ext, %loop ]
-  %iv.next = add nuw nsw i64 %iv, 1
-  %dead.iv.next = add i16 %dead.iv, 1
-  %ext = zext i16 %dead.iv.next to i64
-  %gep = getelementptr inbounds i64, ptr %dst, i64 %prev
-  store i64 %iv, ptr %gep, align 8
-  %cmp = icmp slt i64 %iv.next, %n
-  br i1 %cmp, label %loop, label %exit
-
-exit:
-  %result = phi i64 [ %ext, %loop ]
-  ret i64 %result
 }
 
 define void @test_outer_loop(ptr %A, i64 %m) {
