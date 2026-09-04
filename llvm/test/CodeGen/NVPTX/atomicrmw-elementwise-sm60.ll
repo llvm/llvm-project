@@ -531,31 +531,29 @@ define <8 x i8> @add_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
-; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
-; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:  $L__BB19_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    prmt.b32 %r4, %r33, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r33, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r33, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r33, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -563,11 +561,13 @@ define <8 x i8> @add_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
 ; SM60-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
+; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs13, %r18;
 ; SM60-NEXT:    prmt.b32 %r19, %r34, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r19;
 ; SM60-NEXT:    add.s16 %rs15, %rs14, %rs13;
 ; SM60-NEXT:    cvt.u32.u16 %r20, %rs15;
+; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs16, %r21;
 ; SM60-NEXT:    prmt.b32 %r22, %r34, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs17, %r22;
@@ -1133,31 +1133,29 @@ define <8 x i8> @sub_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
-; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
-; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:  $L__BB35_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    prmt.b32 %r4, %r33, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    sub.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r33, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    sub.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r33, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    sub.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r33, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    sub.s16 %rs12, %rs11, %rs10;
@@ -1165,11 +1163,13 @@ define <8 x i8> @sub_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
 ; SM60-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
+; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs13, %r18;
 ; SM60-NEXT:    prmt.b32 %r19, %r34, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r19;
 ; SM60-NEXT:    sub.s16 %rs15, %rs14, %rs13;
 ; SM60-NEXT:    cvt.u32.u16 %r20, %rs15;
+; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs16, %r21;
 ; SM60-NEXT:    prmt.b32 %r22, %r34, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs17, %r22;
@@ -2100,46 +2100,37 @@ define <2 x i8> @nand_acq_rel_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %
 ; SM60-LABEL: nand_acq_rel_v2i8_global_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .pred %p<2>;
-; SM60-NEXT:    .reg .b16 %rs<9>;
-; SM60-NEXT:    .reg .b32 %r<19>;
+; SM60-NEXT:    .reg .b32 %r<17>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_acq_rel_v2i8_global_cta_param_1];
-; SM60-NEXT:    mov.b32 %r4, {%rs1, %rs2};
 ; SM60-NEXT:    ld.param.b64 %rd2, [nand_acq_rel_v2i8_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM60-NEXT:    and.b32 %r6, %r5, 3;
-; SM60-NEXT:    shl.b32 %r1, %r6, 3;
-; SM60-NEXT:    mov.b32 %r7, 65535;
-; SM60-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM60-NEXT:    not.b32 %r2, %r8;
-; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
+; SM60-NEXT:    cvt.u32.u64 %r6, %rd2;
+; SM60-NEXT:    and.b32 %r7, %r6, 3;
+; SM60-NEXT:    shl.b32 %r1, %r7, 3;
+; SM60-NEXT:    mov.b32 %r8, 65535;
+; SM60-NEXT:    shl.b32 %r2, %r8, %r1;
+; SM60-NEXT:    not.b32 %r3, %r2;
+; SM60-NEXT:    ld.param.b16 %r9, [nand_acq_rel_v2i8_global_cta_param_1];
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB65_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    shr.u32 %r9, %r18, %r1;
-; SM60-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM60-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM60-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM60-NEXT:    and.b32 %r11, %r10, %r4;
-; SM60-NEXT:    xor.b32 %r12, %r11, 16711935;
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
-; SM60-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM60-NEXT:    or.b16 %rs8, %rs5, %rs7;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs8;
-; SM60-NEXT:    shl.b32 %r14, %r13, %r1;
-; SM60-NEXT:    and.b32 %r15, %r18, %r2;
-; SM60-NEXT:    or.b32 %r16, %r15, %r14;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
-; SM60-NEXT:    setp.ne.b32 %p1, %r3, %r18;
-; SM60-NEXT:    mov.b32 %r18, %r3;
+; SM60-NEXT:    and.b32 %r10, %r16, %r4;
+; SM60-NEXT:    not.b32 %r11, %r10;
+; SM60-NEXT:    and.b32 %r12, %r11, %r2;
+; SM60-NEXT:    and.b32 %r13, %r16, %r3;
+; SM60-NEXT:    or.b32 %r14, %r13, %r12;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
+; SM60-NEXT:    setp.ne.b32 %p1, %r5, %r16;
+; SM60-NEXT:    mov.b32 %r16, %r5;
 ; SM60-NEXT:    @%p1 bra $L__BB65_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    shr.u32 %r17, %r3, %r1;
+; SM60-NEXT:    shr.u32 %r15, %r5, %r1;
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.b16 [func_retval0], %r17;
+; SM60-NEXT:    st.param.b16 [func_retval0], %r15;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") acq_rel
         ret <2 x i8> %retval
@@ -3832,16 +3823,16 @@ define <4 x i8> @max_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b32 %r26, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
 ; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
-; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
-; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
 ; SM60-NEXT:  $L__BB114_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r26, 0, 0x8880U;
 ; SM60-NEXT:    setp.gt.s32 %p1, %r4, %r3;
 ; SM60-NEXT:    prmt.b32 %r6, %r26, 0, 0x9991U;
 ; SM60-NEXT:    setp.gt.s32 %p2, %r6, %r5;
+; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
 ; SM60-NEXT:    prmt.b32 %r8, %r26, 0, 0xaaa2U;
 ; SM60-NEXT:    setp.gt.s32 %p3, %r8, %r7;
+; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
 ; SM60-NEXT:    prmt.b32 %r10, %r26, 0, 0xbbb3U;
 ; SM60-NEXT:    setp.gt.s32 %p4, %r10, %r9;
 ; SM60-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
@@ -3886,16 +3877,16 @@ define <8 x i8> @max_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r50}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r49, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:  $L__BB115_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r49;
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r50;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
 ; SM60-NEXT:    prmt.b32 %r4, %r50, 0, 0x8880U;
 ; SM60-NEXT:    setp.gt.s32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:    prmt.b32 %r6, %r50, 0, 0x9991U;
 ; SM60-NEXT:    setp.gt.s32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
@@ -4467,16 +4458,16 @@ define <4 x i8> @min_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b32 %r26, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
 ; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
-; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
-; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
 ; SM60-NEXT:  $L__BB130_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r26, 0, 0x8880U;
 ; SM60-NEXT:    setp.le.s32 %p1, %r4, %r3;
 ; SM60-NEXT:    prmt.b32 %r6, %r26, 0, 0x9991U;
 ; SM60-NEXT:    setp.le.s32 %p2, %r6, %r5;
+; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
 ; SM60-NEXT:    prmt.b32 %r8, %r26, 0, 0xaaa2U;
 ; SM60-NEXT:    setp.le.s32 %p3, %r8, %r7;
+; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0xbbb3U;
 ; SM60-NEXT:    prmt.b32 %r10, %r26, 0, 0xbbb3U;
 ; SM60-NEXT:    setp.le.s32 %p4, %r10, %r9;
 ; SM60-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
@@ -4521,16 +4512,16 @@ define <8 x i8> @min_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r50}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r49, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:  $L__BB131_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r49;
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r50;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x8880U;
 ; SM60-NEXT:    prmt.b32 %r4, %r50, 0, 0x8880U;
 ; SM60-NEXT:    setp.le.s32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x9991U;
 ; SM60-NEXT:    prmt.b32 %r6, %r50, 0, 0x9991U;
 ; SM60-NEXT:    setp.le.s32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0xaaa2U;
@@ -5101,16 +5092,16 @@ define <4 x i8> @umax_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
 ; SM60-NEXT:  $L__BB146_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7770U;
 ; SM60-NEXT:    setp.gt.u32 %p1, %r4, %r3;
 ; SM60-NEXT:    prmt.b32 %r6, %r18, 0, 0x7771U;
 ; SM60-NEXT:    setp.gt.u32 %p2, %r6, %r5;
+; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
 ; SM60-NEXT:    prmt.b32 %r8, %r18, 0, 0x7772U;
 ; SM60-NEXT:    setp.gt.u32 %p3, %r8, %r7;
+; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
 ; SM60-NEXT:    prmt.b32 %r10, %r18, 0, 0x7773U;
 ; SM60-NEXT:    setp.gt.u32 %p4, %r10, %r9;
 ; SM60-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
@@ -5147,18 +5138,16 @@ define <8 x i8> @umax_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM60-NEXT:  $L__BB147_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r33;
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r34;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r4, %r34, 0, 0x7770U;
 ; SM60-NEXT:    setp.gt.u32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:    prmt.b32 %r6, %r34, 0, 0x7771U;
 ; SM60-NEXT:    setp.gt.u32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -5179,7 +5168,9 @@ define <8 x i8> @umax_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %
 ; SM60-NEXT:    prmt.b32 %r17, %r1, 0, 0x7773U;
 ; SM60-NEXT:    prmt.b32 %r18, %r33, 0, 0x7773U;
 ; SM60-NEXT:    setp.gt.u32 %p8, %r18, %r17;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
+; SM60-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    cvt.u16.u32 %rs6, %r8;
@@ -5711,16 +5702,16 @@ define <4 x i8> @umin_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %
 ; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
 ; SM60-NEXT:  $L__BB162_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r4, %r18, 0, 0x7770U;
 ; SM60-NEXT:    setp.le.u32 %p1, %r4, %r3;
 ; SM60-NEXT:    prmt.b32 %r6, %r18, 0, 0x7771U;
 ; SM60-NEXT:    setp.le.u32 %p2, %r6, %r5;
+; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
 ; SM60-NEXT:    prmt.b32 %r8, %r18, 0, 0x7772U;
 ; SM60-NEXT:    setp.le.u32 %p3, %r8, %r7;
+; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
 ; SM60-NEXT:    prmt.b32 %r10, %r18, 0, 0x7773U;
 ; SM60-NEXT:    setp.le.u32 %p4, %r10, %r9;
 ; SM60-NEXT:    selp.b32 %r11, %r10, %r9, %p4;
@@ -5757,18 +5748,16 @@ define <8 x i8> @umin_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM60-NEXT:  $L__BB163_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r33;
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r34;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r4, %r34, 0, 0x7770U;
 ; SM60-NEXT:    setp.le.u32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:    prmt.b32 %r6, %r34, 0, 0x7771U;
 ; SM60-NEXT:    setp.le.u32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -5789,7 +5778,9 @@ define <8 x i8> @umin_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %
 ; SM60-NEXT:    prmt.b32 %r17, %r1, 0, 0x7773U;
 ; SM60-NEXT:    prmt.b32 %r18, %r33, 0, 0x7773U;
 ; SM60-NEXT:    setp.le.u32 %p8, %r18, %r17;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
+; SM60-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    cvt.u16.u32 %rs6, %r8;
@@ -6328,8 +6319,6 @@ define <4 x i8> @uinc_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
-; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
 ; SM60-NEXT:  $L__BB178_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r3, %r22, 0, 0x7770U;
@@ -6346,7 +6335,9 @@ define <4 x i8> @uinc_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    add.s16 %rs8, %rs7, 1;
 ; SM60-NEXT:    setp.ge.u32 %p1, %r3, %r7;
 ; SM60-NEXT:    setp.ge.u32 %p2, %r4, %r8;
+; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
 ; SM60-NEXT:    setp.ge.u32 %p3, %r5, %r9;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
 ; SM60-NEXT:    setp.ge.u32 %p4, %r6, %r10;
 ; SM60-NEXT:    cvt.u32.u16 %r11, %rs8;
 ; SM60-NEXT:    selp.b32 %r12, 0, %r11, %p4;
@@ -6386,8 +6377,6 @@ define <8 x i8> @uinc_wrap_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
 ; SM60-NEXT:  $L__BB179_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r33;
@@ -6418,7 +6407,9 @@ define <8 x i8> @uinc_wrap_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x 
 ; SM60-NEXT:    prmt.b32 %r10, %r33, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs15, %r10;
 ; SM60-NEXT:    add.s16 %rs16, %rs15, 1;
+; SM60-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
 ; SM60-NEXT:    setp.ge.u32 %p1, %r3, %r11;
+; SM60-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
 ; SM60-NEXT:    setp.ge.u32 %p2, %r4, %r12;
 ; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
 ; SM60-NEXT:    setp.ge.u32 %p3, %r5, %r13;
@@ -7147,8 +7138,6 @@ define <4 x i8> @udec_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    ld.volatile.global.b32 %r26, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r8, %r2, 0, 0x7771U;
-; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
-; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
 ; SM60-NEXT:  $L__BB194_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    prmt.b32 %r3, %r26, 0, 0x7770U;
@@ -7169,7 +7158,9 @@ define <4 x i8> @udec_wrap_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    setp.eq.b32 %p4, %r6, 0;
 ; SM60-NEXT:    setp.gt.u32 %p5, %r3, %r7;
 ; SM60-NEXT:    setp.gt.u32 %p6, %r4, %r8;
+; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
 ; SM60-NEXT:    setp.gt.u32 %p7, %r5, %r9;
+; SM60-NEXT:    prmt.b32 %r10, %r2, 0, 0x7773U;
 ; SM60-NEXT:    setp.gt.u32 %p8, %r6, %r10;
 ; SM60-NEXT:    cvt.u32.u16 %r11, %rs8;
 ; SM60-NEXT:    selp.b32 %r12, %r10, %r11, %p8;
@@ -7213,10 +7204,6 @@ define <8 x i8> @udec_wrap_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs17, %r11;
-; SM60-NEXT:    cvt.u16.u32 %rs18, %r12;
 ; SM60-NEXT:  $L__BB195_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r33;
@@ -7255,7 +7242,9 @@ define <8 x i8> @udec_wrap_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x 
 ; SM60-NEXT:    setp.eq.b32 %p6, %r8, 0;
 ; SM60-NEXT:    setp.eq.b32 %p7, %r9, 0;
 ; SM60-NEXT:    setp.eq.b32 %p8, %r10, 0;
+; SM60-NEXT:    prmt.b32 %r11, %r2, 0, 0x7770U;
 ; SM60-NEXT:    setp.gt.u32 %p9, %r3, %r11;
+; SM60-NEXT:    prmt.b32 %r12, %r2, 0, 0x7771U;
 ; SM60-NEXT:    setp.gt.u32 %p10, %r4, %r12;
 ; SM60-NEXT:    prmt.b32 %r13, %r2, 0, 0x7772U;
 ; SM60-NEXT:    setp.gt.u32 %p11, %r5, %r13;
@@ -7269,6 +7258,8 @@ define <8 x i8> @udec_wrap_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x 
 ; SM60-NEXT:    setp.gt.u32 %p15, %r9, %r17;
 ; SM60-NEXT:    prmt.b32 %r18, %r1, 0, 0x7773U;
 ; SM60-NEXT:    setp.gt.u32 %p16, %r10, %r18;
+; SM60-NEXT:    cvt.u16.u32 %rs17, %r11;
+; SM60-NEXT:    cvt.u16.u32 %rs18, %r12;
 ; SM60-NEXT:    cvt.u16.u32 %rs19, %r13;
 ; SM60-NEXT:    cvt.u16.u32 %rs20, %r14;
 ; SM60-NEXT:    cvt.u16.u32 %rs21, %r15;
@@ -8052,10 +8043,6 @@ define <4 x i8> @usub_cond_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    ld.volatile.global.b32 %r22, [%rd1];
 ; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
-; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r9;
-; SM60-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-NEXT:    cvt.u16.u32 %rs3, %r5;
 ; SM60-NEXT:    cvt.u16.u32 %rs4, %r3;
 ; SM60-NEXT:  $L__BB210_1: // %atomicrmw.start
@@ -8064,10 +8051,14 @@ define <4 x i8> @usub_cond_acq_rel_v4i8_global_cta(ptr addrspace(1) %addr, <4 x 
 ; SM60-NEXT:    setp.ge.u32 %p1, %r4, %r3;
 ; SM60-NEXT:    prmt.b32 %r6, %r22, 0, 0x7771U;
 ; SM60-NEXT:    setp.ge.u32 %p2, %r6, %r5;
+; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
 ; SM60-NEXT:    prmt.b32 %r8, %r22, 0, 0x7772U;
 ; SM60-NEXT:    setp.ge.u32 %p3, %r8, %r7;
+; SM60-NEXT:    prmt.b32 %r9, %r2, 0, 0x7773U;
 ; SM60-NEXT:    prmt.b32 %r10, %r22, 0, 0x7773U;
 ; SM60-NEXT:    setp.ge.u32 %p4, %r10, %r9;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r9;
+; SM60-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r4;
 ; SM60-NEXT:    sub.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u16.u32 %rs7, %r6;
@@ -8114,18 +8105,16 @@ define <8 x i8> @usub_cond_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
-; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs13, %r5;
-; SM60-NEXT:    cvt.u16.u32 %rs15, %r3;
 ; SM60-NEXT:  $L__BB211_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r33;
 ; SM60-NEXT:    cvt.u64.u32 %rd4, %r34;
 ; SM60-NEXT:    shl.b64 %rd5, %rd4, 32;
 ; SM60-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM60-NEXT:    prmt.b32 %r3, %r2, 0, 0x7770U;
 ; SM60-NEXT:    prmt.b32 %r4, %r34, 0, 0x7770U;
 ; SM60-NEXT:    setp.ge.u32 %p1, %r4, %r3;
+; SM60-NEXT:    prmt.b32 %r5, %r2, 0, 0x7771U;
 ; SM60-NEXT:    prmt.b32 %r6, %r34, 0, 0x7771U;
 ; SM60-NEXT:    setp.ge.u32 %p2, %r6, %r5;
 ; SM60-NEXT:    prmt.b32 %r7, %r2, 0, 0x7772U;
@@ -8158,7 +8147,9 @@ define <8 x i8> @usub_cond_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x 
 ; SM60-NEXT:    cvt.u16.u32 %rs10, %r10;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r7;
 ; SM60-NEXT:    cvt.u16.u32 %rs12, %r8;
+; SM60-NEXT:    cvt.u16.u32 %rs13, %r5;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r6;
+; SM60-NEXT:    cvt.u16.u32 %rs15, %r3;
 ; SM60-NEXT:    cvt.u16.u32 %rs16, %r4;
 ; SM60-NEXT:    sub.s16 %rs17, %rs16, %rs15;
 ; SM60-NEXT:    sub.s16 %rs18, %rs14, %rs13;
@@ -9114,34 +9105,32 @@ define <8 x i8> @usub_sat_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs5, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs9, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs13, %r13;
-; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
-; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:  $L__BB227_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    prmt.b32 %r4, %r33, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    max.u16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    sub.s16 %rs4, %rs3, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs4;
+; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs5, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r33, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs6, %r7;
 ; SM60-NEXT:    max.u16 %rs7, %rs6, %rs5;
 ; SM60-NEXT:    sub.s16 %rs8, %rs7, %rs5;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs8;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs9, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r33, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs10, %r11;
 ; SM60-NEXT:    max.u16 %rs11, %rs10, %rs9;
 ; SM60-NEXT:    sub.s16 %rs12, %rs11, %rs9;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs12;
+; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs13, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r33, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r14;
 ; SM60-NEXT:    max.u16 %rs15, %rs14, %rs13;
@@ -9150,12 +9139,14 @@ define <8 x i8> @usub_sat_acq_rel_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i
 ; SM60-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
 ; SM60-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
+; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs17, %r18;
 ; SM60-NEXT:    prmt.b32 %r19, %r34, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs18, %r19;
 ; SM60-NEXT:    max.u16 %rs19, %rs18, %rs17;
 ; SM60-NEXT:    sub.s16 %rs20, %rs19, %rs17;
 ; SM60-NEXT:    cvt.u32.u16 %r20, %rs20;
+; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs21, %r21;
 ; SM60-NEXT:    prmt.b32 %r22, %r34, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs22, %r22;
@@ -13092,16 +13083,15 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    cvt.f32.f16 %r10, %rs8;
-; SM60-NEXT:    cvt.f32.f16 %r13, %rs7;
 ; SM60-NEXT:  $L__BB298_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NEXT:    min.f32 %r5, %r4, %r3;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NEXT:    cvt.f32.f16 %r7, %rs3;
 ; SM60-NEXT:    min.f32 %r8, %r7, %r6;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -13111,6 +13101,7 @@ define <4 x half> @fmin_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NEXT:    cvt.f32.f16 %r11, %rs10;
 ; SM60-NEXT:    min.f32 %r12, %r11, %r10;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs11, %r12;
+; SM60-NEXT:    cvt.f32.f16 %r13, %rs7;
 ; SM60-NEXT:    cvt.f32.f16 %r14, %rs9;
 ; SM60-NEXT:    min.f32 %r15, %r14, %r13;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs12, %r15;
@@ -13151,11 +13142,10 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.f32.f16 %r5, %rs2;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NEXT:  $L__BB299_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.f32.f16 %r5, %rs2;
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r33;
 ; SM60-NEXT:    cvt.f32.f16 %r6, %rs4;
 ; SM60-NEXT:    min.f32 %r7, %r6, %r5;
@@ -13166,6 +13156,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-NEXT:    cvt.f32.f16 %r13, %rs10;
 ; SM60-NEXT:    min.f32 %r14, %r13, %r12;
@@ -13192,11 +13183,10 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    cvt.f32.f16 %r19, %rs14;
 ; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
-; SM60-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NEXT:  $L__BB299_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.f32.f16 %r19, %rs14;
 ; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r35;
 ; SM60-NEXT:    cvt.f32.f16 %r20, %rs16;
 ; SM60-NEXT:    min.f32 %r21, %r20, %r19;
@@ -13207,6 +13197,7 @@ define <8 x half> @fmin_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-NEXT:    cvt.f32.f16 %r27, %rs22;
 ; SM60-NEXT:    min.f32 %r28, %r27, %r26;
@@ -13336,16 +13327,15 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NEXT:    cvt.u32.u64 %r17, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.f32.f16 %r3, %rs2;
-; SM60-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
 ; SM60-NEXT:    cvt.f32.f16 %r10, %rs8;
-; SM60-NEXT:    cvt.f32.f16 %r13, %rs7;
 ; SM60-NEXT:  $L__BB302_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r17;
 ; SM60-NEXT:    cvt.f32.f16 %r4, %rs4;
 ; SM60-NEXT:    max.f32 %r5, %r4, %r3;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; SM60-NEXT:    cvt.f32.f16 %r6, %rs1;
 ; SM60-NEXT:    cvt.f32.f16 %r7, %rs3;
 ; SM60-NEXT:    max.f32 %r8, %r7, %r6;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs6, %r8;
@@ -13355,6 +13345,7 @@ define <4 x half> @fmax_acq_rel_v4f16_global_cta(ptr addrspace(1) %addr, <4 x ha
 ; SM60-NEXT:    cvt.f32.f16 %r11, %rs10;
 ; SM60-NEXT:    max.f32 %r12, %r11, %r10;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs11, %r12;
+; SM60-NEXT:    cvt.f32.f16 %r13, %rs7;
 ; SM60-NEXT:    cvt.f32.f16 %r14, %rs9;
 ; SM60-NEXT:    max.f32 %r15, %r14, %r13;
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs12, %r15;
@@ -13395,11 +13386,10 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.f32.f16 %r5, %rs2;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r2;
-; SM60-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NEXT:  $L__BB303_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.f32.f16 %r5, %rs2;
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r33;
 ; SM60-NEXT:    cvt.f32.f16 %r6, %rs4;
 ; SM60-NEXT:    max.f32 %r7, %r6, %r5;
@@ -13410,6 +13400,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs6, %r10;
 ; SM60-NEXT:    mov.b32 %r11, {%rs6, %rs5};
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r11;
+; SM60-NEXT:    cvt.f32.f16 %r12, %rs8;
 ; SM60-NEXT:    mov.b32 {%rs9, %rs10}, %r34;
 ; SM60-NEXT:    cvt.f32.f16 %r13, %rs10;
 ; SM60-NEXT:    max.f32 %r14, %r13, %r12;
@@ -13436,11 +13427,10 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r36}, %rd12; }
 ; SM60-NEXT:    cvt.u32.u64 %r35, %rd12;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r3;
-; SM60-NEXT:    cvt.f32.f16 %r19, %rs14;
 ; SM60-NEXT:    mov.b32 {%rs19, %rs20}, %r4;
-; SM60-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NEXT:  $L__BB303_3: // %atomicrmw.start2
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.f32.f16 %r19, %rs14;
 ; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r35;
 ; SM60-NEXT:    cvt.f32.f16 %r20, %rs16;
 ; SM60-NEXT:    max.f32 %r21, %r20, %r19;
@@ -13451,6 +13441,7 @@ define <8 x half> @fmax_acq_rel_v8f16_global_cta(ptr addrspace(1) %addr, <8 x ha
 ; SM60-NEXT:    cvt.rn.f16.f32 %rs18, %r24;
 ; SM60-NEXT:    mov.b32 %r25, {%rs18, %rs17};
 ; SM60-NEXT:    cvt.u64.u32 %rd13, %r25;
+; SM60-NEXT:    cvt.f32.f16 %r26, %rs20;
 ; SM60-NEXT:    mov.b32 {%rs21, %rs22}, %r36;
 ; SM60-NEXT:    cvt.f32.f16 %r27, %rs22;
 ; SM60-NEXT:    max.f32 %r28, %r27, %r26;
@@ -14208,13 +14199,9 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r24, %rs6;
 ; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
-; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:  $L__BB314_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
@@ -14227,6 +14214,8 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NEXT:    add.rn.f32 %r17, %r16, %r14;
@@ -14248,6 +14237,8 @@ define <4 x bfloat> @fadd_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p3, %r28, %r28;
 ; SM60-NEXT:    or.b32 %r32, %r28, 4194304;
 ; SM60-NEXT:    selp.b32 %r33, %r32, %r31, %p3;
+; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
+; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r36, %rs7;
 ; SM60-NEXT:    shl.b32 %r37, %r36, 16;
 ; SM60-NEXT:    add.rn.f32 %r38, %r37, %r35;
@@ -14294,13 +14285,11 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
-; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:  $L__BB315_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
+; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r89;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
@@ -14324,6 +14313,8 @@ define <8 x bfloat> @fadd_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
+; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
 ; SM60-NEXT:    cvt.u32.u16 %r28, %rs8;
 ; SM60-NEXT:    shl.b32 %r29, %r28, 16;
@@ -14555,13 +14546,9 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r24, %rs6;
 ; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
-; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:  $L__BB318_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
@@ -14574,6 +14561,8 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NEXT:    sub.rn.f32 %r17, %r16, %r14;
@@ -14595,6 +14584,8 @@ define <4 x bfloat> @fsub_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p3, %r28, %r28;
 ; SM60-NEXT:    or.b32 %r32, %r28, 4194304;
 ; SM60-NEXT:    selp.b32 %r33, %r32, %r31, %p3;
+; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
+; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r36, %rs7;
 ; SM60-NEXT:    shl.b32 %r37, %r36, 16;
 ; SM60-NEXT:    sub.rn.f32 %r38, %r37, %r35;
@@ -14641,13 +14632,11 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
-; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:  $L__BB319_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
+; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r89;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
@@ -14671,6 +14660,8 @@ define <8 x bfloat> @fsub_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
+; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
 ; SM60-NEXT:    cvt.u32.u16 %r28, %rs8;
 ; SM60-NEXT:    shl.b32 %r29, %r28, 16;
@@ -14902,13 +14893,9 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r24, %rs6;
 ; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
-; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:  $L__BB322_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
@@ -14921,6 +14908,8 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NEXT:    min.f32 %r17, %r16, %r14;
@@ -14942,6 +14931,8 @@ define <4 x bfloat> @fmin_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p3, %r28, %r28;
 ; SM60-NEXT:    or.b32 %r32, %r28, 4194304;
 ; SM60-NEXT:    selp.b32 %r33, %r32, %r31, %p3;
+; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
+; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r36, %rs7;
 ; SM60-NEXT:    shl.b32 %r37, %r36, 16;
 ; SM60-NEXT:    min.f32 %r38, %r37, %r35;
@@ -14988,13 +14979,11 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
-; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:  $L__BB323_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
+; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r89;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
@@ -15018,6 +15007,8 @@ define <8 x bfloat> @fmin_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
+; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
 ; SM60-NEXT:    cvt.u32.u16 %r28, %rs8;
 ; SM60-NEXT:    shl.b32 %r29, %r28, 16;
@@ -15249,13 +15240,9 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r24, %rs6;
 ; SM60-NEXT:    shl.b32 %r25, %r24, 16;
-; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
-; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:  $L__BB326_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r45;
@@ -15268,6 +15255,8 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; SM60-NEXT:    or.b32 %r11, %r7, 4194304;
 ; SM60-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM60-NEXT:    shl.b32 %r14, %r13, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r15, %rs3;
 ; SM60-NEXT:    shl.b32 %r16, %r15, 16;
 ; SM60-NEXT:    max.f32 %r17, %r16, %r14;
@@ -15289,6 +15278,8 @@ define <4 x bfloat> @fmax_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, <4 x
 ; SM60-NEXT:    setp.nan.f32 %p3, %r28, %r28;
 ; SM60-NEXT:    or.b32 %r32, %r28, 4194304;
 ; SM60-NEXT:    selp.b32 %r33, %r32, %r31, %p3;
+; SM60-NEXT:    cvt.u32.u16 %r34, %rs5;
+; SM60-NEXT:    shl.b32 %r35, %r34, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r36, %rs7;
 ; SM60-NEXT:    shl.b32 %r37, %r36, 16;
 ; SM60-NEXT:    max.f32 %r38, %r37, %r35;
@@ -15335,13 +15326,11 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r90}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r89, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
-; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
-; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:  $L__BB327_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
+; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r89;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
@@ -15365,6 +15354,8 @@ define <8 x bfloat> @fmax_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, <8 x
 ; SM60-NEXT:    selp.b32 %r24, %r23, %r22, %p2;
 ; SM60-NEXT:    prmt.b32 %r25, %r24, %r14, 0x7632U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r25;
+; SM60-NEXT:    cvt.u32.u16 %r26, %rs6;
+; SM60-NEXT:    shl.b32 %r27, %r26, 16;
 ; SM60-NEXT:    mov.b32 {%rs7, %rs8}, %r90;
 ; SM60-NEXT:    cvt.u32.u16 %r28, %rs8;
 ; SM60-NEXT:    shl.b32 %r29, %r28, 16;
@@ -15600,13 +15591,9 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs14;
 ; SM60-NEXT:    shl.b32 %r13, %r12, 16;
-; SM60-NEXT:    cvt.u32.u16 %r16, %rs13;
-; SM60-NEXT:    shl.b32 %r17, %r16, 16;
 ; SM60-NEXT:  $L__BB330_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
@@ -15622,6 +15609,8 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-NEXT:    setp.eq.b16 %p5, %rs3, -32768;
 ; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NEXT:    setp.lt.f32 %p6, %r10, %r8;
@@ -15645,6 +15634,8 @@ define <4 x bfloat> @fminimum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM60-NEXT:    setp.eq.b16 %p13, %rs15, -32768;
 ; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    cvt.u32.u16 %r16, %rs13;
+; SM60-NEXT:    shl.b32 %r17, %r16, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r18, %rs15;
 ; SM60-NEXT:    shl.b32 %r19, %r18, 16;
 ; SM60-NEXT:    setp.lt.f32 %p14, %r19, %r17;
@@ -15690,16 +15681,14 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
-; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r14, %rs14;
-; SM60-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NEXT:  $L__BB331_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
 ; SM60-NEXT:    setp.eq.b16 %p1, %rs4, -32768;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
+; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:    setp.lt.f32 %p2, %r8, %r6;
@@ -15725,6 +15714,8 @@ define <8 x bfloat> @fminimum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-NEXT:    setp.eq.b16 %p9, %rs16, -32768;
 ; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs14;
+; SM60-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r16, %rs16;
 ; SM60-NEXT:    shl.b32 %r17, %r16, 16;
 ; SM60-NEXT:    setp.lt.f32 %p10, %r17, %r15;
@@ -15963,13 +15954,9 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; SM60-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM60-NEXT:    shl.b32 %r4, %r3, 16;
-; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
-; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs14;
 ; SM60-NEXT:    shl.b32 %r13, %r12, 16;
-; SM60-NEXT:    cvt.u32.u16 %r16, %rs13;
-; SM60-NEXT:    shl.b32 %r17, %r16, 16;
 ; SM60-NEXT:  $L__BB334_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r21;
@@ -15985,6 +15972,8 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    selp.b16 %rs8, %rs5, %rs7, %p4;
 ; SM60-NEXT:    setp.eq.b16 %p5, %rs3, 0;
 ; SM60-NEXT:    selp.b16 %rs9, %rs3, %rs1, %p5;
+; SM60-NEXT:    cvt.u32.u16 %r7, %rs1;
+; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r9, %rs3;
 ; SM60-NEXT:    shl.b32 %r10, %r9, 16;
 ; SM60-NEXT:    setp.gt.f32 %p6, %r10, %r8;
@@ -16008,6 +15997,8 @@ define <4 x bfloat> @fmaximum_acq_rel_v4bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    selp.b16 %rs20, %rs17, %rs19, %p12;
 ; SM60-NEXT:    setp.eq.b16 %p13, %rs15, 0;
 ; SM60-NEXT:    selp.b16 %rs21, %rs15, %rs13, %p13;
+; SM60-NEXT:    cvt.u32.u16 %r16, %rs13;
+; SM60-NEXT:    shl.b32 %r17, %r16, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r18, %rs15;
 ; SM60-NEXT:    shl.b32 %r19, %r18, 16;
 ; SM60-NEXT:    setp.gt.f32 %p14, %r19, %r17;
@@ -16053,16 +16044,14 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r42}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r41, %rd2;
 ; SM60-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
-; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    mov.b32 {%rs13, %rs14}, %r2;
-; SM60-NEXT:    cvt.u32.u16 %r14, %rs14;
-; SM60-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NEXT:  $L__BB335_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    mov.b32 {%rs3, %rs4}, %r41;
 ; SM60-NEXT:    setp.eq.b16 %p1, %rs4, 0;
 ; SM60-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
+; SM60-NEXT:    cvt.u32.u16 %r5, %rs2;
+; SM60-NEXT:    shl.b32 %r6, %r5, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r7, %rs4;
 ; SM60-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM60-NEXT:    setp.gt.f32 %p2, %r8, %r6;
@@ -16088,6 +16077,8 @@ define <8 x bfloat> @fmaximum_acq_rel_v8bf16_global_cta(ptr addrspace(1) %addr, 
 ; SM60-NEXT:    mov.b32 {%rs15, %rs16}, %r42;
 ; SM60-NEXT:    setp.eq.b16 %p9, %rs16, 0;
 ; SM60-NEXT:    selp.b16 %rs17, %rs16, %rs14, %p9;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs14;
+; SM60-NEXT:    shl.b32 %r15, %r14, 16;
 ; SM60-NEXT:    cvt.u32.u16 %r16, %rs16;
 ; SM60-NEXT:    shl.b32 %r17, %r16, 16;
 ; SM60-NEXT:    setp.gt.f32 %p10, %r17, %r15;
@@ -16352,31 +16343,29 @@ define <8 x i8> @add_monotonic_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> 
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
-; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
-; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:  $L__BB339_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    prmt.b32 %r4, %r33, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r33, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r33, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r33, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -16384,11 +16373,13 @@ define <8 x i8> @add_monotonic_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> 
 ; SM60-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
 ; SM60-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
+; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs13, %r18;
 ; SM60-NEXT:    prmt.b32 %r19, %r34, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r19;
 ; SM60-NEXT:    add.s16 %rs15, %rs14, %rs13;
 ; SM60-NEXT:    cvt.u32.u16 %r20, %rs15;
+; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs16, %r21;
 ; SM60-NEXT:    prmt.b32 %r22, %r34, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs17, %r22;
@@ -16581,31 +16572,29 @@ define <8 x i8> @add_acquire_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
-; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
-; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:  $L__BB343_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    prmt.b32 %r4, %r33, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r33, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r33, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r33, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -16613,11 +16602,13 @@ define <8 x i8> @add_acquire_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
 ; SM60-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
+; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs13, %r18;
 ; SM60-NEXT:    prmt.b32 %r19, %r34, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r19;
 ; SM60-NEXT:    add.s16 %rs15, %rs14, %rs13;
 ; SM60-NEXT:    cvt.u32.u16 %r20, %rs15;
+; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs16, %r21;
 ; SM60-NEXT:    prmt.b32 %r22, %r34, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs17, %r22;
@@ -16812,31 +16803,29 @@ define <8 x i8> @add_release_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd2; }
 ; SM60-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
-; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
-; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
-; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
-; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
-; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
-; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:  $L__BB347_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
+; SM60-NEXT:    cvt.u16.u32 %rs1, %r3;
 ; SM60-NEXT:    prmt.b32 %r4, %r33, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs2, %r4;
 ; SM60-NEXT:    add.s16 %rs3, %rs2, %rs1;
 ; SM60-NEXT:    cvt.u32.u16 %r5, %rs3;
+; SM60-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
+; SM60-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; SM60-NEXT:    prmt.b32 %r7, %r33, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs5, %r7;
 ; SM60-NEXT:    add.s16 %rs6, %rs5, %rs4;
 ; SM60-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; SM60-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
+; SM60-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
+; SM60-NEXT:    cvt.u16.u32 %rs7, %r10;
 ; SM60-NEXT:    prmt.b32 %r11, %r33, 0, 0x7771U;
 ; SM60-NEXT:    cvt.u16.u32 %rs8, %r11;
 ; SM60-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; SM60-NEXT:    cvt.u32.u16 %r12, %rs9;
+; SM60-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
+; SM60-NEXT:    cvt.u16.u32 %rs10, %r13;
 ; SM60-NEXT:    prmt.b32 %r14, %r33, 0, 0x7770U;
 ; SM60-NEXT:    cvt.u16.u32 %rs11, %r14;
 ; SM60-NEXT:    add.s16 %rs12, %rs11, %rs10;
@@ -16844,11 +16833,13 @@ define <8 x i8> @add_release_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
 ; SM60-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
 ; SM60-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
 ; SM60-NEXT:    cvt.u64.u32 %rd3, %r17;
+; SM60-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs13, %r18;
 ; SM60-NEXT:    prmt.b32 %r19, %r34, 0, 0x7773U;
 ; SM60-NEXT:    cvt.u16.u32 %rs14, %r19;
 ; SM60-NEXT:    add.s16 %rs15, %rs14, %rs13;
 ; SM60-NEXT:    cvt.u32.u16 %r20, %rs15;
+; SM60-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs16, %r21;
 ; SM60-NEXT:    prmt.b32 %r22, %r34, 0, 0x7772U;
 ; SM60-NEXT:    cvt.u16.u32 %rs17, %r22;
@@ -17177,44 +17168,35 @@ define <2 x i8> @nand_monotonic_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8>
 ; SM60-LABEL: nand_monotonic_v2i8_global_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .pred %p<2>;
-; SM60-NEXT:    .reg .b16 %rs<9>;
-; SM60-NEXT:    .reg .b32 %r<19>;
+; SM60-NEXT:    .reg .b32 %r<17>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_monotonic_v2i8_global_cta_param_1];
-; SM60-NEXT:    mov.b32 %r4, {%rs1, %rs2};
 ; SM60-NEXT:    ld.param.b64 %rd2, [nand_monotonic_v2i8_global_cta_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM60-NEXT:    and.b32 %r6, %r5, 3;
-; SM60-NEXT:    shl.b32 %r1, %r6, 3;
-; SM60-NEXT:    mov.b32 %r7, 65535;
-; SM60-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM60-NEXT:    not.b32 %r2, %r8;
-; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
+; SM60-NEXT:    cvt.u32.u64 %r6, %rd2;
+; SM60-NEXT:    and.b32 %r7, %r6, 3;
+; SM60-NEXT:    shl.b32 %r1, %r7, 3;
+; SM60-NEXT:    mov.b32 %r8, 65535;
+; SM60-NEXT:    shl.b32 %r2, %r8, %r1;
+; SM60-NEXT:    not.b32 %r3, %r2;
+; SM60-NEXT:    ld.param.b16 %r9, [nand_monotonic_v2i8_global_cta_param_1];
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB361_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    shr.u32 %r9, %r18, %r1;
-; SM60-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM60-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM60-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM60-NEXT:    and.b32 %r11, %r10, %r4;
-; SM60-NEXT:    xor.b32 %r12, %r11, 16711935;
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
-; SM60-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM60-NEXT:    or.b16 %rs8, %rs5, %rs7;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs8;
-; SM60-NEXT:    shl.b32 %r14, %r13, %r1;
-; SM60-NEXT:    and.b32 %r15, %r18, %r2;
-; SM60-NEXT:    or.b32 %r16, %r15, %r14;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
-; SM60-NEXT:    setp.ne.b32 %p1, %r3, %r18;
-; SM60-NEXT:    mov.b32 %r18, %r3;
+; SM60-NEXT:    and.b32 %r10, %r16, %r4;
+; SM60-NEXT:    not.b32 %r11, %r10;
+; SM60-NEXT:    and.b32 %r12, %r11, %r2;
+; SM60-NEXT:    and.b32 %r13, %r16, %r3;
+; SM60-NEXT:    or.b32 %r14, %r13, %r12;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
+; SM60-NEXT:    setp.ne.b32 %p1, %r5, %r16;
+; SM60-NEXT:    mov.b32 %r16, %r5;
 ; SM60-NEXT:    @%p1 bra $L__BB361_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    shr.u32 %r17, %r3, %r1;
-; SM60-NEXT:    st.param.b16 [func_retval0], %r17;
+; SM60-NEXT:    shr.u32 %r15, %r5, %r1;
+; SM60-NEXT:    st.param.b16 [func_retval0], %r15;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") monotonic
         ret <2 x i8> %retval
@@ -17328,45 +17310,36 @@ define <2 x i8> @nand_acquire_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %
 ; SM60-LABEL: nand_acquire_v2i8_global_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .pred %p<2>;
-; SM60-NEXT:    .reg .b16 %rs<9>;
-; SM60-NEXT:    .reg .b32 %r<19>;
+; SM60-NEXT:    .reg .b32 %r<17>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_acquire_v2i8_global_cta_param_1];
-; SM60-NEXT:    mov.b32 %r4, {%rs1, %rs2};
 ; SM60-NEXT:    ld.param.b64 %rd2, [nand_acquire_v2i8_global_cta_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM60-NEXT:    and.b32 %r6, %r5, 3;
-; SM60-NEXT:    shl.b32 %r1, %r6, 3;
-; SM60-NEXT:    mov.b32 %r7, 65535;
-; SM60-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM60-NEXT:    not.b32 %r2, %r8;
-; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
+; SM60-NEXT:    cvt.u32.u64 %r6, %rd2;
+; SM60-NEXT:    and.b32 %r7, %r6, 3;
+; SM60-NEXT:    shl.b32 %r1, %r7, 3;
+; SM60-NEXT:    mov.b32 %r8, 65535;
+; SM60-NEXT:    shl.b32 %r2, %r8, %r1;
+; SM60-NEXT:    not.b32 %r3, %r2;
+; SM60-NEXT:    ld.param.b16 %r9, [nand_acquire_v2i8_global_cta_param_1];
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB365_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    shr.u32 %r9, %r18, %r1;
-; SM60-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM60-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM60-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM60-NEXT:    and.b32 %r11, %r10, %r4;
-; SM60-NEXT:    xor.b32 %r12, %r11, 16711935;
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
-; SM60-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM60-NEXT:    or.b16 %rs8, %rs5, %rs7;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs8;
-; SM60-NEXT:    shl.b32 %r14, %r13, %r1;
-; SM60-NEXT:    and.b32 %r15, %r18, %r2;
-; SM60-NEXT:    or.b32 %r16, %r15, %r14;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
-; SM60-NEXT:    setp.ne.b32 %p1, %r3, %r18;
-; SM60-NEXT:    mov.b32 %r18, %r3;
+; SM60-NEXT:    and.b32 %r10, %r16, %r4;
+; SM60-NEXT:    not.b32 %r11, %r10;
+; SM60-NEXT:    and.b32 %r12, %r11, %r2;
+; SM60-NEXT:    and.b32 %r13, %r16, %r3;
+; SM60-NEXT:    or.b32 %r14, %r13, %r12;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
+; SM60-NEXT:    setp.ne.b32 %p1, %r5, %r16;
+; SM60-NEXT:    mov.b32 %r16, %r5;
 ; SM60-NEXT:    @%p1 bra $L__BB365_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    shr.u32 %r17, %r3, %r1;
+; SM60-NEXT:    shr.u32 %r15, %r5, %r1;
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.b16 [func_retval0], %r17;
+; SM60-NEXT:    st.param.b16 [func_retval0], %r15;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") acquire
         ret <2 x i8> %retval
@@ -17482,45 +17455,36 @@ define <2 x i8> @nand_release_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %
 ; SM60-LABEL: nand_release_v2i8_global_cta(
 ; SM60:       {
 ; SM60-NEXT:    .reg .pred %p<2>;
-; SM60-NEXT:    .reg .b16 %rs<9>;
-; SM60-NEXT:    .reg .b32 %r<19>;
+; SM60-NEXT:    .reg .b32 %r<17>;
 ; SM60-NEXT:    .reg .b64 %rd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_release_v2i8_global_cta_param_1];
-; SM60-NEXT:    mov.b32 %r4, {%rs1, %rs2};
 ; SM60-NEXT:    ld.param.b64 %rd2, [nand_release_v2i8_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM60-NEXT:    and.b32 %r6, %r5, 3;
-; SM60-NEXT:    shl.b32 %r1, %r6, 3;
-; SM60-NEXT:    mov.b32 %r7, 65535;
-; SM60-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM60-NEXT:    not.b32 %r2, %r8;
-; SM60-NEXT:    ld.volatile.global.b32 %r18, [%rd1];
+; SM60-NEXT:    cvt.u32.u64 %r6, %rd2;
+; SM60-NEXT:    and.b32 %r7, %r6, 3;
+; SM60-NEXT:    shl.b32 %r1, %r7, 3;
+; SM60-NEXT:    mov.b32 %r8, 65535;
+; SM60-NEXT:    shl.b32 %r2, %r8, %r1;
+; SM60-NEXT:    not.b32 %r3, %r2;
+; SM60-NEXT:    ld.param.b16 %r9, [nand_release_v2i8_global_cta_param_1];
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB369_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    shr.u32 %r9, %r18, %r1;
-; SM60-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM60-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM60-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM60-NEXT:    and.b32 %r11, %r10, %r4;
-; SM60-NEXT:    xor.b32 %r12, %r11, 16711935;
-; SM60-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
-; SM60-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM60-NEXT:    or.b16 %rs8, %rs5, %rs7;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs8;
-; SM60-NEXT:    shl.b32 %r14, %r13, %r1;
-; SM60-NEXT:    and.b32 %r15, %r18, %r2;
-; SM60-NEXT:    or.b32 %r16, %r15, %r14;
-; SM60-NEXT:    atom.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
-; SM60-NEXT:    setp.ne.b32 %p1, %r3, %r18;
-; SM60-NEXT:    mov.b32 %r18, %r3;
+; SM60-NEXT:    and.b32 %r10, %r16, %r4;
+; SM60-NEXT:    not.b32 %r11, %r10;
+; SM60-NEXT:    and.b32 %r12, %r11, %r2;
+; SM60-NEXT:    and.b32 %r13, %r16, %r3;
+; SM60-NEXT:    or.b32 %r14, %r13, %r12;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
+; SM60-NEXT:    setp.ne.b32 %p1, %r5, %r16;
+; SM60-NEXT:    mov.b32 %r16, %r5;
 ; SM60-NEXT:    @%p1 bra $L__BB369_1;
 ; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    shr.u32 %r17, %r3, %r1;
-; SM60-NEXT:    st.param.b16 [func_retval0], %r17;
+; SM60-NEXT:    shr.u32 %r15, %r5, %r1;
+; SM60-NEXT:    st.param.b16 [func_retval0], %r15;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") release
         ret <2 x i8> %retval
