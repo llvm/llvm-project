@@ -266,8 +266,25 @@ static LogicalResult cloneFuncsToGPUModule(
     ModuleOp mod, SymbolTable &gpuSymTab,
     const llvm::SmallSetVector<CloneCandidate, 4> &funcsToClone) {
   OpBuilder builder(mod.getContext());
+
+  // ACCRoutineLowering inserts the device copy next to the host function, so
+  // the symbol table uniqued its name while acc.specialized_routine still
+  // holds the original one. Collect all of those renames and apply them in a
+  // single walk below.
   DenseMap<StringAttr, StringAttr> specializedRenames;
-  SmallVector<gpu::GPUFuncOp> deviceFuncs;
+  for (CloneCandidate candidate : funcsToClone) {
+    func::FuncOp srcFunc = candidate.first;
+    if (srcFunc.isDeclaration())
+      continue;
+    if (auto specAttr =
+            srcFunc->getDiscardableAttrOfType<SpecializedRoutineAttr>(
+                getSpecializedRoutineAttrName())) {
+      StringAttr destName = specAttr.getFuncName();
+      if (srcFunc.getNameAttr() != destName)
+        specializedRenames.try_emplace(srcFunc.getNameAttr(), destName);
+    }
+  }
+  rewriteSpecializedSymbolUses(mod, specializedRenames);
 
   for (CloneCandidate candidate : funcsToClone) {
     func::FuncOp srcFunc = candidate.first;
@@ -283,22 +300,13 @@ static LogicalResult cloneFuncsToGPUModule(
     if (auto specAttr =
             srcFunc->getDiscardableAttrOfType<SpecializedRoutineAttr>(
                 getSpecializedRoutineAttrName())) {
-      StringAttr destName = specAttr.getFuncName();
-      StringAttr srcName = deviceFuncOp.getNameAttr();
-      if (srcName != destName)
-        specializedRenames.try_emplace(srcName, destName);
-      deviceFuncOp.setName(destName);
+      deviceFuncOp.setName(specAttr.getFuncName());
       deviceFuncOp->setDiscardableAttr(getSpecializedRoutineAttrName(),
                                        specAttr);
     }
 
-    deviceFuncs.push_back(deviceFuncOp);
-  }
-
-  rewriteSpecializedSymbolUses(mod, specializedRenames);
-
-  for (gpu::GPUFuncOp deviceFuncOp : deviceFuncs)
     gpuSymTab.insert(deviceFuncOp);
+  }
   return success();
 }
 
