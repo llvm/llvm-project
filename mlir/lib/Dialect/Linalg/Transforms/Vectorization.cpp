@@ -2071,6 +2071,45 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
     vecOperands.push_back(read);
   }
 
+  // Preserve the contraction's cast semantics when converting operands to the
+  // integer accumulator type. vector.contract provides an implicit signed
+  // integer promotion; the cases below materialize explicit casts as needed.
+  auto castAttr = linalgOp->getAttrOfType<TypeFnAttr>("cast");
+  bool hasUnsignedCast =
+      castAttr && castAttr.getValue() == TypeFn::cast_unsigned;
+  auto accType = dyn_cast<VectorType>(vecOperands[2].getType());
+  auto accElementType =
+      accType ? dyn_cast<IntegerType>(accType.getElementType()) : nullptr;
+  if (accElementType && accElementType.isSignless()) {
+    for (Value &operand : MutableArrayRef(vecOperands).take_front(2)) {
+      auto operandType = cast<VectorType>(operand.getType());
+      Type operandElementType = operandType.getElementType();
+      VectorType castType = operandType.clone(accElementType);
+
+      if (isa<FloatType>(operandElementType)) {
+        operand =
+            hasUnsignedCast
+                ? arith::FPToUIOp::create(rewriter, loc, castType, operand)
+                      .getResult()
+                : arith::FPToSIOp::create(rewriter, loc, castType, operand)
+                      .getResult();
+        continue;
+      }
+
+      auto operandIntegerType = dyn_cast<IntegerType>(operandElementType);
+      if (!operandIntegerType || !operandIntegerType.isSignless())
+        continue;
+      if (operandIntegerType.getWidth() >= accElementType.getWidth())
+        continue;
+      if (!hasUnsignedCast)
+        continue;
+
+      // vector.contract implicitly sign-extends integer operands. Unsigned
+      // promotion therefore requires an explicit zero extension.
+      operand = arith::ExtUIOp::create(rewriter, loc, castType, operand);
+    }
+  }
+
   // Remap iterators from linalg to vector.
   SmallVector<Attribute> iterAttrs;
   auto iterators = linalgOp.getIteratorTypesArray();

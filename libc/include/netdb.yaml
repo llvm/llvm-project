@@ -33,6 +33,12 @@ functions:
     return_type: void
     arguments:
       - type: struct addrinfo *
+  - name: gai_strerror
+    standards:
+      - posix
+    return_type: const char *
+    arguments:
+      - type: int
   - name: getaddrinfo
     standards:
       - posix

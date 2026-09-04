@@ -3,9 +3,9 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir \
 // RUN:   -fclangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct Empty {};
 struct EmptyMem { Empty e; };
@@ -151,9 +151,8 @@ float takeFloatEmptyFirst(FloatEmptyFirst v) { return v.a; }
 // this size is passed indirectly at its declared alignment.
 int takeBig32(Big32 v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z9takeBig325Big32i(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.byval = !rec_Big32, llvm.noalias, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z9takeBig325Big32i(ptr noalias noundef byval(%struct.Big32) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z9takeBig325Big32i(ptr noundef byval(%struct.Big32) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z9takeBig325Big32i(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.byval = !rec_Big32, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z9takeBig325Big32i(ptr noundef byval(%struct.Big32) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // The same class returned uses sret at that alignment.
 Big32 retBig32() { return Big32{}; }
@@ -220,9 +219,8 @@ int takeUEmptyBytes(UEmptyBytes v) { return v.c[0]; }
 // member changes nothing here.
 int takeUBigEmpty(UBigEmpty v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z13takeUBigEmpty9UBigEmptyi(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmpty, llvm.noalias, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
-// LLVM-CIR: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noalias noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
-// LLVM-OGCG: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+// CIR: cir.func {{.*}}@_Z13takeUBigEmpty9UBigEmptyi(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmpty, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // The same union returned uses sret at that alignment.
 UBigEmpty retUBigEmpty() { return UBigEmpty{}; }

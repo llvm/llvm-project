@@ -232,6 +232,8 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
+- Added support for the `__builtin_strlcat` builtin.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -266,6 +268,9 @@ features cannot lower the translation-unit ABI level;
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
 ### Improvements to Clang's diagnostics
+
+- `-Wfortify-source` now diagnoses when `strlcat` or `__builtin_strlcat` is called with a size
+  argument larger than the destination buffer.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
@@ -611,6 +616,7 @@ features cannot lower the translation-unit ABI level;
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
+- Fixed an assertion failure when instantiating a late-parsed function template defined in an earlier translation unit with -fdelayed-template-parsing. (#GH217073)
 
 - Allow redeclaration lookup to consider conversion function templates, allowing
   Clang to match an in-class specialization such as `template<> operator int()`

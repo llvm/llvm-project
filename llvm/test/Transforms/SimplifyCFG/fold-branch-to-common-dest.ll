@@ -1179,7 +1179,7 @@ fpclassify_not_zero:
 
 fpclassify_not_nan:
   %x.abs = tail call float @llvm.fabs.f32(float %x)
-  %isinf = fcmp oeq float %x.abs, 0x7FF0000000000000
+  %isinf = fcmp oeq float %x.abs, +inf
   br i1 %isinf, label %fpclassify_end, label %fpclassify_not_inf
 
 fpclassify_not_inf:

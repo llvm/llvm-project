@@ -877,9 +877,6 @@ public:
 
   static mlir::SymbolTable::Visibility
   getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind GLK);
-  static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
-      clang::VisibilityAttr::VisibilityType visibility);
-  cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,

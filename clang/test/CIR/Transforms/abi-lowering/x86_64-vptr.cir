@@ -188,8 +188,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_vp_big(%arg0: !cir.ptr<!rec_VPBig> {llvm.align = 8 : i64, llvm.byval = !rec_VPBig, llvm.noalias, llvm.noundef})
-  // LLVM: define void @take_vp_big(ptr noalias noundef byval(%struct.VPBig) align 8 %{{[^,)]+}})
+  // CHECK: cir.func{{.*}} @take_vp_big(%arg0: !cir.ptr<!rec_VPBig> {llvm.align = 8 : i64, llvm.byval = !rec_VPBig, llvm.noundef})
+  // LLVM: define void @take_vp_big(ptr noundef byval(%struct.VPBig) align 8 %{{[^,)]+}})
 
   // Returned at that size it uses sret instead.
   cir.func @ret_vp_big() -> !rec_VPBig {

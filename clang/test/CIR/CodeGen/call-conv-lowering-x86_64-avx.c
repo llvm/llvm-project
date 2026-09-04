@@ -44,7 +44,7 @@ void take_v256(v8f v) { (void)v; }
 
 // CIR-SSE: cir.func {{.*}}@take_v256(%arg0: !cir.ptr<!cir.vector<8 x !cir.float>> {{.*}}llvm.align = 32 : i64{{.*}}llvm.byval = !cir.vector<8 x !cir.float>{{.*}})
 // CIR-AVX: cir.func {{.*}}@take_v256(%arg0: !cir.vector<8 x !cir.float>{{.*}})
-// LLVM-CIR-SSE: define dso_local void @take_v256(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-SSE: define dso_local void @take_v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-SSE: define dso_local void @take_v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-AVX: define dso_local void @take_v256(<8 x float> noundef %{{[^,)]+}})
 // LLVM-AVX512: define dso_local void @take_v256(<8 x float> noundef %{{[^,)]+}})
@@ -59,8 +59,8 @@ v8f ret_v256(void) { v8f z = {0}; return z; }
 // vector argument needs on a non-variadic call.
 void call_v256(v8f v) { take_v256(v); }
 
-// LLVM-CIR-SSE: define dso_local void @call_v256(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
-// LLVM-CIR-SSE: call void @take_v256(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-SSE: define dso_local void @call_v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-SSE: call void @take_v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-SSE: define dso_local void @call_v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-SSE: call void @take_v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-AVX: define dso_local void @call_v256(<8 x float> noundef %{{[^,)]+}})
@@ -73,9 +73,9 @@ void take_v512(v16f v) { (void)v; }
 
 // CIR-SSE: cir.func {{.*}}@take_v512(%arg0: !cir.ptr<!cir.vector<16 x !cir.float>> {{.*}}llvm.align = 64 : i64{{.*}}llvm.byval = !cir.vector<16 x !cir.float>{{.*}})
 // CIR-AVX: cir.func {{.*}}@take_v512(%arg0: !cir.ptr<!cir.vector<16 x !cir.float>> {{.*}}llvm.align = 64 : i64{{.*}}llvm.byval = !cir.vector<16 x !cir.float>{{.*}})
-// LLVM-CIR-SSE: define dso_local void @take_v512(ptr noalias noundef byval(<16 x float>) align 64 %{{[^,)]+}})
+// LLVM-CIR-SSE: define dso_local void @take_v512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 // LLVM-OGCG-SSE: define dso_local void @take_v512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
-// LLVM-CIR-AVX: define dso_local void @take_v512(ptr noalias noundef byval(<16 x float>) align 64 %{{[^,)]+}})
+// LLVM-CIR-AVX: define dso_local void @take_v512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 // LLVM-OGCG-AVX: define dso_local void @take_v512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 // LLVM-AVX512: define dso_local void @take_v512(<16 x float> noundef %{{[^,)]+}})
 
@@ -84,9 +84,9 @@ void take_v512(v16f v) { (void)v; }
 // module's, so this is byval only where the module itself lacks AVX512.
 __attribute__((target("no-avx512f"))) void take_v512_no_avx512(v16f v) { (void)v; }
 
-// LLVM-CIR-SSE: define dso_local void @take_v512_no_avx512(ptr noalias noundef byval(<16 x float>) align 64 %{{[^,)]+}})
+// LLVM-CIR-SSE: define dso_local void @take_v512_no_avx512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 // LLVM-OGCG-SSE: define dso_local void @take_v512_no_avx512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
-// LLVM-CIR-AVX: define dso_local void @take_v512_no_avx512(ptr noalias noundef byval(<16 x float>) align 64 %{{[^,)]+}})
+// LLVM-CIR-AVX: define dso_local void @take_v512_no_avx512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 // LLVM-OGCG-AVX: define dso_local void @take_v512_no_avx512(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 // LLVM-AVX512: define dso_local void @take_v512_no_avx512(<16 x float> noundef %{{[^,)]+}})
 
@@ -98,14 +98,14 @@ __attribute__((target("avx"))) void take_v256_tgt(v8f v) { (void)v; }
 
 // CIR: cir.func {{.*}}@take_v256_tgt(%arg0: !cir.vector<8 x !cir.float>{{.*}})
 // LLVM: define dso_local void @take_v256_tgt(<8 x float> noundef %{{[^,)]+}})
-// LLVM-CIR-PINNED: define dso_local void @take_v256_tgt(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-PINNED: define dso_local void @take_v256_tgt(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-PINNED: define dso_local void @take_v256_tgt(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 
 __attribute__((target("avx512f"))) void take_v512_tgt(v16f v) { (void)v; }
 
 // CIR: cir.func {{.*}}@take_v512_tgt(%arg0: !cir.vector<16 x !cir.float>{{.*}})
 // LLVM: define dso_local void @take_v512_tgt(<16 x float> noundef %{{[^,)]+}})
-// LLVM-CIR-PINNED: define dso_local void @take_v512_tgt(ptr noalias noundef byval(<16 x float>) align 64 %{{[^,)]+}})
+// LLVM-CIR-PINNED: define dso_local void @take_v512_tgt(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 // LLVM-OGCG-PINNED: define dso_local void @take_v512_tgt(ptr noundef byval(<16 x float>) align 64 %{{[^,)]+}})
 
 // A call site has to agree with the callee it resolves to.  Both sides carry
@@ -116,8 +116,8 @@ __attribute__((target("avx"))) void call_v256_tgt(v8f v) { take_v256_tgt(v); }
 
 // LLVM: define dso_local void @call_v256_tgt(<8 x float> noundef %{{[^,)]+}})
 // LLVM: call void @take_v256_tgt(<8 x float> noundef %{{[^,)]+}})
-// LLVM-CIR-PINNED: define dso_local void @call_v256_tgt(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
-// LLVM-CIR-PINNED: call void @take_v256_tgt(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-PINNED: define dso_local void @call_v256_tgt(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-PINNED: call void @take_v256_tgt(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-PINNED: define dso_local void @call_v256_tgt(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-PINNED: call void @take_v256_tgt(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 
@@ -129,13 +129,13 @@ __attribute__((target("avx"))) void call_indirect(v8f_fn p, v8f v) { p(v); }
 
 // LLVM: define dso_local void @call_indirect(ptr noundef %{{[^,)]+}}, <8 x float> noundef %{{[^,)]+}})
 // LLVM: call void %{{[0-9]+}}(<8 x float> noundef %{{[^,)]+}})
-// LLVM-CIR-PINNED: define dso_local void @call_indirect(ptr noundef %{{[^,)]+}}, ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-PINNED: define dso_local void @call_indirect(ptr noundef %{{[^,)]+}}, ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-PINNED: define dso_local void @call_indirect(ptr noundef %{{[^,)]+}}, ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 
 void call_indirect_plain(v8f_fn p, v8f v) { p(v); }
 
-// LLVM-CIR-SSE: define dso_local void @call_indirect_plain(ptr noundef %{{[^,)]+}}, ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
-// LLVM-CIR-SSE: call void %{{[0-9]+}}(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-SSE: define dso_local void @call_indirect_plain(ptr noundef %{{[^,)]+}}, ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM-CIR-SSE: call void %{{[0-9]+}}(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-OGCG-SSE: define dso_local void @call_indirect_plain(ptr noundef %{{[^,)]+}}, ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM-AVX: define dso_local void @call_indirect_plain(ptr noundef %{{[^,)]+}}, <8 x float> noundef %{{[^,)]+}})
 // LLVM-AVX: call void %{{[0-9]+}}(<8 x float> noundef %{{[^,)]+}})
@@ -151,7 +151,7 @@ void pass_swv(StructWideVector s) { variadic("x", s); }
 
 // LLVM-AVX: define dso_local void @named_swv(<8 x float> %{{[^,)]+}})
 // LLVM-AVX: define dso_local void @pass_swv(<8 x float> %{{[^,)]+}})
-// LLVM-CIR-AVX: call i32 (ptr, ...) @variadic(ptr noundef @.str, ptr noalias noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// LLVM-CIR-AVX: call i32 (ptr, ...) @variadic(ptr noundef @.str, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
 // LLVM-OGCG-AVX: call i32 (ptr, ...) @variadic(ptr noundef @.str, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
 
 // A union whose widest member is a 256-bit vector is classified from that
@@ -159,7 +159,7 @@ void pass_swv(StructWideVector s) { variadic("x", s); }
 union UnionWideVector { v8f v; float f; };
 void take_union_wide_vector(union UnionWideVector u) { (void)u; }
 
-// LLVM-CIR-SSE: define dso_local void @take_union_wide_vector(ptr noalias noundef byval(%union.UnionWideVector) align 32 %{{[^,)]+}})
+// LLVM-CIR-SSE: define dso_local void @take_union_wide_vector(ptr noundef byval(%union.UnionWideVector) align 32 %{{[^,)]+}})
 // LLVM-OGCG-SSE: define dso_local void @take_union_wide_vector(ptr noundef byval(%union.UnionWideVector) align 32 %{{[^,)]+}})
 // LLVM-AVX: define dso_local void @take_union_wide_vector(<4 x double> %{{[^,)]+}})
 // LLVM-AVX512: define dso_local void @take_union_wide_vector(<4 x double> %{{[^,)]+}})

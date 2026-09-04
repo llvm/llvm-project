@@ -6701,8 +6701,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
-       Opcode != Instruction::FAdd && Opcode != Instruction::FSub) ||
-      OpAExtend == TTI::PR_None)
+       Opcode != Instruction::FAdd && Opcode != Instruction::FSub))
     return Invalid;
 
   // Floating-point partial reductions are invalid if `reassoc` and `contract`
@@ -6725,6 +6724,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (BinOp && ((*BinOp != Instruction::Mul && *BinOp != Instruction::FMul) ||
                 InputTypeA != InputTypeB))
     return Invalid;
+
+  // We only support the following element sizes.
+  if (!is_contained({8u, 16u, 32u, 64u}, AccumType->getScalarSizeInBits()))
+    return Invalid;
+
+  // If none of the operands are extended and there's no extra BinOp, just
+  // cost this as the equivalent arithmetic instruction.
+  // TODO: Depending on VF and element type, we may be able to improve on this.
+  if (!OpAExtend) {
+    assert(!OpBExtend && "Extended second operand without extended first.");
+    assert(InputTypeA == AccumType && "Type mismatch with no extensions.");
+
+    VectorType *VTy = VectorType::get(AccumType, VF);
+    return getArithmeticInstrCost(Opcode, VTy, CostKind);
+  }
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
   // USDot is natively supported with +i8mm. With plain +dotprod, SUMLA is
