@@ -243,6 +243,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tmpnam
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tmpnam
+)
+
+add_entrypoint_object(
   rename
   ALIAS
   DEPENDS

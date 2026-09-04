@@ -26,6 +26,12 @@ macros:
     macro_header: stdio-macros.h
   - macro_name: _IOFBF
     macro_header: stdio-macros.h
+  - macro_name: L_tmpnam
+    macro_header: stdio-macros.h
+  - macro_name: TMP_MAX
+    macro_header: stdio-macros.h
+  - macro_name: P_tmpdir
+    macro_header: stdio-macros.h
 types:
   - type_name: rsize_t
   - type_name: size_t
@@ -410,6 +416,12 @@ functions:
     return_type: FILE *
     arguments:
       - type: void
+  - name: tmpnam
+    standards:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: char *
   - name: ungetc
     standards:
       - stdc
