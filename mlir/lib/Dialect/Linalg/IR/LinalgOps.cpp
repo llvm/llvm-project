@@ -5190,8 +5190,7 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
   p.printAttribute(getKindAttr());
   SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "kind",
                                            "indexing_maps"};
-  unsigned arity =
-      getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
+  unsigned arity = static_cast<unsigned>(getArityGroup());
   unsigned numDims = getResultRank();
 
   SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
@@ -5273,6 +5272,279 @@ void ElementwiseOp::getEffects(
 
 Speculation::Speculatability ElementwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+/// Check if the given elementwise op matches a scalar-combinable binary op.
+static bool isElementwiseScalarBinaryFoldable(Operation *op) {
+  auto elementwiseOp = dyn_cast_or_null<ElementwiseOpInterface>(op);
+  if (!elementwiseOp)
+    return false;
+
+  auto groupAndKind = getArityGroupAndKind(elementwiseOp.getElementwiseKind());
+  if (groupAndKind.arityGroup != ElementwiseArityGroup::Binary)
+    return false;
+
+  switch (groupAndKind.kind.binaryFn) {
+  case BinaryFn::add:
+  case BinaryFn::sub:
+  case BinaryFn::mul:
+  case BinaryFn::max_signed:
+  case BinaryFn::min_signed:
+  case BinaryFn::max_unsigned:
+  case BinaryFn::min_unsigned:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Check if the given operation is a Linalg binary op with scalar-combinable
+/// semantics.
+static bool isLinalgScalarBinaryFoldable(Operation *op) {
+  if (auto elementwiseOp = dyn_cast_or_null<ElementwiseOpInterface>(op))
+    return isElementwiseScalarBinaryFoldable(elementwiseOp.getOperation());
+  return isa_and_nonnull<linalg::AddOp, linalg::SubOp, linalg::MulOp,
+                         linalg::MaxOp, linalg::MinOp>(op);
+}
+
+/// Combine two scalar attributes with a binary Linalg operation.
+/// Returns nullptr if the operation fails or types are incompatible.
+static TypedAttr combineScalarBinaryAttrs(BinaryFn kind, TypedAttr lhs,
+                                          TypedAttr rhs) {
+  Type lhsType = lhs.getType();
+  Type rhsType = rhs.getType();
+  if (lhsType != rhsType)
+    return nullptr;
+
+  if (auto intType = dyn_cast<IntegerType>(lhsType)) {
+    auto lhsInt = dyn_cast<IntegerAttr>(lhs);
+    auto rhsInt = dyn_cast<IntegerAttr>(rhs);
+    if (!lhsInt || !rhsInt)
+      return nullptr;
+
+    switch (kind) {
+    case BinaryFn::add:
+    case BinaryFn::sub:
+      return IntegerAttr::get(intType, lhsInt.getValue() + rhsInt.getValue());
+    case BinaryFn::mul:
+      return IntegerAttr::get(intType, lhsInt.getValue() * rhsInt.getValue());
+    case BinaryFn::max_signed:
+      return IntegerAttr::get(intType, lhsInt.getValue().slt(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
+    case BinaryFn::min_signed:
+      return IntegerAttr::get(intType, lhsInt.getValue().sgt(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
+    case BinaryFn::max_unsigned:
+      return IntegerAttr::get(intType, lhsInt.getValue().ult(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
+    case BinaryFn::min_unsigned:
+      return IntegerAttr::get(intType, lhsInt.getValue().ugt(rhsInt.getValue())
+                                           ? rhsInt.getValue()
+                                           : lhsInt.getValue());
+    default:
+      return nullptr;
+    }
+  }
+
+  if (isa<FloatType>(lhsType)) {
+    auto lhsFloat = dyn_cast<FloatAttr>(lhs);
+    auto rhsFloat = dyn_cast<FloatAttr>(rhs);
+    if (!lhsFloat || !rhsFloat)
+      return nullptr;
+
+    APFloat result = lhsFloat.getValue();
+    switch (kind) {
+    case BinaryFn::add:
+    case BinaryFn::sub:
+      result.add(rhsFloat.getValue(), APFloat::rmNearestTiesToEven);
+      return FloatAttr::get(lhsType, result);
+    case BinaryFn::mul:
+      result.multiply(rhsFloat.getValue(), APFloat::rmNearestTiesToEven);
+      return FloatAttr::get(lhsType, result);
+    case BinaryFn::max_signed:
+      return FloatAttr::get(lhsType,
+                            lhsFloat.getValue().compare(rhsFloat.getValue()) ==
+                                    APFloat::cmpLessThan
+                                ? rhsFloat.getValue()
+                                : lhsFloat.getValue());
+    case BinaryFn::min_signed:
+      return FloatAttr::get(lhsType,
+                            lhsFloat.getValue().compare(rhsFloat.getValue()) ==
+                                    APFloat::cmpGreaterThan
+                                ? rhsFloat.getValue()
+                                : lhsFloat.getValue());
+    default:
+      return nullptr;
+    }
+  }
+
+  return nullptr;
+}
+
+/// Try to extract the scalar constant value from a Value that is either:
+/// - a dense splat constant (tensor<...xf32> with all same elements), or
+/// - a scalar constant that was broadcast.
+/// Returns std::nullopt if the value is not a recognizable scalar constant.
+static std::optional<TypedAttr> getScalarConstant(Value val) {
+  // Case 1: Dense splat constant.
+  if (auto splatAttr = getScalarConstantAttrFromDenseSplat(val))
+    return splatAttr;
+
+  // Case 2: fill(scalar_constant) - a linalg.fill with a constant scalar.
+  if (auto fillOp = val.getDefiningOp<linalg::FillOp>()) {
+    Value fillVal = fillOp.getInputs()[0];
+    Attribute constAttr;
+    if (matchPattern(fillVal, m_Constant(&constAttr)))
+      return cast<TypedAttr>(constAttr);
+  }
+
+  return std::nullopt;
+}
+
+/// Fold two consecutive scalar binary operations into one.
+///
+/// Works for binary elementwise ops like add/mul/max/min and their named Linalg
+/// counterparts when the scalar constants appear on the same side and the op is
+/// associative w.r.t. the constant combination (with subtraction only handled
+/// in its right-hand-scalar form: sub(sub(x, c0), c1) -> sub(x, c0 + c1)).
+template <typename OpTy, BinaryFn BinaryFnValue>
+struct FoldConsecutiveScalarBinaryPattern : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  /// Helper to identify const/non-const operands. Returns {nonConst, scalar,
+  /// scalarOperand, scalarIsOnLeft}.
+  static std::tuple<Value, std::optional<TypedAttr>, Value, bool>
+  splitConstOperands(Value lhs, Value rhs) {
+    if (auto scalar = getScalarConstant(rhs))
+      return {lhs, scalar, rhs, false};
+    if (auto scalar = getScalarConstant(lhs))
+      return {rhs, scalar, lhs, true};
+    return {Value(), std::nullopt, Value(), false};
+  }
+
+  /// Create a constant matching the form of the reference operand (scalar or
+  /// splat tensor).
+  static FailureOr<Value> createMatchingConstant(PatternRewriter &rewriter,
+                                                 Location loc,
+                                                 TypedAttr scalarValue,
+                                                 Value referenceOperand) {
+    if (auto tensorType =
+            dyn_cast<RankedTensorType>(referenceOperand.getType())) {
+      if (scalarValue.getType() != tensorType.getElementType())
+        return failure();
+      auto splatAttr = DenseElementsAttr::get(tensorType, scalarValue);
+      return arith::ConstantOp::create(rewriter, loc, splatAttr).getResult();
+    }
+    return arith::ConstantOp::create(rewriter, loc, scalarValue).getResult();
+  }
+
+  LogicalResult matchAndRewrite(OpTy outerOp,
+                                PatternRewriter &rewriter) const override {
+    if (!outerOp.hasPureTensorSemantics())
+      return failure();
+
+    if constexpr (std::is_same_v<OpTy, ElementwiseOp>) {
+      auto groupAndKind = getArityGroupAndKind(outerOp.getKind());
+      if (groupAndKind.arityGroup != ElementwiseArityGroup::Binary ||
+          groupAndKind.kind.binaryFn != BinaryFnValue)
+        return failure();
+    }
+
+    Value outerNonConst, outerScalarOperand;
+    std::optional<TypedAttr> outerScalar;
+    bool outerScalarOnLeft = false;
+    std::tie(outerNonConst, outerScalar, outerScalarOperand,
+             outerScalarOnLeft) =
+        splitConstOperands(outerOp.getInputs()[0], outerOp.getInputs()[1]);
+    if (!outerScalar)
+      return failure();
+
+    Operation *innerOp = outerNonConst.getDefiningOp();
+    if (!isLinalgScalarBinaryFoldable(innerOp))
+      return failure();
+    if (!cast<linalg::LinalgOp>(innerOp).hasPureTensorSemantics())
+      return failure();
+    if (!innerOp->hasOneUse())
+      return failure();
+
+    Value innerNonConst, innerScalarOperand;
+    std::optional<TypedAttr> innerScalar;
+    bool innerScalarOnLeft = false;
+    std::tie(innerNonConst, innerScalar, innerScalarOperand,
+             innerScalarOnLeft) =
+        splitConstOperands(innerOp->getOperand(0), innerOp->getOperand(1));
+    if (!innerScalar)
+      return failure();
+    if (innerNonConst.getType() != outerNonConst.getType())
+      return failure();
+
+    if (BinaryFnValue == BinaryFn::sub &&
+        (outerScalarOnLeft || innerScalarOnLeft))
+      return failure();
+
+    TypedAttr foldedScalar =
+        combineScalarBinaryAttrs(BinaryFnValue, *innerScalar, *outerScalar);
+    if (!foldedScalar)
+      return failure();
+
+    FailureOr<Value> combinedConst = createMatchingConstant(
+        rewriter, outerOp.getLoc(), foldedScalar, outerScalarOperand);
+    if (failed(combinedConst))
+      return failure();
+
+    rewriter.modifyOpInPlace(outerOp, [&]() {
+      outerOp.getDpsInputOperand(0)->set(innerNonConst);
+      outerOp.getDpsInputOperand(1)->set(*combinedConst);
+    });
+    rewriter.eraseOp(innerOp);
+    return success();
+  }
+};
+
+ElementwiseKind ElementwiseOp::getElementwiseKind() { return getKind(); }
+
+ElementwiseArityGroup ElementwiseOp::getArityGroup() {
+  return getArityGroupAndKind(getKind()).arityGroup;
+}
+
+//===----------------------------------------------------------------------===//
+// Shared utilities for named elementwise ops (AddOp, SubOp, ExpOp, etc.)
+//===----------------------------------------------------------------------===//
+
+void buildElementwiseRegion(ImplicitLocOpBuilder &b, Block &block,
+                            ElementwiseKind kind,
+                            function_ref<InFlightDiagnostic()> emitError) {
+  ArityGroupAndKind groupAndKind = getArityGroupAndKind(kind);
+  auto arityGroup = groupAndKind.arityGroup;
+  auto fnKind = groupAndKind.kind;
+
+  unsigned expectedArgs = getArityGroupAsUInt(arityGroup) + 1;
+  assert(block.getNumArguments() == expectedArgs &&
+         "elementwise regionBuilder arg count mismatch");
+
+  RegionBuilderHelper helper(b, block);
+  Value result;
+
+  switch (arityGroup) {
+  case ElementwiseArityGroup::Unary:
+    result = helper.buildUnaryFn(fnKind.unaryFn, block.getArgument(0));
+    break;
+  case ElementwiseArityGroup::Binary:
+    result = helper.buildBinaryFn(fnKind.binaryFn, block.getArgument(0),
+                                  block.getArgument(1), emitError);
+    break;
+  case ElementwiseArityGroup::Ternary:
+    result = helper.buildTernaryFn(fnKind.ternaryFn, block.getArgument(0),
+                                   block.getArgument(1), block.getArgument(2));
+    break;
+  }
+
+  if (!result)
+    return;
+  helper.yieldOutputs({result});
 }
 
 //===----------------------------------------------------------------------===//
@@ -7012,8 +7284,26 @@ Speculation::Speculatability BatchReduceMatmulOp::getSpeculatability() {
 
 void LinalgDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<EraseDeadLinalgOp, FoldTensorCastConsumerOp, FoldTensorCastPackOp,
-              FoldTensorCastUnPackOp, InferStaticShapeOfOperands>(getContext());
+  results.add<
+      EraseDeadLinalgOp, FoldTensorCastConsumerOp, FoldTensorCastPackOp,
+      FoldTensorCastUnPackOp, InferStaticShapeOfOperands,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp, BinaryFn::add>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp, BinaryFn::sub>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp, BinaryFn::mul>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::max_signed>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::min_signed>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::max_unsigned>,
+      FoldConsecutiveScalarBinaryPattern<linalg::ElementwiseOp,
+                                         BinaryFn::min_unsigned>,
+      FoldConsecutiveScalarBinaryPattern<linalg::AddOp, BinaryFn::add>,
+      FoldConsecutiveScalarBinaryPattern<linalg::SubOp, BinaryFn::sub>,
+      FoldConsecutiveScalarBinaryPattern<linalg::MulOp, BinaryFn::mul>,
+      FoldConsecutiveScalarBinaryPattern<linalg::MaxOp, BinaryFn::max_signed>,
+      FoldConsecutiveScalarBinaryPattern<linalg::MinOp, BinaryFn::min_signed>>(
+      getContext());
 }
 
 Operation *LinalgDialect::materializeConstant(OpBuilder &builder,
