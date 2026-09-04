@@ -5294,6 +5294,7 @@ add_header_library(
     .common_constants
     .exp10f
     .exp2f
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
