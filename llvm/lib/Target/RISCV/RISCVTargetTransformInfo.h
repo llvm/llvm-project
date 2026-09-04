@@ -134,6 +134,9 @@ public:
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
 
+  bool shouldMaximizeVectorBandwidth(
+      TargetTransformInfo::RegisterKind K) const override;
+
   unsigned getRegUsageForType(Type *Ty) const override;
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
