@@ -16,7 +16,9 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -75,8 +77,8 @@ static LogicalResult collectIndexUse(Operation *op, Value indices, Value values,
         "gather/scatter hardening");
   }
 
-  // Clamp bounds must be representable in the index element type. Group only
-  // users whose resulting clamp bounds are identical.
+  // Bounds must be representable in the index element type. Group only users
+  // whose resulting bounds are identical.
   int64_t maxRepresentable =
       llvm::APInt::getSignedMaxValue(elementType.getWidth()).getSExtValue();
   int64_t upperBound = std::min(indexedSize - 1, maxRepresentable);
@@ -123,33 +125,55 @@ collectIndexUseGroups(func::FuncOp funcOp,
 }
 
 /// Returns whether the indices already have sufficiently restrictive bounds.
-static bool isAlreadyHardened(Value indices, IntegerAttr maxAttr) {
-  auto clampOp = indices.getDefiningOp<tosa::ClampOp>();
-  if (!clampOp)
+static bool isAlreadyHardened(Value indices, int64_t requiredUpperBound) {
+  auto minimumOp = indices.getDefiningOp<tosa::MinimumOp>();
+  if (!minimumOp)
     return false;
 
-  auto existingMin = dyn_cast<IntegerAttr>(clampOp.getMinValAttr());
-  auto existingMax = dyn_cast<IntegerAttr>(clampOp.getMaxValAttr());
-  return existingMin && existingMax && !existingMin.getValue().isNegative() &&
-         existingMax.getValue().sle(maxAttr.getValue());
+  Value maximumResult = minimumOp.getInput1();
+  llvm::APInt upperBound;
+  if (!matchPattern(minimumOp.getInput2(), m_ConstantInt(&upperBound))) {
+    maximumResult = minimumOp.getInput2();
+    if (!matchPattern(minimumOp.getInput1(), m_ConstantInt(&upperBound)))
+      return false;
+  }
+
+  auto maximumOp = maximumResult.getDefiningOp<tosa::MaximumOp>();
+  if (!maximumOp)
+    return false;
+
+  llvm::APInt lowerBound;
+  if (!matchPattern(maximumOp.getInput2(), m_ConstantInt(&lowerBound)) &&
+      !matchPattern(maximumOp.getInput1(), m_ConstantInt(&lowerBound)))
+    return false;
+
+  unsigned bitWidth = upperBound.getBitWidth();
+  llvm::APInt requiredUpper(bitWidth,
+                            static_cast<uint64_t>(requiredUpperBound));
+  return lowerBound.getBitWidth() == bitWidth && !lowerBound.isNegative() &&
+         !upperBound.isNegative() && upperBound.sle(requiredUpper);
 }
 
-/// Creates a clamp for the group and rewires its gather/scatter users.
+/// Creates a rank-two splat constant suitable for index broadcasting.
+static Value createIndexBoundConstant(OpBuilder &builder, Location loc,
+                                      IntegerType elementType, int64_t value) {
+  auto type = RankedTensorType::get({1, 1}, elementType);
+  auto valueAttr =
+      IntegerAttr::get(elementType, llvm::APInt(elementType.getWidth(),
+                                                static_cast<uint64_t>(value)));
+  auto values = DenseElementsAttr::get(type, valueAttr);
+  return tosa::ConstOp::create(builder, loc, type, values).getResult();
+}
+
+/// Creates minimum/maximum bounds and rewires the group's index users.
 static void hardenIndexUseGroup(IndexUseGroup &group, OpBuilder &builder) {
   Value indices = group.indices;
   auto indicesType = cast<ShapedType>(indices.getType());
   auto elementType = cast<IntegerType>(indicesType.getElementType());
-  unsigned bitWidth = elementType.getWidth();
 
-  IntegerAttr minAttr =
-      IntegerAttr::get(elementType, llvm::APInt::getZero(bitWidth));
-  IntegerAttr maxAttr = IntegerAttr::get(
-      elementType,
-      llvm::APInt(bitWidth, static_cast<uint64_t>(group.upperBound)));
-
-  // Keep the pass idempotent and avoid nesting a second clamp around an
-  // existing clamp that is at least as restrictive as the required one.
-  if (isAlreadyHardened(indices, maxAttr))
+  // Keep the pass idempotent and avoid nesting a second min/max pair around
+  // indices that are already at least as restricted as required.
+  if (isAlreadyHardened(indices, group.upperBound))
     return;
 
   if (Operation *definingOp = indices.getDefiningOp())
@@ -157,9 +181,17 @@ static void hardenIndexUseGroup(IndexUseGroup &group, OpBuilder &builder) {
   else
     builder.setInsertionPointToStart(cast<BlockArgument>(indices).getOwner());
 
+  Location loc = group.users.front()->getLoc();
+  Value lowerBound = createIndexBoundConstant(builder, loc, elementType, 0);
+  Value upperBound =
+      createIndexBoundConstant(builder, loc, elementType, group.upperBound);
+  Value nonNegativeIndices =
+      tosa::MaximumOp::create(builder, loc, indices.getType(), indices,
+                              lowerBound)
+          .getResult();
   Value clampedIndices =
-      tosa::ClampOp::create(builder, group.users.front()->getLoc(),
-                            indices.getType(), indices, minAttr, maxAttr)
+      tosa::MinimumOp::create(builder, loc, indices.getType(),
+                              nonNegativeIndices, upperBound)
           .getResult();
 
   for (Operation *user : group.users)
@@ -174,7 +206,7 @@ struct TosaGatherScatterHardeningPass
   void runOnOperation() override {
     SmallVector<IndexUseGroup> groups;
     // Do not partially harden the function when one operation cannot be made
-    // safe using a statically bounded tosa.clamp.
+    // safe using statically bounded minimum and maximum operations.
     if (failed(collectIndexUseGroups(getOperation(), groups))) {
       signalPassFailure();
       return;
