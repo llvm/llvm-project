@@ -120,6 +120,25 @@ define i1 @icmp_sgt_basic(i16 %arg) {
 }
 
 ; ==============================================================================
+; Test with non-constant operands
+; ==============================================================================
+define i1 @icmp_ult_nonconstant(i8 %x, i8 %c, i8 %c2) {
+; CHECK-LABEL: define i1 @icmp_ult_nonconstant(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]], i8 [[C2:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp ule i8 [[C]], [[C2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[LIMIT:%.*]] = sub i8 [[C2]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[LIMIT]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cond = icmp ule i8 %c, %c2
+  call void @llvm.assume(i1 %cond)
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
+  %cmp = icmp ult i8 %sat, %c2
+  ret i1 %cmp
+}
+
+; ==============================================================================
 ; Tests with more than user
 ; ==============================================================================
 define i1 @icmp_eq_multiuse(i8 %arg) {
@@ -258,5 +277,6 @@ declare <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16>, <2 x i16>)
 declare <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8>, <2 x i8>)
 
+declare void @llvm.assume(i1 noundef)
 declare void @use.i8(i8)
 declare void @use.v2i8(<2 x i8>)

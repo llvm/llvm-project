@@ -4182,6 +4182,49 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
   return foldICmpBinOpWithConstantViaTruthTable(Cmp, BO, C);
 }
 
+/// Fold uadd.sat(X, C) <u C2 to X <u C2 - C when C2 >=u C is
+/// known to hold.
+static Instruction *foldICmpUAddSat(ICmpInst &Cmp, SaturatingInst *II,
+                                    InstCombiner::BuilderTy &Builder,
+                                    const SimplifyQuery &Q) {
+  // This transform may end up producing more than one instruction for the
+  // intrinsic, so limit it to one user of the intrinsic.
+  if (!II->hasOneUse())
+    return nullptr;
+
+  if (Cmp.getPredicate() != ICmpInst::ICMP_ULT)
+    return nullptr;
+
+  Value *X = II->getOperand(0);
+  Value *C = II->getOperand(1);
+  Value *C2 = Cmp.getOperand(1);
+
+  // Check whether C2 >=u C is known from assumptions or dominating conditions.
+  Value *IsKnown = simplifyICmpInst(ICmpInst::ICMP_UGE, C2, C, Q);
+
+  if (!IsKnown || !match(IsKnown, m_One()))
+    return nullptr;
+
+  Value *Limit = Builder.CreateSub(C2, C);
+  return new ICmpInst(ICmpInst::ICMP_ULT, X, Limit);
+}
+
+/// Try to fold an integer comparison whose operands are
+/// not required to be constants.
+Instruction *InstCombinerImpl::foldICmpInst(ICmpInst &Cmp) {
+  if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0))) {
+    switch (II->getIntrinsicID()) {
+    default:
+      break;
+    case Intrinsic::uadd_sat:
+      return foldICmpUAddSat(Cmp, cast<SaturatingInst>(II), Builder,
+                             SQ.getWithInstruction(&Cmp));
+    }
+  }
+
+  return nullptr;
+}
+
 static Instruction *
 foldICmpUSubSatOrUAddSatWithConstant(CmpPredicate Pred, SaturatingInst *II,
                                      const APInt &C,
@@ -8051,6 +8094,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpInstWithConstant(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpInst(I))
     return Res;
 
   // Try to match comparison as a sign bit test. Intentionally do this after
