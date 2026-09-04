@@ -1,7 +1,7 @@
 ; RUN: opt -S -mtriple=mips64-mti-linux-gnu -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s
 
 ; MIPS uses TargetLowering's default AtomicRMW expansion, so an elementwise
-; atomicrmw is expanded into a compare-exchange loop.
+; atomicrmw is scalarized.
 define <2 x i32> @atomicrmw_add_elementwise(ptr %ptr, <2 x i32> %value) {
 ; CHECK-LABEL: define <2 x i32> @atomicrmw_add_elementwise(
 ; CHECK-SAME: ptr [[PTR:%.*]], <2 x i32> [[VALUE:%.*]]) {
