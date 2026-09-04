@@ -940,10 +940,42 @@ bool Thread::ShouldStop(Event *event_ptr) {
           if (should_stop)
             current_plan->WillStop();
 
-          if (current_plan->ShouldAutoContinue(event_ptr)) {
+          const bool auto_continue =
+              current_plan->ShouldAutoContinue(event_ptr);
+          if (auto_continue) {
             override_stop = true;
             LLDB_LOGF(log, "Plan %s auto-continue: true.",
                       current_plan->GetName());
+          }
+
+          // A plan that auto-continues has already settled that this stop will
+          // not be reported: override_stop discards whatever the plans below
+          // answer.  Asking them anyway is not free, because the asking
+          // consumes them -- a plan that answers MischiefManaged() is popped
+          // here, and it tears its state down on the way out, the way
+          // ThreadPlanRunToAddress deletes the breakpoint it was running to.
+          // With its vote discarded and its breakpoint gone, nothing is left
+          // to stop the thread and the process runs away.
+          //
+          // The plan that does this is the one nothing on the stack owns:
+          // SetupToStepOverBreakpointIfNeeded() interposes a
+          // ThreadPlanStepOverBreakpoint just before the resume, and gives it
+          // auto-continue exactly when it was interposed for a plan that
+          // wanted to run rather than step.  This stop is the end of the one
+          // instruction it stepped on that plan's behalf, not an event any
+          // plan below asked to see.  So pop it and resume instead: the plans
+          // below keep their state, and a BreakpointSite the thread is sitting
+          // on but has not executed is still installed, so it is hit for real
+          // on that resume -- which is also what keeps a user breakpoint there
+          // reported as a hit.
+          if (auto_continue &&
+              current_plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+            LLDB_LOGF(log,
+                      "Plan %s auto-continues; not asking the plans below it "
+                      "about a stop that will not be reported.",
+                      current_plan->GetName());
+            PopPlan();
+            break;
           }
 
           // If a Controlling Plan wants to stop, we let it. Otherwise, see if
