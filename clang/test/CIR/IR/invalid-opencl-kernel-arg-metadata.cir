@@ -13,7 +13,7 @@
 
 // expected-error @below {{failed to verify 'access_qual': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
-  addr_space = [#cir<lang_address_space(default)>],
+  addr_space = [#cir.lang_address_space<default>],
   access_qual = [42 : i32],
   type = ["uint*"],
   base_type = ["uint*"],
@@ -24,7 +24,7 @@
 
 // expected-error @below {{failed to verify 'type': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
-  addr_space = [#cir<lang_address_space(default)>],
+  addr_space = [#cir.lang_address_space<default>],
   access_qual = ["none"],
   type = [42 : i32],
   base_type = ["uint*"],
@@ -35,7 +35,7 @@
 
 // expected-error @below {{failed to verify 'base_type': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
-  addr_space = [#cir<lang_address_space(default)>],
+  addr_space = [#cir.lang_address_space<default>],
   access_qual = ["none"],
   type = ["uint*"],
   base_type = [42 : i32],
@@ -46,7 +46,7 @@
 
 // expected-error @below {{failed to verify 'type_qual': string array attribute}}
 #attr = #cir.cl.kernel_arg_metadata<
-  addr_space = [#cir<lang_address_space(default)>],
+  addr_space = [#cir.lang_address_space<default>],
   access_qual = ["none"],
   type = ["uint*"],
   base_type = ["uint*"],
@@ -57,7 +57,7 @@
 
 // expected-error @below {{failed to verify 'name': string array attribute or null}}
 #attr = #cir.cl.kernel_arg_metadata<
-  addr_space = [#cir<lang_address_space(default)>],
+  addr_space = [#cir.lang_address_space<default>],
   access_qual = ["none"],
   type = ["uint*"],
   base_type = ["uint*"],
@@ -69,7 +69,7 @@
 
 // expected-error @below {{all arrays must have the same number of elements}}
 #attr = #cir.cl.kernel_arg_metadata<
-  addr_space = [#cir<lang_address_space(default)>],
+  addr_space = [#cir.lang_address_space<default>],
   access_qual = ["none"],
   type = ["uint*", "myunsignedint*"],
   base_type = ["uint*", "uint*"],
