@@ -16,6 +16,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DIERef.cpp
   DWARFASTParser.cpp
   DWARFASTParserClang.cpp
+  DWARFASTParserFortran.cpp
   DWARFAttribute.cpp
   DWARFBaseDIE.cpp
   DWARFCompileUnit.cpp
