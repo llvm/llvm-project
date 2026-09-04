@@ -154,6 +154,34 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
   }
 }
 
+// bctar8 - Branch Conditional to Target Address Register (ISA 2.07 / POWER8)
+// 64-bit variant, mirrors BCCTR/BCCTR8 split.
+let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
+  let Predicates = [IsISA2_07] in {
+    let isBranch = 1, isIndirectBranch = 1 in {
+      let isCodeGenOnly = 1 in {
+        def BCCTAR8 : XLForm_2_br<19, 560, 0, (outs), (ins (pred $BIBO, $CR):$cond),
+                                   "b${cond:cc}tar${cond:pm} ${cond:reg}", IIC_BrB,
+                                   []>, Requires<[IsPPC64]>;
+      }
+    }
+  }
+}
+
+// bctarl8 - Branch Conditional Link to Target Address Register (ISA 2.07 / POWER8)
+// 64-bit variant with LR8 def, mirrors BCCTRL/BCCCTRL8 split.
+let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
+  let Predicates = [IsISA2_07] in {
+    let Uses = [RM] in {
+      let isCodeGenOnly = 1 in {
+        def BCCTARL8 : XLForm_2_br<19, 560, 1, (outs), (ins (pred $BIBO, $CR):$cond),
+                                    "b${cond:cc}tarl${cond:pm} ${cond:reg}", IIC_BrB,
+                                    []>, Requires<[IsPPC64]>;
+      }
+    }
+  }
+}
+
 let isCall = 1, PPC970_Unit = 7, Defs = [LR8, RM], hasSideEffects = 0,
     isCodeGenOnly = 1, Uses = [RM] in {
   // Convenient aliases for call instructions
