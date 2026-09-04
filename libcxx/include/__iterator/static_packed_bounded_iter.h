@@ -1,0 +1,247 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP__STATIC_PACKED_BOUNDED_ITER_H
+#define _LIBCPP__STATIC_PACKED_BOUNDED_ITER_H
+
+#include <__assert>
+#include <__bit/countr.h>
+#include <__compare/ordering.h>
+#include <__compare/three_way_comparable.h>
+#include <__concepts/convertible_to.h>
+#include <__config>
+#include <__cstddef/size_t.h>
+#include <__iterator/concepts.h>
+#include <__iterator/incrementable_traits.h>
+#include <__iterator/iterator_traits.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_pointer.h>
+#include <cstdint>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 26
+
+// static_packed_bounded_iter is a bounded, contiguous iterator that is aware of its container's (compile-time) maximum
+// capacity.
+//
+// It packs the bottom bits of the pointer with an offset that tracks the iterator's current position, while
+// also incrementing/decrementing the pointer. This is to minimize the amount of instructions required to retrieve the
+// pointer, at the cost of an additional add instruction when updating.
+//
+// To retrieve the current pointer, we mask off the bottom bits and return the correctly-aligned pointer.
+//
+// This iterator requires that its container's maximum range can fit inside the representable range of
+// the available bottom bits, so (2 ^ available_bits) - 1
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+consteval bool __range_fits_in_alignment(size_t __alignment, size_t __num_elems) {
+  size_t __bits = std::countr_zero(__alignment);
+
+  // Example: For alignof(T) == 4, we have two bits free, which has a range of 0-3. We need to
+  // reserve one for the end position, so __num_elems must be < 3.
+  size_t __allowed_range = (1 << __bits) - 1;
+  return __allowed_range > __num_elems;
+}
+
+template <class _Ptr, class _Tag, size_t _RangeCapacity>
+  requires(is_pointer_v<_Ptr> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr>), _RangeCapacity))
+class __static_packed_bounded_iterator {
+public:
+  using iterator_category = iterator_traits<_Ptr>::iterator_category;
+  using iterator_concept  = contiguous_iterator_tag;
+  using difference_type   = iter_difference_t<_Ptr>;
+  using pointer           = iterator_traits<_Ptr>::pointer;
+  using reference         = iter_reference_t<_Ptr>;
+  using value_type        = iter_value_t<_Ptr>;
+
+private:
+  static constexpr uintptr_t __CountMask = (1 << std::countr_zero(alignof(value_type))) - 1;
+  static constexpr uintptr_t __PtrMask   = ~__CountMask;
+
+  union {
+    _Ptr __ptr_;
+    alignas(pointer) uintptr_t __data_;
+  };
+
+  size_t __count() const noexcept { return __data_ & __CountMask; }
+
+  _Ptr __current() const noexcept { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
+
+  void __increment(difference_type __n) noexcept {
+    __ptr_ += __n;
+    __data_ += __n;
+  }
+
+  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
+    _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
+                            "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
+  }
+
+  template <class _Ptr2, class, size_t _RangeCapacity2>
+    requires(is_pointer_v<_Ptr2> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr2>), _RangeCapacity2))
+  friend class __static_packed_bounded_iterator;
+
+public:
+  template <class _Ptr2, class _Tag2, size_t _RangeCapacity2>
+  friend auto __make_static_packed_bounded_iter(_Ptr2) noexcept;
+
+  __static_packed_bounded_iterator()
+    requires is_default_constructible_v<_Ptr>
+  = default;
+
+  template <convertible_to<_Ptr> _Ptr2, class _Tag2>
+  __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag2, _RangeCapacity>& __y)
+      : __data_(__y.__data_) {}
+
+  [[nodiscard]] reference operator*() const noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != _RangeCapacity,
+        "__static_packed_bounded_iterator::operator*: Attempt to dereference an iterator at the end");
+
+    return *__current();
+  }
+
+  pointer operator->() const noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != _RangeCapacity,
+        "__static_packed_bounded_iterator::operator->: Attempt to dereference an iterator at the end");
+
+    return __current();
+  }
+
+  __static_packed_bounded_iterator& operator++() noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != _RangeCapacity,
+        "__static_packed_bounded_iterator::operator++: Attempt to advance an iterator past the end");
+
+    __increment(1);
+
+    return *this;
+  }
+
+  __static_packed_bounded_iterator operator++(int) noexcept {
+    __static_packed_bounded_iterator __tmp(*this);
+    ++*this;
+    return __tmp;
+  }
+
+  __static_packed_bounded_iterator& operator--() noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __count() != 0u, "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");
+
+    __increment(-1);
+
+    return *this;
+  }
+
+  __static_packed_bounded_iterator operator--(int) noexcept {
+    __static_packed_bounded_iterator __tmp(*this);
+    --*this;
+    return __tmp;
+  }
+
+  __static_packed_bounded_iterator& operator+=(difference_type __n) noexcept {
+    if (__n < 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __count() >= static_cast<size_t>(-__n),
+          "__static_packed_bounded_iterator::operator+=: Attempt to rewind an iterator past the start");
+    } else {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          static_cast<size_t>(__count() + __n) <= _RangeCapacity,
+          "__static_packed_bounded_iterator::operator+=: Attempt to advance an iterator past the end");
+    }
+
+    __increment(__n);
+
+    return *this;
+  }
+
+  __static_packed_bounded_iterator& operator-=(difference_type __n) noexcept {
+    if (__n > 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __count() >= static_cast<size_t>(__n),
+          "__static_packed_bounded_iterator::operator-=: Attempt to rewind an iterator past the start");
+    } else {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          static_cast<size_t>(__count() - __n) <= _RangeCapacity,
+          "__static_packed_bounded_iterator::operator-=: Attempt to advance an iterator past the end");
+    }
+
+    __increment(-__n);
+
+    return *this;
+  }
+
+  [[nodiscard]] reference operator[](difference_type __n) const noexcept {
+    if (__n < 0) {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __count() >= static_cast<size_t>(-__n),
+          "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator past the start");
+    } else {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          static_cast<size_t>(__count() + __n) < _RangeCapacity,
+          "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator at or past the end");
+    }
+    return *(*this + __n);
+  }
+
+  friend bool
+  operator==(const __static_packed_bounded_iterator& __x, const __static_packed_bounded_iterator& __y) noexcept {
+    return __x.__current() == __y.__current();
+  }
+
+  friend auto
+  operator<=>(const __static_packed_bounded_iterator& __x, const __static_packed_bounded_iterator& __y) noexcept {
+    return __x.__current() <=> __y.__current();
+  }
+
+  [[nodiscard]] friend __static_packed_bounded_iterator
+  operator+(const __static_packed_bounded_iterator& __i, difference_type __n) noexcept {
+    auto __tmp = __i;
+    __tmp += __n;
+    return __tmp;
+  }
+
+  [[nodiscard]] friend __static_packed_bounded_iterator
+  operator+(difference_type __n, const __static_packed_bounded_iterator& __i) noexcept {
+    auto __tmp = __i;
+    __tmp += __n;
+    return __tmp;
+  }
+
+  [[nodiscard]] friend __static_packed_bounded_iterator
+  operator-(const __static_packed_bounded_iterator& __i, difference_type __n) noexcept {
+    auto __tmp = __i;
+    __tmp -= __n;
+    return __tmp;
+  }
+
+  [[nodiscard]] friend difference_type
+  operator-(const __static_packed_bounded_iterator& __x, const __static_packed_bounded_iterator& __y) noexcept {
+    return difference_type(__x.__current() - __y.__current());
+  }
+};
+
+template <class _Ptr, class _Tag, size_t _RangeCapacity>
+auto __make_static_packed_bounded_iter(_Ptr __p) noexcept {
+  return __static_packed_bounded_iterator<_Ptr, _Tag, _RangeCapacity>(__p);
+}
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif
+_LIBCPP_POP_MACROS
+#endif
