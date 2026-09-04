@@ -75,14 +75,13 @@ void f7(void) {
 // CIR:         %[[B:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_Big>, !rec_Big
 // CIR-NEXT:    %[[SLOT:.+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    cir.store %[[B]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
-// CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> ()
+// CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f7(){{.*}} {
 // LLVM:         %[[B:.+]] = load %struct.Big, ptr %{{.+}}, align 4
 // LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.Big, align 8
 // LLVM-NEXT:    store %struct.Big %[[B]], ptr %[[SLOT]], align 4
-// TODO(cir): CIR adds noalias to a byval argument where classic does not.
-// LLVM-NEXT:    call void @f5(ptr noalias noundef byval(%struct.Big) align 8 %[[SLOT]])
+// LLVM-NEXT:    call void @f5(ptr noundef byval(%struct.Big) align 8 %[[SLOT]])
 
 // OGCG-LABEL: define{{.*}} void @f7() #0 {
 // OGCG:         %[[B:.+]] = alloca %struct.Big, align 8

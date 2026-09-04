@@ -142,11 +142,11 @@ llvm.func @main() {
 
 ^bb16:
   %221 = llvm.extractvalue %25[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
-  %222 = llvm.mlir.constant(0 : index) : i64
-  %223 = llvm.mlir.constant(2 : index) : i64
+  %222 = llvm.mlir.constant(0 : i64) : i64
+  %223 = llvm.mlir.constant(2 : i64) : i64
   %224 = llvm.mul %214, %223 : i64
   %225 = llvm.add %222, %224 : i64
-  %226 = llvm.mlir.constant(1 : index) : i64
+  %226 = llvm.mlir.constant(1 : i64) : i64
   %227 = llvm.mul %219, %226 : i64
   %228 = llvm.add %225, %227 : i64
   %229 = llvm.getelementptr %221[%228] : (!llvm."double*">, i64) -> !llvm<"f64*">

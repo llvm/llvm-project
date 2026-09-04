@@ -119,9 +119,9 @@ struct BitSetBuilder {
 ///
 /// The bit set lowering pass assigns an object index to each object that needs
 /// to be laid out, and calls addFragment for each bit set passing the object
-/// indices of its referenced globals. It then assembles a layout from the
-/// computed layout in the Fragments field.
-struct GlobalLayoutBuilder {
+/// indices of its referenced globals. It then assembles a layout by calling
+/// build().
+class GlobalLayoutBuilder {
   /// The computed layout. Each element of this vector contains a fragment of
   /// layout (which may be empty) consisting of object indices.
   std::vector<std::vector<uint64_t>> Fragments;
@@ -129,6 +129,7 @@ struct GlobalLayoutBuilder {
   /// Mapping from object index to fragment index.
   std::vector<uint64_t> FragmentMap;
 
+public:
   GlobalLayoutBuilder(uint64_t NumObjects)
       : Fragments(1), FragmentMap(NumObjects) {}
 
@@ -136,6 +137,9 @@ struct GlobalLayoutBuilder {
   /// If a previously seen fragment uses any of F's indices, that
   /// fragment will be laid out inside F.
   LLVM_ABI void addFragment(const std::set<uint64_t> &F);
+
+  /// Flatten fragments into a single layout and return it.
+  LLVM_ABI const std::vector<uint64_t> &build();
 };
 
 /// This class is used to build a byte array containing overlapping bit sets. By

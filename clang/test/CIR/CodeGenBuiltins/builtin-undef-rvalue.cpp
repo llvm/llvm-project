@@ -6,7 +6,7 @@
 typedef int v4si __attribute__((vector_size(16)));
 
 int test_builtin_reduce_add_undef_rvalue(v4si x) {
-  // expected-error@+1 {{unimplemented X86 builtin call: __builtin_reduce_add}}
+  // expected-error@+1 {{unimplemented builtin call: __builtin_reduce_add}}
   return __builtin_reduce_add(x);
 }
 

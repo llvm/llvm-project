@@ -1,0 +1,65 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// Enum attributes that operations print as a bare keyword must still have a
+// readable standalone spelling for when they show up in an attribute
+// dictionary. These used to be IntegerAttr subclasses, which printed as
+// `2 : i32`.
+
+module {
+
+// CHECK-LABEL: cir.func @cast_attr() {
+cir.func @cast_attr() {
+  // CHECK: cir.return {cir.test = [#cir.cast<bitcast>, #cir.cast<integral>, #cir.cast<bool_to_float>]}
+  cir.return {cir.test = [#cir.cast<bitcast>, #cir.cast<integral>,
+                          #cir.cast<bool_to_float>]}
+}
+
+// CHECK-LABEL: cir.func @dynamic_cast_attr() {
+cir.func @dynamic_cast_attr() {
+  // CHECK: cir.return {cir.test = [#cir.dynamic_cast<ptr>, #cir.dynamic_cast<ref>]}
+  cir.return {cir.test = [#cir.dynamic_cast<ptr>,
+                          #cir.dynamic_cast<ref>]}
+}
+
+// CHECK-LABEL: cir.func @cmp_attr() {
+cir.func @cmp_attr() {
+  // CHECK: cir.return {cir.test = [#cir.cmp<lt>, #cir.cmp<eq>, #cir.cmp<uno>]}
+  cir.return {cir.test = [#cir.cmp<lt>, #cir.cmp<eq>,
+                          #cir.cmp<uno>]}
+}
+
+// CHECK-LABEL: cir.func @complex_range_attr() {
+cir.func @complex_range_attr() {
+  // CHECK: cir.return {cir.test = [#cir.complex_range<full>, #cir.complex_range<basic>]}
+  cir.return {cir.test = [#cir.complex_range<full>,
+                          #cir.complex_range<basic>]}
+}
+
+// CHECK-LABEL: cir.func @init_catch_attr() {
+cir.func @init_catch_attr() {
+  // CHECK: cir.return {cir.test = [#cir.init_catch<reference>, #cir.init_catch<non_trivial_copy>]}
+  cir.return {cir.test = [#cir.init_catch<reference>,
+                          #cir.init_catch<non_trivial_copy>]}
+}
+
+// CHECK-LABEL: cir.func @case_attr() {
+cir.func @case_attr() {
+  // CHECK: cir.return {cir.test = [#cir.case<default>, #cir.case<anyof>, #cir.case<range>]}
+  cir.return {cir.test = [#cir.case<default>, #cir.case<anyof>,
+                          #cir.case<range>]}
+}
+
+// CHECK-LABEL: cir.func @await_attr() {
+cir.func @await_attr() {
+  // CHECK: cir.return {cir.test = [#cir.await<init>, #cir.await<final>]}
+  cir.return {cir.test = [#cir.await<init>, #cir.await<final>]}
+}
+
+// CHECK-LABEL: cir.func @tls_model_attr() {
+cir.func @tls_model_attr() {
+  // CHECK: cir.return {cir.test = [#cir.tls_model<tls_dyn>, #cir.tls_model<tls_local_exec>]}
+  cir.return {cir.test = [#cir.tls_model<tls_dyn>,
+                          #cir.tls_model<tls_local_exec>]}
+}
+
+}

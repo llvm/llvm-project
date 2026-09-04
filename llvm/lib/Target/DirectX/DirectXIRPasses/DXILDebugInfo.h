@@ -39,6 +39,9 @@ public:
   DXILDebugInfoMap(const DXILDebugInfoMap &) = delete;
   DXILDebugInfoMap(DXILDebugInfoMap &&) = default;
 
+  /// Whether the run modified the IR of the module the map was produced for.
+  bool Modified = false;
+
   /// Completely replace one function with another in ValueEnumerator.
   FuncMap FuncReplace;
 

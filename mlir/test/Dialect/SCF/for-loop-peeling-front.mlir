@@ -218,3 +218,24 @@ func.func @no_peeling_front() -> i32 {
   }
   return %r : i32
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @non_index_loop_bounds(
+// CHECK-SAME:                                         %[[INIT:[^:]*]]: i32,
+// CHECK-SAME:                                         %[[LB:[^:]*]]: i32,
+// CHECK-SAME:                                         %[[N:[^:]*]]: i32) -> i32 {
+// CHECK:           %[[C2:.*]] = arith.constant 2 : i32
+// CHECK:           %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[LB]] to %[[N]] step %[[C2]] iter_args(%[[ACC:.*]] = %[[INIT]]) -> (i32) : i32 {
+// CHECK:             %[[ADD:.*]] = arith.addi %[[ACC]], %[[IV]] : i32
+// CHECK:             scf.yield %[[ADD]] : i32
+// CHECK:           }
+// CHECK:           return %[[RESULT]] : i32
+func.func @non_index_loop_bounds(%init: i32, %lb: i32, %n: i32) -> i32 {
+  %c2 = arith.constant 2 : i32
+  %r = scf.for %i = %lb to %n step %c2 iter_args(%a = %init) -> (i32) : i32 {
+    %t = arith.addi %a, %i : i32
+    scf.yield %t : i32
+  }
+  return %r : i32
+}

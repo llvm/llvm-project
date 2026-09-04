@@ -62,7 +62,7 @@
 //       scf.reduce
 //     } {acc.par_dims = #acc<par_dims[thread_x]>}
 //     acc.yield
-//   } {origin = "acc.parallel"}
+//   } <{origin = "acc.parallel"}>
 //
 // After:
 //   gpu.launch blocks(%bidx, %bidy, %bidz) in (%gdimx = %c1, ...)
@@ -103,6 +103,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsReduction.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
@@ -193,12 +194,14 @@ getAccRoutineParDim(RoutineOp routineOp, MLIRContext *ctx,
 static RoutineOp getRoutineOpForAccRoutineFunction(FunctionOpInterface funcOp,
                                                    const SymbolTable &symTab) {
   if (isSpecializedAccRoutine(funcOp)) {
-    SpecializedRoutineAttr attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
-        getSpecializedRoutineAttrName());
+    SpecializedRoutineAttr attr =
+        funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
+            getSpecializedRoutineAttrName());
     return symTab.lookup<RoutineOp>(attr.getRoutine().getLeafReference());
   }
   RoutineInfoAttr routineInfo =
-      funcOp->getAttrOfType<RoutineInfoAttr>(getRoutineInfoAttrName());
+      funcOp->getDiscardableAttrOfType<RoutineInfoAttr>(
+          getRoutineInfoAttrName());
   if (!routineInfo || routineInfo.getAccRoutines().empty())
     return nullptr;
   return symTab.lookup<RoutineOp>(
@@ -210,7 +213,7 @@ static GPUParallelDimAttr
 getSpecializedRoutineDim(FunctionOpInterface funcOp,
                          const ACCToGPUMappingPolicy &policy) {
   SpecializedRoutineAttr specAttr =
-      funcOp->getAttrOfType<SpecializedRoutineAttr>(
+      funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
           getSpecializedRoutineAttrName());
   assert(specAttr && "expected specialized routine attribute");
   return policy.map(funcOp->getContext(), specAttr.getLevel().getValue());
@@ -358,24 +361,6 @@ static Value unwrapMemRefConversion(Value v) {
     break;
   }
   return v;
-}
-
-/// Casts between pointer-like private types when lowering requires it.
-static Value castPointerLikeTypeIfNeeded(OpBuilder &builder, Location loc,
-                                         Value value, Type resultType) {
-  if (value.getType() == resultType)
-    return value;
-  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(value.getType())) {
-    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
-      return casted;
-  }
-  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(resultType)) {
-    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
-      return casted;
-  }
-  emitError(loc) << "unsupported pointer-like type cast from "
-                 << value.getType() << " to " << resultType;
-  return value;
 }
 
 /// Walks back from a memref use to its defining `acc.private_local`, if any,

@@ -1238,8 +1238,11 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   case AtomicExpr::AO__opencl_atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
-    cgf.cgm.errorNYI(loc, "emitLibCallForAtomicExpr: atomic exchange NYI");
-    return RValue::get(nullptr);
+    calleeName = "__atomic_exchange";
+    args.add(RValue::get(castToGenericAddrSpace(val1.emitRawPointer(),
+                                                e->getVal1()->getType())),
+             cgf.getContext().VoidPtrTy);
+    break;
 
   // void __atomic_store(size_t size, void *mem, void *val, int order)
   case AtomicExpr::AO__atomic_store:

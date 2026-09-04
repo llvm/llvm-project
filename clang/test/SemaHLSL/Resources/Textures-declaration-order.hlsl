@@ -20,6 +20,10 @@ Texture2DArray<float> Tex2DArray;
 Texture2DArray<float2> Tex2DArrayVec;
 RWTexture2DArray<float> RWTex2DArray;
 RWTexture2DArray<float2> RWTex2DArrayVec;
+TextureCube<float> TexCube;
+TextureCube<float2> TexCubeVec;
+TextureCubeArray<float> TexCubeArray;
+TextureCubeArray<float2> TexCubeArrayVec;
 #else
 Texture2D<float2> Tex2DVec;
 Texture2D<float> Tex2D;
@@ -29,13 +33,17 @@ Texture2DArray<float2> Tex2DArrayVec;
 Texture2DArray<float> Tex2DArray;
 RWTexture2DArray<float2> RWTex2DArrayVec;
 RWTexture2DArray<float> RWTex2DArray;
+TextureCube<float2> TexCubeVec;
+TextureCube<float> TexCube;
+TextureCubeArray<float2> TexCubeArrayVec;
+TextureCubeArray<float> TexCubeArray;
 #endif
 
 SamplerState Samp;
 
 // Use members of both the primary template and the partial specialization to
 // make sure both patterns really have been completed.
-export void useTextures(float2 UV, float3 UVW) {
+export void useTextures(float2 UV, float3 UVW, float4 UVWA) {
   float S = Tex2D.Sample(Samp, UV);
   float2 V = Tex2DVec.Sample(Samp, UV);
   RWTex2D[uint2(0, 0)] = S;
@@ -45,4 +53,10 @@ export void useTextures(float2 UV, float3 UVW) {
   float2 AV = Tex2DArrayVec.Sample(Samp, UVW);
   RWTex2DArray[uint3(0, 0, 0)] = AS;
   RWTex2DArrayVec[uint3(0, 0, 0)] = AV;
+
+  float CS = TexCube.Sample(Samp, UVW);
+  float2 CV = TexCubeVec.Sample(Samp, UVW);
+
+  float CAS = TexCubeArray.Sample(Samp, UVWA);
+  float2 CAV = TexCubeArrayVec.Sample(Samp, UVWA);
 }

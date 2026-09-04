@@ -124,6 +124,7 @@ on support follow.
 | `Smepmp` | Supported |
 | `Smmpm` | Supported |
 | `Smnpm` | Supported |
+| `Smpmpdeleg` | Supported |
 | `Smrnmi` | Supported |
 | `Smstateen` | Assembly Support |
 | `Ssaia` | Supported |
@@ -136,6 +137,8 @@ on support follow.
 | `Ssdbltrp` | Supported |
 | `Ssnpm` | Supported |
 | `Sspm` | Supported |
+| `Sspmp` | Supported |
+| `Sspmpen` | Supported |
 | `Ssqosid` | Assembly Support |
 | `Ssstateen` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
 | `Ssstrict` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
@@ -372,7 +375,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 `experimental-zvabd`
 
-: LLVM implements the [0.7 draft specification](https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7).
+: LLVM implements the [0.9 draft specification](https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.9).
 
 `experimental-zvzip`
 

@@ -244,8 +244,9 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   // The switch-resumed API based coroutine should be marked with
   // presplitcoroutine attribute to mark the function as a coroutine.
-  func->setAttr("llvm.passthrough", builder.getArrayAttr(StringAttr::get(
-                                        ctx, "presplitcoroutine")));
+  func->setDiscardableAttr(
+      "llvm.passthrough",
+      builder.getArrayAttr(StringAttr::get(ctx, "presplitcoroutine")));
 
   CoroMachinery machinery;
   machinery.func = func;
@@ -474,11 +475,9 @@ public:
 
     SymbolTable::setSymbolVisibility(newFuncOp,
                                      SymbolTable::getSymbolVisibility(op));
-    // Copy over all attributes other than the name.
-    for (const auto &namedAttr : op->getAttrs()) {
-      if (namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-    }
+    // Copy over the discardable attributes.
+    for (const auto &namedAttr : op->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(op.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());

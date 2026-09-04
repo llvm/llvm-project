@@ -37,8 +37,8 @@ def dup1 : RuntimeLibcallImpl<ANOTHER_DUP>;
 // CHECK-EMPTY:
 
 // CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:        RTLIB::impl_func_b, // func_b
 // CHECK-NEXT:        RTLIB::impl_func_a, // func_a
+// CHECK-NEXT:        RTLIB::impl_func_b, // func_b
 // CHECK-NEXT:    };
 // CHECK-EMPTY:
 // CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
@@ -82,8 +82,8 @@ def TheSystemLibraryB : SystemRuntimeLibrary<isTargetArchB,
 // CHECK-NEXT: AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:         RTLIB::impl_dup1, // dup1
 // CHECK-NEXT:         RTLIB::impl_dup0, // dup0
+// CHECK-NEXT:         RTLIB::impl_dup1, // dup1
 // CHECK-NEXT:         RTLIB::impl_other_func, // other_func
 // CHECK-NEXT:         RTLIB::impl_func_a, // func_a
 // CHECK-NEXT:         RTLIB::impl_func_b, // func_b

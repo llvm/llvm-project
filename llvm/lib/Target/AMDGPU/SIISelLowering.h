@@ -514,6 +514,9 @@ public:
   /// \p VT is used as written, so a vector type reports false.
   bool isFMADLegal(EVT VT, DenormalFPEnv FPEnv) const;
 
+  /// \p Ty is taken by its scalar type, so a vector type asks about a lane.
+  bool isFMADLegal(const Function &F, Type *Ty) const;
+
   bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;

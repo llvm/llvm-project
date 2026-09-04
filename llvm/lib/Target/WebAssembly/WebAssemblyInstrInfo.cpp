@@ -47,7 +47,7 @@ bool WebAssemblyInstrInfo::isReMaterializableImpl(
   case WebAssembly::CONST_F32:
   case WebAssembly::CONST_F64:
     // TargetInstrInfo::isReMaterializableImpl misses these
-    // because of the ARGUMENTS implicit def, so we manualy override it here.
+    // because of the ARGUMENTS implicit def, so we manually override it here.
     return true;
   default:
     return TargetInstrInfo::isReMaterializableImpl(MI);

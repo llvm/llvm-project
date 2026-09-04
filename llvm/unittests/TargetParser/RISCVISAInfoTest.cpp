@@ -1526,6 +1526,7 @@ R"(All available -march extensions for RISC-V
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
+    smpmpdeleg           1.0
     smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
@@ -1538,6 +1539,8 @@ R"(All available -march extensions for RISC-V
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
+    sspmp                1.0
+    sspmpen              1.0
     ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
@@ -1640,7 +1643,7 @@ Experimental extensions
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zilx                 0.1
-    zvabd                0.7
+    zvabd                0.9
     zvbc32e              0.7
     zvdot4a8i            0.1
     zvfbdota32f          0.2

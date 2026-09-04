@@ -152,3 +152,28 @@ func.func @test_derived() {
   %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
+
+// -----
+
+// Recipe generation from an acc.firstprivate result must use the host
+// variable's Fortran properties, not the clause result. The host is not
+// OPTIONAL, so the copy region is a direct load/assign.
+// CHECK: acc.firstprivate.recipe @firstprivate_from_clause : !fir.ref<i32> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca i32
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<i32>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
+// CHECK-NOT: fir.is_present
+// CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_from_clause() {
+  %host = fir.alloca i32
+  %fp = acc.firstprivate varPtr(%host : !fir.ref<i32>) name("x") -> !fir.ref<i32> {test.var = "from_clause"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}

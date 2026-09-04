@@ -22,7 +22,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"

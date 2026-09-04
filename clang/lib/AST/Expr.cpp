@@ -1407,6 +1407,28 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
   }
 }
 
+UnsignedOrNone StringLiteral::findZeroCodeUnit(unsigned StartIndex) const {
+  unsigned Length = getLength();
+  if (StartIndex > Length)
+    return std::nullopt;
+
+  if (getCharByteWidth() == 1) {
+    StringRef::size_type Pos = getString().substr(StartIndex).find('\0');
+    if (Pos == StringRef::npos)
+      return Length - StartIndex;
+    return Pos;
+  }
+
+  unsigned Result = 0;
+  for (unsigned I = StartIndex; I != Length; ++I) {
+    if (getCodeUnit(I) == 0)
+      break;
+    ++Result;
+  }
+
+  return Result;
+}
+
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
 /// corresponds to, e.g. "sizeof" or "[pre]++".
 StringRef UnaryOperator::getOpcodeStr(Opcode Op) {

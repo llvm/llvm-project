@@ -55,7 +55,7 @@ define nofpclass(pinf) { float } @ret_nofpclass_struct_ty_pinf__ninf() {
 ; CHECK-NEXT:    ret { float } { float -inf }
 ;
 entry:
-  ret { float } { float 0xFFF0000000000000 }
+  ret { float } { float -inf }
 }
 
 define nofpclass(pinf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pinf__ninf() {
@@ -64,7 +64,7 @@ define nofpclass(pinf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_
 ; CHECK-NEXT:    ret { float, float } { float -inf, float -inf }
 ;
 entry:
-  ret { float, float } { float 0xFFF0000000000000, float 0xFFF0000000000000 }
+  ret { float, float } { float -inf, float -inf }
 }
 
 define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pinf__ninf() {
@@ -73,7 +73,7 @@ define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pin
 ; CHECK-NEXT:    ret { <2 x float> } { <2 x float> splat (float -inf) }
 ;
 entry:
-  ret { <2 x float>} { <2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000> }
+  ret { <2 x float>} { <2 x float> <float -inf, float -inf> }
 }
 
 ; UTC_ARGS: --disable
@@ -84,7 +84,7 @@ define nofpclass(pinf) [ 1 x [ 1 x float ]] @ret_nofpclass_nested_array_ty_pinf_
 ; CHECK-NEXT:    ret {{.*}}float -inf
 ;
 entry:
-  ret [ 1 x [ 1 x float ]] [[ 1 x float ] [float 0xFFF0000000000000]]
+  ret [ 1 x [ 1 x float ]] [[ 1 x float ] [float -inf]]
 }
 ; UTC_ARGS: --enable
 
@@ -103,7 +103,7 @@ define nofpclass(ninf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_
 ; CHECK-NEXT:    ret { float, float } { float +inf, float +inf }
 ;
 entry:
-  ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
+  ret { float, float } { float +inf, float +inf }
 }
 
 define nofpclass(inf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_inf__npinf() {
@@ -112,7 +112,7 @@ define nofpclass(inf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_i
 ; CHECK-NEXT:    ret { float, float } poison
 ;
 entry:
-  ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
+  ret { float, float } { float +inf, float +inf }
 }
 
 define nofpclass(nzero) [ 1 x float ] @ret_nofpclass_multiple_elems_struct_ty_nzero_nzero() {

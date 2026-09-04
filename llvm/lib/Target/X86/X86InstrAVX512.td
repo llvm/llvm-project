@@ -2732,6 +2732,20 @@ def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
 def : Pat<(i64 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
           (INSERT_SUBREG (IMPLICIT_DEF), (COPY_TO_REGCLASS VK8:$src, GR32), sub_32bit)>;
 
+// zext(and(bitcast(mask), C)) --> and(anyext(bitcast(mask)), zext(C)). PR120389.
+def : Pat<(i32 (zext (and (i8 (bitconvert (v8i1 VK8:$src))), imm:$c))),
+          (AND32ri (COPY_TO_REGCLASS VK8:$src, GR32), (i32 (GetLo32XForm imm:$c)))>;
+def : Pat<(i64 (zext (and (i8 (bitconvert (v8i1 VK8:$src))), imm:$c))),
+          (SUBREG_TO_REG
+            (AND32ri (COPY_TO_REGCLASS VK8:$src, GR32), (i32 (GetLo32XForm imm:$c))),
+            sub_32bit)>;
+def : Pat<(i32 (zext (and (i16 (bitconvert (v16i1 VK16:$src))), imm:$c))),
+          (AND32ri (COPY_TO_REGCLASS VK16:$src, GR32), (i32 (GetLo32XForm imm:$c)))>;
+def : Pat<(i64 (zext (and (i16 (bitconvert (v16i1 VK16:$src))), imm:$c))),
+          (SUBREG_TO_REG
+            (AND32ri (COPY_TO_REGCLASS VK16:$src, GR32), (i32 (GetLo32XForm imm:$c))),
+            sub_32bit)>;
+
 def : Pat<(v32i1 (bitconvert (i32 GR32:$src))),
           (COPY_TO_REGCLASS GR32:$src, VK32)>;
 def : Pat<(i32 (bitconvert (v32i1 VK32:$src))),

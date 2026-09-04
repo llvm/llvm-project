@@ -177,6 +177,43 @@ For more information on leak detector in AddressSanitizer, see
 and can be enabled using `ASAN_OPTIONS=detect_leaks=1` on macOS;
 however, it is not yet supported on other platforms.
 
+## Flags and Options
+
+Runtime flags can be passed to AddressSanitizer via the `ASAN_OPTIONS` environment
+variable:
+
+```console
+$ ASAN_OPTIONS="verbosity=1:detect_stack_use_after_return=1" ./a.out
+```
+
+To see the full list of available flags, run an instrumented binary with
+`ASAN_OPTIONS="help=1"`.
+
+Flags passed via the `ASAN_OPTIONS` environment variable take precedence over
+compile-time default options.
+
+### Compile-time Default Options
+
+Default options can be specified at compile/link time by defining
+the `__asan_default_options` function in your source code:
+
+```c++
+#include <sanitizer/asan_interface.h>
+
+extern "C" const char *__asan_default_options() {
+  return "verbosity=1:detect_stack_use_after_return=1";
+}
+```
+
+### Options Evaluation with Integrated Sanitizers
+
+When running AddressSanitizer with integrated {doc}`LeakSanitizer` or {doc}`UndefinedBehaviorSanitizer`:
+
+- `__asan_default_options()`, `__lsan_default_options()`, and `__ubsan_default_options()` are all evaluated independently by the runtime.
+- The environment variables `ASAN_OPTIONS`, `LSAN_OPTIONS`, and `UBSAN_OPTIONS` are also parsed independently.
+
+LSan and UBSan flags should be passed via their own environment variables (`LSAN_OPTIONS`, `UBSAN_OPTIONS`) or default option hooks (`__lsan_default_options()`, `__ubsan_default_options()`) rather than packed into `ASAN_OPTIONS` or `__asan_default_options()`.
+
 ## Issue Suppression
 
 AddressSanitizer is not expected to produce false positives. If you see one,
@@ -199,15 +236,34 @@ path of the file relative to the location of your executable.
 ASAN_OPTIONS=suppressions=MyASan.supp
 ```
 
-Use the following format to specify the names of the functions or libraries
-you want to suppress. You can see these in the error report. Remember that
-the narrower the scope of the suppression, the more bugs you will be able to
-catch.
+Each non-empty line of the suppression file represents one suppression of the
+form `suppression_type:suppression_pattern`. Supported types are:
+
+- `interceptor_via_fun`: Suppress errors when the given function is in the caller stack trace.
+- `interceptor_via_lib`: Suppress errors when the call originates from the given library.
+- `interceptor_name`: Suppress an interceptor by function name directly (e.g., `interceptor_name:memcpy`).
+- `odr_violation`: Suppress One Definition Rule violation reports for global variables.
+- `alloc_dealloc_mismatch`: Suppress allocation/deallocation mismatch errors for specific functions in the stack trace.
 
 ```bash
 interceptor_via_fun:NameOfCFunctionToSuppress
 interceptor_via_fun:-[ClassName objCMethodToSuppress:]
 interceptor_via_lib:NameOfTheLibraryToSuppress
+interceptor_name:memcpy
+odr_violation:my_global_var
+alloc_dealloc_mismatch:my_allocator_fn
+```
+
+Alternatively, you can provide default suppressions at compile time by defining
+the `__asan_default_suppressions` function in your source code:
+
+```c++
+#include <sanitizer/asan_interface.h>
+
+extern "C" const char *__asan_default_suppressions() {
+  return "interceptor_via_lib:NameOfTheLibraryToSuppress\n"
+         "interceptor_name:memcpy\n";
+}
 ```
 
 ### Conditional Compilation with `__has_feature(address_sanitizer)`
@@ -362,18 +418,10 @@ src:bad/init/files/*=init
 
 ### Suppressing memory leaks
 
-Memory leak reports produced by {doc}`LeakSanitizer` (if it is run as a part
-of AddressSanitizer) can be suppressed by a separate file passed as
-
-```bash
-LSAN_OPTIONS=suppressions=MyLSan.supp
-```
-
-which contains lines of the form `leak:<pattern>`. Memory leak will be
-suppressed if pattern matches any function name, source file name, or
-library name in the symbolized stack trace of the leak report. See
-[full documentation](https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer#suppressions)
-for more details.
+Memory leak reports produced by {doc}`LeakSanitizer` (when run as part of
+AddressSanitizer) can be suppressed at runtime via `LSAN_OPTIONS=suppressions=...`
+or at compile time via `__lsan_default_suppressions()`. See {doc}`LeakSanitizer`
+for full details on suppression rules, default options, and programmatic APIs.
 
 ## Code generation control
 

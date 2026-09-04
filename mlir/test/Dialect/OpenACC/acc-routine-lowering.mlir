@@ -86,7 +86,7 @@ acc.routine @routine_cf func(@host_cf) seq
 // CHECK: %[[EXE:[0-9]+]] = scf.execute_region
 // CHECK: scf.yield %{{.*}} : i32
 // CHECK: acc.yield %[[EXE]] : i32
-// CHECK: } {origin = "acc.routine"}
+// CHECK: } <{origin = "acc.routine"}>
 // CHECK: return %[[CR]] : i32
 func.func @host_cf(%cond: i1) -> i32 {
   cf.cond_br %cond, ^then, ^else

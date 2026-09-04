@@ -62,7 +62,7 @@ Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
@@ -159,8 +159,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
                    ArrayRef<DictionaryAttr> argAttrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(name));
+  state.getOrAddProperties<Properties>().sym_name = builder.getStringAttr(name);
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
@@ -196,16 +195,16 @@ void FuncOp::print(OpAsmPrinter &p) {
 void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<StringAttr, Attribute> newAttrMap;
-  for (const auto &attr : dest->getAttrs())
+  for (const auto &attr : dest->getDiscardableAttrDictionary().getValue())
     newAttrMap.insert({attr.getName(), attr.getValue()});
-  for (const auto &attr : (*this)->getAttrs())
+  for (const auto &attr : (*this)->getDiscardableAttrDictionary().getValue())
     newAttrMap.insert({attr.getName(), attr.getValue()});
 
   auto newAttrs = llvm::map_to_vector(
       newAttrMap, [](std::pair<StringAttr, Attribute> attrPair) {
         return NamedAttribute(attrPair.first, attrPair.second);
       });
-  dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs));
+  dest->setDiscardableAttrs(DictionaryAttr::get(getContext(), newAttrs));
 
   // Clone the body.
   getBody().cloneInto(&dest.getBody(), mapper);

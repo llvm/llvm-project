@@ -27,6 +27,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <cstdint>
 #include <utility>
 
@@ -34,7 +35,8 @@ namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
-bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
+bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
+                                                unsigned BuiltinID,
                                                 CallExpr *TheCall) {
   const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
@@ -151,6 +153,15 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     if (!ScopeExpr->EvaluateAsConstantExpr(ScopeResult, getASTContext()))
       return Diag(ScopeExpr->getExprLoc(), diag::err_expr_not_string_literal)
              << ScopeExpr->getType();
+
+    // Reject any string that is not a valid synchronization scope name.
+    std::optional<std::string> ScopeName =
+        ScopeExpr->tryEvaluateString(getASTContext());
+    const llvm::Triple &TT = TI.getTriple();
+    if (ScopeName && !llvm::parseAtomicScopeIRString(TT, *ScopeName)) {
+      return Diag(ScopeExpr->getExprLoc(), diag::err_invalid_sync_scope)
+             << *ScopeName << ScopeExpr->getSourceRange();
+    }
 
     return false;
   }

@@ -882,14 +882,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
 
         // Warn if using `#elifdef` & `#elifndef` in not C23 & C++23 mode even
         // if this branch is in a skipping block.
-        unsigned DiagID;
-        if (LangOpts.CPlusPlus)
-          DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                        : diag::ext_cxx23_pp_directive;
-        else
-          DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                                : diag::ext_c23_pp_directive;
-        Diag(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
+        unsigned DiagID = LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive;
+        DiagCompat(Tok, DiagID) << (IsElifDef ? PED_Elifdef : PED_Elifndef);
 
         // If this is a #elif with a #else before it, report the error.
         if (CondInfo.FoundElse)
@@ -2885,10 +2880,12 @@ void Preprocessor::HandleImportDirective(SourceLocation HashLoc,
 /// effects on the preprocessor).
 void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
                                                 Token &IncludeMacrosTok) {
-  // This directive should only occur in the predefines buffer.  If not, emit an
+  // This directive should only occur in the predefines buffer or the internal
+  // buffer used to enter deferred implicit inputs in a GMF. If not, emit an
   // error and reject it.
   SourceLocation Loc = IncludeMacrosTok.getLocation();
-  if (SourceMgr.getBufferName(Loc) != "<built-in>") {
+  FileID FID = SourceMgr.getFileID(Loc);
+  if (FID != getPredefinesFileID() && FID != DeferredGMFInputsFileID) {
     Diag(IncludeMacrosTok.getLocation(),
          diag::pp_include_macros_out_of_predefines);
     DiscardUntilEndOfDirective();
@@ -3700,14 +3697,9 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
   switch (DirKind) {
   case PED_Elifdef:
   case PED_Elifndef:
-    unsigned DiagID;
-    if (LangOpts.CPlusPlus)
-      DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
-                                    : diag::ext_cxx23_pp_directive;
-    else
-      DiagID = LangOpts.C23 ? diag::warn_c23_compat_pp_directive
-                            : diag::ext_c23_pp_directive;
-    Diag(ElifToken, DiagID) << DirKind;
+    DiagCompat(ElifToken, LangOpts.CPlusPlus ? diag_compat::cxx23_pp_directive
+                                             : diag_compat::c23_pp_directive)
+        << DirKind;
     break;
   default:
     break;
@@ -4419,7 +4411,12 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
           : DirToks.pop_back_val().getLocation();
 
-  if (!IncludeMacroStack.empty()) {
+  bool IsGMFIntroducer = DirToks.size() == 2 && DirToks[0].is(tok::kw_module) &&
+                         DirToks[1].is(tok::semi);
+  bool IsSynthesizedGMF = IsGMFIntroducer && HasSynthesizedGMF &&
+                          CurPPLexer->getFileID() == getPredefinesFileID();
+
+  if (!IncludeMacroStack.empty() && !IsSynthesizedGMF) {
     Diag(StartLoc, diag::err_pp_module_decl_in_header)
         << SourceRange(StartLoc, End);
   }
@@ -4428,6 +4425,15 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     Diag(StartLoc, diag::err_pp_cond_span_module_decl)
         << SourceRange(StartLoc, End);
   }
+
+  // For the global-module-fragment introducer (`module;`), enter any implicit
+  // macro, PCH, and regular include files that were deferred to the GMF now,
+  // before re-entering the `module;` token stream. Because the include stack is
+  // LIFO, the `module;` tokens are consumed first and the included files are
+  // then lexed inside the fragment (ahead of the rest of the main file).
+  if (IsGMFIntroducer)
+    EnterDeferredGMFInputs(End);
+
   EnterModuleSuffixTokenStream(DirToks);
 }
 

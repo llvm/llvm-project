@@ -21,7 +21,7 @@ func.func @predicate_region_reduction(%arg0: memref<i32>) {
         acc.yield %alloca : memref<i32>
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

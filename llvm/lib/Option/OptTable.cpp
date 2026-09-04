@@ -20,7 +20,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <cstring>
 #include <map>
 #include <set>

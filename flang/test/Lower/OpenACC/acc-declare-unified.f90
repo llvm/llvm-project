@@ -63,15 +63,12 @@ end subroutine
 
 ! DISCRETE-MOD: acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_unified_modEgarr_acc_declare_post_alloc>
 ! DISCRETE-MOD: acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declare_unified_modEgarr_acc_declare_pre_dealloc>
-! DISCRETE-MOD: acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declare_unified_modEgarr_acc_declare_post_dealloc>
 ! DISCRETE-MOD: func.func private @_QMacc_declare_unified_modFalloc_localElarr_acc_declare_post_alloc(
 ! DISCRETE-MOD: func.func private @_QMacc_declare_unified_modFalloc_localElarr_acc_declare_pre_dealloc(
 ! DISCRETE-MOD: func.func private @_QMacc_declare_unified_modFalloc_localElarr_acc_declare_post_dealloc(
 ! DISCRETE-MOD: acc.global_ctor @_QMacc_declare_unified_modEgarr_acc_ctor
 ! DISCRETE-MOD: func.func @_QMacc_declare_unified_modEgarr_acc_declare_post_alloc() attributes {acc.declare_action}
-! DISCRETE-MOD: func.func @_QMacc_declare_unified_modEgarr_acc_declare_post_dealloc() attributes {acc.declare_action}
 ! DISCRETE-MOD: acc.global_dtor @_QMacc_declare_unified_modEgarr_acc_dtor
 
 ! DISCRETE-USE: acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_unified_modEgarr_acc_declare_post_alloc>
 ! DISCRETE-USE: func.func private @_QMacc_declare_unified_modEgarr_acc_declare_post_alloc()
-! DISCRETE-USE: func.func private @_QMacc_declare_unified_modEgarr_acc_declare_post_dealloc()

@@ -1533,7 +1533,7 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         // attributes to byval arguments. Even if CalledFunction
         // doesn't e.g. write to the argument (readonly), the call to
         // NewInnerCB may write to its by-value copy.
-        if (NewInnerCB->paramHasAttr(I, Attribute::ByVal))
+        if (NewInnerCB->isByValArgument(I))
           continue;
 
         // Don't bother propagating attrs to constants.
@@ -1955,6 +1955,19 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   // nodebug functions (which is different to existing behaviour).
   DebugLoc TheCallDL = TheCall->getDebugLoc()->getWithoutAtom();
 
+  // A call receiving the outer callsite's fallback location has no usable
+  // callsite probe of its own. Do not let it inherit the outer call's probe
+  // discriminator, but preserve any packed DWARF base discriminator.
+  DebugLoc TheCallDLForInlinedCall = TheCallDL;
+  uint32_t Discriminator = TheCallDLForInlinedCall->getDiscriminator();
+  if (DILocation::isPseudoProbeDiscriminator(Discriminator)) {
+    std::optional<uint32_t> DwarfDiscriminator =
+        PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
+            Discriminator);
+    TheCallDLForInlinedCall = TheCallDLForInlinedCall->cloneWithDiscriminator(
+        DwarfDiscriminator.value_or(0));
+  }
+
   auto &Ctx = Fn->getContext();
   DILocation *InlinedAtNode = TheCallDL;
 
@@ -2013,7 +2026,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     if (isa<PseudoProbeInst>(I))
       return;
 
-    I.setDebugLoc(TheCallDL);
+    I.setDebugLoc(isa<CallBase>(I) ? TheCallDLForInlinedCall : TheCallDL);
   };
 
   // Helper-util for updating debug-info records attached to instructions.

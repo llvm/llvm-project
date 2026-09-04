@@ -10,7 +10,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %5 = omp.map.info var_ptr(%1 : !llvm.ptr, f64) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("n") -> !llvm.ptr
     omp.target kernel_type(generic) nowait map_entries(%4 -> %arg1, %5 -> %arg2, %3 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %two_f = llvm.mlir.constant(2.000000e+00 : f64) : f64
-      %one_i = llvm.mlir.constant(1 : index) : i64
+      %one_i = llvm.mlir.constant(1 : i64) : i64
       %6 = llvm.getelementptr %arg1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
       %7 = llvm.load %6 : !llvm.ptr -> !llvm.ptr
       %8 = llvm.getelementptr %7[%one_i] : (!llvm.ptr, i64) -> !llvm.ptr, i8

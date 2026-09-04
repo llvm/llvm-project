@@ -1,7 +1,11 @@
 ; RUN: llc -enable-new-pm -mtriple=riscv32 -O3 -print-pipeline-passes=tree < %s 2>&1 \
+; RUN:   | grep -v verify \
 ; RUN:   | FileCheck %s
 ; RUN: llc -enable-new-pm -mtriple=riscv64 -O3 -print-pipeline-passes=tree < %s 2>&1 \
+; RUN:   | grep -v verify \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
+
+; REQUIRES: asserts
 
 ; CHECK: require<MachineModuleAnalysis>
 ; CHECK-NEXT: require<profile-summary>
@@ -19,7 +23,6 @@
 ; CHECK-NEXT:   riscv-gather-scatter-lowering
 ; CHECK-NEXT:   interleaved-access
 ; CHECK-NEXT:   riscv-codegenprepare
-; CHECK-NEXT:   verify
 ; CHECK-NEXT:   loop
 ; CHECK-NEXT:     canon-freeze
 ; CHECK-NEXT:     loop-reduce
@@ -39,7 +42,6 @@
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack
 ; CHECK-NEXT:   stack-protector
-; CHECK-NEXT:   verify
 ; CHECK-NEXT: riscv-asm-printer-begin
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
@@ -108,11 +110,6 @@
 ; CHECK-NEXT:     riscv-expand-pseudo-pre-emit
 ; CHECK-NEXT:     riscv-expand-pseudo-atomics
 ; CHECK-NEXT:     unpack-mi-bundles
-; CHECK-NEXT:     verify
 ; CHECK-NEXT:     riscv-asm-printer
 ; CHECK-NEXT:   free-machine-function
 ; CHECK-NEXT: riscv-asm-printer-end
-
-define void @f() {
-  ret void
-}

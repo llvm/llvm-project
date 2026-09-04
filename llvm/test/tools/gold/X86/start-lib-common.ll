@@ -1,6 +1,9 @@
 ; Test the case when the preferred (larger / more aligned) version of a common
 ; symbol is located in a module that's not included in the link.
 
+; --start-lib is not supported by ld.bfd, use gold instead.
+; REQUIRES: gold_linker
+
 ; RUN: llvm-as %s -o %t1.o
 ; RUN: llvm-as %p/Inputs/start-lib-common.ll -o %t2.o
 

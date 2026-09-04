@@ -4,7 +4,7 @@
 // CHECK-SAME:  (%[[ARG0:.+]]: tensor<?x42xf32>, %{{.*}}, %{{.*}})
 // CHECK:  %[[C0:.+]] = arith.constant 0
 // CHECK:  %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[C0]]
-// CHECK:  %[[ALLOC:.+]] = bufferization.alloc_tensor(%[[DIM]]) {memory_space = 1 : i64}
+// CHECK:  %[[ALLOC:.+]] = bufferization.alloc_tensor(%[[DIM]]) <{memory_space = 1 : i64}>
 // CHECK:  %[[MAT:.+]] = bufferization.materialize_in_destination %[[ARG0]] in %[[ALLOC]]
 // CHECK:  linalg.matmul ins(%[[MAT]], %{{.*}}
 func.func @promote_in0(%arg0: tensor<?x42xf32>, %arg1: tensor<42x?xf32>, %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
@@ -33,7 +33,7 @@ func.func @promote_out(%arg0: tensor<?x42xf32>, %arg1: tensor<?x42xf32>, %arg2: 
     // CHECK:  %[[DIM0:.+]] = tensor.dim %[[ARG2]], %[[C0]]
     // CHECK:  %[[C1:.+]] = arith.constant 1
     // CHECK:  %[[DIM1:.+]] = tensor.dim %[[ARG2]], %[[C1]]
-    // CHECK:  %[[ALLOC:.+]] = bufferization.alloc_tensor(%[[DIM0]], %[[DIM1]]) {memory_space = 1 : i64}
+    // CHECK:  %[[ALLOC:.+]] = bufferization.alloc_tensor(%[[DIM0]], %[[DIM1]]) <{memory_space = 1 : i64}>
     // CHECK-NOT: materialize_in_destination
     // CHECK:  linalg.add {{.*}} outs(%[[ALLOC]]
     %0 = linalg.add ins(%arg0, %arg1 : tensor<?x42xf32>, tensor<?x42xf32>)

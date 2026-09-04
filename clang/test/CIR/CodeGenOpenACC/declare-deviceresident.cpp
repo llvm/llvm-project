@@ -1,6 +1,4 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -fno-clangir-call-conv-lowering %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 struct HasSideEffects {
   HasSideEffects();
@@ -261,15 +259,13 @@ struct Struct {
 // CHECK-NEXT: }
 
   void MemFunc1(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEPtr) {
-    // CHECK: cir.func {{.*}}MemFunc1{{.*}}(%{{.*}}: !cir.ptr<!rec_Struct>{{.*}}, %[[ARG_HSE:.*]]: !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
+    // CHECK: cir.func {{.*}}MemFunc1{{.*}}(%{{.*}}: !cir.ptr<!rec_Struct>{{.*}}, %[[ARG_HSE:.*]]: !cir.ptr<!rec_HasSideEffects> {llvm.align = 1 : i64, llvm.byref = !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
     // CHECK-NEXT: cir.alloca{{.*}}"this"
-    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca "ArgHSE" {{.*}} : !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca "ArgInt" {{.*}} : !cir.ptr<!s32i>
     // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca "ArgHSEPtr" {{.*}} : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>
     // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca "LocalHSE" {{.*}} : !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca "LocalHSEArr" {{.*}} : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
     // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt" {{.*}} : !cir.ptr<!s32i>
-    // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
@@ -281,7 +277,7 @@ struct Struct {
     int LocalInt;
 
 #pragma acc declare device_resident(ArgHSE, ArgInt, LocalHSE, LocalInt, ArgHSEPtr[1:1], LocalHSEArr[1:1])
-    // CHECK: %[[ARG_HSE_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) name("ArgHSE") -> !cir.ptr<!rec_HasSideEffects>
+    // CHECK: %[[ARG_HSE_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_HSE]] : !cir.ptr<!rec_HasSideEffects>) name("ArgHSE") -> !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[ARG_INT_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) name("ArgInt") -> !cir.ptr<!s32i>
     // CHECK-NEXT: %[[LOC_HSE_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) name("LocalHSE") -> !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[LOC_INT_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) name("LocalInt") -> !cir.ptr<!s32i>
@@ -325,15 +321,13 @@ void use() {
 }
 
 void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEPtr) {
-    // CHECK: cir.func {{.*}}MemFunc2{{.*}}(%{{.*}}: !cir.ptr<!rec_Struct>{{.*}}, %[[ARG_HSE:.*]]: !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
+    // CHECK: cir.func {{.*}}MemFunc2{{.*}}(%{{.*}}: !cir.ptr<!rec_Struct>{{.*}}, %[[ARG_HSE:.*]]: !cir.ptr<!rec_HasSideEffects> {llvm.align = 1 : i64, llvm.byref = !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
     // CHECK-NEXT: cir.alloca{{.*}}"this"
-    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca "ArgHSE" {{.*}} : !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca "ArgInt" {{.*}} : !cir.ptr<!s32i>
     // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca "ArgHSEPtr" {{.*}} : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>
     // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca "LocalHSE" {{.*}} : !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca "LocalHSEArr" {{.*}} : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
     // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt" {{.*}} : !cir.ptr<!s32i>
-    // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
@@ -346,7 +340,7 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
     // CHECK: }
     int LocalInt;
 #pragma acc declare device_resident(ArgHSE, ArgInt, ArgHSEPtr[1:1])
-    // CHECK: %[[ARG_HSE_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) name("ArgHSE") -> !cir.ptr<!rec_HasSideEffects>
+    // CHECK: %[[ARG_HSE_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_HSE]] : !cir.ptr<!rec_HasSideEffects>) name("ArgHSE") -> !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[ARG_INT_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) name("ArgInt") -> !cir.ptr<!s32i>
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -396,14 +390,12 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
 extern "C" void do_thing();
 
 extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEPtr) {
-    // CHECK: cir.func {{.*}}NormalFunc(%[[ARG_HSE:.*]]: !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
-    // CHECK-NEXT: %[[ARG_HSE_ALLOCA:.*]] = cir.alloca "ArgHSE" {{.*}} : !cir.ptr<!rec_HasSideEffects>
+    // CHECK: cir.func {{.*}}NormalFunc(%[[ARG_HSE:.*]]: !cir.ptr<!rec_HasSideEffects> {llvm.align = 1 : i64, llvm.byref = !rec_HasSideEffects{{.*}}, %[[ARG_INT:.*]]: !s32i {{.*}}, %[[ARG_HSE_PTR:.*]]: !cir.ptr<!rec_HasSideEffects>{{.*}})
     // CHECK-NEXT: %[[ARG_INT_ALLOCA:.*]] = cir.alloca "ArgInt" {{.*}} : !cir.ptr<!s32i>
     // CHECK-NEXT: %[[ARG_HSE_PTR_ALLOCA:.*]] = cir.alloca "ArgHSEPtr" {{.*}} : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>
     // CHECK-NEXT: %[[LOC_HSE_ALLOCA:.*]] = cir.alloca "LocalHSE" {{.*}} : !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[LOC_HSE_ARR_ALLOCA:.*]] = cir.alloca "LocalHSEArr" {{.*}} : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>
     // CHECK-NEXT: %[[LOC_INT_ALLOCA:.*]] = cir.alloca "LocalInt" {{.*}} : !cir.ptr<!s32i>
-    // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.store
     HasSideEffects LocalHSE;
@@ -414,7 +406,7 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     // CHECK: }
     int LocalInt;
 #pragma acc declare device_resident(ArgHSE, ArgInt, ArgHSEPtr[1:1])
-    // CHECK: %[[ARG_HSE_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) name("ArgHSE") -> !cir.ptr<!rec_HasSideEffects>
+    // CHECK: %[[ARG_HSE_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_HSE]] : !cir.ptr<!rec_HasSideEffects>) name("ArgHSE") -> !cir.ptr<!rec_HasSideEffects>
     // CHECK-NEXT: %[[ARG_INT_DEV_RES:.*]] = acc.declare_device_resident varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) name("ArgInt") -> !cir.ptr<!s32i>
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
     // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32

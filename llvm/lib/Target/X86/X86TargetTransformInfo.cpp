@@ -5698,8 +5698,8 @@ InstructionCost X86TTIImpl::getPointersChainCost(
     if (const auto *BaseGEP = dyn_cast<GetElementPtrInst>(Base)) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       return getGEPCost(BaseGEP->getSourceElementType(),
-                        BaseGEP->getPointerOperand(), Indices, nullptr,
-                        CostKind);
+                        BaseGEP->getPointerOperand(), Indices, CostKind,
+                        nullptr);
     }
     return TTI::TCC_Free;
   }
@@ -7019,7 +7019,7 @@ X86TTIImpl::TTI::MemCmpExpansionOptions
 X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = 2;
+  Options.NumLoadsPerBlock = IsZeroCmp ? 2 : 1;
   // All GPR and vector loads can be unaligned.
   Options.AllowOverlappingLoads = true;
   if (IsZeroCmp) {

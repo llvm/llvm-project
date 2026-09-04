@@ -253,6 +253,10 @@ public:
     return m_sym_file_impl->CopyType(other_type);
   }
 
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override {
+    return m_sym_file_impl->GetTypeEnclosingVariableUID(uid);
+  }
+
 private:
   Log *GetLog() const { return ::lldb_private::GetLog(LLDBLog::OnDemand); }
 

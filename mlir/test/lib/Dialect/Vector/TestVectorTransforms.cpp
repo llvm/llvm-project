@@ -792,7 +792,7 @@ struct TestCreateVectorBroadcast
 
   void runOnOperation() override {
     getOperation()->walk([](Operation *op) {
-      if (op->getName().getStringRef() != "test_create_broadcast")
+      if (op->getName().getStringRef() != "test.create_broadcast")
         return;
       auto targetShape =
           cast<VectorType>(op->getResult(0).getType()).getShape();

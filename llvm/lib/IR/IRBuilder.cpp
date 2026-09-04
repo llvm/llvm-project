@@ -140,7 +140,9 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   };
 
   // See if we need inttoptr for this type pair. May require additional bitcast.
-  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+  bool OldIsIntLike =
+      OldTy->isIntOrIntVectorTy() || OldTy->isByteOrByteVectorTy();
+  if (OldIsIntLike && NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
     // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
     // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
@@ -149,7 +151,9 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   }
 
   // See if we need ptrtoint for this type pair. May require additional bitcast.
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
+  bool NewIsIntLike =
+      NewTy->isIntOrIntVectorTy() || NewTy->isByteOrByteVectorTy();
+  if (OldTy->isPtrOrPtrVectorTy() && NewIsIntLike) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
     // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
@@ -211,7 +215,7 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
 
 Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
   const DataLayout &DL = BB->getDataLayout();
-  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  TypeSize ElemSize = AI->getAllocationBaseSize(DL);
   Value *Size = CreateTypeSize(DestTy, ElemSize);
   if (AI->isArrayAllocation())
     Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
@@ -495,6 +499,14 @@ Value *IRBuilderBase::CreateFPMaximumReduce(Value *Src) {
 
 Value *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMaximumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fmaximumnum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMinimumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fminimumnum, Src);
 }
 
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {

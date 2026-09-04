@@ -22,6 +22,7 @@ unittest("ClangScalableAnalysisTests") {
   sources = [
     "ASTEntityMappingTest.cpp",
     "Analyses/CallGraph/CallGraphExtractorTest.cpp",
+    "Analyses/EntityPointerLevel/EntityPointerLevelTest.cpp",
     "Analyses/PointerFlow/PointerFlowTest.cpp",
     "Analyses/PointerFlow/PointerFlowWPATest.cpp",
     "Analyses/SharedLexicalRepresentation/EntitySourceLocationExtractorTest.cpp",

@@ -313,14 +313,14 @@ compiler looks for `M.pcm` in the directories specified by
 `-fprebuilt-module-path`.
 
 The `-fmodule-file=<path/to/BMI>` option causes the compiler to load the
-specified BMI directly. The `-fmodule-file=<module-name>=<path/to/BMI>`
+specified BMI eagerly and directly. The `-fmodule-file=<module-name>=<path/to/BMI>`
 option causes the compiler to load the specified BMI for the module specified
 by `<module-name>` when necessary. The main difference is that
 `-fmodule-file=<path/to/BMI>` will load the BMI eagerly, whereas
 `-fmodule-file=<module-name>=<path/to/BMI>` will only load the BMI lazily,
 as will `-fprebuilt-module-path`. The `-fmodule-file=<path/to/BMI>` option
-for named modules is deprecated and will be removed in a future version of
-Clang.
+for named modules is not suggested unless you know what you're doing as it
+may change the order the compiler handles the code.
 
 When these options are specified in the same invocation of the compiler, the
 `-fmodule-file=<path/to/BMI>` option takes precedence over
@@ -1734,6 +1734,284 @@ For build systems,
 The point of the approach is, the build system can reuse the result of C++20 named modules to manage depencies. So that
 the implementation burden of build systems is largely reduced.
 
+### Tricks for using std modules without changing your code
+
+This section introduces two methods to use std modules in a project without changing
+(too many) the code. It is still better to refactor the code explicitly.
+
+The methods introduced in this section needs build system's support to run stably.
+But even without build system's support, end users can make this experiment to have
+a feeling about the benefits of introduce std module to their projects.
+
+#### Preload the std module
+
+We can assume almost all C++ TU depends on the STL. So we can assume
+it is safe to import std in almost all C++ TUs. And clang have a mechanism
+to load the corresponding module eagerly: `-fmodule-file=<path-to-BMI>`.
+
+So if we built the std module's BMI ahead of time, we can pass
+`-fmodule-file=<path-to-BMI-of-std-module>` so that the code:
+
+```C++
+// hello.cpp
+#include <string>
+#include <iostream>
+int main() {
+  std::string hello = "Hello World.\n";
+  std::cout << hello << std::endl;
+  return 0;
+}
+```
+
+will be effectively equal to:
+
+```C++
+import std;
+#include <string>
+#include <iostream>
+int main() {
+  std::string hello = "Hello World.\n";
+  std::cout << hello << std::endl;
+  return 0;
+}
+```
+
+Let's take a quick measure (the numbers may vary in different environments):
+
+```
+$ time clang++ -std=c++23 hello.cpp -o hello
+
+real    0m1.245s
+user    0m1.154s
+sys     0m0.085s
+```
+
+and let's build the std module first and preload it without changing hello.cpp.
+
+```
+$ clang++ -std=c++23 <path-to-std-module>/std.cppm -c -o std.o -fmodule-output=std.pcm
+$ time clang++ -std=c++23 hello.cpp -o hello -fmodule-file=std.pcm
+
+real    0m0.795s
+user    0m0.707s
+sys     0m0.084s
+```
+
+we should be able to observe a clear compilation reduction.
+
+Clang has some optimizations for the case of import-before-include but also
+the pattern import-before-include may trigger compiler internal issues. But
+bugs are bugs. They should be reported and fixed.
+
+However, it is straight-forward that
+
+```C++
+import std;
+#include <string>
+#include <iostream>
+```
+
+will be slower to be compiled than
+
+```C++
+import std;
+```
+
+And due to compiler internal data structures, the mixed form will be much more slower
+than the pure import style due to the same declration apears in different TU issues
+(see above sections for more discussions).
+
+#### Use Module Map to replace includes to imports
+
+So is there any tricks we can use to replace the includes with the imports without
+changing the source code? Yes, clang has a module map. Although clang's module map
+was invented for clang header module maps, it can be used with named modules as well.
+
+Let's start with a simple example:
+
+```
+// std.modulemap
+module std [system] {
+  requires cplusplus
+
+  header "algorithm"
+  header "bitset"
+  header "complex"
+  header "deque"
+  header "exception"
+  header "fstream"
+  header "functional"
+  header "iomanip"
+  header "ios"
+  header "iosfwd"
+  header "iostream"
+  header "istream"
+  header "iterator"
+  header "limits"
+  header "list"
+  header "locale"
+  header "map"
+  header "memory"
+  header "new"
+  header "numeric"
+  header "ostream"
+  header "queue"
+  header "set"
+  header "sstream"
+  header "stack"
+  header "stdexcept"
+  header "streambuf"
+  header "string"
+  header "typeinfo"
+  header "utility"
+  header "valarray"
+  header "vector"
+  header "array"
+  header "atomic"
+  header "chrono"
+  header "codecvt"
+  header "condition_variable"
+  header "forward_list"
+  header "future"
+  header "initializer_list"
+  header "mutex"
+  header "ratio"
+  header "regex"
+  header "scoped_allocator"
+  header "system_error"
+  header "thread"
+  header "tuple"
+  header "typeindex"
+  header "unordered_map"
+  header "unordered_set"
+  header "optional"
+  header "any"
+  header "variant"
+}
+```
+
+the paths of the files referenced in module map is relative to the module map.
+So they can't be associated with the system headers.
+
+There are two solutions for this. First, we can create the softlinks for the headers:
+
+```
+mkdir -p std-module-map
+cp std.modulemap std-module-map/.
+cd std-module-map
+
+libcxx_dir=...
+
+awk -F '"' '/^[[:space:]]*header[[:space:]]+"/ {print $2}' std.modulemap |
+while IFS= read -r header; do
+  ln -s "$libcxx_dir/$header" "$header"
+done
+```
+
+then
+
+```
+$ time bin/clang++ -std=c++23 hello.cpp std.o -o hello $LIBCXX_FLAGS -fmodule-map-file=std-module-map/std.modulemap -fmodule-file=std=std.pcm  -Rmodule-import
+
+hello.cpp:1:2: remark: importing module 'std' from 'std.pcm' [-Rmodule-import]
+    1 | #include <string>
+      |  ^
+
+real    0m0.171s
+user    0m0.128s
+sys     0m0.043s
+```
+
+We can see the compilation time is highly reduced! 
+
+The flag `-Rmodule-import` tells if the compiler replace headers includes to imports actually.
+
+The other solution to associate the std headers with the module map is to use
+clang's VFS system.
+
+```
+// vfs.yaml
+{
+  'version': 0,
+  'overlay-relative': True,
+  'roots': [
+    {
+      'name': '<path-to-std-headers>',
+      'type': 'directory',
+      'contents': [
+        {
+          'name': 'std.modulemap', 'type': 'file',
+          'external-contents': 'std.modulemap'
+        },
+      ]
+    }
+  ]
+}
+```
+
+then
+
+```
+$ time clang++ -std=c++23 hello.cpp std.o -o hello -fmodule-map-file=<path-to-std-headers>/std.modulemap -fmodule-file=std=std.pcm -ivfsoverlay vfs.yaml -Rmodule-import
+hello.cpp:1:2: remark: importing module 'std' from 'std.pcm' [-Rmodule-import]
+    1 | #include <string>
+      |  ^
+
+real    0m0.172s
+user    0m0.122s
+sys     0m0.049s
+```
+
+the vfs.yaml means to place the std.modulemap file to the directory of std headers virtually.
+
+#### Why not use clang header modules?
+
+Clang header modules have two modes:
+
+- Clang implicit header modules: compiler will manage the modules builds.
+- Clang explicit header modules: build system will manage the modules builds.
+
+Clang implicit header modules sounds nice but it is prety fragile. Users need
+to be careful to manage the headers and builds to make it effective.
+
+Clang explicit header modules are much better. This is the way the inventors
+of clang header modules are using. But they need supports from build systems.
+
+#### Extends to other modules
+
+Extends this to other modules has some problems as:
+
+- Dependency management: we can assume almost all TU needs std module. But we
+  can't assume this for other modules.
+- Preprocessor state management: The use of module map to replace headers includes 
+  to imports of named modules loses the information about macros. We can do this
+  for std module because the 'exported' macro from STL is really limited and
+  centralized. We can exclude the headers which define macros only from the module
+  map. But this may not be true for other modules.
+
+These problems are solvable if we introduce new features. This may be possible
+if the community has more interests.
+
+#### What build systems need to do
+
+Except automating the steps I described above, an important step to manage the
+flags the consumer used. E.g., if they are two TUs, one is using C++20 and the
+other is using C++23, the build system needs to build two BMIs of the std module
+so that the consumers can consume successfully.
+
+#### Summary
+
+This section introduces two tricks to use std modules without changing the source code.
+
+These tricks needs support from build systems to make them smoothy in real cases.
+
+The preload tricks will load the std module to all the TUs. It is relatively slower
+than a clean rewrite (replace #include to imports). And it may trigger more compiler
+internal bugs. But it should be faster than the pure includes.
+
+The module map solution can make the compilation much more faster.
+But it needs more steps.
+ 
 ### Known Issues
 
 The following describes issues in the current implementation of modules. Please

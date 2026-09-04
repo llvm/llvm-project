@@ -346,7 +346,13 @@ public:
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
 
+  /// Stably sort the stubs by \p priorities and reassign their offsets. Must
+  /// run before addresses are assigned.
+  void sortSymbols(const llvm::DenseMap<const Symbol *, int> &priorities);
+
 private:
+  size_t getStubSize() const;
+
   std::vector<Defined *> symbols;
   Symbol *objcMsgSend = nullptr;
 };

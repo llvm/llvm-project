@@ -1,0 +1,12 @@
+RUN: %cpp_compiler %S/AccumulateAllocationsTest.cpp -o %t-AccumulateAllocationsTest
+
+# Fuzzing must stop when the stop file exists, even if the file is empty.
+RUN: rm -f %t.stop_file
+RUN: echo -n "" > %t.stop_file
+RUN: %run %t-AccumulateAllocationsTest -seed=1 -runs=100000 -stop_file=%t.stop_file 2>&1 | FileCheck %s
+CHECK: Done {{[0-9]}} runs
+
+# Fuzzing must not stop when the stop file does not exist.
+RUN: rm -f %t.stop_file
+RUN: %run %t-AccumulateAllocationsTest -seed=1 -runs=1000 -stop_file=%t.stop_file 2>&1 | FileCheck %s --check-prefix=NOSTOP
+NOSTOP: Done 1000 runs

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Optional
 from packaging import version
 import contextlib
@@ -13,6 +13,7 @@ import locale
 import os
 import platform
 import re
+import socket
 import sys
 import tempfile
 import subprocess
@@ -1287,6 +1288,29 @@ def requireThreadSupport(func):
         platform.startswith("wasi") and not platform.endswith("threads"),
         UnsupportedReason(f"threads are not supported on {platform}"),
     )(func)
+
+
+@lru_cache(maxsize=None)
+def _socketPermissionError() -> Optional[str]:
+    """Probe whether the host lets us open a listening socket.
+    Returns None if it does, otherwise a description of why it doesn't.
+    """
+
+    family = socket.AF_INET
+    addr = ("localhost", 0)
+    try:
+        with socket.socket(family, socket.SOCK_STREAM) as sock:
+            sock.bind(addr)
+            sock.listen(1)
+    except OSError as e:
+        return f"host does not permit opening a listening socket: {e}"
+    return None
+
+
+def requireSocketPermission(func):
+    """Mark the item as requiring permission to open a listening socket."""
+    error = _socketPermissionError()
+    return unittest.skipIf(error is not None, UnsupportedReason(error or ""))(func)
 
 
 def skipIfTargetDoesNotSupportSharedLibraries():

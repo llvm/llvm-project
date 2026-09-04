@@ -1417,12 +1417,6 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
         *this, Intrinsic::fma, Intrinsic::experimental_constrained_fma, Ty,
         {Ops[1], Ops[2], Ops[0]});
   }
-  case NEON::BI__builtin_neon_vld1_v:
-  case NEON::BI__builtin_neon_vld1q_v: {
-    llvm::Type *Tys[] = {Ty, Int8PtrTy};
-    Ops.push_back(getAlignmentValue32(PtrOp0));
-    return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "vld1");
-  }
   case NEON::BI__builtin_neon_vld1_x2_v:
   case NEON::BI__builtin_neon_vld1q_x2_v:
   case NEON::BI__builtin_neon_vld1_x3_v:
@@ -1433,6 +1427,12 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     Function *F = CGM.getIntrinsic(LLVMIntrinsic, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld1xN");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
+  }
+  case NEON::BI__builtin_neon_vld1_v:
+  case NEON::BI__builtin_neon_vld1q_v: {
+    llvm::Type *Tys[] = {Ty, Int8PtrTy};
+    Ops.push_back(getAlignmentValue32(PtrOp0));
+    return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "vld1");
   }
   case NEON::BI__builtin_neon_vld2_v:
   case NEON::BI__builtin_neon_vld2q_v:
@@ -4064,17 +4064,13 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   case SVE::BI__builtin_sve_svreinterpret_b: {
-    auto SVCountTy =
-        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
     Function *CastFromSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svcount);
     return Builder.CreateCall(CastFromSVCountF, Ops[0]);
   }
   case SVE::BI__builtin_sve_svreinterpret_c: {
-    auto SVCountTy =
-        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
     Function *CastToSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svcount);
     return Builder.CreateCall(CastToSVCountF, Ops[0]);
   }
 

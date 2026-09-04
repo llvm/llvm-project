@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpRegisterInfo.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
@@ -132,4 +133,17 @@ TEST(DoDumpRegisterInfoTest, Enumerators) {
             "A: 0 = an_enumerator\n"
             "\n"
             "C: 1 = another_enumerator, 2 = another_enumerator_2");
+}
+
+TEST(DoDumpRegisterInfoTest, VectorElements) {
+  StreamString strm;
+  RegisterTypeBuiltin element_type("ieee_single", lldb::eEncodingIEEE754,
+                                   lldb::eFormatFloat, 4);
+  RegisterTypeVector vector_type("v4f", &element_type, 4);
+
+  DoDumpRegisterInfo(strm, "v0", nullptr, 16, {}, {}, {}, &vector_type, 100);
+  ASSERT_EQ(strm.GetString(), "       Name: v0\n"
+                              "       Size: 16 bytes (128 bits)\n"
+                              "\n"
+                              "  Vector elements: 4");
 }

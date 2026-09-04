@@ -26,6 +26,8 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/xxhash.h"
 
+#include <limits>
+
 #if defined(__APPLE__)
 #include <sys/mman.h>
 
@@ -897,15 +899,19 @@ StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   return methname;
 }
 
+size_t ObjCStubsSection::getStubSize() const {
+  return config->objcStubsMode == ObjCStubsMode::fast
+             ? target->objcStubsFastSize
+             : target->objcStubsSmallSize;
+}
+
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
   // We create a selref entry for each unique methname.
   if (!ObjCSelRefsHelper::getSelRef(methname))
     ObjCSelRefsHelper::makeSelRef(methname);
 
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
+  size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
       /*value=*/symbols.size() * stubSize,
@@ -938,10 +944,22 @@ void ObjCStubsSection::setUp() {
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
-  return stubSize * symbols.size();
+  return getStubSize() * symbols.size();
+}
+
+void ObjCStubsSection::sortSymbols(
+    const llvm::DenseMap<const Symbol *, int> &priorities) {
+  llvm::stable_sort(symbols, [&](const Defined *a, const Defined *b) {
+    auto priority = [&](const Defined *sym) {
+      auto it = priorities.find(sym);
+      return it == priorities.end() ? std::numeric_limits<int>::max()
+                                    : it->second;
+    };
+    return priority(a) < priority(b);
+  });
+  size_t stubSize = getStubSize();
+  for (auto [idx, sym] : llvm::enumerate(symbols))
+    sym->value = idx * stubSize;
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {

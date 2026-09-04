@@ -21,17 +21,19 @@ subroutine use_mod()
   use acc_declare_alloc_mod
   implicit none
   allocate(data(100))
+  deallocate(data)
 end subroutine
 
 ! MOD: func.func @_QMacc_declare_alloc_modEdata_acc_declare_post_alloc() attributes {acc.declare_action} {
 ! MOD: acc.declare_enter
-! MOD: func.func @_QMacc_declare_alloc_modEdata_acc_declare_post_dealloc() attributes {acc.declare_action} {
 
 ! USE: func.func @_QPuse_mod() {
 ! USE: acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_alloc_modEdata_acc_declare_post_alloc>
 ! USE: fir.global @_QMacc_declare_alloc_modEdata {acc.declare = #acc.declare<dataClause = acc_create>
 ! USE: func.func private @_QMacc_declare_alloc_modEdata_acc_declare_post_alloc()
-! USE: func.func private @_QMacc_declare_alloc_modEdata_acc_declare_post_dealloc()
+! USE: func.func private @_QMacc_declare_alloc_modEdata_acc_declare_pre_dealloc()
 ! USE-NOT: acc.declare_enter
 
 ! CONV: fir.call @_QMacc_declare_alloc_modEdata_acc_declare_post_alloc()
+! The release must survive separate compilation.
+! CONV: fir.call @_QMacc_declare_alloc_modEdata_acc_declare_pre_dealloc()

@@ -77,12 +77,13 @@ end subroutine target_allocatable
 ! CPU-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} [map_idx=0] : [[TYPE]]) {
 
 ! GPU-LABEL: omp.private {type = private} {{.*}} init {
+! GPU-NOT:     fir.allocmem i32
+! GPU:         %[[PRIV_ALLOC:.*]] = fir.alloca i32
 ! GPU:         fir.if %{{.*}} {
 ! GPU-NEXT:    %[[ZERO_BOX:.*]] = fir.embox %{{.*}}
 ! GPU-NEXT:     fir.store %[[ZERO_BOX]] to %{{.*}}
 ! GPU-NEXT:   } else {
-! GPU-NOT:      fir.allocmem i32
-! GPU-NEXT:     %[[PRIV_ALLOC:.*]] = fir.alloca i32
+! GPU-NOT:     fir.allocmem i32
 ! GPU-NEXT:     %[[PRIV_ALLOC_BOX:.*]] = fir.embox %[[PRIV_ALLOC]]
 ! GPU-NEXT:     fir.store %[[PRIV_ALLOC_BOX]] to %{{.*}}
 ! GPU-NEXT:   }

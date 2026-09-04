@@ -822,6 +822,82 @@ This is a performance optimization, which speeds up debugging by avoiding
 multiple round-trips for retrieving thread information. The information from this
 packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
 
+## jAddressSpacesInfo
+
+Ask the server for the address spaces the process exposes.
+
+Most processes have a single, flat address space, but some (such as GPUs) have
+multiple address spaces where the same numeric address refers to different
+storage depending on the address space (for example global, local, private or
+generic memory). This packet lets the client discover those address spaces.
+
+This packet requires the `address-spaces+` feature from `qSupported`, which a
+server only advertises when its process exposes address spaces.
+
+The response is a JSON array of dictionaries, one per address space:
+```
+    [
+      {"name":"global","space_id":1,"is_thread_specific":false},
+      {"name":"local","space_id":2,"is_thread_specific":true}
+    ]
+```
+
+Each dictionary has the following keys:
+
+* `name`: the human readable name of the address space.
+* `space_id`: the integer identifier of the address space.
+* `is_thread_specific`: true if the address space is thread specific.
+
+The client only sends this packet when the server advertised `address-spaces+`
+in its `qSupported` response. If a server that advertised the feature has no
+address spaces to report, it replies with an unsupported (empty) response.
+
+**Priority To Implement:** Required for targets that use address spaces, not
+needed for targets that don't need address spaces.
+
+## address-spaces (qSupported feature)
+
+A server advertises `address-spaces+` in its `qSupported` response when its
+process exposes address spaces. This single feature implies both the
+`jAddressSpacesInfo` packet and the optional `address_space:<hex-id>;` suffix on
+the memory packets described below.
+
+### The `address_space` suffix
+
+To read from a specific address space, the client appends an optional
+`address_space:<hex-id>;` key-value suffix to the existing memory packets rather
+than introducing a dedicated packet, where `<hex-id>` is the address space id
+reported by `jAddressSpacesInfo`, in base 16 like the other numeric values in
+these packets. An id of `0`, or the absence of the suffix, means the default
+address space and behaves exactly as before, so address-space-unaware stubs and
+reads are unaffected.
+
+```
+send packet: $x1000,4;address_space:1a;
+read packet: $<binary encoding of the 4 bytes at 0x1000 in address space 0x1a>
+```
+
+If `jAddressSpacesInfo` reported the address space as `is_thread_specific`, a
+`thread:<hex-tid>;` key-value pair is appended to identify the thread the
+address belongs to. It is only sent for thread specific address spaces.
+
+```
+send packet: $x1000,4;address_space:1a;thread:1a2b;
+read packet: $<binary encoding of the 4 bytes at 0x1000 in address space 0x1a of thread 0x1a2b>
+```
+
+Packets that currently accept the suffix:
+
+* `m` / `x`: read memory from a specific address space.
+
+Because the suffix is an optional key-value pair on the existing packets, the
+same mechanism can be extended to other address-bearing packets (memory writes
+`M` / `X`, breakpoints `z` / `Z`, etc.) as the need arises, without introducing
+new packets or bifurcating the address-space-aware and unaware code paths.
+
+**Priority To Implement:** Required for targets that expose more than one
+address space, not needed for targets that have a single address space.
+
 ## MultiMemRead
 
 Read memory from multiple memory ranges.
@@ -2770,6 +2846,11 @@ xADDRESS,LENGTH
 
 where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
 
+The `x` packet may also carry an optional `address_space:<hex-id>;` suffix to read
+from a non-default address space, followed by `thread:<hex-tid>;` when that
+address space is thread specific; see
+[the address-spaces feature](#address-spaces-qsupported-feature).
+
 To test if this packet is available, send a addr/len of 0:
 ```
 x0,0
@@ -2911,6 +2992,116 @@ Example:
 ```
 LLDB SENDS:    jAcceleratorPluginBreakpointHit:{"plugin_name":"mock","breakpoint":{"identifier":1,"symbol_names":[]},"symbol_values":[]}
 STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false,"actions":{"plugin_name":"mock","session_name":"","identifier":2,"breakpoints":[{"identifier":2,"by_name":{"function_name":"exit"},"symbol_names":[]}]}}
+```
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.
+
+### jAcceleratorPluginGetDynamicLoaderLibraryInfo
+
+Requests shared library information from an accelerator plugin. The client
+sends this packet when it needs to load or update the accelerator's shared
+library list. This packet requires the `accelerator-plugins+` feature from
+`qSupported`.
+
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:<json>
+STUB REPLIES:  <json_response>
+```
+
+The request JSON has the following fields:
+
+| Key           | Type   | Description |
+|---------------|--------|-------------|
+| `plugin_name` | string | Name of the accelerator plugin to query. |
+| `full`        | bool   | If true, return every library the plugin knows about. If false, return only what changed since the last query. |
+
+A plugin may track thousands of code objects, so `full` lets a client that is
+already up to date ask only for the delta instead of re-receiving the whole
+list on every stop. It is the plugin that decides what "changed since the last
+query" means, and the plugin that keeps that state.
+
+Because that state lives in the plugin and is not per-client, a client cannot
+assume it starts from a known point: an earlier client may have consumed the
+pending changes with `full=false`. The first query of a session must therefore
+use `full=true`, and a client should also use it whenever it discards its own
+module list and needs to rebuild it.
+
+The response JSON is an object with a single `library_infos` key, holding an
+array of library info objects:
+
+| Key                     | Type   | Description |
+|-------------------------|--------|-------------|
+| `pathname`              | string | Path to the object file, or a unique name for the module when it has no file on disk. |
+| `load`                  | bool   | True when the library is being loaded, false when it is being unloaded. |
+| `load_address`          | int    | (optional) Base address the whole object file is slid to. |
+| `loaded_sections`       | array  | (optional) Per-section load addresses, for object files whose sections load at independent addresses. Each entry has `names` (the section name, or a path of nested section names to descend) and `load_address`. |
+| `uuid`                  | string | (optional) UUID of the object file, if the plugin knows it. |
+| `native_memory_address` | int    | (optional) Address **in the native (host) process** where the object file image can be read, for a library that only exists in memory. |
+| `native_memory_size`    | int    | (optional) Size of that in-memory image. |
+| `file_offset`           | int    | (optional) Byte offset of the object file within `pathname`, for a library embedded in a containing file. |
+| `file_size`             | int    | (optional) Size of the object file within that containing file. |
+
+`load_address`, `loaded_sections` and neither-of-the-two are three different
+requests, and are resolved in that order:
+
+* `load_address` present: slide the whole object file to that address.
+* otherwise `loaded_sections` non-empty: load only the named sections, each at
+  its own address.
+* otherwise: load at the file addresses with no slide.
+
+An absent `loaded_sections` and an empty `loaded_sections` therefore mean the
+same thing here: no per-section addresses were supplied. A plugin that wants
+sections loaded must send a non-empty array.
+
+A module that only exists in the accelerator's memory has no file on disk, so
+`pathname` carries a unique name for it instead of a path. That name is what
+identifies the module in the target.
+
+Load `/path/to/lib.so` at address 2130706432:
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:{"plugin_name":"mock","full":true}
+STUB REPLIES:  {
+  "library_infos": [
+    {
+      "pathname": "/path/to/lib.so",
+      "load": true,
+      "load_address": 2130706432
+    }
+  ]
+}
+```
+
+Load only `.text` from `PT_LOAD[1]` and `.data` from `PT_LOAD[3]` in
+`/path/to/lib.so`, each at its own address:
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:{"plugin_name":"mock","full":true}
+STUB REPLIES:  {
+  "library_infos": [
+    {
+      "pathname": "/path/to/lib.so",
+      "load": true,
+      "loaded_sections": [
+        {"names": ["PT_LOAD[1]", ".text"], "load_address": 2130706432},
+        {"names": ["PT_LOAD[3]", ".data"], "load_address": 2130707432}
+      ]
+    }
+  ]
+}
+```
+
+Load `/path/to/lib.so` at the file addresses found in the object file, with no
+slide:
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:{"plugin_name":"mock","full":true}
+STUB REPLIES:  {
+  "library_infos": [
+    {
+      "pathname": "/path/to/lib.so",
+      "load": true
+    }
+  ]
+}
 ```
 
 **Priority To Implement:** Required for hardware accelerator debugging

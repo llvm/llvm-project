@@ -937,6 +937,11 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
     python::PythonObject &p, Status &error);
 
 template <>
+lldb::ThreadPlanSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadPlanSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
 std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error);

@@ -180,8 +180,8 @@ protected:
             if (!RegInfo.use_empty(OutReg)) {
               std::set<MachineInstr *> Uses;
               // Collect all instructions that use the OutReg.
-              for (MachineOperand &MO : RegInfo.use_operands(OutReg))
-                Uses.insert(MO.getParent());
+              for (MachineInstr &UseMI : RegInfo.use_instructions(OutReg))
+                Uses.insert(&UseMI);
               // Find the first user (e.g.: lwax/stfdx) of the OutReg within the
               // current BB.
               MachineBasicBlock::iterator UseIter = MBB.begin();

@@ -743,6 +743,80 @@ TEST(InstructionsTest, CloneCall) {
   }
 }
 
+TEST(InstructionsTest, IsSameOperationAsCompareCallTargets) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+declare i32 @foo(i32)
+declare i32 @bar(i32)
+
+define void @test_calls(ptr %fp1, ptr %fp2, i32 %x) {
+entry:
+  %same_direct0 = call i32 @foo(i32 %x)
+  %same_direct1 = call i32 @foo(i32 %x)
+  %diff_direct = call i32 @bar(i32 %x)
+  %same_indirect0 = call i32 %fp1(i32 %x)
+  %same_indirect1 = call i32 %fp1(i32 %x)
+  %diff_indirect = call i32 %fp2(i32 %x)
+  %attr_same0 = call i32 @foo(i32 %x) #0
+  %attr_same1 = call i32 @foo(i32 %x) #1
+  %attr_diff = call i32 @bar(i32 %x) #1
+  ret void
+}
+
+attributes #0 = { nounwind }
+attributes #1 = { willreturn }
+)");
+  ASSERT_TRUE(M);
+
+  auto GetNamedInst = [](Function *F, StringRef Name) -> Instruction * {
+    for (BasicBlock &BB : *F)
+      for (Instruction &I : BB)
+        if (I.getName() == Name)
+          return &I;
+    ADD_FAILURE() << "Could not find instruction " << Name;
+    return nullptr;
+  };
+
+  Function *TestCalls = M->getFunction("test_calls");
+  ASSERT_NE(TestCalls, nullptr);
+  Instruction *SameDirect0 = GetNamedInst(TestCalls, "same_direct0");
+  Instruction *SameDirect1 = GetNamedInst(TestCalls, "same_direct1");
+  Instruction *DiffDirect = GetNamedInst(TestCalls, "diff_direct");
+  Instruction *SameIndirect0 = GetNamedInst(TestCalls, "same_indirect0");
+  Instruction *SameIndirect1 = GetNamedInst(TestCalls, "same_indirect1");
+  Instruction *DiffIndirect = GetNamedInst(TestCalls, "diff_indirect");
+  Instruction *AttrSame0 = GetNamedInst(TestCalls, "attr_same0");
+  Instruction *AttrSame1 = GetNamedInst(TestCalls, "attr_same1");
+  Instruction *AttrDiff = GetNamedInst(TestCalls, "attr_diff");
+  ASSERT_TRUE(SameDirect0 && SameDirect1 && DiffDirect && SameIndirect0 &&
+              SameIndirect1 && DiffIndirect && AttrSame0 && AttrSame1 &&
+              AttrDiff);
+
+  EXPECT_TRUE(SameDirect0->isSameOperationAs(SameDirect1));
+  EXPECT_TRUE(SameDirect0->isSameOperationAs(DiffDirect));
+  EXPECT_TRUE(SameDirect0->isSameOperationAs(SameDirect1,
+                                             Instruction::CompareCallTargets));
+  EXPECT_FALSE(SameDirect0->isSameOperationAs(DiffDirect,
+                                              Instruction::CompareCallTargets));
+
+  EXPECT_TRUE(SameIndirect0->isSameOperationAs(DiffIndirect));
+  EXPECT_TRUE(SameIndirect0->isSameOperationAs(
+      SameIndirect1, Instruction::CompareCallTargets));
+  EXPECT_FALSE(SameIndirect0->isSameOperationAs(
+      DiffIndirect, Instruction::CompareCallTargets));
+
+  EXPECT_FALSE(
+      AttrSame0->isSameOperationAs(AttrSame1, Instruction::CompareCallTargets));
+  EXPECT_TRUE(AttrSame0->isSameOperationAs(
+      AttrSame1, Instruction::CompareCallTargets |
+                     Instruction::CompareUsingIntersectedAttrs));
+  EXPECT_TRUE(AttrSame0->isSameOperationAs(
+      AttrDiff, Instruction::CompareUsingIntersectedAttrs));
+  EXPECT_FALSE(AttrSame0->isSameOperationAs(
+      AttrDiff, Instruction::CompareCallTargets |
+                    Instruction::CompareUsingIntersectedAttrs));
+}
+
 TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
@@ -860,6 +934,27 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
     ASSERT_TRUE(GI->isInBounds());
     GI->dropPoisonGeneratingFlags();
     ASSERT_FALSE(GI->isInBounds());
+  }
+
+  {
+    Value *Ptr = B.CreateIntToPtr(Arg0, B.getPtrTy(1));
+    auto *ASC = cast<AddrSpaceCastInst>(
+        B.CreateAddrSpaceCast(Ptr, B.getPtrTy(), "", /*IsNonNull*/ true));
+    EXPECT_TRUE(ASC->hasNonNull());
+    EXPECT_TRUE(ASC->hasPoisonGeneratingFlags());
+    ASC->dropPoisonGeneratingFlags();
+    EXPECT_FALSE(ASC->hasNonNull());
+    EXPECT_FALSE(ASC->hasPoisonGeneratingFlags());
+  }
+
+  {
+    // A ConstantExpr addrspacecast is an Operator but not an
+    // AddrSpaceCastInst; hasPoisonGeneratingFlags() must not assume the
+    // instruction subclass.
+    Constant *NullPtr = Constant::getNullValue(B.getPtrTy(1));
+    auto *CE =
+        cast<Operator>(ConstantExpr::getAddrSpaceCast(NullPtr, B.getPtrTy()));
+    EXPECT_FALSE(CE->hasPoisonGeneratingFlags());
   }
 }
 

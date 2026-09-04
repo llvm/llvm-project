@@ -35,18 +35,31 @@ def CZERO_NEZ : ALU_rr<0b0000111, 0b111, "czero.nez">,
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZicond] in {
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
-          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
-          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
+// Zero (eqz) is instantiated with CZERO_EQZ or a compatible custom
+// instruction, and nez with CZERO_NEZ or a compatible custom instruction.
+multiclass CondOpsPat<Instruction eqz, Instruction nez> {
+  def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
+            (eqz GPR:$rs1, GPR:$rc)>;
+  def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
+            (nez GPR:$rs1, GPR:$rc)>;
 
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
-          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
-          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
-          (CZERO_NEZ GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
-          (CZERO_EQZ GPR:$rs1, GPR:$rc)>;
-} // Predicates = [HasStdExtZicond]
+  def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+            (eqz GPR:$rs1, GPR:$rc)>;
+  def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+            (nez GPR:$rs1, GPR:$rc)>;
+  def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+            (nez GPR:$rs1, GPR:$rc)>;
+  def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+            (eqz GPR:$rs1, GPR:$rc)>;
+
+  // (and (setcc a, b, ne), c) -> (eqz c, (xor a, b))
+  // (and (setcc a, b, eq), c) -> (nez c, (xor a, b))
+  // where c is known to be 0 or 1.
+  def : Pat<(XLenVT (and (riscv_setne_oneuse (XLenVT GPR:$rs1)), zero_or_one:$rc)),
+            (eqz GPR:$rc, GPR:$rs1)>;
+  def : Pat<(XLenVT (and (riscv_seteq_oneuse (XLenVT GPR:$rs1)), zero_or_one:$rc)),
+            (nez GPR:$rc, GPR:$rs1)>;
+}
+
+let Predicates = [HasStdExtZicond] in
+defm : CondOpsPat<CZERO_EQZ, CZERO_NEZ>;

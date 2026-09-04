@@ -13,7 +13,6 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
-#include "NVPTXAsmPrinter.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
@@ -107,7 +106,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                TT, CPU, FS, Options, Reloc::PIC_,
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<NVPTXTargetObjectFile>()),
-      Subtarget(TT, CPU, FS, *this), StrPool(StrAlloc) {
+      Subtarget(TT, CPU, FS, *this) {
   if (!DisableRequireStructuredCFG)
     setRequiresStructuredCFG(true);
   // NVPTX does not produce verifier-clean MIR yet; see isMachineVerifierClean()

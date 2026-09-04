@@ -26,7 +26,6 @@
 #include <cassert>
 #include <optional>
 #include <stack>
-#include <tuple>
 #include <utility>
 
 using namespace clang::ast_matchers;

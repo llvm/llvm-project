@@ -4663,10 +4663,9 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
     return;   // getValue will auto-populate this.
 
   SDLoc dl = getCurSDLoc();
-  Type *Ty = I.getAllocatedType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto &DL = DAG.getDataLayout();
-  TypeSize TySize = DL.getTypeAllocSize(Ty);
+  TypeSize TySize = I.getAllocationBaseSize(DL);
   MaybeAlign Alignment = I.getAlign();
 
   SDValue AllocSize = getValue(I.getArraySize());
@@ -5011,10 +5010,12 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
 
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/1);
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::upperBound(VT.getStoreSize()), Alignment,
-      I.getAAMetadata());
+      MMOMetadata(I.getAAMetadata(), /*Ranges=*/nullptr, MemCacheHint));
 
   SDValue StoreNode =
       !IsCompressing && TTI->hasConditionalLoadStoreForType(
@@ -5156,6 +5157,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   EVT VT = Src0.getValueType();
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/0);
 
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
@@ -5175,7 +5177,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::upperBound(VT.getStoreSize()), Alignment,
-      MMOMetadata(AAInfo, Ranges));
+      MMOMetadata(AAInfo, Ranges, MemCacheHint));
 
   // The Load/Res may point to different values and both of them are output
   // variables.
@@ -5258,9 +5260,11 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), MMOMetadata(), SSID, SuccessOrdering, FailureOrdering);
+      I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
+      SSID, SuccessOrdering, FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5329,9 +5333,11 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), MMOMetadata(), SSID, Ordering);
+      I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
+      SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -5369,16 +5375,17 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   EVT MemVT = TLI.getMemValueType(DAG.getDataLayout(), I.getType());
 
-  if (!TLI.supportsUnalignedAtomics() &&
-      I.getAlign().value() < MemVT.getSizeInBits() / 8)
+  if (!TLI.isAtomicAlignmentSupported(I.getAlign(), MemVT.getSizeInBits() / 8))
     report_fatal_error("Cannot generate unaligned atomic load");
 
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
   const MDNode *Ranges = getRangeMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), MMOMetadata(AAMDNodes(), Ranges), SSID, Order);
+      I.getAlign(), MMOMetadata(AAMDNodes(), Ranges, MemCacheHint), SSID,
+      Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
@@ -5406,16 +5413,18 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   EVT MemVT =
       TLI.getMemValueType(DAG.getDataLayout(), I.getValueOperand()->getType());
 
-  if (!TLI.supportsUnalignedAtomics() &&
-      I.getAlign().value() < MemVT.getSizeInBits() / 8)
+  if (!TLI.isAtomicAlignmentSupported(I.getAlign(), MemVT.getSizeInBits() / 8))
     report_fatal_error("Cannot generate unaligned atomic store");
 
   auto Flags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
+  const MDNode *MemCacheHint =
+      getMemCacheHintMetadata(I, I.getPointerOperandIndex());
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), MMOMetadata(), SSID, Ordering);
+      I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
+      SSID, Ordering);
 
   SDValue Val = getValue(I.getValueOperand());
   if (Val.getValueType() != MemVT)
@@ -8206,6 +8215,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fmaximum:
   case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fmaximumnum:
+  case Intrinsic::vector_reduce_fminimumnum:
     visitVectorReduce(I, Intrinsic);
     return;
 
@@ -11287,6 +11298,12 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     break;
   case Intrinsic::vector_reduce_fminimum:
     Res = DAG.getNode(ISD::VECREDUCE_FMINIMUM, dl, VT, Op1, SDFlags);
+    break;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    Res = DAG.getNode(ISD::VECREDUCE_FMAXIMUMNUM, dl, VT, Op1, SDFlags);
+    break;
+  case Intrinsic::vector_reduce_fminimumnum:
+    Res = DAG.getNode(ISD::VECREDUCE_FMINIMUMNUM, dl, VT, Op1, SDFlags);
     break;
   default:
     llvm_unreachable("Unhandled vector reduce intrinsic");

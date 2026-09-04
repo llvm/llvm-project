@@ -22,6 +22,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
@@ -176,6 +177,13 @@ private:
 
   Block *constructCmpxchgLoop(Value ptr, Type type, Value expr,
                               ConversionPatternRewriter &rewriter) const;
+
+  /// Emit a single atomicrmw for a `x = x <binop> expr` capture, or fail so
+  /// the caller falls back to the cmpxchg loop.
+  LogicalResult
+  tryEmitCaptureAtomicRMW(AtomicCaptureOp capture, AtomicUpdateOp update,
+                          AtomicReadOp read,
+                          ConversionPatternRewriter &rewriter) const;
 
   Value genUpdateCmpxchgLoop(AtomicUpdateOp update,
                              ConversionPatternRewriter &rewriter) const;
@@ -497,6 +505,66 @@ Value ACCAtomicOpConversion<AtomicOpTy>::genUpdateCmpxchgLoop(
   llvm_unreachable("invalid cmpxchg loop");
 }
 
+static std::optional<LLVM::AtomicBinOp> getAtomicBinOp(Operation *op,
+                                                       bool updateIsLhs) {
+  return TypeSwitch<Operation *, std::optional<LLVM::AtomicBinOp>>(op)
+      .Case<arith::AddFOp>([](auto) { return LLVM::AtomicBinOp::fadd; })
+      .Case<arith::AddIOp>([](auto) { return LLVM::AtomicBinOp::add; })
+      .Case<arith::SubFOp>(
+          [updateIsLhs](auto) -> std::optional<LLVM::AtomicBinOp> {
+            // atomicrmw fsub is always `*ptr = *ptr - val`.
+            if (!updateIsLhs)
+              return std::nullopt;
+            return LLVM::AtomicBinOp::fsub;
+          })
+      .Case<arith::SubIOp>(
+          [updateIsLhs](auto) -> std::optional<LLVM::AtomicBinOp> {
+            // atomicrmw sub is always `*ptr = *ptr - val`.
+            if (!updateIsLhs)
+              return std::nullopt;
+            return LLVM::AtomicBinOp::sub;
+          })
+      .Case<arith::AndIOp>([](auto) { return LLVM::AtomicBinOp::_and; })
+      .Case<arith::OrIOp>([](auto) { return LLVM::AtomicBinOp::_or; })
+      .Case<arith::XOrIOp>([](auto) { return LLVM::AtomicBinOp::_xor; })
+      .Case<arith::MaxSIOp>([](auto) { return LLVM::AtomicBinOp::max; })
+      .Case<arith::MinSIOp>([](auto) { return LLVM::AtomicBinOp::min; })
+      .Case<arith::MaxUIOp>([](auto) { return LLVM::AtomicBinOp::umax; })
+      .Case<arith::MinUIOp>([](auto) { return LLVM::AtomicBinOp::umin; })
+      .Case<arith::MaximumFOp>([](auto) { return LLVM::AtomicBinOp::fmaximum; })
+      .Case<arith::MinimumFOp>([](auto) { return LLVM::AtomicBinOp::fminimum; })
+      .Case<arith::MaxNumFOp>(
+          [](auto) { return LLVM::AtomicBinOp::fmaximumnum; })
+      .Case<arith::MinNumFOp>(
+          [](auto) { return LLVM::AtomicBinOp::fminimumnum; })
+      .Default([](Operation *) { return std::nullopt; });
+}
+
+/// Match an update region computing `x = x <binop> expr`, and return the
+/// atomicrmw kind with the binary operation. Shared by the update and capture
+/// conversions so the same region cannot take atomicrmw in one and the cmpxchg
+/// loop in the other.
+static std::optional<std::pair<LLVM::AtomicBinOp, Operation *>>
+matchAtomicBinOpUpdate(AtomicUpdateOp update) {
+  Block &block = update.getRegion().front();
+  Value arg = block.getArgument(0);
+  Operation *yield = block.getTerminator();
+  if (!yield || yield->getNumOperands() != 1)
+    return std::nullopt;
+  Operation *binOp = yield->getOperand(0).getDefiningOp();
+  if (!binOp || binOp->getBlock() != &block || binOp->getNumOperands() != 2 ||
+      binOp->getNumResults() != 1)
+    return std::nullopt;
+  // The updated value has to feed the binop and nothing else.
+  if (!arg.hasOneUse() || arg.use_begin()->getOwner() != binOp)
+    return std::nullopt;
+  bool updateIsLhs = binOp->getOperand(0) == arg;
+  std::optional<LLVM::AtomicBinOp> kind = getAtomicBinOp(binOp, updateIsLhs);
+  if (!kind)
+    return std::nullopt;
+  return std::make_pair(*kind, binOp);
+}
+
 /// Generate llvm.atomicrmw or an llvm.cmpxchg loop.
 template <>
 LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
@@ -549,56 +617,16 @@ LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
   // https://llvm.org/docs/LangRef.html#floating-point-min-max-intrinsics-comparison
   // https://mlir.llvm.org/docs/Dialects/ArithOps/#arithmaximumf-arithmaximumfop
   // https://mlir.llvm.org/docs/Dialects/ArithOps/#arithmaxnumf-arithmaxnumfop
-  auto getAtomicBinOp =
-      [](Operation *op, bool updateIsLhs) -> std::optional<LLVM::AtomicBinOp> {
-    return TypeSwitch<Operation *, std::optional<LLVM::AtomicBinOp>>(op)
-        .Case<arith::AddFOp>([](auto) { return LLVM::AtomicBinOp::fadd; })
-        .Case<arith::AddIOp>([](auto) { return LLVM::AtomicBinOp::add; })
-        .Case<arith::SubFOp>(
-            [updateIsLhs](auto) -> std::optional<LLVM::AtomicBinOp> {
-              // atomicrmw fsub is always `*ptr = *ptr - val`.
-              if (!updateIsLhs)
-                return std::nullopt;
-              return LLVM::AtomicBinOp::fsub;
-            })
-        .Case<arith::SubIOp>(
-            [updateIsLhs](auto) -> std::optional<LLVM::AtomicBinOp> {
-              // atomicrmw sub is always `*ptr = *ptr - val`.
-              if (!updateIsLhs)
-                return std::nullopt;
-              return LLVM::AtomicBinOp::sub;
-            })
-        .Case<arith::AndIOp>([](auto) { return LLVM::AtomicBinOp::_and; })
-        .Case<arith::OrIOp>([](auto) { return LLVM::AtomicBinOp::_or; })
-        .Case<arith::XOrIOp>([](auto) { return LLVM::AtomicBinOp::_xor; })
-        .Case<arith::MaxSIOp>([](auto) { return LLVM::AtomicBinOp::max; })
-        .Case<arith::MinSIOp>([](auto) { return LLVM::AtomicBinOp::min; })
-        .Case<arith::MaxUIOp>([](auto) { return LLVM::AtomicBinOp::umax; })
-        .Case<arith::MinUIOp>([](auto) { return LLVM::AtomicBinOp::umin; })
-        .Case<arith::MaximumFOp>(
-            [](auto) { return LLVM::AtomicBinOp::fmaximum; })
-        .Case<arith::MinimumFOp>(
-            [](auto) { return LLVM::AtomicBinOp::fminimum; })
-        .Case<arith::MaxNumFOp>(
-            [](auto) { return LLVM::AtomicBinOp::fmaximumnum; })
-        .Case<arith::MinNumFOp>(
-            [](auto) { return LLVM::AtomicBinOp::fminimumnum; })
-        .Default([](Operation *) { return std::nullopt; });
-  };
 
   // Select the kind and the val of atomicrmw.
   std::optional<Value> val = std::nullopt;
   std::optional<LLVM::AtomicBinOp> kind = std::nullopt;
 
-  auto &ops = updateBlock.getOperations();
-  Operation &firstOp = ops.front();
-  Operation &yield = ops.back();
-
-  if (dependents.size() == 2 && firstOp.getResult(0) == yield.getOperand(0)) {
-    bool updateIsLhs = firstOp.getOperand(0) == updateArgument;
-    kind = getAtomicBinOp(&firstOp, updateIsLhs);
-    if (kind)
-      val = firstOp.getOperand(updateIsLhs ? 1 : 0);
+  if (auto matched = matchAtomicBinOpUpdate(update)) {
+    Operation *binOp = matched->second;
+    bool updateIsLhs = binOp->getOperand(0) == updateArgument;
+    kind = matched->first;
+    val = binOp->getOperand(updateIsLhs ? 1 : 0);
   }
 
   // Per-component atomicrmw info for complex type decomposition.
@@ -691,6 +719,75 @@ LogicalResult ACCAtomicOpConversion<AtomicUpdateOp>::matchAndRewrite(
   return success();
 }
 
+/// The cmpxchg loop re-points reads of `v`/`x` inside `expr` at the atomically
+/// loaded value (see moveDependency). An atomicrmw cannot do that, so any
+/// `expr` that loads from memory keeps the loop: the load may be the captured
+/// value itself, and the address is not reliably comparable here.
+static bool exprReadsMemory(Value expr) {
+  SmallVector<Value> worklist{expr};
+  llvm::DenseSet<Operation *> seen;
+  while (!worklist.empty()) {
+    Operation *def = worklist.pop_back_val().getDefiningOp();
+    if (!def || !seen.insert(def).second)
+      continue;
+    if (!isMemoryEffectFree(def))
+      return true;
+    worklist.append(def->getOperands().begin(), def->getOperands().end());
+  }
+  return false;
+}
+
+/// Emit a single atomicrmw for a `x = x <binop> expr` capture.
+template <typename AtomicOpTy>
+LogicalResult ACCAtomicOpConversion<AtomicOpTy>::tryEmitCaptureAtomicRMW(
+    AtomicCaptureOp capture, AtomicUpdateOp update, AtomicReadOp read,
+    ConversionPatternRewriter &rewriter) const {
+  if (read.getX() != update.getX())
+    return failure();
+  auto matched = matchAtomicBinOpUpdate(update);
+  if (!matched)
+    return failure();
+  auto [kind, binOp] = *matched;
+
+  Value arg = update.getRegion().front().getArgument(0);
+  bool updateIsLhs = binOp->getOperand(0) == arg;
+  Value expr = binOp->getOperand(updateIsLhs ? 1 : 0);
+
+  // Keep serialized and aggregate types on the cmpxchg path.
+  Type argTy = arg.getType();
+  if (!argTy.isIntOrFloat() ||
+      this->getTypeConverter()->convertType(argTy) != argTy)
+    return failure();
+  // The operand must already be available, and must not be the captured value.
+  Operation *exprDef = expr.getDefiningOp();
+  if (exprDef && exprDef->getBlock() == &update.getRegion().front())
+    return failure();
+  if (exprReadsMemory(expr))
+    return failure();
+
+  Location loc = capture.getLoc();
+  Value xRef = update.getX();
+  Value vRef = read.getV();
+  Value xPtr =
+      getAtomicPointer(xRef, rewriter.getRemappedValue(xRef), loc, rewriter);
+  Value vPtr =
+      getAtomicPointer(vRef, rewriter.getRemappedValue(vRef), loc, rewriter);
+
+  rewriter.setInsertionPoint(capture);
+  auto rmw = LLVM::AtomicRMWOp::create(rewriter, loc, kind, xPtr,
+                                       rewriter.getRemappedValue(expr),
+                                       LLVM::AtomicOrdering::monotonic);
+  // atomicrmw yields the old value; `{update, read}` captures the new one.
+  Value captured = rmw.getRes();
+  if (capture.getFirstOp() == update.getOperation()) {
+    rewriter.moveOpAfter(binOp, rmw);
+    binOp->replaceUsesOfWith(arg, captured);
+    captured = binOp->getResult(0);
+  }
+  rewriter.replaceOpWithNewOp<LLVM::StoreOp>(capture, captured, vPtr);
+  return success();
+}
+
 /// Generate an llvm.cmpxchg loop.
 template <>
 LogicalResult ACCAtomicOpConversion<AtomicCaptureOp>::matchAndRewrite(
@@ -700,6 +797,14 @@ LogicalResult ACCAtomicOpConversion<AtomicCaptureOp>::matchAndRewrite(
   Operation *secondOp = capture.getSecondOp();
   Value vPtr = nullptr;
   Value storeVal = nullptr;
+
+  // A single `x = x <binop> expr` capture becomes one atomicrmw. The cmpxchg
+  // loop below serializes retries and collapses under contention.
+  if (AtomicUpdateOp update = capture.getAtomicUpdateOp())
+    if (AtomicReadOp read = capture.getAtomicReadOp())
+      if (succeeded(tryEmitCaptureAtomicRMW(capture, update, read, rewriter)))
+        return success();
+
   if (auto firstReadStmt = dyn_cast<AtomicReadOp>(firstOp)) {
     Location loc = capture.getLoc();
     Value xRef = firstReadStmt.getX();

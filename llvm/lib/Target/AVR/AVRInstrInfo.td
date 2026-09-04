@@ -398,12 +398,22 @@ let hasSideEffects = 0, isCommutable = 1, Constraints = "$src = $rd",
                         "adcw\t$rd, $rr",
                         [(set i16:$rd, (adde i16:$src, i16:$rr))]>;
 
-  // AIDW Rd, k
+  // ADIW Rd, k
   // Adds an immediate 6-bit value K to Rd, placing the result in Rd.
   def ADIWRdK : FWRdK<0b0, (outs IWREGS:$rd), (ins IWREGS :$src, imm_arith6:$k),
                       "adiw\t$rd, $k",
                       [(set i16:$rd, (add i16:$src, uimm6:$k))]>,
                 Requires<[HasADDSUBIW]>;
+
+  // ADIW Rd, k
+  // Adds an immediate 8-bit value K to Rd, placing the result in Rd.
+  //
+  // Expands to ADIW or SUBIW, depending on the size of `k` and the supported
+  // instruction set.
+  def ADIWRdKP : Pseudo<(outs DLDREGS:$rd),
+                        (ins DLDREGS:$src, i16imm:$k),
+                        "adiw\t$rd, $k",
+                        [(set i16:$rd, (add i16:$src, i16:$k))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1525,10 +1535,16 @@ def SEXT : ExtensionPseudo<(outs DREGS:$dt), (ins GPR8:$src), "sext\t$dt, $src",
 def ZEXT : ExtensionPseudo<(outs DREGS:$dt), (ins GPR8:$src), "zext\t$dt, $src",
                            [(set i16:$dt, (zext i8:$src))]>;
 
+let hasSideEffects = 0 in
+def FRMSP : Pseudo<(outs DLDREGS:$dst),
+                   (ins i16imm:$off),
+                   "frmsp\t$dst, $off", []>;
+
 // This pseudo gets expanded into a movw+adiw thus it clobbers SREG.
 let Defs = [SREG], hasSideEffects = 0 in
-def FRMIDX : Pseudo<(outs DLDREGS:$dst), (ins DLDREGS:$src, i16imm:$src2),
-                    "frmidx\t$dst, $src, $src2", []>;
+def FRMIDX : Pseudo<(outs DLDREGS:$dst),
+                    (ins DLDREGS:$src, i16imm:$off, DLDREGS:$rel),
+                    "frmidx\t$dst, $src, $off, $rel", []>;
 
 // The instructions STDSPQRr and STDWSPQRr are used to store to the stack
 // frame. The most accurate implementation would be to load the SP into

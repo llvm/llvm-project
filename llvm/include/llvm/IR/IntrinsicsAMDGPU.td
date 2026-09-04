@@ -190,7 +190,8 @@ def int_amdgcn_queue_ptr :
 def int_amdgcn_kernarg_segment_ptr :
   ClangBuiltin<"__builtin_amdgcn_kernarg_segment_ptr">,
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
-  [Align<RetIndex, 4>, NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+  [Align<RetIndex, 4>, NoUndef<RetIndex>, NoFreeObj<RetIndex>,
+   IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_implicitarg_ptr :
   ClangBuiltin<"__builtin_amdgcn_implicitarg_ptr">,
@@ -2509,16 +2510,6 @@ def int_amdgcn_cvt_pk_u8_f32 :
   ClangBuiltin<"__builtin_amdgcn_cvt_pk_u8_f32">,
   PureIntrinsic<[llvm_i32_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty]>;
 
-def int_amdgcn_icmp :
-  Intrinsic<[llvm_anyint_ty], [llvm_anyint_ty, LLVMMatchType<1>, llvm_i32_ty],
-            [IntrNoMem, IntrConvergent,
-             ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
-
-def int_amdgcn_fcmp :
-  Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty, LLVMMatchType<1>, llvm_i32_ty],
-            [IntrNoMem, IntrConvergent,
-             ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
-
 // Returns a bitfield(i32 or i64) containing the result of its i1 argument
 // in all active lanes, and zero in all inactive lanes.
 def int_amdgcn_ballot :
@@ -2932,12 +2923,15 @@ def int_amdgcn_pops_exiting_wave_id :
 
 // Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
 def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
+                     IntrNoCallback, IntrNoFree]>;
 
 // Waits until the Nth previous marker is completed, if it exists.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
-    Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+    Intrinsic<[], [llvm_i16_ty],
+              [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects,
+               IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics

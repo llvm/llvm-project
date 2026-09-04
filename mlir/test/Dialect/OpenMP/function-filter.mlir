@@ -20,21 +20,21 @@ module attributes {omp.is_target_device = true} {
   llvm.func @any() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (any), capture_clause = (to)>
+          #omp.declaretarget<device_type = any, capture_clause = to>
       } {
     llvm.return
   }
   llvm.func @nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
   llvm.func @host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -44,7 +44,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @nohost_target() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     omp.target kernel_type(generic) {
       omp.terminator
@@ -54,7 +54,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @host_target() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     omp.target kernel_type(generic) {
       omp.terminator
@@ -71,7 +71,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @host_target_call() -> i32
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     omp.target kernel_type(generic) {
       omp.terminator
@@ -101,21 +101,21 @@ module attributes {omp.is_target_device = false} {
   llvm.func @any() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (any), capture_clause = (to)>
+          #omp.declaretarget<device_type = any, capture_clause = to>
       } {
     llvm.return
   }
   llvm.func @nohost() -> ()
       attributes {
           omp.declare_target =
-            #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+            #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
   llvm.func @host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -125,7 +125,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @nohost_target() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     omp.target kernel_type(generic) {
       omp.terminator
@@ -135,7 +135,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @host_target() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     omp.target kernel_type(generic) {
       omp.terminator

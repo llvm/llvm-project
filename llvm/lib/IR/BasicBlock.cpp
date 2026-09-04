@@ -86,12 +86,13 @@ void BasicBlock::convertToNewDbgValues() {
   }
 }
 
-void BasicBlock::convertFromNewDbgValues() {
+bool BasicBlock::convertFromNewDbgValues() {
+  bool Modified = false;
   invalidateOrders();
 
   // Iterate over the block, finding instructions annotated with DbgMarkers.
-  // Convert any attached DbgRecords to debug intrinsics and insert ahead of the
-  // instruction.
+  // Convert any attached DbgRecords to debug intrinsics and insert ahead of
+  // the instruction.
   for (auto &Inst : *this) {
     if (!Inst.DebugMarker)
       continue;
@@ -102,12 +103,14 @@ void BasicBlock::convertFromNewDbgValues() {
                       DR.createDebugIntrinsic(getModule(), nullptr));
 
     Marker.eraseFromParent();
+    Modified = true;
   }
 
   // Assume no trailing DbgRecords: we could technically create them at the end
   // of the block, after a terminator, but this would be non-cannonical and
   // indicates that something else is broken somewhere.
   assert(!getTrailingDbgRecords());
+  return Modified;
 }
 
 #ifndef NDEBUG

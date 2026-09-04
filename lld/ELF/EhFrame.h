@@ -12,10 +12,12 @@
 #include "lld/Common/LLVM.h"
 
 namespace lld::elf {
+struct Ctx;
 struct EhSectionPiece;
 
 uint8_t getFdeEncoding(EhSectionPiece *p);
 bool hasLSDA(const EhSectionPiece &p);
+bool hasZeroPcRange(Ctx &ctx, const EhSectionPiece &p, uint8_t enc);
 }
 
 #endif

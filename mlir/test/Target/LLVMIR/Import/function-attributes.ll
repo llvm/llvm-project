@@ -568,6 +568,12 @@ declare void @save_reg_params() "save-reg-params"
 
 // -----
 
+; CHECK-LABEL: @uniform_work_group_size
+; CHECK-SAME: attributes {uniform_work_group_size}
+declare void @uniform_work_group_size() "uniform-work-group-size"
+
+; // -----
+
 ; CHECK-LABEL: @zero_call_used_regs
 ; CHECK-SAME: attributes {zero_call_used_regs = "skip"}
 declare void @zero_call_used_regs() "zero-call-used-regs"="skip"

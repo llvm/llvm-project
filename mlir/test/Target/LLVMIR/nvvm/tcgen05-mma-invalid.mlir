@@ -183,3 +183,14 @@ llvm.func @nvvm_tcgen05_mma_sp_block_scale_invalid_kind_tf32(%d_tmem : !llvm.ptr
   nvvm.tcgen05.mma.sp.block_scale %d_tmem, %a_desc, %b_desc, %idesc, %enable_input_d, %spmetadata, %scale_a, %scale_b , kind = tf32, cta_group = <cta_1> : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>, !llvm.ptr<6>, !llvm.ptr<6>)
   llvm.return
 }
+
+// -----
+
+// block_scale.decompress_b: block_scale=block16 is invalid (only default and block32 are supported).
+// CHECK-LABEL: @nvvm_tcgen05_mma_block_scale_decompress_b_invalid_block_scale_block16
+llvm.func @nvvm_tcgen05_mma_block_scale_decompress_b_invalid_block_scale_block16(%d_tmem : !llvm.ptr<6>, %a_desc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1, %scale_a: !llvm.ptr<6>, %scale_b: !llvm.ptr<6>, %decompress_metadata: !llvm.ptr<6>) {
+  // expected-error @below {{attribute 'blockScale' failed to satisfy constraint: tcgen05.mma block scale attribute whose value is one of {default, block32}}}
+  nvvm.tcgen05.mma.block_scale.decompress_b %d_tmem, %a_desc, %b_desc, %idesc, %enable_input_d, %scale_a, %scale_b, %decompress_metadata
+  cta_group = <cta_1> block_scale = block16 : (!llvm.ptr<6>, i64, i64, i32, i1, !llvm.ptr<6>, !llvm.ptr<6>, !llvm.ptr<6>)
+  llvm.return
+}

@@ -791,9 +791,10 @@ an initial scalar accumulator value, and the second operand is the vector to red
 
 These reductions are relaxed variants which may reduce the elements in any order.
 
-### G_VECREDUCE_FMAX, G_VECREDUCE_FMIN, G_VECREDUCE_FMAXIMUM, G_VECREDUCE_FMINIMUM
+### G_VECREDUCE_FMAX, G_VECREDUCE_FMIN, G_VECREDUCE_FMAXIMUM, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUMNUM, G_VECREDUCE_FMINIMUMNUM
 
-FMIN/FMAX/FMINIMUM/FMAXIMUM nodes can have flags, for NaN/NoNaN variants.
+FMIN/FMAX/FMINIMUM/FMAXIMUM/FMINIMUMNUM/FMAXIMUMNUM nodes can have flags, for
+NaN/NoNaN variants.
 
 ### Integer/bitwise reductions
 

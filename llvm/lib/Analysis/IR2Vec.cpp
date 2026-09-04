@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Module.h"

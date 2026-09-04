@@ -274,7 +274,7 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
   // Ensure the collapsed loop has an attribute indicating the number
   // of collapsed loops
   auto collapseAttr =
-      forOp->getAttrOfType<IntegerAttr>(getCollapseCountAttrName());
+      forOp->getDiscardableAttrOfType<IntegerAttr>(getCollapseCountAttrName());
   ASSERT_TRUE(collapseAttr);
   EXPECT_EQ(collapseAttr.getInt(), 2);
 
@@ -311,7 +311,7 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNoCollapse) {
   EXPECT_TRUE(hasNestedFor);
 
   // No collapse happened, so no collapse_count attribute is expected
-  EXPECT_FALSE(forOp->hasAttr(getCollapseCountAttrName()));
+  EXPECT_FALSE(forOp->hasDiscardableAttr(getCollapseCountAttrName()));
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapseAndDynamicBounds) {
@@ -1006,9 +1006,11 @@ TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
   b.setInsertionPoint(loopBody->getTerminator());
   Value replacementVal =
       arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  Value cleanupVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(2)).getResult();
   loopBody->getTerminator()->erase();
   b.setInsertionPointToEnd(loopBody);
-  acc::YieldOp::create(b, loc, ValueRange{replacementVal});
+  acc::YieldOp::create(b, loc, ValueRange{replacementVal, cleanupVal});
 
   b.setInsertionPointToEnd(entry);
   Value c1value =
@@ -1024,7 +1026,9 @@ TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
   auto [replacements, ip] = acc::cloneACCRegionInto(
       &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{origVal});
 
-  ASSERT_EQ(replacements.size(), 1u);
+  ASSERT_EQ(replacements.size(), 2u);
+  EXPECT_EQ(replacements[1].getDefiningOp<arith::ConstantOp>().getValue(),
+            b.getI32IntegerAttr(2));
   // The addi should now use the replacement (constant 1), not origVal
   bool addiUsesReplacement = false;
   for (Operation &op : entry->getOperations()) {
@@ -1032,4 +1036,114 @@ TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
       addiUsesReplacement = (addi.getLhs() == replacements[0]);
   }
   EXPECT_TRUE(addiUsesReplacement);
+}
+
+//===----------------------------------------------------------------------===//
+// calculateTripCount Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountInclusiveUpperBound) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(1), createIndexConstant(10),
+      createIndexConstant(1), /*inclusiveUpperbound=*/true);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 10);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountExclusiveUpperBound) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(0), createIndexConstant(10),
+      createIndexConstant(1), /*inclusiveUpperbound=*/false);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 10);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountWithStep) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(0), createIndexConstant(9),
+      createIndexConstant(2), /*inclusiveUpperbound=*/true);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 5);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountNegativeStep) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(10), createIndexConstant(1),
+      createIndexConstant(-1), /*inclusiveUpperbound=*/true);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 10);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountCastsOperandsToIndex) {
+  SmallVector<Type> argTypes(3, b.getI32Type());
+  auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
+  Block *entry = &funcOp.getBody().front();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, entry->getArgument(0), entry->getArgument(1),
+      entry->getArgument(2), /*inclusiveUpperbound=*/true);
+
+  EXPECT_TRUE(isa<IndexType>(tripCount.getType()));
+  ASSERT_TRUE(tripCount.getDefiningOp<arith::DivSIOp>());
+}
+
+//===----------------------------------------------------------------------===//
+// normalizeIVUses Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, NormalizeIVUsesDenormalizesIV) {
+  SmallVector<Type> argTypes(1, b.getIndexType());
+  auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
+  Value iv = funcOp.getBody().front().getArgument(0);
+
+  auto useOp = arith::AddIOp::create(b, loc, iv, createIndexConstant(7));
+  b.setInsertionPoint(useOp);
+  Value lb = createIndexConstant(3);
+  Value step = createIndexConstant(4);
+
+  acc::normalizeIVUses(b, loc, iv, lb, step);
+
+  // The use must now read `iv * step + lb` instead of the normalized IV.
+  auto denormalized = useOp.getLhs().getDefiningOp<arith::AddIOp>();
+  ASSERT_TRUE(denormalized);
+  EXPECT_EQ(denormalized.getOverflowFlags(), arith::IntegerOverflowFlags::nsw);
+  EXPECT_EQ(denormalized.getRhs(), lb);
+
+  auto scaled = denormalized.getLhs().getDefiningOp<arith::MulIOp>();
+  ASSERT_TRUE(scaled);
+  EXPECT_EQ(scaled.getOverflowFlags(), arith::IntegerOverflowFlags::nsw);
+  EXPECT_EQ(scaled.getRhs(), step);
+
+  // The ops computing the denormalized value keep reading the original IV.
+  EXPECT_EQ(scaled.getLhs(), iv);
+}
+
+TEST_F(OpenACCUtilsLoopTest, NormalizeIVUsesCastsBoundsToIndex) {
+  SmallVector<Type> argTypes{b.getIndexType(), b.getI32Type(), b.getI32Type()};
+  auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
+  Block *entry = &funcOp.getBody().front();
+  Value iv = entry->getArgument(0);
+
+  auto useOp = arith::AddIOp::create(b, loc, iv, createIndexConstant(7));
+  b.setInsertionPoint(useOp);
+
+  acc::normalizeIVUses(b, loc, iv, entry->getArgument(1),
+                       entry->getArgument(2));
+
+  auto denormalized = useOp.getLhs().getDefiningOp<arith::AddIOp>();
+  ASSERT_TRUE(denormalized);
+  EXPECT_TRUE(isa<IndexType>(denormalized.getType()));
+  EXPECT_TRUE(denormalized.getRhs().getDefiningOp<arith::IndexCastOp>());
+
+  auto scaled = denormalized.getLhs().getDefiningOp<arith::MulIOp>();
+  ASSERT_TRUE(scaled);
+  EXPECT_TRUE(scaled.getRhs().getDefiningOp<arith::IndexCastOp>());
 }

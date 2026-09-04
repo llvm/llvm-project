@@ -204,7 +204,8 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperands()[reductionIndex].getType();
   auto decl = omp::DeclareReductionOp::create(builder, reduce.getLoc(),
-                                              "__scf_reduction", type,
+                                              "__scf_reduction",
+                                              /*sym_visibility=*/nullptr, type,
                                               /*byref_element_type=*/{});
   symbolTable.insert(decl);
 

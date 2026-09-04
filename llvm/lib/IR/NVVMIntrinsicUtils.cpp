@@ -16,6 +16,16 @@
 using namespace llvm;
 using namespace nvvm;
 
+void nvvm::printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal) {
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI ||
+      CI->getZExtValue() > static_cast<uint64_t>(EvictPolicyType::EVICT_LAST)) {
+    OS << "Unsupported evict policy";
+    return;
+  }
+  OS << getEvictPolicyName(static_cast<EvictPolicyType>(CI->getZExtValue()));
+}
+
 void nvvm::printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal) {
   const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
   if (!CI || CI->getZExtValue() > static_cast<uint64_t>(TMAReductionOp::XOR))

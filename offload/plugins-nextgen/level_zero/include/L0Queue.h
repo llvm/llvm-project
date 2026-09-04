@@ -76,9 +76,8 @@ public:
     return dataSubmitImpl(TgtPtr, HstPtr, Size);
   }
 
-  // Enqueue a memory fill command. Supports arbitrary pattern sizes, including
-  // non-power-of-two sizes, by falling back to a less performant software fill
-  // if necessary.
+  // Enqueue a memory fill command. Unsupported native patterns are replicated
+  // using ordered memory copies.
   Error memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
                    size_t Size);
 
@@ -163,12 +162,8 @@ public:
   }
 
 private:
-  /// Fallback fill for host-accessible target memory: replicate the pattern
-  /// directly on the host with std::copy_n.
-  Error memoryFillHostImpl(void *Ptr, const void *Pattern, size_t PatternSize,
-                           size_t Size);
-  /// Fallback fill for non-host-accessible target memory: seed the pattern
-  /// once and grow the filled region via device copies, doubling each time.
+  /// Fallback fill that seeds the pattern once and grows the filled region via
+  /// device copies, doubling each time.
   Error memoryFillReplicateImpl(void *Ptr, const void *Pattern,
                                 size_t PatternSize, size_t Size);
 };
@@ -276,6 +271,8 @@ public:
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
   Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
+  Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
+                       size_t Size) override;
 };
 
 /// Simple cache for queue objects.

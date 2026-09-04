@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include <algorithm>
 #include <vector>
 
 using namespace llvm;

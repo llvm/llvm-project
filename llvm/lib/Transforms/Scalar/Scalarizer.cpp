@@ -364,6 +364,7 @@ char ScalarizerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
                       "Scalarize vector operations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
                     "Scalarize vector operations", false, false)
 

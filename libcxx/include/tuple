@@ -1192,9 +1192,11 @@ struct __tuple_less {
   template <class _Tp, class _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Up& __y) {
     const size_t __idx = tuple_size<_Tp>::value - _Ip;
-    if (std::get<__idx>(__x) < std::get<__idx>(__y))
+    const auto& __a    = std::get<__idx>(__x);
+    const auto& __b    = std::get<__idx>(__y);
+    if (__a < __b)
       return true;
-    if (std::get<__idx>(__y) < std::get<__idx>(__x))
+    if (__b < __a)
       return false;
     return __tuple_less<_Ip - 1>()(__x, __y);
   }

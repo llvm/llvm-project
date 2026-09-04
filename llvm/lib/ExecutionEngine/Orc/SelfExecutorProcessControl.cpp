@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Process.h"
@@ -44,6 +45,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
 
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
+  rt_bootstrap::addRunAsFunctionWrappersTo(BootstrapSymbols);
 
   BootstrapSymbols[rt::DispatchName] =
       ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);

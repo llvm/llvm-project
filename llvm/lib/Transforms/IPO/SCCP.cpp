@@ -327,9 +327,10 @@ static bool runIPSCCP(
 
   // If we inferred constant or undef values for globals variables, we can
   // delete the global and any stores that remain to it.
-  for (const auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
-    GlobalVariable *GV = I.first;
-    if (SCCPSolver::isOverdefined(I.second))
+  for (const auto &[GV, LV] : Solver.getTrackedGlobals()) {
+    // We may have inferred a constant that is not replaceable (e.g., due to
+    // different pointer provenance), so skip deleting the global in this case.
+    if (!SCCPSolver::isReplaceableConstant(LV) && !LV.isUnknownOrUndef())
       continue;
     LLVM_DEBUG(dbgs() << "Found that GV '" << GV->getName()
                       << "' is constant!\n");

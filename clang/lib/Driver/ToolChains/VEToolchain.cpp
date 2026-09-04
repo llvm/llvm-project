@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEToolchain.h"
-#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
@@ -139,8 +138,6 @@ void VEToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                       ArgStringList &CmdArgs) const {
   assert((GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) &&
          "Only -lc++ (aka libxx) is supported in this toolchain.");
-
-  tools::addArchSpecificRPath(*this, Args, CmdArgs);
 
   // Add paths for libc++.so and other shared libraries.
   if (std::optional<std::string> Path = getStdlibPath()) {

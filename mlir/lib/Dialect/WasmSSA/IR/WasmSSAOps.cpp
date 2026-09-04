@@ -87,8 +87,10 @@ ParseResult parseImportOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   StringAttr symbolName;
-  res = parser.parseSymbolName(symbolName, SymbolTable::getSymbolAttrName(),
-                               result.attributes);
+  res = parser.parseSymbolName(symbolName);
+  if (succeeded(res))
+    result.getOrAddProperties<GlobalImportOp::Properties>().sym_name =
+        symbolName;
   return res;
 }
 } // namespace
@@ -272,7 +274,7 @@ ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
     result.addAttribute(getExportedAttrName(result.name), UnitAttr::get(ctx));
   }
 
-  res = parser.parseSymbolName(symbolName, SymbolTable::getSymbolAttrName(),
+  res = parser.parseSymbolName(symbolName, getSymNameAttrName(result.name),
                                result.attributes);
   res = parser.parseType(globalType);
   result.addAttribute(getTypeAttrName(result.name), TypeAttr::get(globalType));

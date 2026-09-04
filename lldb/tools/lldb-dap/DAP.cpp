@@ -521,17 +521,18 @@ void DAP::SendProgressEvent(uint64_t progress_id, const char *message,
   progress_event_reporter.Push(progress_id, message, completed, total);
 }
 
-int32_t DAP::CreateSourceReference(lldb::addr_t address) {
+src_ref_t DAP::CreateSourceReference(lldb::addr_t address) {
   std::lock_guard<std::mutex> guard(m_source_references_mutex);
   auto iter = llvm::find(m_source_references, address);
   if (iter != m_source_references.end())
     return std::distance(m_source_references.begin(), iter) + 1;
 
   m_source_references.emplace_back(address);
-  return static_cast<int32_t>(m_source_references.size());
+  return static_cast<src_ref_t>(m_source_references.size());
 }
 
-std::optional<lldb::addr_t> DAP::GetSourceReferenceAddress(int32_t reference) {
+std::optional<lldb::addr_t>
+DAP::GetSourceReferenceAddress(src_ref_t reference) {
   std::lock_guard<std::mutex> guard(m_source_references_mutex);
   if (reference <= LLDB_DAP_INVALID_SRC_REF)
     return std::nullopt;

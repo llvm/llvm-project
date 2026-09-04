@@ -30,6 +30,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -68,14 +69,18 @@ Address CIRGenFunction::emitAddrOfFieldStorage(Address base,
                                                const FieldDecl *field,
                                                llvm::StringRef fieldName,
                                                unsigned fieldIndex) {
-  if (isEmptyFieldForLayout(getContext(), field))
-    return emitAddrOfZeroSizeField(*this, base, field);
-
-  mlir::Location loc = getLoc(field->getLocation());
-
   // Retrieve layout information for both type resolution and alignment.
   const RecordDecl *rec = field->getParent();
   const CIRGenRecordLayout &layout = cgm.getTypes().getCIRGenRecordLayout(rec);
+
+  bool addressedByFieldIndex =
+      field->isPotentiallyOverlapping()
+          ? layout.hasCIRField(field)
+          : !isEmptyFieldForLayout(getContext(), field);
+  if (!addressedByFieldIndex)
+    return emitAddrOfZeroSizeField(*this, base, field);
+
+  mlir::Location loc = getLoc(field->getLocation());
   unsigned idx = layout.getCIRFieldNo(field);
 
   // For potentially-overlapping fields (e.g. [[no_unique_address]]), the
@@ -503,12 +508,6 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   assert(!cir::MissingFeatures::opTBAA());
 }
 
-// TODO: Replace this with a proper TargetInfo function call.
-/// Helper method to check if the underlying ABI is AAPCS
-static bool isAAPCS(const TargetInfo &targetInfo) {
-  return targetInfo.getABI().starts_with("aapcs");
-}
-
 mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                                                            LValue dst) {
 
@@ -516,9 +515,9 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
   mlir::Type resLTy = convertTypeForMem(dst.getType());
   Address ptr = dst.getBitFieldAddress();
 
-  bool useVoaltile = cgm.getCodeGenOpts().AAPCSBitfieldWidth &&
-                     dst.isVolatileQualified() &&
-                     info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
+  bool useVoaltile =
+      cgm.getCodeGenOpts().AAPCSBitfieldWidth && dst.isVolatileQualified() &&
+      info.volatileStorageSize != 0 && CodeGenUtils::isAAPCS(cgm.getTarget());
 
   assert(currSrcLoc && "must pass in source location");
 
@@ -535,7 +534,7 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
   Address ptr = lv.getBitFieldAddress();
 
   bool useVoaltile = lv.isVolatileQualified() && info.volatileOffset != 0 &&
-                     isAAPCS(cgm.getTarget());
+                     CodeGenUtils::isAAPCS(cgm.getTarget());
 
   mlir::Value field =
       builder.createGetBitfield(getLoc(loc), resLTy, ptr, ptr.getElementType(),
@@ -611,9 +610,13 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   if (cgm.lambdaFieldToName.count(field))
     fieldName = cgm.lambdaFieldToName[field];
 
-  // Empty fields don't have entries in the record layout, so handle them
-  // separately. They just use the base address directly with the right type.
-  if (!rec->isUnion() && isEmptyFieldForLayout(getContext(), field)) {
+  // Fields with no CIR field index (e.g. a [[no_unique_address]] field that
+  // is empty for both layout and the ABI) aren't in the record layout, so
+  // handle them separately: use the base address directly with the right
+  // type instead of get_member.
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  if (!rec->isUnion() && !layout.hasCIRField(field)) {
     addr = emitAddrOfZeroSizeField(*this, addr, field);
     LValue lv = makeAddrLValue(addr, fieldType, fieldBaseInfo);
     lv.getQuals().addCVRQualifiers(recordCVR);
@@ -622,11 +625,8 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
 
   if (rec->isUnion())
     fieldIndex = field->getFieldIndex();
-  else {
-    const CIRGenRecordLayout &layout =
-        cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  else
     fieldIndex = layout.getCIRFieldNo(field);
-  }
 
   addr = emitAddrOfFieldStorage(addr, field, fieldName, fieldIndex);
   assert(!cir::MissingFeatures::preservedAccessIndexRegion());
@@ -671,11 +671,11 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
     return emitLValueForField(base, field);
 
   Address v = base.getAddress();
-  if (isEmptyFieldForLayout(getContext(), field)) {
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  if (!layout.hasCIRField(field)) {
     v = emitAddrOfZeroSizeField(*this, v, field);
   } else {
-    const CIRGenRecordLayout &layout =
-        cgm.getTypes().getCIRGenRecordLayout(field->getParent());
     unsigned fieldIndex = layout.getCIRFieldNo(field);
     v = emitAddrOfFieldStorage(v, field, fieldName, fieldIndex);
   }
@@ -2020,7 +2020,7 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
 
   if (var) {
     if (!var.getInitialValue().has_value()) {
-      var.setInitialValueAttr(cir::ZeroAttr::get(var.getSymType()));
+      var.setInitialValueAttr(builder.getZeroInitAttr(var.getSymType()));
       assert(!cir::MissingFeatures::pointerAuthentication());
       emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
     }

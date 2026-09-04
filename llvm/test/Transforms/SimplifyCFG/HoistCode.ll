@@ -214,6 +214,36 @@ F:
   ret i16 %z2
 }
 
+define ptr @hoist_addrspacecast_flags_preserve(i1 %C, ptr addrspace(1) %p) {
+; CHECK-LABEL: @hoist_addrspacecast_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = addrspacecast nonnull ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    ret ptr [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  ret ptr %z1
+F:
+  %z2 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  ret ptr %z2
+}
+
+define ptr @hoist_addrspacecast_flags_drop(i1 %C, ptr addrspace(1) %p) {
+; CHECK-LABEL: @hoist_addrspacecast_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = addrspacecast ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    ret ptr [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = addrspacecast ptr addrspace(1) %p to ptr
+  ret ptr %z1
+F:
+  %z2 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  ret ptr %z2
+}
+
 define ptr @hoist_gep_flags_both_nuw(i1 %C, ptr %p) {
 ; CHECK-LABEL: @hoist_gep_flags_both_nuw(
 ; CHECK-NEXT:  common.ret:

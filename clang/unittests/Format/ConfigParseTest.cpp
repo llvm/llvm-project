@@ -242,6 +242,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterNamespace);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterObjCDeclaration);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterRequiresExpression);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterStruct);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterUnion);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExternBlock);

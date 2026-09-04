@@ -359,7 +359,7 @@ bool LiveRegOptimizer::optimizeLiveType(
           return false;
 
         // Collect all other incoming values for coercion.
-        if (IncInst)
+        if (IncInst && !IncInst->isTerminator())
           Defs.insert(IncInst);
       }
     }
@@ -377,7 +377,7 @@ bool LiveRegOptimizer::optimizeLiveType(
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
-        if (!isa<PHINode>(II))
+        if (!isa<PHINode>(II) && !II->isTerminator())
           Defs.insert(II);
       }
     }
@@ -434,12 +434,14 @@ bool LiveRegOptimizer::optimizeLiveType(
         if (OriginalPhi != PhiNodes.end())
           ValMap.erase(*OriginalPhi);
 
-        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
-
         for (User *U : NextDeadValue->users()) {
           if (!VisitedPhis.contains(cast<PHINode>(U)))
             PHIWorklist.push_back(U);
         }
+        NextDeadValue->replaceAllUsesWith(
+            PoisonValue::get(NextDeadValue->getType()));
+
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
       }
     } else {
       DeadInsts.emplace_back(cast<Instruction>(Phi));
@@ -455,7 +457,8 @@ bool LiveRegOptimizer::optimizeLiveType(
             BBUseValMap[U->getParent()].contains(Val))
           NewVal = BBUseValMap[U->getParent()][Val];
         else {
-          BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
+          // Not getFirstNonPHIIt, which would insert in front of a landingpad.
+          BasicBlock::iterator InsertPt = U->getParent()->getFirstInsertionPt();
           // We may pick up ops that were previously converted for users in
           // other blocks. If there is an originally typed definition of the Op
           // already in this block, simply reuse it.

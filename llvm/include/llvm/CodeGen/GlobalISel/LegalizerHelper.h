@@ -526,7 +526,6 @@ public:
   LLVM_ABI LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerRotate(MachineInstr &MI);
 
-  LLVM_ABI LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerU64ToF32WithSITOFP(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerU64ToF64BitFloatOps(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerUITOFP(MachineInstr &MI);

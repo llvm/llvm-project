@@ -81,6 +81,11 @@ static cl::opt<bool>
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
 
+static cl::opt<bool>
+    WarnNotSymbolized("warn-not-symbolized", cl::init(false),
+                      cl::desc("Generate warnings for unsymbolized addresses"),
+                      cl::cat(ProfGenCategory));
+
 namespace sampleprof {
 
 static const Target *getTarget(const ObjectFile *Obj) {
@@ -362,25 +367,20 @@ template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
-  // FIXME: This should be the page size of the system running profiling.
-  // However such info isn't available at post-processing time, assuming
-  // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
-  // because we may build the tools on non-linux.
-  uint64_t PageSize = 0x1000;
   bool SeenFirstLoadableSegment = false;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
       HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
       if (!SeenFirstLoadableSegment) {
-        FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
+        // Derive the preferred address corresponding to file offset zero
+        // without assuming a page size.
+        FirstLoadableAddress = Phdr.p_vaddr - Phdr.p_offset;
         SeenFirstLoadableSegment = true;
       }
       if (Phdr.p_flags & ELF::PF_X) {
-        // Segments will always be loaded at a page boundary.
-        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
-                                                ~(PageSize - 1U));
-        TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr);
+        TextSegmentOffsets.push_back(Phdr.p_offset);
       } else {
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;
@@ -1180,6 +1180,14 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
     LineLocation Line(LineOffset, Discriminator);
     auto It = NameStrings.insert(FunctionName);
     CallStack.emplace_back(FunctionId(It.first->getKey()), Line);
+  }
+
+  if (WarnNotSymbolized && CallStack.empty()) {
+    uint64_t VAddr = IP.Address + BaseAddress - getPreferredBaseAddress();
+    if (isVaddrMMapped(VAddr))
+      WithColor::warning() << "Failed to symbolize address "
+                           << format("%8" PRIx64, IP.Address)
+                           << " (vaddr=" << format("%8" PRIx64, VAddr) << ")\n";
   }
 
   return CallStack;

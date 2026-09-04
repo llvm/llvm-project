@@ -228,25 +228,25 @@ func.func @shuffle_1D(%arg0: vector<2xf32>, %arg1: vector<3xf32>) -> vector<5xf3
 // CHECK-SAME: %[[A:.*]]: vector<2xf32>,
 // CHECK-SAME: %[[B:.*]]: vector<3xf32>)
 //       CHECK:   %[[U0:.*]] = llvm.mlir.poison : vector<5xf32>
-//       CHECK:   %[[C2:.*]] = llvm.mlir.constant(2 : index) : i64
+//       CHECK:   %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
 //       CHECK:   %[[E1:.*]] = llvm.extractelement %[[B]][%[[C2]] : i64] : vector<3xf32>
-//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 //       CHECK:   %[[I1:.*]] = llvm.insertelement %[[E1]], %[[U0]][%[[C0]] : i64] : vector<5xf32>
-//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
+//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 //       CHECK:   %[[E2:.*]] = llvm.extractelement %[[B]][%[[C1]] : i64] : vector<3xf32>
-//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
+//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 //       CHECK:   %[[I2:.*]] = llvm.insertelement %[[E2]], %[[I1]][%[[C1]] : i64] : vector<5xf32>
-//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 //       CHECK:   %[[E3:.*]] = llvm.extractelement %[[B]][%[[C0]] : i64] : vector<3xf32>
-//       CHECK:   %[[C2:.*]] = llvm.mlir.constant(2 : index) : i64
+//       CHECK:   %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
 //       CHECK:   %[[I3:.*]] = llvm.insertelement %[[E3]], %[[I2]][%[[C2]] : i64] : vector<5xf32>
-//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
+//       CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
 //       CHECK:   %[[E4:.*]] = llvm.extractelement %[[A]][%[[C1]] : i64] : vector<2xf32>
-//       CHECK:   %[[C3:.*]] = llvm.mlir.constant(3 : index) : i64
+//       CHECK:   %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
 //       CHECK:   %[[I4:.*]] = llvm.insertelement %[[E4]], %[[I3]][%[[C3]] : i64] : vector<5xf32>
-//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
+//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 //       CHECK:   %[[E5:.*]] = llvm.extractelement %[[A]][%[[C0]] : i64] : vector<2xf32>
-//       CHECK:   %[[C4:.*]] = llvm.mlir.constant(4 : index) : i64
+//       CHECK:   %[[C4:.*]] = llvm.mlir.constant(4 : i64) : i64
 //       CHECK:   %[[I5:.*]] = llvm.insertelement %[[E5]], %[[I4]][%[[C4]] : i64] : vector<5xf32>
 //       CHECK:   return %[[I5]] : vector<5xf32>
 
@@ -765,7 +765,7 @@ func.func @type_cast_f32(%arg0: memref<8x8x8xf32>) -> memref<vector<8x8x8xf32>> 
 //       CHECK:   llvm.insertvalue %[[allocated]], {{.*}}[0] : !llvm.struct<(ptr, ptr, i64)>
 //       CHECK:   %[[aligned:.*]] = llvm.extractvalue {{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:   llvm.insertvalue %[[aligned]], {{.*}}[1] : !llvm.struct<(ptr, ptr, i64)>
-//       CHECK:   llvm.mlir.constant(0 : index
+//       CHECK:   llvm.mlir.constant(0 : i64
 //       CHECK:   llvm.insertvalue {{.*}}[2] : !llvm.struct<(ptr, ptr, i64)>
 
 // NOTE: No test for scalable vectors - the input memref is fixed size.
@@ -796,7 +796,7 @@ func.func @type_cast_non_zero_addrspace(%arg0: memref<8x8x8xf32, 3>) -> memref<v
 //       CHECK:   llvm.insertvalue %[[allocated]], {{.*}}[0] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
 //       CHECK:   %[[aligned:.*]] = llvm.extractvalue {{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:   llvm.insertvalue %[[aligned]], {{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
-//       CHECK:   llvm.mlir.constant(0 : index
+//       CHECK:   llvm.mlir.constant(0 : i64
 //       CHECK:   llvm.insertvalue {{.*}}[2] : !llvm.struct<(ptr<3>, ptr<3>, i64)>
 
 // NOTE: No test for scalable vectors - the input memref is fixed size.

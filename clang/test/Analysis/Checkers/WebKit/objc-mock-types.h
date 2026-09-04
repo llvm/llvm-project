@@ -273,8 +273,6 @@ template<typename T> RetainPtr<T> adoptNSNullable(T*);
 template<typename T> RetainPtr<T> adoptCF(T);
 template<typename T> RetainPtr<T> adoptCFNullable(T);
 
-template <typename T, typename S> T *downcast(S *t) { return static_cast<T*>(t); }
-
 template <typename T> struct RemovePointer {
   typedef T Type;
 };
@@ -713,7 +711,6 @@ using WTF::adoptCFNullable;
 using WTF::retainPtr;
 using WTF::OSObjectPtr;
 using WTF::adoptOSObject;
-using WTF::downcast;
 using WTF::bridge_cast;
 using WTF::bridge_id_cast;
 using WTF::is_objc;

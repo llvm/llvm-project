@@ -1237,6 +1237,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
   case ISD::IS_FPCLASS:
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(0).getValueType());
@@ -1269,6 +1271,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
+    break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE:
+    Action = TLI.getVectorInterleaveAction(
+        Node->getOpcode(), Node->getNumOperands(), Node->getValueType(0));
     break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Action = TLI.getOperationAction(
@@ -3417,6 +3424,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Res.getValue(1));
     break;
   }
+  case ISD::ATOMIC_LOAD_FSUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    SDValue NewRHS = DAG.getNode(ISD::FNEG, DL, VT, Node->getOperand(2));
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
   case ISD::DYNAMIC_STACKALLOC:
     ExpandDYNAMIC_STACKALLOC(Node, Results);
     break;
@@ -4627,6 +4646,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
   case ISD::VP_CTTZ_ELTS:
@@ -5442,14 +5463,15 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   SmallVector<SDValue, 8> Results;
   MVT OVT = Node->getSimpleValueType(0);
   if (Node->getOpcode() == ISD::UINT_TO_FP ||
-      Node->getOpcode() == ISD::SINT_TO_FP ||
-      Node->getOpcode() == ISD::SETCC ||
+      Node->getOpcode() == ISD::SINT_TO_FP || Node->getOpcode() == ISD::SETCC ||
       Node->getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
       Node->getOpcode() == ISD::INSERT_VECTOR_ELT ||
       Node->getOpcode() == ISD::VECREDUCE_FMAX ||
       Node->getOpcode() == ISD::VECREDUCE_FMIN ||
       Node->getOpcode() == ISD::VECREDUCE_FMAXIMUM ||
-      Node->getOpcode() == ISD::VECREDUCE_FMINIMUM) {
+      Node->getOpcode() == ISD::VECREDUCE_FMINIMUM ||
+      Node->getOpcode() == ISD::VECREDUCE_FMAXIMUMNUM ||
+      Node->getOpcode() == ISD::VECREDUCE_FMINIMUMNUM) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
   if (Node->getOpcode() == ISD::ATOMIC_STORE ||
@@ -6286,6 +6308,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:

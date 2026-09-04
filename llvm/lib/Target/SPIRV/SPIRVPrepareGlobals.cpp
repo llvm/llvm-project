@@ -26,7 +26,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
-#include <climits>
 #include <string>
 
 #define DEBUG_TYPE "spirv-prepare-globals"

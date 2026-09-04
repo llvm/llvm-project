@@ -1089,8 +1089,9 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::SGPRSpill:
     return true;
   case TargetStackID::ScalableVector:
-  case TargetStackID::ScalablePredicateVector:
   case TargetStackID::WasmLocal:
+  case TargetStackID::ScalablePredicateVector:
+  case TargetStackID::AvrAlign:
     return false;
   }
   llvm_unreachable("Invalid TargetStackID::Value");

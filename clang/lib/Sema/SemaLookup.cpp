@@ -1158,7 +1158,7 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
   //   name lookup. Instead, any conversion function templates visible in the
   //   context of the use are considered. [...]
   const CXXRecordDecl *Record = cast<CXXRecordDecl>(DC);
-  if (!Record->isCompleteDefinition())
+  if (!Record->isCompleteDefinition() && !R.isForRedeclaration())
     return Found;
 
   // For conversion operators, 'operator auto' should only match
@@ -3411,9 +3411,9 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
   ID.AddInteger(ConstThis);
   ID.AddInteger(VolatileThis);
 
-  void *InsertPoint;
+  llvm::FoldingSetInsertToken Token;
   SpecialMemberOverloadResultEntry *Result =
-    SpecialMemberCache.FindNodeOrInsertPos(ID, InsertPoint);
+      SpecialMemberCache.lookup(ID, Token);
 
   // This was already cached
   if (Result)
@@ -3421,7 +3421,7 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
 
   Result = BumpAlloc.Allocate<SpecialMemberOverloadResultEntry>();
   Result = new (Result) SpecialMemberOverloadResultEntry(ID);
-  SpecialMemberCache.InsertNode(Result, InsertPoint);
+  SpecialMemberCache.insert(Result, Token);
 
   if (SM == CXXSpecialMemberKind::Destructor) {
     if (RD->needsImplicitDestructor()) {
@@ -3880,6 +3880,17 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
   FindAssociatedClassesAndNamespaces(Loc, Args,
                                      AssociatedNamespaces,
                                      AssociatedClasses);
+
+  // Load the friend classes in case there are unloaded decls.
+  //
+  // FIXME: Currently this is inefficient if there are a lot of friends
+  // in the classes. We just expect the number of friends are limited
+  // in real world. In case we meet the case that the loading friends
+  // became a threshold, we can change the structure of friends from
+  // a list to a name lookup table.
+  for (CXXRecordDecl *Class : AssociatedClasses)
+    if (Class->hasDefinition() && Class->hasLazyFriends())
+      Class->loadLazyFriends();
 
   // C++ [basic.lookup.argdep]p3:
   //   Let X be the lookup set produced by unqualified lookup (3.4.1)

@@ -12,7 +12,7 @@ define <2 x bfloat> @shuffle_chained_v32bf16_v2bf16(<32 x bfloat> %a) {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $128, %rsp
+; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = [0,16,0,0,0,0,0,0]
 ; CHECK-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0

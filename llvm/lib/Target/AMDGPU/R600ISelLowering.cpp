@@ -18,11 +18,9 @@
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
-#include "R600TargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 

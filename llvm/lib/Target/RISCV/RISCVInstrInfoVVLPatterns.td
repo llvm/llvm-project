@@ -2665,6 +2665,34 @@ foreach fvti = AllFloatAndBF16Vectors in {
   }
 }
 
+// Match vmerge with a splat that is a bitcast integer splat of the
+// floating-point type (e.g. when the scalar type doesn't have native
+// FP splat support, such as f16 or bf16).
+foreach fvti = !listconcat(AllFP16Vectors, AllBF16Vectors) in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
+  def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
+                                          (fvti.Vector (bitconvert
+                                            (ivti.Vector (SplatPat XLenVT:$rs1)))),
+                                          fvti.RegClass:$rs2,
+                                          fvti.RegClass:$passthru,
+                                          VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
+                 fvti.RegClass:$passthru, fvti.RegClass:$rs2, GPR:$rs1, (fvti.Mask VMV0:$vm),
+                 GPR:$vl, fvti.Log2SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
+                                          (fvti.Vector (bitconvert
+                                            (ivti.Vector (SplatPat_simm5 simm5:$rs1)))),
+                                          fvti.RegClass:$rs2,
+                                          fvti.RegClass:$passthru,
+                                          VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                 fvti.RegClass:$passthru, fvti.RegClass:$rs2, simm5:$rs1, (fvti.Mask VMV0:$vm),
+                 GPR:$vl, fvti.Log2SEW)>;
+  }
+}
+
 foreach fvti = AllFloatAndBF16Vectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {

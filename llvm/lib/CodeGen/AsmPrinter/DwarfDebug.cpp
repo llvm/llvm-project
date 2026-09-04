@@ -1371,6 +1371,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // Emit DW_AT_containing_type attribute to connect types with their
     // vtable holding type.
     TheCU.constructContainingTypeDIEs();
+    TheCU.constructPropertyForwardDIEs();
 
     // Add CU specific attributes if we need to add any.
     // If we're splitting the dwarf out now that we've got the entire

@@ -318,6 +318,30 @@ TEST(ModuleTest, NamedMDList) {
   EXPECT_EQ(M->named_metadata_size(), 2u);
 }
 
+TEST(ModuleTest, ValueToGUIDMap) {
+  LLVMContext Context;
+  Module M("M", Context);
+  Type *Ty = Type::getInt32Ty(Context);
+  Constant *Init = ConstantInt::get(Ty, 0);
+  auto *OldGV = new GlobalVariable(M, Ty, /*isConstant=*/false,
+                                   GlobalValue::InternalLinkage, Init, "old");
+  auto *NewGV = new GlobalVariable(M, Ty, /*isConstant=*/false,
+                                   GlobalValue::InternalLinkage, Init, "new");
+
+  constexpr GlobalValue::GUID GUID = 101;
+  M.insertGUID(OldGV, GUID);
+  ASSERT_EQ(M.getGUID(OldGV), GUID);
+
+  // GUID does not follow RAUW.
+  OldGV->replaceAllUsesWith(NewGV);
+  EXPECT_EQ(M.getGUID(OldGV), GUID);
+  EXPECT_FALSE(M.getGUID(NewGV).has_value());
+
+  // Mapping deleted upon Value deletion (no dangling pointer in map)
+  OldGV->eraseFromParent();
+  EXPECT_FALSE(M.getGUID(OldGV).has_value());
+}
+
 TEST(ModuleTest, GlobalList) {
   // This tests all Module's functions that interact with Module::GlobalList.
   LLVMContext C;
@@ -438,12 +462,67 @@ define void @Foo2() {
       ASSERT_EQ(NMD.getParent(), &*M1);
   }
 
+  M1->renumberMetadataForAssembly();
   std::string M1Print;
   {
     llvm::raw_string_ostream Os(M1Print);
     Os << "\n" << *M1;
   }
   ASSERT_EQ(M2Str, M1Print);
+}
+
+TEST(ModuleTest, RenumberMetadataPreservesContextWideUniqueIDs) {
+  LLVMContext Context;
+  Module M("M", Context);
+  MDNode *Detached =
+      MDNode::getDistinct(Context, MDString::get(Context, "detached"));
+  MDNode *Attached =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached"));
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("n");
+  NMD->addOperand(Attached);
+
+  M.renumberMetadataForAssembly();
+  NMD->addOperand(Detached);
+
+  std::string Assembly;
+  raw_string_ostream OS(Assembly);
+  M.print(OS, nullptr);
+  EXPECT_NE(Assembly.find("!n = !{!0, !2}"), std::string::npos);
+
+  LLVMContext ParsedContext;
+  SMDiagnostic Err;
+  EXPECT_TRUE(parseAssemblyString(Assembly, Err, ParsedContext))
+      << Err.getMessage().str();
+}
+
+TEST(ModuleTest, RenumberMetadataPreservesUniqueTemporaryIDs) {
+  LLVMContext Context;
+  Module M("M", Context);
+  TempMDTuple DetachedA =
+      MDTuple::getTemporary(Context, MDString::get(Context, "detached-a"));
+  TempMDTuple DetachedB =
+      MDTuple::getTemporary(Context, MDString::get(Context, "detached-b"));
+  MDNode *AttachedA =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached-a"));
+  MDNode *AttachedB =
+      MDNode::getDistinct(Context, MDString::get(Context, "attached-b"));
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("n");
+  NMD->addOperand(AttachedA);
+  NMD->addOperand(AttachedB);
+
+  M.renumberMetadataForAssembly();
+  NMD->addOperand(MDNode::replaceWithDistinct(std::move(DetachedA)));
+  NMD->addOperand(MDNode::replaceWithDistinct(std::move(DetachedB)));
+
+  std::string Assembly;
+  raw_string_ostream OS(Assembly);
+  M.print(OS, nullptr);
+  EXPECT_NE(Assembly.find("!n = !{!0, !1, !4, !5}"), std::string::npos);
+
+  LLVMContext ParsedContext;
+  SMDiagnostic Err;
+  EXPECT_TRUE(parseAssemblyString(Assembly, Err, ParsedContext))
+      << Err.getMessage().str();
 }
 
 TEST(ModuleTest, FunctionDefinitions) {

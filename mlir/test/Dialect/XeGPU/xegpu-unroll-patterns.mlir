@@ -139,7 +139,7 @@ gpu.module @test {
 
       %c17 = arith.constant 17: index
       %mask = vector.create_mask %c17: vector<32xi1>
-      %ld = xegpu.load %src[%cst], %mask {chunk_size = 1, layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+      %ld = xegpu.load %src[%cst], %mask <{chunk_size = 1, layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 
       gpu.return %ld : vector<32xf32>
   }
@@ -160,7 +160,7 @@ gpu.module @test {
       %mask = vector.create_mask %c17: vector<32xi1>
 
       %st_vec = arith.constant dense<1023.0>: vector<32xf32>
-      xegpu.store %st_vec, %src[%cst], %mask {chunk_size = 1, layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : vector<32xf32>, ui64, vector<32xindex>, vector<32xi1>
+      xegpu.store %st_vec, %src[%cst], %mask <{chunk_size = 1, layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>}> : vector<32xf32>, ui64, vector<32xindex>, vector<32xi1>
 
       gpu.return
   }
@@ -184,7 +184,7 @@ gpu.module @test {
 
     %c17 = arith.constant 17: index
     %mask = vector.create_mask %c17: vector<32xi1>
-    %ld = xegpu.load %src[%cst], %mask {chunk_size = 4, layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32x4xf32>
+    %ld = xegpu.load %src[%cst], %mask <{chunk_size = 4, layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<32xindex>, vector<32xi1> -> vector<32x4xf32>
     gpu.return %ld : vector<32x4xf32>
    }
 
@@ -209,7 +209,7 @@ gpu.module @test {
     %mask = vector.create_mask %c17: vector<32xi1>
 
     %st_vec = arith.constant dense<1023.>: vector<32x4xf32>
-    xegpu.store %st_vec, %src[%cst], %mask {chunk_size = 4, layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>} : vector<32x4xf32>, ui64, vector<32xindex>, vector<32xi1>
+    xegpu.store %st_vec, %src[%cst], %mask <{chunk_size = 4, layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>}> : vector<32x4xf32>, ui64, vector<32xindex>, vector<32xi1>
     gpu.return
   }
 

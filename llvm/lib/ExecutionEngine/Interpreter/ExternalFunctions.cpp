@@ -33,7 +33,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>

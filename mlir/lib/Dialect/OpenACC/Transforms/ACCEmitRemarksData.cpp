@@ -200,7 +200,7 @@ static void emitDataMappingRemarks(ValueRange mappingOperands,
         [&]() {
           std::string message = "Generating ";
           message += directivePrefix.str();
-          if (op->getAttr(acc::getFromDefaultClauseAttrName()))
+          if (op->getDiscardableAttr(acc::getFromDefaultClauseAttrName()))
             message += "default ";
           else if (acc::getImplicitFlag(op))
             message += "implicit ";

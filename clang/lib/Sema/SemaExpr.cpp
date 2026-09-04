@@ -2865,6 +2865,12 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   IdentifierInfo *II = Name.getAsIdentifierInfo();
   SourceLocation NameLoc = NameInfo.getLoc();
 
+  if (Id.getKind() == UnqualifiedIdKind::IK_TemplateId &&
+      Id.TemplateId->Template)
+    if (TemplateName TN = Id.TemplateId->Template.get();
+        TN.getAsPackIndexingTemplate())
+      return CheckVarOrConceptTemplateTemplateId(NameInfo, TN, TemplateArgs);
+
   if (II && II->isEditorPlaceholder()) {
     // FIXME: When typed placeholders are supported we can create a typed
     // placeholder expression node.
@@ -4058,12 +4064,12 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     QualType Ty;
 
     // 'z/uz' literals are a C++23 feature.
-    if (Literal.isSizeT)
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus
-                                  ? getLangOpts().CPlusPlus23
-                                        ? diag::warn_cxx20_compat_size_t_suffix
-                                        : diag::ext_cxx23_size_t_suffix
-                                  : diag::err_cxx23_size_t_suffix);
+    if (Literal.isSizeT) {
+      if (getLangOpts().CPlusPlus)
+        DiagCompat(Tok.getLocation(), diag_compat::size_t_suffix);
+      else
+        Diag(Tok.getLocation(), diag::err_cxx23_size_t_suffix);
+    }
 
     // 'wb/uwb' literals are a C23 feature. We support _BitInt as a type in C++,
     // but we do not currently support the suffix in C++ mode because it's not
@@ -11785,6 +11791,26 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
   return PExp->getType();
 }
 
+/// Determine whether the size of \p T is provably zero: some array dimension
+/// is provably zero or the base element type has zero size. A variable
+/// dimension that does not fold to an integer constant is assumed nonzero.
+static bool isProvablyZeroSize(const ASTContext &Ctx, QualType T) {
+  while (const ArrayType *AT = Ctx.getAsArrayType(T)) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+      if (CAT->isZeroSize())
+        return true;
+    } else if (const auto *VAT = dyn_cast<VariableArrayType>(AT)) {
+      if (const Expr *Bound = VAT->getSizeExpr())
+        if (std::optional<llvm::APSInt> Size =
+                Bound->getIntegerConstantExpr(Ctx))
+          if (*Size == 0)
+            return true;
+    }
+    T = AT->getElementType();
+  }
+  return !T->isIncompleteType() && Ctx.getTypeSizeInChars(T).isZero();
+}
+
 // C99 6.5.6
 QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation Loc,
@@ -11919,15 +11945,13 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
       // The pointee type may have zero size.  As an extension, a structure or
       // union may have zero size or an array may have zero length.  In this
-      // case subtraction does not make sense.
-      if (!rpointee->isVoidType() && !rpointee->isFunctionType()) {
-        CharUnits ElementSize = Context.getTypeSizeInChars(rpointee);
-        if (ElementSize.isZero()) {
-          Diag(Loc,diag::warn_sub_ptr_zero_size_types)
-            << rpointee.getUnqualifiedType()
-            << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
-        }
-      }
+      // case subtraction does not make sense.  For a variably modified type,
+      // warn only when the size is provably zero.
+      if (!rpointee->isVoidType() && !rpointee->isFunctionType() &&
+          isProvablyZeroSize(Context, rpointee))
+        Diag(Loc, diag::warn_sub_ptr_zero_size_types)
+            << rpointee.getUnqualifiedType() << LHS.get()->getSourceRange()
+            << RHS.get()->getSourceRange();
 
       if (CompLHSTy) *CompLHSTy = LHS.get()->getType();
       return Context.getPointerDiffType();
@@ -19546,10 +19570,7 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
       return false;
     } else if (Diagnose && S.getLangOpts().CPlusPlus) {
-      S.Diag(Loc, S.LangOpts.CPlusPlus20
-                      ? diag::warn_cxx17_compat_capture_binding
-                      : diag::ext_capture_binding)
-          << Var;
+      S.DiagCompat(Loc, diag_compat::capture_binding) << Var;
       S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
     }
   }

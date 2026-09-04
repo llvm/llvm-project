@@ -185,8 +185,6 @@ public:
   LLVM_ABI void
   add(Instruction *I); // Dispatch to one of the other add methods...
   LLVM_ABI void add(BasicBlock &BB); // Add all instructions in basic block
-  LLVM_ABI void
-  add(const AliasSetTracker &AST); // Add alias relations from another AST
   LLVM_ABI void addUnknown(Instruction *I);
 
   LLVM_ABI void clear();

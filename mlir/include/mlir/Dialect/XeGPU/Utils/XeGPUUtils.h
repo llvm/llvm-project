@@ -169,11 +169,20 @@ template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
-/// Retrieves the DistributeLayoutAttr associated with a given Value. For
-/// TensorDescType values, the DistributeLayoutAttr is extracted from the
-/// TensorDescType itself. For other values, it is obtained from the attributes
-/// of the defining operation. Returns nullptr if no DistributeLayoutAttr is
-/// found.
+/// Retrieves the DistributeLayoutAttr associated with a given Value, or nullptr
+/// if none is found. For TensorDescType values it is extracted from the
+/// TensorDescType itself; for an op result, from the attributes of the defining
+/// operation.
+///
+/// A block argument carries no attribute of its own, so it is resolved through
+/// the operand that feeds it:
+///  - an iter_arg of a loop, including scf.while's "before" arguments, resolves
+///    through its tied init operand;
+///  - an scf.while "after" argument is fed by scf.condition rather than by an
+///    init operand. Only a pass-through before region is handled: the forwarded
+///    value must be a "before" argument, and the layout comes from that
+///    argument's tied init operand. If the before region forwards anything
+///    computed, nullptr is returned.
 DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 
 /// Retrieves the DistributeLayoutAttr associated with a given OpOperand. It

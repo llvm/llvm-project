@@ -90,6 +90,7 @@ set(LIBSYCL_SOURCES
     "exception_list.cpp"
     "device.cpp"
     "device_selector.cpp"
+    "handler.cpp"
     "platform.cpp"
     "queue.cpp"
     "usm_functions.cpp"

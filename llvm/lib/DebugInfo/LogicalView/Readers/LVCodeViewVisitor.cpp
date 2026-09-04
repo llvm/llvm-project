@@ -22,7 +22,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Demangle/Demangle.h"

@@ -30,7 +30,7 @@ jobs:
         # other configurations in Debug only.
         include:
           - name: linux-x86_64-Debug
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             build_type: Debug
             c_compiler: clang-23
             cpp_compiler: clang++-23
@@ -38,7 +38,7 @@ jobs:
             include_scudo: ON
             testing: BUILD
           - name: linux-x86_64-Release
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
@@ -46,7 +46,7 @@ jobs:
             include_scudo: ON
             build_fuzzing_tests: ON
           - name: linux-x86_64-MinSizeRel
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23

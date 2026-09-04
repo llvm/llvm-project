@@ -52,12 +52,12 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVStructurizerPass(PR);
   initializeSPIRVCBufferAccessLegacyPass(PR);
   initializeSPIRVPushConstantAccessLegacyPass(PR);
-  initializeSPIRVPreLegalizerCombinerPass(PR);
+  initializeSPIRVPreLegalizerCombinerLegacyPass(PR);
   initializeSPIRVLegalizePointerCastLegacyPass(PR);
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
   initializeSPIRVRegularizerLegacyPass(PR);
-  initializeSPIRVPreLegalizerPass(PR);
-  initializeSPIRVPostLegalizerPass(PR);
+  initializeSPIRVPreLegalizerLegacyPass(PR);
+  initializeSPIRVPostLegalizerLegacyPass(PR);
   initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
   initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
@@ -240,14 +240,14 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
-  addPass(createSPIRVPreLegalizerCombiner());
-  addPass(createSPIRVPreLegalizerPass());
+  addPass(createSPIRVPreLegalizerCombinerLegacyPass());
+  addPass(createSPIRVPreLegalizerLegacyPass());
 }
 
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
   addPass(new LegalizerLegacy());
-  addPass(createSPIRVPostLegalizerPass());
+  addPass(createSPIRVPostLegalizerLegacyPass());
   return false;
 }
 

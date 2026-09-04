@@ -1459,7 +1459,7 @@ let Uses = [RDX] in
 //===----------------------------------------------------------------------===//
 // ADCX and ADOX Instructions
 //
-// We don't have patterns for these as there is no advantage over ADC for
+// We don't have patterns for ADCX as there is no advantage over ADC for
 // most code.
 let Form = MRMSrcReg in {
   def ADCX32rr : BinOpRRF_RF<0xF6, "adcx", Xi32>, T8, PD;
@@ -1492,4 +1492,35 @@ let Form = MRMSrcMem in {
     def ADOX32rm_ND : BinOpRMF_RF<0x66, "adox", Xi32, null_frag, 1>, XS;
     def ADOX64rm_ND : BinOpRMF_RF<0x66, "adox", Xi64, null_frag, 1>, XS;
   }
+}
+
+// ADOX patterns
+let Predicates = [HasADX, HasNDD] in {
+  def : Pat<(X86adox_flag GR32:$src1, GR32:$src2, EFLAGS),
+            (ADOX32rr_ND GR32:$src1, GR32:$src2)>;
+  def : Pat<(X86adox_flag GR64:$src1, GR64:$src2, EFLAGS),
+            (ADOX64rr_ND GR64:$src1, GR64:$src2)>;
+  def : Pat<(X86adox_flag GR32:$src1, (loadi32 addr:$src2), EFLAGS),
+            (ADOX32rm_ND GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adox_flag GR64:$src1, (loadi64 addr:$src2), EFLAGS),
+            (ADOX64rm_ND GR64:$src1, addr:$src2)>;
+  def : Pat<(X86adox_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+            (ADOX32rm_ND GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adox_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+            (ADOX64rm_ND GR64:$src1, addr:$src2)>;
+}
+
+let Predicates = [HasADX, NoNDD] in {
+  def : Pat<(X86adox_flag GR32:$src1, GR32:$src2, EFLAGS),
+            (ADOX32rr GR32:$src1, GR32:$src2)>;
+  def : Pat<(X86adox_flag GR64:$src1, GR64:$src2, EFLAGS),
+            (ADOX64rr GR64:$src1, GR64:$src2)>;
+  def : Pat<(X86adox_flag GR32:$src1, (loadi32 addr:$src2), EFLAGS),
+            (ADOX32rm GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adox_flag GR64:$src1, (loadi64 addr:$src2), EFLAGS),
+            (ADOX64rm GR64:$src1, addr:$src2)>;
+  def : Pat<(X86adox_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+            (ADOX32rm GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adox_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+            (ADOX64rm GR64:$src1, addr:$src2)>;
 }

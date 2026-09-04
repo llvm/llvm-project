@@ -2555,12 +2555,11 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
   Register DefReg = getOperand(0).getReg();
   auto *MRI = getRegInfo();
-  for (auto &MO : MRI->use_operands(DefReg)) {
-    auto *DI = MO.getParent();
-    if (!DI->isDebugValue())
+  for (MachineInstr &DI : MRI->use_instructions(DefReg)) {
+    if (!DI.isDebugValue())
       continue;
-    if (DI->hasDebugOperandForReg(DefReg)) {
-      DbgValues.push_back(DI);
+    if (DI.hasDebugOperandForReg(DefReg)) {
+      DbgValues.push_back(&DI);
     }
   }
 

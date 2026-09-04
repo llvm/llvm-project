@@ -6,7 +6,7 @@
 module {
   cir.func @without_names(%arg0: !cir.ptr<!u32i, lang_address_space(offload_global)>, %arg1: !s32i) attributes {
     cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<
-      addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>],
+      addr_space = [#cir.lang_address_space<offload_global>, #cir.lang_address_space<default>],
       access_qual = ["none", "none"],
       type = ["uint*", "int"],
       base_type = ["uint*", "int"],
@@ -18,7 +18,7 @@ module {
 
   cir.func @with_names(%data: !cir.ptr<!u32i, lang_address_space(offload_global)>, %count: !s32i) attributes {
     cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata<
-      addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>],
+      addr_space = [#cir.lang_address_space<offload_global>, #cir.lang_address_space<default>],
       access_qual = ["none", "none"],
       type = ["uint*", "int"],
       base_type = ["uint*", "int"],
@@ -46,7 +46,7 @@ module {
 // CHECK-SAME: %{{.*}}: !cir.ptr<!u32i, lang_address_space(offload_global)>
 // CHECK-SAME: %{{.*}}: !s32i
 // CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
-// CHECK-SAME: addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>]
+// CHECK-SAME: addr_space = [#cir.lang_address_space<offload_global>, #cir.lang_address_space<default>]
 // CHECK-SAME: type = ["uint*", "int"]
 // CHECK-SAME: base_type = ["uint*", "int"]
 // CHECK-SAME: type_qual = ["restrict", ""]
@@ -56,7 +56,7 @@ module {
 // CHECK-SAME: %{{.*}}: !cir.ptr<!u32i, lang_address_space(offload_global)>
 // CHECK-SAME: %{{.*}}: !s32i
 // CHECK-SAME: cir.cl.kernel_arg_metadata = #cir.cl.kernel_arg_metadata
-// CHECK-SAME: addr_space = [#cir<lang_address_space(offload_global)>, #cir<lang_address_space(default)>]
+// CHECK-SAME: addr_space = [#cir.lang_address_space<offload_global>, #cir.lang_address_space<default>]
 // CHECK-SAME: type = ["uint*", "int"]
 // CHECK-SAME: base_type = ["uint*", "int"]
 // CHECK-SAME: type_qual = ["restrict", ""]

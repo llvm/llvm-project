@@ -72,12 +72,12 @@ static LogicalResult updateSymbolAndAllUses(SymbolOpInterface op,
 static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
   NamedAttrList attrs(symbolOp->getDiscardableAttrDictionary());
   symbolOp->getName().populateInherentAttrs(symbolOp, attrs);
-  auto range = llvm::make_filter_range(attrs, [](NamedAttribute attr) {
-    return attr.getName() != SymbolTable::getSymbolAttrName();
-  });
+  // `populateInherentAttrs` adds the name property back to the list. Remove it
+  // so otherwise-identical symbols still hash equally after being renamed.
+  attrs.erase("sym_name");
 
   return llvm::hash_combine(symbolOp->getName(),
-                            llvm::hash_combine_range(range));
+                            llvm::hash_combine_range(attrs));
 }
 
 namespace mlir {

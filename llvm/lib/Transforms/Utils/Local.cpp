@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1659,6 +1658,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   assert(DIVar && "Missing variable");
   auto *DIExpr = DVR->getExpression();
   Value *DV = SI->getValueOperand();
+
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
 
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 

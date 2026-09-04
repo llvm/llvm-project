@@ -80,7 +80,7 @@ public:
         continue;
       T x = xbits.get_val();
       T y = ybits.get_val();
-      if ((x == 0) && (y == 0))
+      if ((x == T(0)) && (y == T(0)))
         continue;
 
       if (x > y)

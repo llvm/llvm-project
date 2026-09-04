@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
-define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) {
+define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_pr98413_zext_removed(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -54,7 +54,7 @@ exit:
   ret void
 }
 
-define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) {
+define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_pr98413_sext_removed(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -247,7 +247,7 @@ exit:
 }
 
 ; Test for https://github.com/llvm/llvm-project/issues/162688.
-define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
+define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_minbws_for_trunc(
 ; CHECK-SAME: i32 [[N:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

@@ -6,18 +6,24 @@
 ; OFF-LABEL: @new_hot_cold()
 
 ;; First check with the default hint values (254 = -2, 128 = -128, 222 = -34).
-; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF -DCOLD=1 -DHOT=-2 -DNOTCOLD=-128 -DAMBIG=-34 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,MIN-OFF -DCOLD=1 -DHOT=-2 -DNOTCOLD=-128 -DAMBIG=-34 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=7 -DMINHOT1=-6 -DMINHOT2=50
 
 ;; Next check with the non-default cold and hot hint values (200 =-56).
-; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -hot-new-hint-value=200 -notcold-new-hint-value=99 -ambiguous-new-hint-value=44 -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF -DCOLD=5 -DHOT=-56 -DAMBIG=44 -DNOTCOLD=99 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -hot-new-hint-value=200 -notcold-new-hint-value=99 -ambiguous-new-hint-value=44 -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,MIN-OFF -DCOLD=5 -DHOT=-56 -DAMBIG=44 -DNOTCOLD=99 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=7 -DMINHOT1=-6 -DMINHOT2=50
 
 ;; Next check with the same non-default cold and hot hint values (200 =-56),
 ;; but with transformation of nobuiltin calls enabled.
-; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -optimize-nobuiltin-hot-cold-new-new -cold-new-hint-value=5 -hot-new-hint-value=200 -notcold-new-hint-value=99 -ambiguous-new-hint-value=44 -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-ON -DCOLD=5 -DHOT=-56 -DAMBIG=44 -DNOTCOLD=99 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -optimize-nobuiltin-hot-cold-new-new -cold-new-hint-value=5 -hot-new-hint-value=200 -notcold-new-hint-value=99 -ambiguous-new-hint-value=44 -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-ON,MIN-OFF -DCOLD=5 -DHOT=-56 -DAMBIG=44 -DNOTCOLD=99 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=7 -DMINHOT1=-6 -DMINHOT2=50
 
 ;; Try again with the non-default cold and hot hint values (200 =-56), and this
-;; time specify that existing hints should be updated.
-; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=100 -DPREVHINTHOT=-56 -DPREVHINTAMBIG=44
+;; time specify that existing hints should be updated (using default/implicit value,
+;; explicit always, cold, none, and with min hint enabled).
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,NO-MIN-ALWAYS -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=100 -DPREVHINTHOT=-56 -DPREVHINTAMBIG=44 -DMINCOLD1=5 -DMINCOLD2=5 -DMINHOT1=-56 -DMINHOT2=-56
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new=always -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,NO-MIN-ALWAYS -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=100 -DPREVHINTHOT=-56 -DPREVHINTAMBIG=44 -DMINCOLD1=5 -DMINCOLD2=5 -DMINHOT1=-56 -DMINHOT2=-56
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new=cold -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,NO-MIN-COLD -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=5 -DMINCOLD2=5 -DMINHOT1=-6 -DMINHOT2=50
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new=none -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,MIN-OFF -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=7 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=7 -DMINHOT1=-6 -DMINHOT2=50
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new -min-existing-hot-cold-new-hint -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,MIN-ALWAYS -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=5 -DMINHOT1=-56 -DMINHOT2=50
+; RUN: opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=5 -notcold-new-hint-value=100 -hot-new-hint-value=200 -ambiguous-new-hint-value=44 -optimize-existing-hot-cold-new=cold -min-existing-hot-cold-new-hint -S | FileCheck %s --check-prefixes=HOTCOLD,NOBUILTIN-OFF,MIN-COLD -DCOLD=5 -DHOT=-56 -DNOTCOLD=100 -DAMBIG=44 -DPREVHINTCOLD=5 -DPREVHINTNOTCOLD=7 -DPREVHINTHOT=7 -DPREVHINTAMBIG=7 -DMINCOLD1=2 -DMINCOLD2=5 -DMINHOT1=-6 -DMINHOT2=50
 
 ;; Make sure that values not in 0..255 are flagged with an error
 ; RUN: not opt < %s -passes=instcombine -optimize-hot-cold-new -cold-new-hint-value=256 -S 2>&1 | FileCheck %s --check-prefix=ERROR
@@ -617,6 +623,54 @@ define void @new_alloc_token() {
   ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[COLD]]), !alloc_token ![[ALLOC_TOKEN:[0-9]+]]
   %call = call ptr @_Znwm(i64 10) #0, !alloc_token !0
   call void @dummy(ptr %call)
+  ret void
+}
+
+;; Check that -min-existing-hot-cold-new-hint takes the min of existing and compiler hints.
+; HOTCOLD-LABEL: @new_hot_cold_min()
+define void @new_hot_cold_min() {
+  ;; Existing hint 2 < cold hint 5 -> min is 2
+  ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[MINCOLD1]])
+  %call = call ptr @_Znwm12__hot_cold_t(i64 10, i8 2) #0
+  call void @dummy(ptr %call)
+  ;; Existing hint 7 > cold hint 5 -> min is 5
+  ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[MINCOLD2]])
+  %call1 = call ptr @_Znwm12__hot_cold_t(i64 10, i8 7) #0
+  call void @dummy(ptr %call1)
+  ;; Existing hint 250 > hot hint 200 (-56) -> min is 200 (-56)
+  ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[MINHOT1]])
+  %call2 = call ptr @_Znwm12__hot_cold_t(i64 10, i8 -6) #2
+  call void @dummy(ptr %call2)
+  ;; Existing hint 50 < hot hint 200 (-56) -> min is 50
+  ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[MINHOT2]])
+  %call3 = call ptr @_Znwm12__hot_cold_t(i64 10, i8 50) #2
+  call void @dummy(ptr %call3)
+  ret void
+}
+
+;; Check that -min-existing-hot-cold-new-hint handles non-constant dynamic hints with umin intrinsic.
+; HOTCOLD-LABEL: @new_hot_cold_dynamic(
+; HOTCOLD-SAME: i8 [[HINT:%[a-zA-Z0-9_]+]])
+define void @new_hot_cold_dynamic(i8 %hint) {
+  ;; Cold allocation
+  ; MIN-OFF: @_Znwm12__hot_cold_t(i64 10, i8 [[HINT]])
+  ; NO-MIN-ALWAYS: @_Znwm12__hot_cold_t(i64 10, i8 [[COLD]])
+  ; NO-MIN-COLD: @_Znwm12__hot_cold_t(i64 10, i8 [[COLD]])
+  ; MIN-ALWAYS: [[UMIN:%[a-zA-Z0-9_]+]] = call i8 @llvm.umin.i8(i8 [[HINT]], i8 [[COLD]])
+  ; MIN-ALWAYS: @_Znwm12__hot_cold_t(i64 10, i8 [[UMIN]])
+  ; MIN-COLD: [[UMIN:%[a-zA-Z0-9_]+]] = call i8 @llvm.umin.i8(i8 [[HINT]], i8 [[COLD]])
+  ; MIN-COLD: @_Znwm12__hot_cold_t(i64 10, i8 [[UMIN]])
+  %call = call ptr @_Znwm12__hot_cold_t(i64 10, i8 %hint) #0
+  call void @dummy(ptr %call)
+  ;; Hot allocation
+  ; MIN-OFF: @_Znwm12__hot_cold_t(i64 10, i8 [[HINT]])
+  ; NO-MIN-ALWAYS: @_Znwm12__hot_cold_t(i64 10, i8 [[HOT]])
+  ; NO-MIN-COLD: @_Znwm12__hot_cold_t(i64 10, i8 [[HINT]])
+  ; MIN-ALWAYS: [[UMIN2:%[a-zA-Z0-9_]+]] = call i8 @llvm.umin.i8(i8 [[HINT]], i8 [[HOT]])
+  ; MIN-ALWAYS: @_Znwm12__hot_cold_t(i64 10, i8 [[UMIN2]])
+  ; MIN-COLD: @_Znwm12__hot_cold_t(i64 10, i8 [[HINT]])
+  %call1 = call ptr @_Znwm12__hot_cold_t(i64 10, i8 %hint) #2
+  call void @dummy(ptr %call1)
   ret void
 }
 

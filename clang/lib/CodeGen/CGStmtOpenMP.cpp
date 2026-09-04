@@ -2247,7 +2247,11 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
       emitBody(CGF, CurStmt, NextLoop, MaxLevel, Level);
     return;
   }
-  if (SimplifiedS == NextLoop) {
+
+  // `tryToFindNextInnerLoop` keeps the intra-tile hint wrapper around, so match
+  // against the loop it annotates. The tile overshoot guard is emitted
+  // separately via EmitOMPLoopBody's finals-conditions handling.
+  if (SimplifiedS == OMPLoopBasedDirective::ignoreIntraTileHint(NextLoop)) {
     if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
@@ -8926,5 +8930,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
 }
 
 void CodeGenFunction::EmitOMPAssumeDirective(const OMPAssumeDirective &S) {
+  for (const auto *C : S.getClausesOfKind<OMPHoldsClause>()) {
+    const Expr *E = C->getExpr();
+    assert(E && "holds clause requires an expression");
+    if (!E->HasSideEffects(getContext()))
+      Builder.CreateAssumption(EvaluateExprAsBool(E));
+  }
   EmitStmt(S.getAssociatedStmt());
 }

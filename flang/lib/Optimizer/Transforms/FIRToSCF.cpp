@@ -26,6 +26,44 @@ public:
   void runOnOperation() override;
 };
 
+// Rebuild the typed induction variable as low + step * canonicalIV. The
+// arithmetic is done in i64, which cannot wrap for any trip count flang
+// supports, so the result is a value of the loop variable and the final
+// narrowing is exact. Spelling it as an arith.trunci carrying nsw lets loop
+// analyses recover the recurrence in the narrower type; a fir.convert lowers
+// to a bare trunc and loses it. Not nuw: the loop variable may be negative.
+static mlir::Value buildTypedIV(mlir::PatternRewriter &rewriter,
+                                mlir::Location loc, mlir::Value canonicalIV,
+                                mlir::Value low, mlir::Value step,
+                                mlir::arith::IntegerOverflowFlagsAttr iofAttr,
+                                bool setNSW) {
+  mlir::Type ivType = low.getType();
+  auto intType = mlir::dyn_cast<mlir::IntegerType>(ivType);
+  if (!setNSW || !intType || intType.getWidth() >= 64) {
+    mlir::Value narrowIV =
+        fir::ConvertOp::create(rewriter, loc, ivType, canonicalIV);
+    mlir::Value scaled =
+        mlir::arith::MulIOp::create(rewriter, loc, narrowIV, step, iofAttr);
+    return mlir::arith::AddIOp::create(rewriter, loc, low, scaled, iofAttr);
+  }
+
+  mlir::Type wideType = rewriter.getI64Type();
+  mlir::Value wideIV =
+      fir::ConvertOp::create(rewriter, loc, wideType, canonicalIV);
+  mlir::Value wideLow = fir::ConvertOp::create(rewriter, loc, wideType, low);
+  mlir::Value wideStep = fir::ConvertOp::create(rewriter, loc, wideType, step);
+  mlir::Value scaled =
+      mlir::arith::MulIOp::create(rewriter, loc, wideIV, wideStep, iofAttr);
+  mlir::Value wideVal =
+      mlir::arith::AddIOp::create(rewriter, loc, wideLow, scaled, iofAttr);
+  mlir::arith::IntegerOverflowFlags flags{};
+  flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
+  auto noWrapAttr =
+      mlir::arith::IntegerOverflowFlagsAttr::get(rewriter.getContext(), flags);
+  return mlir::arith::TruncIOp::create(rewriter, loc, intType, wideVal,
+                                       noWrapAttr);
+}
+
 struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
   using OpRewritePattern<fir::DoLoopOp>::OpRewritePattern;
 
@@ -108,14 +146,14 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
       iv = scfLoopLikeOp.getRegionIterArgs().front();
     } else {
       mlir::Value canonicalIV = scfLoopLikeOp.getSingleInductionVar().value();
-      if (hasTypedIV)
-        canonicalIV =
-            fir::ConvertOp::create(rewriter, loc, low.getType(), canonicalIV);
-      // Keep the no-wrap flags the stepped increment carried, so a narrow IV
-      // still folds into an affine recurrence.
-      iv = mlir::arith::MulIOp::create(rewriter, loc, canonicalIV, step,
-                                       iofAttr);
-      iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv, iofAttr);
+      if (hasTypedIV) {
+        iv = buildTypedIV(rewriter, loc, canonicalIV, low, step, iofAttr,
+                          setNSW);
+      } else {
+        iv = mlir::arith::MulIOp::create(rewriter, loc, canonicalIV, step,
+                                         iofAttr);
+        iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv, iofAttr);
+      }
     }
     mlir::Value firIV = doLoopOp.getInductionVar();
     firIV.replaceAllUsesWith(iv);

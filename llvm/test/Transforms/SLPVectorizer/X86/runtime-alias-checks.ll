@@ -23,7 +23,7 @@ define void @test(ptr %dst, ptr %x, ptr %y) {
 ; CHECK-NEXT:    [[RT_CONFLICT13:%.*]] = and i1 [[RT_BOUND011]], [[RT_BOUND112]]
 ; CHECK-NEXT:    [[RT_CONFLICT_ALL:%.*]] = or i1 [[RT_CONFLICT]], [[RT_CONFLICT13]]
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT_ALL]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[ENTRY_RTVEC]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[Y]], align 8
@@ -228,7 +228,7 @@ define void @test_dup_switch_successor(ptr %dst, ptr %x, ptr %y, i32 %cond) {
 ; CHECK-NEXT:    [[RT_CONFLICT13:%.*]] = and i1 [[RT_BOUND011]], [[RT_BOUND112]]
 ; CHECK-NEXT:    [[RT_CONFLICT_ALL:%.*]] = or i1 [[RT_CONFLICT]], [[RT_CONFLICT13]]
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT_ALL]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0]]
 ; CHECK:       [[EXIT:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ENTRY_RTVEC]]:
@@ -1132,7 +1132,7 @@ define void @versioned_block_with_loop_defined_base(ptr %arg, ptr %arg1, ptr %ar
 ; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[PHI_LCSSA1]], [[TMP1]]
 ; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[BBL9_RTSCALAR:.*]], label %[[BBL9_RTVEC:.*]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[BBL9_RTSCALAR:.*]], label %[[BBL9_RTVEC:.*]], !prof [[PROF0]]
 ; CHECK:       [[BBL9_RTVEC]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[PHI_LCSSA]], align 1
 ; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[ARG2]], align 1
@@ -1363,3 +1363,6 @@ bbl9:
   store i8 %load53, ptr %gep54, align 1
   ret void
 }
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.

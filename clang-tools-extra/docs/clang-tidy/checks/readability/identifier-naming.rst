@@ -85,6 +85,7 @@ The available options are summarized below:
  - :option:`CheckAnonFieldInParent`
  - :option:`GetConfigPerFile`
  - :option:`IgnoreMainLikeFunctions`
+ - :option:`TypedefInheritAnonTagConfig`
 
 **Specific options**
 
@@ -159,6 +160,9 @@ The available options are summarized below:
    :option:`GlobalVariableHungarianPrefix`
  - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`,
    :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceIgnoredRegexp`
+ - :option:`LambdaCaptureCase`, :option:`LambdaCapturePrefix`,
+   :option:`LambdaCaptureSuffix`, :option:`LambdaCaptureIgnoredRegexp`,
+   :option:`LambdaCaptureHungarianPrefix`
  - :option:`LocalConstexprVariableCase`,
    :option:`LocalConstexprVariablePrefix`,
    :option:`LocalConstexprVariableSuffix`,
@@ -1491,6 +1495,63 @@ After:
     }
     } // namespace FOO_NS
 
+.. option:: LambdaCaptureCase
+
+    When defined, the check will ensure lambda init-capture names (e.g.
+    ``Captured`` in ``[Captured = Var]``) conform to the selected casing.
+    A simple, non-init capture (e.g. ``[Var]`` or ``[&Var]``) refers to the
+    same declaration as ``Var`` itself, so it keeps following whichever
+    naming style applies to ``Var``'s own declaration instead.
+
+.. option:: LambdaCapturePrefix
+
+    When defined, the check will ensure lambda init-capture names will add
+    the prefix with the given value (regardless of casing).
+
+.. option:: LambdaCaptureIgnoredRegexp
+
+    Identifier naming checks won't be enforced for lambda init-capture names
+    matching this regular expression.
+
+.. option:: LambdaCaptureSuffix
+
+    When defined, the check will ensure lambda init-capture names will add
+    the suffix with the given value (regardless of casing).
+
+.. option:: LambdaCaptureHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will
+    have a Hungarian notation prefix based on the declared type.
+
+For example using values of:
+
+   - LambdaCaptureCase of ``CamelCase``
+   - LambdaCapturePrefix of ``c_``
+
+Identifies and/or transforms lambda init-capture names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    void foo() {
+      int local_variable = 0;
+      auto lambda = [captured_value = local_variable]() {
+        return captured_value;
+      };
+    }
+
+After:
+
+.. code-block:: c++
+
+    void foo() {
+      int local_variable = 0;
+      auto lambda = [c_CapturedValue = local_variable]() {
+        return c_CapturedValue;
+      };
+    }
+
 .. option:: LocalConstexprVariableCase
 
     When defined, the check will ensure local ``constexpr`` variable names
@@ -2731,6 +2792,40 @@ After:
 .. code-block:: c++
 
     typedef int pre_myint_post;
+
+.. option:: TypedefInheritAnonTagConfig
+
+    When set to `true`, a typedef or type alias that provides the only name of
+    an otherwise unnamed tag, as in ``typedef enum {} MyEnum;``, is checked
+    against the naming style configured for the kind of that tag
+    (``AbstractClass``, ``Class``, ``Enum``, ``Struct`` or ``Union``, i.e.
+    :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix` and
+    :option:`EnumIgnoredRegexp` for an enum) rather than against the typedef
+    or type alias style. If that kind configures no case, prefix or suffix,
+    the typedef or type alias style still applies. Typedefs of named tags, of
+    other typedefs and of non-tag types are not affected. Default is `false`.
+
+For example using values of:
+
+   - TypedefInheritAnonTagConfig of `true`
+   - EnumCase of ``CamelCase``
+   - TypedefCase of ``lower_case``
+
+Identifies and/or transforms names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    typedef enum { VAL } my_enum;        // The typedef names the enum.
+    typedef enum Kind { VAL2 } my_kind;  // Kind names the enum.
+
+After:
+
+.. code-block:: c++
+
+    typedef enum { VAL } MyEnum;
+    typedef enum Kind { VAL2 } my_kind;
 
 .. option:: TypeTemplateParameterCase
 

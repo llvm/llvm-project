@@ -247,8 +247,10 @@ getDeducedNTTParameterFromExpr(const Expr *E, unsigned Depth) {
       if (NTTP->getDepth() == Depth)
         return NTTP;
 
+  // A pack-index-template-name is not deducible.
   if (const auto *DTI = dyn_cast<DependentTemplateIdExpr>(E))
-    if (DTI->getParameter()->getDepth() == Depth)
+    if (!DTI->getTemplateName().getAsPackIndexingTemplate() &&
+        DTI->getParameter()->getDepth() == Depth)
       return DTI->getParameter();
 
   return nullptr;

@@ -1534,6 +1534,30 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
 }
 
+// Match vselect with a splat that is a bitcast integer splat of the
+// floating-point type (e.g. when the scalar type doesn't have native
+// FP splat support, such as f16 or bf16).
+foreach fvti = !listconcat(AllFP16Vectors, AllBF16Vectors) in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                    (fvti.Vector (bitconvert
+                                      (ivti.Vector (SplatPat XLenVT:$rs1)))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, GPR:$rs1, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                    (fvti.Vector (bitconvert
+                                      (ivti.Vector (SplatPat_simm5 simm5:$rs1)))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, simm5:$rs1, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+  }
+}
+
 // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
 defm : VPatConvertFP2ISDNode_V<any_fp_to_sint, "PseudoVFCVT_RTZ_X_F_V">;
 defm : VPatConvertFP2ISDNode_V<any_fp_to_uint, "PseudoVFCVT_RTZ_XU_F_V">;

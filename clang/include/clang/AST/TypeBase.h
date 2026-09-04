@@ -6011,8 +6011,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                       param_type_iterator ArgTys, unsigned NumArgs,
-                      const ExtProtoInfo &EPI, const ASTContext &Context,
-                      bool Canonical);
+                      const ExtProtoInfo &EPI, const ASTContext &Context);
 };
 
 /// The elaboration keyword that precedes a qualified type name or

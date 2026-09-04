@@ -51,7 +51,6 @@ FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModeLegacyPass();
-FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();

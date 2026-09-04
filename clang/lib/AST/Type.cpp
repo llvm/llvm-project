@@ -4047,7 +4047,7 @@ bool FunctionProtoType::isTemplateVariadic() const {
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
-                                const ASTContext &Context, bool Canonical) {
+                                const ASTContext &Context) {
   // We have to be careful not to get ambiguous profile encodings.
   // Note that valid type pointers are never ambiguous with anything else.
   //
@@ -4086,7 +4086,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
+    // getFunctionTypeInternal compares noexcept expressions after the lookup,
+    // so the key only needs their canonical form.
+    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, /*Canonical=*/true);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
@@ -4116,7 +4118,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
   Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
-          getExtProtoInfo(), Ctx, isCanonicalUnqualified());
+          getExtProtoInfo(), Ctx);
 }
 
 TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
@@ -5150,9 +5152,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(
         cast<OverflowBehaviorType>(T)->getUnderlyingType());
   case Type::HLSLAttributedResource:
-    return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
-                                      ->getContainedType()
-                                      ->getCanonicalTypeInternal());
+    return computeTypeLinkageInfo(
+        cast<HLSLAttributedResourceType>(T)->getWrappedType());
   case Type::HLSLInlineSpirv:
     return LinkageInfo::external();
   }
@@ -5750,8 +5751,8 @@ AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
   if (!TypeConstraintConcept.isNull()) {
-
-    assert(TypeConstraintConcept.getKind() == TemplateName::Template);
+    assert(TypeConstraintConcept.isConceptName() &&
+           "type-constraint does not name a concept");
 
     auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 

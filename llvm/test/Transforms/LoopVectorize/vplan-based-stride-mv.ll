@@ -3054,8 +3054,7 @@ define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride)
 ; COMPARE-LAA-MV-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i16
 ; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
-; COMPARE-LAA-MV-NEXT:    [[TMP2:%.*]] = mul i16 [[TMP0]], [[STRIDE_TRUNC]]
-; COMPARE-LAA-MV-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[P0]], i16 [[TMP2]]
+; COMPARE-LAA-MV-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[P0]], i16 [[TMP0]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[P0]], i64 [[TMP1]]
 ; COMPARE-LAA-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; COMPARE-LAA-MV-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4

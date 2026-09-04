@@ -147,6 +147,8 @@ public:
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
 
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override;
+
   llvm::Expected<SymbolContext>
   ResolveFunctionCallLabel(FunctionCallLabel &label) override;
 

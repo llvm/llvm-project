@@ -1052,6 +1052,22 @@ Address ObjectFileELF::GetBaseAddress() {
   return Address();
 }
 
+FileSpecList ObjectFileELF::GetReExportedLibraries() {
+  FileSpecList filtees;
+  if (!ParseDynamicSymbols())
+    return filtees;
+  // Multiple DT_FILTER / DT_AUXILIARY entries are permitted; the dynamic
+  // linker searches the filtees in the order the entries appear in the
+  // dynamic section, so preserve that order here.
+  for (const auto &entry : m_dynamic_symbols) {
+    if (entry.symbol.d_tag != DT_FILTER && entry.symbol.d_tag != DT_AUXILIARY)
+      continue;
+    if (!entry.name.empty())
+      filtees.EmplaceBack(entry.name);
+  }
+  return filtees;
+}
+
 size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();

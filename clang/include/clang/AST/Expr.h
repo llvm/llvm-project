@@ -1897,17 +1897,21 @@ public:
     return StringRef(getStrDataAsChar(), getByteLength());
   }
 
+  /// Prints the contents of the string to \p OS.
   void outputString(raw_ostream &OS) const;
 
-  uint32_t getCodeUnit(size_t i) const {
-    assert(i < getLength() && "out of bounds access");
+  /// Return the code unit at the given position.
+  ///
+  /// \pre \p I < getLength()
+  uint32_t getCodeUnit(size_t I) const {
+    assert(I < getLength() && "out of bounds access");
     switch (getCharByteWidth()) {
     case 1:
-      return static_cast<unsigned char>(getStrDataAsChar()[i]);
+      return static_cast<unsigned char>(getStrDataAsChar()[I]);
     case 2:
-      return getStrDataAsUInt16()[i];
+      return getStrDataAsUInt16()[I];
     case 4:
-      return getStrDataAsUInt32()[i];
+      return getStrDataAsUInt32()[I];
     }
     llvm_unreachable("Unsupported character width!");
   }
@@ -1925,8 +1929,20 @@ public:
     return V;
   }
 
+  /// Scan the string literal contents for a code unit with value 0.
+  /// If \p StartIndex is outside of the length of the string, this returns \c
+  /// std::nullopt.
+  ///
+  /// Otherwise, returns the offset (in code units, not bytes) of the zero code
+  /// unit, starting at index \p StartIndex. If no such code unit could be
+  /// found, this returns `getLength() - StartIndex`.
+  UnsignedOrNone findZeroCodeUnit(unsigned StartIndex = 0) const;
+
+  /// \returns The length of the full string in bytes.
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
+  /// \returns The length of the full string in characters.
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
+  /// \returns The size of one character in the string, in bytes.
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
 
   StringLiteralKind getKind() const {
@@ -1941,6 +1957,10 @@ public:
   bool isUnevaluated() const { return getKind() == StringLiteralKind::Unevaluated; }
   bool isPascal() const { return StringLiteralBits.IsPascal; }
 
+  /// Scans the string contents for any non-ascii characters.
+  ///
+  /// \pre isUnevaluated() || getCharByteWidth() == 1
+  /// \returns \c true if a non-ascii character was found, \c false otherwise.
   bool containsNonAscii() const {
     for (auto c : getString())
       if (!isASCII(c))
@@ -1948,6 +1968,11 @@ public:
     return false;
   }
 
+  /// Scans the string contents for any non-ascii or null characters.
+  ///
+  /// \pre isUnevaluated() || getCharByteWidth() == 1
+  /// \returns \c true if a non-ascii or null character was found, \c false
+  /// otherwise.
   bool containsNonAsciiOrNull() const {
     for (auto c : getString())
       if (!isASCII(c) || !c)
@@ -1955,7 +1980,7 @@ public:
     return false;
   }
 
-  /// getNumConcatenated - Get the number of string literal tokens that were
+  /// Get the number of string literal tokens that were
   /// concatenated in translation phase #6 to form this string literal.
   unsigned getNumConcatenated() const {
     return StringLiteralBits.NumConcatenated;
@@ -1967,13 +1992,12 @@ public:
     return getTrailingObjects<SourceLocation>()[TokNum];
   }
 
-  /// getLocationOfByte - Return a source location that points to the specified
+  /// Return a source location that points to the specified
   /// byte of this string literal.
   ///
   /// Strings are amazingly complex.  They can be formed from multiple tokens
   /// and can have escape sequences in them in addition to the usual trigraph
   /// and escaped newline business.  This routine handles this complexity.
-  ///
   SourceLocation
   getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                     const LangOptions &Features, const TargetInfo &Target,

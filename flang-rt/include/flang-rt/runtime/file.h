@@ -102,7 +102,7 @@ private:
   bool isTerminal_{false};
   bool isWindowsTextFile_{false}; // expands LF to CR+LF on write
 
-  int nextId_;
+  int nextId_{0};
   OwningPtr<Pending> pending_;
 };
 

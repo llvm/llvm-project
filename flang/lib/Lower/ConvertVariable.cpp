@@ -198,7 +198,7 @@ static void attachAccDeclareAttribute(fir::FirOpBuilder &builder,
 static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::lower::pft::Variable &var,
                                    llvm::StringRef globalName,
-                                   mlir::StringAttr linkage) {
+                                   fir::LinkageAttr linkage) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (fir::GlobalOp global = builder.getNamedGlobal(globalName))
     return global;
@@ -497,7 +497,7 @@ createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
 fir::GlobalOp Fortran::lower::defineGlobal(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::pft::Variable &var, llvm::StringRef globalName,
-    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
+    fir::LinkageAttr linkage, cuf::DataAttributeAttr dataAttr) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = genLocation(converter, sym);
@@ -509,8 +509,15 @@ fir::GlobalOp Fortran::lower::defineGlobal(
   if (global && globalIsInitialized(global))
     return global;
 
+  // Follow USE association only for named constants so the module-file
+  // initializer is available in the using TU. Other globals keep the
+  // local symbol: copying a non-PARAMETER initializer across TUs with
+  // external linkage would be a duplicate definition.
+  const Fortran::semantics::Symbol &objSym =
+      Fortran::semantics::IsNamedConstant(sym.GetUltimate()) ? sym.GetUltimate()
+                                                             : sym;
   const auto *oeDetails =
-      sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+      objSym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
@@ -628,7 +635,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       // with no other definitions, and to never link the resulting module
       // object file.
       if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
-        global.setLinkName(builder.createCommonLinkage());
+        global.setLinkageAttr(builder.createCommonLinkage());
       createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             mlir::Value initValue;
@@ -647,7 +654,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
 }
 
 /// Return linkage attribute for \p var.
-static mlir::StringAttr
+static fir::LinkageAttr
 getLinkageAttribute(Fortran::lower::AbstractConverter &converter,
                     const Fortran::lower::pft::Variable &var) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -662,8 +669,22 @@ getLinkageAttribute(Fortran::lower::AbstractConverter &converter,
       (!converter.getLoweringOptions().getSkipExternalRttiDefinition() ||
        Fortran::semantics::IsFromBuiltinModule(var.getSymbol())))
     return builder.createLinkOnceODRLinkage();
-  if (var.isModuleOrSubmoduleVariable())
+  if (var.isModuleOrSubmoduleVariable()) {
+    // Named module PARAMETERs: emit linkonce_odr from the module-file value.
+    // Keep strong linkage when a unique GPU symbol must survive:
+    // - !$acc declare (device registration / USE-side acc.declare)
+    // - CUDA data attributes (e.g. constant)
+    if (var.hasSymbol() &&
+        Fortran::semantics::IsNamedConstant(var.getSymbol().GetUltimate())) {
+      const Fortran::semantics::Symbol &ultimate =
+          var.getSymbol().GetUltimate();
+      if (ultimate.test(Fortran::semantics::Symbol::Flag::AccDeclare) ||
+          Fortran::semantics::GetCUDADataAttr(&ultimate))
+        return {}; // external linkage
+      return builder.createLinkOnceODRLinkage();
+    }
     return {}; // external linkage
+  }
   // Otherwise, the variable is owned by a procedure and must not be visible in
   // other compilation units.
   return builder.createInternalLinkage();
@@ -680,7 +701,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(sym);
   mlir::Location loc = genLocation(converter, sym);
-  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
+  fir::LinkageAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
 
   if (Fortran::evaluate::IsCoarray(sym)) {
@@ -905,7 +926,7 @@ genInlinedInitWithMemcpy(Fortran::lower::AbstractConverter &converter,
       (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
        fir::kDerivedTypeInitSuffix)
           .str());
-  mlir::StringAttr linkage = builder.createInternalLinkage();
+  fir::LinkageAttr linkage = builder.createInternalLinkage();
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global && details->init()) {
     global = builder.createGlobal(symLoc, symTy, globalName, linkage,
@@ -1398,7 +1419,7 @@ getAggregateType(Fortran::lower::AbstractConverter &converter,
 static fir::GlobalOp defineGlobalAggregateStore(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::pft::Variable::AggregateStore &aggregate,
-    llvm::StringRef aggName, mlir::StringAttr linkage) {
+    llvm::StringRef aggName, fir::LinkageAttr linkage) {
   assert(aggregate.isGlobal() && "not a global interval");
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   fir::GlobalOp global = builder.getNamedGlobal(aggName);
@@ -1443,7 +1464,7 @@ static fir::GlobalOp defineGlobalAggregateStore(
 static fir::GlobalOp declareGlobalAggregateStore(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::pft::Variable::AggregateStore &aggregate,
-    llvm::StringRef aggName, mlir::StringAttr linkage) {
+    llvm::StringRef aggName, fir::LinkageAttr linkage) {
   assert(aggregate.isGlobal() && "not a global interval");
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (fir::GlobalOp global = builder.getNamedGlobal(aggName))
@@ -1467,7 +1488,7 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
   if (var.isGlobal()) {
     fir::GlobalOp global;
     auto &aggregate = var.getAggregateStore();
-    mlir::StringAttr linkage = getLinkageAttribute(converter, var);
+    fir::LinkageAttr linkage = getLinkageAttribute(converter, var);
     if (var.isModuleOrSubmoduleVariable()) {
       // A module global was or will be defined when lowering the module. Emit
       // only a declaration if the global does not exist at that point.
@@ -1668,7 +1689,7 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
   Fortran::semantics::MutableSymbolVector cmnBlkMems =
       getCommonMembersWithInitAliases(common);
   mlir::Location loc = converter.genLocation(common.name());
-  mlir::StringAttr linkage = builder.createCommonLinkage();
+  fir::LinkageAttr linkage = builder.createCommonLinkage();
   const auto *details =
       common.detailsIf<Fortran::semantics::CommonBlockDetails>();
   assert(details && "Expect CommonBlockDetails on the common symbol");
@@ -2708,7 +2729,7 @@ void Fortran::lower::defineModuleVariable(
     AbstractConverter &converter, const Fortran::lower::pft::Variable &var) {
   // Use empty linkage for module variables, which makes them available
   // for use in another unit.
-  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
+  fir::LinkageAttr linkage = getLinkageAttribute(converter, var);
   if (!var.isGlobal())
     fir::emitFatalError(converter.getCurrentLocation(),
                         "attempting to lower module variable as local");
@@ -2845,7 +2866,7 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
     const Fortran::semantics::Symbol &typeInfoSym) {
   std::string globalName = converter.mangleName(typeInfoSym);
   auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
-  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
+  fir::LinkageAttr linkage = getLinkageAttribute(converter, var);
   defineGlobal(converter, var, globalName, linkage);
 }
 

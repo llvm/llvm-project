@@ -18,6 +18,9 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -29,16 +32,16 @@
 using namespace llvm;
 
 namespace {
-class SPIRVPreLegalizer : public MachineFunctionPass {
+class SPIRVPreLegalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPreLegalizer() : MachineFunctionPass(ID) {}
+  SPIRVPreLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
 
-void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
+void SPIRVPreLegalizerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -798,6 +801,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // G_GLOBAL_VALUE already has type info.
         if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
           updateRegType(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
+        if (Def->getOpcode() == TargetOpcode::COPY && isVector1(Ty))
+          updateRegType(passCopy(Def, &MF.getRegInfo())->getOperand(0).getReg(),
+                        Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
         MachineInstr *MdMI = MI.getPrevNode();
@@ -1299,7 +1305,7 @@ static void removeImplicitFallthroughs(MachineFunction &MF,
   }
 }
 
-bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
+static bool runPreLegalizer(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
@@ -1326,11 +1332,26 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-INITIALIZE_PASS(SPIRVPreLegalizer, DEBUG_TYPE, "SPIRV pre legalizer", false,
-                false)
+INITIALIZE_PASS(SPIRVPreLegalizerLegacy, DEBUG_TYPE, "SPIRV pre legalizer",
+                false, false)
 
-char SPIRVPreLegalizer::ID = 0;
+char SPIRVPreLegalizerLegacy::ID = 0;
 
-FunctionPass *llvm::createSPIRVPreLegalizerPass() {
-  return new SPIRVPreLegalizer();
+FunctionPass *llvm::createSPIRVPreLegalizerLegacyPass() {
+  return new SPIRVPreLegalizerLegacy();
+}
+
+bool SPIRVPreLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runPreLegalizer(MF);
+}
+
+PreservedAnalyses
+SPIRVPreLegalizerPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runPreLegalizer(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserve<GISelValueTrackingAnalysis>();
 }

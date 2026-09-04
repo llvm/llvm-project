@@ -36,6 +36,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -332,6 +333,8 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
+  case llvm::Triple::spir:
+  case llvm::Triple::spir64:
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
@@ -733,7 +736,8 @@ void CIRGenModule::addGlobalDtor(cir::FuncOp dtor,
 
 void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
   VarDecl::DefinitionKind dk = vd->isThisDeclarationADefinition();
-  if (dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>())
+  if ((dk == VarDecl::Definition && vd->hasAttr<DLLImportAttr>()) ||
+      (langOpts.CUDA && !shouldEmitCUDAGlobalVar(vd)))
     return;
 
   TemplateSpecializationKind tsk = vd->getTemplateSpecializationKind();
@@ -1060,10 +1064,10 @@ static bool isViewOnGlobal(cir::GlobalOp glob, cir::GlobalViewAttr view) {
   return view.getSymbol().getValue() == glob.getSymName();
 }
 
-static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
-                                               cir::GlobalOp newGlob,
-                                               cir::GlobalViewAttr attr,
-                                               mlir::Type oldTy) {
+static mlir::Attribute createNewGlobalView(CIRGenModule &cgm,
+                                           cir::GlobalOp newGlob,
+                                           cir::GlobalViewAttr attr,
+                                           mlir::Type oldTy) {
   // If the attribute does not require indexes or it is not a global view on
   // the global we're replacing, keep the original attribute.
   if (!attr.getIndices() || !isViewOnGlobal(newGlob, attr))
@@ -1077,7 +1081,11 @@ static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
 
   uint64_t offset =
       bld.computeOffsetFromGlobalViewIndices(layout, oldTy, oldInds);
-  bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout, newInds);
+  if (!bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout,
+                                                  newInds))
+    return cir::GlobalOffsetAttr::get(attr.getType(), attr.getSymbol(),
+                                      static_cast<int64_t>(offset));
+
   cir::PointerType newPtrTy;
 
   if (isa<cir::RecordType>(oldTy))
@@ -1099,6 +1107,11 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
                                        mlir::Attribute oldInit) {
   if (auto oldView = mlir::dyn_cast<cir::GlobalViewAttr>(oldInit))
     return createNewGlobalView(cgm, newGlob, oldView, oldTy);
+
+  // A byte offset from a symbol doesn't depend on the symbol's type, so it
+  // remains valid when the global is replaced.
+  if (mlir::isa<cir::GlobalOffsetAttr>(oldInit))
+    return oldInit;
 
   auto getNewInitElements =
       [&](mlir::ArrayAttr oldElements) -> mlir::ArrayAttr {
@@ -2338,7 +2351,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
   mlir::Location loc = getLoc(e->getSourceRange());
 
-  const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
+  const ValueDecl *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
 
   // A member function pointer.
   if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
@@ -2357,13 +2370,13 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
   // Otherwise, a member data pointer.
   auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
-  const auto *fieldDecl = cast<FieldDecl>(decl);
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
 
   // Empty [[no_unique_address]] fields have no CIR field index; represent the
   // pointer-to-data-member by its concrete byte offset within the class.
-  if (isEmptyFieldForMemberPointer(fieldDecl)) {
+  if (const auto *fieldDecl = dyn_cast<FieldDecl>(decl);
+      fieldDecl && isEmptyFieldForMemberPointer(fieldDecl)) {
     // This function should ONLY be accessed in reference to itself, I don't see
     // any cases/couldn't find any cases where anything else could get here, and
     // classic-codegen does the same.
@@ -2377,7 +2390,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   }
 
   std::optional<llvm::SmallVector<int32_t>> path =
-      buildMemberPath(destClass, fieldDecl);
+      buildMemberPath(destClass, decl);
   if (!path)
     return {};
   return cir::ConstantOp::create(builder, loc,
@@ -2386,9 +2399,24 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
 
 std::optional<llvm::SmallVector<int32_t>>
 CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
-                              const FieldDecl *field) {
+                              const ValueDecl *decl) {
   llvm::SmallVector<int32_t> path;
-  if (!findFieldMemberPath(destClass, field, path))
+
+  // Members of an anonymous struct/union have an IndirectFieldDecl, which
+  // contains the whole chain of how to get to it, so to get the 'path', we dig
+  // through those rather than searching.
+  if (const auto *indirectField = dyn_cast<IndirectFieldDecl>(decl)) {
+    const CXXRecordDecl *currentClass = destClass;
+    for (const NamedDecl *nd : indirectField->chain()) {
+      const auto *field = cast<FieldDecl>(nd);
+      if (!findFieldMemberPath(currentClass, field, path))
+        return std::nullopt;
+      currentClass = field->getType()->getAsCXXRecordDecl();
+    }
+    return path;
+  }
+
+  if (!findFieldMemberPath(destClass, cast<FieldDecl>(decl), path))
     return std::nullopt;
   return path;
 }
@@ -2457,8 +2485,17 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
 }
 
 bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
-  return isEmptyFieldForLayout(astContext, field) &&
-         field->isPotentiallyOverlapping();
+  if (!field->isPotentiallyOverlapping() ||
+      !isEmptyFieldForLayout(astContext, field))
+    return false;
+
+  // Unions always have a field even if they are empty.
+  const RecordDecl *rec = field->getParent();
+  if (rec->isUnion())
+    return true;
+
+  // Otherwise, count on whether accumulateFields gave this a member.
+  return !getTypes().getCIRGenRecordLayout(rec).hasCIRField(field);
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
@@ -2547,6 +2584,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // Indirect fields from global anonymous structs and unions can be
+  // ignored; only the actual variable requires IR gen support.
+  case Decl::IndirectField:
     break;
 
   // No code generation needed.
@@ -3192,11 +3234,7 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  // TODO(cir): Set the calling convention computed by constructAttributeList
-  // on the function. FuncOp supports calling_conv, but target-specific
-  // CodeGen is needed to set it correctly (e.g., AMDGPU kernel functions
-  // should be marked with AMDGPUKernel).
-  assert(!cir::MissingFeatures::opFuncCallingConv());
+  func.setCallingConv(callingConv);
 }
 
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
@@ -3238,30 +3276,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   }
 }
 
-/// Determines whether the language options require us to model
-/// unwind exceptions.  We treat -fexceptions as mandating this
-/// except under the fragile ObjC ABI with only ObjC exceptions
-/// enabled.  This means, for example, that C with -fexceptions
-/// enables this.
-static bool hasUnwindExceptions(const LangOptions &langOpts) {
-  // If exceptions are completely disabled, obviously this is false.
-  if (!langOpts.Exceptions)
-    return false;
-  // If C++ exceptions are enabled, this is true.
-  if (langOpts.CXXExceptions)
-    return true;
-  // If ObjC exceptions are enabled, this depends on the ABI.
-  if (langOpts.ObjCExceptions)
-    return langOpts.ObjCRuntime.hasUnwindExceptions();
-  return true;
-}
-
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
   assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
   assert(!cir::MissingFeatures::stackProtector());
 
-  if (!hasUnwindExceptions(langOpts))
+  if (!CodeGenUtils::hasUnwindExceptions(langOpts))
     f->setAttr(cir::CIRDialect::getNoThrowAttrName(),
                mlir::UnitAttr::get(&getMLIRContext()));
 
@@ -3825,32 +3845,6 @@ CIRGenModule::getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind glk) {
   llvm_unreachable("linkage should be handled above!");
 }
 
-cir::VisibilityKind CIRGenModule::getGlobalVisibilityKindFromClangVisibility(
-    clang::VisibilityAttr::VisibilityType visibility) {
-  switch (visibility) {
-  case clang::VisibilityAttr::VisibilityType::Default:
-    return cir::VisibilityKind::Default;
-  case clang::VisibilityAttr::VisibilityType::Hidden:
-    return cir::VisibilityKind::Hidden;
-  case clang::VisibilityAttr::VisibilityType::Protected:
-    return cir::VisibilityKind::Protected;
-  }
-  llvm_unreachable("unexpected visibility value");
-}
-
-cir::VisibilityAttr
-CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
-  const clang::VisibilityAttr *va = decl->getAttr<clang::VisibilityAttr>();
-  cir::VisibilityAttr cirVisibility =
-      cir::VisibilityAttr::get(&getMLIRContext());
-  if (va) {
-    cirVisibility = cir::VisibilityAttr::get(
-        &getMLIRContext(),
-        getGlobalVisibilityKindFromClangVisibility(va->getVisibility()));
-  }
-  return cirVisibility;
-}
-
 void CIRGenModule::release() {
   emitDeferred();
   emitVTablesOpportunistically();
@@ -4376,7 +4370,7 @@ CIRGenModule::getOrCreateAnnotationArgs(const AnnotateAttr *attr) {
   for (Expr *e : exprs)
     id.Add(cast<clang::ConstantExpr>(e)->getAPValueResult());
 
-  mlir::ArrayAttr &lookup = annotationArgs[id.ComputeHash()];
+  mlir::ArrayAttr &lookup = annotationArgs[id.computeHash()];
   if (lookup)
     return lookup;
 

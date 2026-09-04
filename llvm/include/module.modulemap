@@ -236,6 +236,9 @@ module LLVM_Frontend_OpenMP {
   module * { export * }
 
   exclude header "llvm/Frontend/OpenMP/OMPKinds.def"
+
+  // These are intended for (repeated) textual inclusion.
+  textual header "llvm/Frontend/OpenMP/OMPDescriptors.h.inc"
 }
 
 // Orc utilities that don't depend only on Support (not ExecutionEngine or

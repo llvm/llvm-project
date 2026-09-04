@@ -23,7 +23,7 @@ struct EmulatorBaton {
   NativeProcessProtocol &m_process;
   NativeRegisterContext &m_reg_context;
 
-  // eRegisterKindDWARF -> RegsiterValue
+  // eRegisterKindDWARF -> RegisterValue
   std::unordered_map<uint32_t, RegisterValue> m_register_values;
 
   EmulatorBaton(NativeProcessProtocol &process,
@@ -55,7 +55,7 @@ static bool ReadRegisterCallback(EmulateInstruction *instruction, void *baton,
     return true;
   }
 
-  // The emulator only fill in the dwarf regsiter numbers (and in some case the
+  // The emulator only fill in the dwarf register numbers (and in some case the
   // generic register numbers). Get the full register info from the register
   // context based on the dwarf register numbers.
   const RegisterInfo *full_reg_info =

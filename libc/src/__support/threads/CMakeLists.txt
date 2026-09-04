@@ -36,6 +36,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
 
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.tcb)
+  add_header_library(
+    tcb
+    HDRS
+      tcb.h
+    DEPENDS
+      .${LIBC_TARGET_OS}.tcb
+      libc.src.__support.macros.properties.os
+  )
+endif()
+
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
   add_header_library(
     futex_utils

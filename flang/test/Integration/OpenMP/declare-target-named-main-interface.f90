@@ -14,9 +14,9 @@
 ! program (_QQmain) as a declare-target function while still correctly
 ! marking the declared subroutine (sub_a) as device_type(any).
 
-! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = (any)
-! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = (nohost)
-! CHECK: llvm.func @_QPsub_a{{.*}}device_type = (any), {{.*}}sym_visibility = "private"
+! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = any
+! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = nohost
+! CHECK: llvm.func @_QPsub_a{{.*}}device_type = any, {{.*}}sym_visibility = "private"
 
 program named_main
   interface

@@ -1685,22 +1685,22 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_ConstantScalar) {
                                        Loc, MVT::f32);
   KnownFPClass Known = DAG->computeKnownFPClass(PosZero, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcPosZero);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_FALSE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_FALSE(*Known.getSignBit());
 
   SDValue NegZero = DAG->getConstantFP(
       APFloat::getZero(APFloat::IEEEsingle(), true), Loc, MVT::f32);
   Known = DAG->computeKnownFPClass(NegZero, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcNegZero);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_TRUE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_TRUE(*Known.getSignBit());
 
   SDValue PosInf =
       DAG->getConstantFP(APFloat::getInf(APFloat::IEEEsingle()), Loc, MVT::f32);
   Known = DAG->computeKnownFPClass(PosInf, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcPosInf);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_FALSE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_FALSE(*Known.getSignBit());
 
   SDValue QNaN = DAG->getConstantFP(APFloat::getQNaN(APFloat::IEEEsingle()),
                                     Loc, MVT::f32);
@@ -1710,8 +1710,8 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_ConstantScalar) {
   SDValue One = DAG->getConstantFP(1.0, Loc, MVT::f32);
   Known = DAG->computeKnownFPClass(One, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcPosNormal);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_FALSE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_FALSE(*Known.getSignBit());
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_BuildVector) {
@@ -1726,13 +1726,13 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_BuildVector) {
   SDValue VecPosPos = DAG->getBuildVector(VecVT, Loc, {PosOne, PosTwo});
   KnownFPClass Known = DAG->computeKnownFPClass(VecPosPos, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcPosNormal);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_FALSE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_FALSE(*Known.getSignBit());
 
   SDValue VecPosNeg = DAG->getBuildVector(VecVT, Loc, {PosOne, NegOne});
   Known = DAG->computeKnownFPClass(VecPosNeg, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcPosNormal | fcNegNormal);
-  EXPECT_FALSE(Known.SignBit.has_value());
+  EXPECT_FALSE(Known.getSignBit().has_value());
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_DemandedElts) {
@@ -1746,24 +1746,24 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_DemandedElts) {
   APInt DemandLo(2, 1);
   KnownFPClass Known = DAG->computeKnownFPClass(Vec, DemandLo, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcPosNormal);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_FALSE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_FALSE(*Known.getSignBit());
 
   APInt DemandHi(2, 2);
   Known = DAG->computeKnownFPClass(Vec, DemandHi, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcNegNormal);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_TRUE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_TRUE(*Known.getSignBit());
 
   APInt DemandAll(2, 3);
   Known = DAG->computeKnownFPClass(Vec, DemandAll, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcPosNormal | fcNegNormal);
-  EXPECT_FALSE(Known.SignBit.has_value());
+  EXPECT_FALSE(Known.getSignBit().has_value());
 
   APInt DemandNone(2, 0);
   Known = DAG->computeKnownFPClass(Vec, DemandNone, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcAllFlags);
-  EXPECT_FALSE(Known.SignBit.has_value());
+  EXPECT_FALSE(Known.getSignBit().has_value());
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_MaxDepth) {
@@ -1782,7 +1782,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_MaxDepth) {
   Known = DAG->computeKnownFPClass(Vec, fcAllFlags,
                                    SelectionDAG::MaxRecursionDepth);
   EXPECT_EQ(Known.KnownFPClasses, fcAllFlags);
-  EXPECT_FALSE(Known.SignBit.has_value());
+  EXPECT_FALSE(Known.getSignBit().has_value());
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_UndefAndPoison) {
@@ -1792,14 +1792,14 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownFPClass_UndefAndPoison) {
   SDValue Undef = DAG->getUNDEF(MVT::f32);
   KnownFPClass Known = DAG->computeKnownFPClass(Undef, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcAllFlags);
-  EXPECT_FALSE(Known.SignBit.has_value());
+  EXPECT_FALSE(Known.getSignBit().has_value());
 
   // POISON is fcNone — can be assumed to never be observed.
   SDValue Poison = DAG->getPOISON(MVT::f32);
   Known = DAG->computeKnownFPClass(Poison, fcAllFlags);
   EXPECT_EQ(Known.KnownFPClasses, fcNone);
-  EXPECT_TRUE(Known.SignBit.has_value());
-  EXPECT_FALSE(*Known.SignBit);
+  EXPECT_TRUE(Known.getSignBit().has_value());
+  EXPECT_FALSE(*Known.getSignBit());
 }
 
 } // end namespace llvm

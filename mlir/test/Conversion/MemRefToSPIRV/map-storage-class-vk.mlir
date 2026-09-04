@@ -1,4 +1,4 @@
-// RUN: mlir-opt --allow-unregistered-dialect --map-memref-spirv-storage-class='client-api=vulkan' %s | FileCheck %s
+// RUN: mlir-opt --map-memref-spirv-storage-class='client-api=vulkan' %s | FileCheck %s
 
 // Vulkan Specific Mappings:
 //   8 -> UniformConstant
@@ -14,14 +14,14 @@
 // CHECK-LABEL: func @test_vk_specific_memory_spaces
 func.func @test_vk_specific_memory_spaces() {
   // CHECK: memref<4xi32, #spirv.storage_class<UniformConstant>>
-  %1 = "dialect.memref_producer"() : () -> (memref<4xi32, 8>)
+  %1 = "test.memref_producer"() : () -> (memref<4xi32, 8>)
   // CHECK: memref<4xi32, #spirv.storage_class<Input>>
-  %2 = "dialect.memref_producer"() : () -> (memref<4xi32, 9>)
+  %2 = "test.memref_producer"() : () -> (memref<4xi32, 9>)
   // CHECK: memref<4xi32, #spirv.storage_class<Output>>
-  %3 = "dialect.memref_producer"() : () -> (memref<4xi32, 10>)
+  %3 = "test.memref_producer"() : () -> (memref<4xi32, 10>)
   // CHECK: memref<4xi32, #spirv.storage_class<PhysicalStorageBuffer>>
-  %4 = "dialect.memref_producer"() : () -> (memref<4xi32, 11>)
+  %4 = "test.memref_producer"() : () -> (memref<4xi32, 11>)
   // CHECK: memref<4xi32, #spirv.storage_class<Image>>
-  %5 = "dialect.memref_producer"() : () -> (memref<4xi32, 12>)
+  %5 = "test.memref_producer"() : () -> (memref<4xi32, 12>)
   return
 }

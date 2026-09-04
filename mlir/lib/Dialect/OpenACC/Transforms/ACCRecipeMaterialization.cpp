@@ -57,6 +57,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -88,12 +89,13 @@ static void saveVarName(StringRef name, Value dst) {
   if (name.empty())
     return;
   if (Operation *dstOp = dst.getDefiningOp()) {
-    if (dstOp->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName()))
+    if (dstOp->getDiscardableAttrOfType<acc::VarNameAttr>(
+            acc::getVarNameAttrName()))
       return;
     if (isa<ACC_DATA_ENTRY_OPS>(dstOp))
       return;
-    dstOp->setAttr(acc::getVarNameAttrName(),
-                   acc::VarNameAttr::get(dstOp->getContext(), name));
+    dstOp->setDiscardableAttr(acc::getVarNameAttrName(),
+                              acc::VarNameAttr::get(dstOp->getContext(), name));
     return;
   }
   auto blockArg = dyn_cast<BlockArgument>(dst);
@@ -126,14 +128,17 @@ static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
                                        StringRef name) {
   StringRef placeholder = acc::getVarNamePlaceholder();
   for (auto it = block->begin(); it != std::next(ip); ++it) {
-    auto attr = it->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName());
-    if (attr && attr.getName() == placeholder) {
+    it->walk([&](Operation *op) {
+      auto attr = op->getDiscardableAttrOfType<acc::VarNameAttr>(
+          acc::getVarNameAttrName());
+      if (!attr || attr.getName() != placeholder)
+        return;
       if (name.empty())
-        it->removeAttr(acc::getVarNameAttrName());
+        op->removeDiscardableAttr(acc::getVarNameAttrName());
       else
-        it->setAttr(acc::getVarNameAttrName(),
-                    acc::VarNameAttr::get(it->getContext(), name));
-    }
+        op->setDiscardableAttr(acc::getVarNameAttrName(),
+                               acc::VarNameAttr::get(op->getContext(), name));
+    });
   }
 }
 
@@ -165,9 +170,9 @@ public:
   void runOnOperation() override;
 
 private:
-  // When handling firstprivate, the initial value needs to be available on
-  // the GPU. One way to get that value there is to map the variable through
-  // global memory.
+  // When the recipe reads the original variable, its initial value needs to be
+  // available on the GPU. One way to get that value there is to map the
+  // variable through global memory.
   // Thus, when we materialize a firstprivate, we materialize it into
   // a mapping action first. This function ends up with doing the following:
   // %dev = acc.firstprivate var(%var)
@@ -178,9 +183,12 @@ private:
   // being removed. But because of the way we chain it to the
   // `acc.firstprivate_map`, then its result becomes live-in to the
   // compute region and used as the variable the initial value is loaded from.
-  void handleFirstprivateMapping(acc::FirstprivateOp firstprivateOp) const;
   template <typename OpTy>
-  void removeRecipe(OpTy op, ModuleOp moduleOp) const;
+  void handleInitialValueMapping(OpTy op) const;
+  template <typename OpTy>
+  void removeRecipe(
+      OpTy op, ModuleOp moduleOp,
+      const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) const;
   template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
   LogicalResult materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
                             acc::OpenACCSupport &accSupport,
@@ -190,21 +198,36 @@ private:
                                     acc::ACCToGPUMappingPolicy &policy) const;
 };
 
-void ACCRecipeMaterialization::handleFirstprivateMapping(
-    acc::FirstprivateOp firstprivateOp) const {
-  OpBuilder builder(firstprivateOp);
-  auto mapFirstprivateOp = acc::FirstprivateMapInitialOp::create(
-      builder, firstprivateOp.getLoc(), firstprivateOp.getVar(),
-      firstprivateOp.getStructured(), firstprivateOp.getImplicit(),
-      firstprivateOp.getBounds());
-  mapFirstprivateOp.setName(firstprivateOp.getName());
-  firstprivateOp.getVarMutable().assign(mapFirstprivateOp.getAccVar());
+template <typename OpTy>
+void ACCRecipeMaterialization::handleInitialValueMapping(OpTy op) const {
+  OpBuilder builder(op);
+  auto mapInitialOp = acc::FirstprivateMapInitialOp::create(
+      builder, op.getLoc(), op.getVar(), op.getStructured(), op.getImplicit(),
+      op.getBounds());
+  mapInitialOp.setName(op.getName());
+  op.getVarMutable().assign(mapInitialOp.getAccVar());
+}
+
+// Whether a recipe region reads the variable it privatizes - a descriptor
+// recipe loads it for the bounds, while a scalar one ignores it. Both init and
+// destroy receive it as their first argument.
+static bool readsVar(Region &region) {
+  if (region.empty() || region.getNumArguments() == 0)
+    return false;
+  return !region.getArgument(0).use_empty();
 }
 
 template <typename OpTy>
-void ACCRecipeMaterialization::removeRecipe(OpTy op, ModuleOp moduleOp) const {
+void ACCRecipeMaterialization::removeRecipe(
+    OpTy op, ModuleOp moduleOp,
+    const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) const {
   auto recipeName = op.getNameAttr();
-  if (SymbolTable::symbolKnownUseEmpty(recipeName, moduleOp)) {
+  // Fall back to scanning the module when the symbol uses could not be
+  // gathered up front.
+  bool useEmpty = usedSymbols
+                      ? !usedSymbols->contains(recipeName)
+                      : SymbolTable::symbolKnownUseEmpty(recipeName, moduleOp);
+  if (useEmpty) {
     LLVM_DEBUG(llvm::dbgs() << "erasing recipe: " << recipeName << "\n");
     op.erase();
   } else {
@@ -290,7 +313,7 @@ LogicalResult ACCRecipeMaterialization::materialize(
     Block *block = &region.front();
     auto [results, ip] = acc::cloneACCRegionInto(
         &initRegion, block, block->begin(), mapping, {accPtr});
-    assert(results.size() == 1 && "expected single result from init region");
+    assert(!results.empty() && "expected a result from init region");
     saveVarName(op.getAccVar(), results[0]);
     resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // Clone the destroy region for a private, if it exists.
@@ -304,23 +327,26 @@ LogicalResult ACCRecipeMaterialization::materialize(
     Block *block = &region.front();
     auto [results, ip] = acc::cloneACCRegionInto(
         &initRegion, block, block->begin(), mapping, {accPtr});
-    assert(results.size() == 1 && "expected single result from init region");
+    assert(!results.empty() && "expected a result from init region");
     saveVarName(op.getAccVar(), results[0]);
     resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
-    // We want the copy to store the origPtr to private
-    results.insert(results.begin(), origPtr);
-    results.append(triples);
+    // The copy only consumes the original and user-visible private value.
+    SmallVector<Value> copyArgs{origPtr, results.front()};
+    copyArgs.append(triples);
+    // Destruction also consumes any cleanup values yielded by init.
+    SmallVector<Value> destroyArgs{origPtr};
+    destroyArgs.append(results);
+    destroyArgs.append(triples);
 
     // Clone the copy region for a firstprivate
     mapping.clear();
-    mapping.map(recipe.getCopyRegion().front().getArguments(), results);
+    mapping.map(recipe.getCopyRegion().front().getArguments(), copyArgs);
     // Clone the copy region for a firstprivate.
     Region &copyRegion = recipe.getCopyRegion();
     setLocation(copyRegion, loc);
     acc::cloneACCRegionInto(&copyRegion, block, std::next(ip), mapping, {});
     if (!recipe.getDestroyRegion().empty()) {
-      // origPtr was already pushed.
-      cloneDestroy(loc, recipe, block, std::prev(block->end()), results);
+      cloneDestroy(loc, recipe, block, std::prev(block->end()), destroyArgs);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
@@ -445,7 +471,7 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::FirstprivateRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << firstprivateOp << "\n"
                               << symbolRef << "\n");
-      handleFirstprivateMapping(firstprivateOp);
+      handleInitialValueMapping(firstprivateOp);
       if (failed(
               materialize(firstprivateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
@@ -464,6 +490,9 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::PrivateRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << privateOp << "\n"
                               << symbolRef << "\n");
+      if (readsVar(recipeOp.getInitRegion()) ||
+          readsVar(recipeOp.getDestroyRegion()))
+        handleInitialValueMapping(privateOp);
       if (failed(materialize(privateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
@@ -510,14 +539,27 @@ void ACCRecipeMaterialization::runOnOperation() {
     return;
   }
 
-  // Remove all recipes.
+  // Remove all recipes. Gather the symbol uses that are left with a single
+  // walk: asking whether each recipe is still referenced walks the whole module
+  // again for every recipe, and recipes are generated per type, so there can be
+  // many of them.
+  std::optional<llvm::DenseSet<StringAttr>> usedSymbols;
+  // The module region, not the module op, is the symbol table scope: asking
+  // for the uses on the op itself would not walk into the body.
+  if (std::optional<SymbolTable::UseRange> uses =
+          SymbolTable::getSymbolUses(&moduleOp.getBodyRegion())) {
+    usedSymbols.emplace();
+    for (const SymbolTable::SymbolUse &use : *uses)
+      usedSymbols->insert(use.getSymbolRef().getLeafReference());
+  }
+
   moduleOp.walk([&](Operation *op) {
     if (auto recipe = dyn_cast<acc::ReductionRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
     else if (auto recipe = dyn_cast<acc::PrivateRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
     else if (auto recipe = dyn_cast<acc::FirstprivateRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
   });
 }
 

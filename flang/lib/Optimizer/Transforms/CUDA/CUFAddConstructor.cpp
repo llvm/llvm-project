@@ -63,7 +63,7 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   auto ptrGlobal = fir::GlobalOp::create(
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
-      /*linkName=*/builder.createInternalLinkage(), attrs);
+      /*linkage=*/builder.createInternalLinkage(), attrs);
 
   mlir::Region &region = ptrGlobal.getRegion();
   mlir::Block *block = builder.createBlock(&region);

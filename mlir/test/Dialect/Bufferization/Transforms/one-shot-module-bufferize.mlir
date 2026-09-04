@@ -1,5 +1,6 @@
 // Note: Default is function-boundary-type-conversion=infer-layout-map
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1" -canonicalize -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1" -split-input-file | FileCheck %s --check-prefix=INHERENT
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -590,6 +591,7 @@ func.func private @inner_func(%t: tensor<?xf32>) -> tensor<?xf32> {
 
 // CHECK-LABEL: func @equivalent_func_arg(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+// INHERENT-LABEL: func @equivalent_func_arg(
 func.func @equivalent_func_arg(%t0: tensor<?xf32> {bufferization.writable = true},
                                %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
   // CHECK-NOT: alloc
@@ -597,7 +599,8 @@ func.func @equivalent_func_arg(%t0: tensor<?xf32> {bufferization.writable = true
   // CHECK: scf.for {{.*}} iter_args(%[[t1:.*]] = %[[arg0]])
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
     // CHECK: call @inner_func(%[[t1]])
-    %3 = func.call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    // INHERENT: call @inner_func({{.*}}) {no_inline}
+    %3 = func.call @inner_func(%t1) {no_inline} : (tensor<?xf32>) -> tensor<?xf32>
     // CHECK: scf.yield %[[t1]]
     scf.yield %3 : tensor<?xf32>
   }

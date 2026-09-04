@@ -59,7 +59,7 @@ define float @remquo_f32_inf_x(ptr %quo) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %call = call float @remquof(float 0x7FF0000000000000, float 1.000000e+00, ptr %quo)
+  %call = call float @remquof(float +inf, float 1.000000e+00, ptr %quo)
   ret float %call
 }
 

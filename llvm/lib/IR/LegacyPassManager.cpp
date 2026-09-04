@@ -634,12 +634,12 @@ AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
     AUFoldingSetNode* Node = nullptr;
     FoldingSetNodeID ID;
     AUFoldingSetNode::Profile(ID, AU);
-    void *IP = nullptr;
-    if (auto *N = UniqueAnalysisUsages.FindNodeOrInsertPos(ID, IP))
+    FoldingSetInsertToken Token;
+    if (auto *N = UniqueAnalysisUsages.lookup(ID, Token))
       Node = N;
     else {
       Node = new (AUFoldingSetNodeAllocator.Allocate()) AUFoldingSetNode(AU);
-      UniqueAnalysisUsages.InsertNode(Node, IP);
+      UniqueAnalysisUsages.insert(Node, Token);
     }
     assert(Node && "cached analysis usage must be non null");
 
@@ -1388,18 +1388,19 @@ bool FPPassManager::runOnFunction(Function &F) {
     // unregistered infrastructure passes).
     StringRef PassID;
     bool ReportChanged = PrintChanged != ChangePrinter::None;
-    bool IsInteresting = false, ShouldPrintChanged = false;
+    bool IsInteresting = false, ShouldCaptureChanged = false;
+    bool ShouldPrintChanged = false;
     if (ReportChanged) {
       const PassInfo *PI = Pass::lookupPassInfo(FP->getPassID());
       if (PI && !PI->isAnalysis()) {
         PassID = PI->getPassArgument();
         IsInteresting = isPassInPrintList(PassID);
-        ShouldPrintChanged = IsInteresting && isFunctionInPrintList(Name);
+        ShouldCaptureChanged = IsInteresting;
       } else {
         ReportChanged = false;
       }
     }
-    if (ShouldPrintChanged) {
+    if (ShouldCaptureChanged) {
       BeforeStr.clear();
       AfterStr.clear();
       raw_svector_ostream OS(BeforeStr);
@@ -1439,9 +1440,9 @@ bool FPPassManager::runOnFunction(Function &F) {
       }
     }
 
-    if (ShouldPrintChanged) {
+    if (ShouldCaptureChanged) {
       raw_svector_ostream OS(AfterStr);
-      FP->printIRUnit(OS, F);
+      ShouldPrintChanged |= FP->printIRUnit(OS, F);
     }
     if (ReportChanged)
       reportChangedIR(BeforeStr, AfterStr, FP->getPassName(), PassID, Name,
@@ -1520,6 +1521,22 @@ MPPassManager::runOnModule(Module &M) {
     InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
 
   SmallString<0> BeforeStr, AfterStr;
+  auto PrintIR = [&M](raw_ostream &OS) {
+    if (isSourceLocFilterEmpty()) {
+      M.print(OS, /*AAW=*/nullptr);
+      return true;
+    }
+
+    bool Printed = false;
+    for (const Function &F : M) {
+      if (!shouldPrintFunction(F))
+        continue;
+      F.print(OS);
+      Printed = true;
+    }
+    return Printed;
+  };
+
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     ModulePass *MP = getContainedPass(Index);
     bool LocalChanged = false;
@@ -1529,8 +1546,8 @@ MPPassManager::runOnModule(Module &M) {
 
     initializeAnalysisImpl(MP);
 
-    // As in FPPassManager, but for module passes. Not subject to
-    // -filter-print-funcs.
+    // As in FPPassManager, but for module passes. A function-name filter by
+    // itself does not filter module passes.
     StringRef PassID;
     bool ReportChanged = PrintChanged != ChangePrinter::None;
     bool IsInteresting = false, ShouldPrintChanged = false;
@@ -1538,16 +1555,16 @@ MPPassManager::runOnModule(Module &M) {
       const PassInfo *PI = Pass::lookupPassInfo(MP->getPassID());
       if (PI && !PI->isAnalysis()) {
         PassID = PI->getPassArgument();
-        IsInteresting = ShouldPrintChanged = isPassInPrintList(PassID);
+        IsInteresting = isPassInPrintList(PassID);
       } else {
         ReportChanged = false;
       }
     }
-    if (ShouldPrintChanged) {
+    if (IsInteresting) {
       BeforeStr.clear();
       AfterStr.clear();
       raw_svector_ostream OS(BeforeStr);
-      M.print(OS, /*AAW=*/nullptr);
+      ShouldPrintChanged = PrintIR(OS);
     }
 
     {
@@ -1578,9 +1595,9 @@ MPPassManager::runOnModule(Module &M) {
       }
     }
 
-    if (ShouldPrintChanged) {
+    if (IsInteresting) {
       raw_svector_ostream OS(AfterStr);
-      M.print(OS, /*AAW=*/nullptr);
+      ShouldPrintChanged |= PrintIR(OS);
     }
     if (ReportChanged)
       reportChangedIR(BeforeStr, AfterStr, MP->getPassName(), PassID,

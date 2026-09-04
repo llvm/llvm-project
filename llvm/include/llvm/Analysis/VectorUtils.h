@@ -812,7 +812,7 @@ private:
   /// Predicates if it is not nullptr.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides,
+      const SymbolicStrideMap &Strides,
       SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.

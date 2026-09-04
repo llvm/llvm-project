@@ -997,7 +997,7 @@ define i64 @latch_postdec_umin_clamp(ptr %s, i64 %n) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[IF_FOUND]]:
-; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[N]], [[IV]]
+; CHECK-NEXT:    [[IDX:%.*]] = sub nuw i64 [[N]], [[IV]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N]], %[[LOOP_LATCH]] ], [ [[IDX]], %[[IF_FOUND]] ]

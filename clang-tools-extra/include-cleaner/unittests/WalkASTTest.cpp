@@ -1179,6 +1179,123 @@ TEST(WalkAST, ObjCSelectorExpr) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCBridgedCastExprToObjC) {
+  testWalk(R"objc(
+    typedef const struct __CFString *CFStringRef;
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      NSString *s = (__bridge ^NSString *)cf;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprToCF) {
+  testWalk(R"objc(
+    typedef const struct __CFString * $explicit^CFStringRef;
+    @interface NSString
+    @end
+  )objc",
+           R"objc(
+    void test(NSString *s) {
+      CFStringRef cf = (__bridge ^CFStringRef)s;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprBridgeTransfer) {
+  testWalk(R"objc(
+    typedef const struct __CFString *CFStringRef;
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      NSString *s = (__bridge_transfer ^NSString *)cf;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprBridgeRetained) {
+  testWalk(R"objc(
+    typedef const struct __CFString * $explicit^CFStringRef;
+    @interface NSString
+    @end
+  )objc",
+           R"objc(
+    void test(NSString *s) {
+      CFStringRef cf = (__bridge_retained ^CFStringRef)s;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCTollFreeBridgeCStyleCast) {
+  testWalk(R"objc(
+    typedef const struct __attribute__((objc_bridge(NSString)))
+      __CFString * CFStringRef;
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      NSString *s = (^NSString *)cf;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprToProtocol) {
+  // Note this test case is handled by TraverseObjCProtocolLoc instead of
+  // VisitCastExpr.
+  // It is here for completeness.
+  testWalk(R"objc(
+    typedef const struct __CFString *CFStringRef;
+    @protocol $explicit^MyProtocol
+    - (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      id<MyProtocol> p = (__bridge id<^MyProtocol>)cf;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCImplicitVoidPointerCast) {
+  testWalk(R"objc(
+    @interface $implicit^NSString
+    @end
+    void cast(NSString *p);
+  )objc",
+           R"objc(
+    void foo(void *p) {
+      cast(^p);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCImplicitIdPointerCast) {
+  testWalk(R"objc(
+    @interface $implicit^NSString
+    @end
+    void cast(NSString *p);
+  )objc",
+           R"objc(
+   void foo(id p) {
+      cast(^p);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCSelectorExprPropertyGetter) {
   auto Decls = testWalk(R"objc(
     @interface MyClass

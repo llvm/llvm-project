@@ -185,6 +185,8 @@ public:
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
+  uint32_t getDriverId() const override { return L0Context.getDriverId(); }
+
   bool supportsCooperativeKernels() const {
     return QueueConfig.SupportsCooperativeKernels;
   }
@@ -213,9 +215,10 @@ public:
   }
   ze_module_handle_t *getGlobalModulesArray() { return GlobalModules.data(); }
 
-  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image) {
+  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image,
+                                   ze_context_handle_t ZeContext) {
     for (auto &PGM : Programs)
-      if (PGM.getMemoryBuffer() == Image)
+      if (PGM.getMemoryBuffer() == Image && PGM.getZeContext() == ZeContext)
         return &PGM;
     return nullptr;
   }
@@ -234,9 +237,9 @@ public:
     auto ImageOrErr = Builder.getELF();
     if (!ImageOrErr)
       return ImageOrErr.takeError();
-    Programs.emplace_back(ImageId, *this, std::move(*ImageOrErr),
-                          Builder.getGlobalModule(),
-                          std::move(Builder.getModules()));
+    Programs.emplace_back(
+        ImageId, *this, std::move(*ImageOrErr), Builder.getGlobalModule(),
+        std::move(Builder.getModules()), Builder.getZeContext());
     return Programs.back();
   }
 
@@ -510,8 +513,8 @@ public:
 
   // Generic device interface implementation.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *UserCtx) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
   Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
                             size_t Alignment) override;

@@ -60,6 +60,14 @@ namespace __pstl {
 //
 // This backend implements all the PSTL algorithms based on the following basis operations:
 //
+// find_end family
+// ------------------
+// No other algorithms based on find_end
+//
+// is_heap_until family
+// --------------
+// No other algorithms based on is_heap_until
+//
 // find_if family
 // --------------
 // - find
@@ -69,6 +77,10 @@ namespace __pstl {
 // - none_of
 // - is_partitioned
 // - find_first_of
+//
+// min_element family
+// ---------------
+// - max_element
 //
 // mismatch family
 // ---------------
@@ -243,6 +255,26 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
         return std::find_if(__first2, __last2, [&](_Ref2 __value) { return __pred(__element, __value); }) != __last2;
       }
     });
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// min_element family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __max_element<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Compare>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
+    using _MinElement = __dispatch<__min_element, __current_configuration, _ExecutionPolicy>;
+    using _Ref        = __iterator_reference<_ForwardIterator>;
+    // Express max_element via min_element by replacing the comparison
+    // "lhs OP rhs" with "rhs OP lhs".
+    return _MinElement()(
+        __policy, std::move(__first), std::move(__last), [__comp = std::move(__comp)](_Ref __lhs, _Ref __rhs) {
+          return __comp(__rhs, __lhs);
+        });
   }
 };
 

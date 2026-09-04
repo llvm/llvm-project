@@ -53,7 +53,6 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstdio>
 #include <optional>
@@ -4480,7 +4479,8 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
     ImmVal = MCSpecifierExpr::create(ImmVal, RefKind, getContext(), Loc);
 
   SMLoc EndLoc;
-  if (getContext().getAsmInfo().hasSubsectionsViaSymbols()) {
+  // :specifier: and @specifier are alternative syntaxes; nesting them is invalid.
+  if (!HasELFModifier && getContext().getAsmInfo().hasSubsectionsViaSymbols()) {
     if (getParser().parseAtSpecifier(ImmVal, EndLoc))
       return true;
     const MCExpr *Term;

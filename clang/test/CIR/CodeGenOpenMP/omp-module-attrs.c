@@ -64,6 +64,6 @@
 // RUN:   | FileCheck %s --check-prefix=USM
 
 // USM: module {{.*}}  attributes {
-// USM-SAME: omp.requires = #omp<clause_requires unified_shared_memory>
+// USM-SAME: omp.requires = #omp.clause_requires<unified_shared_memory>
 
 void omp_function(void) {}

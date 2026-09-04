@@ -34,6 +34,11 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 
+# --- C standard ---
+set(CMAKE_C_STANDARD 11 CACHE STRING "C standard to conform to")
+set(CMAKE_C_STANDARD_REQUIRED YES)
+set(CMAKE_C_EXTENSIONS NO)
+
 # --- Project variables ---
 set(CMAKE_FOLDER "orc-rt")
 set(ORC_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})

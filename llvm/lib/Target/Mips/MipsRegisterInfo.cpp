@@ -185,6 +185,11 @@ getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg R : ReservedGPR64)
     Reserved.set(R);
 
+  // Mark user-reserved GPRs and their 64-bit super-registers.
+  for (unsigned I = 1; I < 32; ++I)
+    if (Subtarget.isGPRReservedByUser(I))
+      markSuperRegs(Reserved, Mips::GPR32RegClass.getRegister(I));
+
   // For mno-abicalls, GP is a program invariant!
   bool GPIsGlobal = isGPUsedAsGlobalRegister(MF);
   if (!Subtarget.isABICalls() || GPIsGlobal) {

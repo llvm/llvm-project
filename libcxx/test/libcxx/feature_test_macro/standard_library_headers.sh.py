@@ -35,6 +35,7 @@ class Test(unittest.TestCase):
                 "charconv",
                 "format",
                 "numeric",
+                "ranges",
                 "variant",
             ],
         )

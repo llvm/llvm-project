@@ -462,7 +462,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   // the symbolic strides when runtime SCEV checks are permitted.
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
-                            : DenseMap<Value *, const SCEV *>();
+                            : SymbolicStrideMap();
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)

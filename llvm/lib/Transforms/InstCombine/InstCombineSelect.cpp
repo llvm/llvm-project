@@ -928,6 +928,10 @@ static Value *foldSelectICmpAndBinOp(Value *CondVal, Value *TrueVal,
   bool NeedZExtTrunc = Y->getType()->getScalarSizeInBits() !=
                        V->getType()->getScalarSizeInBits();
 
+  // the demanded bits for the created shl make the and redundant
+  if (AndMask.isOne() && C2->isSignBitSet())
+    CreateAnd = false;
+
   // Make sure we don't create more instructions than we save.
   if ((NeedShift + NeedXor + NeedZExtTrunc + CreateAnd) >
       (CondVal->hasOneUse() + BinOp->hasOneUse()))
@@ -2714,9 +2718,9 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
   Value *X = ExtInst->getOperand(0);
   Type *SmallType = X->getType();
   Value *Cond = Sel.getCondition();
-  auto *Cmp = dyn_cast<CmpInst>(Cond);
   if (!SmallType->isIntOrIntVectorTy(1) &&
-      (!Cmp || Cmp->getOperand(0)->getType() != SmallType))
+      (!isa<CmpInst, TruncInst>(Cond) ||
+       cast<Instruction>(Cond)->getOperand(0)->getType() != SmallType))
     return nullptr;
 
   // If the constant is the same after truncation to the smaller type and
@@ -3722,8 +3726,11 @@ static bool impliesPoisonOrCond(const Value *ValAssumedPoison, const Value *V,
                       *RHSC2);
     }
   }
+  // For non-poison X in [0, 1], `trunc nuw X to i1` is not poison, but an
+  // additional `nsw` flag makes it poison for X == 1.
   Value *A;
   if (match(ValAssumedPoison, m_NUWTrunc(m_Value(A))) &&
+      !cast<TruncInst>(ValAssumedPoison)->hasNoSignedWrap() &&
       isGuaranteedNotToBePoison(A)) {
     assert(ValAssumedPoison->getType()->isIntOrIntVectorTy(1));
     return computeKnownBits(

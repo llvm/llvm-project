@@ -18,7 +18,6 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -1477,7 +1476,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextPow2(0)
           .scalarize(0)
           .lower();
-      if (ST.hasMinMaxI64Insts()) {
+      if (ST.useMinMaxI64Insts()) {
         getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
             .legalFor({S32, S16, S64, V2S16})
             .clampMaxNumElements(0, S16, 2)
@@ -3748,9 +3747,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
         Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
     if (PromoteToF32) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
-      auto PromoteSrc = B.buildFPExt(F32, X);
+      auto PromoteSrc = B.buildFPExt(F32, X, Flags);
       legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
-      B.buildFPTrunc(Dst, LogVal);
+      B.buildFPTrunc(Dst, LogVal, Flags);
     } else {
       legalizeFlogUnsafe(B, Dst, X, IsLog10, Flags);
     }
@@ -4703,7 +4702,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
-  if (ST.hasVMulU64Inst() && Size == 64)
+  if (ST.useVMulU64Inst() && Size == 64)
     return true;
 
   unsigned NumParts = Size / 32;
@@ -8185,31 +8184,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrID) {
-  case Intrinsic::amdgcn_icmp: {
-    // amdgcn.icmp(i1 src0, i1 0, NE) -> ballot(src0)
-    // This is the only valid form of amdgcn.icmp with i1 inputs.
-    Register Src0 = MI.getOperand(2).getReg();
-    LLT SrcTy = MRI.getType(Src0);
-    if (SrcTy != LLT::scalar(1))
-      return true; // Not i1, leave for default handling.
-
-    // Check that src1 is constant 0.
-    Register Src1 = MI.getOperand(3).getReg();
-    auto Src1Const = getIConstantVRegValWithLookThrough(Src1, MRI);
-    if (!Src1Const || Src1Const->Value != 0)
-      return false; // Invalid i1 icmp form.
-
-    // Check that predicate is ICMP_NE.
-    int64_t Pred = MI.getOperand(4).getImm();
-    if (Pred != CmpInst::ICMP_NE)
-      return false; // Invalid i1 icmp form.
-
-    // Convert to ballot.
-    Register Dst = MI.getOperand(0).getReg();
-    B.buildIntrinsic(Intrinsic::amdgcn_ballot, Dst).addUse(Src0);
-    MI.eraseFromParent();
-    return true;
-  }
   case Intrinsic::sponentry:
     if (B.getMF().getInfo<SIMachineFunctionInfo>()->isBottomOfStack()) {
       // FIXME: The imported pattern checks for i32 instead of p5; if we fix

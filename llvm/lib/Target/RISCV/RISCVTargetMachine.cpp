@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetMachine.h"
-#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVMachineScheduler.h"

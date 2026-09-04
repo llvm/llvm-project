@@ -68,7 +68,7 @@ public:
   bool runOnModule(Module &M) override {
     const auto DIMap = DXILDebugInfoPass::run(M);
     WriteDXILToFile(M, OS, DIMap);
-    return false;
+    return DIMap.Modified;
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

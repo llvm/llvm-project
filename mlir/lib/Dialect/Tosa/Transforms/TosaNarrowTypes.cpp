@@ -371,7 +371,11 @@ LogicalResult convertGenericOp(Operation *op, ValueRange operands,
                        newResults, {}, op->getSuccessors());
 
   // Keep attribute payloads consistent with the converted element types.
-  for (const NamedAttribute &namedAttribute : op->getAttrs()) {
+  NamedAttrList sourceAttrs(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+    sourceAttrs.append(name, attr);
+  });
+  for (const NamedAttribute &namedAttribute : sourceAttrs) {
     const Attribute attribute = namedAttribute.getValue();
 
     if (isa<IntegerAttr>(attribute) || isa<FloatAttr>(attribute)) {
@@ -501,7 +505,7 @@ class ConvertCastOpWithBoundsChecking
 
     rewriter.replaceOpWithNewOp<tosa::CastOp>(
         op, typeConverter->convertType(resultType), adaptor.getInput(),
-        op->getAttrs());
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };

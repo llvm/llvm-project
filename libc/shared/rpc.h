@@ -543,28 +543,28 @@ RPC_ATTRS void Port<T>::send_n(const void *src, uint64_t size) {
 /// multiples of the packet length.
 template <bool T>
 RPC_ATTRS void Port<T>::send_n(const void *const *src, uint64_t *size) {
+  constexpr uint64_t BUFFER_SIZE = sizeof(Buffer::data);
+  constexpr uint64_t FIRST_CHUNK = BUFFER_SIZE - sizeof(uint64_t);
   uint64_t num_sends = 0;
   send([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
     reinterpret_cast<uint64_t *>(buffer->data)[0] = lane_value(size, id);
     num_sends = is_process_gpu() ? lane_value(size, id)
                                  : rpc::max(lane_value(size, id), num_sends);
     uint64_t len =
-        lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
-            ? sizeof(Buffer::data) - sizeof(uint64_t)
-            : lane_value(size, id);
+        lane_value(size, id) > FIRST_CHUNK ? FIRST_CHUNK : lane_value(size, id);
     rpc_memcpy(&buffer->data[1], lane_value(src, id), len);
   });
-  uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
+  uint64_t idx = FIRST_CHUNK;
   uint64_t mask = process.header[index].mask;
-  while (rpc::ballot(mask, idx < num_sends)) {
+  while (rpc::ballot(mask, idx < num_sends && num_sends > FIRST_CHUNK)) {
     send([=](RPC_GLOBAL Buffer *buffer, uint32_t id) {
-      uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
-                         ? sizeof(Buffer::data)
+      uint64_t len = lane_value(size, id) - idx > BUFFER_SIZE
+                         ? BUFFER_SIZE
                          : lane_value(size, id) - idx;
       if (idx < lane_value(size, id))
         rpc_memcpy(buffer->data, advance(lane_value(src, id), idx), len);
     });
-    idx += sizeof(Buffer::data);
+    idx += BUFFER_SIZE;
   }
 }
 
@@ -574,6 +574,8 @@ RPC_ATTRS void Port<T>::send_n(const void *const *src, uint64_t *size) {
 template <bool T>
 template <typename A>
 RPC_ATTRS void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
+  constexpr uint64_t BUFFER_SIZE = sizeof(Buffer::data);
+  constexpr uint64_t FIRST_CHUNK = BUFFER_SIZE - sizeof(uint64_t);
   uint64_t num_recvs = 0;
   recv([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
     lane_value(size, id) = reinterpret_cast<uint64_t *>(buffer->data)[0];
@@ -582,22 +584,20 @@ RPC_ATTRS void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
     num_recvs = is_process_gpu() ? lane_value(size, id)
                                  : rpc::max(lane_value(size, id), num_recvs);
     uint64_t len =
-        lane_value(size, id) > sizeof(Buffer::data) - sizeof(uint64_t)
-            ? sizeof(Buffer::data) - sizeof(uint64_t)
-            : lane_value(size, id);
+        lane_value(size, id) > FIRST_CHUNK ? FIRST_CHUNK : lane_value(size, id);
     rpc_memcpy(lane_value(dst, id), &buffer->data[1], len);
   });
-  uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
+  uint64_t idx = FIRST_CHUNK;
   uint64_t mask = process.header[index].mask;
-  while (rpc::ballot(mask, idx < num_recvs)) {
+  while (rpc::ballot(mask, idx < num_recvs && num_recvs > FIRST_CHUNK)) {
     recv([=](RPC_GLOBAL Buffer *buffer, uint32_t id) {
-      uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
-                         ? sizeof(Buffer::data)
+      uint64_t len = lane_value(size, id) - idx > BUFFER_SIZE
+                         ? BUFFER_SIZE
                          : lane_value(size, id) - idx;
       if (idx < lane_value(size, id))
         rpc_memcpy(advance(lane_value(dst, id), idx), buffer->data, len);
     });
-    idx += sizeof(Buffer::data);
+    idx += BUFFER_SIZE;
   }
 }
 

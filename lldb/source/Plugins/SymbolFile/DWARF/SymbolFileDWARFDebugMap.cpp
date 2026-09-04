@@ -1642,6 +1642,18 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
   });
 }
 
+lldb::TypeSP
+SymbolFileDWARFDebugMap::GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+  lldb::TypeSP type;
+  ForEachSymbolFile("Looking up enclosing type for variable",
+                    [&](SymbolFileDWARF &oso_dwarf) {
+                      type = oso_dwarf.GetTypeEnclosingVariableUID(uid);
+                      return type ? IterationAction::Stop
+                                  : IterationAction::Continue;
+                    });
+  return type;
+}
+
 llvm::Expected<SymbolContext>
 SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(FunctionCallLabel &label) {
   const uint64_t oso_idx = GetOSOIndexFromUserID(label.symbol_id);

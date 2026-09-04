@@ -4,9 +4,9 @@
 ! Test that a bare '!$omp declare target' inside a multiple entry subprogram
 ! marks all entries as declare-target functions.
 
-! CHECK: func.func @_QPfirst_entry{{.*}}device_type = (any)
-! CHECK: func.func @_QPsecond_entry{{.*}}device_type = (any)
-! CHECK: func.func @_QPthird_entry{{.*}}device_type = (any)
+! CHECK: func.func @_QPfirst_entry{{.*}}device_type = any
+! CHECK: func.func @_QPsecond_entry{{.*}}device_type = any
+! CHECK: func.func @_QPthird_entry{{.*}}device_type = any
 
 subroutine first_entry()
   implicit none

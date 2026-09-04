@@ -12,9 +12,6 @@
 
 #include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Frontend/OpenMP/OMP.h"
-
 namespace llvm::omp {
 const DescriptorMap<Clause, descriptor::Clause> &getClauseMap() {
   static const DescriptorMap<Clause, descriptor::Clause> Map{
@@ -34,10 +31,23 @@ const DescriptorMap<Modifier, descriptor::Modifier> &getModifierMap() {
   return Map;
 }
 
+const DescriptorMap<ModifierSet, descriptor::ModifierSet> &getModifierSetMap() {
+  static const DescriptorMap<ModifierSet, descriptor::ModifierSet> Map{
+#define GEN_OMP_MODIFIER_GROUP_DESCRIPTORS
+#include "OMPDescriptors.inc"
+#undef GEN_OMP_MODIFIER_GROUP_DESCRIPTORS
+
+#define GEN_OMP_MODIFIER_SET_DESCRIPTORS
+#include "OMPDescriptors.inc"
+#undef GEN_OMP_MODIFIER_SET_DESCRIPTORS
+  };
+  return Map;
+}
+
 #define GET_THING_OR_EMPTY(Thing, Member)                                      \
   template <typename DetailsTy>                                                \
-  static Thing get##Thing##OrEmpty(const DetailsTy &D, unsigned V) {           \
-    V = std::max(V, 45u);                                                      \
+  static Thing get##Thing##OrEmpty(const DetailsTy &D, Version V) {            \
+    V = std::max(V, Version(45));                                              \
     if (auto Found = D.find(V); Found != D.end())                              \
       return Found->second.Member;                                             \
     return Thing{};                                                            \
@@ -46,35 +56,53 @@ const DescriptorMap<Modifier, descriptor::Modifier> &getModifierMap() {
 GET_THING_OR_EMPTY(Clauses, Cls)
 GET_THING_OR_EMPTY(Directives, Dirs)
 GET_THING_OR_EMPTY(Modifiers, Mods)
+GET_THING_OR_EMPTY(ModifierSets, ModSets)
 GET_THING_OR_EMPTY(Properties, Props)
 
 #undef GET_THING_OR_EMPTY
 
-Properties descriptor::Clause::getProperties(unsigned V) const {
+// Clause
+Properties descriptor::Clause::getProperties(Version V) const {
   return getPropertiesOrEmpty(Details, V);
 }
-Directives descriptor::Clause::getDirectives(unsigned V) const {
+Directives descriptor::Clause::getDirectives(Version V) const {
   return getDirectivesOrEmpty(Details, V);
 }
-Modifiers descriptor::Clause::getModifiers(unsigned V) const {
+Modifiers descriptor::Clause::getModifiers(Version V) const {
   return getModifiersOrEmpty(Details, V);
 }
-Properties descriptor::Modifier::getProperties(unsigned V) const {
+ModifierSets descriptor::Clause::getModifierSets(Version V) const {
+  return getModifierSetsOrEmpty(Details, V);
+}
+// Modifier
+Properties descriptor::Modifier::getProperties(Version V) const {
   return getPropertiesOrEmpty(Details, V);
 }
-Clauses descriptor::Modifier::getClauses(unsigned V) const {
+Clauses descriptor::Modifier::getClauses(Version V) const {
+  return getClausesOrEmpty(Details, V);
+}
+// ModifierSet
+Properties descriptor::ModifierSet::getProperties(Version V) const {
+  return getPropertiesOrEmpty(Details, V);
+}
+Modifiers descriptor::ModifierSet::getModifiers(Version V) const {
+  return getModifiersOrEmpty(Details, V);
+}
+Clauses descriptor::ModifierSet::getClauses(Version V) const {
   return getClausesOrEmpty(Details, V);
 }
 
 const descriptor::Clause &getDescriptor(llvm::omp::Clause C) {
   return getClauseMap().at(C);
 }
-
 const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M) {
   return getModifierMap().at(M);
 }
+const descriptor::ModifierSet &getDescriptor(llvm::omp::ModifierSet S) {
+  return getModifierSetMap().at(S);
+}
 
-Properties getProperties(Clause C, unsigned Version) {
-  return getDescriptor(C).getProperties(std::max(Version, 45u));
+Properties getProperties(Clause C, Version V) {
+  return getDescriptor(C).getProperties(std::max(V, Version(45)));
 }
 } // namespace llvm::omp

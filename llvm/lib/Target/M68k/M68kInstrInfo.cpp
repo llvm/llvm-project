@@ -893,7 +893,7 @@ unsigned getLoadStoreRegOpcode(unsigned Reg, const TargetRegisterClass *RC,
     if (M68k::XR16RegClass.hasSubClassEq(RC))
       return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::DR8RegClass.hasSubClassEq(RC))
-      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
+      return load ? M68k::MOVM8mp_P : M68k::MOVM8pm_P;
     if (M68k::CCRCRegClass.hasSubClassEq(RC))
       return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     llvm_unreachable("Unknown 2-byte regclass");

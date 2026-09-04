@@ -2160,7 +2160,7 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                          const TargetLibraryInfo *TLI,
                                          LibFunc SizeFeedbackNewFunc,
-                                         uint8_t HotCold) {
+                                         Value *HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
@@ -2173,7 +2173,7 @@ Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
   FunctionCallee Func =
       M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, "sized_ptr");
+  CallInst *CI = B.CreateCall(Func, {Num, HotCold}, "sized_ptr");
 
   if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
@@ -2185,7 +2185,7 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
                                                 IRBuilderBase &B,
                                                 const TargetLibraryInfo *TLI,
                                                 LibFunc SizeFeedbackNewFunc,
-                                                uint8_t HotCold) {
+                                                Value *HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
@@ -2198,8 +2198,7 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
   FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
                                                Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI =
-      B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, "sized_ptr");
+  CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, "sized_ptr");
 
   if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
@@ -2209,7 +2208,7 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
 
 Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
                             const TargetLibraryInfo *TLI, LibFunc NewFunc,
-                            uint8_t HotCold) {
+                            Value *HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
@@ -2218,7 +2217,7 @@ Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
   FunctionCallee Func =
       M->getOrInsertFunction(Name, B.getPtrTy(), Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, Name);
+  CallInst *CI = B.CreateCall(Func, {Num, HotCold}, Name);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
@@ -2229,7 +2228,7 @@ Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
 
 Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
                                    const TargetLibraryInfo *TLI,
-                                   LibFunc NewFunc, uint8_t HotCold) {
+                                   LibFunc NewFunc, Value *HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
@@ -2238,7 +2237,7 @@ Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
   FunctionCallee Func = M->getOrInsertFunction(
       Name, B.getPtrTy(), Num->getType(), NoThrow->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI = B.CreateCall(Func, {Num, NoThrow, B.getInt8(HotCold)}, Name);
+  CallInst *CI = B.CreateCall(Func, {Num, NoThrow, HotCold}, Name);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
@@ -2249,7 +2248,7 @@ Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
 
 Value *llvm::emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
                                    const TargetLibraryInfo *TLI,
-                                   LibFunc NewFunc, uint8_t HotCold) {
+                                   LibFunc NewFunc, Value *HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
@@ -2258,7 +2257,7 @@ Value *llvm::emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
   FunctionCallee Func = M->getOrInsertFunction(
       Name, B.getPtrTy(), Num->getType(), Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI = B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, Name);
+  CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, Name);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))
@@ -2270,7 +2269,7 @@ Value *llvm::emitHotColdNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
 Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
                                           Value *NoThrow, IRBuilderBase &B,
                                           const TargetLibraryInfo *TLI,
-                                          LibFunc NewFunc, uint8_t HotCold) {
+                                          LibFunc NewFunc, Value *HotCold) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, NewFunc))
     return nullptr;
@@ -2280,8 +2279,7 @@ Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
       Name, B.getPtrTy(), Num->getType(), Align->getType(), NoThrow->getType(),
       B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
-  CallInst *CI =
-      B.CreateCall(Func, {Num, Align, NoThrow, B.getInt8(HotCold)}, Name);
+  CallInst *CI = B.CreateCall(Func, {Num, Align, NoThrow, HotCold}, Name);
 
   if (const Function *F =
           dyn_cast<Function>(Func.getCallee()->stripPointerCasts()))

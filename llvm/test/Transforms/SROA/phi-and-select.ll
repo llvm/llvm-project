@@ -350,7 +350,7 @@ define i32 @test9_asan(i32 %b, ptr %ptr) sanitize_address {
 ;
 ; CHECK-PRESERVE-CFG-LABEL: @test9_asan(
 ; CHECK-PRESERVE-CFG-NEXT:  entry:
-; CHECK-PRESERVE-CFG-NEXT:    [[F:%.*]] = alloca float, align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[F:%.*]] = alloca i32, align 4
 ; CHECK-PRESERVE-CFG-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-PRESERVE-CFG-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
 ; CHECK-PRESERVE-CFG-NEXT:    [[SELECT:%.*]] = select i1 [[TEST]], ptr [[F]], ptr [[PTR]]
@@ -638,14 +638,14 @@ define float @PR16687(i64 %x, i1 %flag) {
 ; CHECK-LABEL: @PR16687(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_SROA_0_0_EXTRACT_TRUNC]] to float
 ; CHECK-NEXT:    [[A_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[X]], 32
 ; CHECK-NEXT:    [[A_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[A_SROA_2_0_EXTRACT_SHIFT]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[A_SROA_2_0_EXTRACT_TRUNC]] to float
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_SROA_0_0_EXTRACT_TRUNC]] to float
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[A_SROA_2_0_EXTRACT_TRUNC]] to float
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[A_PHI_F_SROA_SPECULATED:%.*]] = phi float [ [[TMP0]], [[THEN]] ], [ [[TMP1]], [[ELSE]] ]

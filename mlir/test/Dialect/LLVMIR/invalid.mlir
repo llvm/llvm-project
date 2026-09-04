@@ -472,6 +472,62 @@ llvm.func @vector_int_attr_requires_int_type() -> vector<2xf32> {
 
 // -----
 
+llvm.func @int_attr_and_type_required_same_index() -> i64 {
+  // expected-error @below{{attribute and type have different integer types: 'index' vs. 'i64'}}
+  %0 = llvm.mlir.constant(1 : index) : i64
+  llvm.return %0 : i64
+}
+
+// -----
+
+llvm.func @int_attr_and_type_required_same_width() -> i16 {
+  // expected-error @below{{attribute and type have different integer types: 'i8' vs. 'i16'}}
+  %0 = llvm.mlir.constant(1 : i8) : i16
+  llvm.return %0 : i16
+}
+
+// -----
+
+llvm.func @int_attr_and_type_required_same_signedness() -> i32 {
+  // expected-error @below{{attribute and type have different integer types: 'ui32' vs. 'i32'}}
+  %0 = llvm.mlir.constant(1 : ui32) : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @vector_int_attr_and_type_required_same_index() -> vector<2xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'index' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xindex>) : vector<2xi64>
+  llvm.return %0 : vector<2xi64>
+}
+
+// -----
+
+llvm.func @vector_int_attr_and_type_required_same_width() -> vector<2xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xi32>) : vector<2xi64>
+  llvm.return %0 : vector<2xi64>
+}
+
+// -----
+
+llvm.func @scalable_vector_int_attr_and_type_required_same() -> vector<[2]xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<1> : vector<2xi32>) : vector<[2]xi64>
+  llvm.return %0 : vector<[2]xi64>
+}
+
+// -----
+
+llvm.func @array_int_attr_and_type_required_same() -> !llvm.array<2 x i64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i64>
+  llvm.return %0 : !llvm.array<2 x i64>
+}
+
+// -----
+
 llvm.func @float_attr_and_type_required_same() -> f16 {
   // expected-error @below{{attribute and type have different float semantics}}
   %cst = llvm.mlir.constant(1.0 : bf16) : f16
@@ -2074,7 +2130,7 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
 // -----
 
 llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op dst should be 64 bits wide to hold 8 value(s) of 8 bits, but it is 8}}
   %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
   llvm.return
 }
@@ -2082,7 +2138,7 @@ llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
 // -----
 
 llvm.func @invalid_xevm_truncf_2(%arg0: f16) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op dst should be 8 bits wide to hold 1 value(s) of 8 bits, but it is 64}}
   %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (f16) -> vector<8xi8>
   llvm.return
 }
@@ -2090,7 +2146,7 @@ llvm.func @invalid_xevm_truncf_2(%arg0: f16) {
 // -----
 
 llvm.func @invalid_xevm_extf_1(%arg0: vector<8xi8>) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op src should be 8 bits wide to hold 1 value(s) of 8 bits, but it is 64}}
   %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (vector<8xi8>) -> f16
   llvm.return
 }
@@ -2098,7 +2154,7 @@ llvm.func @invalid_xevm_extf_1(%arg0: vector<8xi8>) {
 // -----
 
 llvm.func @invalid_xevm_extf_2(%arg0: i8) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op src should be 64 bits wide to hold 8 value(s) of 8 bits, but it is 8}}
   %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (i8) -> vector<8xf16>
   llvm.return
 }

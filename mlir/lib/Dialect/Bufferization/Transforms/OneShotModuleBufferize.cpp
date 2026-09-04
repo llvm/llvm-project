@@ -99,8 +99,8 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   Operation *op = returnVal.getOwner();
 
   SmallVector<int64_t> equivBbArgs;
-  if (op->hasAttr(kEquivalentArgsAttr)) {
-    auto attr = cast<ArrayAttr>(op->getAttr(kEquivalentArgsAttr));
+  if (op->hasDiscardableAttr(kEquivalentArgsAttr)) {
+    auto attr = cast<ArrayAttr>(op->getDiscardableAttr(kEquivalentArgsAttr));
     equivBbArgs = llvm::map_to_vector<4>(attr, [](Attribute a) {
       return cast<IntegerAttr>(a).getValue().getSExtValue();
     });
@@ -110,7 +110,7 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   equivBbArgs[returnVal.getOperandNumber()] = bbArg.getArgNumber();
 
   OpBuilder b(op->getContext());
-  op->setAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
+  op->setDiscardableAttr(kEquivalentArgsAttr, b.getI64ArrayAttr(equivBbArgs));
 }
 
 /// Store function BlockArguments that are equivalent to/aliasing a returned

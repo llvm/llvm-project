@@ -22,6 +22,7 @@
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <cassert>
+#include <limits>
 using namespace llvm;
 
 // As the type of more than one return values is represented as an anonymous
@@ -30,6 +31,38 @@ using namespace llvm;
 // (encoded as 255). So, the maximum number of values that an intrinsic can
 // return is 257.
 static constexpr unsigned MaxNumReturn = 257;
+
+using ImmArgRange = CodeGenIntrinsic::ImmArgRangeSet::Range;
+using ImmArgRangeList = CodeGenIntrinsic::ImmArgRangeSet::RangeList;
+
+static ImmArgRange getHalfOpenRange(const Record *R, const ListInit *Range,
+                                    StringRef AttrName) {
+  auto GetBound = [&](const Init *Bound) -> int64_t {
+    if (const auto *II = dyn_cast<IntInit>(Bound))
+      return II->getValue();
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) +
+                        " bound is not an integer: " + Bound->getAsString());
+  };
+
+  int64_t Lower = GetBound(Range->getElement(0));
+  int64_t Upper = GetBound(Range->getElement(1));
+  if (Upper == std::numeric_limits<int64_t>::max())
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) + " closed upper bound is too large");
+  return ImmArgRange(Lower, Upper + 1);
+}
+
+static void appendHalfOpenRange(SmallVectorImpl<ImmArgRange> &Ranges,
+                                ImmArgRange Range) {
+  if (!Ranges.empty()) {
+    if (Range.first == Ranges.back().second) {
+      Ranges.back().second = Range.second;
+      return;
+    }
+  }
+  Ranges.push_back(Range);
+}
 
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
@@ -388,6 +421,12 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
 
+  for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+    if (!isParamImmArg(RangeSet.ArgNo))
+      PrintFatalError(
+          TheDef->getLoc(),
+          formatv("RangeSet requires ImmArg for argument {}", RangeSet.ArgNo));
+
   // Default values are not yet supported for overloaded intrinsics
   // (overloaded support will come in a follow-up).
   if (isOverloaded &&
@@ -566,6 +605,28 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("RangeSet")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    const ListInit *RangeList = R->getValueAsListInit("Ranges");
+    ImmArgRangeList Ranges;
+
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(), "RangeSet should only apply to arguments");
+    unsigned ParamNo = ArgNo - 1;
+
+    for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+      if (RangeSet.ArgNo == ParamNo)
+        PrintFatalError(
+            R->getLoc(),
+            formatv("RangeSet for argument {} already specified", ParamNo));
+
+    for (const Init *Range : RangeList->getElements())
+      appendHalfOpenRange(
+          Ranges, getHalfOpenRange(R, cast<ListInit>(Range), "RangeSet"));
+    addImmArgRangeSet(ParamNo, std::move(Ranges));
+  } else if (R->isSubClassOf("NoFreeObj")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    addArgAttribute(ArgNo, NoFreeObj);
   } else if (R->isSubClassOf("ArgInfo")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     if (ArgNo < 1)
@@ -632,6 +693,11 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+}
+
+void CodeGenIntrinsic::addImmArgRangeSet(unsigned ArgNo,
+                                         ImmArgRangeSet::RangeList Ranges) {
+  ImmArgRangeSets.push_back({ArgNo, std::move(Ranges)});
 }
 
 void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,

@@ -238,9 +238,9 @@ struct DAP final : public DAPTransport::MessageHandler {
   void SendProgressEvent(uint64_t progress_id, const char *message,
                          uint64_t completed, uint64_t total);
 
-  int32_t CreateSourceReference(lldb::addr_t address);
+  src_ref_t CreateSourceReference(lldb::addr_t address);
 
-  std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
+  std::optional<lldb::addr_t> GetSourceReferenceAddress(src_ref_t reference);
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
@@ -512,7 +512,7 @@ private:
   const protocol::Request *m_active_request;
 
   llvm::StringMap<SourceBreakpointMap> m_source_breakpoints;
-  llvm::DenseMap<int64_t, SourceBreakpointMap> m_source_assembly_breakpoints;
+  llvm::DenseMap<src_ref_t, SourceBreakpointMap> m_source_assembly_breakpoints;
 };
 
 } // namespace lldb_dap

@@ -10,7 +10,9 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -86,6 +88,23 @@ getTypeSizeAndAlignment(Type ty, ModuleOp module, OpenACCSupport *support) {
   if (!dl)
     return std::nullopt;
   return getTypeSizeAndAlignment(ty, module, *dl, support);
+}
+
+Value castPointerLikeTypeIfNeeded(OpBuilder &builder, Location loc, Value value,
+                                  Type resultType) {
+  if (value.getType() == resultType)
+    return value;
+  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(value.getType())) {
+    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
+      return casted;
+  }
+  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(resultType)) {
+    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
+      return casted;
+  }
+  emitError(loc) << "unsupported pointer-like type cast from "
+                 << value.getType() << " to " << resultType;
+  return value;
 }
 
 } // namespace acc

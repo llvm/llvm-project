@@ -2990,9 +2990,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
     SourceLocation RangeLoc = RangeVar->getLocation();
     QualType BeginType = BeginVar->getType(), EndType = EndVar->getType();
     if (!Context.hasSameType(BeginType, EndType)) {
-      Diag(RangeLoc, getLangOpts().CPlusPlus17
-                         ? diag::warn_for_range_begin_end_types_differ
-                         : diag::ext_for_range_begin_end_types_differ)
+      DiagCompat(RangeLoc, diag_compat::for_range_begin_end_types_differ)
           << BeginType << EndType;
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       NoteForRangeBeginEndFunction(*this, EndExpr, BEF_end);

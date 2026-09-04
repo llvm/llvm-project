@@ -97,7 +97,7 @@
 #    error "__cpp_lib_variant should have the value 202106L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_constrained_equality
 #    error "__cpp_lib_constrained_equality should be defined in c++26"
@@ -126,6 +126,35 @@
 #    error "__cpp_lib_variant should have the value 202306L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_constrained_equality
+#    error "__cpp_lib_constrained_equality should be defined in c++29"
+#  endif
+#  if __cpp_lib_constrained_equality != 202411L
+#    error "__cpp_lib_constrained_equality should have the value 202411L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_freestanding_variant
+#      error "__cpp_lib_freestanding_variant should be defined in c++29"
+#    endif
+#    if __cpp_lib_freestanding_variant != 202311L
+#      error "__cpp_lib_freestanding_variant should have the value 202311L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_freestanding_variant
+#      error "__cpp_lib_freestanding_variant should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_variant
+#    error "__cpp_lib_variant should be defined in c++29"
+#  endif
+#  if __cpp_lib_variant != 202306L
+#    error "__cpp_lib_variant should have the value 202306L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on
