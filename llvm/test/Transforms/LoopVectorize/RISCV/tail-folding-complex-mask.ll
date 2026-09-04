@@ -85,6 +85,8 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[TMP4]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP9:%.*]] = or <vscale x 4 x i1> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT4]]
+; NO-VP-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 4 x i1> [[TMP9]], i64 0
+; NO-VP-NEXT:    [[TMP25:%.*]] = freeze i1 [[TMP24]]
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3]], i64 0
 ; NO-VP-NEXT:    [[TMP12:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -92,7 +94,7 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH12:.*]] ]
 ; NO-VP-NEXT:    br i1 [[C1]], label %[[LOAD_V06:.*]], label %[[CHECK_COND15:.*]]
 ; NO-VP:       [[CHECK_COND15]]:
-; NO-VP-NEXT:    br label %[[LOAD_V17:.*]]
+; NO-VP-NEXT:    br i1 [[TMP25]], label %[[LOAD_V17:.*]], label %[[LOAD_V2_CHECK9:.*]]
 ; NO-VP:       [[LOAD_V06]]:
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[SRC0]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> [[BROADCAST_SPLAT2]], <vscale x 4 x i32> poison)
@@ -108,7 +110,11 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; NO-VP-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[SRC1]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> poison)
 ; NO-VP-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_LOAD5]], [[PREDPHI]]
-; NO-VP-NEXT:    [[PREDPHI6:%.*]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> [[TMP15]], <vscale x 4 x i32> zeroinitializer
+; NO-VP-NEXT:    br label %[[LOAD_V2_CHECK9]]
+; NO-VP:       [[LOAD_V2_CHECK9]]:
+; NO-VP-NEXT:    [[TMP26:%.*]] = phi <vscale x 4 x i32> [ poison, %[[CHECK_COND15]] ], [ [[TMP15]], %[[LOAD_V17]] ]
+; NO-VP-NEXT:    [[TMP27:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[CHECK_COND15]] ], [ [[TMP8]], %[[LOAD_V17]] ]
+; NO-VP-NEXT:    [[PREDPHI6:%.*]] = select <vscale x 4 x i1> [[TMP27]], <vscale x 4 x i32> [[TMP26]], <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    br i1 [[C3]], label %[[LOAD_V210:.*]], label %[[LATCH12]]
 ; NO-VP:       [[LOAD_V210]]:
 ; NO-VP-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[SRC2]], i64 [[INDEX]]
@@ -116,8 +122,8 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; NO-VP-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_LOAD7]], [[PREDPHI6]]
 ; NO-VP-NEXT:    br label %[[LATCH12]]
 ; NO-VP:       [[LATCH12]]:
-; NO-VP-NEXT:    [[TMP22:%.*]] = phi <vscale x 4 x i32> [ poison, %[[LOAD_V17]] ], [ [[TMP17]], %[[LOAD_V210]] ]
-; NO-VP-NEXT:    [[TMP23:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[LOAD_V17]] ], [ [[TMP12]], %[[LOAD_V210]] ]
+; NO-VP-NEXT:    [[TMP22:%.*]] = phi <vscale x 4 x i32> [ poison, %[[LOAD_V2_CHECK9]] ], [ [[TMP17]], %[[LOAD_V210]] ]
+; NO-VP-NEXT:    [[TMP23:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[LOAD_V2_CHECK9]] ], [ [[TMP12]], %[[LOAD_V210]] ]
 ; NO-VP-NEXT:    [[PREDPHI8:%.*]] = select <vscale x 4 x i1> [[TMP23]], <vscale x 4 x i32> [[TMP22]], <vscale x 4 x i32> [[PREDPHI6]]
 ; NO-VP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[PREDPHI8]], ptr [[TMP18]], align 4

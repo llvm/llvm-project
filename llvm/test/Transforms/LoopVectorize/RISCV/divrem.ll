@@ -301,12 +301,18 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_ra
 ; FIXED-NEXT:    [[TMP0:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
-; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LATCH2:%.*]] ]
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; FIXED-NEXT:    [[TMP8:%.*]] = call <4 x i64> @llvm.masked.udiv.v4i64(<4 x i64> [[WIDE_LOAD1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i1> [[TMP0]])
 ; FIXED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select i1 [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    br i1 [[TMP6]], label [[DO_OP1:%.*]], label [[LATCH2]]
+; FIXED:       do_op1:
+; FIXED-NEXT:    [[TMP3:%.*]] = call <4 x i64> @llvm.masked.udiv.v4i64(<4 x i64> [[WIDE_LOAD1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i1> [[TMP0]])
+; FIXED-NEXT:    br label [[LATCH2]]
+; FIXED:       latch2:
+; FIXED-NEXT:    [[TMP4:%.*]] = phi <4 x i64> [ poison, [[VECTOR_BODY]] ], [ [[TMP3]], [[DO_OP1]] ]
+; FIXED-NEXT:    [[TMP5:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP0]], [[DO_OP1]] ]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP4]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -377,12 +383,18 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_ra
 ; FIXED-NEXT:    [[TMP0:%.*]] = icmp ne <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
-; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LATCH2:%.*]] ]
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; FIXED-NEXT:    [[TMP8:%.*]] = call <4 x i64> @llvm.masked.sdiv.v4i64(<4 x i64> [[WIDE_LOAD1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i1> [[TMP0]])
 ; FIXED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select i1 [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    br i1 [[TMP6]], label [[DO_OP1:%.*]], label [[LATCH2]]
+; FIXED:       do_op1:
+; FIXED-NEXT:    [[TMP3:%.*]] = call <4 x i64> @llvm.masked.sdiv.v4i64(<4 x i64> [[WIDE_LOAD1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i1> [[TMP0]])
+; FIXED-NEXT:    br label [[LATCH2]]
+; FIXED:       latch2:
+; FIXED-NEXT:    [[TMP4:%.*]] = phi <4 x i64> [ poison, [[VECTOR_BODY]] ], [ [[TMP3]], [[DO_OP1]] ]
+; FIXED-NEXT:    [[TMP5:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP0]], [[DO_OP1]] ]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> [[TMP4]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
