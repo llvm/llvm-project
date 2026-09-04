@@ -6478,7 +6478,9 @@ public:
 
   QualType getSelectedType() const {
     assert(hasSelectedType() && "Type is dependant");
-    return *(getExpansionsPtr() + *getSelectedIndex());
+    // Resolved nodes store only the selected expansion; unresolved nodes store
+    // the full list and are indexed by the evaluated index.
+    return getExpansionsPtr()[Size == 1 ? 0 : *getSelectedIndex()];
   }
 
   UnsignedOrNone getSelectedIndex() const;

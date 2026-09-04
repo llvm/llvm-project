@@ -6809,7 +6809,14 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                          UnsignedOrNone Index) const {
   QualType Canonical;
   if (FullySubstituted && Index) {
-    Canonical = getCanonicalType(Expansions[*Index]);
+    unsigned SelIdx = Expansions.size() == 1 ? 0 : *Index;
+    assert(SelIdx < Expansions.size() && "pack index out of bounds");
+    QualType Selected = Expansions[SelIdx];
+    Canonical = getCanonicalType(Selected);
+    // Store only the selected element once resolved.
+    if (!Selected->isInstantiationDependentType() &&
+        !IndexExpr->isInstantiationDependent())
+      Expansions = Expansions.slice(SelIdx, 1);
   } else {
     llvm::FoldingSetNodeID ID;
     PackIndexingType::Profile(ID, *this, Pattern.getCanonicalType(), IndexExpr,
