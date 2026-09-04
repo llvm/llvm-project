@@ -19,6 +19,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
@@ -1082,6 +1083,116 @@ struct TestVectorShuffleLowering
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
+
+/// Test pass to ensure that per-dimension information survives the
+/// canonicalizations that fold vector.transpose into vector.shape_cast or
+/// vector.broadcast. Propagates a `dim_tags` attribute (one tag per source
+/// dim) into a new `propagated_tags` attribute (one tag per result dim).
+struct TestVectorTransposeDimTagPropagation
+    : public PassWrapper<TestVectorTransposeDimTagPropagation,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorTransposeDimTagPropagation)
+
+  static constexpr int64_t kUnknownDimTag = -1;
+
+  StringRef getArgument() const final {
+    return "test-vector-transpose-dim-tag-propagation";
+  }
+  StringRef getDescription() const final {
+    return "Propagate 'dim_tags' through vector.transpose, vector.broadcast "
+           "and vector.shape_cast to ensure that no information is lost "
+           "after canonicalization";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
+  }
+
+  /// Greedily groups source and result dims with matching products. Every
+  /// result dim in a group takes the tag of the group's leftmost source dim:
+  /// a split propagates the tag to all pieces and a merge picks the leftmost
+  /// tag. Trailing unit dims join the last group. Scalable shapes bail out to
+  /// `kUnknownDimTag` since vscale breaks the size grouping.
+  static SmallVector<int64_t> propagateThroughShapeCast(
+      ArrayRef<int64_t> sourceTags, VectorType sourceType,
+      VectorType resultType) {
+    ArrayRef<int64_t> sourceShape = sourceType.getShape();
+    ArrayRef<int64_t> resultShape = resultType.getShape();
+    SmallVector<int64_t> resultTags(resultShape.size(), kUnknownDimTag);
+    if (sourceType.isScalable() || resultType.isScalable())
+      return resultTags;
+
+    size_t si = 0, ri = 0;
+    int64_t groupTag = kUnknownDimTag;
+    while (si < sourceShape.size() && ri < resultShape.size()) {
+      groupTag = sourceTags[si];
+      int64_t sourceProd = sourceShape[si++];
+      int64_t resultProd = resultShape[ri];
+      resultTags[ri++] = groupTag;
+      // Grow the smaller side until the group products match. The shape_cast
+      // verifier guarantees equal element counts, so this always converges.
+      while (sourceProd != resultProd) {
+        if (sourceProd < resultProd) {
+          sourceProd *= sourceShape[si++];
+        } else {
+          resultProd *= resultShape[ri];
+          resultTags[ri++] = groupTag;
+        }
+      }
+    }
+
+    // Trailing unit dims join the last group.
+    while (ri < resultShape.size())
+      resultTags[ri++] = groupTag;
+
+    return resultTags;
+  }
+
+  void runOnOperation() override {
+    getOperation().walk([&](Operation *op) {
+      auto dimTagsAttr = dyn_cast_or_null<DenseI64ArrayAttr>(
+          op->getDiscardableAttr("dim_tags"));
+      if (!dimTagsAttr)
+        return;
+
+      ArrayRef<int64_t> sourceTags = dimTagsAttr.asArrayRef();
+      SmallVector<int64_t> resultTags;
+
+      if (auto transposeOp = dyn_cast<vector::TransposeOp>(op)) {
+        if (static_cast<int64_t>(sourceTags.size()) !=
+            transposeOp.getSourceVectorType().getRank())
+          return;
+
+        resultTags = applyPermutation(sourceTags, transposeOp.getPermutation());
+      } else if (auto broadcastOp = dyn_cast<vector::BroadcastOp>(op)) {
+        auto srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+        if (!srcType ||
+            static_cast<int64_t>(sourceTags.size()) != srcType.getRank())
+          return;
+
+        // Broadcast is trailing aligned: prepended dims are new and have no
+        // source tag, stretched unit dims keep theirs.
+        int64_t rankDelta =
+            broadcastOp.getResultVectorType().getRank() - srcType.getRank();
+        resultTags.assign(rankDelta, kUnknownDimTag);
+        resultTags.append(sourceTags.begin(), sourceTags.end());
+      } else if (auto shapeCastOp = dyn_cast<vector::ShapeCastOp>(op)) {
+        if (static_cast<int64_t>(sourceTags.size()) !=
+            shapeCastOp.getSourceVectorType().getRank())
+          return;
+
+        resultTags = propagateThroughShapeCast(
+            sourceTags, shapeCastOp.getSourceVectorType(),
+            shapeCastOp.getResultVectorType());
+      } else {
+        return;
+      }
+
+      op->setAttr("propagated_tags",
+                  DenseI64ArrayAttr::get(&getContext(), resultTags));
+    });
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -1132,6 +1243,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorBitWidthLinearize>();
 
   PassRegistration<TestEliminateVectorMasks>();
+
+  PassRegistration<TestVectorTransposeDimTagPropagation>();
 }
 } // namespace test
 } // namespace mlir
