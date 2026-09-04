@@ -1315,17 +1315,18 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
           continue;
         }
 
+        bool IsProductPositive = IsPositive;
         if (isNeg(A)) {
           A = getNegOperand(A);
-          IsPositive = !IsPositive;
+          IsProductPositive = !IsProductPositive;
         }
 
         if (isNeg(B)) {
           B = getNegOperand(B);
-          IsPositive = !IsPositive;
+          IsProductPositive = !IsProductPositive;
         }
 
-        Muls.push_back(Product{A, B, IsPositive});
+        Muls.push_back(Product{A, B, IsProductPositive});
         Worklist.emplace_back(C, IsPositive);
         break;
       }

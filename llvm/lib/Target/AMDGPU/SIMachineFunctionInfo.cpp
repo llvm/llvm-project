@@ -9,7 +9,6 @@
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -23,7 +22,6 @@
 #include "llvm/IR/Function.h"
 #include <cassert>
 #include <optional>
-#include <vector>
 
 enum { MAX_LANES = 64 };
 

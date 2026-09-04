@@ -232,6 +232,11 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
     });
+  // SCEV models ptrtoaddr, but not ptrtoint, mirroring createSCEV.
+  if (match(V, m_PtrToAddr(m_VPValue(LHSVal))))
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getPtrToAddrExpr(Ops[0]);
+    });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
     Type *DestTy = V->getScalarType();
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
@@ -373,8 +378,8 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
 unsigned vputils::getOpcode(const VPValue *V) {
   return TypeSwitch<const VPValue *, unsigned>(V)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
-            VPReplicateRecipe, VPWidenPHIRecipe>(
-          [](auto *I) { return I->getOpcode(); })
+            VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
+            VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -603,7 +608,7 @@ vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
 VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
     VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
@@ -1004,7 +1009,12 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       }
     }
 
-    return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
+    std::optional<VPIRFlags> Flags;
+    if (Opcode == Instruction::ZExt)
+      Flags =
+          VPIRFlags::NonNegFlagsTy(SE.isKnownNonNegative(Cast->getOperand()));
+
+    return Builder.createScalarCast(Opcode, Op, S->getType(), DL, Flags);
   }
   case scUMaxExpr:
   case scSMaxExpr:
@@ -1055,13 +1065,40 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
     return Result;
   }
   case scAddRecExpr: {
+    auto *AR = cast<SCEVAddRecExpr>(S);
+    VPlan &Plan = Builder.getPlan();
     [[maybe_unused]] BasicBlock *PH =
-        cast<VPIRBasicBlock>(Builder.getPlan().getEntry())->getIRBasicBlock();
-    assert(
-        SE.DT.dominates(cast<SCEVAddRecExpr>(S)->getLoop()->getHeader(), PH) &&
-        "can only expand AddRecs for loops outside VPlan's scope");
-    // AddRecs outside VPlan's scope must be expanded via VPExpandSCEV.
-    return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S);
+        cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+    assert(SE.DT.dominates(AR->getLoop()->getHeader(), PH) &&
+           "can only expand AddRecs for loops outside VPlan's scope");
+
+    // Try to expand AR by re-using an existing canonical IV in the Plan's
+    // entry. A canonical IV must be affine and integer typed.
+    if (!AR->isAffine() || !AR->getType()->isIntegerTy())
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
+    auto FoundCanIV =
+        find_if(Plan.getEntry()->phis(), [&](const VPRecipeBase &R) {
+          if (!SE.isSCEVable(cast<VPIRPhi>(R).getIRPhi().getType()))
+            return false;
+          const SCEV *Candidate = SE.getSCEV(&cast<VPIRPhi>(R).getIRPhi());
+          return match(Candidate,
+                       m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(),
+                                           m_SpecificLoop(AR->getLoop()))) &&
+                 Candidate->getType() == AR->getType();
+        });
+    if (FoundCanIV == Plan.getEntry()->phis().end())
+      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
+
+    // {Start, +, Step} --> Start + IV * Step, since the AddRec is affine.
+    // Compute Offset = IV * Step.
+    VPValue *Start = expand(AR->getStart());
+    Value *CanonicalIV = &cast<VPIRPhi>(FoundCanIV)->getIRPhi();
+    VPValue *Offset = expand(
+        SE.getMulExpr(SE.getUnknown(CanonicalIV), AR->getStepRecurrence(SE)));
+
+    // Compute Start + Offset with nuw from the AddRec.
+    return Builder.createAdd(Start, Offset, DL, "",
+                             {AR->hasNoUnsignedWrap(), false});
   }
   case scCouldNotCompute:
     llvm_unreachable("Attempt to expand a SCEVCouldNotCompute");

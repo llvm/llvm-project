@@ -8,8 +8,6 @@
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 
-#include "llvm/ExecutionEngine/Orc/Core.h"
-
 namespace llvm {
 namespace orc {
 

@@ -70,13 +70,16 @@ LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
 template <typename SourceOp, typename TargetOp>
 class AttrConvertPassThrough {
 public:
-  AttrConvertPassThrough(SourceOp srcOp) : srcAttrs(srcOp->getAttrs()) {}
+  AttrConvertPassThrough(SourceOp srcOp)
+      : srcAttrs(srcOp->getDiscardableAttrDictionary().getValue()),
+        propertiesAttr(srcOp->getPropertiesAsAttribute()) {}
 
   ArrayRef<NamedAttribute> getAttrs() const { return srcAttrs; }
-  Attribute getPropAttr() const { return {}; }
+  Attribute getPropAttr() const { return propertiesAttr; }
 
 private:
   ArrayRef<NamedAttribute> srcAttrs;
+  Attribute propertiesAttr;
 };
 
 /// Basic lowering implementation to rewrite Ops with just one result to the

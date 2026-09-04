@@ -76,7 +76,7 @@ private:
   // Returns true if the instruction was modified.
   void preISelLower(MachineInstr &MI);
 
-  bool replacePtrWithInt(MachineOperand &Op);
+  bool replacePtrWithInt(MachineInstr &MI, unsigned OpIdx);
 
   // Custom selection methods
   bool selectCopy(MachineInstr &MI) const;
@@ -1569,18 +1569,18 @@ bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op) {
+bool RISCVInstructionSelector::replacePtrWithInt(MachineInstr &MI,
+                                                 unsigned OpIdx) {
+  MachineOperand &Op = MI.getOperand(OpIdx);
   Register PtrReg = Op.getReg();
   assert(MRI->getType(PtrReg).isPointer() && "Operand is not a pointer!");
 
   const LLT sXLen = LLT::scalar(STI.getXLen());
-  MachineInstr &ParentMI = *Op.getParent();
   Register IntReg = MRI->createGenericVirtualRegister(sXLen);
   MRI->setRegBank(IntReg, RBI.getRegBank(RISCV::GPRBRegBankID));
-  MachineInstr *PtrToInt =
-      BuildMI(*ParentMI.getParent(), ParentMI, ParentMI.getDebugLoc(),
-              TII.get(TargetOpcode::G_PTRTOINT), IntReg)
-          .addReg(PtrReg);
+  MachineInstr *PtrToInt = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                   TII.get(TargetOpcode::G_PTRTOINT), IntReg)
+                               .addReg(PtrReg);
   Op.setReg(IntReg);
   return select(*PtrToInt);
 }
@@ -1591,7 +1591,7 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI) {
     Register DstReg = MI.getOperand(0).getReg();
     const LLT sXLen = LLT::scalar(STI.getXLen());
 
-    replacePtrWithInt(MI.getOperand(1));
+    replacePtrWithInt(MI, 1);
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
     MRI->setType(DstReg, sXLen);
     break;
@@ -1599,7 +1599,7 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI) {
   case TargetOpcode::G_PTRMASK: {
     Register DstReg = MI.getOperand(0).getReg();
     const LLT sXLen = LLT::scalar(STI.getXLen());
-    replacePtrWithInt(MI.getOperand(1));
+    replacePtrWithInt(MI, 1);
     MI.setDesc(TII.get(TargetOpcode::G_AND));
     MRI->setType(DstReg, sXLen);
     break;

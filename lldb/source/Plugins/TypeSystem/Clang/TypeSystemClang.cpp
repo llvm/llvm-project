@@ -243,8 +243,13 @@ static lldb::addr_t GetVTableAddress(Process &process,
 
     vbtable_ptr_addr += vbtable_ptr_offset;
 
-    Status err;
-    return process.ReadPointerFromMemory(vbtable_ptr_addr, err);
+    llvm::Expected<lldb::addr_t> vbtable_ptr_addr_or_err =
+        process.ReadPointerFromMemory(vbtable_ptr_addr);
+    if (!vbtable_ptr_addr_or_err) {
+      llvm::consumeError(vbtable_ptr_addr_or_err.takeError());
+      return LLDB_INVALID_ADDRESS;
+    }
+    return *vbtable_ptr_addr_or_err;
   }
 
   // We have an object already read from process memory,
@@ -313,6 +318,8 @@ static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
   if (base_offset == INT64_MAX)
     return false;
 
+  if (vtable_ctx.isMicrosoft())
+    base_offset += record_layout.getVBPtrOffset().getQuantity();
   bit_offset = base_offset * 8;
 
   return true;

@@ -133,4 +133,25 @@ cir.func @return_within_cleanup() {
 // CHECK:   cir.return
 // CHECK: }
 
+// Test that the cleanup kind attribute keeps its own delimiters when it is
+// printed standalone, while the operation still prints a bare keyword.
+cir.func @cleanup_attr_standalone() {
+  cir.cleanup.scope {
+    cir.yield
+  } cleanup all {
+    cir.yield
+  } {cir.test = [#cir.cleanup<normal>, #cir.cleanup<eh>,
+                 #cir.cleanup<all>]}
+  cir.return
+}
+
+// CHECK: cir.func @cleanup_attr_standalone() {
+// CHECK:   cir.cleanup.scope {
+// CHECK:     cir.yield
+// CHECK:   } cleanup all {
+// CHECK:     cir.yield
+// CHECK:   } {cir.test = [#cir.cleanup<normal>, #cir.cleanup<eh>, #cir.cleanup<all>]}
+// CHECK:   cir.return
+// CHECK: }
+
 }

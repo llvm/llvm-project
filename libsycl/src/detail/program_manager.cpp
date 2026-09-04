@@ -11,6 +11,7 @@
 #include <sycl/__impl/detail/get_device_kernel_info.hpp>
 #include <sycl/__impl/exception.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
@@ -127,9 +128,8 @@ static bool isImageCompatible(const DeviceImageManager &Image,
   return IsValid;
 }
 
-ol_symbol_handle_t
-ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
-                                           DeviceImpl &Device) {
+ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
+    DeviceKernelInfo &KernelInfo, ContextImpl &Context, DeviceImpl &Device) {
 
   std::lock_guard<std::mutex> KernelGuard(MDataCollectionMutex);
 
@@ -144,7 +144,8 @@ ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
                         KernelInfo.getName().data() + " was found");
 
   auto DeviceHandle = Device.getOLHandle();
-  auto Program = DeviceImage.getOrCreateProgram(DeviceHandle);
+  auto Program =
+      DeviceImage.getOrCreateProgram(Context.getOLHandleRef(), DeviceHandle);
 
   ol_symbol_handle_t Kernel{};
   callAndThrow(olGetSymbol, Program, KernelInfo.getName().data(),

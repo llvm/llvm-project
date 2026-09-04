@@ -334,7 +334,8 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     if (auto recType = mlir::dyn_cast<fir::RecordType>(
             fir::getFortranElementType(memberType))) {
       std::string mapperIdName = getCanonicalDefaultDeclareMapperName(recType);
-      mangler(mapperIdName, memberName);
+      if (mangler)
+        mangler(mapperIdName, memberName);
       mapperId = getOrGenImplicitDefaultDeclareMapper(
           firOpBuilder, loc, recType, mapperIdName, mangler);
     }

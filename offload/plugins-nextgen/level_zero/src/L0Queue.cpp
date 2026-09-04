@@ -14,7 +14,10 @@
 #include "L0Device.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
+#include "L0Trace.h"
+#include "PluginInterface.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
@@ -52,9 +55,63 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
                                       ze_event_handle_t *WaitEvents) {
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
-  return CmdList->appendLaunchKernelWithArgs(
-      Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
-      NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+
+  bool AppendLaunchKernelWithArgsAvailable =
+      Device.getL0Context().LaunchKernelWithArguments.available();
+
+  if (AppendLaunchKernelWithArgsAvailable &&
+      Device.getL0Context().AppendLaunchKernelWithArgsSupported.load(
+          std::memory_order_acquire)) {
+    auto Err = CmdList->appendLaunchKernelWithArgs(
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
+        NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+
+    if (!Err)
+      return Plugin::success();
+
+    // Check if Err is ErrorCode::UNSUPPORTED, if so consume it
+    Err = llvm::handleErrors(
+        std::move(Err),
+        [&](std::unique_ptr<error::OffloadError> E) -> llvm::Error {
+          if (E->convertToErrorCode() ==
+              error::make_error_code(error::ErrorCode::UNSUPPORTED))
+            return llvm::Error::success(); // Swallow error
+          return llvm::Error(std::move(E));
+        });
+
+    if (Err)
+      // Err is still here, so it was not ErrorCode::UNSUPPORTED
+      return Err;
+
+    // No Err - it was ErrorCode::UNSUPPORTED, continue into fallback
+  }
+
+  auto &KernelProperties = KEnv.KernelPR;
+  if (KernelProperties.NumKernelArgs > 0 &&
+      (KEnv.ArgPtrs == nullptr || KEnv.ArgSizes == nullptr))
+    return error::createOffloadError(
+        ErrorCode::INVALID_ARGUMENT,
+        "zeCommandListAppendLaunchKernelWithArguments is not supported on this "
+        "platform and fallback is not possible, becaue ArgPtrs(%p) or "
+        "ArgSizes(%p) were not provided!",
+        KEnv.ArgPtrs, KEnv.ArgSizes);
+
+  // Submit kernel using older set of APIs - zeKernelSetArgumentValue
+  auto &GroupSizes = KEnv.GroupSizes;
+  CALL_ZE_RET_ERROR(zeKernelSetGroupSize, Kernel, GroupSizes.groupSizeX,
+                    GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
+
+  for (uint32_t KernelArg = 0; KernelArg < KernelProperties.NumKernelArgs;
+       KernelArg++) {
+    uint32_t ArgSize = KEnv.ArgSizes[KernelArg];
+
+    CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, Kernel, KernelArg, ArgSize,
+                      KEnv.ArgPtrs[KernelArg]);
+  }
+
+  return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
+                                     NumWaitEvents, WaitEvents,
+                                     KEnv.IsCooperative);
 }
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,

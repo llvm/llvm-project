@@ -349,8 +349,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
 
     // All Records.
     for (const Record *R : Records.values()) {
-      Bytes += sizeof(Record) + R->BaseMap.getMemorySize() +
-               R->VirtualBaseMap.getMemorySize();
+      Bytes += sizeof(Record) + R->BaseMap.getMemorySize();
       Bytes += R->Fields.capacity_in_bytes() + R->Bases.capacity_in_bytes() +
                R->VirtualBases.capacity_in_bytes();
     }

@@ -8,7 +8,7 @@ define i1 @test_is_inf_or_nan(double %arg) {
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
-  %ret = fcmp ueq double %abs, 0x7FF0000000000000
+  %ret = fcmp ueq double %abs, +inf
   ret i1 %ret
 }
 
@@ -19,7 +19,7 @@ define i1 @test_is_not_inf_or_nan(double %arg) {
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
-  %ret = fcmp one double %abs, 0x7FF0000000000000
+  %ret = fcmp one double %abs, +inf
   ret i1 %ret
 }
 
@@ -30,7 +30,7 @@ define i1 @test_is_inf(double %arg) {
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
-  %ret = fcmp oeq double %abs, 0x7FF0000000000000
+  %ret = fcmp oeq double %abs, +inf
   ret i1 %ret
 }
 
@@ -41,7 +41,7 @@ define i1 @test_is_not_inf(double %arg) {
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
-  %ret = fcmp une double %abs, 0x7FF0000000000000
+  %ret = fcmp une double %abs, +inf
   ret i1 %ret
 }
 
@@ -52,7 +52,7 @@ define <4 x i1> @test_vec_is_inf_or_nan(<4 x double> %arg) {
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
-  %ret = fcmp ueq <4 x double> %abs, splat (double 0x7FF0000000000000)
+  %ret = fcmp ueq <4 x double> %abs, splat (double +inf)
   ret <4 x i1> %ret
 }
 
@@ -63,7 +63,7 @@ define <4 x i1> @test_vec_is_not_inf_or_nan(<4 x double> %arg) {
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
-  %ret = fcmp one <4 x double> %abs, splat (double 0x7FF0000000000000)
+  %ret = fcmp one <4 x double> %abs, splat (double +inf)
   ret <4 x i1> %ret
 }
 
@@ -74,7 +74,7 @@ define <4 x i1> @test_vec_is_inf(<4 x double> %arg) {
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
-  %ret = fcmp oeq <4 x double> %abs, splat (double 0x7FF0000000000000)
+  %ret = fcmp oeq <4 x double> %abs, splat (double +inf)
   ret <4 x i1> %ret
 }
 
@@ -85,7 +85,7 @@ define <4 x i1> @test_vec_is_not_inf(<4 x double> %arg) {
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
-  %ret = fcmp une <4 x double> %abs, splat (double 0x7FF0000000000000)
+  %ret = fcmp une <4 x double> %abs, splat (double +inf)
   ret <4 x i1> %ret
 }
 

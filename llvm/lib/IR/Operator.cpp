@@ -54,6 +54,10 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return false;
   case Instruction::ICmp:
     return cast<ICmpInst>(this)->hasSameSign();
+  case Instruction::AddrSpaceCast:
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(this))
+      return ASC->hasNonNull();
+    return false;
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(this)) {
       switch (II->getIntrinsicID()) {

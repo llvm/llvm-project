@@ -1563,6 +1563,43 @@ TEST(IncludeFixerTest, NoCrashMemberAccess) {
       UnorderedElementsAre(Diag(Test.range(), "no member named 'xy' in 'X'")));
 }
 
+TEST(IncludeFixerTest, NoCrashOnQualifiedConversionFunctionName) {
+  auto TU = TestTU::withCode(R"cpp(// error-ok
+namespace std {}
+void f() { operator new[](0, operator::align_val_t{}); }
+  )cpp");
+  TU.ExtraArgs.push_back("-std=c++17");
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"std::align_val_t", "unittest:///new.h", "<new>"});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(TU.build().getDiagnostics(), Not(IsEmpty()));
+}
+
+TEST(IncludeFixerTest, FixConversionFunctionTargetType) {
+  Annotations Test(R"cpp(// error-ok
+$insert[[]]struct Wrapper {
+  template <typename T>
+  operator T() const { return T(); }
+};
+
+void f() {
+  Wrapper W;
+  auto V = W.operator::$target[[Something]]();
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"Something", "unittest:///test.h", "\"test.h\""});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              Contains(Field(
+                  &Diag::Fixes,
+                  Contains(Fix(Test.range("insert"), "#include \"test.h\"\n",
+                               "Include \"test.h\" for symbol Something")))));
+}
+
 TEST(IncludeFixerTest, UseCachedIndexResults) {
   // As index results for the identical request are cached, more than 5 fixes
   // are generated.

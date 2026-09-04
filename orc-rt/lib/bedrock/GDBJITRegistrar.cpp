@@ -45,15 +45,20 @@ static constexpr uint32_t JitDescriptorVersion = 1;
 // We put information about the JIT'd object in this global, which the
 // debugger reads. Make sure to specify the version statically, because the
 // debugger checks the version before we can set it during runtime.
-ORC_RT_INTERFACE struct jit_descriptor __jit_debug_descriptor = {
+//
+// The symbols below are part of the debugger's contract with the runtime, so
+// they use ORC_RT_C_EXPORT rather than ORC_RT_EXPORT: they must stay exported
+// even in builds that hide the C++ API. (They are already within the extern "C"
+// block opened above, so no linkage specifier is needed here.)
+ORC_RT_C_EXPORT struct jit_descriptor __jit_debug_descriptor = {
     JitDescriptorVersion, JIT_NOACTION, nullptr, nullptr};
 
 // Debuggers that implement the GDB JIT interface put a special breakpoint in
 // this function.
 #if defined(_MSC_VER)
-ORC_RT_INTERFACE void __jit_debug_register_code() {}
+ORC_RT_C_EXPORT void __jit_debug_register_code() {}
 #else
-ORC_RT_INTERFACE __attribute__((noinline)) void __jit_debug_register_code() {
+ORC_RT_C_EXPORT __attribute__((noinline)) void __jit_debug_register_code() {
   // The noinline attribute above and the asm volatile below prevent calls to
   // this function from being optimized out.
   asm volatile("" ::: "memory");
