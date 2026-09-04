@@ -590,20 +590,12 @@ module cxx03_std_private_locale            [system] {
   header "__locale"
   export *
 }
-module cxx03_std_private_mbstate_t         [system] {
-  header "__mbstate_t.h"
-  export *
-}
 module cxx03_std_private_node_handle       [system] {
   header "__node_handle"
   export *
 }
 module cxx03_std_private_split_buffer      [system] {
   header "__split_buffer"
-  export *
-}
-module cxx03_std_private_std_mbstate_t     [system] {
-  header "__std_mbstate_t.h"
   export *
 }
 module cxx03_std_private_tree              [system] {

@@ -474,6 +474,7 @@ set(files
   __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
+  __fwd/mbstate_t.h
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
@@ -593,7 +594,6 @@ set(files
   __math/rounding_functions.h
   __math/traits.h
   __math/trigonometric_functions.h
-  __mbstate_t.h
   __mdspan/aligned_accessor.h
   __mdspan/default_accessor.h
   __mdspan/extents.h
@@ -801,7 +801,6 @@ set(files
   __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
-  __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
   __stop_token/intrusive_shared_ptr.h
@@ -1374,7 +1373,6 @@ set(files
   __cxx03/__math/rounding_functions.h
   __cxx03/__math/traits.h
   __cxx03/__math/trigonometric_functions.h
-  __cxx03/__mbstate_t.h
   __cxx03/__memory/addressof.h
   __cxx03/__memory/align.h
   __cxx03/__memory/aligned_alloc.h
@@ -1449,7 +1447,6 @@ set(files
   __cxx03/__random/weibull_distribution.h
   __cxx03/__split_buffer
   __cxx03/__std_clang_module
-  __cxx03/__std_mbstate_t.h
   __cxx03/__string/char_traits.h
   __cxx03/__string/constexpr_c_functions.h
   __cxx03/__string/extern_template_lists.h

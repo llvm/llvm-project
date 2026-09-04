@@ -114,7 +114,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/remove_cv.h>
 #  include <cwctype>
-
 #  include <wchar.h>
 
 #  ifndef _LIBCPP_WCHAR_H

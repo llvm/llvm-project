@@ -1510,6 +1510,7 @@ module std {
   }
 
   module iosfwd {
+    module fwd { header "__fwd/mbstate_t.h" }
     header "iosfwd"
     export *
   }
@@ -2487,13 +2488,13 @@ module std {
   module hash_table           { header "__hash_table" }
   module node_handle          { header "__node_handle" }
   module split_buffer         { header "__split_buffer" }
+  module std_mbstate_t {
+    header "__fwd/mbstate_t.h"
+    export *
+  }
   module tree                 {
     header "__tree"
     export std.memory.unique_ptr
-  }
-  module std_mbstate_t {
-    header "__std_mbstate_t.h"
-    export *
   }
   module log_hardening_failure {
     header "__log_hardening_failure"
@@ -2584,8 +2585,3 @@ module std_wctype_h {
   export *
 }
 
-// This header is used by other C compatibility headers so it needs to be in its own module.
-module std_private_mbstate_t {
-  header "__mbstate_t.h"
-  export *
-}

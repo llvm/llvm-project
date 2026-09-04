@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MBSTATE_T_H
-#define _LIBCPP___MBSTATE_T_H
+#ifndef _LIBCPP___FWD_MBSTATE_T_H
+#define _LIBCPP___FWD_MBSTATE_T_H
 
 #include <__config>
 
@@ -16,16 +16,8 @@
 #  pragma GCC system_header
 #endif
 
-// The goal of this header is to provide mbstate_t without requiring all of
-// <uchar.h> or <wchar.h>. It's also used by the libc++ versions of <uchar.h>
-// and <wchar.h> to get mbstate_t when the C library doesn't provide <uchar.h>
-// or <wchar.h>, hence the #include_next of those headers instead of #include.
-// (e.g. if <wchar.h> isn't present in the C library, the libc++ <wchar.h>
-// will include this header. This header needs to not turn around and cyclically
-// include <wchar.h>, but fall through to <uchar.h>.)
-//
-// This does not define std::mbstate_t -- this only brings in the declaration
-// in the global namespace.
+// The goal of this header is to provide std::mbstate_t without requiring all
+// of <cuchar> or <cwchar>.
 
 // We define this here to support older versions of glibc <wchar.h> that do
 // not define this for clang. This is also set in libc++'s <wchar.h> header,
@@ -55,4 +47,10 @@
 #  error "We don't know how to get the definition of mbstate_t on your platform."
 #endif
 
-#endif // _LIBCPP___MBSTATE_T_H
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+using ::mbstate_t _LIBCPP_USING_IF_EXISTS;
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP___FWD_MBSTATE_T_H
