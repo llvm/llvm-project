@@ -825,6 +825,34 @@ struct Chil^d : Parent {};
                   withSymbolTags(SymbolTag::Declaration, SymbolTag::Definition),
                   withResolveParents(Optional(IsEmpty()))))));
 }
+
+// A base class that is an implicit template instantiation
+// (like Mixin<RootBase> below) is never indexed, so
+// looking it up while resolving supertypes fails. superTypes() should not
+// let that hide everything above it; it should skip over the unresolvable
+// link and surface its own already-known parents instead.
+TEST(Standard, SuperTypesSkipsUnindexedImplicitInstantiation) {
+  Annotations Source(R"cpp(
+struct RootBase {};
+struct OtherBase {};
+template <typename T>
+struct Mixin : T, OtherBase {};
+struct Deri^ved : Mixin<RootBase> {};
+)cpp");
+
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  auto Result = getTypeHierarchy(AST, Source.point(), /*ResolveLevels=*/1,
+                                 TypeHierarchyDirection::Children, Index.get(),
+                                 testPath(TU.Filename));
+  ASSERT_THAT(Result, SizeIs(1));
+  auto Parents = superTypes(Result.front(), Index.get());
+
+  EXPECT_THAT(Parents, Optional(UnorderedElementsAre(withName("RootBase"),
+                                                     withName("OtherBase"))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
