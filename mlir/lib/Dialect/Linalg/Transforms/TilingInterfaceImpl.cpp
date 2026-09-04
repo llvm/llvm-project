@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
+#include <functional>
 #include <optional>
 
 #define DEBUG_TYPE "linalg-tiling-interface-impl"
@@ -655,6 +656,79 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
       partialReductionMap, initOperandShape);
 }
 
+/// Returns true if `combinerOp` accumulates into `accumulator` by subtracting
+/// the reduced value from it, i.e. it reduces the negated inputs.
+///
+/// Subtraction is not commutative, so the accumulator has to be the left-hand
+/// side: `x - acc` computes an alternating sum instead of accumulating every
+/// input with the same sign, and cannot be split into partial results.
+static bool isSubtractingAccumulation(Operation *combinerOp,
+                                      Value accumulator) {
+  if (!isa<arith::SubFOp, arith::SubIOp>(combinerOp))
+    return false;
+  return combinerOp->getOperand(0) == accumulator;
+}
+
+/// Creates the operation combining two partial results of the subtracting
+/// accumulation performed by `combinerOp`, preserving its fast-math flags,
+/// rounding mode and integer overflow flags.
+///
+/// TODO: see issue https://github.com/llvm/llvm-project/issues/218538
+/// The overflow flags assert that the original accumulation does not wrap,
+/// which may not hold for partial results since they are subtractions from
+/// zero. The flags are propagated nonetheless, for consistency with the other
+/// combiners, which are cloned with their flags. This behaviour should be
+/// revisited.
+static Value createSubtractingAccumulationMerge(OpBuilder &b, Location loc,
+                                                Operation *combinerOp,
+                                                Value lhs, Value rhs) {
+  if (auto subFOp = dyn_cast<arith::SubFOp>(combinerOp))
+    return arith::AddFOp::create(b, loc, lhs, rhs, subFOp.getFastmathAttr(),
+                                 subFOp.getRoundingmodeAttr());
+  auto subIOp = dyn_cast<arith::SubIOp>(combinerOp);
+  assert(subIOp && "expected a subtracting accumulation combiner");
+  return arith::AddIOp::create(b, loc, lhs, rhs, subIOp.getOverflowFlags());
+}
+
+/// Describes how a reduction is split into partial results.
+struct SplitReductionCombiner {
+  /// Value each partial result is initialized with.
+  TypedAttr identity;
+  /// Builds the operation combining two partial results.
+  std::function<Value(OpBuilder &, Location, Value, Value)> merge;
+};
+
+/// Returns how the reduction implemented by `combinerOp`, accumulating into
+/// `accumulator`, is split into partial results, or `std::nullopt` if it cannot
+/// be split. The identity and the merge operation have to agree, so they are
+/// determined together.
+static std::optional<SplitReductionCombiner>
+getSplitReductionCombiner(Operation *combinerOp, Value accumulator) {
+  if (isSubtractingAccumulation(combinerOp, accumulator)) {
+    // Each partial result holds the negated sum of its own tile, so they are
+    // combined with an addition rather than with the subtraction itself.
+    Builder builder(combinerOp->getContext());
+    return SplitReductionCombiner{
+        builder.getZeroAttr(combinerOp->getResult(0).getType()),
+        [combinerOp](OpBuilder &b, Location loc, Value lhs, Value rhs) {
+          return createSubtractingAccumulationMerge(b, loc, combinerOp, lhs,
+                                                    rhs);
+        }};
+  }
+
+  std::optional<TypedAttr> identity = arith::getNeutralElement(combinerOp);
+  if (!identity.has_value())
+    return std::nullopt;
+  return SplitReductionCombiner{
+      *identity,
+      [combinerOp](OpBuilder &b, Location loc, Value lhs, Value rhs) {
+        Operation *clonedCombinerOp = b.clone(*combinerOp);
+        clonedCombinerOp->setOperand(0, lhs);
+        clonedCombinerOp->setOperand(1, rhs);
+        return clonedCombinerOp->getResult(0);
+      }};
+}
+
 /// External model implementation of PartialReductionInterface for
 /// LinalgOps.
 template <typename LinalgOpTy>
@@ -682,11 +756,12 @@ struct LinalgOpPartialReductionInterface
           combinerOps.size() != 1)
         return op->emitOpError("Failed to anaysis the reduction operation.");
 
-      Operation *reductionOp = combinerOps[0];
-      std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
-      if (!identity.has_value())
+      std::optional<SplitReductionCombiner> combiner =
+          getSplitReductionCombiner(combinerOps[0],
+                                    linalgOp.getRegionOutputArgs()[initIdx]);
+      if (!combiner.has_value())
         return op->emitOpError(
-            "Failed to get an identity value for the reduction operation.");
+            "failed to determine how to split the reduction operation");
 
       // Append the new partial result dimensions.
       SmallVector<OpFoldResult> partialResultShape;
@@ -708,7 +783,7 @@ struct LinalgOpPartialReductionInterface
       Type elType = getElementTypeOrSelf(result.getType());
       Value emptyTensor =
           tensor::EmptyOp::create(b, loc, partialResultShape, elType);
-      Value constantOp = arith::ConstantOp::create(b, loc, *identity);
+      Value constantOp = arith::ConstantOp::create(b, loc, combiner->identity);
       auto identityTensor =
           linalg::FillOp::create(b, loc, constantOp, emptyTensor);
       inits.push_back(identityTensor.getResult(0));
@@ -844,18 +919,24 @@ struct LinalgOpPartialReductionInterface
         }
       }
 
+      // Get the combiner op. This has to happen before the merge operation is
+      // built, since the region builder below cannot report a failure.
+      SmallVector<Operation *, 4> combinerOps;
+      if (!matchReduction(linalgOp.getRegionOutputArgs(), initIdx, combinerOps))
+        return op->emitOpError("failed to match the reduction operation");
+      std::optional<SplitReductionCombiner> combiner =
+          getSplitReductionCombiner(combinerOps[0],
+                                    linalgOp.getRegionOutputArgs()[initIdx]);
+      if (!combiner.has_value())
+        return op->emitOpError(
+            "failed to determine how to split the reduction operation");
+
       auto reduction = linalg::ReduceOp::create(
           b, loc, partialResult, init, partialReductionDims,
-          [&linalgOp, &initIdx](OpBuilder &b, Location loc, ValueRange inputs) {
-            // Get the combiner op.
-            SmallVector<Operation *, 4> combinerOps;
-            matchReduction(linalgOp.getRegionOutputArgs(), initIdx,
-                           combinerOps);
-            Operation *clonedReductionOp = b.clone(*combinerOps[0]);
+          [&combiner](OpBuilder &b, Location loc, ValueRange inputs) {
             // Combine the input at idx and output at numInits + idx.
-            clonedReductionOp->setOperand(0, inputs[0]);
-            clonedReductionOp->setOperand(1, inputs[1]);
-            linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
+            linalg::YieldOp::create(
+                b, loc, combiner->merge(b, loc, inputs[0], inputs[1]));
           });
 
       mergeOperations.push_back(reduction);
