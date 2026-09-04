@@ -711,3 +711,27 @@ define void @nvvm_ex2_approx(float %a, double %b, half %c, <2 x half> %d) {
   %r4 = call float @llvm.nvvm.ex2.approx.ftz.f(float %a)
   ret void
 }
+
+define void @nvvm_add(float %a, double %b, half %c, <2 x half> %d) {
+; CHECK: call float @llvm.nvvm.fadd.f32(float %a, float %a, /* rnd=rn */ i32 1)
+; CHECK: call float @llvm.nvvm.fadd.ftz.f32(float %a, float %a, /* rnd=rz */ i32 0)
+; CHECK: call float @llvm.nvvm.fadd.sat.f32(float %a, float %a, /* rnd=rm */ i32 3)
+; CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %a, /* rnd=rp */ i32 2)
+; CHECK: call double @llvm.nvvm.fadd.f64(double %b, double %b, /* rnd=rn */ i32 1)
+; CHECK: call double @llvm.nvvm.fadd.f64(double %b, double %b, /* rnd=rz */ i32 0)
+; CHECK: call half @llvm.nvvm.fadd.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fadd.ftz.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fadd.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+  %r1 = call float @llvm.nvvm.add.rn.f(float %a, float %a)
+  %r2 = call float @llvm.nvvm.add.rz.ftz.f(float %a, float %a)
+  %r3 = call float @llvm.nvvm.add.rm.sat.f(float %a, float %a)
+  %r4 = call float @llvm.nvvm.add.rp.ftz.sat.f(float %a, float %a)
+  %r5 = call double @llvm.nvvm.add.rn.d(double %b, double %b)
+  %r6 = call double @llvm.nvvm.add.rz.d(double %b, double %b)
+  %r7 = call half @llvm.nvvm.add.rn.sat.f16(half %c, half %c)
+  %r8 = call half @llvm.nvvm.add.rn.ftz.sat.f16(half %c, half %c)
+  %r9 = call <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  %r10 = call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  ret void
+}

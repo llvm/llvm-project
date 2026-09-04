@@ -1810,31 +1810,21 @@ let TargetPrefix = "nvvm" in {
   }
 
   //
-  // Add
+  // FAdd
   //
 
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
-                        IntrNoCreateUndefOrPoison] in {
-    foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-      foreach ftz = ["", "_ftz"] in {
-        foreach sat = ["", "_sat"] in {
-          def int_nvvm_add # rnd # ftz # sat # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-        } // sat
-      } // ftz
-      def int_nvvm_add # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
-    
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_add_rn # ftz # _sat_f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-      def int_nvvm_add_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-        
-    } // ftz
-  }
+                        IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<2>>,
+                        Range<ArgIndex<2>, 0, 4>,
+                        ArgInfo<ArgIndex<2>,
+                                [ArgName<"rnd">,
+                                 ImmArgPrinter<"printFPRoundingMode">]>] in
+    foreach ftz = ["", "_ftz"] in
+      foreach sat = ["", "_sat"] in
+        def int_nvvm_fadd # ftz # sat :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
+                                 llvm_i32_ty]>;
 
   //
   // Dot Product
