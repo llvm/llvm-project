@@ -981,6 +981,8 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
                          E.castAs<CFGLifetimeEnds>().getVarDecl(), Pred);
       return;
     case CFGElement::CleanupFunction:
+      ProcessCleanupFunction(E.castAs<CFGCleanupFunction>(), Pred);
+      return;
     case CFGElement::FullExprCleanup:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
@@ -1606,6 +1608,33 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   }
   VisitCXXDestructor(T, MR, BTE,
                      /*IsBase=*/false, CleanPred, Dst, CallOpts);
+}
+
+void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction CF,
+                                        ExplodedNode *Pred) {
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+
+  const FunctionDecl *FD = CF.getFunctionDecl();
+  SVal VF = svalBuilder.getFunctionPointer(FD);
+
+  const VarDecl *VD = CF.getVarDecl();
+  SVal VLoc = State->getLValue(VD, SF);
+
+  const CallExpr *CE = CF.getPseudoCallExpr();
+  State = State->BindExpr(CE->getCallee(), SF, VF);
+  State = State->BindExpr(CE->getArg(0), SF, VLoc);
+
+  // Copied from ExprEngine::VisitCallExpr
+  CallEventManager &CEMgr = getStateManager().getCallEventManager();
+  CallEventRef<> CallTemplate =
+      CEMgr.getSimpleCall(CE, State, SF, getCFGElementRef());
+  ExplodedNodeSet Dst;
+  // Create a new node to apply the new state before function call.
+  evalCall(Dst, Engine.makeNode(PreStmt(CE, SF, /*tag=*/nullptr), State, Pred),
+           *CallTemplate);
+
+  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,

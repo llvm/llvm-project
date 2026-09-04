@@ -351,6 +351,8 @@ public:
   void ProcessTemporaryDtor(const CFGTemporaryDtor D,
                             ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
+  void ProcessCleanupFunction(const CFGCleanupFunction D, ExplodedNode *Pred);
+
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
   /// Returns nullptr or a node descending from Pred.
   ExplodedNode *processCFGBlockEntrance(const BlockEntrance &BE,

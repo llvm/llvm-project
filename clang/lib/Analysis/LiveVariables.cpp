@@ -488,10 +488,16 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
       continue;
     }
 
-    if (!elem.getAs<CFGStmt>())
+    const Stmt *S = nullptr;
+    if (auto StmtElem = elem.getAs<CFGStmt>())
+      S = elem.castAs<CFGStmt>().getStmt();
+    else if (auto CleanupElem = elem.getAs<CFGCleanupFunction>())
+      S = cast<UnaryOperator>(CleanupElem->getPseudoCallExpr()->getArg(0))
+              ->getSubExpr();
+
+    if (!S)
       continue;
 
-    const Stmt *S = elem.castAs<CFGStmt>().getStmt();
     TF.Visit(const_cast<Stmt*>(S));
     stmtsToLiveness[S] = val;
   }
