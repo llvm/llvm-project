@@ -834,6 +834,11 @@ LogicalResult LLVM::GEPOp::verify() {
   if (getNoWrapFlags() == GEPNoWrapFlags::inboundsFlag)
     return emitOpError("'inbounds_flag' cannot be used directly.");
 
+  if (auto inrange = getInrangeAttr()) {
+    if (inrange.getLower().sge(inrange.getUpper()))
+      return emitOpError("expected 'inrange' end to be larger than start");
+  }
+
   return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
 }
@@ -4065,7 +4070,8 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
                                                  adaptor.getDynamicIndices());
 
   // gep %x:T, 0 -> %x
-  if (getBase().getType() == getType() && indices.size() == 1)
+  if (!getInrangeAttr() && getBase().getType() == getType() &&
+      indices.size() == 1)
     if (auto integer = llvm::dyn_cast_or_null<IntegerAttr>(indices[0]))
       if (integer.getValue().isZero())
         return getBase();

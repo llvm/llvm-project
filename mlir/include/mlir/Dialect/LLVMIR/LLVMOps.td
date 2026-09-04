@@ -294,7 +294,8 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
                    TypeAttr:$elem_type,
-                   GEPNoWrapFlagsProp:$noWrapFlags);
+                   GEPNoWrapFlagsProp:$noWrapFlags,
+                   OptionalAttr<LLVM_ConstantRangeAttr>:$inrange);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
 
@@ -313,6 +314,14 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     Note that 'inbounds' implies 'nusw' which is ensured by the enum
     definition. The flags can be set individually or in combination.
 
+    An optional `inrange` attribute corresponds to the LLVM IR `inrange(Start,
+    End)` qualifier on constant GEP expressions. Loading from or storing to any
+    pointer derived from the GEP has undefined behavior if the access would fall
+    outside the half-open range `[Start, End)` from the GEP result. LLVM IR
+    permits `inrange` only on constant GEP expressions. Consequently, an
+    `llvm.getelementptr` with this attribute can be translated only when its
+    base and indices map to LLVM constants.
+
     Examples:
 
     ```mlir
@@ -325,6 +334,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     // GEP with constant offsets into a structure
     %0 = llvm.getelementptr %1[0, 1]
        : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f32)>
+
+    // Constant GEP with an inrange qualifier
+    %0 = llvm.getelementptr inbounds inrange <i32, -16, 8> %1[0, 0, 2]
+       : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
     ```
   }];
 
@@ -352,13 +365,41 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     }
     Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
-    $res = builder.CreateGEP(elementType, $base, indices, "",
-                             llvm::GEPNoWrapFlags::fromRaw(
-                                 static_cast<unsigned>(
-                                     op.getNoWrapFlags())));
+    llvm::GEPNoWrapFlags nwFlags = llvm::GEPNoWrapFlags::fromRaw(
+        static_cast<unsigned>(op.getNoWrapFlags()));
+    // `inrange` is only representable on LLVM constant GEP expressions.
+    if (auto inrangeAttr = op.getInrangeAttr()) {
+      auto *baseConst = ::llvm::dyn_cast<llvm::Constant>($base);
+      if (!baseConst ||
+          !::llvm::all_of(indices, [](llvm::Value *value) {
+            return ::llvm::isa<llvm::Constant>(value);
+          }))
+        return op.emitError("'inrange' requires the base and indices to "
+                            "translate to LLVM constants");
+
+      unsigned indexBitWidth =
+          moduleTranslation.getLLVMModule()
+              ->getDataLayout()
+              .getIndexTypeSizeInBits($base->getType());
+      llvm::APInt lower = inrangeAttr.getLower().sextOrTrunc(indexBitWidth);
+      llvm::APInt upper = inrangeAttr.getUpper().sextOrTrunc(indexBitWidth);
+      if (lower.sge(upper))
+        return op.emitError("expected 'inrange' end to be larger than start "
+                            "after conversion to the pointer index type");
+
+      SmallVector<llvm::Constant *> constIndices;
+      constIndices.reserve(indices.size());
+      for (llvm::Value *value : indices)
+        constIndices.push_back(::llvm::cast<llvm::Constant>(value));
+      $res = llvm::ConstantExpr::getGetElementPtr(
+          elementType, baseConst, constIndices, nwFlags,
+          llvm::ConstantRange::getNonEmpty(std::move(lower), std::move(upper)));
+    } else {
+      $res = builder.CreateGEP(elementType, $base, indices, "", nwFlags);
+    }
   }];
   let assemblyFormat = [{
-    ($noWrapFlags^)?
+    ($noWrapFlags^)? (`inrange` $inrange^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
     `:` functional-type(operands, results) `,` $elem_type
   }];
