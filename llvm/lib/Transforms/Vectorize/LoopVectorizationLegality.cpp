@@ -104,7 +104,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
             VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate(FK_Undefined), Scalable(SK_Unspecified), TheLoop(L), ORE(ORE) {
+      Predicate(FK_Undefined), Scalable(SK_Unspecified),
+      FPReordering(FK_Undefined), TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -243,6 +244,9 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
 bool LoopVectorizeHints::allowReordering() const {
   // Allow the vectorizer to change the order of operations if enabling
   // loop hints are provided
+  if ((ForceKind)FPReordering != FK_Undefined)
+    return HintsAllowReordering && ((ForceKind)FPReordering == FK_Enabled);
+
   ElementCount EC = getWidth();
   return HintsAllowReordering &&
          (getForce() == LoopVectorizeHints::FK_Enabled ||
@@ -286,6 +290,10 @@ void LoopVectorizeHints::getHintsFromMetadata() {
         Force = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.disable")
         Force = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.fp_reordering.enable")
+        FPReordering = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.fp_reordering.disable")
+        FPReordering = FK_Disabled;
       else if (Name == "llvm.loop.vectorize.predicate.enable")
         Predicate = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.predicate.disable")
@@ -310,8 +318,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  // Force, Predicate, and Scalable are omitted: they are only spelled as
-  // single-operand enable/disable nodes, which never reach setHint().
+  // Force, Predicate, Scalable and FPReordering are omitted: they are only
+  // spelled as single-operand enable/disable nodes, which never reach
+  // setHint().
   Hint *Hints[] = {&Width, &Interleave, &IsVectorized};
   for (auto *H : Hints) {
     if (Name == H->Name) {
