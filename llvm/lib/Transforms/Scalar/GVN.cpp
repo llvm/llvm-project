@@ -151,6 +151,11 @@ static cl::opt<uint32_t> MaxNumInsnsPerBlock(
     cl::desc("Max number of instructions to scan in each basic block in GVN "
              "(default = 100)"));
 
+static cl::opt<bool> GVNPropagateConstExp(
+    "gvn-const-expr-prop", cl::Hidden, cl::init(true),
+    cl::desc("Propagate expressions defined outside the dominating blocks "
+             "for equality checks"));
+
 struct llvm::GVNPass::Expression {
   uint32_t Opcode;
   bool Commutative = false;
@@ -3105,6 +3110,168 @@ void GVNPass::assignBlockRPONumber(Function &F) {
   InvalidBlockRPONumbers = false;
 }
 
+namespace {
+
+/// Check if \p Expr is an expression involving only \p Base and/or constants.
+bool isExprBuiltFromBaseOnly(Value *Expr, Value *Base) {
+  if (!Expr || !Base)
+    return false;
+
+  if (Expr == Base)
+    return true;
+
+  // Only handle Cast, BinOp, UnaryOp for now.
+  if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
+    return false;
+
+  auto *ExprInst = cast<Instruction>(Expr);
+  bool isUsedAtLeastOnce = false;
+  for (Value *Op : ExprInst->operands()) {
+    if (isa<Constant>(Op))
+      continue;
+    if (!isExprBuiltFromBaseOnly(Op, Base))
+      return false;
+    isUsedAtLeastOnce = true;
+  }
+
+  return isUsedAtLeastOnce;
+}
+
+/// Clone the expression \p Expr, replacing any use of \p OldVal with \p NewVal,
+/// inserting the cloned instructions right before \p InsertPt. This avoids
+// creating a new expression for the same value more than once and keeps the
+// clone as close as possible to its first use.
+Value *cloneExprReplacingOperand(Value *Expr, const Value *OldVal,
+                                 Value *NewVal, Instruction *InsertPt,
+                                 DenseMap<Value *, Value *> &ClonedExprs) {
+  if (!Expr || !OldVal || !NewVal || !InsertPt)
+    return nullptr;
+
+  if (isa<Constant>(Expr))
+    return Expr;
+
+  if (Expr == OldVal)
+    return NewVal;
+
+  // Check if we already have a clone for this expression.
+  auto It = ClonedExprs.find(Expr);
+  if (It != ClonedExprs.end())
+    return It->second;
+
+  // Only handle Cast, BinOp, UnaryOp for now.
+  if (!isa<CastInst, BinaryOperator, UnaryOperator>(Expr))
+    return nullptr;
+
+  auto *ExprInst = cast<Instruction>(Expr);
+  SmallVector<Value *, 4> NewOps;
+  for (Value *Op : ExprInst->operands()) {
+    auto *NewOp =
+        cloneExprReplacingOperand(Op, OldVal, NewVal, InsertPt, ClonedExprs);
+    if (!NewOp)
+      return nullptr;
+    NewOps.push_back(NewOp);
+  }
+  auto *NewInst = ExprInst->clone();
+  for (unsigned i = 0, e = NewOps.size(); i != e; ++i)
+    NewInst->setOperand(i, NewOps[i]);
+
+  NewInst->insertBefore(InsertPt->getIterator());
+  LLVM_DEBUG(dbgs() << "ConstPropExpr: Cloning Inst " << *NewInst << "\n");
+
+  // Store the clone in the map for future reuse.
+  ClonedExprs[Expr] = NewInst;
+  return NewInst;
+}
+
+} // end anonymous namespace
+
+bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
+                                        const BasicBlockEdge &Root) {
+  if (!GVNPropagateConstExp)
+    return false;
+
+  if (!LHS || !RHS || !DT)
+    return false;
+
+  // Restrict to integer type for now.
+  if (!LHS->getType()->isIntegerTy())
+    return false;
+
+  // Exactly one of the two should be a constant.
+  if (isa<Constant>(LHS) == isa<Constant>(RHS))
+    return false;
+
+  // Prefer RHS to be the constant.
+  if (!isa<Constant>(RHS))
+    std::swap(LHS, RHS);
+
+  if (!isOnlyReachableViaThisEdge(Root, DT))
+    return false;
+
+  auto processBlock = [&](BasicBlock *Block) {
+    bool Changed = false;
+    for (auto &I : *Block) {
+
+      if (isa<PHINode>(&I))
+        continue;
+
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::fake_use)
+          continue;
+
+      for (unsigned OpNum = 0; OpNum < I.getNumOperands(); ++OpNum) {
+        Instruction *OpExpr = dyn_cast<Instruction>(I.getOperand(OpNum));
+        if (!OpExpr)
+          continue;
+
+        // Skip if OpExpr is not defined outside the dominated region.
+        if (DT->dominates(Root.getEnd(), OpExpr->getParent()))
+          continue;
+
+        // Make sure the expression is built only from LHS.
+        if (!isExprBuiltFromBaseOnly(OpExpr, LHS))
+          continue;
+
+        DenseMap<Value *, Value *> ClonedExprs;
+        Value *ClonedExpr =
+            cloneExprReplacingOperand(OpExpr, LHS, RHS, &I, ClonedExprs);
+        if (!ClonedExpr || ClonedExpr == OpExpr)
+          continue;
+
+        LLVM_DEBUG(dbgs() << "ConstPropExpr: From: " << I);
+        I.setOperand(OpNum, ClonedExpr);
+        LLVM_DEBUG(dbgs() << "\nConstPropExpr: To: " << I << "\n");
+
+        if (isa<Instruction>(ClonedExpr)) {
+          auto *CI = cast<Instruction>(ClonedExpr);
+          const DataLayout &DL = I.getDataLayout();
+          if (Value *V = simplifyInstruction(CI, {DL, TLI, DT, AC})) {
+            I.setOperand(OpNum, V);
+            LLVM_DEBUG(dbgs() << "ConstPropExpr: Optimized instruction: " << I
+                              << "\n");
+          }
+          ++NumGVNEqProp;
+        }
+        Changed = true;
+      }
+    }
+
+    return Changed;
+  };
+
+  bool Changed = false;
+  auto *RootNode = DT->getNode(Root.getEnd());
+  Changed |= processBlock(const_cast<BasicBlock *>(Root.getEnd()));
+  for (auto *DominatedNode : *RootNode) {
+    Changed |= processBlock(DominatedNode->getBlock());
+  }
+
+  if (Changed)
+    LLVM_DEBUG(dbgs() << "ConstPropExpr: With " << *LHS << " == " << *RHS
+                      << "\n");
+  return Changed;
+}
+
 /// The given values are known to be equal in every use
 /// dominated by 'Root'.  Exploit this, for example by replacing 'LHS' with
 /// 'RHS' everywhere in the scope.  Returns whether a change was made.
@@ -3140,6 +3307,10 @@ bool GVNPass::propagateEquality(
     // Don't try to propagate equalities between constants.
     if (isa<Constant>(LHS) && isa<Constant>(RHS))
       continue;
+
+    // Clone constant expressions into dominated region for further folding.
+    if (auto *Edge = std::get_if<BasicBlockEdge>(&Root))
+      Changed |= propagateConstExpressions(LHS, RHS, *Edge);
 
     // Prefer a constant on the right-hand side, or an Argument if no constants.
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))

@@ -506,6 +506,10 @@ private:
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);
+  /// Clone expressions built from a non-constant value into the dominated
+  /// region with the constant substituted, enabling further constant folding.
+  bool propagateConstExpressions(Value *LHS, Value *RHS,
+                                 const BasicBlockEdge &Root);
   bool processFoldableCondBr(CondBrInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
