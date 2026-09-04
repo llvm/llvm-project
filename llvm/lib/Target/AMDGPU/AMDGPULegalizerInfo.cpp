@@ -7669,6 +7669,20 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
   bool HasMMO = !MI.memoperands_empty();
+
+  // S_BUFFER_LOAD only produces values that fill whole SGPRs, apart from the
+  // subword loads below.
+  bool IsSubwordLoad =
+      !Ty.isVector() && (Size == 8 || Size == 16) && ST.hasScalarSubwordLoads();
+  if (Size % 32 != 0 && !IsSubwordLoad) {
+    const Function &Fn = MF.getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported s_buffer_load result type", MI.getDebugLoc()));
+    B.buildUndef(OrigDst);
+    MI.eraseFromParent();
+    return true;
+  }
+
   unsigned Opc = 0;
   if (Size < 32 && ST.hasScalarSubwordLoads()) {
     assert(Size == 8 || Size == 16);
