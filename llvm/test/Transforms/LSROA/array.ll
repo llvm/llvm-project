@@ -9,10 +9,9 @@ declare ptr @llvm.structured.gep.p0(ptr, ...)
 define i32 @test_simple_array() {
 ; CHECK-LABEL: define i32 @test_simple_array() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP:%.*]] = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) [[TMP]], i32 0)
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = call elementtype(i32) ptr @llvm.structured.alloca.p0()
+; CHECK-NEXT:    store i32 0, ptr [[TMP]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[TMP]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
