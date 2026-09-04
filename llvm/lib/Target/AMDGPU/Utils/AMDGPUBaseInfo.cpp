@@ -3347,7 +3347,7 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
-           CB->paramHasAttr(ArgNo, Attribute::ByVal);
+           CB->isByValArgument(ArgNo);
   default:
     return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
