@@ -28,15 +28,6 @@ using namespace llvm;
 // into an M68kGenRegisterBankInfo.def (similar to AArch64).
 namespace llvm {
 namespace M68k {
-enum PartialMappingIdx {
-  PMI_GPR,
-  PMI_Min = PMI_GPR,
-};
-
-const RegisterBankInfo::PartialMapping PartMappings[]{
-    // GPR Partial Mapping
-    {0, 32, GPRRegBank},
-};
 
 enum ValueMappingIdx {
   InvalidIdx = 0,
@@ -47,9 +38,9 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
     // 3 operands in GPRs
-    {&PartMappings[PMI_GPR - PMI_Min], 1},
-    {&PartMappings[PMI_GPR - PMI_Min], 1},
-    {&PartMappings[PMI_GPR - PMI_Min], 1},
+    {&PartMappings[PMI_AnyGPR32], 1},
+    {&PartMappings[PMI_AnyGPR32], 1},
+    {&PartMappings[PMI_AnyGPR32], 1},
 
 };
 } // end namespace M68k
