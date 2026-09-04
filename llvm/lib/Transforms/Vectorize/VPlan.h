@@ -461,12 +461,13 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    VPMonotonicPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCurrentIterationPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
+    VPLastHeaderPHISC = VPMonotonicPHISC,
+    VPLastPHISC = VPMonotonicPHISC,
   };
 
   VPRecipeBase(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
@@ -659,6 +660,7 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPMonotonicPHISC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
@@ -2080,7 +2082,9 @@ public:
                                DL),
         Alignment(Alignment) {
     assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
-            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
+            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store ||
+            VectorIntrinsicID == Intrinsic::masked_compressstore ||
+            VectorIntrinsicID == Intrinsic::masked_expandload) &&
            "Unexpected intrinsic");
   }
 
@@ -2096,6 +2100,9 @@ public:
 
   /// Produce a widened version of the vector memory intrinsic.
   void execute(VPTransformState &State) override;
+
+  /// Returns the mask of a predicated VPWidenMemIntrinsicRecipe.
+  VPValue *getMask() const;
 
   /// Helper function for computing the cost of vector memory intrinsic.
   static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
@@ -2511,6 +2518,11 @@ public:
     VPUser::addOperand(V);
   }
 
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
+
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2586,11 +2598,6 @@ public:
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
-
-  /// Returns the underlying PHINode if one exists, or null otherwise.
-  PHINode *getPHINode() const {
-    return cast_if_present<PHINode>(getUnderlyingValue());
-  }
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -2956,6 +2963,51 @@ protected:
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
+};
+
+/// A recipe for handling monotonic phis. The start value is the first operand
+/// of the recipe, the incoming value from the backedge is the second
+/// operand, and the third operand is the step.
+class VPMonotonicPHIRecipe : public VPHeaderPHIRecipe {
+public:
+  VPMonotonicPHIRecipe(PHINode &Phi, VPValue &Start, VPValue &BackedgeValue,
+                       VPValue &Step)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPMonotonicPHISC, &Phi, &Start) {
+    addOperand(&BackedgeValue);
+    addOperand(&Step);
+  }
+
+  VPValue *getStep() const { return getOperand(2); }
+
+  unsigned getNumIncoming() const override { return 2; }
+
+  ~VPMonotonicPHIRecipe() override = default;
+
+  VPMonotonicPHIRecipe *clone() override {
+    return new VPMonotonicPHIRecipe(*getPHINode(), *getStartValue(),
+                                    *getBackedgeValue(), *getStep());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPMonotonicPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPRecipeID() == VPRecipeBase::VPMonotonicPHISC;
+  }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -4360,7 +4412,8 @@ struct CastInfoMixinImpl
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
     : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
-                                  VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
+                                  VPWidenPHIRecipe, VPHeaderPHIRecipe,
+                                  VPMonotonicPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>

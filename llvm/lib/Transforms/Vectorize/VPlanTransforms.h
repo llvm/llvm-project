@@ -170,6 +170,7 @@ struct VPlanTransforms {
       const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+      const MapVector<PHINode *, MonotonicDescriptor> &MonotonicPHIs,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
@@ -258,6 +259,15 @@ struct VPlanTransforms {
   /// element and the corresponding data vector. Return false if this attempt
   /// was unsuccessful.
   static bool handleFindLastReductions(VPlan &Plan);
+
+  /// Handles compressing memory loads/stores. Loads/stores where the pointer
+  /// is derived from a monotonic PHI are replaced with expandloads or
+  /// compressstores respectively. The backedge value of the monotonic PHI is
+  /// updated to increment by the number of active lanes of the block mask.
+  /// Returns false if any memory operation could not be updated (e.g., due to
+  /// having a mask that does not match the PHI).
+  static bool handleCompressingPatterns(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                        VPRecipeBuilder &RecipeBuilder);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);

@@ -814,6 +814,12 @@ public:
   /// or scatter operation.
   bool isLegalGatherOrScatter(Value *V, ElementCount VF) const;
 
+  /// Returns true if the target machine supports a masked expand load (if \p
+  /// IsLoad) or masked compress store of scalar type \p ScalarTy with \p
+  /// Alignment.
+  bool isLegalExpandLoadOrCompressStore(bool IsLoad, Type *ScalarTy,
+                                        Align Alignment) const;
+
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
   /// InLoopReductionImmediateChains is filled with each in-loop reduction

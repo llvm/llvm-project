@@ -147,6 +147,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
   case VPExpandSCEVSC:
+  case VPMonotonicPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -1459,6 +1460,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   VectorTy, Ctx.CostKind, /*Mask=*/{},
                                   /*Index=*/0);
   }
+  case VPInstruction::NumActiveLanes: {
+    Type *ElementTy = getOperand(0)->getScalarType();
+    auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getArithmeticReductionCost(Instruction::Add, VectorTy,
+                                              std::nullopt, Ctx.CostKind);
+  }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(getOperand(0)->getScalarType(), VF);
@@ -2395,12 +2402,18 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *MemI = createVectorCall(State);
-  auto PtrPos = VPIntrinsic::getMemoryPointerParamPos(getVectorIntrinsicID());
+  auto PtrPos = getVectorMemoryIntrinsicPointerArgIdx(getVectorIntrinsicID());
   assert(PtrPos && "Expected a memory intrinsic with a valid pointer position");
   MemI->addParamAttr(
       *PtrPos, Attribute::getWithAlignment(MemI->getContext(), Alignment));
   if (!MemI->getType()->isVoidTy())
     State.set(this, MemI);
+}
+
+VPValue *VPWidenMemIntrinsicRecipe::getMask() const {
+  auto MaskPos = getVectorIntrinsicMaskArgIdx(getVectorIntrinsicID());
+  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
+  return getOperand(*MaskPos);
 }
 
 InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
@@ -2415,17 +2428,14 @@ InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
   Type *DataTy;
-  if (auto DataPos = VPIntrinsic::getMemoryDataParamPos(getVectorIntrinsicID()))
+  if (auto DataPos = getVectorStoreIntrinsicDataArgIdx(getVectorIntrinsicID()))
     DataTy = getOperand(*DataPos)->getScalarType();
   else
     DataTy = getScalarType();
   assert(!DataTy->isVoidTy() && "Expected a non-void data type");
   Type *Ty = toVectorTy(DataTy, VF);
-  auto MaskPos = VPIntrinsic::getMaskParamPos(getVectorIntrinsicID());
-  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
   return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
-                                 !match(getOperand(*MaskPos), m_True()),
-                                 Alignment, Ctx);
+                                 !match(getMask(), m_True()), Alignment, Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
@@ -5037,6 +5047,21 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   return vputils::onlyFirstLaneUsed(this);
 }
+
+void VPMonotonicPHIRecipe::execute(VPTransformState &State) {
+  executePhiRecipe(this, *this, State, /*IsScalar=*/true, "monotonic.iv");
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPMonotonicPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
+                                       VPSlotTracker &SlotTracker) const {
+  O << Indent << "MONOTONIC-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   executePhiRecipe(this, *this, State, /*IsScalar=*/false, Name);
