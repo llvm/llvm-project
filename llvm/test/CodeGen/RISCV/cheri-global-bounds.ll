@@ -1,6 +1,6 @@
-; RUN: llc -mtriple riscv32 -mattr=+experimental-y -target-abi il32pc64 %s -o - | FileCheck -check-prefix=RVY32 %s
-; RUN: llc -mtriple riscv64 -mattr=+experimental-y -target-abi l64pc128 %s -o - | FileCheck -check-prefix=RVY64 %s
-; RUN: llc -mtriple riscv64 -mattr=+xcheriot -target-abi cheriot %s -o - | FileCheck -check-prefix=CHERIOT %s
+; RUN: llc -mtriple riscv32 -mattr=+experimental-y -target-abi il32pc64 %s -o - | FileCheck -check-prefix=RVY32,COMMON %s
+; RUN: llc -mtriple riscv64 -mattr=+experimental-y -target-abi l64pc128 %s -o - | FileCheck -check-prefix=RVY64,COMMON %s
+; RUN: llc -mtriple riscv64 -mattr=+xcheriot -target-abi cheriot %s -o - | FileCheck -check-prefix=CHERIOT,COMMON %s
 
 @global1 = global [6995 x i8] zeroinitializer, align 1
 
@@ -24,3 +24,10 @@
 ; CHERIOT-NEXT:  .zero 6995
 ; CHERIOT-NEXT:  .size global1, 7008
 ; CHERIOT:  .p2align 4, 0x0
+
+@global_in_section = global [6995 x i8] zeroinitializer, section "foo", align 1
+
+; COMMON-LABEL: .globl global_in_section
+; COMMON-NEXT:  global_in_section:
+; COMMON-NEXT:  .zero 6995
+; COMMON-NEXT:  .size global_in_section, 6995
