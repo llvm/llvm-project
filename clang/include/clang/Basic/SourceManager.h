@@ -755,21 +755,6 @@ class SourceManager : public RefCountedBase<SourceManager> {
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
 
-  // Source location deduplication statistics.
-private:
-  /// Number of loaded file entries reused from an earlier module.
-  unsigned NumDuplicateLoadedFiles = 0;
-  /// Address-space bytes reused instead of allocated, for -print-stats.
-  uint64_t DuplicateLoadedBytes = 0;
-
-public:
-  /// Record that a loaded file entry was reused from an earlier module.
-  void noteDuplicateLoadedFile(uint64_t Size) {
-    ++NumDuplicateLoadedFiles;
-    DuplicateLoadedBytes += Size;
-  }
-
-private:
   /// A bitmap that indicates whether the entries of LoadedSLocEntryTable
   /// have already been loaded from the external source.
   ///

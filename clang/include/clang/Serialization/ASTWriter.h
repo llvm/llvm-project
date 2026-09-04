@@ -542,6 +542,22 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
+  /// Mapping from a range to the amount an offset within it must move to reach
+  /// the loaded copy we point at. This is \c Begin-LoadedBase, always negative
+  /// since loaded offsets sit above local ones, and zero for a range with no
+  /// copy.
+  std::vector<int64_t> NonAffectingRedirectAdjustments;
+
+  /// Mapping from an input file to the \c FileID a loaded module already uses
+  /// for it. Filled on first use, so only a module write pays for the walk.
+  llvm::DenseMap<const FileEntry *, FileID> LoadedCopyFileIDs;
+  bool LoadedCopyFileIDsBuilt = false;
+
+  /// Whether the control block has been written. It records import locations,
+  /// which must stay local to this module file, so we rewrite nothing before
+  /// then.
+  bool ControlBlockWritten = false;
+
   /// A list of classes in named modules which need to emit the VTable in
   /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
@@ -555,6 +571,13 @@ private:
   /// This function erases source locations pointing into such files.
   SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
                                         const SrcMgr::FileInfo &File);
+
+  /// The \c FileID a loaded module uses for \p FE, if one of them has it.
+  FileID getLoadedCopyFileID(const FileEntry *FE);
+
+  /// Returns \p Loc translated into the module file that already has its file,
+  /// or an invalid location if we kept the file.
+  SourceLocation getRedirectedLocation(SourceLocation Loc) const;
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.

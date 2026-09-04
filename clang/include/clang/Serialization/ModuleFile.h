@@ -346,40 +346,6 @@ public:
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
-  // === Source location deduplication ===
-
-  /// One segment of the local-to-global source location map. A local raw
-  /// location L in [LocalBegin, LocalEnd) maps to global location L + Delta.
-  struct SLocRemapSegment {
-    SourceLocation::UIntTy LocalBegin;
-    SourceLocation::UIntTy LocalEnd;
-    int64_t Delta;
-  };
-
-  /// The local-to-global source location map for this module, sorted by
-  /// LocalBegin. When a module's files are all distinct it holds a single
-  /// segment equivalent to the flat shift by (SLocEntryBaseOffset - 2). When a
-  /// file is reused from an earlier module, extra segments redirect that file's
-  /// locations into the earlier module. Empty when this path did not run, in
-  /// which case the flat shift is used directly.
-  llvm::SmallVector<SLocRemapSegment, 4> SLocRemap;
-
-  /// The inverse of SLocRemap, sorted by global start, where LocalBegin and
-  /// LocalEnd hold global bounds and a global location G maps to G - Delta.
-  /// Holds only the entries this module kept, which tile its own range.
-  llvm::SmallVector<SLocRemapSegment, 4> SLocRemapGlobal;
-
-  /// Maps a local SLoc entry index to its global SLoc entry ID. A kept entry
-  /// maps to its own ID. A file reused from an earlier module maps to that
-  /// module's copy. Empty when no file was reused (the global ID is then
-  /// SLocEntryBaseID + index).
-  std::vector<int> LocalToGlobalID;
-
-  /// For each kept entry, in order, its original local index (into
-  /// SLocEntryOffsets). Reused entries have no slot, so this skips them. Empty
-  /// when no file was reused (kept slot j is then local index j).
-  std::vector<unsigned> KeptSLocLocalIndex;
-
   // === Identifiers ===
 
   /// The number of identifiers in this AST file.
