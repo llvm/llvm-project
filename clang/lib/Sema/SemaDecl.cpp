@@ -16840,8 +16840,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   FunctionScopeInfo *FSI = getCurFunction();
   FunctionDecl *FD = dcl ? dcl->getAsFunction() : nullptr;
 
-  if (FSI->UsesFPIntrin && FD && !FD->hasAttr<StrictFPAttr>())
-    FD->addAttr(StrictFPAttr::CreateImplicit(Context));
+  if (FSI->UsesFPIntrin) {
+    Decl *StrictFPTarget = FD ? cast<Decl>(FD) : dcl;
+    if (StrictFPTarget && !StrictFPTarget->hasAttr<StrictFPAttr>())
+      StrictFPTarget->addAttr(StrictFPAttr::CreateImplicit(Context));
+  }
 
   SourceLocation AnalysisLoc;
   if (Body)
