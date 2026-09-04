@@ -50,20 +50,6 @@ static BundleTy getOperand(ArrayRef<Value *> Bndl, unsigned OpIdx) {
   return Operands;
 }
 
-/// \Returns the BB iterator after the lowest instruction in \p Vals, or the top
-/// of BB if no instruction found in \p Vals.
-static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
-                                                      BasicBlock *BB) {
-  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals, BB));
-  if (BotI == nullptr)
-    // We are using BB->begin() (or after PHIs) as the fallback insert point.
-    return BB->empty()
-               ? BB->begin()
-               : std::next(
-                     VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
-  return std::next(BotI->getIterator());
-}
-
 Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
                                     ArrayRef<Value *> Operands) {
   auto CreateVectorInstr = [](ArrayRef<Value *> Bndl,
@@ -75,7 +61,7 @@ Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
     Type *ScalarTy = VecUtils::getElementType(Utils::getExpectedType(Bndl[0]));
     auto *VecTy = VecUtils::getWideType(ScalarTy, VecUtils::getNumLanes(Bndl));
 
-    BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(
+    BasicBlock::iterator WhereIt = VecUtils::getInsertPointAfterInstrs(
         Bndl, cast<Instruction>(Bndl[0])->getParent());
 
     auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
@@ -197,13 +183,15 @@ void BundleVec::tryEraseDeadInstrs() {
 
 Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
                                 BasicBlock *UserBB) {
-  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp}, UserBB);
+  BasicBlock::iterator WhereIt =
+      VecUtils::getInsertPointAfterInstrs({VecOp}, UserBB);
   return ShuffleVectorInst::create(VecOp, VecOp, Mask, WhereIt,
                                    VecOp->getContext(), "VShuf");
 }
 
 Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
-  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack, UserBB);
+  BasicBlock::iterator WhereIt =
+      VecUtils::getInsertPointAfterInstrs(ToPack, UserBB);
 
   Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
   unsigned Lanes = VecUtils::getNumLanes(ToPack);
@@ -495,7 +483,7 @@ Value *BundleVec::emitVectors() {
           DescrInstrs.push_back(I);
       }
       BasicBlock::iterator WhereIt =
-          getInsertPointAfterInstrs(DescrInstrs, UserBB);
+          VecUtils::getInsertPointAfterInstrs(DescrInstrs, UserBB);
 
       Value *LastV = PoisonValue::get(ResTy);
       Context &Ctx = LastV->getContext();

@@ -1831,7 +1831,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       std::optional<mlir::omp::LinearModifier> linearMod;
       if (explicitLinearMod)
         linearMod = *explicitLinearMod;
-      else if (semaCtx.langOptions().OpenMPVersion >= 52)
+      else if (semaCtx.langOptions().getOpenMPVersion() >= 52)
         linearMod = isDeclareSimd ? getDeclareSimdDefaultMod(*sym)
                                   : mlir::omp::LinearModifier::val;
 
@@ -1979,10 +1979,10 @@ bool ClauseProcessor::processMap(
     // default value
     Map::MapType type;
     if (directive == llvm::omp::Directive::OMPD_target_enter_data &&
-        semaCtx.langOptions().OpenMPVersion >= 52)
+        semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::To);
     else if (directive == llvm::omp::Directive::OMPD_target_exit_data &&
-             semaCtx.langOptions().OpenMPVersion >= 52)
+             semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::From);
     else
       type = mapType.value_or(Map::MapType::Tofrom);

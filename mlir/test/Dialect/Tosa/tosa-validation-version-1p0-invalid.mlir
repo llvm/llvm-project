@@ -82,6 +82,16 @@ func.func @test_transpose_conv2d_fp8_acc32(%arg0: tensor<1x32x32x8xf8E5M2>, %arg
 
 // -----
 
+func.func @test_transpose_conv2d_mxfp(%arg0: tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg2: tensor<8xbf16>) -> tensor<1x4x4x8xbf16> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.transpose_conv2d' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [bf16, mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = bf16, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xbf16>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xbf16>
+  return %0 : tensor<1x4x4x8xbf16>
+}
+
+// -----
+
 func.func @test_gather_bool_i64(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi1> {
   // expected-error@+1 {{'tosa.gather' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires any of [int64] profiles/extensions to be specified in the target environment}}
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi1>, tensor<13x26xi64>) -> tensor<13x26x3xi1>
@@ -204,6 +214,14 @@ func.func @test_dyanmic_dims(%arg0: tensor<1x8x16xi8>) {
   // expected-error@+1 {{'tosa.argmax' op failed level check: operand shape dimension cannot be dynamic when targeting TOSA specification version 1.0 or below}}
   %1 = tosa.argmax %0 { axis = 1 : i32 } : (tensor<?x8x16xi8>) -> tensor<?x16xi32>
   return
+}
+
+// -----
+
+func.func @test_block_scaled_identity(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>> {
+  // expected-error@+1 {{'tosa.identity' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp6e2m3] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.identity %arg0 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  return %0 : tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
 }
 
 // -----

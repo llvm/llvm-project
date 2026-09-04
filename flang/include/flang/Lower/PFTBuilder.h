@@ -377,6 +377,9 @@ struct Evaluation : EvaluationVariant {
   bool isUnstructured{false};  // evaluation has unstructured control flow
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
   bool activeConstruct{false}; // temporarily set for some constructs
+  // The enclosing evaluation-list traversal should skip this evaluation once
+  // because directive lowering already consumed it.
+  bool skipNextLowering{false};
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };

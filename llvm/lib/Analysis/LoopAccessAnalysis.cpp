@@ -382,9 +382,6 @@ getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
       !SE->isLoopInvariant(OffStart, Lp) || !SE->isLoopInvariant(OffEnd, Lp))
     return {nullptr, nullptr};
 
-  assert(SE->isKnownPredicate(CmpInst::ICMP_ULE, OffStart, OffEnd) &&
-         "Start must be provably <= End for monotonic expressions");
-
   return {SE->getAddExpr(Base, OffStart), SE->getAddExpr(Base, OffEnd)};
 }
 

@@ -117,6 +117,8 @@ template B::B(int, double);
 #endif
 } // namespace cwg1738
 
+// cwg1739: na
+
 // cwg1748 is in cwg1748.cpp
 
 namespace cwg1753 { // cwg1753: 11

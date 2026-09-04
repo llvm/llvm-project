@@ -22,6 +22,6 @@ define i1 @test_frem_fcmp_inf(double %a, double %b) {
 ;
 entry:
   %rem = frem double %a, %b
-  %is.inf = fcmp oeq double %rem, 0x7FF0000000000000
+  %is.inf = fcmp oeq double %rem, +inf
   ret i1 %is.inf
 }

@@ -42,7 +42,7 @@ void foo(int i) {
   [[unused]] switch (i) { // expected-warning {{unknown attribute 'unused' ignored}}
     [[uuid]] case 0: // expected-warning {{unknown attribute 'uuid' ignored}}
     [[visibility]] default: // expected-warning {{unknown attribute 'visibility' ignored}}
-      [[carries_dependency]] break; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
+      [[gnu::nonnull]] break; // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
   }
 
   [[fastcall]] goto there; // expected-warning {{unknown attribute 'fastcall' ignored}}
@@ -54,28 +54,28 @@ void foo(int i) {
 
   [[weakref]] return; // expected-warning {{unknown attribute 'weakref' ignored}}
 
-  [[carries_dependency]] ; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
-  [[carries_dependency]] { } // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
-  [[carries_dependency]] if (0) { } // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
-  [[carries_dependency]] for (;;); // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
-  [[carries_dependency]] do { // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
-    [[carries_dependency]] continue; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}} ignored}}
+  [[gnu::nonnull]] ; // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] { } // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] if (0) { } // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] for (;;); // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] do { // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
+    [[gnu::nonnull]] continue; // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}} ignored}}
   } while (0);
-  [[carries_dependency]] while (0); // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] while (0); // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
 
-  [[carries_dependency]] switch (i) { // expected-error {{'carries_dependency' attribute cannot be applied to a statement}} ignored}}
-    [[carries_dependency]] case 0: // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
-    [[carries_dependency]] default: // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
-      [[carries_dependency]] break; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] switch (i) { // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}} ignored}}
+    [[gnu::nonnull]] case 0: // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
+    [[gnu::nonnull]] default: // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
+      [[gnu::nonnull]] break; // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
   }
 
-  [[carries_dependency]] goto here; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] goto here; // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
 
-  [[carries_dependency]] try { // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] try { // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
   } catch (...) {
   }
 
-  [[carries_dependency]] return; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
+  [[gnu::nonnull]] return; // expected-error {{'gnu::nonnull' attribute cannot be applied to a statement}}
 
   {
     [[ ]] // expected-error {{an attribute list cannot appear here}}
