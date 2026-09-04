@@ -52,3 +52,14 @@ func.func @test_atomic_exch(%arg0: memref<?xi32>, %idx: index, %value: i32) {
   }
   func.return
 }
+
+// -----
+
+func.func @generic_atomic_rmw_rank_mismatch(%arg0: memref<i32>, %idx: index) {
+  // expected-error@+1 {{index count (1) does not match memref rank (0)}}
+  %r = memref.generic_atomic_rmw %arg0[%idx] : memref<i32> {
+  ^bb0(%v: i32):
+    memref.atomic_yield %v : i32
+  }
+  func.return
+}
