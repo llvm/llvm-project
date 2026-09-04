@@ -1850,7 +1850,7 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
   Spec = {}; // Do not use `Spec` beyond this point.
   BasicBlock *Tail = I.getParent();
   Tail->setName(Head->getName() + ".cont");
-  PHINode *PN;
+  PHINode *PN = nullptr;
   if (isa<LoadInst>(I))
     PN = PHINode::Create(I.getType(), 2, "", I.getIterator());
   for (BasicBlock *SuccBB : successors(Head)) {
