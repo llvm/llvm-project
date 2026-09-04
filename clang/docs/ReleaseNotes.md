@@ -443,6 +443,12 @@ features cannot lower the translation-unit ABI level;
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Added the `-Wcounted-by-addrof` warning (on by default) for
+  `__builtin_dynamic_object_size(&p->fam, 1)` where `fam` is a `__counted_by` flexible array member.
+  Taking the array's address makes the builtin ignore the count and use the object's static layout
+  instead. The warning fires only when the array is reached through a pointer, where the count is the
+  useful bound; a fix-it removes the `&`.
+
 - Clang now attempts to print enumerator names rather than C-style cast expressions
   in more diagnostics.
 

@@ -3046,6 +3046,87 @@ static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
   return QualType();
 }
 
+/// Returns true when the object holding the flexible array member reached by
+/// \p ME has a fixed allocation (a local, parameter, static, or global
+/// variable). A count cannot enlarge a fixed allocation, so for those the
+/// layout answer __bdos returns is already correct and '&fam' loses nothing
+/// useful -- warning would be a false positive. Returns false when the member
+/// is reached through a pointer, where the count is the bound the layout
+/// fallback would lose.
+static bool flexibleArrayMemberHasFixedStorage(const MemberExpr *ME) {
+  const Expr *E = ME;
+  while (true) {
+    if (const auto *M = dyn_cast<MemberExpr>(E)) {
+      if (M->isArrow())
+        return false; // Reached through a pointer.
+      E = M->getBase()->IgnoreParenImpCasts();
+      continue;
+    }
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *Base = ASE->getBase()->IgnoreParenImpCasts();
+      // Array subscript keeps the storage, pointer subscript escapes it.
+      if (Base->getType()->isPointerType())
+        return false;
+      E = Base;
+      continue;
+    }
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+      // Locals, params, statics and globals all have a fixed allocation.
+      return VD && (VD->hasLocalStorage() || VD->hasGlobalStorage());
+    }
+    return false; // Call temporaries, opaque returns, etc.
+  }
+}
+
+/// -Wcounted-by-addrof: warn when the pointer argument of
+/// '__builtin_dynamic_object_size' is '&' applied to a whole '__counted_by'
+/// flexible array member (e.g. '__bdos(&p->fam, 1)'). Taking the array's
+/// address makes the builtin ignore the count and use the object's static
+/// layout instead. The warning fires only when the member is reached through a
+/// pointer: there the layout gives -1 ("unknown") and the count is the useful
+/// bound. When the object has a fixed allocation the layout answer is already
+/// correct, so we stay quiet.
+static void DiagnoseCountedByAddrOfDynamicObjectSize(Sema &S,
+                                                     const CallExpr *Call) {
+  if (S.getLangOpts().BoundsSafety)
+    return; // Already an error under -fbounds-safety.
+
+  if (Call->getNumArgs() < 1)
+    return;
+
+  // The pointer argument must be the address of an lvalue: '&<expr>'.
+  const auto *UO =
+      dyn_cast<UnaryOperator>(Call->getArg(0)->IgnoreParenImpCasts());
+  if (!UO || UO->getOpcode() != UO_AddrOf)
+    return;
+
+  const auto *ME = dyn_cast<MemberExpr>(UO->getSubExpr()->IgnoreParens());
+  if (!ME)
+    return;
+
+  const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!FD)
+    return;
+
+  // Match a whole flexible array member: an incomplete array (T[]) with a
+  // __counted_by attribute. Excludes &fam[idx], the decayed 'fam', and
+  // __counted_by pointer fields.
+  const auto *CATy = FD->getType()->getAs<CountAttributedType>();
+  if (!CATy || !CATy->desugar()->isIncompleteArrayType())
+    return;
+
+  // A fixed allocation already gives the correct layout answer; nothing lost.
+  if (flexibleArrayMemberHasFixedStorage(ME))
+    return;
+
+  // Warn and offer to drop the '&' so the count-honoring decayed form is used.
+  S.Diag(UO->getOperatorLoc(), diag::warn_counted_by_addrof_discards_count)
+      << FD << static_cast<unsigned>(CATy->getKind()) << UO->getSourceRange()
+      << FixItHint::CreateRemoval(
+             SourceRange(UO->getOperatorLoc(), UO->getOperatorLoc()));
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3269,6 +3350,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_dynamic_object_size:
+    if (BuiltinConstantArgRange(TheCall, 1, 0, 3))
+      return ExprError();
+    DiagnoseCountedByAddrOfDynamicObjectSize(*this, TheCall);
+    break;
   case Builtin::BI__builtin_object_size:
     if (BuiltinConstantArgRange(TheCall, 1, 0, 3))
       return ExprError();
