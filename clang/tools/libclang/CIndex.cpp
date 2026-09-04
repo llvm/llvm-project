@@ -10252,6 +10252,16 @@ CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
 }
 
 enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
+
+  auto retOp = [](OverloadedOperatorKind Kind, int numArgs) {
+    if (!(Kind == OO_None || Kind == OO_PlusPlus || Kind == OO_MinusMinus ||
+          numArgs != 2)) {
+      auto opcode = BinaryOperator::getOverloadedOpcode(Kind);
+      return static_cast<CXBinaryOperatorKind>(opcode + 1);
+    }
+    return CXBinaryOperator_Invalid;
+  };
+
   if (clang_isExpression(cursor.kind)) {
     const Expr *expr = getCursorExpr(cursor);
 
@@ -10260,6 +10270,22 @@ enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
 
     if (const auto *op = dyn_cast<CXXRewrittenBinaryOperator>(expr))
       return static_cast<CXBinaryOperatorKind>(op->getOpcode() + 1);
+
+    if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(expr)) {
+      return retOp(OCE->getOperator(), OCE->getNumArgs());
+    }
+  }
+
+  if (clang_isDeclaration(cursor.kind)) {
+    const auto *decl = getCursorDecl(cursor);
+
+    const auto *funcDecl = dyn_cast<FunctionDecl>(decl);
+    if (!funcDecl)
+      return CXBinaryOperator_Invalid;
+
+    return retOp(funcDecl->getOverloadedOperator(),
+                 (funcDecl->isCXXClassMember()) ? funcDecl->getNumParams() + 1
+                                                : funcDecl->getNumParams());
   }
 
   return CXBinaryOperator_Invalid;
@@ -10274,11 +10300,39 @@ CXString clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind) {
 }
 
 enum CXUnaryOperatorKind clang_getCursorUnaryOperatorKind(CXCursor cursor) {
+
+  auto retOp = [](OverloadedOperatorKind op, int argNum) {
+    const bool postfix =
+        argNum == 2 && (op == OO_PlusPlus || op == OO_MinusMinus);
+
+    if (op == OO_None || (!postfix && argNum != 1))
+      return CXUnaryOperator_Invalid;
+
+    const auto uop = UnaryOperator::getOverloadedOpcode(op, postfix);
+    return static_cast<CXUnaryOperatorKind>(uop + 1);
+  };
+
   if (clang_isExpression(cursor.kind)) {
     const Expr *expr = getCursorExpr(cursor);
 
     if (const auto *op = dyn_cast<UnaryOperator>(expr))
       return static_cast<CXUnaryOperatorKind>(op->getOpcode() + 1);
+
+    if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(expr)) {
+      return retOp(OCE->getOperator(), OCE->getNumArgs());
+    }
+  }
+
+  if (clang_isDeclaration(cursor.kind)) {
+    const auto *decl = getCursorDecl(cursor);
+
+    const auto *funcDecl = dyn_cast<FunctionDecl>(decl);
+    if (!funcDecl)
+      return CXUnaryOperator_Invalid;
+
+    return retOp(funcDecl->getOverloadedOperator(),
+                 (funcDecl->isCXXClassMember()) ? funcDecl->getNumParams() + 1
+                                                : funcDecl->getNumParams());
   }
 
   return CXUnaryOperator_Invalid;

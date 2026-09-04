@@ -769,6 +769,7 @@ features cannot lower the translation-unit ABI level;
 ### libclang
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
+- Allow querying Unary and Binary operator types on declaration cursors.
 
 ### Code Completion
 
