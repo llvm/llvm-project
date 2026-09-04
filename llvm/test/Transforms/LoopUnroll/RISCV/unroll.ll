@@ -160,3 +160,84 @@ exit_loop:
   ret void
 }
 
+; The non-call instructions in the loop only cost 6, but the ctpop calls push
+; the cost past the 12 instruction limit for force unrolling. Without
+; UP.Force, a loop with a small max trip count is not runtime unrolled.
+define void @ctpop_loop(i32 %start, ptr %p) {
+; CHECK-LABEL: @ctpop_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[END:%.*]] = add i32 [[START:%.*]], 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT_3:%.*]], [[LOOP_3:%.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[V:%.*]] = load volatile i64, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[C0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[V]])
+; CHECK-NEXT:    [[C1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C0]])
+; CHECK-NEXT:    [[C2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C1]])
+; CHECK-NEXT:    [[C3:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C2]])
+; CHECK-NEXT:    [[C4:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C3]])
+; CHECK-NEXT:    store volatile i64 [[C4]], ptr [[GEP]], align 8
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_1:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 [[IV_NEXT]]
+; CHECK-NEXT:    [[V_1:%.*]] = load volatile i64, ptr [[GEP_1]], align 8
+; CHECK-NEXT:    [[C0_1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[V_1]])
+; CHECK-NEXT:    [[C1_1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C0_1]])
+; CHECK-NEXT:    [[C2_1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C1_1]])
+; CHECK-NEXT:    [[C3_1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C2_1]])
+; CHECK-NEXT:    [[C4_1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C3_1]])
+; CHECK-NEXT:    store volatile i64 [[C4_1]], ptr [[GEP_1]], align 8
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw i32 [[IV]], 2
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ult i32 [[IV_NEXT_1]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP_1]], label [[LOOP_2:%.*]], label [[EXIT]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[V_2:%.*]] = load volatile i64, ptr [[GEP_2]], align 8
+; CHECK-NEXT:    [[C0_2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[V_2]])
+; CHECK-NEXT:    [[C1_2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C0_2]])
+; CHECK-NEXT:    [[C2_2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C1_2]])
+; CHECK-NEXT:    [[C3_2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C2_2]])
+; CHECK-NEXT:    [[C4_2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C3_2]])
+; CHECK-NEXT:    store volatile i64 [[C4_2]], ptr [[GEP_2]], align 8
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw i32 [[IV]], 3
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp ult i32 [[IV_NEXT_2]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP_2]], label [[LOOP_3]], label [[EXIT]]
+; CHECK:       loop.3:
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[V_3:%.*]] = load volatile i64, ptr [[GEP_3]], align 8
+; CHECK-NEXT:    [[C0_3:%.*]] = call i64 @llvm.ctpop.i64(i64 [[V_3]])
+; CHECK-NEXT:    [[C1_3:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C0_3]])
+; CHECK-NEXT:    [[C2_3:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C1_3]])
+; CHECK-NEXT:    [[C3_3:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C2_3]])
+; CHECK-NEXT:    [[C4_3:%.*]] = call i64 @llvm.ctpop.i64(i64 [[C3_3]])
+; CHECK-NEXT:    store volatile i64 [[C4_3]], ptr [[GEP_3]], align 8
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw i32 [[IV]], 4
+; CHECK-NEXT:    [[CMP_3:%.*]] = icmp ult i32 [[IV_NEXT_3]], [[END]]
+; CHECK-NEXT:    br i1 [[CMP_3]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %end = add i32 %start, 8
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr inbounds i64, ptr %p, i32 %iv
+  %v = load volatile i64, ptr %gep, align 8
+  %c0 = call i64 @llvm.ctpop.i64(i64 %v)
+  %c1 = call i64 @llvm.ctpop.i64(i64 %c0)
+  %c2 = call i64 @llvm.ctpop.i64(i64 %c1)
+  %c3 = call i64 @llvm.ctpop.i64(i64 %c2)
+  %c4 = call i64 @llvm.ctpop.i64(i64 %c3)
+  store volatile i64 %c4, ptr %gep, align 8
+  %iv.next = add nuw i32 %iv, 1
+  %cmp = icmp ult i32 %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
