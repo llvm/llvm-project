@@ -748,6 +748,16 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   return MD;
 }
 
+// Read a !tbaa.struct field entry (an offset or a size) into Out as a 64-bit
+// value. Returns false if it is not a constant integer that fits in 64 bits.
+static bool getTBAAStructFieldAsInt64(const MDOperand &Op, uint64_t &Out) {
+  auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+  if (!CI || !CI->getValue().isIntN(64))
+    return false;
+  Out = CI->getZExtValue();
+  return true;
+}
+
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
@@ -810,16 +820,30 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, ssize_t Len) {
 AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   AAMDNodes New = *this;
   MDNode *M = New.TBAAStruct;
-  if (!New.TBAA && M && M->getNumOperands() >= 3 && M->getOperand(0) &&
-      mdconst::hasa<ConstantInt>(M->getOperand(0)) &&
-      mdconst::extract<ConstantInt>(M->getOperand(0))->isZero() &&
-      M->getOperand(1) && mdconst::hasa<ConstantInt>(M->getOperand(1)) &&
-      mdconst::extract<ConstantInt>(M->getOperand(1))->getValue() ==
-          AccessSize &&
-      M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
-    New.TBAA = cast<MDNode>(M->getOperand(2));
 
+  // The access may cover several !tbaa.struct fields (e.g. a {int, int} copy
+  // widened to an i64 load/store). If those fields share a single tag and tile
+  // [0, AccessSize) with no gaps, that tag still describes the whole access.
   New.TBAAStruct = nullptr;
+  if (New.TBAA || !M)
+    return New;
+  MDNode *CommonTag = nullptr;
+  uint64_t Offset = 0;
+  for (size_t I = 0, E = M->getNumOperands(); I + 2 < E; I += 3) {
+    uint64_t FieldOffset, FieldSize;
+    MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
+    if (!getTBAAStructFieldAsInt64(M->getOperand(I), FieldOffset) ||
+        !getTBAAStructFieldAsInt64(M->getOperand(I + 1), FieldSize) ||
+        !FieldTag || FieldOffset != Offset ||
+        (CommonTag && FieldTag != CommonTag))
+      break;
+    CommonTag = FieldTag;
+    Offset += FieldSize;
+    if (Offset >= AccessSize)
+      break;
+  }
+  if (Offset == AccessSize)
+    New.TBAA = CommonTag;
   return New;
 }
 
