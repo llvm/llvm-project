@@ -11321,17 +11321,25 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (!Predicates)
     return false;
 
-  // Look through AddRec expressions to improve the precision of added
-  // predicates. An AddRecExpr S is a multiple of M if S starts with a multiple
-  // of M and at every iteration step S only adds multiples of M.
-  if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
-    if (isKnownMultipleOf(AR->getStart(), M, Predicates) &&
-        isKnownMultipleOf(AR->getStepRecurrence(*this), M, Predicates))
+  // Look through Add and AddRec expressions with nuw to improve the
+  // precision of added predicates. S is a multiple of M if S starts with a
+  // multiple of M and at every iteration step S only adds multiples of M.
+  if (isa<SCEVAddExpr, SCEVAddRecExpr>(S) &&
+      cast<SCEVNAryExpr>(S)->hasNoUnsignedWrap() &&
+      all_of(S->operands(),
+             [&](SCEVUse Op) { return isKnownMultipleOf(Op, M, Predicates); }))
+    return true;
+
+  // Similarly, look through Mul with nuw, where any operand being a
+  // known-multiple is sufficient.
+  if (auto *Mul = dyn_cast<SCEVMulExpr>(S))
+    if (Mul->hasNoUnsignedWrap() && any_of(S->operands(), [&](SCEVUse Op) {
+          return isKnownMultipleOf(Op, M, Predicates);
+        }))
       return true;
 
-  // Similarly, look through commutative expressions to improve the precision of
-  // added predicates.
-  if (isa<SCEVCommutativeExpr>(S))
+  // Similarly, look through UMinMax, with no wrapping arithmetic to consider.
+  if (isa<SCEVUMinExpr, SCEVUMaxExpr>(S))
     if (all_of(S->operands(), [&](SCEVUse Op) {
           return isKnownMultipleOf(Op, M, Predicates);
         }))
