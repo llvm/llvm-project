@@ -18,12 +18,15 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
+  LIBC_CRASH_ON_NULLPTR(arg0);
+
   va_list varargs, varargs_copy;
   va_start(varargs, arg0);
   va_copy(varargs_copy, varargs);
@@ -42,10 +45,11 @@ LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
 #pragma GCC diagnostic pop
   argv[0] = const_cast<char *>(arg0);
 
-  for (size_t i = 1; i <= argc; ++i)
+  for (size_t i = 1; i < argc; ++i)
     argv[i] = va_arg(varargs_copy, char *);
-  char **envp = va_arg(varargs_copy, char **);
   va_end(varargs_copy);
+  argv[argc] = nullptr;
+  char **envp = va_arg(varargs_copy, char **);
 
   auto ret = linux_syscalls::execve(path, argv, envp);
   if (!ret) {
