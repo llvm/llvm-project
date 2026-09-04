@@ -1139,9 +1139,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges_as_const",
-            "values": {
-                "c++23": 202311
-            },
+            "values": {"c++23": 202311},
             "headers": ["ranges"],
         },
         {

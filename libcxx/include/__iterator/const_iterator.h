@@ -41,9 +41,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <indirectly_readable _Iter>
 using iter_const_reference_t _LIBCPP_NODEBUG = common_reference_t<const iter_value_t<_Iter>&&, iter_reference_t<_Iter>>;
@@ -342,9 +342,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr const_sentinel<_Sent> make_const_sentinel(_Sent 
   return __sent;
 }
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 
