@@ -24,7 +24,6 @@ bool AffineForOp::isRegionPromotable(const MemorySlot &slot, Region *region,
 void AffineForOp::setupPromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
     llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
-
   Region &bodyRegion = getBodyRegion();
   if (!hasValueStores) {
     regionsToProcess.insert({&bodyRegion, reachingDef});

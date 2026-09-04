@@ -23,6 +23,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+
 namespace mlir {
 namespace affine {
 
