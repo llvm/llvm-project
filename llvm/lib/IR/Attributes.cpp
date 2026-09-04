@@ -814,6 +814,7 @@ enum AttributeProperty {
   IntersectMin = (2 << 3),
   IntersectCustom = (3 << 3),
   IntersectPropertyMask = (3 << 3),
+  ABIAttr = (1 << 5),
 };
 
 #define GET_ATTR_PROP_TABLE
@@ -843,25 +844,7 @@ bool Attribute::canUseAsRetAttr(AttrKind Kind) {
 }
 
 bool Attribute::isABIAttr(AttrKind Kind) {
-  switch (Kind) {
-  case Attribute::ByRef:
-  case Attribute::ByVal:
-  case Attribute::InAlloca:
-  case Attribute::InReg:
-  case Attribute::Nest:
-  case Attribute::NoExt:
-  case Attribute::Preallocated:
-  case Attribute::SExt:
-  case Attribute::StackAlignment:
-  case Attribute::StructRet:
-  case Attribute::SwiftAsync:
-  case Attribute::SwiftError:
-  case Attribute::SwiftSelf:
-  case Attribute::ZExt:
-    return true;
-  default:
-    return false;
-  }
+  return hasAttributeProperty(Kind, AttributeProperty::ABIAttr);
 }
 
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
