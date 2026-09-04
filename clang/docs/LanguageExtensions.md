@@ -407,9 +407,9 @@ option for a warning and returns `true` if that is a valid warning option.
 
 `__clang_literal_encoding__`
 : Defined to a narrow string literal that represents the current encoding of
-  narrow string literals, e.g., `"hello"`. This macro typically expands to
-  "UTF-8" (but may change in the future if the
-  `-fexec-charset="Encoding-Name"` option is implemented.)
+  narrow string literals, e.g., ``"hello"``. This macro expands to the text
+  encoding specified by ``-fexec-charset`` if any, or a system-specific default
+  otherwise: ``"IBM-1047"`` on z/OS and ``"UTF-8"`` on all other systems.
 
 `__clang_wide_literal_encoding__`
 : Defined to a narrow string literal that represents the current encoding of
