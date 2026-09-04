@@ -945,7 +945,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
-  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
+  "CoroutineOp", "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -1094,7 +1094,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroutineOp",
   "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
   "TernaryOp", "TryOp", "WhileOp"
 ];
@@ -4728,6 +4728,85 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 }
 
 //===----------------------------------------------------------------------===//
+// CoroutineOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroutineOp : CIR_Op<"coroutine", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  NoRegionArguments, RecursivelySpeculatable, AutomaticAllocationScope
+]> {
+
+  let summary = "Groups a coroutine's structured suspend/resume/destroy control flow";
+  let description = [{
+    `cir.coroutine` is an op consisting of seven regions: `initial_suspend`,
+    `body`, `final_suspend`, grp (TODO),`unwind` (TODO), `destroy`, and`exit`.
+
+    - `initial_suspend`: the coroutine ramp/setup region. Its `cir.await` marked
+      `init` is the ramp boundary: the coroutine frame and its associated state
+      are established before this point, and crossing the await transfers
+      execution to `body`.
+
+    - `body`: the user-written coroutine body, arbitrary CFG, zero or more
+      `cir.await`s at any nesting depth, terminated by `cir.co_return` or a
+      plain `cir.yield` if control simply falls off the end. This region is
+      a structural boundary separating the coroutine's setup and teardown
+      logic (initial suspend, final suspend, destroy) from the
+      user-provided statements of the original function body, including
+      `co_await` and `co_return` expressions. In particular,
+      `cir.co_return` operations inside this region mark coroutine exit
+      points and introduce structured control flow that transfers
+      execution to `final_suspend`.
+    - `final_suspend`: exactly one `cir.await`, marked `final`. Nothing
+      else. Corresponds to `co_await promise.final_suspend()`. Resuming
+      past this point is undefined behavior in valid programs, so its
+      `resume` edge is expected to be dead in practice, but is kept for
+      structural symmetry with the other two suspend regions.
+    - `gro`: TODO.
+    - `unwind`: TODO.
+    - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
+      Reached by an explicit `destroy()` call on a suspended handle, by
+      normal completion through `final_suspend`, or by an exception
+      escaping the coroutine. Falls through to `exit` except when reached
+      due to an escaping exception, where it continues propagating that
+      exception instead.
+    - `exit`: the shared return-to-caller path. Reached directly from any
+      suspend point that isn't being destroyed (the coroutine is just
+      pausing), and from `destroy` when it was entered via ordinary
+      dispatch. Holds `coro.end` + the actual `cir.return`.
+
+  }];
+
+  // TODO(cir): Add GRO and EH
+  let regions = (region AnyRegion:$initialSuspend,
+                        AnyRegion:$body,
+                        AnyRegion:$finalSuspend,
+                        AnyRegion:$destroy,
+                        AnyRegion:$exit);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$initialSuspendBuilder,
+      "BuilderCallbackRef":$bodyBuilder,
+      "BuilderCallbackRef":$finalSuspendBuilder,
+      "BuilderCallbackRef":$destroyBuilder,
+      "BuilderCallbackRef":$exitBuilder)>
+  ];
+
+  let assemblyFormat = [{
+    `initialSuspend` `:` $initialSuspend `,`
+    `body` `:` $body `,`
+    `finalSuspend` `:` $finalSuspend `,`
+    `destroy` `:` $destroy `,`
+    `exit` `:` $exit
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
@@ -4744,7 +4823,7 @@ def CIR_AwaitKindAttr : CIR_EnumAttr<CIR_AwaitKind, "await">;
 
 def CIR_AwaitOp : CIR_Op<"await",[
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, NoRegionArguments
+  RecursivelySpeculatable, NoRegionArguments, HasAncestor<"CoroutineOp">
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
   let description = [{
@@ -4825,52 +4904,13 @@ def CIR_AwaitOp : CIR_Op<"await",[
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
-//===----------------------------------------------------------------------===//
-// CoroBody
-//===----------------------------------------------------------------------===//
-def CIR_CoroBodyOp : CIR_Op<"coro.body", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
-  RecursiveMemoryEffects
-]> {
-  let summary = "Region containing the user-authored coroutine body";
-  let description = [{
-    The `cir.coro.body` operation models the region where the user-authored
-    coroutine code is emitted.
-
-    This operation serves as a structural boundary separating the coroutine
-    setup and teardown logic (e.g. initial suspend, final suspend, and cleanup)
-    from the user-provided statements inside the coroutine.
-
-    The body region contains the code corresponding to the original function
-    body, including `co_await` and `co_return` expressions. In particular,
-    `cir.co_return` operations inside this region mark coroutine exit points
-    and introduce structured control flow that transfers execution to the
-    final suspend point of the coroutine.
-  }];
-
-  let regions = (region AnyRegion:$body);
-
-  let skipDefaultBuilders = 1;
-
-  let builders = [
-    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder)>
-  ];
-
-  let assemblyFormat = [{
-    $body attr-dict
-  }];
-
-  let hasLLVMLowering = false;
-  let hasVerifier = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // CoReturnOp
 //===----------------------------------------------------------------------===//
 
 def CIR_CoReturnOp : CIR_Op<"co_return", [
-  ReturnLike, Pure, Terminator, HasAncestor<"CoroBodyOp">
+  ReturnLike, Pure, Terminator, HasAncestor<"CoroutineOp">
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
@@ -4884,6 +4924,7 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
     attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -5000,6 +5041,38 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
   let description = [{
     Returns the size, in bytes, of the coroutine frame.
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// CoroSuspendPoint
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
+  Pure, Terminator, HasParent<"AwaitOp">
+]> {
+  let summary = "Marks the point where a coroutine actually suspends";
+  let description = [{
+    Terminates the `suspend` region of a `cir.await`. It has no explicit
+    successors; the destination is determined by `CoroutineOp`
+    according to how the suspended coroutine is subsequently handled:
+
+    - resume: continues execution through the `cir.await`'s `resume` region
+      when the coroutine handle is resumed.
+
+    - exit: transfers directly to the enclosing `cir.coroutine`'s `exit`
+      region when the coroutine remains suspended. The coroutine frame remains
+      alive and no cleanups are performed.
+
+    - destroy: transfers through the enclosing `cir.cleanup.scope`s to the
+      `cir.coroutine`'s `destroy` region when the coroutine handle is
+      destroyed.
+  }];
+
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//

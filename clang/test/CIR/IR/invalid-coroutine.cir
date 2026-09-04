@@ -1,0 +1,289 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func coroutine @missing_initial_await() {
+  cir.coroutine initialSuspend : { // expected-error {{must have exactly one 'init' cir.await in 'initial_suspend'}}
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  } 
+}
+
+// -----
+
+cir.func coroutine @multiple_initial_awaits(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{must have exactly one 'init' cir.await in 'initial_suspend'}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+}
+
+// -----
+
+cir.func coroutine @wrong_initial_await_kind(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'initial_suspend' must not contain any cir.await other than the 'init' one}}
+    cir.await(user, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @initial_suspend_wrong_terminator(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'initial_suspend' must end with cir.yield}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.return
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @body_wrong_terminator(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'body' must end with cir.yield or cir.co_return}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.return
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @wrong_final_await_kind(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'final_suspend' must not contain any cir.await other than the 'final' one}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.await(user, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @final_suspend_wrong_terminator(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'final_suspend' must end with cir.yield}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.return
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @destroy_wrong_terminator(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'destroy' must end with cir.yield}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.return
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @exit_wrong_terminator(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'exit' must end with cir.return}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.yield
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @final_suspend_multiple_awaits(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{must have one or zero 'final' cir.await in 'final_suspend'}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.await(final, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.await(final, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}
+
+// -----
+
+cir.func coroutine @final_suspend_invalid_await(%arg0 : !cir.bool) {
+  cir.coroutine initialSuspend : { // expected-error {{'final_suspend' must not contain any cir.await other than the 'final' one}}
+    cir.await(init, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, body : {
+    cir.yield
+  }, finalSuspend : {
+    cir.await(user, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.coro.suspend_point
+    }, resume : {
+      cir.yield
+    },)
+    cir.yield
+  }, destroy : {
+    cir.yield
+  }, exit : {
+    cir.return
+  }
+  cir.trap
+}

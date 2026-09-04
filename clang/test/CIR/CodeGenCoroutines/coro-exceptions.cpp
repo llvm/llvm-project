@@ -11,13 +11,14 @@ TaskWithEH simple_eh_body() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z14simple_eh_bodyv
+// CIR: cir.coroutine initialSuspend : {
 // CIR: }, resume : {
 // Note no 'try'/'catch' here.
 // CIR-NEXT: cir.call @_ZNSt15suspend_nothrow12await_resumeEv
 // CIR-NEXT: cir.yield
 // CIR-NEXT: }
 
-// CIR: cir.coro.body {
+// CIR: }, body : {
 // CIR-NOT: cir.if
 // CIR:   cir.scope {
 // CIR:     cir.try {
@@ -35,8 +36,8 @@ TaskWithEH simple_eh_body() {
 // CIR:     }
 // CIR:   }
 // CIR:   cir.yield
-// CIR: }
 // Make sure that 'final' is outside of the above try/catch/etc.
+// CIR: }, finalSuspend : {
 // CIR: cir.call @_ZN10TaskWithEH12promise_type13final_suspendEv
 
 TaskThrowingInit throwing_init_suspend() {
@@ -45,6 +46,7 @@ TaskThrowingInit throwing_init_suspend() {
 
 // CIR-LABEL: cir.func{{.*}} @_Z21throwing_init_suspendv
 // CIR: %[[RESUME_FLAG:.*]] = cir.alloca "resume.eh" align(1) : !cir.ptr<!cir.bool>
+// CIR: cir.coroutine initialSuspend : {
 // CIR: }, resume : {
 // CIR:    %[[FALSE:.*]] = cir.const #false
 // CIR:    cir.store %[[FALSE]], %[[RESUME_FLAG]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -69,7 +71,7 @@ TaskThrowingInit throwing_init_suspend() {
 // CIR:    cir.yield
 // CIR: }
 
-// CIR: cir.coro.body {
+// CIR: }, body : {
 // CIR:   %[[LOAD_RESUME_FLAG:.*]] = cir.load align(1) %[[RESUME_FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.if %[[LOAD_RESUME_FLAG]] {
 // CIR:     cir.scope {
@@ -89,5 +91,5 @@ TaskThrowingInit throwing_init_suspend() {
 // CIR:     }
 // CIR:   }
 // CIR:   cir.yield
-// CIR: }
+// CIR: }, finalSuspend : {
 // CIR: cir.call @_ZN16TaskThrowingInit12promise_type13final_suspendEv
