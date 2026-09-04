@@ -2507,7 +2507,12 @@ def : GCNPat <
              (V_LSHRREV_B32_e64 (i32 16), $src1)), lo16)
 >;
 
-// TODO: Scalar case for 0 magnitude special case
+def : GCNPat <
+  (UniformBinFrag<fcopysign> (fp16vt fpimm_pos_zero), f32:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x00008000)),
+             (S_LSHR_B32 SReg_32:$src1, (i32 16)))
+>;
+
 def : GCNPat <
   (fcopysign (fp16vt fpimm_pos_zero), f32:$src1),
   (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)),

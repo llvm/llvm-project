@@ -6767,6 +6767,52 @@ define half @v_copysign_f16_0_f32(float %sign) {
   ret half %op
 }
 
+; Uniform copysign with a VALU user must not select the true16 pattern that
+; reads an SGPR hi16.
+define amdgpu_ps i32 @s_copysign_f16_0_f32_valu_user(float inreg %sign) {
+; SI-LABEL: s_copysign_f16_0_f32_valu_user:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_and_b32 s0, s0, 0x80000000
+; SI-NEXT:    s_lshr_b32 s0, s0, 16
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; SI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; SI-NEXT:    v_readfirstlane_b32 s0, v0
+; SI-NEXT:    ; return to shader part epilog
+;
+; VI-LABEL: s_copysign_f16_0_f32_valu_user:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_lshr_b32 s0, s0, 16
+; VI-NEXT:    s_and_b32 s0, 0x8000, s0
+; VI-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; VI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; VI-NEXT:    v_readfirstlane_b32 s0, v0
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_copysign_f16_0_f32_valu_user:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX9-NEXT:    s_and_b32 s0, 0x8000, s0
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_f16_0_f32_valu_user:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, 0x8000, s0
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign)
+  %trunc = fptrunc float %result to half
+  %cvt = fptosi half %trunc to i32
+  ret i32 %cvt
+}
+
 define amdgpu_ps i32 @s_copysign_f16_0_f64(double inreg %sign) {
 ; SI-LABEL: s_copysign_f16_0_f64:
 ; SI:       ; %bb.0:
