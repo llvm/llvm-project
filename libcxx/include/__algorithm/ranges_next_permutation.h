@@ -54,8 +54,11 @@ struct __next_permutation {
     requires sortable<iterator_t<_Range>, _Comp, _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr next_permutation_result<borrowed_iterator_t<_Range>>
   operator()(_Range&& __range, _Comp __comp = {}, _Proj __proj = {}) const {
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
     auto __result = std::__next_permutation<_RangeAlgPolicy>(
-        ranges::begin(__range), ranges::end(__range), std::__make_projected(__comp, __proj));
+        std::move(__first), std::move(__last), std::__make_projected(__comp, __proj));
     return {std::move(__result.first), std::move(__result.second)};
   }
 };

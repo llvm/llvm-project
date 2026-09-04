@@ -71,7 +71,10 @@ struct __stable_partition {
     requires permutable<iterator_t<_Range>>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 borrowed_subrange_t<_Range>
   operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
-    return __stable_partition_fn_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
+    return __stable_partition_fn_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
 };
 
