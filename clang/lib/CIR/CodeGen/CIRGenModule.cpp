@@ -3239,7 +3239,6 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   // (e.g., AMDGPU kernel functions should be marked with AMDGPUKernel).
   if (callingConv != cir::CallingConv::C)
     func.setCallingConv(callingConv);
-
 }
 
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,

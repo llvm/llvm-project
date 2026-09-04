@@ -325,8 +325,9 @@ void CIRGenModule::constructAttributeList(
     cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
   // Compute the calling convention based on the function type.
   // The calling convention is stored on the function type, not the declaration.
-  // WinCall is the only target-specific CC routed here; clangCallConvToCIRCallConv
-  // in CIRGenTypes.cpp covers the other cases (C, DeviceKernel, SPIR/SPIR-V).
+  // WinCall is the only target-specific CC routed here;
+  // clangCallConvToCIRCallConv in CIRGenTypes.cpp covers the other cases (C,
+  // DeviceKernel, SPIR/SPIR-V).
   callingConv = cir::CallingConv::C;
   if (const Decl *decl = calleeInfo.getCalleeDecl().getDecl()) {
     if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
