@@ -1692,14 +1692,32 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
+  // Execution always starts in the body region.
+  if (point.isParent()) {
+    regions.emplace_back(&getBodyRegion());
     return;
   }
 
-  // Execution always proceeds from the body region to the cleanup region.
-  regions.push_back(RegionSuccessor(&getBodyRegion()));
-  regions.push_back(RegionSuccessor(&getCleanupRegion()));
+  mlir::Operation *term = point.getTerminatorPredecessorOrNull();
+  assert(term && "expected a terminator predecessor");
+
+  if (term->getParentRegion() == &getBodyRegion()) {
+    // cir.resume leaves the body while unwinding, so it runs the cleanup
+    // region exactly when the cleanup is EH-capable. Every other branch
+    // terminator (cir.yield, cir.co_return) is a normal exit and runs the
+    // cleanup when it triggers on normal exits.
+    cir::CleanupKindAttr kind = getCleanupKindAttr();
+    if (isa<cir::ResumeOp>(term) ? kind.isEH() : kind.isNormal()) {
+      regions.emplace_back(&getCleanupRegion());
+      return;
+    }
+  }
+
+  // Exiting the cleanup region, or a body exit that skips it, leaves the
+  // operation. An unwind out of the middle of the body and a cir.return are
+  // not RegionBranchPoints, so a cleanup region reached only that way has no
+  // predecessor here.
+  regions.emplace_back(getOperation());
 }
 
 mlir::ValueRange

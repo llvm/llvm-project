@@ -1381,12 +1381,11 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
   let summary = "Represents a scope with associated cleanup code";
   let description = [{
     `cir.cleanup.scope` contains a body region and a cleanup region. The body
-    region is executed first, and the cleanup region is executed when the body
-    region is exited, either normally or due to an exception.
+    region runs first, and the cleanup region may run when the body region is
+    exited.
 
-    The cleanup kind attribute specifies when the cleanup region should be
-    executed:
-    - `none`: No cleanup (cleanup region is empty/unused)
+    The cleanup kind attribute specifies which exits from the body region run
+    the cleanup region:
     - `normal`: Cleanup is executed only on normal exit
     - `eh`: Cleanup is executed only on exception unwinding
     - `all`: Cleanup is executed on both normal exit and exception unwinding
