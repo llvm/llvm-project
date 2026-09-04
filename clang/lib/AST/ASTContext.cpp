@@ -4919,9 +4919,8 @@ QualType ASTContext::getCooperativeMatrixType(QualType ElementTy,
   assert(CooperativeMatrixType::isScopeValid(Scope) &&
          "need valid matrix scope");
   assert(CooperativeMatrixType::isUseValid(Use) && "need valid matrix use");
-  void *InsertPos = nullptr;
-  if (CooperativeMatrixType *MTP =
-          CooperativeMatrixTypes.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken Token;
+  if (CooperativeMatrixType *MTP = CooperativeMatrixTypes.lookup(ID, Token))
     return QualType(MTP, 0);
 
   QualType Canonical;
@@ -4929,15 +4928,14 @@ QualType ASTContext::getCooperativeMatrixType(QualType ElementTy,
     Canonical = getCooperativeMatrixType(getCanonicalType(ElementTy), Scope,
                                          NumRows, NumColumns, Use);
 
-    CooperativeMatrixType *NewIP =
-        CooperativeMatrixTypes.FindNodeOrInsertPos(ID, InsertPos);
+    CooperativeMatrixType *NewIP = CooperativeMatrixTypes.lookup(ID, Token);
     assert(!NewIP && "Matrix type shouldn't already exist in the map");
     (void)NewIP;
   }
 
   auto *New = new (*this, TypeAlignment) CooperativeMatrixType(
       ElementTy, Scope, NumRows, NumColumns, Use, Canonical);
-  CooperativeMatrixTypes.InsertNode(New, InsertPos);
+  CooperativeMatrixTypes.insert(New, Token);
   Types.push_back(New);
   return QualType(New, 0);
 }
