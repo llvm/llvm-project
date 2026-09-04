@@ -270,6 +270,21 @@ struct CoExecInfo {
     return std::nullopt;
   }
 
+  /// Return the number of cycles an instruction matching \p InstMask must wait
+  /// at \p Stage. Returns zero when no stall is required.
+  unsigned getStallCycles(CoExecMaskT InstMask, unsigned Stage) const {
+    if (canCoExec(InstMask, Stage))
+      return 0;
+
+    // Stall until the next stage that accepts the instruction.
+    if (std::optional<unsigned> Next =
+            findNextAllowedStage(InstMask, Stage + 1))
+      return *Next - Stage;
+
+    // Stall until the window ends if no later stage accepts the instruction.
+    return TotalWindow - Stage;
+  }
+
   /// Get stage type from mask for display.
   static CoExecStageType getStageType(CoExecMaskT Mask) {
     if (Mask == CoExecMask::StageE0)
