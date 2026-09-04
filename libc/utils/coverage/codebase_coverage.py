@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -79,23 +78,11 @@ class FullCoverageSummary:
         default_factory=DirectoryCoverageMetrics
     )
     directories: Dict[str, DirectoryCoverageMetrics] = field(default_factory=dict)
-    dashboard_url: str = ""
 
     @property
     def has_mcdc(self) -> bool:
         """Returns True if any MC/DC condition data exists in the summary."""
         return self.global_stats.mcdc_tot > 0
-
-
-def resolve_dashboard_url(has_mcdc: bool) -> str:
-    """Resolves live dashboard URL if configured via environment variable."""
-    pages_url = os.environ.get("COVERAGE_DASHBOARD_URL", "").strip()
-    if not pages_url:
-        return ""
-
-    if has_mcdc and not pages_url.endswith("/mcdc/"):
-        return pages_url.rstrip("/") + "/mcdc/"
-    return pages_url
 
 
 def extract_full_coverage_statistics(
@@ -114,8 +101,6 @@ def extract_full_coverage_statistics(
             continue
 
         idx = file_path.find("src/")
-        if idx == -1:
-            continue
         rel_path = file_path[idx:]
 
         summary = item.get("summary", {})
@@ -134,12 +119,13 @@ def extract_full_coverage_statistics(
             continue
 
         mcdc_records = item.get("mcdc_records", [])
-        file_decisions_tot = len(mcdc_records)
-        file_decisions_full = sum(
-            1
+        valid_mcdc_records = [
+            rec
             for rec in mcdc_records
-            if len(rec) >= 10 and isinstance(rec[9], list) and all(rec[9])
-        )
+            if len(rec) >= 10 and isinstance(rec[9], list) and len(rec[9]) > 0
+        ]
+        file_decisions_tot = len(valid_mcdc_records)
+        file_decisions_full = sum(1 for rec in valid_mcdc_records if all(rec[9]))
 
         global_metrics.lines_cov += line_cov
         global_metrics.lines_tot += line_tot
@@ -169,18 +155,14 @@ def extract_full_coverage_statistics(
     if global_metrics.lines_tot == 0:
         return None
 
-    has_mcdc = global_metrics.mcdc_tot > 0
-    dashboard_url = resolve_dashboard_url(has_mcdc)
-
     return FullCoverageSummary(
         global_stats=global_metrics,
         directories=directories,
-        dashboard_url=dashboard_url,
     )
 
 
 def format_overview_callout(summary: FullCoverageSummary) -> str:
-    """Generates the executive summary banner with dashboard link."""
+    """Generates the executive summary banner."""
     g = summary.global_stats
     lines: List[str] = []
 
@@ -202,16 +184,10 @@ def format_overview_callout(summary: FullCoverageSummary) -> str:
         )
 
     lines.append("")
-    if summary.dashboard_url:
-        lines.append(
-            f"- **Coverage Dashboard:** "
-            f"[{summary.dashboard_url}]({summary.dashboard_url})"
-        )
-    else:
-        lines.append(
-            "- **HTML Coverage Report:** Available for download under the "
-            "**Artifacts** section of this workflow run."
-        )
+    lines.append(
+        "- **HTML Coverage Report:** Available for download under the "
+        "**Artifacts** section of this workflow run."
+    )
     return "\n".join(lines)
 
 

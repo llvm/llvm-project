@@ -2,7 +2,6 @@ name: Libc Patch Code Coverage
 
 permissions:
   contents: read
-  pull-requests: write # Required to post/update patch coverage comments
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -57,7 +56,7 @@ jobs:
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        fetch-depth: 2
+        fetch-depth: 100
         persist-credentials: false
 
     - name: Setup Compiler Cache (sccache)
@@ -112,8 +111,13 @@ jobs:
           HEAD_REF="$PR_HEAD_REF"
           BASE_REPO="${PR_BASE_REPO:-llvm/llvm-project}"
           HEAD_REPO="${PR_HEAD_REPO:-$REPO_NAME}"
-          git fetch upstream "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_REF" --depth=1 2>/dev/null || true
-          DIFF_BASE="$BASE_SHA"
+          # Fetch base branch history to resolve merge base
+          git fetch upstream "$BASE_REF" --depth=100 2>/dev/null || git fetch origin "$BASE_REF" --depth=100 2>/dev/null || git fetch upstream "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_SHA" --depth=1 2>/dev/null || true
+          DIFF_BASE=$(git merge-base "$BASE_SHA" HEAD 2>/dev/null || true)
+          if [ -z "$DIFF_BASE" ]; then
+            git fetch --no-tags --deepen=200 2>/dev/null || true
+            DIFF_BASE=$(git merge-base "$BASE_SHA" HEAD 2>/dev/null || echo "$BASE_SHA")
+          fi
         elif [ "$BRANCH_REF" != "main" ]; then
           # For feature branches, compare against main merge-base
           git fetch origin main --depth=100 2>/dev/null || true
@@ -240,8 +244,8 @@ jobs:
 
         echo "[LOG] Discovered ${#EXECUTABLES[@]} instrumented binaries for llvm-cov export."
 
-        if [ ! -f libc_full.profdata ]; then
-          echo "[LOG] Notice: libc_full.profdata not found. Generating non-coverage summary."
+        if [ ! -f libc_full.profdata ] || [ ${#EXECUTABLES[@]} -eq 0 ]; then
+          echo "[LOG] Notice: Profile data or instrumented executables not found. Generating non-coverage summary."
           echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
           echo "" >> coverage_report.md
           echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
@@ -279,78 +283,16 @@ jobs:
 
         cat coverage_report.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Post or Update Sticky PR Comment
-      if: always() && github.event_name == 'pull_request'
-      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+
+    - name: Upload Patch Coverage Artifacts
+      if: always() && hashFiles('coverage_report.md')
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs');
-          if (!fs.existsSync('coverage_report.md')) return;
-
-          const reportContent = fs.readFileSync('coverage_report.md', 'utf8');
-          const identifier = '<!-- LLVM-LIBC-PRE-COMMIT-COVERAGE-COMMENT -->';
-          const issue_number = context.payload.pull_request.number;
-          const owner = context.repo.owner;
-          const repo = context.repo.repo;
-
-          try {
-            // Fetch existing PR comments
-            const comments = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number,
-              per_page: 100
-            });
-
-            const botComment = comments.data.find(c => c.body && c.body.includes(identifier));
-
-            // Parse metrics from reportContent for history table entry
-            const headSha = context.payload.pull_request.head.sha.substring(0, 7);
-            const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
-
-            const summaryMatch = reportContent.match(/\|\s*\*\*Total \(Patch\)\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|\s*([0-9]+)\s*\/\s*([0-9]+)\s*\|\s*\*\*([0-9]+)\*\*/);
-            const pct = summaryMatch ? summaryMatch[1] + '%' : '100.00%';
-            const totalLines = summaryMatch ? summaryMatch[3] : 'N/A';
-            const missedLines = summaryMatch ? summaryMatch[4] : '0';
-
-            const newHistoryRow = `| [\`${headSha}\`](https://github.com/${owner}/${repo}/commit/${context.payload.pull_request.head.sha}) | ${dateStr} | ${totalLines} | **${pct}** | ${missedLines} |`;
-
-            let existingHistory = '';
-            if (botComment && botComment.body.includes('<!-- HISTORY_START -->')) {
-              const historyStart = botComment.body.indexOf('<!-- HISTORY_START -->') + '<!-- HISTORY_START -->'.length;
-              const historyEnd = botComment.body.indexOf('<!-- HISTORY_END -->');
-              if (historyStart !== -1 && historyEnd !== -1) {
-                existingHistory = botComment.body.substring(historyStart, historyEnd).trim();
-              }
-            }
-
-            let historyTable = existingHistory;
-            if (!historyTable) {
-              historyTable = `| Commit | Date (UTC) | Executable Lines | Patch Coverage | Missed Lines |\n| :---: | :---: | :---: | :---: | :---: |\n${newHistoryRow}`;
-            } else {
-              if (!historyTable.includes(headSha)) {
-                historyTable += `\n${newHistoryRow}`;
-              }
-            }
-
-            const fullBody = `${identifier}\n${reportContent}\n\n<details>\n<summary><b>View Coverage History for this PR</b></summary>\n\n<!-- HISTORY_START -->\n${historyTable}\n<!-- HISTORY_END -->\n\n</details>`;
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: botComment.id,
-                body: fullBody
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body: fullBody
-              });
-            }
-          } catch (err) {
-            core.warning(`Could not post/update sticky PR comment: ${err.message}`);
-          }
+        name: libc-patch-coverage-report
+        path: |
+          coverage_report.md
+          patch.diff
+          coverage.json
+        if-no-files-found: ignore
+        retention-days: 14
+        overwrite: true

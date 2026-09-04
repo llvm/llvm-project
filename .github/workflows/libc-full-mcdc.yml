@@ -123,7 +123,8 @@ jobs:
             --path-equivalence="$GITHUB_WORKSPACE,." \
             -ignore-filename-regex=".*(test|utils).*"
           # 3. Run Codebase Coverage Analyzer
-          PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
+          PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" > coverage_summary.md
+          cat coverage_summary.md >> $GITHUB_STEP_SUMMARY
           echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
 
       - name: Fallback Failure Summary
@@ -132,7 +133,20 @@ jobs:
           echo "### LLVM-libc MC/DC Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "Workflow run encountered an error before coverage reports could be generated. Inspect job logs for details." >> $GITHUB_STEP_SUMMARY
 
+      - name: Upload MC/DC Coverage Summary Artifact
+        if: always() && hashFiles('coverage_summary.md')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: libc-mcdc-coverage-summary
+          path: |
+            coverage_summary.md
+            coverage.json
+          if-no-files-found: ignore
+          retention-days: 14
+          overwrite: true
+
       - name: Upload MC/DC Coverage Artifact
+        if: always() && hashFiles('coverage_mcdc_html/**')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: libc-mcdc-coverage-html

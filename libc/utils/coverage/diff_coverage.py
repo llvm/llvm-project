@@ -40,7 +40,10 @@ DECLARATION_PREFIXES = (
     "__attribute__",
     "template",
     "typedef ",
+    "friend ",
+    "static_assert",
 )
+ACCESS_SPECIFIERS = ("public:", "private:", "protected:")
 
 
 @dataclass
@@ -267,7 +270,11 @@ class CoverageJSONParser:
             # 2. Process MC/DC decision records
             mcdc_records = item.get("mcdc_records", [])
             for record in mcdc_records:
-                if len(record) >= 10 and isinstance(record[9], list):
+                if (
+                    len(record) >= 10
+                    and isinstance(record[9], list)
+                    and len(record[9]) > 0
+                ):
                     decision_start_line = record[0]
                     decision_end_line = record[2]
                     boolean_conditions = record[9]
@@ -292,23 +299,32 @@ def is_executable_line(line_text: str) -> bool:
     stripped_line = line_text.strip()
     if not stripped_line:
         return False
-    if any(stripped_line.startswith(prefix) for prefix in COMMENT_PREFIXES):
-        return False
-    if stripped_line in STRUCTURAL_TOKENS or stripped_line.startswith(":"):
-        return False
-    if stripped_line.startswith("#"):
-        return False
-    if any(stripped_line.startswith(prefix) for prefix in DECLARATION_PREFIXES):
+    # Strip block comments on the same line and trailing line comments
+    clean_line = re.sub(r"/\*.*?\*/", "", stripped_line)
+    clean_line = re.sub(r"//.*$", "", clean_line).strip()
+    if not clean_line:
         return False
     if (
-        stripped_line.startswith("struct ")
-        or stripped_line.startswith("class ")
-        or stripped_line.startswith("enum ")
+        clean_line.startswith("*")
+        or clean_line.startswith("/*")
+        or clean_line.startswith("*/")
     ):
-        if "{" in stripped_line or (
-            stripped_line.endswith(";")
-            and "=" not in stripped_line
-            and "(" not in stripped_line
+        return False
+    if clean_line in STRUCTURAL_TOKENS or clean_line.startswith(":"):
+        return False
+    if clean_line in ACCESS_SPECIFIERS:
+        return False
+    if clean_line.startswith("#"):
+        return False
+    if any(clean_line.startswith(prefix) for prefix in DECLARATION_PREFIXES):
+        return False
+    if (
+        clean_line.startswith("struct ")
+        or clean_line.startswith("class ")
+        or clean_line.startswith("enum ")
+    ):
+        if ("{" in clean_line and "=" not in clean_line) or (
+            clean_line.endswith(";") and "=" not in clean_line and "(" not in clean_line
         ):
             return False
     return True
@@ -348,6 +364,15 @@ def calculate_patch_statistics(
     summary = PatchCoverageSummary()
 
     for file_path, file_data in coverage_matrix.items():
+        if (
+            not any(file_path.endswith(ext) for ext in (".cpp", ".c", ".h", ".inc"))
+            or "/test/" in file_path
+            or file_path.startswith("test/")
+            or "/utils/" in file_path
+            or file_path.startswith("utils/")
+        ):
+            continue
+
         added_lines: Set[int] = set()
         for hunk in diff_files.get(file_path, []):
             for line_type, text, line_number in hunk.lines:
@@ -546,9 +571,12 @@ def format_breakdown_table(
 
     for file_path, file_metric in summary.files.items():
         commit_ref = head_commit_sha or "main"
+        repo_file_path = (
+            file_path if file_path.startswith("libc/") else f"libc/{file_path}"
+        )
         file_link = (
             f"[`{file_path}`]"
-            f"(https://github.com/{head_repository}/blob/{commit_ref}/{file_path})"
+            f"(https://github.com/{head_repository}/blob/{commit_ref}/{repo_file_path})"
         )
         missed_lines = file_metric.missed_lines
         covered_count = len(file_metric.covered_lines)
@@ -576,7 +604,7 @@ def format_breakdown_table(
                 f"| {file_link} | "
                 f"**{file_metric.line_coverage_percentage:.2f}%** "
                 f"({covered_count}/{total_file_lines}) | "
-                f"{mcdc_cell} | {decision_cell} | "
+                f"{mcdc_cell} | {dec_cell} | "
                 f"{len(missed_lines)} | {diagnostic_cell} |"
             )
         else:
@@ -689,7 +717,7 @@ def render_patch_report(
             print(metadata_section_string)
             print("\n---\n")
         print("### Coverage Summary")
-        print("No `.cpp` source files in `libc/src/` were modified in this patch.")
+        print("No executable lines were added or modified in this patch.")
         return
 
     # 1. Status Banner
@@ -746,6 +774,10 @@ def main() -> None:
     )
 
     arguments = parser.parse_args()
+
+    if not os.path.isfile(arguments.diff_file):
+        sys.stderr.write(f"Error: Diff file not found: '{arguments.diff_file}'\n")
+        sys.exit(1)
 
     diff_files = DiffParser.parse(arguments.diff_file)
     coverage_data = CoverageJSONParser.load(arguments.json_file)
