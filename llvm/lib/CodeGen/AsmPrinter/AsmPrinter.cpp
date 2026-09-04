@@ -2097,7 +2097,10 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
-  bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
+  // The AArch64 unwinder backs the PC up over a call itself, so it does not
+  // need the padding the EH_LABEL case below emits for the other targets.
+  bool NeedsEHaNops = MMI->getModule()->getModuleFlag("eh-asynch") &&
+                      !TM.getTargetTriple().isAArch64();
 
   const MCSubtargetInfo *STI = nullptr;
   if (this->MF)
@@ -2190,7 +2193,7 @@ void AsmPrinter::emitFunctionBody() {
         //  an EH region as it must be led by at least a Load
         {
           auto MI2 = std::next(MI.getIterator());
-          if (IsEHa && MI2 != MBB.end() &&
+          if (NeedsEHaNops && MI2 != MBB.end() &&
               (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
             emitNops(1);
         }
