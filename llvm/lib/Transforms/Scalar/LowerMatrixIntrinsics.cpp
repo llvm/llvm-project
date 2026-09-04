@@ -66,15 +66,6 @@ STATISTIC(SplitMatrices, "Number of matrix splits");
 static cl::opt<bool>
     FuseMatrix("fuse-matrix", cl::init(true), cl::Hidden,
                cl::desc("Enable/disable fusing matrix instructions."));
-// TODO: Allow and use non-square tiles.
-static cl::opt<unsigned> TileSize(
-    "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
-    cl::desc(
-        "Tile size for matrix instruction fusion using square-shaped tiles."));
-static cl::opt<unsigned>
-    TileLoopsThreshold("fuse-matrix-loops-threshold", cl::init(200), cl::Hidden,
-                       cl::desc("Generate loop nests for tiling when expected "
-                                "number of operations exceeds threshold."));
 static cl::opt<bool> ForceFusion(
     "force-fuse-matrix", cl::init(false), cl::Hidden,
     cl::desc("Force matrix instruction fusion even if not profitable."));
@@ -105,6 +96,27 @@ static cl::opt<unsigned> MemOpRemarkSizeThreshold(
     "memop-remark-size-threshold", cl::init(128), cl::Hidden,
     cl::desc(
         "Do not emit remarks for loads/stores under this size (in bytes)."));
+
+// Tiling options.
+cl::opt<unsigned> TileSizeRows("fuse-matrix-tile-size-rows", cl::init(4),
+                               cl::Hidden,
+                               cl::desc("Number of rows in the tile used for "
+                                        "matrix instruction fusion."));
+cl::opt<unsigned> TileSizeInner(
+    "fuse-matrix-tile-size-inner", cl::init(4), cl::Hidden,
+    cl::desc(
+        "Inner dimension of the tile used for matrix instruction fusion."));
+cl::opt<unsigned> TileSizeColumns(
+    "fuse-matrix-tile-size-columns", cl::init(4), cl::Hidden,
+    cl::desc(
+        "Number of columns in the tile used for matrix instruction fusion."));
+static cl::opt<bool> TileUseLoops("fuse-matrix-use-loops", cl::init(false),
+                                  cl::Hidden,
+                                  cl::desc("Generate loop nest for tiling."));
+static cl::opt<unsigned>
+    LoopMinTilesCount("fuse-matrix-loop-min-tiles-count", cl::init(4),
+                      cl::desc("The minimum number of computed tiles required "
+                               "to make loop generation profitable."));
 
 static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
     "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
@@ -2074,6 +2086,35 @@ public:
            TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true));
   }
 
+  /// Return true if it's profitable to lower into loops.
+  /// FIXME: for now, "profitable" here aims at smaller code size.
+  bool isTilingLoopProfitable(const TileInfo &TI) {
+    // Gather the number of K-loop iterations executed.
+    unsigned RIterations = TI.NumRows / TI.TileNumRows;
+    unsigned RRemainder = TI.NumRows % TI.TileNumRows;
+    unsigned CIterations = TI.NumColumns / TI.TileNumColumns;
+    unsigned CRemainder = TI.NumColumns % TI.TileNumColumns;
+    unsigned KIterations = TI.NumInner / TI.TileNumInner;
+    unsigned KRemainder = TI.NumInner % TI.TileNumInner;
+
+    unsigned MainLoopTilesComputed =
+        RIterations * CIterations * (KIterations + (KRemainder ? 1 : 0));
+    unsigned RemainderColumnsLoopTilesComputed =
+        RIterations * ((CRemainder ? KIterations : 0) + (KRemainder ? 1 : 0));
+    unsigned RemainderRowsLoopTilesComputed =
+        (RRemainder ? 1 : 0) * CIterations *
+        (KIterations + (KRemainder ? 1 : 0));
+    unsigned RemainderRowsRemainderColumnsLoopTilesComputed =
+        (RRemainder ? 1 : 0) * (CRemainder ? 1 : 0) *
+        (KIterations + (KRemainder ? 1 : 0));
+
+    unsigned TotalTilesComputed =
+        MainLoopTilesComputed + RemainderColumnsLoopTilesComputed +
+        RemainderRowsLoopTilesComputed +
+        RemainderRowsRemainderColumnsLoopTilesComputed;
+    return TotalTilesComputed > LoopMinTilesCount;
+  }
+
   MatrixTy getZeroMatrix(Type *EltType, unsigned R, unsigned C) {
     MatrixTy Res;
     auto *ColumType = FixedVectorType::get(EltType, R);
@@ -2087,7 +2128,8 @@ public:
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
     // Create the main tiling loop nest.
-    TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns, TileSize);
+    TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns,
+                TileSizeRows, TileSizeInner, TileSizeColumns, EltType);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     Instruction *InsertI = cast<Instruction>(MatMul);
     BasicBlock *Start = InsertI->getParent();
@@ -2097,13 +2139,13 @@ public:
     BasicBlock *InnerBody = TI.CreateTiledLoops(Start, End, Builder, DTU, *LI);
 
     Type *TileVecTy =
-        FixedVectorType::get(MatMul->getType()->getScalarType(), TileSize);
+        FixedVectorType::get(MatMul->getType()->getScalarType(), TileSizeRows);
     MatrixTy TileResult;
     // Insert in the inner loop header.
     Builder.SetInsertPoint(TI.KLoop.Header->getTerminator());
     // Create PHI nodes for the result columns to accumulate across iterations.
     SmallVector<PHINode *, 4> ColumnPhis;
-    for (unsigned I = 0; I < TileSize; I++) {
+    for (unsigned I = 0; I < TileSizeColumns; I++) {
       auto *Phi = Builder.CreatePHI(TileVecTy, 2, "result.vec." + Twine(I));
       Phi->addIncoming(ConstantAggregateZero::get(TileVecTy),
                        TI.RowLoop.Header->getSingleSuccessor());
@@ -2117,10 +2159,10 @@ public:
     // Load tiles of the operands.
     MatrixTy A =
         loadMatrix(LPtr, {}, false, LShape, TI.RowLoop.Index, TI.KLoop.Index,
-                   {TileSize, TileSize}, EltType, Builder);
+                   {TileSizeRows, TileSizeInner}, EltType, Builder);
     MatrixTy B =
         loadMatrix(RPtr, {}, false, RShape, TI.KLoop.Index, TI.ColumnLoop.Index,
-                   {TileSize, TileSize}, EltType, Builder);
+                   {TileSizeInner, TileSizeColumns}, EltType, Builder);
     emitMatrixMultiply(TileResult, A, B, Builder, true, false,
                        getFastMathFlags(MatMul));
     // Store result after the inner loop is done.
@@ -2136,7 +2178,8 @@ public:
     // is enough work per iteration.
     // FIXME: The unroller should make this decision directly instead, but
     // currently the cost-model is not up to the task.
-    unsigned InnerLoopUnrollCount = std::min(10u, LShape.NumColumns / TileSize);
+    unsigned InnerLoopUnrollCount =
+        std::min(10u, LShape.NumColumns / TileSizeInner);
     addStringMetadataToLoop(LI->getLoopFor(TI.KLoop.Header),
                             "llvm.loop.unroll.count", InnerLoopUnrollCount);
   }
@@ -2161,23 +2204,21 @@ public:
     auto [BPtr, BAlloca] = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
-    // Use loop-based tiling when the number of expected operations exceeds
-    // threshold.
-    unsigned NumOps = getNumNativeVectorOps(EltType, R, M, C);
-    bool UseLoops =
-        (NumOps > TileLoopsThreshold) && R % TileSize == 0 && C % TileSize == 0;
-    if (UseLoops)
+    TileInfo TI(LShape.NumRows, RShape.NumColumns, LShape.NumColumns,
+                TileSizeRows, TileSizeInner, TileSizeColumns, EltType);
+
+    if (TileUseLoops && isTilingLoopProfitable(TI))
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
-      for (unsigned J = 0; J < C; J += TileSize)
-        for (unsigned I = 0; I < R; I += TileSize) {
-          const unsigned TileR = std::min(R - I, unsigned(TileSize));
-          const unsigned TileC = std::min(C - J, unsigned(TileSize));
+      for (unsigned J = 0; J < C; J += TileSizeColumns)
+        for (unsigned I = 0; I < R; I += TileSizeRows) {
+          const unsigned TileR = std::min(R - I, unsigned(TileSizeRows));
+          const unsigned TileC = std::min(C - J, unsigned(TileSizeColumns));
           MatrixTy Res = getZeroMatrix(EltType, TileR, TileC);
 
-          for (unsigned K = 0; K < M; K += TileSize) {
-            const unsigned TileM = std::min(M - K, unsigned(TileSize));
+          for (unsigned K = 0; K < M; K += TileSizeInner) {
+            const unsigned TileM = std::min(M - K, unsigned(TileSizeInner));
             MatrixTy A =
                 loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
                            LShape, getIndex(APtr, I), getIndex(APtr, K),
@@ -2226,7 +2267,7 @@ public:
   LowerMatrixMultiplyFused(CallInst *MatMul,
                            SmallPtrSetImpl<Instruction *> &FusedInsts,
                            SmallVector<IntrinsicInst *, 16> &LifetimeEnds) {
-    if (!FuseMatrix || !DT || TileSize == 0)
+    if (!FuseMatrix || !DT || TileSizeRows == 0)
       return;
 
     assert(AA && LI && "Analyses should be available");
