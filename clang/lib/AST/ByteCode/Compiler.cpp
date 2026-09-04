@@ -268,7 +268,9 @@ template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
       : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
-    Ctx->InitStackActive = Active;
+    // An explicit initializer nested in a default member initializer still
+    // needs the surrounding default initializer's `this` reconstruction.
+    Ctx->InitStackActive = OldValue || Active;
     if (Active)
       Ctx->InitStack.push_back(InitLink::DIE());
   }
@@ -2315,22 +2317,36 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->emitInvalid(E);
   }
 
-  // Handle discarding first.
-  if (DiscardResult) {
-    for (const Expr *Init : Inits) {
-      if (!this->discard(Init))
-        return false;
-    }
-    return true;
-  }
-
-  // Primitive values.
+  // Primitive values. A discarded one can simply discard each initializer;
+  // there is no object to establish.
   if (OptPrimType T = classify(QT)) {
-    assert(!DiscardResult);
+    if (DiscardResult) {
+      for (const Expr *Init : Inits) {
+        if (!this->discard(Init))
+          return false;
+      }
+      return true;
+    }
     if (Inits.size() == 0)
       return this->visitZeroInitializer(*T, QT, E);
     assert(Inits.size() == 1);
     return this->delegate(Inits[0]);
+  }
+
+  assert(!canClassify(E->getType()));
+
+  // A composite prvalue needs somewhere to live even when it is discarded: a
+  // default member initializer may read subobjects initialized earlier in this
+  // same list, so those have to actually be written and `this` has to denote
+  // the object. Materialize one and initialize into it.
+  if (DiscardResult && !Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+    InitLinkScope<Emitter> ILS2(this, InitLink::Temp(*LocalIndex));
+    return this->visitInitializerPop(E);
   }
 
   if (QT->isRecordType()) {
