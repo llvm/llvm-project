@@ -3008,6 +3008,15 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
     Flags.AllKnownNonZero = false;
     Flags.mergeFlags(*BO);
     Flags.mergeFlags(*BO0);
+    // If C1 + C2 cannot signed-overflow, both reassociated adds preserve nsw.
+    // Record this fact in AllKnownNonNegative for applyFlags().
+    SimplifyQuery SQ(L.getHeader()->getDataLayout(), DT, AC,
+                     Preheader->getTerminator());
+    if (Opcode == Instruction::Add && Flags.HasNSW && !Flags.HasNUW &&
+        computeOverflowForSignedAdd(C1, C2, SQ) ==
+            OverflowResult::NeverOverflows)
+      Flags.AllKnownNonNegative = true;
+
     // If `Inv` was not constant-folded, a new Instruction has been created.
     if (auto *I = dyn_cast<Instruction>(Inv))
       Flags.applyFlags(*I);
