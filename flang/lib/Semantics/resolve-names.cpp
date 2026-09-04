@@ -3461,7 +3461,7 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
 }
 
 // Ensure that the symbol for an intrinsic procedure is marked with
-// the INTRINSIC attribute.  Also set PURE &/or ELEMENTAL as
+// the INTRINSIC attribute.  Also set SIMPLE, PURE &/or ELEMENTAL as
 // appropriate.
 void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   SetImplicitAttr(symbol, Attr::INTRINSIC);

@@ -2891,6 +2891,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
+    // TODO: Mark intrinsic functions that are SIMPLE per F2023
     if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
       attrs.set(characteristics::Procedure::Attr::Pure);
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
