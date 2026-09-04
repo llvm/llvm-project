@@ -660,8 +660,8 @@ TEST_F(MemoryTest, TestFlushAtTheTopOfTheAddressSpace) {
 // The cache copies raw bytes, which have no buffer behind them to retain.
 TEST_F(MemoryTest, TestCacheCopiesRawBytes) {
   CacheTestProcess proc;
-  ASSERT_TRUE(proc.process());
-  DummyProcess *process = proc.process();
+  ASSERT_TRUE(proc.GetProcess());
+  DummyProcess *process = proc.GetProcess();
   Status error;
   TestMemoryCache cache(*process);
   std::vector<uint8_t> raw(16, 0xAA);
