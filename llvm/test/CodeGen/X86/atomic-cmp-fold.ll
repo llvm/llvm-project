@@ -9,8 +9,7 @@
 define i1 @cmp8_eq0_monotonic(ptr %p) {
 ; CHECK-LABEL: cmp8_eq0_monotonic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %eax
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    cmpb $0, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i8, ptr %p monotonic, align 1
@@ -21,8 +20,7 @@ define i1 @cmp8_eq0_monotonic(ptr %p) {
 define i1 @cmp16_eq0_acquire(ptr %p) {
 ; CHECK-LABEL: cmp16_eq0_acquire:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    cmpw $0, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i16, ptr %p acquire, align 2
@@ -33,8 +31,7 @@ define i1 @cmp16_eq0_acquire(ptr %p) {
 define i1 @cmp32_eq0_seq_cst(ptr %p) {
 ; CHECK-LABEL: cmp32_eq0_seq_cst:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmpl $0, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i32, ptr %p seq_cst, align 4
@@ -56,8 +53,7 @@ define i1 @cmp64_eq0_unordered(ptr %p) {
 define i1 @cmp32_imm_acquire(ptr %p) {
 ; CHECK-LABEL: cmp32_imm_acquire:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    cmpl $42, %eax
+; CHECK-NEXT:    cmpl $42, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i32, ptr %p acquire, align 4
@@ -68,8 +64,7 @@ define i1 @cmp32_imm_acquire(ptr %p) {
 define i1 @cmp32_imm_large(ptr %p) {
 ; CHECK-LABEL: cmp32_imm_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    cmpl $305419896, %eax # imm = 0x12345678
+; CHECK-NEXT:    cmpl $305419896, (%rdi) # imm = 0x12345678
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i32, ptr %p monotonic, align 4
@@ -80,8 +75,7 @@ define i1 @cmp32_imm_large(ptr %p) {
 define i1 @cmp64_imm_sext32(ptr %p) {
 ; CHECK-LABEL: cmp64_imm_sext32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    cmpq $-100, %rax
+; CHECK-NEXT:    cmpq $-100, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i64, ptr %p monotonic, align 8
@@ -93,9 +87,8 @@ define i1 @cmp64_imm_sext32(ptr %p) {
 define i1 @cmp64_imm_too_wide(ptr %p) {
 ; CHECK-LABEL: cmp64_imm_too_wide:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movabsq $4886718345, %rcx # imm = 0x123456789
-; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    movabsq $4886718345, %rax # imm = 0x123456789
+; CHECK-NEXT:    cmpq %rax, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i64, ptr %p monotonic, align 8
@@ -106,8 +99,7 @@ define i1 @cmp64_imm_too_wide(ptr %p) {
 define i1 @cmp32_reg(ptr %p, i32 %x) {
 ; CHECK-LABEL: cmp32_reg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    cmpl %esi, %eax
+; CHECK-NEXT:    cmpl %esi, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic i32, ptr %p acquire, align 4
@@ -119,8 +111,7 @@ define i1 @cmp32_reg(ptr %p, i32 %x) {
 define i1 @cmp32_reg_rhs(ptr %p, i32 %x) {
 ; CHECK-LABEL: cmp32_reg_rhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    cmpl %eax, %esi
+; CHECK-NEXT:    cmpl (%rdi), %esi
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    retq
   %v = load atomic i32, ptr %p acquire, align 4
@@ -132,8 +123,7 @@ define i1 @cmp32_reg_rhs(ptr %p, i32 %x) {
 define i32 @cmp32_sge_branch(ptr %p, i32 %lvl) {
 ; CHECK-LABEL: cmp32_sge_branch:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    cmpl %esi, %eax
+; CHECK-NEXT:    cmpl %esi, (%rdi)
 ; CHECK-NEXT:    jl .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %log
 ; CHECK-NEXT:    movl $1, %eax
@@ -199,8 +189,7 @@ define i1 @cmp_two_loads(ptr %p, ptr %q) {
 ; CHECK-LABEL: cmp_two_loads:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    movl (%rsi), %ecx
-; CHECK-NEXT:    cmpl %ecx, %eax
+; CHECK-NEXT:    cmpl (%rsi), %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %a = load atomic i32, ptr %p acquire, align 4
@@ -214,8 +203,7 @@ define i1 @cmp_two_loads(ptr %p, ptr %q) {
 define i1 @cmp32_volatile(ptr %p) {
 ; CHECK-LABEL: cmp32_volatile:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmpl $0, (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %v = load atomic volatile i32, ptr %p acquire, align 4
