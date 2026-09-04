@@ -6693,19 +6693,17 @@ def CIR_BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
   }];
 }
 
-def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
-  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
-> {
+def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz", CIR_AnyIntOrVecOfIntType> {
   let summary = "Get the number of leading 0-bits in the input";
   let description = [{
     Compute the number of leading 0-bits in the input.
 
-    The input integer must be an unsigned integer. The `cir.clz` operation
-    returns the number of consecutive 0-bits at the most significant bit
-    position in the input.
+    The input must be an integer or a vector of integers. The `cir.clz`
+    operation counts the number of consecutive 0-bits starting from the most
+    significant bit of each input value.
 
-    If the `poison_zero` attribute is present, this operation will have
-    undefined behavior if the input value is 0.
+    If the `poison_zero` attribute is present, the result is poison for any
+    input value or vector element that is 0.
 
     Example:
 
@@ -6718,19 +6716,17 @@ def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
   }];
 }
 
-def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
-  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
-> {
+def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz", CIR_AnyIntOrVecOfIntType> {
   let summary = "Get the number of trailing 0-bits in the input";
   let description = [{
     Compute the number of trailing 0-bits in the input.
 
-    The input integer must be an unsigned integer. The `cir.ctz` operation
-    counts the number of consecutive 0-bits starting from the least significant
-    bit.
+    The input must be an integer or a vector of integers. The `cir.ctz`
+    operation counts the number of consecutive 0-bits starting from the least
+    significant bit of each input value.
 
-    If the `poison_zero` attribute is present, this operation will have
-    undefined behavior if the input value is 0.
+    If the `poison_zero` attribute is present, the result is poison for any
+    input value or vector element that is 0.
 
     Example:
 
