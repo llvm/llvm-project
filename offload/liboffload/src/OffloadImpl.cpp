@@ -1315,6 +1315,32 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
   return Error::success();
 }
 
+Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
+                                      ol_device_iterate_cb_t Callback,
+                                      void *UserData) {
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Platform->Plugin || !Platform->Plugin->isPluginCompatible(Buffer))
+      continue;
+
+    // If  the image is compatible, initialize the platform.
+    if (auto Err = Platform->init())
+      return Err;
+
+    for (auto &Device : Platform->Devices) {
+      if (!Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum,
+                                                       Buffer))
+        continue;
+
+      if (!Callback(Device.get(), UserData))
+        return Error::success();
+    }
+  }
+
+  return Error::success();
+}
+
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
   if (auto Err = Device.unloadBinary(Program->Image))
@@ -1636,6 +1662,10 @@ extern "C" void __ol_tgt_setInfoFlag(uint32_t NewInfoLevel) {
 extern "C" GenericPluginTy *
 __ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
   return Platform->Plugin.get();
+}
+
+extern "C" int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
+  return Device->DeviceNum;
 }
 
 } // namespace offload
