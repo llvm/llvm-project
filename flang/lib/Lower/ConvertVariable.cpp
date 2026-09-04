@@ -1440,8 +1440,10 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   // width matches the actual allocation size.
   // The caller stores it via a bitcasted address to preserve the bit pattern
   // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
-  // A sub-byte mapping (e.g. --kind-mapping=l4:1) is not supported: the
-  // APInt::getSplat precondition requires the destination width >= 8.
+  // Sub-byte and non-byte-multiple LOGICAL mappings (e.g. --kind-mapping=l4:1)
+  // are not supported: APInt::getSplat requires the destination width >= 8.
+  // CHARACTER kind mappings with sub-byte or non-byte-multiple widths are
+  // similarly unsupported and are guarded in genInitLocalStore / genInitLocal.
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
     unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
     if (bits < 8)
@@ -1483,8 +1485,16 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
       // bytes.  Use KindMapping to get the true byte width under any
       // --kind-mapping override.
       int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
-      int64_t kindBytes =
-          builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
+      // A sub-byte or non-byte-multiple CHARACTER kind mapping is not
+      // supported for hex initialization (same restriction as LOGICAL).
+      // getCharacterBitsize / 8 would truncate to zero (sub-byte) or give
+      // a wrong stride (non-byte-multiple), so emit a controlled diagnostic.
+      unsigned charBits =
+          builder.getKindMap().getCharacterBitsize(charTy.getFKind());
+      if (charBits < 8 || charBits % 8 != 0)
+        TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
+                  "CHARACTER kind mapping");
+      int64_t kindBytes = charBits / 8;
       int64_t nBytes = nUnits * kindBytes;
       if (nBytes > 0) {
         mlir::Type idxTy = builder.getIndexType();
@@ -1740,8 +1750,13 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       // For kind>1 (UTF-16/32) the runtime length is in code units; multiply
       // by the kind byte width to get the total byte count.  Use KindMapping
       // so a --kind-mapping override is respected.
-      int64_t kindBytes =
-          builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
+      // Same sub-byte / non-byte-multiple guard as the fixed-length path.
+      unsigned charBitsRt =
+          builder.getKindMap().getCharacterBitsize(charTy.getFKind());
+      if (charBitsRt < 8 || charBitsRt % 8 != 0)
+        TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
+                  "CHARACTER kind mapping");
+      int64_t kindBytes = charBitsRt / 8;
       if (kindBytes > 1) {
         mlir::Value kindCst =
             builder.createIntegerConstant(loc, idxTy, kindBytes);
@@ -1767,8 +1782,9 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Value byteAddr = fir::CoordinateOp::create(
           builder, loc, builder.getRefType(i8Ty, byteVolatile4), byteBase,
           mlir::ValueRange{iv});
-      mlir::Value pat = builder.createIntegerConstant(
-          loc, i8Ty, static_cast<int64_t>(hexByte));
+      int64_t fillByte =
+          (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
+      mlir::Value pat = builder.createIntegerConstant(loc, i8Ty, fillByte);
       fir::StoreOp::create(builder, loc, pat, byteAddr);
       return;
     }
