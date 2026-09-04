@@ -33,6 +33,10 @@ public:
   CompilerType GetRegisterType(const RegisterInfo &reg_info) override;
 
 private:
+  CompilerType BuildBuiltinType(const RegisterTypeBuiltin *builtin_type,
+                                uint32_t expected_byte_size,
+                                lldb::TypeSystemClangSP type_system);
+
   CompilerType BuildEnumType(const RegisterTypeEnum *enum_type_info,
                              uint32_t register_byte_size,
                              lldb::TypeSystemClangSP type_system);

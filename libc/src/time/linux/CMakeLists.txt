@@ -105,3 +105,69 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
+add_entrypoint_object(
+  timer_gettime
+  SRCS
+    timer_gettime.cpp
+  HDRS
+    ../timer_gettime.h
+  DEPENDS
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_gettime
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timer_settime
+  SRCS
+    timer_settime.cpp
+  HDRS
+    ../timer_settime.h
+  DEPENDS
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_settime
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  tz_variables
+  SRCS
+    tz_variables.cpp
+  HDRS
+    ../tz_variables.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  tzset
+  SRCS
+    tzset.cpp
+  HDRS
+    ../tzset.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  clock_getcpuclockid
+  SRCS
+    clock_getcpuclockid.cpp
+  HDRS
+    ../clock_getcpuclockid.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clock_getres
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

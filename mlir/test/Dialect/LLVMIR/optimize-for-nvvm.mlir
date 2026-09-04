@@ -2,8 +2,8 @@
 
 // CHECK-LABEL: llvm.func @fdiv_fp16
 llvm.func @fdiv_fp16(%arg0 : f16, %arg1 : f16) -> f16 {
-  // CHECK-DAG: %[[c0:.*]]      = llvm.mlir.constant(0 : ui32) : i32
-  // CHECK-DAG: %[[mask:.*]]    = llvm.mlir.constant(2139095040 : ui32) : i32
+  // CHECK-DAG: %[[c0:.*]]      = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-DAG: %[[mask:.*]]    = llvm.mlir.constant(2139095040 : i32) : i32
   // CHECK-DAG: %[[lhs:.*]]     = llvm.fpext %arg0 : f16 to f32
   // CHECK-DAG: %[[rhs:.*]]     = llvm.fpext %arg1 : f16 to f32
   // CHECK-DAG: %[[rcp:.*]]     = nvvm.rcp.approx.ftz.f %[[rhs]] : f32

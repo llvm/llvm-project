@@ -15,4 +15,7 @@ class Object(Symbol):
         self.type = type
 
     def __str__(self):
-        return f"extern {self.type} {self.name};"
+        split_type = self.type.partition("[")
+        scalar_type = split_type[0]
+        array_size = split_type[1] + split_type[2]
+        return f"extern {scalar_type} {self.name}{array_size};"

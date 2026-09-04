@@ -247,12 +247,15 @@ func.func @op_with_region() -> (i32) {
   return %1 : i32
 }
 
+// `llvm.mlir.constant` allows a float attribute to be paired with an integer
+// type of the same width, so the folded attribute type differs from the source
+// type of the broadcast. Folding must bail out instead of crashing.
 // CHECK-LABEL: no_crash_with_different_source_type
 func.func @no_crash_with_different_source_type() {
-  // CHECK: llvm.mlir.constant(0 : index) : i64
-  %0 = llvm.mlir.constant(0 : index) : i64
-  // CHECK: vector.broadcast %[[CST:.*]] : i64 to vector<128xi64>
-  %1 = vector.broadcast %0 : i64 to vector<128xi64>
+  // CHECK: llvm.mlir.constant(0.000000e+00 : f32) : i32
+  %0 = llvm.mlir.constant(0.0 : f32) : i32
+  // CHECK: vector.broadcast %[[CST:.*]] : i32 to vector<128xi32>
+  %1 = vector.broadcast %0 : i32 to vector<128xi32>
   llvm.return
 }
 
@@ -282,7 +285,7 @@ func.func @no_crash_acc_kernel_environment(%data: memref<8xi32>) {
   acc.kernel_environment {
     acc.compute_region {
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

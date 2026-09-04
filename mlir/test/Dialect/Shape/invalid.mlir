@@ -166,6 +166,16 @@ func.func @broadcast(%arg0 : !shape.shape, %arg1 : tensor<?xindex>) -> tensor<?x
 
 // -----
 
+func.func @broadcast_error_in_attr_dict(%arg0 : !shape.shape,
+                                        %arg1 : !shape.shape) {
+  // expected-error@+1 {{inherent attribute 'error' cannot be parsed from attr-dict when strict properties in assembly format is enabled}}
+  %result = shape.broadcast %arg0, %arg1 {error = "incompatible shapes"}
+      : !shape.shape, !shape.shape -> !shape.shape
+  return
+}
+
+// -----
+
 // Test using an unsupported shape.lib attribute type.
 
 // expected-error@+1 {{only SymbolRefAttr allowed in shape.lib attribute array}}
@@ -300,4 +310,3 @@ func.func @invalid_meet(%arg0 : tensor<2xindex>, %arg1 : tensor<3xindex>) -> ten
   %result = shape.meet %arg0, %arg1 : tensor<2xindex>, tensor<3xindex> -> tensor<?xindex>
   return %result : tensor<?xindex>
 }
-

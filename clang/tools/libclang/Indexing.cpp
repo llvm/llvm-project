@@ -103,7 +103,7 @@ namespace llvm {
       ID.AddInteger(UniqueID.getDevice());
       ID.AddInteger(S.getOffset());
       ID.AddInteger(S.getModTime());
-      return ID.ComputeHash();
+      return ID.computeHash();
     }
 
     static bool isEqual(const PPRegion &LHS, const PPRegion &RHS) {

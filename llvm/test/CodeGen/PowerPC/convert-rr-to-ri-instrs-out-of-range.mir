@@ -368,7 +368,7 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
+    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
     %9 = RLDICL killed %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -547,7 +547,7 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
+    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
     %9 = RLDICL killed %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -667,7 +667,7 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
+    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
     %9 = RLDICL killed %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3

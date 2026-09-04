@@ -1273,6 +1273,30 @@ func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>, %acc: vector<16xf3
 
 // -----
 
+func.func @multi_reduce_dim_out_of_range(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op reduction dimension out of range: 2}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, 2] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @multi_reduce_negative_dim(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op reduction dimension out of range: -1}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, -1] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @multi_reduce_duplicate_dim(%arg0: vector<4x16xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  // expected-error@+1 {{'vector.multi_reduction' op duplicate reduction dimension: 1}}
+  %0 = vector.multi_reduction <add>, %arg0, %acc [1, 1] : vector<4x16xf32> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
 func.func @transpose_rank_mismatch_0d(%arg0: vector<f32>) {
   // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
   %0 = vector.transpose %arg0, [] : vector<f32> to vector<100xf32>

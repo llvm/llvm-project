@@ -93,6 +93,16 @@ struct Float128;
 // TODO: Commented till we modify all required functions to support emulated
 // Float128.
 
+// -- Emulated float80 support ------------------------------------------------
+
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+struct Float80;
+}
+} // namespace LIBC_NAMESPACE_DECL
+
+using float80 = LIBC_NAMESPACE::fputil::Float80;
+
 // -- bfloat16 support ---------------------------------------------------------
 
 namespace LIBC_NAMESPACE_DECL {

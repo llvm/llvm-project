@@ -15,7 +15,7 @@ namespace lldb_private {
 
 std::tuple<lldb::ModuleSP, HistoryPCType>
 GetPreferredAsanModule(const Target &target) {
-  // Currently only Darwin provides ASan runtime support as part of the OS
+  // Currently only Darwin provides (partial) runtime support as part of the OS
   // (libsanitizers).
   if (!target.GetArchitecture().GetTriple().isOSDarwin())
     return {nullptr, HistoryPCType::Calls};

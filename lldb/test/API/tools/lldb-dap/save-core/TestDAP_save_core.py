@@ -1,73 +1,76 @@
 """
-Test saving core minidump from lldb-dap
+Test lldb-dap saving a core minidump file and attaching to it.
 """
 
-import dap_server
+from pathlib import Path
+
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-import lldbdap_testcase
-from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import AttachArgs, LaunchArgs
 
 
-class TestDAP_save_core(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_save_core(DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipUnlessArch("x86_64")
-    @skipUnlessPlatform(["linux"])
-    def test_save_core(self):
-        """
-        Tests saving core minidump from lldb-dap.
-        """
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+    @requireLinux
+    def test_save_and_reload_core(self):
+        """Save minidump cores in every supported `--style` from a single
+        live stop, then re-attach to each and verify the frame, thread
+        count, and module count all round-trip."""
+
+        session = self.build_and_create_session()
         source = "main.cpp"
-        # source_path = os.path.join(os.getcwd(), source)
-        breakpoint1_line = line_number(source, "// breakpoint 1")
-        lines = [breakpoint1_line]
-        # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        program = self.getBuildArtifact("a.out")
+        breakpoint_line = line_number(source, "// breakpoint 1")
+
+        with session.configure(LaunchArgs(program)) as cm:
+            [bp_id] = session.resolve_source_breakpoints(source, [breakpoint_line])
+
+        stop_event = session.verify_stopped_on_breakpoint(bp_id, after=cm.process_event)
+
+        # Snapshot the live state so we can assert the reloaded core matches.
+        thread_count = len(session.get_threads())
+        module_count = len(session.get_modules())
+
+        core_styles = ["stack", "modified-memory", "full"]
+        top_frame = session.top_frame_from(stop_event)
+        for style in core_styles:
+            path = Path(self.getBuildArtifact(f"core.{style}.dmp"))
+            self.assertFalse(path.exists(), f"stale core file: {path}")
+
+            save_core = "process save-core --plugin-name=minidump"
+            top_frame.evaluate(f"`{save_core} --style={style} {path}", context="repl")
+            self.assertTrue(path.is_file(), f"{style} core file is a file")
+
+            with self.subTest(style=style):
+                self.verify_core(style, path, module_count, thread_count)
+
+        session.continue_to_exit(exitCode=3)
+
+    def verify_core(
+        self, style: str, core_path: Path, module_count: int, thread_count: int
+    ):
+        """Attach to a saved core and verify the reloaded process state
+        matches what was captured live: current frame, thread count,
+        module count."""
+        session = self.create_session(adapter=self.create_stdio_debug_adapter())
+        process_event = session.attach(AttachArgs(coreFile=str(core_path)))
+
+        stop_event = session.verify_stopped_on_exception(after=process_event)
+        top_frame = session.top_frame_from(stop_event).frame
+        self.assertTrue(
+            top_frame.name.startswith("function"),
+            "expected to stop inside `function`",
         )
-        self.continue_to_breakpoints(breakpoint_ids)
 
-        # Getting dap stack trace may trigger __lldb_caller_function JIT module to be created.
-        self.get_stackFrames(startFrame=0)
+        expected_line = line_number("main.cpp", "// breakpoint 1")
+        self.assertEqual(top_frame.line, expected_line)
 
-        modules = self.dap_server.get_modules()
-        thread_count = len(self.dap_server.get_threads())
+        core_thread_count = len(session.get_threads())
+        core_module_count = len(session.get_modules())
 
-        core_stack = self.getBuildArtifact("core.stack.dmp")
-        core_dirty = self.getBuildArtifact("core.dirty.dmp")
-        core_full = self.getBuildArtifact("core.full.dmp")
-
-        base_command = "`process save-core --plugin-name=minidump "
-        self.dap_server.request_evaluate(
-            base_command + " --style=stack '%s'" % (core_stack), context="repl"
-        )
-
-        self.assertTrue(os.path.isfile(core_stack))
-        self.verify_core_file(core_stack, len(modules), thread_count)
-
-        self.dap_server.request_evaluate(
-            base_command + " --style=modified-memory '%s'" % (core_dirty),
-            context="repl",
-        )
-        self.assertTrue(os.path.isfile(core_dirty))
-        self.verify_core_file(core_dirty, len(modules), thread_count)
-
-        self.dap_server.request_evaluate(
-            base_command + " --style=full '%s'" % (core_full), context="repl"
-        )
-        self.assertTrue(os.path.isfile(core_full))
-        self.verify_core_file(core_full, len(modules), thread_count)
-
-    def verify_core_file(self, core_path, expected_module_count, expected_thread_count):
-        # To verify, we'll launch with the mini dump
-        target = self.dbg.CreateTarget(None)
-        process = target.LoadCore(core_path)
-
-        # check if the core is in desired state
-        self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertTrue(process.GetProcessInfo().IsValid())
-        self.assertNotEqual(target.GetTriple().find("linux"), -1)
-        self.assertTrue(target.GetNumModules(), expected_module_count)
-        self.assertEqual(process.GetNumThreads(), expected_thread_count)
+        self.assertEqual(core_thread_count, thread_count)
+        if style != "full":  # FIXME: There is a bug on linux
+            self.assertEqual(core_module_count, module_count)

@@ -14,7 +14,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; A single 'catch (int)' clause.
 ; A wasm.catch() call, wasm.lsda() call, and personality call to generate a
-; selector should all be genereated after the catchpad.
+; selector should all be generated after the catchpad.
 ;
 ; void foo();
 ; void test0() {

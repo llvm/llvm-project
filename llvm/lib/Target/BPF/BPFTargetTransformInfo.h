@@ -77,6 +77,9 @@ public:
     TTI::MemCmpExpansionOptions Options;
     Options.LoadSizes = {8, 4, 2, 1};
     Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+    // Group byte loads into a native-width value before comparing. This keeps
+    // the number of branches bounded when wide misaligned loads are split.
+    Options.NumLoadsPerBlock = 8;
     return Options;
   }
 };

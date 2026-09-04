@@ -256,7 +256,7 @@ int main(int argc, const char **argv, const char **envp) {
   OFFLOAD_ERR(olCreateContext(1, &Device, &Context));
 
   ol_program_handle_t Program;
-  OFFLOAD_ERR(olCreateProgram(Device, Image.getBufferStart(),
+  OFFLOAD_ERR(olCreateProgram(Context, Device, Image.getBufferStart(),
                               Image.getBufferSize(), &Program));
 
   ol_queue_handle_t Queue;

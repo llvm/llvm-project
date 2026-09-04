@@ -182,6 +182,9 @@ public:
     return false;
   }
 
+  /// Find breakpoint sites that in any way overlap the range starting at
+  /// \a lower_bound and ending at \a upper_bound (but not including it).
+  /// Zero sized sites are treated as never overlapping.
   bool FindInRange(lldb::addr_t lower_bound, lldb::addr_t upper_bound,
                    StopPointSiteList &bp_site_list) const {
     if (lower_bound > upper_bound)
@@ -200,14 +203,18 @@ public:
       typename collection::const_iterator prev_pos = lower;
       prev_pos--;
       const StopPointSiteSP &prev_site = (*prev_pos).second;
-      if (prev_site->GetLoadAddress() + prev_site->GetByteSize() > lower_bound)
+      if (prev_site->GetByteSize() != 0 &&
+          (prev_site->GetLoadAddress() + prev_site->GetByteSize() >
+           lower_bound))
         bp_site_list.Add(prev_site);
     }
 
     upper = m_site_list.upper_bound(upper_bound);
 
     for (pos = lower; pos != upper; pos++)
-      bp_site_list.Add((*pos).second);
+      if (pos->second->GetByteSize() != 0)
+        bp_site_list.Add(pos->second);
+
     return true;
   }
 

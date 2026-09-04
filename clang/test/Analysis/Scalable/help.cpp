@@ -11,6 +11,8 @@
 // HELP-NEXT:    Path to the WPASuite file containing the whole-program analysis result consumed by the source transformation. The extension selects which file format to use.
 // HELP-NEXT:  --ssaf-include-local-entities
 // HELP-NEXT:    Include block-scope (function-local) declarations in extracted SSAF summaries. By default they are omitted.
+// HELP-NEXT:  --ssaf-link-unit-id=<id>
+// HELP-NEXT:    Stable identifier of the link unit that this compilation unit was linked into.
 // HELP-NEXT:  --ssaf-list-extractors  Display the list of available SSAF summary extractors
 // HELP-NEXT:  --ssaf-list-formats     Display the list of available SSAF serialization formats
 // HELP-NEXT:  --ssaf-no-extract-from-system-headers

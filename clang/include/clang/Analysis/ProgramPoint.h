@@ -186,7 +186,7 @@ public:
   unsigned getHashValue() const {
     llvm::FoldingSetNodeID ID;
     Profile(ID);
-    return ID.ComputeHash();
+    return ID.computeHash();
   }
 
   bool operator==(const ProgramPoint & RHS) const {

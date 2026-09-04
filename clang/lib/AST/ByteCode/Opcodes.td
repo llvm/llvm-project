@@ -534,11 +534,6 @@ def GetFieldPop : AccessOpcode;
 // [] -> [Value]
 def GetThisField : AccessOpcode;
 
-// [Pointer, Value] -> [Pointer]
-def SetField : AccessOpcode;
-// [Value] -> []
-def SetThisField : AccessOpcode;
-
 // [Value] -> []
 def InitThisField : AccessOpcode;
 def InitThisFieldActivate : AccessOpcode;
@@ -564,6 +559,7 @@ class LoadOpcode : Opcode {
 def Load : LoadOpcode {}
 // [Pointer] -> [Value]
 def LoadPop : LoadOpcode {}
+def LoadPopL : Opcode {}
 
 class StoreOpcode : Opcode {
   let Types = [AllTypeClass];
@@ -617,6 +613,11 @@ def AddOffset : Opcode {
   let Types = [IntegralTypeClass];
   let HasGroup = 1;
 }
+
+def GetOpaquePtr : SuccessOpcode {
+  let Args = [ArgValueDecl, ArgBool];
+}
+
 // [Pointer, Integral] -> [Pointer]
 def SubOffset : Opcode {
   let Types = [IntegralTypeClass];
@@ -1043,3 +1044,7 @@ def PushCC : SuccessOpcode {
 def PopCC : SuccessOpcode;
 def PushMSVCCE : SuccessOpcode;
 def PopMSVCCE : SuccessOpcode;
+
+def GetStringPtr : SuccessOpcode {
+  let Args = [ArgExpr];
+}

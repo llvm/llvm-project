@@ -29,7 +29,8 @@ mlir::lowerDiscardableAttrsForLLVMFunc(FunctionOpInterface funcOp,
 
   NamedAttrList inherentAttrs;
 
-  for (const NamedAttribute &attr : funcOp->getDiscardableAttrs()) {
+  for (const NamedAttribute &attr :
+       funcOp->getDiscardableAttrDictionary().getValue()) {
     StringRef attrName = attr.getName().strref();
 
     if (odsAttrNames.contains(attrName)) {

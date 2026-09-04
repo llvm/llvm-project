@@ -2277,6 +2277,15 @@ define void @f() "no-sse" { ... }
     around the cases where the training input does not have good coverage
     on all the hot functions.
 
+`hybrid_patchable`
+:   This attribute applies to code compiled for ARM64EC (target triple
+    'arm64ec-*') targets and indicates that the function may be patched at
+    runtime. In addition to the function's actual implementation, an x86-64
+    function thunk is generated. Code referencing the function will use this
+    thunk as its address, and calls to the function perform an additional
+    runtime check to execute the call through the emulator if the thunk has
+    been patched.
+
 `inlinehint`
 :   This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -7291,6 +7300,19 @@ be used for the structure type.
                      getter: "getFoo", attributes: 7, type: !2)
 ```
 
+##### DIProperty
+
+`DIProperty` nodes represent an entity that is syntactically accessed like a
+data member but whose access is implemented by an accessor. The node models
+the property's backing variable (for example, an Objective-C `@property`'s
+backing ivar).
+
+```text
+!3 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !1, file: !2,
+                    line: 8, baseType: !4, size: 32)
+!5 = !DIProperty(name: "x", file: !2, line: 8, type: !4, backing_storage: !3)
+```
+
 ##### DIImportedEntity
 
 `DIImportedEntity` nodes represent entities (such as modules) imported into a
@@ -8470,10 +8492,11 @@ indicates that, each time execution reaches the peeled iterations, execution is
 estimated to exit them without reaching the remaining loop's header.
 
 Even if the probability of reaching a loop's header is low, if it is reached, it
-is the start of an iteration.  Consequently, some passes historically assume
-that `llvm::getLoopEstimatedTripCount` always returns a positive count or
-`std::nullopt`.  Thus, it returns `std::nullopt` when
-`llvm.loop.estimated_trip_count` is 0.
+is the start of an iteration.  Some passes therefore need a positive trip count.
+Even so, `llvm::getLoopEstimatedTripCount` returns 0 when
+`llvm.loop.estimated_trip_count` is 0, so that a zero estimate can be told apart
+from a missing estimate, for which it returns `std::nullopt`.  Passes that need a
+positive trip count must check for zero.
 
 #### '`llvm.licm.disable`' Metadata
 
@@ -9569,14 +9592,6 @@ flags metadata, using the following key-value pairs:
 ```
 
 ### Other Module Flags
-
-`executable-stack`
-:   A non-zero value indicates the module contains code requiring an executable
-    stack, such as a trampoline built in stack memory and jumped to. On ELF
-    targets a non-zero value emits `.note.GNU-stack` with `SHF_EXECINSTR` set,
-    telling the linker to mark the binary's stack executable. The flag must use
-    the `max` merge behavior, so that a module requiring an executable stack
-    still gets one after linking with modules that do not.
 
 `require-logical-pointer`
 :   This flag indicates this module must only use logical pointer intrinsics
@@ -12891,9 +12906,11 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```llvm
-%X = fptoui double 123.0 to i32      ; yields i32:123
-%Y = fptoui float 1.0E+300 to i1     ; yields i1:poison
-%Z = fptoui float 1.04E+17 to i8     ; yields i8:poison
+%X  = fptoui double 123.0 to i32     ; yields i32:123
+%Y  = fptoui float 1.0E-24 to i1     ; yields i1:false
+%Z  = fptoui float -1.04E+17 to i8   ; yields i8:poison
+%W1 = fptoui double -0.999 to i32    ; yields i32:0
+%W2 = fptoui double -1.0 to i32      ; yields i32:poison
 ```
 
 #### '`fptosi .. to`' Instruction
@@ -12926,9 +12943,11 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```llvm
-%X = fptosi double -123.0 to i32      ; yields i32:-123
-%Y = fptosi float 1.0E-247 to i1      ; yields i1:poison
-%Z = fptosi float 1.04E+17 to i8      ; yields i8:poison
+%X  = fptosi double -123.0 to i32     ; yields i32:-123
+%Y  = fptosi float 1.0E-24 to i1      ; yields i1:false
+%Z  = fptosi float 1.04E+17 to i8     ; yields i8:poison
+%W1 = fptosi double -128.9 to i8      ; yields i8:-128
+%W2 = fptosi double -129.0 to i8      ; yields i8:poison
 ```
 
 (i_uitofp)=
@@ -13267,7 +13286,8 @@ If `value` is of the {ref}`byte type <t_byte>`:
 ##### Syntax:
 
 ```
-<result> = addrspacecast <pty> <ptrval> to <pty2>       ; yields pty2
+<result> = addrspacecast <pty> <ptrval> to <pty2>          ; yields pty2
+<result> = addrspacecast nonnull <pty> <ptrval> to <pty2>  ; yields pty2
 ```
 
 ##### Overview:
@@ -13303,6 +13323,10 @@ should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
 address space casts return {ref}`poison <poisonvalues>`.
+
+The optional `nonnull` flag asserts that `ptrval` is not the null value of
+its source address space; if it is, the result is
+{ref}`poison <poisonvalues>`.
 
 ##### Example:
 
@@ -20389,6 +20413,54 @@ than +0.0. If any element of the vector is a NaN, the result is NaN.
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
 
+(int_vector_reduce_fmaximumnum)=
+
+#### '`llvm.vector.reduce.fmaximumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fmaximumnum.*`' intrinsics do a floating-point
+`MAX` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.maximumnum.*`' intrinsic.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
+(int_vector_reduce_fminimumnum)=
+
+#### '`llvm.vector.reduce.fminimumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fminimumnum.*`' intrinsics do a floating-point
+`MIN` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.minimumnum.*`' intrinsic.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
 ### Vector Partial Reduction Intrinsics
 
 Partial reductions of vectors can be expressed using the intrinsics described in
@@ -21732,9 +21804,10 @@ These intrinsics make it possible to excise one parameter, marked with
 the {ref}`nest <nest>` attribute, from a function. The result is a
 callable function pointer lacking the nest parameter - the caller does
 not need to provide a value for it. Instead, the value to use is stored
-in advance in a "trampoline", a block of memory which also contains code
-to splice the nest value into the argument list. This is used to
-implement the GCC nested function address extension.
+in advance in a "trampoline", a block of memory usually allocated on the
+stack, which also contains code to splice the nest value into the
+argument list. This is used to implement the GCC nested function address
+extension.
 
 For example, if the function is `i32 f(ptr nest %c, i32 %x, i32 %y)`
 then the resulting function pointer has signature `i32 (i32, i32)`.
@@ -21773,13 +21846,6 @@ intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
 target-specific knowledge.
-
-The block may be allocated anywhere - the stack, the heap, a global, or a
-runtime-managed pool - as long as it is writable when
-`llvm.init.trampoline` executes and the address returned by
-{ref}`llvm.adjust.trampoline <int_at>` is executable when called. Those two
-addresses need not be equal, so a W^X implementation may map the block
-twice, once writable and once executable.
 
 The `func` argument must be a constant (potentially bitcasted) pointer to a
 function declaration or definition, since the calling convention may affect the

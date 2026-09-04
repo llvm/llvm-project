@@ -428,9 +428,12 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
             if (tmpC)
               operands.push_back(tmpC);
 
-            tmpC = xegpu::DpasOp::create(
-                rewriter, loc, vecTy, operands,
-                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+            auto newDpasOp = xegpu::DpasOp::create(
+                rewriter, loc, TypeRange{vecTy}, operands, op.getProperties(),
+                xegpu::dropInstDataOnAttrs(
+                    op->getDiscardableAttrDictionary().getValue()));
+            xegpu::dropInstDataOnInherentAttrs(newDpasOp);
+            tmpC = newDpasOp.getResult();
           }
           newOps.push_back(tmpC);
         }
@@ -531,8 +534,10 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
                   bScaleVals[batch * (kIters * nIters) + k * nIters + j]);
 
             newDpasMxOp = xegpu::DpasMxOp::create(
-                rewriter, loc, vecTy, operands,
-                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+                rewriter, loc, TypeRange{vecTy}, operands, op.getProperties(),
+                xegpu::dropInstDataOnAttrs(
+                    op->getDiscardableAttrDictionary().getValue()));
+            xegpu::dropInstDataOnInherentAttrs(newDpasMxOp);
             tmpC = newDpasMxOp.getResult();
           }
           newOps.push_back(newDpasMxOp);
@@ -563,11 +568,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       return failure();
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
-    int64_t chunkSize = 1;
-    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
-      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
-        chunkSize = intAttr.getInt();
-    }
+    int64_t chunkSize = op.getChunkSize().value_or(1);
 
     // Unroll mask and offsets with correct shape
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());
@@ -657,11 +658,7 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     if (!targetShape)
       return failure();
 
-    int64_t chunkSize = 1;
-    if (auto chunkSizeAttr = op->getAttr("chunk_size")) {
-      if (auto intAttr = llvm::dyn_cast<IntegerAttr>(chunkSizeAttr))
-        chunkSize = intAttr.getInt();
-    }
+    int64_t chunkSize = op.getChunkSize().value_or(1);
 
     SmallVector<int64_t> targetMaskShape(*targetShape);
     VectorType maskTy = llvm::dyn_cast<VectorType>(mask.getType());

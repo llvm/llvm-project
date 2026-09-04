@@ -17,8 +17,7 @@ define <1 x ptr> @one_elt_vector_ptr_add_non_vector_idx(<1 x ptr> %vec) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i64) = G_SEXT [[COPY1]](i32)
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[SEXT]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   $d0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   $d0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   ;
   ; CHECK-CI-LABEL: name: one_elt_vector_ptr_add_non_vector_idx
@@ -47,8 +46,7 @@ define <1 x ptr> @one_elt_vector_ptr_add_non_vector_ptr(ptr %vec) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY [[C]](i32)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i64) = G_SEXT [[COPY1]](i32)
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[SEXT]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   $d0 = COPY [[COPY2]](p0)
+  ; CHECK-NEXT:   $d0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   ;
   ; CHECK-CI-LABEL: name: one_elt_vector_ptr_add_non_vector_ptr

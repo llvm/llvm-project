@@ -1067,6 +1067,7 @@ def err_unsupported_itanium_mangling : Error<
     "|%UnnamedUnionNTTP{unnamed union non-type template parameter}"
     "|%RequiresExprWithSubstitutionFailure{requires-expression "
     "containing a substitution failure}"
+    "|%PackIndexTemplateName{pack indexing template name}"
     "}0">;
 
 def err_unsupported_itanium_expr_mangling : Error<

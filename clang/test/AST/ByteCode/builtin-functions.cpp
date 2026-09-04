@@ -132,6 +132,12 @@ namespace strcmp {
   static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
   static_assert(__builtin_strncmp(0, 0, 0) == 0);
   static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
+
+
+  constexpr char missingInit[] = bar__; // both-error {{use of undeclared identifier 'bar__'}} \
+                                        // ref-note {{declared here}}
+  static_assert(__builtin_strcmp(missingInit, "bar") == 0, ""); // both-error {{not an integral constant expression}} \
+                                                                // ref-note {{initializer of 'missingInit' is unknown}}
 }
 
 namespace WcsCmp {
@@ -180,7 +186,7 @@ namespace WcsCmp {
 
 /// Copied from constant-expression-cxx11.cpp
 namespace strlen {
-constexpr const char *a = "foo\0quux";
+  constexpr const char *a = "foo\0quux";
   constexpr char b[] = "foo\0quux";
   constexpr int f() { return 'u'; }
   constexpr char c[] = { 'f', 'o', 'o', 0, 'q', f(), 'u', 'x', 0 };

@@ -30,7 +30,9 @@ include "mlir/IR/SymbolInterfaces.td"
 // 2.19.4 Data-Sharing Attribute Clauses
 //===----------------------------------------------------------------------===//
 
-def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]> {
+def PrivateClauseOp
+    : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface, SymbolName,
+                            SymbolVisibility, Symbol]> {
   let summary = "Provides declaration of [first]private logic.";
   let description = [{
     This operation provides a declaration of how to implement the
@@ -104,6 +106,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttrOf<AnyType>:$type,
                        DataSharingClauseTypeAttr:$data_sharing_type);
 
@@ -112,7 +115,8 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $data_sharing_type $sym_name `:` $type
+    ` ` `{` `type` `=` enum($data_sharing_type) `}`
+      ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)? attr-dict
@@ -1722,7 +1726,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     bool hasHostEvalTripCount();
   }] # clausesExtraClassDeclaration;
 
-  let assemblyFormat = "`kernel_type` `` $kernel_type " #
+  let assemblyFormat = "`kernel_type` `(` enum($kernel_type) `)` " #
     clausesReqAssemblyFormat # " " #
     "oilist(" # clausesOptAssemblyFormat #
     " | `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`)" # [{
@@ -2118,7 +2122,7 @@ def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
   let assemblyFormat = clausesAssemblyFormat #
     "$x `:` type($x) $region "
     "oilist(`weak` $weak | "
-    "`fail_memory_order` `(` $fail_memory_order `)`) attr-dict";
+    "`fail_memory_order` `(` enum($fail_memory_order) `)`) attr-dict";
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2221,7 +2225,7 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
     IsolatedFromAbove,
     RecipeInterface,
     SingleBlock,
-    Symbol
+    SymbolName, SymbolVisibility, Symbol
   ]> {
   let summary = "declare mapper directive";
   let description = [{
@@ -2230,11 +2234,13 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
   }] # clausesDescription;
 
   let arguments = (ins  SymbolNameAttr:$sym_name,
+                        OptionalAttr<StrAttr>:$sym_visibility,
                         TypeAttr:$type);
 
   let regions = (region AnyRegion:$body);
 
-  let assemblyFormat = "$sym_name `:` $type $body attr-dict";
+  let assemblyFormat =
+      "($sym_visibility^)? $sym_name `:` $type $body attr-dict";
 
   let extraClassDeclaration = [{
     /// Get DeclareMapperInfoOp.
@@ -2281,6 +2287,8 @@ def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info",
 
 def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                                                          RecipeInterface,
+                                                         SymbolName,
+                                                         SymbolVisibility,
                                                          Symbol]> {
   let summary = "declares a reduction kind";
   let description = [{
@@ -2331,6 +2339,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$type,
                        OptionalAttr<TypeAttr>:$byref_element_type
                        );
@@ -2342,7 +2351,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                         AnyRegion:$cleanupRegion,
                         MaxSizedRegion<1>:$dataPtrPtrRegion);
 
-  let assemblyFormat = "$sym_name "
+  let assemblyFormat = "($sym_visibility^)? $sym_name "
                        "( `byref_element_type` `(` $byref_element_type^ `)` )? "
                        "`:` $type attr-dict-with-keyword "
                        "( `alloc` $allocRegion^ )? "
@@ -2742,7 +2751,8 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
   );
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
   let assemblyFormat = [{
-    $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+    $sym_name (`device_type` ` ` `(` enum($device_type)^ `)`)?
+      `:` type($gp_addr) attr-dict
   }];
 }
 

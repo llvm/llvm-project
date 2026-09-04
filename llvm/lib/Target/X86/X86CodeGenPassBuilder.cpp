@@ -19,6 +19,10 @@
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
@@ -53,9 +57,15 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
   void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
-  void addILPOpts(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
   void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
+  void addILPOpts(PassManagerWrapper &PMW) override;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   // TODO(boomanaiden154): We need to add addPostFastRegAllocRewrite here once
@@ -125,8 +135,38 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   return Error::success();
 }
 
+Error X86CodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
 void X86CodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(X86PreLegalizerCombinerPass(), PMW);
+}
+
+Error X86CodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
+}
+
+Error X86CodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error X86CodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+  // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
+  if (isGlobalISelAbortEnabled())
+    addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
+  return Error::success();
 }
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
@@ -134,10 +174,6 @@ void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   if (X86EnableMachineCombinerPass)
     addMachineFunctionPass(MachineCombinerPass(), PMW);
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
-}
-
-void X86CodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(X86PostLegalizerCombinerPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addMachineSSAOptimization(PassManagerWrapper &PMW) {

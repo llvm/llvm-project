@@ -15,11 +15,11 @@
 using namespace clang;
 using namespace clang::interp;
 
-Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
+Function::Function(FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
                    bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
-    : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
-      ParamDescriptors(std::move(ParamDescriptors)), IsValid(false),
+    : Source(Source), ParamDescriptors(std::move(ParamDescriptors)),
+      ArgSize(ArgSize), Kind(FunctionKind::Normal), IsValid(false),
       IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
       HasBody(false), Defined(false) {
 

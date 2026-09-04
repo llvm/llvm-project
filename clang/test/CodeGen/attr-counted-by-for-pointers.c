@@ -262,7 +262,7 @@ size_t test_bdos_of_pointer_through_cast(struct annotated_ptr *p, int index) {
   return __bdos((struct foo **)((char *)p->buf));
 }
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -17179869168, 34359738361) i64 @test_bdos_of_element_address(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 0, 17179869177) i64 @test_bdos_of_element_address(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // SANITIZE-WITH-ATTR-NEXT:    [[DOTCOUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
@@ -278,8 +278,8 @@ size_t test_bdos_of_pointer_through_cast(struct annotated_ptr *p, int index) {
 // SANITIZE-WITH-ATTR:       [[CONT8]]:
 // SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = zext nneg i32 [[DOTCOUNTED_BY_LOAD]] to i64
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = sub nsw i64 [[COUNT]], [[IDXPROM]]
-// SANITIZE-WITH-ATTR-NEXT:    [[RESULT:%.*]] = shl nsw i64 [[TMP4]], 3
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = sub nuw nsw i64 [[COUNT]], [[IDXPROM]]
+// SANITIZE-WITH-ATTR-NEXT:    [[RESULT:%.*]] = shl nuw nsw i64 [[TMP4]], 3
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[RESULT]]
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -34359738360, 34359738361) i64 @test_bdos_of_element_address(
@@ -531,7 +531,7 @@ void test_pass_dynamic_object_size_of_pointer(struct annotated_volatile_ptr *p) 
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[IDXPROM]]
 // SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = zext nneg i32 [[DOTCOUNTED_BY_LOAD]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAY_SIZE:%.*]] = shl nuw nsw i64 [[COUNT]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[RESULT:%.*]] = sub nsw i64 [[ARRAY_SIZE]], [[IDXPROM]]
+// SANITIZE-WITH-ATTR-NEXT:    [[RESULT:%.*]] = sub nuw nsw i64 [[ARRAY_SIZE]], [[IDXPROM]]
 // SANITIZE-WITH-ATTR-NEXT:    tail call void @take_ptr_with_size(ptr noundef [[ARRAYIDX]], i64 noundef [[RESULT]]) #[[ATTR5]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //

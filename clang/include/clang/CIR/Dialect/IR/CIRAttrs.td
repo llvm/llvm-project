@@ -19,6 +19,7 @@ include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIREnumAttr.td"
+include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
 
 include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
@@ -79,7 +80,9 @@ class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 
 def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
   I32EnumAttrCase<"C", 1, "c">,
-  I32EnumAttrCase<"CXX", 2, "cxx">
+  I32EnumAttrCase<"CXX", 2, "cxx">,
+  I32EnumAttrCase<"OpenCLC", 3, "opencl_c">,
+  I32EnumAttrCase<"OpenCLCXX", 4, "opencl_cxx">
 ]> {
   // The enum attr class is defined in `CIR_SourceLanguageAttr` below,
   // so that it can define extra class methods.
@@ -98,6 +101,10 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
     module attributes {cir.lang = cir.lang<c>} {}
     // Module compiled from C++.
     module attributes {cir.lang = cir.lang<cxx>} {}
+    // Module compiled from OpenCL C.
+    module attributes {cir.lang = cir.lang<opencl_c>} {}
+    // Module compiled from C++ for OpenCL.
+    module attributes {cir.lang = cir.lang<opencl_cxx>} {}
     ```
 
     Module source language attribute name is `cir.lang` is defined by
@@ -107,6 +114,8 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
   let extraClassDeclaration = [{
     bool isC() const { return getValue() == SourceLanguage::C; }
     bool isCXX() const { return getValue() == SourceLanguage::CXX; }
+    bool isOpenCLC() const { return getValue() == SourceLanguage::OpenCLC; }
+    bool isOpenCLCXX() const { return getValue() == SourceLanguage::OpenCLCXX; }
   }];
 }
 
@@ -991,6 +1000,64 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalOffsetAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_GlobalOffsetAttr : CIR_ValueLikeAttr<"GlobalOffset", "global_offset"> {
+  let summary = "Provides constant access to a byte offset from a global";
+  let description = [{
+    Get the constant address that is `offset` bytes away from the address of
+    global `symbol`. Like `#cir.global_view`, it provides a way to access
+    globals from other globals and always produces a pointer, and the type of
+    the referenced symbol may differ from the type of the attribute.
+
+    Whereas `#cir.global_view` navigates the type of the symbol using
+    subelement indices, this attribute describes a flat displacement in bytes.
+    It is used for the addresses that cannot be described by subelement
+    indices, namely addresses outside of the referenced object, such as the
+    one-past-the-end address of a record, and addresses that do not fall on a
+    subelement boundary. This mirrors the byte offset that classic codegen
+    applies to every constant lvalue.
+
+    Example:
+
+    ```
+    struct S { int x; };
+    S s;
+    S *p = &s + 1;
+    ```
+
+    produces
+
+    ```
+    cir.global external @p = #cir.global_offset<@s, 4> : !cir.ptr<!rec_S>
+    ```
+
+    which lowers to
+
+    ```
+    @p = global ptr getelementptr (i8, ptr @s, i64 4)
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::FlatSymbolRefAttr":$symbol,
+                        "int64_t":$offset);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol,
+                                        "int64_t":$offset), [{
+      return $_get(type.getContext(), type, symbol, offset);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `<` $symbol `,` $offset `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VTableAttr
 //===----------------------------------------------------------------------===//
 
@@ -1142,10 +1209,6 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
     }]>
   ];
 
-  let assemblyFormat = [{
-    `(` custom<AddressSpaceValue>($value) `)`
-  }];
-
   let defaultValue = "cir::LangAddressSpace::Default";
 
   let extraClassDeclaration = [{
@@ -1285,7 +1348,7 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 }
 
 //===----------------------------------------------------------------------===//
-// VisibilityAttr
+// VisibilityKind
 //===----------------------------------------------------------------------===//
 
 def CIR_VisibilityKind : CIR_I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
@@ -1294,33 +1357,6 @@ def CIR_VisibilityKind : CIR_I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
   I32EnumAttrCase<"Protected", 2, "protected">
 ]> {
   let genSpecializedAttr = 0;
-}
-
-def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
-  let summary = "Visibility attribute";
-  let description = [{
-    Visibility attributes.
-  }];
-
-  let cppClassName = "VisibilityAttr";
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    AttrBuilder<(ins CArg<"VisibilityKind",
-                          "cir::VisibilityKind::Default">:$value), [{
-      return $_get($_ctxt, value);
-    }]>
-  ];
-
-  let assemblyFormat = [{
-    $value
-  }];
-
-  let extraClassDeclaration = [{
-    bool isDefault() const { return getValue() == VisibilityKind::Default; };
-    bool isHidden() const { return getValue() == VisibilityKind::Hidden; };
-    bool isProtected() const { return getValue() == VisibilityKind::Protected; };
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1539,6 +1575,71 @@ def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_CXXAssignAttr,
   CIR_FuncIdentityAttr
 ], "function information attribute">;
+
+//===----------------------------------------------------------------------===//
+// BitFieldDeclAttr
+//===----------------------------------------------------------------------===//
+
+// A flag spelled as the bare `unnamed` keyword.  A named bit-field leaves the
+// keyword out, so the parameter defaults to false and prints nothing.
+def CIR_UnnamedBitFieldParameter
+    : AttrOrTypeParameter<"bool", "unnamed bit-field flag"> {
+  let parser = [{ [&]() -> ::mlir::FailureOr<bool> {
+    if ($_parser.parseKeyword("unnamed"))
+      return ::mlir::failure();
+    return true;
+  }() }];
+  let printer = [{ $_printer << "unnamed" }];
+  let defaultValue = "false";
+}
+
+def CIR_BitFieldDeclAttr : CIR_Attr<"BitFieldDecl", "bitfield_decl"> {
+  let summary = "How the source declared one bit-field";
+  let description = [{
+    Records a single bit-field as its declaration wrote it: the declared type,
+    the number of bits the field holds, and whether the declaration named it.
+
+    A run of bit-fields shares one access unit whose width the compiler picks,
+    so none of this can be recovered from the unit.  The fields in a run need
+    not even agree on a declared type: `struct { int a : 2; long long b : 30; }`
+    packs an `int` and a `long long` into a single 32-bit unit.  This attribute
+    is therefore per field, and `!cir.bitfield` carries one of them for every
+    bit-field in the unit.
+
+    A width of zero is a zero-width bit-field, `int : 0`, which holds no bits
+    and exists only to end the run before it.
+
+    `unnamed` marks a bit-field the source cannot read, `int : 3`.  It still
+    occupies bits of the unit, and the x86-64 classifier reads it, but it is
+    not a field any expression names.  Every zero-width bit-field is unnamed.
+
+    Example:
+    ```
+      #cir.bitfield_decl<!s32i, 4>
+      #cir.bitfield_decl<!s64i, 30>
+      #cir.bitfield_decl<!s32i, 3, unnamed>
+      #cir.bitfield_decl<!u32i, 0, unnamed>
+    ```
+  }];
+
+  let parameters = (ins CIR_AnyIntOrBoolType:$declared_type, "uint64_t":$width,
+                        CIR_UnnamedBitFieldParameter:$is_unnamed);
+
+  let assemblyFormat = [{
+    `<` $declared_type `,` $width (`,` $is_unnamed^)? `>`
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$declaredType,
+                                        "uint64_t":$width,
+                                        CArg<"bool", "false">:$isUnnamed), [{
+      return $_get(declaredType.getContext(), declaredType, width, isUnnamed);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
@@ -2010,6 +2111,91 @@ class CIR_AST<string name, string prefix, list<Trait> traits = []>
 def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
   ASTVarDeclInterface
 ]>;
+
+//===----------------------------------------------------------------------===//
+// StaticLocalInfoAttr
+//===----------------------------------------------------------------------===//
+
+// CIR-native thread-local storage kind. Cases mirror clang::VarDecl::TLSKind
+// so CIRGen can map between them, but CIR does not depend on the underlying
+// clang enumerator values.
+def CIR_TLSKind : CIR_I32EnumAttr<"TLSKind", "thread-local storage kind", [
+  I32EnumAttrCase<"None", 0, "none">,          // clang::VarDecl::TLS_None
+  I32EnumAttrCase<"Static", 1, "static">,      // clang::VarDecl::TLS_Static
+  I32EnumAttrCase<"Dynamic", 2, "dynamic">     // clang::VarDecl::TLS_Dynamic
+]> {
+  let genSpecializedAttr = 0;
+}
+
+// CIR-native template-specialization kind. Cases mirror
+// clang::TemplateSpecializationKind.
+def CIR_TemplateSpecializationKind
+    : CIR_I32EnumAttr<"TemplateSpecializationKind",
+                      "template specialization kind", [
+  // clang::TSK_Undeclared
+  I32EnumAttrCase<"Undeclared", 0, "undeclared">,
+  // clang::TSK_ImplicitInstantiation
+  I32EnumAttrCase<"ImplicitInstantiation", 1, "implicit_instantiation">,
+  // clang::TSK_ExplicitSpecialization
+  I32EnumAttrCase<"ExplicitSpecialization", 2, "explicit_specialization">,
+  // clang::TSK_ExplicitInstantiationDeclaration
+  I32EnumAttrCase<"ExplicitInstantiationDeclaration", 3,
+                  "explicit_instantiation_declaration">,
+  // clang::TSK_ExplicitInstantiationDefinition
+  I32EnumAttrCase<"ExplicitInstantiationDefinition", 4,
+                  "explicit_instantiation_definition">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_StaticLocalInfoAttr
+    : CIR_Attr<"StaticLocalInfo", "static_local_info"> {
+  let summary = "Static-local variable facts needed by later lowering";
+  let description = [{
+    Holds the subset of a static-local variable's declaration facts that
+    post-CIRGen lowering needs, as plain data (no `clang::VarDecl` pointer).
+
+    - `local`: whether the variable is a block-scope (local) declaration.
+      Mirrors `clang::VarDecl::isLocalVarDecl()`. The namespace-scope inline
+      variables that also reach guarded initialization are not local.
+
+    - `tls`: the thread-local storage kind (`none`, `static`, or `dynamic`).
+
+    - `is_inline`: whether the variable is inline. Mirrors
+      `clang::VarDecl::isInline()`.
+
+    - `tsk`: the template-specialization kind (`undeclared`,
+      `implicit_instantiation`, `explicit_specialization`,
+      `explicit_instantiation_declaration`, or
+      `explicit_instantiation_definition`).
+
+    Example:
+    ```
+    cir.global ... @x = ...
+      {static_local_info = #cir.static_local_info<
+         local = true, tls = none, is_inline = false, tsk = undeclared>}
+    ```
+
+    Because it stores plain data rather than a `clang::VarDecl` pointer, it
+    round-trips through textual CIR and stays valid once the AST is gone.
+    This is what lets LoweringPrepare consume these facts without a live
+    `clang::ASTContext`; the `$ast` `ASTVarDeclAttr` remains a separate,
+    live-AST handle for consumers that need arbitrary AST properties.
+  }];
+
+  let parameters = (ins
+    "bool":$local,
+    EnumParameter<CIR_TLSKind>:$tls,
+    "bool":$is_inline,
+    EnumParameter<CIR_TemplateSpecializationKind>:$tsk
+  );
+
+  let assemblyFormat = [{
+    `<` struct($local, $tls, $is_inline, $tsk) `>`
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // AnnotationAttr

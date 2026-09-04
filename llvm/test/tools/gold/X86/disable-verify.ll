@@ -1,11 +1,11 @@
 ; RUN: llvm-as %s -o %t.o
 ; REQUIRES: asserts
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=disable-verify --plugin-opt=debug-pass-manager \
 ; RUN:    -shared %t.o -o %t2.o 2>&1 | FileCheck %s
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=debug-pass-manager \
 ; RUN:    -shared %t.o -o %t2.o 2>&1 | FileCheck %s -check-prefix=VERIFY
 
