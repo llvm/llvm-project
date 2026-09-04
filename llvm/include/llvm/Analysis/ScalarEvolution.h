@@ -347,8 +347,7 @@ public:
 template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
   static void Profile(const SCEV &X, FoldingSetNodeID &ID) { ID = X.FastID; }
 
-  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID,
-                     FoldingSetNodeID &TempID) {
+  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID) {
     return ID == X.FastID;
   }
 };
@@ -426,8 +425,7 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
     ID = X.FastID;
   }
 
-  static bool Equals(const SCEVPredicate &X, const FoldingSetNodeID &ID,
-                     FoldingSetNodeID &TempID) {
+  static bool Equals(const SCEVPredicate &X, const FoldingSetNodeID &ID) {
     return ID == X.FastID;
   }
 };
