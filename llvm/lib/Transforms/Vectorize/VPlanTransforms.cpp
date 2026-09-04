@@ -1710,19 +1710,20 @@ void VPlanTransforms::combineRecipes(VPlan &Plan) {
     assert(Worklist.size() < InitWorklistSize * 2 &&
            "Worklist is growing large, possible cycle?");
     VPSingleDefRecipe *Def = Worklist.pop_back_val();
-    if (VPSingleDefRecipe *New = combineRecipe(Plan, Def)) {
-      if (New != Def) {
-        // Replace the recipe with a new one.
-        Def->replaceAllUsesWith(New);
-        Def->eraseFromParent();
-        if (auto *NewR = dyn_cast_if_present<VPSingleDefRecipe>(
-                New->getDefiningRecipe()))
-          Worklist.push_back(NewR);
-        // TODO: Append users to the worklist (might need a setvector)
-      } else if (vputils::isDeadRecipe(*Def)) {
-        // Recipe was modified - it may be dead now.
-        Def->eraseFromParent();
-      }
+    VPSingleDefRecipe *New = combineRecipe(Plan, Def);
+    if (!New)
+      continue;
+    if (New != Def) {
+      // Replace the recipe with a new one.
+      Def->replaceAllUsesWith(New);
+      Def->eraseFromParent();
+      if (auto *NewR =
+              dyn_cast_if_present<VPSingleDefRecipe>(New->getDefiningRecipe()))
+        Worklist.push_back(NewR);
+      // TODO: Append users to the worklist (might need a setvector)
+    } else if (vputils::isDeadRecipe(*Def)) {
+      // Recipe was modified - it may be dead now.
+      Def->eraseFromParent();
     }
   }
 }
