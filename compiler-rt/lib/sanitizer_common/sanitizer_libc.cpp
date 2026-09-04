@@ -49,6 +49,19 @@ int internal_memcmp(const void* s1, const void* s2, uptr n) {
   return 0;
 }
 
+void *internal_memccpy(void *dest, const void *src, int c, uptr n) {
+  char *d = (char *)dest;
+  const char *s = (const char *)src;
+  uptr i = 0;
+  for (; i < n; ++i) {
+    d[i] = s[i];
+    if (s[i] == c) break;
+  }
+  if (n > 0 && i < n)
+    return d + i + 1;
+  return nullptr;
+}
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
                                                                 const void *src,
