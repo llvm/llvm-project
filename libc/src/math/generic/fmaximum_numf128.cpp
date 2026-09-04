@@ -15,7 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 using LIBC_NAMESPACE::fputil::Float128;
 
 LLVM_LIBC_FUNCTION(float128, fmaximum_numf128, (float128 x, float128 y)) {
-  return cpp::bit_cast<float128>(math::fmaximum_numf128(cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y)));
+  return cpp::bit_cast<float128>(math::fmaximum_numf128(
+      cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
