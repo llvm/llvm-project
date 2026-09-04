@@ -182,7 +182,6 @@ public:
   }
 
   DummyProcess *GetProcess() const { return m_process; }
-  // Widened from uint32_t so tests can do address arithmetic with it.
   lldb::addr_t GetLine() const { return m_process->GetMemoryCacheLineSize(); }
 
 private:
@@ -205,8 +204,8 @@ bool AllBytesAre(llvm::ArrayRef<uint8_t> bytes, uint8_t fill) {
 
 TEST_F(MemoryTest, TesetMemoryCacheRead) {
   CacheTestProcess proc("x86_64-apple-macosx-");
-  ASSERT_TRUE(proc.process());
-  DummyProcess *process = proc.process();
+  ASSERT_TRUE(proc.GetProcess());
+  DummyProcess *process = proc.GetProcess();
   MemoryCache &mem_cache = process->GetMemoryCache();
   const uint64_t l2_cache_size = process->GetMemoryCacheLineSize();
   Status error;
@@ -366,8 +365,8 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
 
 TEST_F(MemoryTest, TestL1Cache) {
   CacheTestProcess proc;
-  ASSERT_TRUE(proc.process());
-  DummyProcess *process = proc.process();
+  ASSERT_TRUE(proc.GetProcess());
+  DummyProcess *process = proc.GetProcess();
   TestMemoryCache mem_cache(*process);
 
   auto add = [&](lldb::addr_t addr, size_t size, uint8_t fill) {
@@ -462,8 +461,8 @@ TEST_F(MemoryTest, TestL1Cache) {
 
 TEST_F(MemoryTest, TestReadStopsAtAnInvalidRange) {
   CacheTestProcess proc;
-  ASSERT_TRUE(proc.process());
-  DummyProcess *process = proc.process();
+  ASSERT_TRUE(proc.GetProcess());
+  DummyProcess *process = proc.GetProcess();
   MemoryCache &cache = process->GetMemoryCache();
   const lldb::addr_t line = process->GetMemoryCacheLineSize();
   const lldb::addr_t base = 0xE000;
@@ -499,12 +498,12 @@ TEST_F(MemoryTest, TestReadStopsAtAnInvalidRange) {
 
 TEST_F(MemoryTest, TestReadRangesFromCaches) {
   CacheTestProcess proc;
-  ASSERT_TRUE(proc.process());
-  DummyProcess *process = proc.process();
-  const lldb::addr_t line = proc.line();
+  ASSERT_TRUE(proc.GetProcess());
+  DummyProcess *process = proc.GetProcess();
+  const lldb::addr_t line = proc.GetLine();
 
-  { // A short fetch must expose only the bytes it read, and must not disturb a
-    // range the caches already served.
+  { // An entry serves a range only if it covers it all.  A short fetch is all
+    // the caller sees and all L1 keeps of the range it was for.
     TestMemoryCache cache(*process);
     AddCacheChunk(cache, 0xB000, 40, 0xAA);
     AddCacheChunk(cache, 0xC000, 8, 0xCC);
@@ -521,6 +520,24 @@ TEST_F(MemoryTest, TestReadRangesFromCaches) {
     EXPECT_TRUE(AllBytesAre(results[0], 0xBB));
     ASSERT_EQ(results[1].size(), 8u);
     EXPECT_TRUE(AllBytesAre(results[1], 0xCC));
+    // A short reply is retried for the remainder, here with no bytes left.
+    ASSERT_EQ(process->m_reads.size(), 2u);
+    EXPECT_EQ(process->m_reads[0].first, 0xB000u);
+    EXPECT_EQ(process->m_reads[0].second, 64u);
+    EXPECT_EQ(process->m_reads[1].first, 0xB000u + 20u);
+    EXPECT_EQ(process->m_reads[1].second, 64u - 20u);
+
+    ASSERT_EQ(cache.GetL1Cache().size(), 2u);
+    EXPECT_EQ(cache.GetL1Cache().count(0xB000), 1u);
+    EXPECT_EQ(cache.GetL1Cache().count(0xC000), 1u);
+
+    auto l1cache_line = cache.GetL1Cache().at(0xB000);
+    // was 40 bytes of 0xAA
+    EXPECT_EQ(l1cache_line->GetByteSize(), 20u);
+    EXPECT_TRUE(AllBytesAre(l1cache_line->GetData(), 0xBB));
+    l1cache_line = cache.GetL1Cache().at(0xC000);
+    EXPECT_EQ(l1cache_line->GetByteSize(), 8u);
+    EXPECT_TRUE(AllBytesAre(l1cache_line->GetData(), 0xCC));
   }
 
   { // A range ReadRanges fetched is cached, so asking for it again serves it
@@ -577,9 +594,9 @@ TEST_F(MemoryTest, TestReadRangesFromCaches) {
 
 TEST_F(MemoryTest, TestReadRequestShape) {
   CacheTestProcess proc;
-  ASSERT_TRUE(proc.process());
-  DummyProcess *process = proc.process();
-  const lldb::addr_t line = proc.line();
+  ASSERT_TRUE(proc.GetProcess());
+  DummyProcess *process = proc.GetProcess();
+  const lldb::addr_t line = proc.GetLine();
 
   { // A read longer than a line that L1 cannot serve whole goes to the inferior
     // as one request for the whole range.
@@ -615,11 +632,13 @@ TEST_F(MemoryTest, TestReadRequestShape) {
 }
 
 // A flushed range whose end wraps past UINT64_MAX must stop at the top line.
+// FIXME: a range whose end wraps past UINT64_MAX leaves the wrapped lines
+// cached.
 TEST_F(MemoryTest, TestFlushAtTheTopOfTheAddressSpace) {
   CacheTestProcess proc;
-  ASSERT_TRUE(proc.process());
-  DummyProcess *process = proc.process();
-  const lldb::addr_t line = proc.line();
+  ASSERT_TRUE(proc.GetProcess());
+  DummyProcess *process = proc.GetProcess();
+  const lldb::addr_t line = proc.GetLine();
   const lldb::addr_t top_line = UINT64_MAX - line + 1;
 
   // Only L2 is walked line by line, so seed it by reading.  The line at 0 is
