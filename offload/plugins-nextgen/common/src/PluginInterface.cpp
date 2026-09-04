@@ -75,9 +75,29 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 
   ImagePtr = &Image;
 
+  GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
+
+  // Retrieve kernel information if possible.
+  const std::string KernelInfoName = Name + "_kernel_info";
+  if (GHandler.isSymbolInImage(GenericDevice, Image, KernelInfoName)) {
+    GlobalTy ImageKernelInfo(KernelInfoName);
+    if (auto Err = GHandler.getGlobalMetadataFromImage(GenericDevice, Image,
+                                                       ImageKernelInfo))
+      return Err;
+
+    assert(!ArgTypes);
+    ArgTypes.emplace();
+    const size_t NumArgs =
+        ImageKernelInfo.getSize() / sizeof(KernelArgInfo::EncodeType);
+    ArgTypes->reserve(NumArgs);
+    for (size_t i = 0; i < NumArgs; ++i)
+      ArgTypes->emplace_back(KernelArgInfo::fromEncodedLE(static_cast<void *>(
+          static_cast<KernelArgInfo::EncodeType *>(ImageKernelInfo.getPtr()) +
+          i)));
+  }
+
   // Retrieve kernel environment object for the kernel.
   std::string EnvironmentName = std::string(Name) + "_kernel_environment";
-  GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
   if (GHandler.isSymbolInImage(GenericDevice, Image, EnvironmentName)) {
     GlobalTy KernelEnv(EnvironmentName, sizeof(KernelEnvironment),
                        &KernelEnvironment);
@@ -187,6 +207,18 @@ Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
        "%s mode\n",
        getName(), NumBlocks[0], NumBlocks[1], NumBlocks[2], NumThreads[0],
        NumThreads[1], NumThreads[2], getExecutionModeName());
+
+  assert(!ArgTypes || ArgTypes->size() == LaunchArgs.NumArgs);
+  for (uint32_t I = 0; I < LaunchArgs.NumArgs; ++I) {
+    KernelArgInfo TypeInfo = KernelArgInfo::getUnknownTy();
+    if (ArgTypes && I < ArgTypes->size())
+      TypeInfo = (*ArgTypes)[I];
+
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
+         "  arg[%u]={ type=%s, val=%s }\n", I, TypeInfo.typeStr().data(),
+         TypeInfo.valueStr(LaunchArgs.Args[I]).data());
+  }
+
   return printLaunchInfoDetails(GenericDevice, LaunchArgs, NumThreads,
                                 NumBlocks);
 }
