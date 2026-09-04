@@ -49,3 +49,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.elf.module
 )
+
+add_libc_test(
+  tls_layout_test
+  SUITE
+    libc-support-tests
+  SRCS
+    tls_layout_test.cpp
+  DEPENDS
+    libc.src.__support.elf.tls_layout
+)
