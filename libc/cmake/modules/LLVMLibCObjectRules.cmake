@@ -94,6 +94,10 @@ function(create_object_library fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
+  if(LIBC_ENABLE_SHARED)
+    set_target_properties(${fq_target_name}
+      PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
 
   # loop through the deps, check if any have the TARGET_TYPE of ENTRYPOINT_OBJ_TARGET_TYPE, and print a warning if they do.
   if(LIBC_CMAKE_VERBOSE_LOGGING)
@@ -323,6 +327,13 @@ function(create_entrypoint_object fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name} ${full_deps_list})
   target_link_libraries(${fq_target_name} ${full_deps_list})
+
+  # The same objects are packaged into both the static archive and, when
+  # enabled, the shared object, so they must be position independent.
+  if(LIBC_ENABLE_SHARED)
+    set_target_properties(${fq_target_name} ${internal_target_name}
+      PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
 
   # Builtin recognition causes issues when trying to implement the builtin
   # functions themselves. The GPU backends do not use libcalls so we disable the

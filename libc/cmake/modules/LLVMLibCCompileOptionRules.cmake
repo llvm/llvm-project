@@ -288,6 +288,13 @@ function(_get_common_compile_options_impl output_var)
     list(APPEND compile_options "-fno-unwind-tables")
     list(APPEND compile_options "-fno-asynchronous-unwind-tables")
     list(APPEND compile_options "-fno-rtti")
+    if(LIBC_ENABLE_SHARED)
+      # Position independent code defaults to the general dynamic TLS model,
+      # which needs __tls_get_addr. libc.so is always loaded at startup rather
+      # than dlopen'd, so initial-exec is both valid and cheaper.
+      list(APPEND compile_options "-ftls-model=initial-exec")
+      list(APPEND compile_options "-DLIBC_COPT_SHARED_LIBRARY")
+    endif()
     if(LIBC_CC_SUPPORTS_PATTERN_INIT)
       list(APPEND compile_options "-ftrivial-auto-var-init=pattern")
     endif()

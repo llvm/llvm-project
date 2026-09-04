@@ -35,6 +35,7 @@ else()
 endif()
 
 set(added_archive_targets "")
+set(added_shared_targets "")
 set(added_bitcode_targets "")
 foreach(archive IN ZIP_LISTS
   libc_archive_names libc_archive_targets libc_archive_entrypoint_lists)
@@ -59,6 +60,33 @@ foreach(archive IN ZIP_LISTS
     endif()
   endif()
   list(APPEND added_archive_targets ${archive_1})
+
+  if(LIBC_ENABLE_SHARED)
+    add_entrypoint_library(
+      ${archive_1}-shared
+      SHARED
+      SOVERSION ${LIBC_ABI_VERSION}
+      DEPENDS
+        ${${archive_2}}
+    )
+    set_target_properties(
+      ${archive_1}-shared
+      PROPERTIES
+        OUTPUT_NAME ${archive_0}
+    )
+    target_link_libraries(${archive_1}-shared PUBLIC libc-headers)
+    if(TARGET libc-startup)
+      add_dependencies(${archive_1}-shared libc-startup)
+    endif()
+    if(archive_1 STREQUAL "libc" AND TARGET ${tls_object})
+      target_sources(${archive_1}-shared
+        PRIVATE $<TARGET_OBJECTS:${tls_object}>)
+    else()
+      # libm and libmvec reference errno and other libc internals.
+      target_link_libraries(${archive_1}-shared PRIVATE libc-shared)
+    endif()
+    list(APPEND added_shared_targets ${archive_1}-shared)
+  endif()
 
   # Add the offloading version of the library for offloading languages. These
   # are installed in the standard search path separate from the other libraries.
@@ -97,6 +125,14 @@ install(
   ARCHIVE DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
   COMPONENT libc
 )
+
+if(added_shared_targets)
+  install(
+    TARGETS ${added_shared_targets}
+    LIBRARY DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+    COMPONENT libc
+  )
+endif()
 
 foreach(file ${added_bitcode_targets})
   install(FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
@@ -143,6 +179,7 @@ endif()
 
 add_custom_target(install-libc
   DEPENDS ${added_archive_targets}
+    ${added_shared_targets}
     ${added_bitcode_targets}
     ${added_empty_archives}
     ${startup_target}
@@ -152,6 +189,7 @@ add_custom_target(install-libc
     -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 add_custom_target(install-libc-stripped
   DEPENDS ${added_archive_targets}
+    ${added_shared_targets}
     ${added_bitcode_targets}
     ${added_empty_archives}
     ${startup_target}

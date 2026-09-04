@@ -138,8 +138,15 @@ endfunction()
 # A rule to build a library from a collection of entrypoint objects.
 # Usage:
 #     add_entrypoint_library(
+#       target_name
+#       [SHARED]
+#       [SOVERSION <version>]
 #       DEPENDS <list of add_entrypoint_object targets>
 #     )
+#
+# Without SHARED a static archive is produced. SHARED builds a shared object
+# instead and requires LIBC_ENABLE_SHARED, which makes the entrypoint objects
+# position independent.
 #
 # NOTE: If one wants an entrypoint to be available in a library, then they will
 # have to list the entrypoint target explicitly in the DEPENDS list. Implicit
@@ -147,14 +154,18 @@ endfunction()
 function(add_entrypoint_library target_name)
   cmake_parse_arguments(
     "ENTRYPOINT_LIBRARY"
-    "" # No optional arguments
-    "" # No single value arguments
+    "SHARED" # Optional arguments
+    "SOVERSION" # Single value arguments
     "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
     message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
       "of 'add_entrypoint_object' targets.")
+  endif()
+  if(ENTRYPOINT_LIBRARY_SHARED AND NOT LIBC_ENABLE_SHARED)
+    message(FATAL_ERROR
+      "'add_entrypoint_library' with SHARED requires LIBC_ENABLE_SHARED.")
   endif()
 
   get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
@@ -165,12 +176,34 @@ function(add_entrypoint_library target_name)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
   endforeach()
 
+  if(NOT ENTRYPOINT_LIBRARY_SHARED)
+    add_library(
+      ${target_name}
+      STATIC
+        ${objects}
+    )
+    set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
+    return()
+  endif()
+
   add_library(
     ${target_name}
-    STATIC
+    SHARED
       ${objects}
   )
-  set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
+  set_target_properties(${target_name}
+    PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
+  if(NOT ENTRYPOINT_LIBRARY_SOVERSION STREQUAL "")
+    set_target_properties(${target_name}
+      PROPERTIES SOVERSION ${ENTRYPOINT_LIBRARY_SOVERSION})
+  endif()
+  # Link nothing from the host toolchain except the compiler runtime, which the
+  # math and fixed-point entrypoints need for builtins such as __divti3. The
+  # driver defaults would otherwise add a DT_NEEDED on the system libm.
+  target_link_options(${target_name} PRIVATE -nostdlib)
+  if(LIBC_COMPILER_RT_BUILTINS)
+    target_link_libraries(${target_name} PRIVATE ${LIBC_COMPILER_RT_BUILTINS})
+  endif()
 endfunction()
 
 set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
