@@ -170,6 +170,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AArch64 Backend
 
+* Added support for hardening return address signing against PACMAN attacks.
+  Functions with the `"sign-return-address-harden"="load-return-address"`
+  attribute perform a load of the return address before returning, reducing the
+  cache side channel used to guess pointer authentication codes.
+
 ### Changes to the AMDGPU Backend
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`

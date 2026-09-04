@@ -216,6 +216,7 @@ void TargetCodeGenInfo::setBranchProtectionFnAttributes(
   // Called on already created and initialized function where attributes already
   // set from command line attributes but some might need to be removed as the
   // actual BPI is different.
+
   if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
     F.addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
     F.addFnAttr("sign-return-address-key", BPI.getSignKeyStr());
@@ -224,6 +225,15 @@ void TargetCodeGenInfo::setBranchProtectionFnAttributes(
       F.removeFnAttr("sign-return-address");
     if (F.hasFnAttribute("sign-return-address-key"))
       F.removeFnAttr("sign-return-address-key");
+  }
+
+  if (BPI.SignReturnAddressHardening ==
+      LangOptions::SignReturnAddressHardeningKind::None) {
+    F.removeFnAttr("sign-return-address-harden");
+  } else if (BPI.SignReturnAddr !=
+             LangOptions::SignReturnAddressScopeKind::None) {
+    F.addFnAttr("sign-return-address-harden",
+                BPI.getSignReturnAddressHardeningStr());
   }
 
   auto AddRemoveAttributeAsSet = [&](bool Set, const StringRef &ModAttr) {
@@ -248,6 +258,10 @@ void TargetCodeGenInfo::initBranchProtectionFnAttributes(
     FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
     FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());
   }
+  if (BPI.SignReturnAddressHardening !=
+      LangOptions::SignReturnAddressHardeningKind::None)
+    FuncAttrs.addAttribute("sign-return-address-harden",
+                           BPI.getSignReturnAddressHardeningStr());
   if (BPI.BranchTargetEnforcement)
     FuncAttrs.addAttribute("branch-target-enforcement");
   if (BPI.BranchProtectionPAuthLR)

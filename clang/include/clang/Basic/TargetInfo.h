@@ -61,10 +61,12 @@ struct ParsedTargetAttr {
   StringRef CPU;
   StringRef Tune;
   StringRef BranchProtection;
+  StringRef SignReturnAddrHardening;
   StringRef Duplicate;
   bool operator ==(const ParsedTargetAttr &Other) const {
     return Duplicate == Other.Duplicate && CPU == Other.CPU &&
            Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
+           SignReturnAddrHardening == Other.SignReturnAddrHardening &&
            Features == Other.Features;
   }
 };
@@ -1466,6 +1468,7 @@ public:
   public:
     LangOptions::SignReturnAddressScopeKind SignReturnAddr;
     LangOptions::SignReturnAddressKeyKind SignKey;
+    LangOptions::SignReturnAddressHardeningKind SignReturnAddressHardening;
     bool BranchTargetEnforcement;
     bool BranchProtectionPAuthLR;
     bool GuardedControlStack;
@@ -1492,9 +1495,21 @@ public:
       llvm_unreachable("Unexpected SignReturnAddressKeyKind");
     }
 
+    const char *getSignReturnAddressHardeningStr() const {
+      switch (SignReturnAddressHardening) {
+      case LangOptions::SignReturnAddressHardeningKind::None:
+        return "none";
+      case LangOptions::SignReturnAddressHardeningKind::LoadReturnAddress:
+        return "load-return-address";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressHardeningKind");
+    }
+
     BranchProtectionInfo()
         : SignReturnAddr(LangOptions::SignReturnAddressScopeKind::None),
           SignKey(LangOptions::SignReturnAddressKeyKind::AKey),
+          SignReturnAddressHardening(
+              LangOptions::SignReturnAddressHardeningKind::None),
           BranchTargetEnforcement(false), BranchProtectionPAuthLR(false),
           GuardedControlStack(false) {}
 
@@ -1508,6 +1523,7 @@ public:
       SignKey = LangOpts.isSignReturnAddressWithAKey()
                     ? LangOptions::SignReturnAddressKeyKind::AKey
                     : LangOptions::SignReturnAddressKeyKind::BKey;
+      SignReturnAddressHardening = LangOpts.getSignReturnAddressHardening();
       BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
       BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
       GuardedControlStack = LangOpts.GuardedControlStack;
@@ -1520,14 +1536,21 @@ public:
     return false;
   }
 
-  /// Determine if this TargetInfo supports the given branch protection
-  /// specification
-  virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
+  /// Determines whether this TargetInfo supports the given branch protection
+  /// specification. BPI is modified based on the input arguments. Returns
+  /// whether the specification is valid.
+  virtual bool validateBranchProtection(const ParsedTargetAttr &Attr,
                                         BranchProtectionInfo &BPI,
                                         const LangOptions &LO,
                                         StringRef &Err) const {
     Err = "";
     return false;
+  }
+
+  /// Parse the Return Address Signing Hardening specification.
+  virtual std::optional<LangOptions::SignReturnAddressHardeningKind>
+  parseSignReturnAddressHardening(StringRef Spec) const {
+    return std::nullopt;
   }
 
   /// Perform initialization based on the user configured

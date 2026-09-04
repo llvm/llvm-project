@@ -320,6 +320,13 @@ public:
     BKey
   };
 
+  enum class SignReturnAddressHardeningKind {
+    /// Regular return address signing.
+    None,
+    /// Hardened return address signing with load of return address.
+    LoadReturnAddress
+  };
+
   enum class ThreadModelKind {
     /// POSIX Threads.
     POSIX,
@@ -762,6 +769,13 @@ public:
   /// Check if leaf functions are also signed.
   bool isSignReturnAddressScopeAll() const {
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
+  }
+
+  /// Check if return address signing hardening is enabled and uses load of
+  /// return address.
+  bool isSignReturnAddressHardenWithLoadReturnAddress() const {
+    return getSignReturnAddressHardening() ==
+           SignReturnAddressHardeningKind::LoadReturnAddress;
   }
 
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }

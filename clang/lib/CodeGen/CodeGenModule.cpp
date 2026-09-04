@@ -1620,6 +1620,10 @@ void CodeGenModule::Release() {
     if (!LangOpts.isSignReturnAddressWithAKey())
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 2);
+    if (LangOpts.isSignReturnAddressHardenWithLoadReturnAddress())
+      getModule().addModuleFlag(
+          llvm::Module::Min, "sign-return-address-harden-load-return-address",
+          2);
   }
   if (T.isAArch64()) {
     // Emit the following 4 module flags so LLVM can derive corresponding

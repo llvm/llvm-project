@@ -6,6 +6,8 @@
 // RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret+leaf  %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
 // RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key %s | FileCheck %s --check-prefix=CHECK --check-prefix=B-KEY
 // RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=bti %s           | FileCheck %s --check-prefix=CHECK --check-prefix=BTE
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret -mharden-pac-ret=load-return-address %s | \
+//      FileCheck %s --check-prefix=CHECK --check-prefixes=HARDEN
 // RUN: %clang -target aarch64-windows-msvc -S -emit-llvm -o - -mbranch-protection=pac-ret %s | FileCheck %s --check-prefix=CHECK --check-prefix=WIN-PAC
 // RUN: %clang -target aarch64-windows-msvc -S -emit-llvm -o - -mbranch-protection=standard %s | FileCheck %s --check-prefix=CHECK --check-prefix=WIN-STD
 
@@ -19,49 +21,63 @@
 // NONE-NOT:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"
 // NONE-NOT:  attributes #[[#ATTR]] = { {{.*}} "branch-target-enforcement"
 
-// ALL:   attributes #[[#ATTR]] = { {{.*}} "sign-return-address"
-// PART:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"="a_key"
-// B-KEY: attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"="b_key"
-// BTE:   attributes #[[#ATTR]] = { {{.*}} "branch-target-enforcement"
+// ALL:     attributes #[[#ATTR]] = { {{.*}} "sign-return-address"
+// PART:    attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"="a_key"
+// B-KEY:   attributes #[[#ATTR]] = { {{.*}} "sign-return-address-key"="b_key"
+// BTE:     attributes #[[#ATTR]] = { {{.*}} "branch-target-enforcement"
+// HARDEN:  attributes #[[#ATTR]] = { {{.*}} "sign-return-address-harden"="load-return-address"
 // WIN-PAC: attributes #[[#ATTR]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 // WIN-STD: attributes #[[#ATTR]] = { {{.*}} "branch-target-enforcement" {{.*}} "guarded-control-stack" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
 
 // Check module attributes
 
-// NONE-NOT:  !"branch-target-enforcement"
-// ALL-NOT:   !"branch-target-enforcement"
-// PART-NOT:  !"branch-target-enforcement"
-// BTE:       !{i32 8, !"branch-target-enforcement", i32 2}
-// B-KEY-NOT: !"branch-target-enforcement"
+// NONE-NOT:    !"branch-target-enforcement"
+// ALL-NOT:     !"branch-target-enforcement"
+// PART-NOT:    !"branch-target-enforcement"
+// BTE:         !{i32 8, !"branch-target-enforcement", i32 2}
+// B-KEY-NOT:   !"branch-target-enforcement"
+// HARDEN-NOT:  !"branch-target-enforcement"
 // WIN-PAC-NOT: !"branch-target-enforcement"
-// WIN-STD:   !{i32 8, !"branch-target-enforcement", i32 2}
+// WIN-STD:     !{i32 8, !"branch-target-enforcement", i32 2}
 
 // WIN-PAC-NOT: !"guarded-control-stack"
-// WIN-STD: !{i32 8, !"guarded-control-stack", i32 2}
+// WIN-STD:     !{i32 8, !"guarded-control-stack", i32 2}
 
-// NONE-NOT:  !"sign-return-address"
-// ALL:   !{i32 8, !"sign-return-address", i32 2}
-// PART:  !{i32 8, !"sign-return-address", i32 2}
-// BTE-NOT:   !"sign-return-address"
-// B-KEY: !{i32 8, !"sign-return-address", i32 2}
-// WIN-PAC: !{i32 8, !"sign-return-address", i32 2}
-// WIN-STD: !{i32 8, !"sign-return-address", i32 2}
+// NONE-NOT: !"sign-return-address"
+// ALL:      !{i32 8, !"sign-return-address", i32 2}
+// PART:     !{i32 8, !"sign-return-address", i32 2}
+// BTE-NOT:  !"sign-return-address"
+// B-KEY:    !{i32 8, !"sign-return-address", i32 2}
+// HARDEN:   !{i32 8, !"sign-return-address", i32 2}
+// WIN-PAC:  !{i32 8, !"sign-return-address", i32 2}
+// WIN-STD:  !{i32 8, !"sign-return-address", i32 2}
 
-// NONE-NOT:  !"sign-return-address-all"
-// ALL:   !{i32 8, !"sign-return-address-all", i32 2}
-// PART-NOT:  !"sign-return-address-all"
-// BTE-NOT:   !"sign-return-address-all"
-// B-KEY-NOT: !"sign-return-address-all"
+// NONE-NOT:    !"sign-return-address-all"
+// ALL:         !{i32 8, !"sign-return-address-all", i32 2}
+// PART-NOT:    !"sign-return-address-all"
+// BTE-NOT:     !"sign-return-address-all"
+// B-KEY-NOT:   !"sign-return-address-all"
+// HARDEN-NOT:  !"sign-return-address-all"
 // WIN-PAC-NOT: !"sign-return-address-all"
 // WIN-STD-NOT: !"sign-return-address-all"
 
-// NONE-NOT:  !"sign-return-address-with-bkey"
-// ALL-NOT:   !"sign-return-address-with-bkey"
-// PART-NOT:  !"sign-return-address-with-bkey"
-// BTE-NOT:   !"sign-return-address-with-bkey"
-// B-KEY: !{i32 8, !"sign-return-address-with-bkey", i32 2}
-// WIN-PAC: !{i32 8, !"sign-return-address-with-bkey", i32 2}
-// WIN-STD: !{i32 8, !"sign-return-address-with-bkey", i32 2}
+// NONE-NOT:   !"sign-return-address-with-bkey"
+// ALL-NOT:    !"sign-return-address-with-bkey"
+// PART-NOT:   !"sign-return-address-with-bkey"
+// BTE-NOT:    !"sign-return-address-with-bkey"
+// HARDEN-NOT: !"sign-return-address-with-bkey"
+// B-KEY:      !{i32 8, !"sign-return-address-with-bkey", i32 2}
+// WIN-PAC:    !{i32 8, !"sign-return-address-with-bkey", i32 2}
+// WIN-STD:    !{i32 8, !"sign-return-address-with-bkey", i32 2}
+
+// NONE-NOT:    !"sign-return-address-harden-load-return-address"
+// ALL-NOT:     !"sign-return-address-harden-load-return-address"
+// PART-NOT:    !"sign-return-address-harden-load-return-address"
+// BTE-NOT:     !"sign-return-address-harden-load-return-address"
+// HARDEN:      !{i32 8, !"sign-return-address-harden-load-return-address", i32 2}
+// B-KEY-NOT:   !"sign-return-address-harden-load-return-address"
+// WIN-PAC-NOT: !"sign-return-address-harden-load-return-address"
+// WIN-STD-NOT: !"sign-return-address-harden-load-return-address"
 
 void foo() {}
