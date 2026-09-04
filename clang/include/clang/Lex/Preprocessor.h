@@ -1806,6 +1806,11 @@ public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
+  /// Get the tokens cached since EnableBacktrackAtThisPos() and commit
+  /// the backtrack. The main token stream remains at the current position
+  /// (advanced past the cached tokens).
+  ArrayRef<Token> GetAndCommitBacktrackedTokens();
+
   /// Make Preprocessor re-lex the tokens that were lexed since
   /// EnableBacktrackAtThisPos() was previously called.
   void Backtrack();
