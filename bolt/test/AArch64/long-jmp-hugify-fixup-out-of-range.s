@@ -1,4 +1,4 @@
-# The longjump pass may consider branch targets in range during tentative
+# The longjump pass may consider branch targets in range during the
 # layout and decide not to insert stubs for them. Later, final section
 # allocation may insert alignment padding after the last non-cold text section
 # when hugify is enabled. This moves the following cold section farther away,
