@@ -1180,6 +1180,27 @@ static mlir::Type correctIntegerSignedness(mlir::Type iitType, QualType astType,
   return iitType;
 }
 
+/// Helper function to correct the return type for intrinsic calls. This is
+/// needed because the AST FunctionDecl may have a different return type than
+/// the intrinsic's IIT descriptor. For example, builtins may need their
+/// signedness corrected, or a builtin may return a bool while the intrinsic
+/// returns an i1.
+static mlir::Type correctReturnType(mlir::Type iitType,
+                                    const FunctionDecl *funcDecl,
+                                    mlir::MLIRContext *context) {
+  if (!funcDecl)
+    return iitType;
+  QualType astType = funcDecl->getReturnType();
+
+  // Relabel the return type to cir.bool if the builtin returns a bool and
+  // the intrinsic returns an i1.
+  auto intTy = mlir::dyn_cast<cir::IntType>(iitType);
+  if (intTy && intTy.getWidth() == 1 && astType->isBooleanType())
+    return cir::BoolType::get(context);
+
+  return correctIntegerSignedness(iitType, astType, context);
+}
+
 static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
                                    CIRGenBuilderTy &builder) {
   auto ptrType = mlir::cast<cir::PointerType>(argValue.getType());
@@ -3056,14 +3077,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       args.push_back(argValue);
     }
 
-    // Correct return type signedness based on AST return type before creating
-    // the call, avoiding unnecessary casts in the IR.
-    mlir::Type correctedReturnType = intrinsicType.getReturnType();
-    if (fd) {
-      correctedReturnType =
-          correctIntegerSignedness(intrinsicType.getReturnType(),
-                                   fd->getReturnType(), &getMLIRContext());
-    }
+    // Correct the builtin type based on the AST function declaration's return
+    // type, if available.
+    mlir::Type correctedReturnType =
+        correctReturnType(intrinsicType.getReturnType(), fd, &getMLIRContext());
 
     cir::LLVMIntrinsicCallOp intrinsicCall = cir::LLVMIntrinsicCallOp::create(
         builder, getLoc(e->getExprLoc()), builder.getStringAttr(name),
