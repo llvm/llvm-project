@@ -867,13 +867,18 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
 // Synthesize the InterlockedFunc overload set: {int, uint, int64_t, uint64_t}
 // x {groupshared, device} x {2-arg, 3-arg}. Operations that always report the
 // previous value, such as InterlockedExchange, only get the 3-arg form.
+// InterlockedExchange also accepts float, which lowers to a bitwise exchange
+// of the 32-bit pattern.
 static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
                                       StringRef FuncName, StringRef BuiltinName,
-                                      bool RequiresOriginalValue = false) {
+                                      bool RequiresOriginalValue = false,
+                                      bool SupportsFloat = false) {
   ASTContext &AST = S.getASTContext();
   // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
-  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
-                      AST.UnsignedLongTy};
+  SmallVector<QualType, 5> Elems = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                                    AST.UnsignedLongTy};
+  if (SupportsFloat)
+    Elems.push_back(AST.FloatTy);
   LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
 
   for (QualType ElemTy : Elems)
@@ -892,7 +897,8 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                             "__builtin_hlsl_interlocked_and");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedExchange",
                             "__builtin_hlsl_interlocked_exchange",
-                            /*RequiresOriginalValue=*/true);
+                            /*RequiresOriginalValue=*/true,
+                            /*SupportsFloat=*/true);
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMax",
                             "__builtin_hlsl_interlocked_max");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMin",

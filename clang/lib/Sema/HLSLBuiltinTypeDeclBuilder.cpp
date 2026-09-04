@@ -1756,6 +1756,12 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   addByteAddressBufferInterlockedMethod(
       "InterlockedExchange", AST.UnsignedIntTy,
       "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
+  // The float exchange reuses the 32-bit integer DXIL operation, so it needs
+  // no capability bits and works from SM 6.0. ByteAddressBuffer carries no
+  // element type, so the method name states the type.
+  addByteAddressBufferInterlockedMethod("InterlockedExchangeFloat", AST.FloatTy,
+                                        "__builtin_hlsl_interlocked_exchange",
+                                        /*RequiresOriginalValue=*/true);
   addByteAddressBufferInterlockedMethod("InterlockedMax", AST.IntTy,
                                         "__builtin_hlsl_interlocked_max");
   addByteAddressBufferInterlockedMethod("InterlockedMax", AST.UnsignedIntTy,

@@ -4742,11 +4742,17 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
-    if (!DestTy->isIntegerType()) {
+    // InterlockedExchange also operates on float. DXIL lowers that as a
+    // bitwise exchange of the value's bit pattern, and DXC accepts 32-bit
+    // float only, so half and double are rejected.
+    const bool AllowsFloat =
+        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange;
+    if (!DestTy->isIntegerType() &&
+        !(AllowsFloat && DestTy->isSpecificBuiltinType(BuiltinType::Float))) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                    diag::err_builtin_invalid_arg_type)
-          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
-          << DestTy;
+          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1
+          << /*32 bit floating-point*/ (AllowsFloat ? 3 : 0) << DestTy;
       return true;
     }
 
