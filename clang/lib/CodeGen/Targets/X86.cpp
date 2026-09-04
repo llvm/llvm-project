@@ -2109,10 +2109,10 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
       return;
     }
 
-    // Vectors of __int128 wider than 128 bits classify as MEMORY: each
-    // __int128 lane contributes two INTEGER eightbytes, and post-merge cleanup
-    // only keeps wider objects in registers when they are SSE followed by
-    // SSEUp.
+    // The psABI does not specify how arbitrary GNU vector extension types such
+    // as vectors of __int128 are classified. Match GCC, which passes vectors
+    // of __int128 wider than 128 bits in memory on platforms that opt in to
+    // this compatibility behavior.
     if (passInt128VectorsInMem() && Size > 128 &&
         (ElementType->isSpecificBuiltinType(BuiltinType::Int128) ||
          ElementType->isSpecificBuiltinType(BuiltinType::UInt128))) {
