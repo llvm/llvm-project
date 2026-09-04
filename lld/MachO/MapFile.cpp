@@ -141,8 +141,7 @@ static void printStubsEntries(
                  sym->getName().str().data());
 }
 
-static void printNonLazyPointerSection(raw_fd_ostream &os,
-                                       NonLazyPointerSectionBase *osec) {
+static void printNonLazyPointerSection(raw_fd_ostream &os, GotSection *osec) {
   // ld64 considers stubs to belong to particular files, but considers GOT
   // entries to be linker-synthesized. Not sure why they made that decision, but
   // I think we can follow suit unless there's demand for better symbol-to-file
@@ -265,8 +264,6 @@ void macho::writeMapFile() {
                      osec->getSize());
       } else if (osec == in.got) {
         printNonLazyPointerSection(os, in.got);
-      } else if (osec == in.tlvPointers) {
-        printNonLazyPointerSection(os, in.tlvPointers);
       } else if (osec == in.objcMethList) {
         printIsecArrSyms(in.objcMethList->getInputs());
       }
