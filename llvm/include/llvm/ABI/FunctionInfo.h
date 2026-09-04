@@ -71,10 +71,11 @@ private:
   bool ZeroExt : 1;
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
+  bool CanBeFlattened : 1;
 
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false) {}
+        IndirectRealign(false), CanBeFlattened(true) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -140,6 +141,13 @@ public:
     return *this;
   }
 
+  /// See getCanBeFlattened.
+  ArgInfo &setCanBeFlattened(bool Flatten) {
+    assert(isDirect() && "Invalid Kind!");
+    CanBeFlattened = Flatten;
+    return *this;
+  }
+
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
@@ -176,6 +184,13 @@ public:
   bool getIndirectRealign() const {
     assert(isIndirect() && "Invalid Kind!");
     return IndirectRealign;
+  }
+
+  /// Whether a Direct record coercion may be split into one wire argument
+  /// per field. Mirrors clang::CodeGen::ABIArgInfo::CanBeFlattened.
+  bool getCanBeFlattened() const {
+    assert(isDirect() && "Invalid Kind!");
+    return CanBeFlattened;
   }
 
   bool isSignExt() const {
