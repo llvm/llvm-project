@@ -1,0 +1,20 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000200
+    AddressAlign:    0x0000000000000004
+    Content:         'C3'
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    VAddr:           0x0000000000000000
+    Align:           0x1000
+    FirstSec:        .text
+    LastSec:         .text

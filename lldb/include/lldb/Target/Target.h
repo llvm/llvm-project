@@ -1165,6 +1165,29 @@ public:
 
   void ModulesDidUnload(ModuleList &module_list, bool delete_locations);
 
+  /// Replace a module in this target with a different one.
+  ///
+  /// Removes \a old_module_sp, unloading its sections and deleting the
+  /// breakpoint locations that resolved into it, then adds \a new_module_sp at
+  /// the same load address and tells the dynamic loader about the swap.
+  ///
+  /// To attach debug info to a module that is otherwise fine, add a symbol file
+  /// to it instead.
+  ///
+  /// \param[in] old_module_sp
+  ///     The module to remove. Passed by value because this drops the last
+  ///     reference the target holds, letting the module be destroyed here once
+  ///     nothing points into it.
+  ///
+  /// \param[in] new_module_sp
+  ///     The module to put in its place. It may already have been added to the
+  ///     target, as Target::GetOrCreateModule() does.
+  ///
+  /// \return
+  ///     An error if the replacement could not be completed.
+  Status ReplaceModule(lldb::ModuleSP old_module_sp,
+                       const lldb::ModuleSP &new_module_sp);
+
   void SymbolsDidLoad(ModuleList &module_list);
 
   void ClearModules(bool delete_locations);

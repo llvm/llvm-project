@@ -532,6 +532,15 @@ class CommandLineCompletionTestCase(TestBase):
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.complete_from_to("target modules load a.ou", ["a.out"])
 
+    def test_target_modules_replace(self):
+        """Tests that the argument completes against paths on disk."""
+        self.build()
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.complete_from_to(
+            "target modules replace " + self.getBuildArtifact("a.ou"),
+            [self.getBuildArtifact("a.out")],
+        )
+
     def test_target_modules_search_paths_insert(self):
         # Completion won't work without a valid target.
         self.complete_from_to(
