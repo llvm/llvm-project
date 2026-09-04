@@ -45,7 +45,6 @@ private:
   static constexpr uint8_t ExternFlag = 1 << 0;
   static constexpr uint8_t DeadFlag = 1 << 1;
   static constexpr uint8_t WeakFlag = 1 << 2;
-  static constexpr uint8_t DummyFlag = 1 << 3;
 
 public:
   static constexpr uint8_t InlineDescMD = sizeof(InlineDescriptor);
@@ -54,23 +53,20 @@ public:
   /// Creates a new block.
   Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
         unsigned MDSize = 0, bool IsStatic = false, bool IsExtern = false,
-        bool IsWeak = false, bool IsDummy = false)
+        bool IsWeak = false)
       : Desc(Desc), DeclID(DeclID), EvalID(EvalID), MDSize(MDSize),
         IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
-    AccessFlags |= (DummyFlag * IsDummy);
   }
 
   Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize = 0,
-        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false,
-        bool IsDummy = false)
+        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false)
       : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
-    AccessFlags |= (DummyFlag * IsDummy);
   }
 
   /// Returns the block's descriptor.
@@ -85,7 +81,6 @@ public:
   bool isTemporary() const { return Desc->IsTemporary; }
   bool isWeak() const { return AccessFlags & WeakFlag; }
   bool isDynamic() const { return (DynAllocId != std::nullopt); }
-  bool isDummy() const { return AccessFlags & DummyFlag; }
   bool isDead() const { return AccessFlags & DeadFlag; }
   /// Returns the size of the block, including metadata.
   unsigned getSize() const { return Desc->getAllocSize() + MDSize; }
@@ -168,13 +163,12 @@ private:
   friend class Program;
 
   Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize, bool IsExtern,
-        bool IsStatic, bool IsWeak, bool IsDummy, bool IsDead)
+        bool IsStatic, bool IsWeak, bool IsDead)
       : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (DeadFlag * IsDead);
     AccessFlags |= (WeakFlag * IsWeak);
-    AccessFlags |= (DummyFlag * IsDummy);
   }
 
   /// To be called by DynamicAllocator.
@@ -200,7 +194,7 @@ private:
   const unsigned EvalID = ~0u;
   /// Allocation ID for this dynamic allocation, if it is one.
   UnsignedOrNone DynAllocId = std::nullopt;
-  /// AccessFlags containing IsExtern, IsDead, IsWeak, and IsDummy bits.
+  /// AccessFlags containing IsExtern, IsDead and IsWeak bits.
   uint8_t AccessFlags = 0;
   /// Size of the metadata.
   const uint8_t MDSize = 0;
