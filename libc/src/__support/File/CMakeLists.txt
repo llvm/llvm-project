@@ -15,6 +15,7 @@ add_object_library(
     libc.hdr.stdio_macros
     libc.hdr.stdint_proxy
     libc.hdr.func.realloc
+    libc.hdr.types.fpos_t
     libc.hdr.types.off_t
     libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
@@ -29,6 +30,7 @@ add_object_library(
     libc.src.__support.wchar.wcrtomb
     libc.src.__support.wchar.character_converter
     libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
     libc.hdr.errno_macros
 )
 

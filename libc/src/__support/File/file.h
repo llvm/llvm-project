@@ -11,6 +11,7 @@
 
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
+#include "hdr/types/fpos_t.h"
 #include "hdr/types/off_t.h"
 #include "hdr/types/wchar_t.h"
 #include "hdr/types/wint_t.h"
@@ -219,7 +220,26 @@ public:
 
   ErrorOr<int> seek(off_t offset, int whence);
 
-  ErrorOr<off_t> tell();
+  ErrorOr<off_t> tell_unlocked();
+
+  ErrorOr<off_t> tell() {
+    FileLock lock(this);
+    return tell_unlocked();
+  }
+
+  ErrorOr<int> get_pos_unlocked(fpos_t *fpos);
+
+  ErrorOr<int> get_pos(fpos_t *fpos) {
+    FileLock lock(this);
+    return get_pos_unlocked(fpos);
+  }
+
+  ErrorOr<int> set_pos_unlocked(const fpos_t *fpos);
+
+  ErrorOr<int> set_pos(const fpos_t *fpos) {
+    FileLock lock(this);
+    return set_pos_unlocked(fpos);
+  }
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.
