@@ -1665,8 +1665,8 @@ MCRegister findFreePredicateReg(BitVector &SavedRegs) {
 }
 
 // The multivector LD/ST are available only for SME or SVE2p1 targets
-bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
-                                MachineFunction &MF) {
+bool llvm::enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
+                                      MachineFunction &MF) {
   if (DisableMultiVectorSpillFill)
     return false;
 
