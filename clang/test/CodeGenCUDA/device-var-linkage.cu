@@ -70,12 +70,21 @@ __device__ __host__ int fun1() {
     ;
 }
 
-// HOST: hipRegisterVar({{.*}}@v1
-// HOST: hipRegisterVar({{.*}}@v2
-// HOST: hipRegisterManagedVar({{.*}}@v3
-// HOST-NOT: hipRegisterVar({{.*}}@ev1
-// HOST-NOT: hipRegisterVar({{.*}}@ev2
-// HOST-NOT: hipRegisterManagedVar({{.*}}@ev3
-// HOST: hipRegisterVar({{.*}}@_ZL3sv1
-// HOST: hipRegisterVar({{.*}}@_ZL3sv2
-// HOST: hipRegisterManagedVar({{.*}}@_ZL3sv3
+// Without RDC the host registers device variables with the runtime.
+// NORDC-H: hipRegisterVar({{.*}}@v1
+// NORDC-H: hipRegisterVar({{.*}}@v2
+// NORDC-H: hipRegisterManagedVar({{.*}}@v3
+// NORDC-H-NOT: hipRegisterVar({{.*}}@ev1
+// NORDC-H-NOT: hipRegisterVar({{.*}}@ev2
+// NORDC-H-NOT: hipRegisterManagedVar({{.*}}@ev3
+// NORDC-H: hipRegisterVar({{.*}}@_ZL3sv1
+// NORDC-H: hipRegisterVar({{.*}}@_ZL3sv2
+// NORDC-H: hipRegisterManagedVar({{.*}}@_ZL3sv3
+
+// With RDC the host emits offloading entries instead of runtime registration.
+// RDC-H-DAG: @.offloading.entry.v1
+// RDC-H-DAG: @.offloading.entry.v2
+// RDC-H-DAG: @.offloading.entry.v3
+// RDC-H-DAG: @.offloading.entry._ZL3sv1
+// RDC-H-DAG: @.offloading.entry._ZL3sv2
+// RDC-H-DAG: @.offloading.entry._ZL3sv3

@@ -9,7 +9,7 @@
 // The host memory operations that SimpleNativeMemoryMap is built on.
 //
 // Exactly one implementation is compiled into the runtime, chosen by the build:
-// see lib/bedrock/posix/Memory.cpp and its siblings. A target that
+// see lib/bedrock/sys/posix/Memory.cpp and its siblings. A target that
 // cannot provide these has no native memory map.
 //
 //===----------------------------------------------------------------------===//

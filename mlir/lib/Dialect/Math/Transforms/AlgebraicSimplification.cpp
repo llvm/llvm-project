@@ -243,6 +243,82 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
 }
 
 //----------------------------------------------------------------------------//
+// ExpOp/Exp2Op quotient strength reduction.
+//----------------------------------------------------------------------------//
+
+namespace {
+/// Replaces `exp(a) / exp(b)` with `exp(a - b)`, and likewise for `exp2`,
+/// trading a division and an exponential for a subtraction.
+template <typename ExpOpTy>
+struct ExpQuotientStrengthReduction : public OpRewritePattern<arith::DivFOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(arith::DivFOp op,
+                                PatternRewriter &rewriter) const final {
+    auto numerator = op.getLhs().getDefiningOp<ExpOpTy>();
+    auto denominator = op.getRhs().getDefiningOp<ExpOpTy>();
+    if (!numerator || !denominator)
+      return failure();
+
+    // The rewrite is only valid when the division may be turned into a
+    // reciprocal multiplication and then reassociated with the exponentials:
+    //   exp(a) / exp(b) --> exp(a) * exp(-b) --> exp(a + -b)
+    // This mirrors LLVM's InstCombine, which reaches the same result with
+    // `arcp` for the first step and `reassoc` for the second. Note that the
+    // rewrite also changes the overflow behaviour: for a large `a == b` the
+    // original expression is `inf / inf`, i.e. NaN, while the folded one is
+    // `exp(0.0)`, i.e. 1.0.
+    arith::FastMathFlags fmf = op.getFastmath();
+    if (!bitEnumContainsAll(fmf, arith::FastMathFlags::arcp |
+                                     arith::FastMathFlags::reassoc))
+      return failure();
+
+    // The rewrite introduces a new exponential, so it is only profitable if at
+    // least one of the two it feeds on dies with the division; the exponential
+    // count then never grows while a division is traded for a subtraction.
+    // This is the fused equivalent of the `isOnlyUserOfAnyOperand()` check
+    // LLVM's InstCombine applies to `exp(X) * exp(Y) --> exp(X + Y)`.
+    Operation *divOp = op;
+    auto diesWithDivision = [divOp](Operation *exp) {
+      return llvm::all_of(exp->getUsers(),
+                          [divOp](Operation *user) { return user == divOp; });
+    };
+    if (!diesWithDivision(numerator) && !diesWithDivision(denominator))
+      return failure();
+
+    // `nnan` and `ninf` are assumptions about the values an operation sees, and
+    // neither new operation sees the values its source did, so they cannot be
+    // carried over:
+    //  - the subtraction consumes the exponents instead of the exponentials.
+    //    `ninf` holds for `exp(-inf) / exp(0.0)`, i.e. `0.0 / 1.0`, while the
+    //    subtraction `-inf - 0.0` is infinite.
+    //  - the new exponential may overflow where neither of the old ones does.
+    //    For f32 `exp(80.0)` and `exp(-80.0)` are both finite while
+    //    `exp(80.0 - -80.0)` is not.
+    // All remaining flags only license *how* a value may be computed, so they
+    // stay. Derive them separately for the two new operations.
+    constexpr arith::FastMathFlags valueAssumptions =
+        arith::FastMathFlags::nnan | arith::FastMathFlags::ninf;
+
+    // The subtraction takes the place of the division.
+    arith::FastMathFlags subFmf = bitEnumClear(fmf, valueAssumptions);
+
+    // The new exponential may not be given a weaker accuracy contract than the
+    // ones it replaces, so it only keeps the flags common to both of them.
+    arith::FastMathFlags expFmf = bitEnumClear(
+        numerator.getFastmath() & denominator.getFastmath(), valueAssumptions);
+
+    Value exponent =
+        arith::SubFOp::create(rewriter, op.getLoc(), numerator.getOperand(),
+                              denominator.getOperand(), subFmf);
+    rewriter.replaceOpWithNewOp<ExpOpTy>(op, exponent, expFmf);
+    return success();
+  }
+};
+} // namespace
+
+//----------------------------------------------------------------------------//
 
 void mlir::populateMathAlgebraicSimplificationPatterns(
     RewritePatternSet &patterns) {
@@ -252,4 +328,7 @@ void mlir::populateMathAlgebraicSimplificationPatterns(
       PowIStrengthReduction<math::FPowIOp, arith::DivFOp, arith::MulFOp>,
       PowIStrengthReduction<complex::PowiOp, complex::DivOp, complex::MulOp>>(
       patterns.getContext(), /*exponentThreshold=*/8);
+  patterns.add<ExpQuotientStrengthReduction<math::ExpOp>,
+               ExpQuotientStrengthReduction<math::Exp2Op>>(
+      patterns.getContext());
 }

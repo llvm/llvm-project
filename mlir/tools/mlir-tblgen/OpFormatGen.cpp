@@ -476,30 +476,36 @@ static bool canFormatEnumAttr(const NamedAttribute *attr) {
   if (!baseAttr.isEnumAttr())
     return false;
 
-  // For newer EnumAttr-based attributes (which extend AttrDef), only apply
-  // enum keyword formatting when the attribute uses the default "$value"
-  // assembly format. If it has a custom format (e.g., `<` $value `>`), the
-  // attribute's own AttrDef parser/printer handles formatting — using the
-  // keyword path here would conflict with that custom format.
-  if (baseAttr.isSubClassOf("EnumAttr")) {
-    llvm::StringRef asmFmt =
-        baseAttr.getDef().getValueAsString("assemblyFormat");
-    if (asmFmt != "$value")
-      return false;
-  }
-
-  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
-
-  // Unquoted bit enums may consist of multiple keywords separated by a comma
-  // or vertical bar. Implicit formatting defers to the attribute parser;
-  // explicit `enum` directives select a separator-aware operation parser.
-  if (baseAttr.isSubClassOf("EnumAttr") && enumInfo.isBitEnum() &&
-      !enumInfo.printBitEnumQuoted())
+  // New-style EnumAttr-based attributes have a custom AttrDef parser and
+  // printer. Only format their symbolic value directly when requested with an
+  // `enum` directive.
+  if (baseAttr.isSubClassOf("EnumAttr"))
     return false;
 
   // The attribute must have a valid underlying type and a constant builder.
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   return !enumInfo.getUnderlyingType().empty() &&
          !baseAttr.getConstBuilderTemplate().empty();
+}
+
+/// Returns true if a keyed `prop-dict` field should use the underlying enum
+/// syntax instead of the default EnumAttr body syntax. Custom EnumAttr formats
+/// continue to use their own parser and printer.
+static bool shouldStripEnumAttrInPropDict(const NamedAttribute *attr) {
+  Attribute baseAttr = attr->attr.getBaseAttr();
+  return baseAttr.isSubClassOf("EnumAttr") &&
+         baseAttr.getDef().getValueAsString("assemblyFormat") ==
+             "`<` $value `>`";
+}
+
+/// Returns true if a stripped EnumAttr field needs brackets to disambiguate
+/// commas in an unquoted bit enum from commas separating `prop-dict` fields.
+static bool needsPropDictEnumBrackets(const NamedAttribute *attr) {
+  if (!shouldStripEnumAttrInPropDict(attr))
+    return false;
+  EnumInfo enumInfo(getEnumInfoRecord(attr->attr.getBaseAttr()));
+  return enumInfo.isBitEnum() &&
+         enumInfo.getDef().getValueAsString("separator").trim() == ",";
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -1260,7 +1266,8 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
 static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
                               bool useProperties, StringRef opCppClassName,
-                              bool formatAsEnumDirective) {
+                              bool formatAsEnumDirective,
+                              bool formatBitEnumAsUnquoted = false) {
   Attribute baseAttr = var->attr.getBaseAttr();
   EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
@@ -1312,7 +1319,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
   }
 
   if (formatAsEnumDirective && enumInfo.isBitEnum() &&
-      !enumInfo.printBitEnumQuoted()) {
+      (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
     StringRef separator = enumInfo.getDef().getValueAsString("separator");
     StringRef parseSeparatorFn = llvm::StringSwitch<StringRef>(separator.trim())
                                      .Case("|", "parseOptionalVerticalBar")
@@ -1775,9 +1782,24 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
     } else {
       body << "      " << attribute.attr.getStorageType() << " "
            << attribute.name << "Attr;\n";
-      genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
-                    /*parseAsOptional=*/false, /*useProperties=*/true,
-                    fmt.opCppClassName);
+      if (shouldStripEnumAttrInPropDict(&attribute)) {
+        bool useBrackets = needsPropDictEnumBrackets(&attribute);
+        if (useBrackets)
+          body << "      if (parser.parseLSquare())\n"
+                  "        return ::mlir::failure();\n";
+        genEnumAttrParser(&attribute, body.indent(), attrTypeCtx,
+                          /*parseAsOptional=*/false, /*useProperties=*/true,
+                          fmt.opCppClassName,
+                          /*formatAsEnumDirective=*/true,
+                          /*formatBitEnumAsUnquoted=*/true);
+        if (useBrackets)
+          body << "      if (parser.parseRSquare())\n"
+                  "        return ::mlir::failure();\n";
+      } else {
+        genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
+                      /*parseAsOptional=*/false, /*useProperties=*/true,
+                      fmt.opCppClassName);
+      }
     }
     body.unindent() << "    }\n";
     isFirst = false;
@@ -2272,6 +2294,13 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
 void OperationFormat::genParserOperandTypeResolution(
     Operator &op, MethodBody &body,
     function_ref<void(TypeResolution &, StringRef)> emitTypeResolver) {
+  // Fixed-length parser variables are represented as ArrayRefs to scalar
+  // storage. Coverity does not track the explicit length and reports the
+  // resolveOperands calls as ARRAY_VS_SINGLETON.
+  auto emitArrayVsSingletonSuppression = [&] {
+    body << "  // coverity[ARRAY_VS_SINGLETON]\n";
+  };
+
   // Early exit if there are no operands.
   if (op.getNumOperands() == 0)
     return;
@@ -2281,6 +2310,7 @@ void OperationFormat::genParserOperandTypeResolution(
   if (allOperandTypes) {
     // If `operands` was specified, use the full operand list directly.
     if (allOperands) {
+      emitArrayVsSingletonSuppression();
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
               "    return ::mlir::failure();\n";
@@ -2289,6 +2319,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
     // Otherwise, use llvm::concat to merge the disjoint operand lists together.
     // llvm::concat does not allow the case of a single range, so guard it here.
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(";
     if (op.getNumOperands() > 1) {
       body << "::llvm::concat<const ::mlir::OpAsmParser::UnresolvedOperand>(";
@@ -2306,6 +2337,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
   // Handle the case where all operands are grouped together with "operands".
   if (allOperands) {
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(allOperands, ";
 
     // Group all of the operand types together to perform the resolution all at
@@ -2341,6 +2373,7 @@ void OperationFormat::genParserOperandTypeResolution(
         operand.isOptional() && !operandType.isDirectlyParsed();
     if (guardOptionalOperand)
       body << "  if (!" << operand.name << "Operands.empty()) {\n";
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
 
     // Resolve the type of this operand.
@@ -2520,7 +2553,8 @@ static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
 
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                                MethodBody &body, StringRef valueExpression,
-                               bool formatAsEnumDirective = false);
+                               bool formatAsEnumDirective = false,
+                               bool formatBitEnumAsUnquoted = false);
 
 /// Generate the key-value printer used by the default `prop-dict` printer.
 static void genKeyValuePropDictPrinter(OperationFormat &fmt, Operator &op,
@@ -2628,6 +2662,19 @@ auto shouldPrint = [&](::llvm::StringRef name) {
 
     if (isUnitAttr) {
       // Unit attributes are represented by the presence of their key.
+    } else if (shouldStripEnumAttrInPropDict(&namedAttr)) {
+      bool useBrackets = needsPropDictEnumBrackets(&namedAttr);
+      if (useBrackets)
+        body << "  _odsPrinter << \"[\";\n";
+      FmtContext conversionContext;
+      conversionContext.withSelf("prop." + name);
+      std::string valueExpression = std::string(tgfmt(
+          namedAttr.attr.getConvertFromStorageCall(), &conversionContext));
+      genEnumAttrPrinter(&namedAttr, op, body, valueExpression,
+                         /*formatAsEnumDirective=*/true,
+                         /*formatBitEnumAsUnquoted=*/true);
+      if (useBrackets)
+        body << "  _odsPrinter << \"]\";\n";
     } else if (canFormatEnumAttr(&namedAttr)) {
       FmtContext conversionContext;
       conversionContext.withSelf("prop." + name);
@@ -2907,7 +2954,8 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 /// Generate the printer for an enum attribute.
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                                MethodBody &body, StringRef valueExpression,
-                               bool formatAsEnumDirective) {
+                               bool formatAsEnumDirective,
+                               bool formatBitEnumAsUnquoted) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   bool dereferenceGetter =
@@ -2922,7 +2970,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                   enumInfo.getSymbolToStringFnName());
 
   if (formatAsEnumDirective && enumInfo.isBitEnum() &&
-      !enumInfo.printBitEnumQuoted()) {
+      (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
     body << "    _odsPrinter << caseValueStr;\n"
             "  }\n";
     return;

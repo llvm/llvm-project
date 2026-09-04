@@ -71,7 +71,7 @@ bb6:                                              ; preds = %bb4
   br i1 %or.cond94, label %bb9, label %bb8, !dbg !29
 
 bb8:                                              ; preds = %bb6
-  %27 = tail call float @copysignf(float 0x7FF0000000000000, float %c) nounwind readnone, !dbg !30 ; <float> [#uses=2]
+  %27 = tail call float @copysignf(float +inf, float %c) nounwind readnone, !dbg !30 ; <float> [#uses=2]
   %28 = fmul float %27, %a, !dbg !30              ; <float> [#uses=1]
   tail call void @llvm.dbg.value(metadata float %28, i64 0, metadata !17, metadata !DIExpression()), !dbg !30
   %29 = fmul float %27, %b, !dbg !31              ; <float> [#uses=1]
@@ -116,12 +116,12 @@ bb16:                                             ; preds = %bb15
   %48 = fmul float %42, %c, !dbg !35              ; <float> [#uses=1]
   %49 = fmul float %47, %d, !dbg !35              ; <float> [#uses=1]
   %50 = fadd float %48, %49, !dbg !35             ; <float> [#uses=1]
-  %51 = fmul float %50, 0x7FF0000000000000, !dbg !35 ; <float> [#uses=1]
+  %51 = fmul float %50, +inf, !dbg !35 ; <float> [#uses=1]
   tail call void @llvm.dbg.value(metadata float %51, i64 0, metadata !17, metadata !DIExpression()), !dbg !35
   %52 = fmul float %47, %c, !dbg !36              ; <float> [#uses=1]
   %53 = fmul float %42, %d, !dbg !36              ; <float> [#uses=1]
   %54 = fsub float %52, %53, !dbg !36             ; <float> [#uses=1]
-  %55 = fmul float %54, 0x7FF0000000000000, !dbg !36 ; <float> [#uses=1]
+  %55 = fmul float %54, +inf, !dbg !36 ; <float> [#uses=1]
   tail call void @llvm.dbg.value(metadata float %55, i64 0, metadata !18, metadata !DIExpression()), !dbg !36
   br label %bb46, !dbg !36
 

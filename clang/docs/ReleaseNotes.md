@@ -232,6 +232,8 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
+- Added support for the `__builtin_strlcat` builtin.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -267,6 +269,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- `-Wfortify-source` now diagnoses when `strlcat` or `__builtin_strlcat` is called with a size
+  argument larger than the destination buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -277,6 +282,11 @@ features cannot lower the translation-unit ABI level;
   considered during allocation function lookup or promise object
   initialization, while not diagnosing parameters passed to the selected
   allocation function or promise constructor. (#GH217501)
+
+- The `wb` and `uwb` `_BitInt` literal suffixes are no longer diagnosed by default
+  before C23. They stay in `-Wc23-extensions` and are still reported under
+  `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
+  type itself is already handled.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -494,8 +504,12 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
+- Fixed an assertion failure when diagnosing a constant evaluation failure
+  inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a wrong code generation in `__builtin_clear_padding` wherein the
+  wrong bits of the `_BitInt` type were cleared in big-endian mode.
 
 #### Bug Fixes to Attribute Support
 
@@ -571,6 +585,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when instantiating the body of a C++26 expansion
   statement after a fatal error had occurred. (#GH214917)
 
+- Fixed an assertion when an invalid statement appeared in a ``switch``
+  statement nested inside a C++26 expansion statement. (#GH210575)
+
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
@@ -599,6 +616,7 @@ features cannot lower the translation-unit ABI level;
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
+- Fixed an assertion failure when instantiating a late-parsed function template defined in an earlier translation unit with -fdelayed-template-parsing. (#GH217073)
 
 - Allow redeclaration lookup to consider conversion function templates, allowing
   Clang to match an in-class specialization such as `template<> operator int()`
@@ -613,6 +631,8 @@ features cannot lower the translation-unit ABI level;
   available as an identifier (e.g. `struct __make_unsigned`) was seen again
   in a token that was lexed and cached before the first occurrence was parsed.
   (#GH214128)
+- Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
+  function that is not a constructor. (#GH194298)
 
 #### Bug Fixes to AST Handling
 
@@ -636,6 +656,10 @@ features cannot lower the translation-unit ABI level;
   threshold to the target's `size_t` width instead of using a fixed
   threshold of `1 << 60` regardless of the target.
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
+- Fixed a crash when filling in the ``TypeLoc`` for an ``AttributedType``
+  that was inherited from a different declarator, for example when
+  ``__typeof__`` resolves to the type of another, already-processed
+  declaration. (#GH217489)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
 
@@ -814,6 +838,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.
   `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
   matching the behavior of such maps outside a mapper.
+- The `holds` clause on the `assume` directive now lowers side-effect-free
+  conditions to `llvm.assume`, enabling downstream optimizations. Previously
+  the clause was parsed but its condition was discarded without effect.
 
 ### SYCL Support
 

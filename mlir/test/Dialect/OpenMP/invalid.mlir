@@ -2339,7 +2339,7 @@ func.func @omp_task_depend_iterated_no_vars(%data_var: memref<i32>) {
   // expected-error @below {{op unexpected depend iterated values}}
     "omp.task"() ({
       "omp.terminator"() : () -> ()
-    }) {depend_iterated_kinds = [#omp<clause_task_depend(taskdependin)>], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : () -> ()
+    }) {depend_iterated_kinds = [#omp.clause_task_depend<taskdependin>], operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : () -> ()
    "func.return"() : () -> ()
 }
 
@@ -3277,7 +3277,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {kernel_type = #omp<kernel_type(generic)>, depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {kernel_type = #omp.kernel_type<generic>, depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
@@ -3923,7 +3923,7 @@ func.func @target_private_count_mismatch(%arg0: !llvm.ptr) {
   // expected-error @below {{inconsistent number of private variables and privatizer op symbols, private vars: 1 vs. privatizer op symbols: 2}}
   "omp.target"(%arg0) <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0>,
                          private_syms = [@x.privatizer, @y.privatizer],
-                         kernel_type = #omp<kernel_type(generic)>}> ({
+                         kernel_type = #omp.kernel_type<generic>}> ({
   ^bb0(%arg1 : !llvm.ptr):
     omp.terminator
   }) : (!llvm.ptr) -> ()
@@ -4774,7 +4774,7 @@ func.func @omp_wsloop_linear_modifiers_mismatch(%lb : index, %ub : index, %step 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+  }) {linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<val>],
       operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
   return
 }
@@ -4788,7 +4788,7 @@ func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : 
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(val)>],
+  }) {linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<val>],
       operandSegmentSizes = array<i32: 0, 0, 1, 1, 0, 0, 0>} : (memref<i32>, i32) -> ()
   return
 }
@@ -4797,7 +4797,7 @@ func.func @omp_simd_linear_modifiers_mismatch(%lb : index, %ub : index, %step : 
 
 func.func @omp_declare_simd_linear_modifiers_mismatch(%iv : i32, %step : i32) {
   // expected-error @below {{'omp.declare_simd' op expected as many linear modifiers as linear variables}}
-  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp<linear_modifier(val)>, #omp<linear_modifier(ref)>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
+  "omp.declare_simd"(%iv, %step) <{linear_modifiers = [#omp.linear_modifier<val>, #omp.linear_modifier<ref>], operandSegmentSizes = array<i32: 0, 1, 1, 0>}> : (i32, i32) -> ()
   return
 }
 

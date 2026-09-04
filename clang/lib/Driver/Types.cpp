@@ -123,13 +123,14 @@ bool types::canTypeBeUserSpecified(ID Id) {
       TY_dSYM,
       TY_Dependencies,
       TY_CUDA_FATBIN,
-      TY_HIP_FATBIN};
+      TY_HIP_FATBIN,
+      TY_SYCL_FATBIN};
   return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
 bool types::appendSuffixForType(ID Id) {
   return Id == TY_PCH || Id == TY_dSYM || Id == TY_CUDA_FATBIN ||
-         Id == TY_HIP_FATBIN;
+         Id == TY_HIP_FATBIN || Id == TY_SYCL_FATBIN;
 }
 
 bool types::canLipoType(ID Id) {

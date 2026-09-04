@@ -741,3 +741,51 @@ body: |
     liveins: $eflags
     $al = SETCCr 14, implicit $eflags
 ...
+---
+name: opt_shift_cmp_zero_lea_count_one_use
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_shift_cmp_zero_lea_count_one_use
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 3, implicit-def $eflags
+    ; CHECK-NEXT: $al = SETCCr 4, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; %0 has no other use, so the shift will never become an LEA and can
+    ; provide the flags itself.
+    %1:gr64 = SHL64ri %0, 3, implicit-def dead $eflags
+    TEST64rr %1, %1, implicit-def $eflags
+    $al = SETCCr 4, implicit $eflags
+...
+---
+name: opt_shift_cmp_zero_shl_one_one_use
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_shift_cmp_zero_shl_one_one_use
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 1, implicit-def $eflags
+    ; CHECK-NEXT: $al = SETCCr 4, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; %0 has no other use, so the shift will never become an LEA and can
+    ; provide the flags itself.
+    %1:gr64 = SHL64ri %0, 1, implicit-def dead $eflags
+    TEST64rr %1, %1, implicit-def $eflags
+    $al = SETCCr 4, implicit $eflags
+...
+---
+name: noopt_shift_cmp_zero_lea_count_reused
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: noopt_shift_cmp_zero_lea_count_reused
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 3, implicit-def dead $eflags
+    ; CHECK-NEXT: TEST64rr [[SHL64ri]], [[SHL64ri]], implicit-def $eflags
+    ; CHECK-NEXT: $al = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: $rbx = COPY [[COPY]]
+    %0:gr64 = COPY $rsi
+    ; %0 is used again below, so the shift may still be converted to an LEA
+    ; (which sets no flags) to avoid a register copy; the TEST must stay.
+    %1:gr64 = SHL64ri %0, 3, implicit-def dead $eflags
+    TEST64rr %1, %1, implicit-def $eflags
+    $al = SETCCr 4, implicit $eflags
+    $rbx = COPY %0
+...

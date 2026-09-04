@@ -140,8 +140,8 @@ define i1 @test_and_olt_infinity(float %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp one float [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
-  %cmp1 = fcmp olt float %x, 0x7FF0000000000000
-  %cmp2 = fcmp ogt float %x, 0xFFF0000000000000
+  %cmp1 = fcmp olt float %x, +inf
+  %cmp2 = fcmp ogt float %x, -inf
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }

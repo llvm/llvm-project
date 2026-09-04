@@ -372,7 +372,19 @@ LogicalResult LLVM::detail::intrinsicRewrite(
   auto callIntrOp = LLVM::CallIntrinsicOp::create(
       rewriter, loc, resType, rewriter.getStringAttr(intrinsic), operands);
   // Propagate attributes.
-  callIntrOp->setAttrs(op->getAttrDictionary());
+  SmallVector<NamedAttribute> discardableAttrs;
+  auto copyAttr = [&](StringAttr name, Attribute attr) {
+    if (callIntrOp->getInherentAttr(name).has_value())
+      callIntrOp->setInherentAttr(name, attr);
+    else
+      discardableAttrs.emplace_back(name, attr);
+  };
+  for (NamedAttribute attr : op->getDiscardableAttrDictionary())
+    copyAttr(attr.getName(), attr.getValue());
+  op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+    copyAttr(rewriter.getStringAttr(name), attr);
+  });
+  callIntrOp->setDiscardableAttrs(discardableAttrs);
 
   if (numResults <= 1) {
     // Directly replace the original op.

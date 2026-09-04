@@ -10,6 +10,8 @@
 #include "./Utils.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <type_traits>
+#include <utility>
 
 using namespace mlir;
 using namespace presburger;
@@ -36,4 +38,35 @@ TEST(GeneratingFunctionTest, sum) {
                                {{2, 8}, {6, 3}},
                                {{3, 7}, {5, 1}},
                                {{5, 2}, {6, 2}}}));
+}
+
+TEST(GeneratingFunctionTest, gettersPreserveOwnership) {
+  static_assert(std::is_same_v<
+                decltype(std::declval<const GeneratingFunction &>().getSigns()),
+                const SmallVector<int> &>);
+  static_assert(
+      std::is_same_v<decltype(std::declval<GeneratingFunction &&>().getSigns()),
+                     SmallVector<int>>);
+  static_assert(
+      std::is_same_v<
+          decltype(std::declval<const GeneratingFunction &&>().getSigns()),
+          SmallVector<int>>);
+  static_assert(
+      std::is_same_v<
+          decltype(std::declval<const GeneratingFunction &&>().getNumerators()),
+          std::vector<ParamPoint>>);
+  static_assert(
+      std::is_same_v<decltype(std::declval<const GeneratingFunction &&>()
+                                  .getDenominators()),
+                     std::vector<std::vector<Point>>>);
+
+  GeneratingFunction gf(0, {1}, {makeFracMatrix(1, 1, {{2}})}, {{{3}}});
+  SmallVector<int> signs = std::move(gf).getSigns();
+  std::vector<ParamPoint> numerators = std::move(gf).getNumerators();
+  std::vector<std::vector<Point>> denominators =
+      std::move(gf).getDenominators();
+
+  EXPECT_THAT(signs, ::testing::ElementsAre(1));
+  EXPECT_EQ(numerators.size(), 1u);
+  EXPECT_EQ(denominators.size(), 1u);
 }

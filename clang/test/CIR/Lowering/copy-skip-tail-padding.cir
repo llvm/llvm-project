@@ -26,9 +26,12 @@
                                pad !cir.array<!u8i x 4>}>
 !rec_TailZw =
     !cir.struct<"TailZw" {data !s8i, pad !cir.array<!u8i x 3>,
-                          bitfield !cir.array<!s32i x 0>}>
+                          empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0,
+                                                                  unnamed>]>}>
 !rec_ZwAlign =
-    !cir.struct<"ZwAlign" {data !s8i, bitfield !cir.array<!s64i x 0>,
+    !cir.struct<"ZwAlign" {data !s8i,
+                           empty !cir.bitfield<[#cir.bitfield_decl<!s64i, 0,
+                                                                    unnamed>]>,
                            data !s8i}>
 !rec_SpanMixed =
     !cir.struct<"SpanMixed" {data !u8i, pad !cir.array<!u8i x 3>, empty !u8i,

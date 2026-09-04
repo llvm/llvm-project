@@ -4,7 +4,7 @@
 ; CHECK-LABEL: @foo(
 ; CHECK:   %t = call double @sin(double +inf)
 define double @foo() {
-  %t = call double @sin(double 0x7FF0000000000000)
+  %t = call double @sin(double +inf)
   ret double %t
 }
 
