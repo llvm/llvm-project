@@ -1,11 +1,11 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SPLITMODULECG_H
 #define LLVM_TRANSFORMS_UTILS_SPLITMODULECG_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/LTO/Config.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include <map>
 
 namespace llvm {
@@ -76,8 +76,7 @@ public:
 /// can identify roots (in-degree 0) during partitioning.
 class SimplifiedCallGraphNode {
 public:
-  inline SimplifiedCallGraphNode(Function *F)
-      : F(F) {}
+  inline SimplifiedCallGraphNode(Function *F) : F(F) {}
 
   SimplifiedCallGraphNode(const SimplifiedCallGraphNode &) = delete;
   SimplifiedCallGraphNode &operator=(const SimplifiedCallGraphNode &) = delete;

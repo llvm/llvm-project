@@ -78,12 +78,10 @@ static cl::opt<std::string>
 static cl::opt<std::string>
     MCPU("mcpu", cl::desc("Target CPU, ignored if --mtriple is not used"),
          cl::value_desc("cpu"), cl::cat(SplitCategory));
-         
-static cl::opt<bool>
-    EnableCallGraphSplitModule("enable-call-graph-split-module",
-                               cl::Prefix, cl::init(false),
-                               cl::desc("Split module using call graph"),
-                               cl::cat(SplitCategory));
+
+static cl::opt<bool> EnableCallGraphSplitModule(
+    "enable-call-graph-split-module", cl::Prefix, cl::init(false),
+    cl::desc("Split module using call graph"), cl::cat(SplitCategory));
 
 enum class SplitByCategoryType {
   SBCT_ByAttribute,
@@ -336,7 +334,8 @@ int main(int argc, char **argv) {
   }
 
   if (EnableCallGraphSplitModule) {
-    const auto HandleModulePartCG = [&](std::unique_ptr<Module> MPart, unsigned I) {
+    const auto HandleModulePartCG = [&](std::unique_ptr<Module> MPart,
+                                        unsigned I) {
       std::error_code EC;
       std::unique_ptr<ToolOutputFile> Out(
           new ToolOutputFile(OutputFilename + utostr(I), EC, sys::fs::OF_None));
@@ -365,4 +364,3 @@ int main(int argc, char **argv) {
   SplitModule(*M, NumOutputs, HandleModulePart, PreserveLocals, RoundRobin);
   return 0;
 }
-

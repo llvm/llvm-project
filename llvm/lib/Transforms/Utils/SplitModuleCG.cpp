@@ -15,9 +15,10 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<bool> enablePrintSimplifiedCallGraph(
-    "enable-print-simplified-callgraph", cl::Hidden, cl::init(false),
-    cl::desc("print SimplifiedCallGraph"));
+static cl::opt<bool>
+    enablePrintSimplifiedCallGraph("enable-print-simplified-callgraph",
+                                   cl::Hidden, cl::init(false),
+                                   cl::desc("print SimplifiedCallGraph"));
 
 using PartitionID = unsigned;
 
@@ -33,6 +34,19 @@ static void externalize(GlobalValue *GV) {
     GV->setName("__llvmsplit_unnamed");
 }
 
+/// Returns whether duplicate definitions of \p F across partitions may be
+/// downgraded to available_externally. This is safe for external functions
+/// (either originally external or promoted by externalize), and for
+/// weak_odr/linkonce_odr functions whose equivalent definitions can be
+/// deduplicated to reduce codegen. Interposable linkages (weak/linkonce
+/// non-ODR) are excluded since downgrading them would change their
+/// optimization semantics.
+static bool canDowngradeToAvailableExternally(const Function &F) {
+  return !F.isDeclaration() &&
+         (F.hasExternalLinkage() || F.hasWeakODRLinkage() ||
+          F.hasLinkOnceODRLinkage());
+}
+
 } // namespace
 
 std::vector<DenseSet<const Function *>> SplitModuleCG::doPartitioning() {
@@ -42,14 +56,14 @@ std::vector<DenseSet<const Function *>> SplitModuleCG::doPartitioning() {
   std::vector<DenseSet<const Function *>> Partitions;
   Partitions.resize(N);
 
-  auto ComparePartitions = [](const std::pair<PartitionID, CostType> &a,
-                              const std::pair<PartitionID, CostType> &b) {
+  auto ComparePartitions = [](const std::pair<PartitionID, CostType> &LHS,
+                              const std::pair<PartitionID, CostType> &RHS) {
     // When two partitions have the same cost, assign to the one with the
     // biggest ID first. This allows us to put things in P0 last, because P0 may
     // have other stuff added later.
-    if (a.second == b.second)
-      return a.first < b.first;
-    return a.second > b.second;
+    if (LHS.second == RHS.second)
+      return LHS.first < RHS.first;
+    return LHS.second > RHS.second;
   };
 
   std::vector<std::pair<PartitionID, CostType>> BalancingQueue;
@@ -103,17 +117,19 @@ void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I) {
   // Downgrade duplicate definitions of external functions to
   // available_externally. The first partition to define such a function keeps
   // the real definition; all other partitions get available_externally copies.
-  for (auto &func : MPart.functions()) {
-    if (func.isDeclaration())
+  for (auto &PartFunc : MPart.functions()) {
+    if (PartFunc.isDeclaration())
       continue;
-    auto Fn = M.getFunction(func.getName());
-    if (!externalFunction.contains(Fn))
+    // Look up the corresponding function in the original module M to check
+    // its externalFunction status.
+    auto *OrigFn = M.getFunction(PartFunc.getName());
+    if (!externalFunction.contains(OrigFn))
       continue;
-    if (!externalFunction[Fn]) {
-      func.setLinkage(GlobalValue::AvailableExternallyLinkage);
-      func.setComdat(nullptr);
+    if (!externalFunction[OrigFn]) {
+      PartFunc.setLinkage(GlobalValue::AvailableExternallyLinkage);
+      PartFunc.setComdat(nullptr);
     } else {
-      externalFunction[Fn] = false;
+      externalFunction[OrigFn] = false;
     }
   }
 
@@ -125,7 +141,9 @@ void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I) {
   // partitions.
   std::string Suffix = getUniqueModuleId(&M);
   for (auto &GV : MPart.global_values()) {
-    // Now external (not local), but was not originally external.
+    // Only rename symbols that were promoted from local to external: skip
+    // those that are still local, and those that were already external in
+    // the source module (recorded in OriginalExternals).
     if (GV.hasLocalLinkage() || OriginalExternals.contains(GV.getName()))
       continue;
     // Skip declarations of functions that were not explicitly externalized
@@ -164,8 +182,8 @@ void SplitModuleCG::createWorkList() {
 
   // Third, find all the functions that are not in the worklist.
   DenseSet<const Function *> SeenFunctions;
-  for (const auto &FWD : FWDWorkList) {
-    SeenFunctions.insert(FWD.Dependencies.begin(), FWD.Dependencies.end());
+  for (const auto &Fwd : FWDWorkList) {
+    SeenFunctions.insert(Fwd.Dependencies.begin(), Fwd.Dependencies.end());
   }
   for (auto &F : M) {
     // This function may be in a cycle, and therefore is not a dependency of
@@ -173,9 +191,9 @@ void SplitModuleCG::createWorkList() {
     if (F.isDeclaration() || SeenFunctions.contains(&F))
       continue;
     FWDWorkList.emplace_back(*SCG, FuncsCosts, &F);
-    auto &FWD = FWDWorkList.back();
+    auto &Fwd = FWDWorkList.back();
     EntryFuncs.insert(&F);
-    SeenFunctions.insert(FWD.Dependencies.begin(), FWD.Dependencies.end());
+    SeenFunctions.insert(Fwd.Dependencies.begin(), Fwd.Dependencies.end());
   }
 
   // Sort the worklist so the most expensive roots are seen first.
@@ -188,15 +206,16 @@ void SplitModuleCG::createWorkList() {
   });
 
   LLVM_DEBUG(dbgs() << "Number of callgraphs to be allocated: "
-                    << FWDWorkList.size() << "   Module cost: "
-                    << ModuleCost << "\n");
+                    << FWDWorkList.size() << "   Module cost: " << ModuleCost
+                    << "\n");
   LLVM_DEBUG(dbgs() << "callgraphs: \n");
 #ifndef NDEBUG
-  for (auto FWD : FWDWorkList)
-    LLVM_DEBUG(dbgs() << "[root] " << FWD.F->getName() << " (totalCost:"
-                      << FWD.TotalCost << ";   root function cost: "
-                      << FuncsCosts[FWD.F] << ";   has dependency: "
-                      << FWD.Dependencies.size() << "\n");
+  for (auto Fwd : FWDWorkList)
+    LLVM_DEBUG(dbgs() << "[root] " << Fwd.F->getName()
+                      << " (totalCost:" << Fwd.TotalCost
+                      << ";   root function cost: " << FuncsCosts[Fwd.F]
+                      << ";   has dependency: " << Fwd.Dependencies.size()
+                      << "\n");
 #endif
 }
 
@@ -207,12 +226,8 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
       continue;
     externalize(&F);
     // Record functions that may be defined in multiple partitions so that
-    // dealWithMpart can downgrade duplicates to available_externally. This
-    // includes functions with external linkage (either originally or just
-    // promoted by externalize), as well as functions whose definitions are
-    // not exact (e.g. linkonce/weak), which may be replaced at link time.
-    if (!F.isDeclaration() &&
-        (F.hasExternalLinkage() || !F.isDefinitionExact()))
+    // dealWithMpart can downgrade duplicates to available_externally.
+    if (canDowngradeToAvailableExternally(F))
       externalFunction[&F] = true;
   }
   for (GlobalVariable &GV : M.globals())
@@ -248,9 +263,9 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
   for (unsigned I = 0; I < N; ++I) {
     ValueToValueMapTy VMap;
     std::unique_ptr<Module> MPart(
-      CloneModule(M, VMap, [&](const GlobalValue *GV) {
-        return ShouldCloneDefinition(I, GV);
-    }));
+        CloneModule(M, VMap, [&](const GlobalValue *GV) {
+          return ShouldCloneDefinition(I, GV);
+        }));
 
     dealWithMpart(*MPart, I);
 
@@ -265,15 +280,17 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
     raw_svector_ostream BCOS(BC);
     WriteBitcodeToFile(*MPart, BCOS);
     MPart.reset();
-    Threads.emplace_back([&, I](SmallString<0> BC) {
-      llvm::lto::LTOLLVMContext Ctx(C);
-      Expected<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
-          MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
-      BC = SmallString<0>();
-      if (!MOrErr)
-        report_fatal_error("Failed to read bitcode");
-      ModuleCallback(std::move(MOrErr.get()), I);
-    }, std::move(BC));
+    Threads.emplace_back(
+        [&, I](SmallString<0> BC) {
+          llvm::lto::LTOLLVMContext Ctx(C);
+          Expected<std::unique_ptr<Module>> MOrErr =
+              parseBitcodeFile(MemoryBufferRef(BC.str(), "ld-temp.o"), Ctx);
+          BC = SmallString<0>();
+          if (!MOrErr)
+            report_fatal_error("Failed to read bitcode");
+          ModuleCallback(std::move(MOrErr.get()), I);
+        },
+        std::move(BC));
   }
   for (auto &T : Threads)
     T.join();
@@ -325,7 +342,6 @@ SimplifiedCallGraph::SimplifiedCallGraph(CallGraph &CG) {
     print();
 }
 
-
 void SimplifiedCallGraph::print() {
 #ifndef NDEBUG
   for (auto &SCGItem : FunctionMap) {
@@ -333,9 +349,9 @@ void SimplifiedCallGraph::print() {
                       << SCGItem.first->getName() << "' #uses="
                       << SCGItem.second->getNumReferences() << "\n");
 
-    for (const auto &callee : *SCGItem.second)
-      LLVM_DEBUG(dbgs() <<"          Calls function : '"
-                        << callee->getFunction()->getName() << " '\n");
+    for (const auto &Callee : *SCGItem.second)
+      LLVM_DEBUG(dbgs() << "          Calls function : '"
+                        << Callee->getFunction()->getName() << " '\n");
   }
 #endif
 }
@@ -346,7 +362,6 @@ SimplifiedCallGraph::getOrInsertFunction(const Function *F) {
   if (SCGN)
     return SCGN.get();
 
-  SCGN =
-      std::make_unique<SimplifiedCallGraphNode>(const_cast<Function *>(F));
+  SCGN = std::make_unique<SimplifiedCallGraphNode>(const_cast<Function *>(F));
   return SCGN.get();
 }
