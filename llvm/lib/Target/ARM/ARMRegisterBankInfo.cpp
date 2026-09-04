@@ -28,21 +28,6 @@ using namespace llvm;
 // into an ARMGenRegisterBankInfo.def (similar to AArch64).
 namespace llvm {
 namespace ARM {
-enum PartialMappingIdx {
-  PMI_GPR,
-  PMI_SPR,
-  PMI_DPR,
-  PMI_Min = PMI_GPR,
-};
-
-const RegisterBankInfo::PartialMapping PartMappings[]{
-    // GPR Partial Mapping
-    {0, 32, GPRRegBank},
-    // SPR Partial Mapping
-    {0, 32, FPRRegBank},
-    // DPR Partial Mapping
-    {0, 64, FPRRegBank},
-};
 
 #ifndef NDEBUG
 static bool checkPartMapping(const RegisterBankInfo::PartialMapping &PM,
@@ -53,15 +38,12 @@ static bool checkPartMapping(const RegisterBankInfo::PartialMapping &PM,
 }
 
 static void checkPartialMappings() {
-  assert(
-      checkPartMapping(PartMappings[PMI_GPR - PMI_Min], 0, 32, GPRRegBankID) &&
-      "Wrong mapping for GPR");
-  assert(
-      checkPartMapping(PartMappings[PMI_SPR - PMI_Min], 0, 32, FPRRegBankID) &&
-      "Wrong mapping for SPR");
-  assert(
-      checkPartMapping(PartMappings[PMI_DPR - PMI_Min], 0, 64, FPRRegBankID) &&
-      "Wrong mapping for DPR");
+  assert(checkPartMapping(PartMappings[PMI_GPRB32], 0, 32, GPRRegBankID) &&
+         "Wrong mapping for GPR");
+  assert(checkPartMapping(PartMappings[PMI_FPRB32], 0, 32, FPRRegBankID) &&
+         "Wrong mapping for SPR");
+  assert(checkPartMapping(PartMappings[PMI_FPRB64], 0, 64, FPRRegBankID) &&
+         "Wrong mapping for DPR");
 }
 #endif
 
@@ -76,17 +58,17 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
     // 3 ops in GPRs
-    {&PartMappings[PMI_GPR - PMI_Min], 1},
-    {&PartMappings[PMI_GPR - PMI_Min], 1},
-    {&PartMappings[PMI_GPR - PMI_Min], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
     // 3 ops in SPRs
-    {&PartMappings[PMI_SPR - PMI_Min], 1},
-    {&PartMappings[PMI_SPR - PMI_Min], 1},
-    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
     // 3 ops in DPRs
-    {&PartMappings[PMI_DPR - PMI_Min], 1},
-    {&PartMappings[PMI_DPR - PMI_Min], 1},
-    {&PartMappings[PMI_DPR - PMI_Min], 1}};
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1}};
 
 #ifndef NDEBUG
 static bool
@@ -96,38 +78,38 @@ checkValueMapping(const RegisterBankInfo::ValueMapping &VM,
 }
 
 static void checkValueMappings() {
-  assert(checkValueMapping(ValueMappings[GPR3OpsIdx],
-                           &PartMappings[PMI_GPR - PMI_Min]) &&
-         "Wrong value mapping for 3 GPR ops instruction");
+  assert(
+      checkValueMapping(ValueMappings[GPR3OpsIdx], &PartMappings[PMI_GPRB32]) &&
+      "Wrong value mapping for 3 GPR ops instruction");
   assert(checkValueMapping(ValueMappings[GPR3OpsIdx + 1],
-                           &PartMappings[PMI_GPR - PMI_Min]) &&
+                           &PartMappings[PMI_GPRB32]) &&
          "Wrong value mapping for 3 GPR ops instruction");
   assert(checkValueMapping(ValueMappings[GPR3OpsIdx + 2],
-                           &PartMappings[PMI_GPR - PMI_Min]) &&
+                           &PartMappings[PMI_GPRB32]) &&
          "Wrong value mapping for 3 GPR ops instruction");
 
-  assert(checkValueMapping(ValueMappings[SPR3OpsIdx],
-                           &PartMappings[PMI_SPR - PMI_Min]) &&
-         "Wrong value mapping for 3 SPR ops instruction");
+  assert(
+      checkValueMapping(ValueMappings[SPR3OpsIdx], &PartMappings[PMI_FPRB32]) &&
+      "Wrong value mapping for 3 SPR ops instruction");
   assert(checkValueMapping(ValueMappings[SPR3OpsIdx + 1],
-                           &PartMappings[PMI_SPR - PMI_Min]) &&
+                           &PartMappings[PMI_FPRB32]) &&
          "Wrong value mapping for 3 SPR ops instruction");
   assert(checkValueMapping(ValueMappings[SPR3OpsIdx + 2],
-                           &PartMappings[PMI_SPR - PMI_Min]) &&
+                           &PartMappings[PMI_FPRB32]) &&
          "Wrong value mapping for 3 SPR ops instruction");
 
-  assert(checkValueMapping(ValueMappings[DPR3OpsIdx],
-                           &PartMappings[PMI_DPR - PMI_Min]) &&
-         "Wrong value mapping for 3 DPR ops instruction");
+  assert(
+      checkValueMapping(ValueMappings[DPR3OpsIdx], &PartMappings[PMI_FPRB64]) &&
+      "Wrong value mapping for 3 DPR ops instruction");
   assert(checkValueMapping(ValueMappings[DPR3OpsIdx + 1],
-                           &PartMappings[PMI_DPR - PMI_Min]) &&
+                           &PartMappings[PMI_FPRB64]) &&
          "Wrong value mapping for 3 DPR ops instruction");
   assert(checkValueMapping(ValueMappings[DPR3OpsIdx + 2],
-                           &PartMappings[PMI_DPR - PMI_Min]) &&
+                           &PartMappings[PMI_FPRB64]) &&
          "Wrong value mapping for 3 DPR ops instruction");
 }
 #endif
-} // end namespace arm
+} // namespace ARM
 } // end namespace llvm
 
 ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI) {
