@@ -17,7 +17,9 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_volatile.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_pointer.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -36,7 +38,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // The checks may be extended in the future.
 template <class _Tp>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
-__is_valid_range(const _Tp* __first, const _Tp* __last) {
+__is_valid_range(const volatile _Tp* __first, const volatile _Tp* __last) {
   if (__libcpp_is_constant_evaluated()) {
     // If this is not a constant during constant evaluation, that is because __first and __last are not
     // part of the same allocation. If they are part of the same allocation, we must still make sure they
@@ -59,11 +61,14 @@ __assume_valid_range([[__maybe_unused__]] _Iter&& __first, [[__maybe_unused__]] 
                 is_same<__remove_cvref_t<_Iter>, __remove_cvref_t<_Sent>>::value) {
     _LIBCPP_ASSERT_INTERNAL(std::__is_valid_range(std::__to_address(__first), std::__to_address(__last)),
                             "Valid range assumption does not hold");
-    if (!__libcpp_is_constant_evaluated()) {
-      using __value_type = typename iterator_traits<__remove_cvref_t<_Iter>>::value_type;
-      __builtin_assume_dereferenceable(std::__to_address(__first), (__last - __first) * sizeof(__value_type));
-      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__first));
-      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__last));
+    using __pointer_type = decltype(std::__to_address(__first));
+    if constexpr (!is_volatile<__remove_pointer_t<__pointer_type>>::value) {
+      if (!__libcpp_is_constant_evaluated()) {
+        using __value_type = typename iterator_traits<__remove_cvref_t<_Iter>>::value_type;
+        __builtin_assume_dereferenceable(std::__to_address(__first), (__last - __first) * sizeof(__value_type));
+        (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__first));
+        (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__last));
+      }
     }
   }
 #endif
