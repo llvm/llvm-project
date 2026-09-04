@@ -6,9 +6,9 @@ define void @implied1(i32 %n) {
 ; Prove that (n s> 1) ===> (n - 1 s> 0).
 ; CHECK-LABEL: 'implied1'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-2 + %n)
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-2 + %n)<nsw>
 ; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483645
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-2 + %n)
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-2 + %n)<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
@@ -89,9 +89,9 @@ define void @implied2_neg(i32 %n) {
 ; Prove that (n u>= -1) =\=> (n - 1 s>= 0).
 ; CHECK-LABEL: 'implied2_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2_neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n))<nsw>
-; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:

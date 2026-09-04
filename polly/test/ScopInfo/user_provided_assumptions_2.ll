@@ -6,7 +6,7 @@
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
 
 ; SCOP:      Context:
-; SCOP-NEXT: [N, M] -> { : -2147483648 <= N <= 2147483647 and -2147483648 <= M <= 2147483647 }
+; SCOP-NEXT: [N, M] -> { : -2147483648 <= N <= 2147483647 and 0 <= M <= 2147483647 }
 ; SCOP:      Assumed Context:
 ; SCOP-NEXT: [N, M] -> { : }
 ; SCOP:      Invalid Context:
