@@ -59,3 +59,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.elf.tls_layout
 )
+
+add_libc_test(
+  load_layout_test
+  SUITE
+    libc-support-tests
+  SRCS
+    load_layout_test.cpp
+  DEPENDS
+    libc.src.__support.elf.load_layout
+)
