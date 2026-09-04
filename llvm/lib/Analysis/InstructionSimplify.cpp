@@ -6541,7 +6541,7 @@ Value *llvm::simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
       return Op0;
 
     if (KnownClass.cannotBeOrderedLessThanZero() &&
-        KnownClass.isKnownNeverNaN() && FMF.noSignedZeros() && 
+        KnownClass.isKnownNeverNaN() && FMF.noSignedZeros() &&
         KnownClass.isKnownNeverNegZero())
       return Op0;
 
