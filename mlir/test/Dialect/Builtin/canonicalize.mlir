@@ -23,3 +23,14 @@ func.func @multiple_conversion_casts_failure(%arg0: i32, %arg1: i32, %arg2: i64)
   %outputs:2 = builtin.unrealized_conversion_cast %arg2, %inputs#1 : i64, i64 to i32, i32
   return %outputs#0, %outputs#1 : i32, i32
 }
+
+// Test a self-referential cast in a graph region must not crash.
+// CHECK-LABEL: func @self_referential_cast
+// CHECK-NOT: unrealized_conversion_cast
+func.func @self_referential_cast() {
+  test.graph_region {
+    %0 = builtin.unrealized_conversion_cast %0 : i32 to i32
+    "test.return"() : () -> ()
+  }
+  return
+}
