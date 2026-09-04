@@ -27,6 +27,14 @@ class OpenFile {
 public:
   using FileOffset = std::int64_t;
 
+  // See common::ResetWithDefinedPayload(): openPosition_ and knownSize_ are
+  // read through short-circuit predicates that compilers may if-convert, so
+  // their payload storage is written once here to keep memory checkers quiet.
+  OpenFile() {
+    common::ResetWithDefinedPayload(openPosition_);
+    common::ResetWithDefinedPayload(knownSize_);
+  }
+
   int fd() const { return fd_; }
   const char *path() const { return path_.get(); }
   std::size_t pathLength() const { return pathLength_; }
@@ -90,7 +98,7 @@ private:
 
   int fd_{-1};
   OwningPtr<char> path_;
-  std::size_t pathLength_;
+  std::size_t pathLength_{0};
   bool mayRead_{false};
   bool mayWrite_{false};
   bool mayPosition_{false};
@@ -102,7 +110,7 @@ private:
   bool isTerminal_{false};
   bool isWindowsTextFile_{false}; // expands LF to CR+LF on write
 
-  int nextId_;
+  int nextId_{0};
   OwningPtr<Pending> pending_;
 };
 
