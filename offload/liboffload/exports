@@ -8,21 +8,15 @@ global:
     error::OffloadError::ID;
     "error::OffloadErrCategory()";
     "llvm::omp::target::RPCServerTy::registerCallback(unsigned int (*)(void*, unsigned int))";
-    "llvm::omp::target::plugin::GenericDeviceTy::dataFill(void*, void const*, long, long, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::async_barrier(omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::create_event(int, void**)";
     "llvm::omp::target::plugin::GenericPluginTy::create_interop(int, int, interop_spec_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_alloc(int, long, void*, int)";
     "llvm::omp::target::plugin::GenericPluginTy::data_delete(int, void*, int)";
-    "llvm::omp::target::plugin::GenericPluginTy::data_exchange(int, void*, int, void*, long)";
-    "llvm::omp::target::plugin::GenericPluginTy::data_exchange_async(int, void*, int, void*, long, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_fence(int, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_lock(int, void*, long, void**)";
     "llvm::omp::target::plugin::GenericPluginTy::data_notify_mapped(int, void*, long)";
     "llvm::omp::target::plugin::GenericPluginTy::data_notify_unmapped(int, void*)";
-    "llvm::omp::target::plugin::GenericPluginTy::data_retrieve_async(int, void*, void*, long, __tgt_async_info*)";
-    "llvm::omp::target::plugin::GenericPluginTy::data_submit(int, void*, void*, long)";
-    "llvm::omp::target::plugin::GenericPluginTy::data_submit_async(int, void*, void*, long, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_unlock(int, void*)";
     "llvm::omp::target::plugin::GenericPluginTy::destroy_event(int, void*)";
     "llvm::omp::target::plugin::GenericPluginTy::flush_queue(omp_interop_val_t*)";
@@ -39,13 +33,11 @@ global:
     "llvm::omp::target::plugin::GenericPluginTy::number_of_devices()";
     "llvm::omp::target::plugin::GenericPluginTy::obtain_device_info(int)";
     "llvm::omp::target::plugin::GenericPluginTy::print_device_info(int)";
-    "llvm::omp::target::plugin::GenericPluginTy::query_async(int, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::record_event(int, void*, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::release_interop(int, omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::set_device_identifier(int, int)";
     "llvm::omp::target::plugin::GenericPluginTy::sync_barrier(omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::sync_event(int, void*)";
-    "llvm::omp::target::plugin::GenericPluginTy::synchronize(int, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::use_auto_zero_copy(int)";
     "llvm::omp::target::plugin::GenericPluginTy::wait_event(int, void*, __tgt_async_info*)";
     llvm::omp::target::ompt::Initialized;
@@ -55,6 +47,7 @@ global:
     __ol_tgt_setInfoFlag;
     __ol_tgt_GetPluginFromPlatform;
     __ol_tgt_GetPluginDeviceId;
+    __ol__tgt_GetAsyncInfoFromQueue;
   };
 local:
   *;

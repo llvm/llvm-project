@@ -14,6 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include "OffloadAPI.h"
+
 #include "Shared/APITypes.h"
 #include "Shared/Environment.h"
 #include "Shared/SourceInfo.h"
@@ -112,6 +114,11 @@ enum TargetAllocTy : int32_t {
 
 struct DeviceTy;
 
+// temporary helper from liboffload until all usage of AsyncInfo
+// are migrated to use liboffload queues.
+extern "C" __tgt_async_info *
+__ol__tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue);
+
 /// The libomptarget wrapper around a __tgt_async_info object directly
 /// associated with a libomptarget layer device. RAII semantics to avoid
 /// mistakes.
@@ -130,20 +137,24 @@ private:
   using PostProcFuncTy = std::function<int()>;
   llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
 
-  __tgt_async_info AsyncInfo;
+  ol_queue_handle_t Queue;
   DeviceTy &Device;
 
 public:
   /// Synchronization method to be used.
   SyncTy SyncType;
 
-  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
-      : Device(Device), SyncType(SyncType) {}
-  ~AsyncInfoTy() { synchronize(); }
+  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING);
+  ~AsyncInfoTy();
 
   /// Implicit conversion to the __tgt_async_info which is used in the
   /// plugin interface.
-  operator __tgt_async_info *() { return &AsyncInfo; }
+  operator __tgt_async_info *() {
+    return __ol__tgt_GetAsyncInfoFromQueue(Queue);
+  }
+
+  /// Get the underlying queue handle.
+  ol_queue_handle_t getQueue() const { return Queue; }
 
   /// Synchronize all pending actions.
   ///
