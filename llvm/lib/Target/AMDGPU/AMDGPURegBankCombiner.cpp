@@ -44,7 +44,7 @@ class AMDGPURegBankCombinerImpl : public Combiner {
 protected:
   const AMDGPURegBankCombinerImplRuleConfig &RuleConfig;
   const GCNSubtarget &STI;
-  const RegisterBankInfo &RBI;
+  const AMDGPURegisterBankInfo &RBI;
   const TargetRegisterInfo &TRI;
   const SIInstrInfo &TII;
   const CombinerHelper Helper;
@@ -59,6 +59,7 @@ public:
 
   static const char *getName() { return "AMDGPURegBankCombinerImpl"; }
 
+  bool tryCombineAllImpl(MachineInstr &I) const;
   bool tryCombineAll(MachineInstr &I) const override;
 
   bool isVgprRegBank(Register Reg) const;
@@ -136,6 +137,27 @@ AMDGPURegBankCombinerImpl::AMDGPURegBankCombinerImpl(
 #include "AMDGPUGenRegBankGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
+}
+
+bool AMDGPURegBankCombinerImpl::tryCombineAll(MachineInstr &MI) const {
+  unsigned NumRegs = MRI.getNumVirtRegs();
+  if (!tryCombineAllImpl(MI))
+    return false;
+
+  // Generated apply patterns (e.g. same_val_zero) create vregs with no bank,
+  // but every vreg needs one after RegBankSelect, which already ran.
+  for (unsigned Idx = NumRegs, End = MRI.getNumVirtRegs(); Idx != End; ++Idx) {
+    Register Reg = Register::index2VirtReg(Idx);
+    if (MRI.getRegClassOrRegBank(Reg))
+      continue;
+    MachineInstr *Def = MRI.getVRegDef(Reg);
+    if (!Def)
+      continue;
+    unsigned BankID =
+        RBI.isSALUMapping(*Def) ? AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
+    MRI.setRegBank(Reg, RBI.getRegBank(BankID));
+  }
+  return true;
 }
 
 bool AMDGPURegBankCombinerImpl::isVgprRegBank(Register Reg) const {
