@@ -1,4 +1,6 @@
-file(GLOB files ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/lib/*.a)
+file(GLOB files
+  ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/lib/*.a
+  ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/lib/*.lib)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(strip_command

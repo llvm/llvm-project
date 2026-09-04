@@ -12,6 +12,21 @@ on:
         required: true
         default: false
         type: boolean
+      enable-thinlto:
+        description: "Windows only: build stage2 with ThinLTO"
+        required: false
+        default: false
+        type: boolean
+      enable-pdb:
+        description: "Windows only: also generate and upload PDB debug info"
+        required: false
+        default: false
+        type: boolean
+      enhanced-pgo:
+        description: "Windows only: train the instrumented clang by building LLVMSupport instead of the legacy single-file Sema.cpp training step (PGO training always runs; this only selects the method)"
+        required: false
+        default: false
+        type: boolean
       runs-on:
         description: "Runner to use for the build"
         required: true
@@ -34,6 +49,21 @@ on:
       upload:
         description: 'Upload binaries to the release page'
         required: true
+        default: false
+        type: boolean
+      enable-thinlto:
+        description: "Windows only: build stage2 with ThinLTO"
+        required: false
+        default: false
+        type: boolean
+      enable-pdb:
+        description: "Windows only: also generate and upload PDB debug info"
+        required: false
+        default: false
+        type: boolean
+      enhanced-pgo:
+        description: "Windows only: train the instrumented clang by building LLVMSupport instead of the legacy single-file Sema.cpp training step (PGO training always runs; this only selects the method)"
+        required: false
         default: false
         type: boolean
       runs-on:
@@ -69,6 +99,9 @@ jobs:
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
+      windows-enable-thinlto: ${{ steps.vars.outputs.windows-enable-thinlto }}
+      windows-enable-pdb: ${{ steps.vars.outputs.windows-enable-pdb }}
+      windows-enhanced-pgo: ${{ steps.vars.outputs.windows-enhanced-pgo }}
 
     steps:
     - name: Validate Release Version
@@ -90,6 +123,9 @@ jobs:
         LLVM_VERSION_MAJOR: ${{ steps.version-from-source.outputs.major }}
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
+        INPUTS_ENABLE_THINLTO: ${{ inputs.enable-thinlto }}
+        INPUTS_ENABLE_PDB: ${{ inputs.enable-pdb }}
+        INPUTS_ENHANCED_PGO: ${{ inputs.enhanced-pgo }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -160,8 +196,10 @@ jobs:
         fi
 
         if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+          # Disable LTO by default; use --enable-thinlto to enable ThinLTO.
+          if [ "$INPUTS_ENABLE_THINLTO" != "true" ]; then
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+          fi
         fi
 
         case "$INPUTS_RUNS_ON" in
@@ -206,10 +244,29 @@ jobs:
 
         target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_CPACK_PACKAGE_FILE_NAME=$release_binary_basename"
 
+        # Translate --enable-thinlto/--enable-pdb/--enhanced-pgo into individual
+        # flags consumed by the Windows build_llvm_release.bat invocation below
+        # (only meaningful for Windows builds).
+        windows_enable_thinlto="false"
+        if [ "$INPUTS_ENABLE_THINLTO" = "true" ]; then
+          windows_enable_thinlto="true"
+        fi
+        windows_enable_pdb="false"
+        if [ "$INPUTS_ENABLE_PDB" = "true" ]; then
+          windows_enable_pdb="true"
+        fi
+        windows_enhanced_pgo="false"
+        if [ "$INPUTS_ENHANCED_PGO" = "true" ]; then
+          windows_enhanced_pgo="true"
+        fi
+
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
         echo "attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-binary-attestation" >> $GITHUB_OUTPUT
+        echo "windows-enable-thinlto=$windows_enable_thinlto" >> $GITHUB_OUTPUT
+        echo "windows-enable-pdb=$windows_enable_pdb" >> $GITHUB_OUTPUT
+        echo "windows-enhanced-pgo=$windows_enhanced_pgo" >> $GITHUB_OUTPUT
 
   build-release-package:
     name: "Build Release Package"
@@ -297,21 +354,42 @@ jobs:
       env:
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
-        EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '--fast-build') }}
+        BUILD_RUNS_ON: ${{ needs.prepare.outputs.build-runs-on }}
+        WINDOWS_ENABLE_THINLTO: ${{ needs.prepare.outputs.windows-enable-thinlto }}
+        WINDOWS_ENABLE_PDB: ${{ needs.prepare.outputs.windows-enable-pdb }}
+        WINDOWS_ENHANCED_PGO: ${{ needs.prepare.outputs.windows-enhanced-pgo }}
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
-        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout $env:EXTRA_ARGS
+        $variantArgs = @()
+        # --fast-build trades PGO training and stage0 test coverage for
+        # build speed; it exists solely so the GitHub-hosted windows-11-arm
+        # runner can finish within its 6-hour job timeout. Other runners
+        # (including our self-hosted ones) don't need that trade-off, and
+        # --enhanced-pgo/--enable-thinlto/--enable-pdb below are explicit,
+        # deliberate opt-ins that should not be silently defeated by it.
+        if ($env:BUILD_RUNS_ON -eq "windows-11-arm") { $variantArgs += "--fast-build" }
+        if ($env:WINDOWS_ENABLE_THINLTO -eq "true") { $variantArgs += "--enable-thinlto" }
+        if ($env:WINDOWS_ENABLE_PDB -eq "true") { $variantArgs += "--enable-pdb" }
+        if ($env:WINDOWS_ENHANCED_PGO -eq "true") { $variantArgs += "--enhanced-pgo" }
+        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout @variantArgs
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
           mv $zstd $env:GITHUB_WORKSPACE
         }
         $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.msi" | Select-Object -First 1).fullName
-        $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
+        $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Where-Object { $_.Name -notlike "*-pdb.tar.xz" } | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.
         mv $installer $env:GITHUB_WORKSPACE
         mv $tarball $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
+        if ($env:WINDOWS_ENABLE_PDB -eq "true") {
+          $pdbArchive = (Get-ChildItem -Recurse -Filter "*-pdb.tar.xz" | Select-Object -First 1).fullName
+          if ($pdbArchive) {
+            mv $pdbArchive $env:GITHUB_WORKSPACE
+            echo "windows-pdb-filename=$(Split-Path -Path $pdbArchive -Leaf)" >> $env:GITHUB_OUTPUT
+          }
+        }
     
     - name: Dump Wix logs
       if: runner.os == 'Windows' && failure()
@@ -363,6 +441,13 @@ jobs:
           ${{ needs.prepare.outputs.release-binary-filename }}
           ${{ needs.prepare.outputs.release-binary-filename-zstd }}
           ${{ steps.build-windows.outputs.windows-installer-filename }}
+
+    - name: Upload Windows PDB debug info
+      if: runner.os == 'Windows' && steps.build-windows.outputs.windows-pdb-filename != ''
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-release-pdb
+        path: ${{ steps.build-windows.outputs.windows-pdb-filename }}
 
     - name: Run Tests
       # These almost always fail so don't let them fail the build and prevent the uploads.
