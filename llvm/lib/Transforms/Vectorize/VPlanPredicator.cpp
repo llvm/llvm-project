@@ -661,6 +661,20 @@ void VPPredicator::run() {
     auto Successors = to_vector(VPBB->getSuccessors());
 
     if (shouldPreserveTerminator(VPBB)) {
+      VPValue *BlockMask = getBlockInMask(VPBB);
+      if (BlockMask && !match(BlockMask, m_HeaderMask())) {
+        // The branch might never be executed in a scalar loop so its condition
+        // can be `poison`. As such we need to `freeze` it. If the block is
+        // masked by the header mask itself, lane zero is known to be active
+        // whenever the branch is executed, so the scalar condition is not
+        // speculative.
+        auto *Term = cast<VPInstruction>(VPBB->getTerminator());
+        VPValue *Cond = Term->getOperand(0);
+        auto *FrozenCond = VPBuilder(Term).createNaryOp(
+            Instruction::Freeze, {Cond}, {}, Term->getDebugLoc());
+        Term->setOperand(0, FrozenCond);
+      }
+
       for (auto *Succ : Successors)
         VPBlockUtils::disconnectBlocks(VPBB, Succ);
 
