@@ -167,7 +167,7 @@ static ProcessSP CreateProcess(lldb::TargetSP target_sp) {
 namespace {
 class CacheTestProcess {
 public:
-  explicit CacheTestProcess(const char *triple = "arm64-apple-macosx")
+  explicit CacheTestProcess(llvm::StringRef triple = "arm64-apple-macosx")
       : m_arch(triple) {
     Platform::SetHostPlatform(
         PlatformRemoteMacOSX::CreateInstance(true, &m_arch));
@@ -181,9 +181,9 @@ public:
     m_process = static_cast<DummyProcess *>(m_process_sp.get());
   }
 
-  DummyProcess *process() const { return m_process; }
+  DummyProcess *GetProcess() const { return m_process; }
   // Widened from uint32_t so tests can do address arithmetic with it.
-  lldb::addr_t line() const { return m_process->GetMemoryCacheLineSize(); }
+  lldb::addr_t GetLine() const { return m_process->GetMemoryCacheLineSize(); }
 
 private:
   ArchSpec m_arch;
