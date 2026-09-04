@@ -1962,8 +1962,11 @@ static bool verifyScalarSize(uint64_t Size) {
   return Size != 0 && isUInt<16>(Size);
 }
 
-static bool verifyVectorElementCount(uint64_t NumElts) {
-  return NumElts != 0 && isUInt<16>(NumElts);
+static bool verifyVectorElementCount(uint64_t NumElts, bool HasVScale) {
+  // A fixed-length vector needs at least two elements: LLT::vector rejects a
+  // one-element ElementCount, and producers map such a type to the element
+  // type itself through LLT::scalarOrVector.
+  return NumElts != 0 && (HasVScale || NumElts != 1) && isUInt<16>(NumElts);
 }
 
 static bool verifyAddrSpace(uint64_t AddrSpace) {
@@ -2050,7 +2053,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return GetError();
   uint64_t NumElements = Token.integerValue().getZExtValue();
-  if (!verifyVectorElementCount(NumElements))
+  if (!verifyVectorElementCount(NumElements, HasVScale))
     return error("invalid number of vector elements");
 
   lex();
