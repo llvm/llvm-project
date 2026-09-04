@@ -18,7 +18,6 @@
 #include "include/llvm-libc-types/struct_pollfd.h"
 #include "src/poll/poll.h"
 #include "src/signal/kill.h"
-#include "src/signal/sigaction.h"
 #include "src/stdio/fflush.h"
 #include "src/stdio/stderr.h"
 #include "src/stdio/stdout.h"
@@ -27,7 +26,6 @@
 #include "src/sys/wait/waitpid.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fork.h"
-#include "src/unistd/getpid.h"
 #include "src/unistd/pipe.h"
 
 #define LIBC_IMPL LIBC_NAMESPACE
@@ -42,10 +40,6 @@
 #include <unistd.h>
 
 #define LIBC_IMPL
-#endif
-
-#if defined(LIBC_ENABLE_COVERAGE)
-extern "C" __attribute__((weak)) void write_raw_profile();
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -64,25 +58,6 @@ int ProcessStatus::get_fatal_signal() {
   return WTERMSIG(platform_defined);
 }
 
-#if defined(LIBC_ENABLE_COVERAGE)
-static void coverage_fatal_signal_handler(int sig) {
-  if (write_raw_profile)
-    write_raw_profile();
-
-  // Restore default signal handler
-#ifdef LIBC_FULL_BUILD
-  struct sigaction sa = {};
-  sa.sa_handler = SIG_DFL;
-  LIBC_IMPL::sigaction(sig, &sa, nullptr);
-#else
-  ::signal(sig, SIG_DFL);
-#endif
-
-  // Re-raise the signal
-  LIBC_IMPL::kill(LIBC_IMPL::getpid(), sig);
-}
-#endif
-
 ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   int pipe_fds[2];
   if (LIBC_IMPL::pipe(pipe_fds) == -1) {
@@ -100,31 +75,10 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   }
 
   if (!pid) {
-#if defined(LIBC_ENABLE_COVERAGE) && defined(LIBC_FULL_BUILD)
-    struct sigaction sa = {};
-    sa.sa_handler = coverage_fatal_signal_handler;
-    LIBC_IMPL::sigaction(SIGABRT, &sa, nullptr);
-    LIBC_IMPL::sigaction(SIGSEGV, &sa, nullptr);
-    LIBC_IMPL::sigaction(SIGILL, &sa, nullptr);
-    LIBC_IMPL::sigaction(SIGFPE, &sa, nullptr);
-    LIBC_IMPL::sigaction(SIGBUS, &sa, nullptr);
-#elif defined(LIBC_ENABLE_COVERAGE)
-    ::signal(SIGABRT, coverage_fatal_signal_handler);
-    ::signal(SIGSEGV, coverage_fatal_signal_handler);
-    ::signal(SIGILL, coverage_fatal_signal_handler);
-    ::signal(SIGFPE, coverage_fatal_signal_handler);
-    ::signal(SIGBUS, coverage_fatal_signal_handler);
-#endif
-
     (*func)();
     delete func;
-#if defined(LIBC_ENABLE_COVERAGE)
-    if (write_raw_profile)
-      write_raw_profile();
-#endif
     LIBC_IMPL::exit(0);
   }
-
   LIBC_IMPL::close(pipe_fds[1]);
 
   pollfd poll_fd{pipe_fds[0], POLLIN, 0};

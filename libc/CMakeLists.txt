@@ -95,28 +95,12 @@ option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 if(LIBC_ENABLE_COVERAGE)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_definitions(LIBC_ENABLE_COVERAGE)
-    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
-    list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
-    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
-
-    # When building with -nostdlib, the compiler does not automatically link the profiling runtime.
-    # We must explicitly query the compiler for the exact architecture-specific profile library path.
-    execute_process(
-      COMMAND ${CMAKE_CXX_COMPILER} --print-libgcc-file-name --rtlib=compiler-rt
-      OUTPUT_VARIABLE COMPILER_RT_BUILTINS
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE COMPILER_RT_RETURN_CODE
-    )
-    if(COMPILER_RT_RETURN_CODE EQUAL 0)
-      string(REPLACE "builtins" "profile" COMPILER_RT_PROFILE "${COMPILER_RT_BUILTINS}")
-      if(EXISTS "${COMPILER_RT_PROFILE}")
-        list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "${COMPILER_RT_PROFILE}")
-      else()
-        message(WARNING "Coverage profiling runtime not found at ${COMPILER_RT_PROFILE}")
-      endif()
-    else()
-      message(WARNING "Failed to locate compiler-rt builtins library for coverage")
-    endif()
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate=libc_cov_%p.profraw"
+         "-fcoverage-mapping" "-fprofile-continuous")
+    list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate=libc_cov_%p.profraw"
+         "-fcoverage-mapping" "-fprofile-continuous")
+    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fprofile-instr-generate=libc_cov_%p.profraw"
+         "-fcoverage-mapping" "-fprofile-continuous")
   else()
     message(FATAL_ERROR "Coverage instrumentation is currently only supported with Clang")
   endif()
