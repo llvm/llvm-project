@@ -243,6 +243,8 @@ class PrerequisiteModulesTests : public ::testing::Test {
 protected:
   void SetUp() override {
     ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("modules-test", TestDir));
+    // /var/tmp is a symlink on Mac. Resolve it so we're asserting the right path.
+    ASSERT_FALSE(llvm::sys::fs::real_path(TestDir, TestDir));
   }
 
   void TearDown() override {
