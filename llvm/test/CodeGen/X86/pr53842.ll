@@ -52,10 +52,10 @@ define void @PR53842_sgt() {
 ; AVX512F-NEXT:    vpmovsxbq (%rax), %zmm1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
 ; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512F-NEXT:    .p2align 4
 ; AVX512F-NEXT:  .LBB1_1: # %vector.body
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512F-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
 ; AVX512F-NEXT:    vpsubq %zmm2, %zmm3, %zmm3 {%k1}
 ; AVX512F-NEXT:    jmp .LBB1_1
 ;
@@ -94,10 +94,10 @@ define void @PR53842_slt() {
 ; AVX512F-NEXT:    vpmovsxbq (%rax), %zmm1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
 ; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
 ; AVX512F-NEXT:    .p2align 4
 ; AVX512F-NEXT:  .LBB2_1: # %vector.body
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512F-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
 ; AVX512F-NEXT:    vpsubq %zmm2, %zmm3, %zmm3 {%k1}
 ; AVX512F-NEXT:    jmp .LBB2_1
 ;
@@ -106,10 +106,10 @@ define void @PR53842_slt() {
 ; AVX512DQ-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vpmovsxbq (%rax), %zmm1
 ; AVX512DQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512DQ-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; AVX512DQ-NEXT:    .p2align 4
 ; AVX512DQ-NEXT:  .LBB2_1: # %vector.body
 ; AVX512DQ-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512DQ-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm3
 ; AVX512DQ-NEXT:    vpsubq %zmm3, %zmm2, %zmm2
 ; AVX512DQ-NEXT:    jmp .LBB2_1

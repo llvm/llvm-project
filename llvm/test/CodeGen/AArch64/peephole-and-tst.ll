@@ -36,6 +36,7 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-GI-LABEL: test_func_i32_two_uses:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, :got:ptr_wrapper
+; CHECK-GI-NEXT:    and w11, w2, w0
 ; CHECK-GI-NEXT:    ldr x8, [x8, :got_lo12:ptr_wrapper]
 ; CHECK-GI-NEXT:    ldr x9, [x8]
 ; CHECK-GI-NEXT:    mov w8, wzr
@@ -49,7 +50,6 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    and w10, w1, w0
 ; CHECK-GI-NEXT:    tst w1, w0
-; CHECK-GI-NEXT:    and w11, w2, w0
 ; CHECK-GI-NEXT:    cinc w8, w8, ne
 ; CHECK-GI-NEXT:    cmp w10, w11
 ; CHECK-GI-NEXT:    b.eq .LBB0_1

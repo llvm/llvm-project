@@ -596,6 +596,20 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
   }
 }
 
+/// Set the register units defined by \p MI in \p Defs.
+static void addRegUnitDefs(const MachineInstr &MI,
+                           const TargetRegisterInfo *TRI, BitVector &Defs) {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.isDef())
+      continue;
+    Register Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    for (MCRegUnit Unit : TRI->regunits(Reg))
+      Defs.set(static_cast<unsigned>(Unit));
+  }
+}
+
 /// Walk the specified region of the CFG and hoist loop invariants out to the
 /// preheader.
 void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
@@ -610,20 +624,27 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
   SmallVector<CandidateInfo, 32> Candidates;
   SmallDenseSet<int> StoredFIs;
 
-  // Walk the entire region, count number of defs for each register, and
-  // collect potential LICM candidates.
+  // First pass: collect all register units defined within the loop.
+  BitVector LoopRUDefs(NumRegUnits);
+  for (MachineBasicBlock *BB : CurLoop->getBlocks())
+    for (MachineInstr &MI : *BB)
+      addRegUnitDefs(MI, TRI, LoopRUDefs);
+
+  // Second pass: walk the entire region, count number of defs for each
+  // register, and collect potential LICM candidates.
   for (MachineBasicBlock *BB : CurLoop->getBlocks()) {
     // If the header of the loop containing this basic block is a landing pad,
     // then don't try to hoist instructions out of this loop.
     const MachineLoop *ML = MLI->getLoopFor(BB);
     if (ML && ML->getHeader()->isEHPad()) continue;
 
-    // Conservatively treat live-in's as an external def.
-    // FIXME: That means a reload that're reused in successor block(s) will not
-    // be LICM'ed.
+    // Only treat live-in registers that are also defined within the loop as
+    // non-invariant. Live-ins that are solely defined outside the loop are
+    // loop-invariant and should not block hoisting.
     for (const auto &LI : BB->liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg))
-        RUDefs.set(static_cast<unsigned>(Unit));
+        if (LoopRUDefs.test(static_cast<unsigned>(Unit)))
+          RUDefs.set(static_cast<unsigned>(Unit));
     }
 
     // Funclet entry blocks will clobber all registers

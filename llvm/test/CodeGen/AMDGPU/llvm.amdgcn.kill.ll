@@ -1720,7 +1720,6 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX12-GISEL-NEXT:  .LBB25_2: ; %bb
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_add_f32 s0, s0, 0x3e800000
-; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-GISEL-NEXT:    s_cbranch_scc1 .LBB25_2
 ; GFX12-GISEL-NEXT:  ; %bb.3: ; %bb33
 ; GFX12-GISEL-NEXT:    s_and_not1_b64 s[2:3], s[2:3], exec
