@@ -13,16 +13,25 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopSplitUtils.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 #define DEBUG_TYPE "loop-bound-split"
 
 using namespace llvm;
 using namespace PatternMatch;
+
+// When enabled, the bound split runs through the generic LoopSplitUtils instead
+// of this pass's bespoke clone-and-fold transform (equivalent, different IR).
+static cl::opt<bool> UseLoopSplitUtils(
+    "loop-bound-split-use-loop-split-utils", cl::init(false), cl::Hidden,
+    cl::desc("Drive LoopBoundSplit's transform through LoopSplitUtils"));
 
 namespace {
 struct ConditionInfo {
@@ -283,6 +292,87 @@ static CondBrInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
   return nullptr;
 }
 
+// Opt-in transform: cut the iteration space where the split condition flips,
+// then fold it (true in the pre-loop, false in the post-loop). Equivalent to
+// the default transform below, but emits LoopSplitUtils' canonical IR shape.
+static bool
+splitLoopBoundWithLoopSplitUtils(Loop &L, DominatorTree &DT, LoopInfo &LI,
+                                 ScalarEvolution &SE, LPMUpdater &U,
+                                 ConditionInfo &SplitCandidateCond) {
+  LoopSplitUtils LSU(&L, &LI, &SE, &DT);
+  if (!LSU.isLegal())
+    return false;
+
+  const auto *IndAR =
+      dyn_cast<SCEVAddRecExpr>(SE.getSCEV(LSU.getInductionVariable()));
+  if (!IndAR || !IndAR->isAffine())
+    return false;
+
+  // The split condition must be over the loop's induction recurrence so its
+  // boundary maps directly onto the iteration space the utility partitions.
+  if (SplitCandidateCond.AddRecSCEV != IndAR)
+    return false;
+
+  Type *IndTy = IndAR->getType();
+  const SCEV *SplitBoundSCEV = SplitCandidateCond.BoundSCEV;
+  if (SplitBoundSCEV->getType() != IndTy)
+    return false;
+
+  // The split condition is normalized to "AddRec < SplitBound", so the pre-loop
+  // covers iterations with induction < SplitBound and the post-loop the rest.
+  // findSplitCandidate guarantees SplitBound > start, so the pre-loop is nonempty.
+  const SCEV *Step = IndAR->getStepRecurrence(SE);
+  const SCEV *Start0 = IndAR->getStart();
+
+  // Round SplitBound up to the next induction-grid value {Start + k*Step} --
+  // Start1 = Start + Step*ceil((SplitBound-Start)/Step) -- the first iteration
+  // "iv < SplitBound" is false for. Step>0 and SplitBound>Start make it exact.
+  const auto *StepC = dyn_cast<SCEVConstant>(Step);
+  if (!StepC || !StepC->getAPInt().isStrictlyPositive())
+    return false;
+  const SCEV *Delta = SE.getMinusSCEV(SplitBoundSCEV, Start0);
+  const SCEV *K = SE.getUDivExpr(
+      SE.getAddExpr(Delta, SE.getMinusSCEV(Step, SE.getOne(IndTy))), Step);
+  const SCEV *Start1 = SE.getAddExpr(Start0, SE.getMulExpr(K, Step));
+  const SCEV *End0 = SE.getMinusSCEV(Start1, Step);
+  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
+  const SCEV *End1 = IndAR->evaluateAtIteration(BTC, SE);
+  if (End1->getType() != IndTy)
+    return false;
+
+  LSU.addPartition(Start0, End0);
+  LSU.addPartition(Start1, End1);
+  LSU.avoidPartitionGuard(0);
+
+  if (!LSU.split())
+    return false;
+
+  // Fold the split condition: true in the pre-loop (partition 0), false in the
+  // post-loop (partition 1). The dead arm is cleaned up later (SimplifyCFG).
+  LLVMContext &Context = L.getHeader()->getContext();
+  SplitCandidateCond.BI->setCondition(ConstantInt::getTrue(Context));
+  if (auto *ClonedSplitCandidateBI = dyn_cast_or_null<CondBrInst>(
+          LSU.getPartitionValue(SplitCandidateCond.BI, 1)))
+    ClonedSplitCandidateBI->setCondition(ConstantInt::getFalse(Context));
+
+  // Refresh analyses and hand the post-loop to the pass manager. The splitter's
+  // SSA fix-up does not restore LCSSA across the new boundaries, so rebuild it
+  // before re-simplifying (simplifyLoop asserts LCSSA when preserving it).
+  SE.forgetLoop(&L);
+  Loop *PostLoop = LSU.getPartitionLoop(1);
+  formLCSSARecursively(L, DT, &LI, &SE);
+  if (PostLoop)
+    formLCSSARecursively(*PostLoop, DT, &LI, &SE);
+  simplifyLoop(&L, &DT, &LI, &SE, nullptr, nullptr, /*PreserveLCSSA=*/true);
+  if (PostLoop) {
+    simplifyLoop(PostLoop, &DT, &LI, &SE, nullptr, nullptr,
+                 /*PreserveLCSSA=*/true);
+    U.addSiblingLoops(PostLoop);
+  }
+
+  return true;
+}
+
 static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
                            ScalarEvolution &SE, LPMUpdater &U) {
   ConditionInfo SplitCandidateCond;
@@ -297,6 +387,11 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
 
   if (!isProfitableToTransform(L, SplitCandidateCond.BI))
     return false;
+
+  // Opt-in: perform the transform through the generic splitter instead.
+  if (UseLoopSplitUtils)
+    return splitLoopBoundWithLoopSplitUtils(L, DT, LI, SE, U,
+                                            SplitCandidateCond);
 
   // Now, we have a split candidate. Let's build a form as below.
   //    +--------------------+
