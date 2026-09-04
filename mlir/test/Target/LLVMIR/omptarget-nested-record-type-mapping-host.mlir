@@ -30,7 +30,7 @@ llvm.func @_QQmain() {
 }
 
 // CHECK: @.offload_sizes = private unnamed_addr constant [5 x i64] [i64 0, i64 4, i64 4, i64 16, i64 0]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [5 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710659, i64 288]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [5 x i64] [i64 35, i64 281474976710659, i64 281474976710659, i64 281474976710659, i64 288]
 
 // CHECK: define void @_QQmain()
 // CHECK: %[[ALLOCA:.*]] = alloca { float, [10 x i32], { float, i32 }, i32 }, i64 1, align 8
