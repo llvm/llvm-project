@@ -4708,9 +4708,42 @@ static bool
 buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
                              SmallVectorImpl<CapturedStmt::Capture> &Captures,
                              SmallVectorImpl<Expr *> &CaptureInits) {
+  bool HasError = false; // Track if any errors occurred.
+  llvm::SmallPtrSet<VarDecl *, 4> CapturedDecomposed;
   for (const sema::Capture &Cap : RSI->Captures) {
     if (Cap.isInvalid())
       continue;
+
+    ValueDecl *CapVar = nullptr;
+    if (Cap.isVariableCapture()) {
+      CapVar = Cap.getVariable();
+      if (auto *BD = dyn_cast<BindingDecl>(CapVar)) {
+        // Detect structured bindings in OpenMP captured regions.
+        // When a BindingDecl (e.g., 'a' from 'auto [a, b] = p')
+        // is referenced inside an OpenMP region.
+        // isVariableCapturable() in SemaExpr.cpp already resets this to the
+        // DecompositionDecl during per-use expression checking. This runs
+        // later, at region-end (ActOnCapturedRegionEnd), over the
+        // already-built capture list, catching captures added without going
+        // through that per-use path (e.g. via explicit map clauses).
+        if (RSI->CapRegionKind == CR_OpenMP && BD->getHoldingVar()) {
+          S.Diag(Cap.getLocation(), diag::err_capture_tuple_binding_openmp)
+              << CapVar;
+          S.Diag(CapVar->getLocation(), diag::note_entity_declared_at)
+              << CapVar;
+          HasError = true; // Mark error but continue.
+          continue;        // Skip this capture, move to next.
+        }
+        CapVar = cast<VarDecl>(BD->getDecomposedDecl());
+      }
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (auto *DD = dyn_cast<DecompositionDecl>(CapVar)) {
+          if (!CapturedDecomposed.insert(DD).second) {
+            continue; // Skip duplicate
+          }
+        }
+      }
+    }
 
     // Form the initializer for the capture.
     ExprResult Init = S.BuildCaptureInit(Cap, Cap.getLocation(),
@@ -4719,32 +4752,38 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     // FIXME: Bail out now if the capture is not used and the initializer has
     // no side-effects.
 
-    // Create a field for this capture.
-    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
+    // Build the capture field. For OpenMP, pass IsOpenMP=true to handle
+    // DecompositionDecl captures correctly.
+    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap,
+                                           RSI->CapRegionKind == CR_OpenMP);
 
     // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {
-      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
-                                               CapturedStmt::VCK_This));
+      Captures.push_back(
+          CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_This));
     } else if (Cap.isVLATypeCapture()) {
       Captures.push_back(
           CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_VLAType));
     } else {
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
-      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-        S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(),
-                                        RSI->OpenMPLevel);
-
-      Captures.push_back(CapturedStmt::Capture(
-          Cap.getLocation(),
-          Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
-                                   : CapturedStmt::VCK_ByCopy,
-          cast<VarDecl>(Cap.getVariable())));
+      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
+        const ValueDecl *DSAVar = Cap.getVariable();
+        // DSAs are tracked per binding; a captured DecompositionDecl has no
+        // own DSA entry.
+        if (const auto *DD = dyn_cast<DecompositionDecl>(DSAVar))
+          if (!DD->bindings().empty())
+            DSAVar = *DD->bindings().begin();
+        S.OpenMP().setOpenMPCaptureKind(Field, DSAVar, RSI->OpenMPLevel);
+      }
+      Captures.emplace_back(Cap.getLocation(),
+                            Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
+                                                     : CapturedStmt::VCK_ByCopy,
+                            cast<VarDecl>(CapVar));
     }
     CaptureInits.push_back(Init.get());
   }
-  return false;
+  return HasError;
 }
 
 static std::optional<int>

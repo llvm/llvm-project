@@ -190,8 +190,10 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       // Mark private vars as undefs.
       for (const auto *C : LD->getClausesOfKind<OMPPrivateClause>()) {
         for (const Expr *IRef : C->varlist()) {
-          const auto *OrigVD =
-              cast<VarDecl>(cast<DeclRefExpr>(IRef)->getDecl());
+          const auto *OrigDecl = cast<DeclRefExpr>(IRef)->getDecl();
+          const auto *OrigVD = dyn_cast<VarDecl>(OrigDecl);
+          if (!OrigVD)
+            continue;
           if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
             QualType OrigVDTy = OrigVD->getType().getNonReferenceType();
             (void)PreCondVars.setVarAddr(
@@ -385,6 +387,21 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
                                          const OMPExecutableDirective &S,
                                          const RegionCodeGenTy &CodeGen);
 
+Address CodeGenFunction::EmitOMPBindingOriginalAddr(const BindingDecl *BD,
+                                                    SourceLocation Loc) {
+  if (CapturedStmtInfo &&
+      CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP) {
+    if (const auto *DD = dyn_cast<VarDecl>(BD->getDecomposedDecl())) {
+      if (CapturedStmtInfo->lookup(DD))
+        return EmitOMPCapturedBindingLValue(BD).getAddress();
+    }
+  }
+  DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
+                  /*RefersToEnclosingVariableOrCapture=*/false, BD->getType(),
+                  VK_LValue, Loc);
+  return EmitLValue(&DRE).getAddress();
+}
+
 LValue CodeGenFunction::EmitOMPSharedLValue(const Expr *E) {
   if (const auto *OrigDRE = dyn_cast<DeclRefExpr>(E)) {
     if (const auto *OrigVD = dyn_cast<VarDecl>(OrigDRE->getDecl())) {
@@ -395,6 +412,15 @@ LValue CodeGenFunction::EmitOMPSharedLValue(const Expr *E) {
           (isa_and_nonnull<BlockDecl>(CurCodeDecl));
       DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD), IsCaptured,
                       OrigDRE->getType(), VK_LValue, OrigDRE->getExprLoc());
+      return EmitLValue(&DRE);
+    }
+    if (const auto *OrigBD = dyn_cast<BindingDecl>(OrigDRE->getDecl())) {
+      OrigBD = cast<BindingDecl>(OrigBD->getCanonicalDecl());
+      bool IsCaptured = CapturedStmtInfo != nullptr ||
+                        (isa_and_nonnull<BlockDecl>(CurCodeDecl));
+      DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(OrigBD),
+                      IsCaptured, OrigDRE->getType(), VK_LValue,
+                      OrigDRE->getExprLoc());
       return EmitLValue(&DRE);
     }
   }
@@ -1157,12 +1183,12 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
   bool DeviceConstTarget = getLangOpts().OpenMPIsTargetDevice &&
                            isOpenMPTargetExecutionDirective(EKind);
   bool FirstprivateIsLastprivate = false;
-  llvm::DenseMap<const VarDecl *, OpenMPLastprivateModifier> Lastprivates;
+  llvm::SmallDenseMap<const Decl *, OpenMPLastprivateModifier> Lastprivates;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
-    for (const auto *D : C->varlist())
-      Lastprivates.try_emplace(
-          cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl(),
-          C->getKind());
+    for (const auto *D : C->varlist()) {
+      const auto *VD = cast<DeclRefExpr>(D)->getDecl();
+      Lastprivates.try_emplace(VD->getCanonicalDecl(), C->getKind());
+    }
   }
   llvm::DenseSet<const VarDecl *> EmittedAsFirstprivate;
   llvm::SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
@@ -1175,11 +1201,74 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
     const auto *IRef = C->varlist_begin();
     const auto *InitsRef = C->inits().begin();
     for (const Expr *IInit : C->private_copies()) {
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
+
+      if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+        // Check if this binding is also lastprivate.
+        bool ThisFirstprivateIsLastprivate =
+            Lastprivates.count(BD->getCanonicalDecl()) > 0;
+        const auto *VDInit =
+            cast<VarDecl>(cast<DeclRefExpr>(*InitsRef)->getDecl());
+        Address OriginalAddr =
+            EmitOMPBindingOriginalAddr(BD, (*IRef)->getExprLoc());
+
+        QualType Type = VD->getType();
+        bool IsRegistered;
+        if (Type->isArrayType()) {
+          // For array bindings, use array copy logic
+          AutoVarEmission Emission = EmitAutoVarAlloca(*VD);
+          const Expr *Init = VD->getInit();
+          LValue OriginalLVal = MakeAddrLValue(OriginalAddr, Type);
+          if (!Init || !isa<CXXConstructExpr>(Init) ||
+              isTrivialInitializer(Init)) {
+            // Perform simple memcpy.
+            LValue Dest = MakeAddrLValue(Emission.getAllocatedAddress(), Type);
+            EmitAggregateAssign(Dest, OriginalLVal, Type);
+          } else {
+            EmitOMPAggregateAssign(
+                Emission.getAllocatedAddress(), OriginalAddr, Type,
+                [this, VDInit, Init](Address DestElement, Address SrcElement) {
+                  // Clean up any temporaries needed by the initialization.
+                  RunCleanupsScope InitScope(*this);
+                  // Emit initialization for single element.
+                  setAddrOfLocalVar(VDInit, SrcElement);
+                  EmitAnyExprToMem(Init, DestElement,
+                                   Init->getType().getQualifiers(),
+                                   /*IsInitializer*/ false);
+                  LocalDeclMap.erase(VDInit);
+                });
+          }
+          EmitAutoVarCleanups(Emission);
+          IsRegistered =
+              PrivateScope.addPrivate(BD, Emission.getAllocatedAddress());
+        } else {
+          // VD now has the binding's type (e.g., int), not the struct type.
+          // Emit VD initialized from the binding's field address.
+          setAddrOfLocalVar(VDInit, OriginalAddr);
+          EmitDecl(*VD);
+          LocalDeclMap.erase(VDInit);
+          Address VDAddr = GetAddrOfLocalVar(VD);
+          // VD is the private copy of the binding, map BD to VDAddr directly
+          IsRegistered = PrivateScope.addPrivate(BD, VDAddr);
+        }
+
+        assert(IsRegistered &&
+               "firstprivate var already registered as firstprivate");
+        (void)IsRegistered;
+        FirstprivateIsLastprivate =
+            FirstprivateIsLastprivate || ThisFirstprivateIsLastprivate;
+        ++IRef;
+        ++InitsRef;
+        continue;
+      }
+
+      // Original VarDecl logic.
+      const VarDecl *OrigVD = dyn_cast<VarDecl>(OrigDecl);
+      assert(OrigVD && "Expected VarDecl for non-BindingDecl firstprivate");
       bool ThisFirstprivateIsLastprivate =
           Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
       const FieldDecl *FD = CapturedStmtInfo->lookup(OrigVD);
-      const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
       if (!MustEmitFirstprivateCopy && !ThisFirstprivateIsLastprivate && FD &&
           !FD->getType()->isReferenceType() &&
           (!VD || !VD->hasAttr<OMPAllocateDeclAttr>())) {
@@ -1298,19 +1387,18 @@ void CodeGenFunction::EmitOMPPrivateClause(
     CodeGenFunction::OMPPrivateScope &PrivateScope) {
   if (!HaveInsertPoint())
     return;
-  llvm::DenseSet<const VarDecl *> EmittedAsPrivate;
+  llvm::SmallDenseSet<const ValueDecl *> EmittedAsPrivate;
   for (const auto *C : D.getClausesOfKind<OMPPrivateClause>()) {
     auto IRef = C->varlist_begin();
     for (const Expr *IInit : C->private_copies()) {
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-      if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
-        const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
+      if (EmittedAsPrivate.insert(cast<ValueDecl>(OrigDecl->getCanonicalDecl()))
+              .second) {
         EmitDecl(*VD);
-        // Emit private VarDecl with copy init.
         bool IsRegistered =
-            PrivateScope.addPrivate(OrigVD, GetAddrOfLocalVar(VD));
+            PrivateScope.addPrivate(OrigDecl, GetAddrOfLocalVar(VD));
         assert(IsRegistered && "private var already registered as private");
-        // Silence the warning about unused variable.
         (void)IsRegistered;
       }
       ++IRef;
@@ -1404,7 +1492,7 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
           cast<VarDecl>(cast<DeclRefExpr>(C)->getDecl())->getCanonicalDecl());
     }
   }
-  llvm::DenseSet<const VarDecl *> AlreadyEmittedVars;
+  llvm::SmallDenseSet<const ValueDecl *> AlreadyEmittedVars;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
     HasAtLeastOneLastprivate = true;
     if (isOpenMPTaskLoopDirective(EKind) && !getLangOpts().OpenMPSimd)
@@ -1414,7 +1502,34 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
     for (const Expr *IInit : C->private_copies()) {
       // Keep the address of the original variable for future update at the end
       // of the loop.
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      // Handle BindingDecls with the same level of support as VarDecls.
+      if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+        if (AlreadyEmittedVars.insert(cast<ValueDecl>(BD->getCanonicalDecl()))
+                .second) {
+          const auto *DestVD =
+              cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
+
+          // Get the original binding address.
+          Address OrigAddr =
+              EmitOMPBindingOriginalAddr(BD, (*IRef)->getExprLoc());
+          PrivateScope.addPrivate(DestVD, OrigAddr);
+          if (IInit) {
+            const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
+            // Emit private VarDecl with copy init.
+            EmitDecl(*VD);
+            Address VDAddr = GetAddrOfLocalVar(VD);
+            bool IsRegistered = PrivateScope.addPrivate(BD, VDAddr);
+            assert(IsRegistered &&
+                   "lastprivate binding already registered as private");
+            (void)IsRegistered;
+          }
+        }
+        ++IRef;
+        ++IDestRef;
+        continue;
+      }
+      const auto *OrigVD = cast<VarDecl>(OrigDecl);
       // Taskloops do not require additional initialization, it is done in
       // runtime support library.
       if (AlreadyEmittedVars.insert(OrigVD->getCanonicalDecl()).second) {
@@ -1484,8 +1599,8 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
     Builder.CreateCondBr(IsLastIterCond, ThenBB, DoneBB);
     EmitBlock(ThenBB);
   }
-  llvm::DenseSet<const VarDecl *> AlreadyEmittedVars;
-  llvm::DenseMap<const VarDecl *, const Expr *> LoopCountersAndUpdates;
+  llvm::DenseSet<const ValueDecl *> AlreadyEmittedVars;
+  llvm::SmallDenseMap<const VarDecl *, const Expr *> LoopCountersAndUpdates;
   if (const auto *LoopDirective = dyn_cast<OMPLoopDirective>(&D)) {
     auto IC = LoopDirective->counters().begin();
     for (const Expr *F : LoopDirective->finals()) {
@@ -1503,27 +1618,69 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
     auto ISrcRef = C->source_exprs().begin();
     auto IDestRef = C->destination_exprs().begin();
     for (const Expr *AssignOp : C->assignment_ops()) {
-      const auto *PrivateVD =
-          cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-      QualType Type = PrivateVD->getType();
-      const auto *CanonicalVD = PrivateVD->getCanonicalDecl();
-      if (AlreadyEmittedVars.insert(CanonicalVD).second) {
+      const auto *PrivateDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+
+      // For BindingDecls, check if we should use .lastprivate.src or the BD
+      // itself.
+      const VarDecl *PrivateVD = nullptr;
+      const BindingDecl *BD = nullptr;
+      if ((BD = dyn_cast<BindingDecl>(PrivateDecl))) {
+        // Check if .lastprivate.src is available (taskloop case).
+        const auto *SrcVD =
+            cast<VarDecl>(cast<DeclRefExpr>(*ISrcRef)->getDecl());
+
+        if (LocalDeclMap.count(SrcVD)) {
+          // Taskloop case: use .lastprivate.src.
+          PrivateVD = SrcVD;
+        } else if (OMPPrivatizedBindings.count(BD)) {
+          // Parallel for case: BindingDecl is directly privatized.
+          // Leave PrivateVD as nullptr to handle specially below.
+        }
+      } else {
+        PrivateVD = cast<VarDecl>(PrivateDecl);
+      }
+
+      QualType Type = PrivateVD ? PrivateVD->getType() : BD->getType();
+      const auto *CanonicalVD =
+          PrivateVD ? PrivateVD->getCanonicalDecl() : nullptr;
+
+      // Check if already emitted.
+      bool ShouldEmit =
+          AlreadyEmittedVars
+              .insert(PrivateVD ? static_cast<const ValueDecl *>(CanonicalVD)
+                                : static_cast<const ValueDecl *>(BD))
+              .second;
+      if (ShouldEmit) {
         // If lastprivate variable is a loop control variable for loop-based
         // directive, update its value before copyin back to original
         // variable.
-        if (const Expr *FinalExpr = LoopCountersAndUpdates.lookup(CanonicalVD))
-          EmitIgnoredExpr(FinalExpr);
+        if (CanonicalVD) {
+          if (const Expr *FinalExpr =
+                  LoopCountersAndUpdates.lookup(CanonicalVD))
+            EmitIgnoredExpr(FinalExpr);
+        }
         const auto *SrcVD =
             cast<VarDecl>(cast<DeclRefExpr>(*ISrcRef)->getDecl());
         const auto *DestVD =
             cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
+
         // Get the address of the private variable.
-        Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
-        if (const auto *RefTy = PrivateVD->getType()->getAs<ReferenceType>())
-          PrivateAddr = Address(
-              Builder.CreateLoad(PrivateAddr),
-              CGM.getTypes().ConvertTypeForMem(RefTy->getPointeeType()),
-              CGM.getNaturalTypeAlignment(RefTy->getPointeeType()));
+        Address PrivateAddr = Address::invalid();
+        if (PrivateVD) {
+          PrivateAddr = GetAddrOfLocalVar(PrivateVD);
+        } else {
+          auto It = OMPPrivatizedBindings.find(BD);
+          assert(It != OMPPrivatizedBindings.end() &&
+                 "BindingDecl should be privatized");
+          PrivateAddr = It->second;
+        }
+        if (PrivateVD) {
+          if (const auto *RefTy = PrivateVD->getType()->getAs<ReferenceType>())
+            PrivateAddr = Address(
+                Builder.CreateLoad(PrivateAddr),
+                CGM.getTypes().ConvertTypeForMem(RefTy->getPointeeType()),
+                CGM.getNaturalTypeAlignment(RefTy->getPointeeType()));
+        }
         // Store the last value to the private copy in the last iteration.
         if (C->getKind() == OMPC_LASTPRIVATE_conditional)
           CGM.getOpenMPRuntime().emitLastprivateConditionalFinalUpdate(
@@ -1582,7 +1739,6 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
   auto *IPriv = Privates.begin();
   for (const Expr *IRef : Shareds) {
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IPriv)->getDecl());
-    // Emit private VarDecl with reduction init.
     RedCG.emitSharedOrigLValue(*this, Count);
     RedCG.emitAggregateType(*this, Count);
     AutoVarEmission Emission = EmitAutoVarAlloca(*PrivateVD);
@@ -1849,7 +2005,11 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
+      // Skip BindingDecls - lastprivate conditional only applies to VarDecls.
+      const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+      if (!VD)
+        continue;
+      PrivateDecls.insert(VD);
       CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
     }
   }
@@ -1860,8 +2020,12 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
-      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+      // Skip BindingDecls - they don't use the same conditional lastprivate
+      // mechanism.
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        PrivateDecls.insert(VD);
+        CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+      }
     }
   }
   for (const auto *C : S.getClausesOfKind<OMPLinearClause>()) {
@@ -1871,8 +2035,10 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
-      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        PrivateDecls.insert(VD);
+        CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+      }
     }
   }
   // Privates should ne analyzed since they are not captured at all.
@@ -1886,7 +2052,9 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
+      // Only track VarDecl, not BindingDecl.
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        PrivateDecls.insert(VD);
     }
   }
   CGF.CGM.getOpenMPRuntime().checkAndEmitSharedLastprivateConditional(
@@ -2549,17 +2717,21 @@ bool CodeGenFunction::EmitOMPLinearClauseInit(const OMPLoopDirective &D) {
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(Init)->getDecl());
       if (const auto *Ref =
               dyn_cast<DeclRefExpr>(VD->getInit()->IgnoreImpCasts())) {
-        AutoVarEmission Emission = EmitAutoVarAlloca(*VD);
-        const auto *OrigVD = cast<VarDecl>(Ref->getDecl());
-        DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
-                        CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                        VD->getInit()->getType(), VK_LValue,
-                        VD->getInit()->getExprLoc());
-        EmitExprAsInit(
-            &DRE, VD,
-            MakeAddrLValue(Emission.getAllocatedAddress(), VD->getType()),
-            /*capturedByInit=*/false);
-        EmitAutoVarCleanups(Emission);
+        if (isa<BindingDecl>(Ref->getDecl())) {
+          EmitVarDecl(*VD);
+        } else {
+          AutoVarEmission Emission = EmitAutoVarAlloca(*VD);
+          const auto *OrigVD = cast<VarDecl>(Ref->getDecl());
+          DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
+                          CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                          VD->getInit()->getType(), VK_LValue,
+                          VD->getInit()->getExprLoc());
+          EmitExprAsInit(
+              &DRE, VD,
+              MakeAddrLValue(Emission.getAllocatedAddress(), VD->getType()),
+              /*capturedByInit=*/false);
+          EmitAutoVarCleanups(Emission);
+        }
       } else {
         EmitVarDecl(*VD);
       }
@@ -2596,15 +2768,72 @@ void CodeGenFunction::EmitOMPLinearClauseFinal(
           EmitBlock(ThenBB);
         }
       }
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IC)->getDecl());
-      DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
-                      CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                      (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
-      Address OrigAddr = EmitLValue(&DRE).getAddress();
-      CodeGenFunction::OMPPrivateScope VarScope(*this);
-      VarScope.addPrivate(OrigVD, OrigAddr);
-      (void)VarScope.Privatize();
-      EmitIgnoredExpr(F);
+      const auto *OrigDecl = cast<DeclRefExpr>(*IC)->getDecl();
+
+      // For BindingDecls, temporarily remove from OMPPrivatizedBindings BEFORE
+      // getting the original address, otherwise EmitOMPBindingOriginalAddr will
+      // return the privatized address instead of the true original.
+      Address SavedPrivBinding = Address::invalid();
+      const BindingDecl *BD = dyn_cast<BindingDecl>(OrigDecl);
+      if (BD) {
+        const BindingDecl *CanonBD = cast<BindingDecl>(BD->getCanonicalDecl());
+        auto PrivIt = OMPPrivatizedBindings.find(CanonBD);
+        if (PrivIt != OMPPrivatizedBindings.end()) {
+          SavedPrivBinding = PrivIt->second;
+          OMPPrivatizedBindings.erase(PrivIt);
+        }
+      }
+
+      Address OrigAddr = [&]() -> Address {
+        if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+          // BindingDecl: use EmitOMPBindingOriginalAddr to get the true
+          // original address.
+          return EmitOMPBindingOriginalAddr(BD, (*IC)->getExprLoc());
+        }
+        const auto *OrigVD = cast<VarDecl>(OrigDecl);
+        DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
+                        CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                        (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
+        return EmitLValue(&DRE).getAddress();
+      }();
+
+      if (BD) {
+        // For BindingDecls, directly manipulate LocalDeclMap without using
+        // VarScope, because VarScope.addPrivate would also update
+        // OMPPrivatizedBindings which interferes with the lookup in
+        // EmitDeclRefLValue.
+        const BindingDecl *CanonBD = cast<BindingDecl>(BD->getCanonicalDecl());
+
+        // Save and update LocalDeclMap using canonical decl.
+        Address SavedLocalAddr = Address::invalid();
+        auto LocalIt = LocalDeclMap.find(CanonBD);
+        bool WasInLocal = LocalIt != LocalDeclMap.end();
+        if (WasInLocal) {
+          SavedLocalAddr = LocalIt->second;
+          LocalIt->second = OrigAddr;
+        } else {
+          LocalDeclMap.insert({CanonBD, OrigAddr});
+        }
+
+        EmitIgnoredExpr(F);
+
+        // Restore LocalDeclMap using canonical decl.
+        if (WasInLocal) {
+          LocalDeclMap.find(CanonBD)->second = SavedLocalAddr;
+        } else {
+          LocalDeclMap.erase(CanonBD);
+        }
+
+        // Restore OMPPrivatizedBindings using canonical decl.
+        if (SavedPrivBinding.isValid())
+          OMPPrivatizedBindings.insert_or_assign(CanonBD, SavedPrivBinding);
+      } else {
+        // For VarDecls, use the normal VarScope mechanism.
+        CodeGenFunction::OMPPrivateScope VarScope(*this);
+        VarScope.addPrivate(OrigDecl, OrigAddr);
+        (void)VarScope.Privatize();
+        EmitIgnoredExpr(F);
+      }
       ++IC;
     }
     if (const Expr *PostUpdate = C->getPostUpdateExpr())
@@ -2745,14 +2974,17 @@ void CodeGenFunction::EmitOMPLinearClause(
   for (const auto *C : D.getClausesOfKind<OMPLinearClause>()) {
     auto CurPrivate = C->privates().begin();
     for (const Expr *E : C->varlist()) {
-      const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+      const auto *VD = cast<DeclRefExpr>(E)->getDecl();
       const auto *PrivateVD =
           cast<VarDecl>(cast<DeclRefExpr>(*CurPrivate)->getDecl());
-      if (!SIMDLCVs.count(VD->getCanonicalDecl())) {
+      bool IsSIMDLCV = false;
+      if (const auto *VarD = dyn_cast<VarDecl>(VD))
+        IsSIMDLCV = SIMDLCVs.count(VarD->getCanonicalDecl());
+      if (!IsSIMDLCV) {
         // Emit private VarDecl with copy init.
         EmitVarDecl(*PrivateVD);
-        bool IsRegistered =
-            PrivateScope.addPrivate(VD, GetAddrOfLocalVar(PrivateVD));
+        Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
+        bool IsRegistered = PrivateScope.addPrivate(VD, PrivateAddr);
         assert(IsRegistered && "linear var already registered as private");
         // Silence the warning about unused variable.
         (void)IsRegistered;
@@ -5238,13 +5470,14 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
   }
   // The first function argument for tasks is a thread id, the second one is a
   // part id (0 for tied tasks, >=0 for untied task).
-  llvm::DenseSet<const VarDecl *> EmittedAsPrivate;
+  llvm::DenseSet<const ValueDecl *> EmittedAsPrivate;
   // Get list of private variables.
   for (const auto *C : S.getClausesOfKind<OMPPrivateClause>()) {
     auto IRef = C->varlist_begin();
     for (const Expr *IInit : C->private_copies()) {
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-      if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      if (EmittedAsPrivate.insert(cast<ValueDecl>(OrigDecl->getCanonicalDecl()))
+              .second) {
         Data.PrivateVars.push_back(*IRef);
         Data.PrivateCopies.push_back(IInit);
       }
@@ -5257,8 +5490,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     auto IRef = C->varlist_begin();
     auto IElemInitRef = C->inits().begin();
     for (const Expr *IInit : C->private_copies()) {
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-      if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      if (EmittedAsPrivate.insert(cast<ValueDecl>(OrigDecl->getCanonicalDecl()))
+              .second) {
         Data.FirstprivateVars.push_back(*IRef);
         Data.FirstprivateCopies.push_back(IInit);
         Data.FirstprivateInits.push_back(*IElemInitRef);
@@ -5268,21 +5502,26 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     }
   }
   // Get list of lastprivate variables (for taskloops).
-  llvm::MapVector<const VarDecl *, const DeclRefExpr *> LastprivateDstsOrigs;
+  llvm::MapVector<const ValueDecl *, const DeclRefExpr *> LastprivateDstsOrigs;
+  llvm::MapVector<const ValueDecl *, const DeclRefExpr *> LastprivateSrcsOrigs;
   for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
     auto IRef = C->varlist_begin();
     auto ID = C->destination_exprs().begin();
+    auto IS = C->source_exprs().begin();
     for (const Expr *IInit : C->private_copies()) {
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-      if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      if (EmittedAsPrivate.insert(cast<ValueDecl>(OrigDecl->getCanonicalDecl()))
+              .second) {
         Data.LastprivateVars.push_back(*IRef);
         Data.LastprivateCopies.push_back(IInit);
       }
-      LastprivateDstsOrigs.insert(
-          std::make_pair(cast<VarDecl>(cast<DeclRefExpr>(*ID)->getDecl()),
-                         cast<DeclRefExpr>(*IRef)));
+      LastprivateDstsOrigs.insert(std::make_pair(
+          cast<DeclRefExpr>(*ID)->getDecl(), cast<DeclRefExpr>(*IRef)));
+      LastprivateSrcsOrigs.insert(std::make_pair(
+          cast<DeclRefExpr>(*IS)->getDecl(), cast<DeclRefExpr>(*IRef)));
       ++IRef;
       ++ID;
+      ++IS;
     }
   }
   SmallVector<const Expr *, 4> LHSs;
@@ -5308,8 +5547,8 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
                               Checker.getPrivateDecls().end());
   }
   auto &&CodeGen = [&Data, &S, CS, &BodyGen, &LastprivateDstsOrigs,
-                    CapturedRegion](CodeGenFunction &CGF,
-                                    PrePostActionTy &Action) {
+                    &LastprivateSrcsOrigs, CapturedRegion](
+                       CodeGenFunction &CGF, PrePostActionTy &Action) {
     llvm::MapVector<CanonicalDeclPtr<const VarDecl>,
                     std::pair<Address, Address>>
         UntiedLocalVars;
@@ -5375,7 +5614,8 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         }
       }
     }
-    llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> FirstprivatePtrs;
+    llvm::SmallVector<std::pair<const ValueDecl *, Address>, 16>
+        FirstprivatePtrs;
     if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty() ||
         !Data.LastprivateVars.empty() || !Data.PrivateLocals.empty()) {
       enum { PrivatesParam = 2, CopyFnParam = 3 };
@@ -5384,13 +5624,13 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       llvm::Value *PrivatesPtr = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(
           CS->getCapturedDecl()->getParam(PrivatesParam)));
       // Map privates.
-      llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> PrivatePtrs;
+      llvm::SmallVector<std::pair<const ValueDecl *, Address>, 16> PrivatePtrs;
       llvm::SmallVector<llvm::Value *, 16> CallArgs;
       llvm::SmallVector<llvm::Type *, 4> ParamTypes;
       CallArgs.push_back(PrivatesPtr);
       ParamTypes.push_back(PrivatesPtr->getType());
       for (const Expr *E : Data.PrivateVars) {
-        const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+        const auto *VD = cast<DeclRefExpr>(E)->getDecl();
         RawAddress PrivatePtr = CGF.CreateMemTempWithoutCast(
             CGF.getContext().getPointerType(E->getType()), ".priv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
@@ -5398,7 +5638,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         ParamTypes.push_back(PrivatePtr.getType());
       }
       for (const Expr *E : Data.FirstprivateVars) {
-        const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+        const auto *VD = cast<DeclRefExpr>(E)->getDecl();
         RawAddress PrivatePtr = CGF.CreateMemTempWithoutCast(
             CGF.getContext().getPointerType(E->getType()),
             ".firstpriv.ptr.addr");
@@ -5408,7 +5648,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         ParamTypes.push_back(PrivatePtr.getType());
       }
       for (const Expr *E : Data.LastprivateVars) {
-        const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+        const auto *VD = cast<DeclRefExpr>(E)->getDecl();
         RawAddress PrivatePtr = CGF.CreateMemTempWithoutCast(
             CGF.getContext().getPointerType(E->getType()),
             ".lastpriv.ptr.addr");
@@ -5438,13 +5678,21 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : LastprivateDstsOrigs) {
-        const auto *OrigVD = cast<VarDecl>(Pair.second->getDecl());
-        DeclRefExpr DRE(CGF.getContext(), const_cast<VarDecl *>(OrigVD),
-                        /*RefersToEnclosingVariableOrCapture=*/
-                        CGF.CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                        Pair.second->getType(), VK_LValue,
-                        Pair.second->getExprLoc());
-        Scope.addPrivate(Pair.first, CGF.EmitLValue(&DRE).getAddress());
+        const auto *OrigDecl = Pair.second->getDecl();
+        if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+          // For BindingDecls, emit the binding's LValue directly.
+          Address OrigAddr =
+              CGF.EmitOMPBindingOriginalAddr(BD, Pair.second->getExprLoc());
+          Scope.addPrivate(Pair.first, OrigAddr);
+        } else {
+          const auto *OrigVD = cast<VarDecl>(OrigDecl);
+          DeclRefExpr DRE(CGF.getContext(), const_cast<VarDecl *>(OrigVD),
+                          /*RefersToEnclosingVariableOrCapture=*/
+                          CGF.CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                          Pair.second->getType(), VK_LValue,
+                          Pair.second->getExprLoc());
+          Scope.addPrivate(Pair.first, CGF.EmitLValue(&DRE).getAddress());
+        }
       }
       for (const auto &Pair : PrivatePtrs) {
         Address Replacement = Address(
@@ -5452,11 +5700,25 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
             CGF.ConvertTypeForMem(Pair.first->getType().getNonReferenceType()),
             CGF.getContext().getDeclAlign(Pair.first));
         Scope.addPrivate(Pair.first, Replacement);
+
+        // For BindingDecls with lastprivate, also map the .lastprivate.src
+        // pseudo-variable to the same private address.
+        if (isa<BindingDecl>(Pair.first)) {
+          for (const auto &SrcPair : LastprivateSrcsOrigs) {
+            if (SrcPair.second->getDecl() == Pair.first) {
+              Scope.addPrivate(SrcPair.first, Replacement);
+              break;
+            }
+          }
+        }
+
         if (auto *DI = CGF.getDebugInfo())
           if (CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
-            (void)DI->EmitDeclareOfAutoVariable(
-                Pair.first, Pair.second.getBasePointer(), CGF.Builder,
-                /*UsePointerValue*/ true);
+            // Only emit debug info for VarDecls, not BindingDecls.
+            if (const auto *VD = dyn_cast<VarDecl>(Pair.first))
+              (void)DI->EmitDeclareOfAutoVariable(
+                  VD, Pair.second.getBasePointer(), CGF.Builder,
+                  /*UsePointerValue*/ true);
       }
       // Adjust mapping for internal locals by mapping actual memory instead of
       // a pointer to this memory.
@@ -5706,13 +5968,13 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
       llvm::Value *PrivatesPtr = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(
           CS->getCapturedDecl()->getParam(PrivatesParam)));
       // Map privates.
-      llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> PrivatePtrs;
+      llvm::SmallVector<std::pair<const ValueDecl *, Address>, 16> PrivatePtrs;
       llvm::SmallVector<llvm::Value *, 16> CallArgs;
       llvm::SmallVector<llvm::Type *, 4> ParamTypes;
       CallArgs.push_back(PrivatesPtr);
       ParamTypes.push_back(PrivatesPtr->getType());
       for (const Expr *E : Data.FirstprivateVars) {
-        const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+        const auto *VD = cast<DeclRefExpr>(E)->getDecl();
         RawAddress PrivatePtr = CGF.CreateMemTempWithoutCast(
             CGF.getContext().getPointerType(E->getType()),
             ".firstpriv.ptr.addr");

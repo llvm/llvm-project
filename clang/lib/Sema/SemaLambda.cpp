@@ -1988,9 +1988,21 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   } else {
     assert(Cap.isVariableCapture() && "unknown kind of capture");
     ValueDecl *Var = Cap.getVariable();
+    // For OpenMP structured bindings, capture the decomposed decl, not the
+    // binding.
+    auto *BD = dyn_cast<BindingDecl>(Var);
+    if (IsOpenMPMapping && BD)
+      // When capturing a BindingDecl in an OpenMP mapping context, we need to
+      // capture the DecompositionDecl instead. BindingDecls are references to
+      // storage owned by the DecompositionDecl.
+      // Example:
+      //   auto [a, b] = p;
+      //   auto lambda = [a]() { return a; };  // In OpenMP context.
+      // This is reached during lambda capture for OpenMP mappings.
+      Var = BD->getDecomposedDecl();
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
-      CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
+        CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
   }
 
   // In OpenMP, the capture kind doesn't actually describe how to capture:
@@ -2096,14 +2108,32 @@ bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
 
 /// Create a field within the lambda class or captured statement record for the
 /// given capture.
-FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
-                                   const sema::Capture &Capture) {
+FieldDecl *Sema::BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                                   bool IsOpenMP) {
   SourceLocation Loc = Capture.getLocation();
   QualType FieldType = Capture.getCaptureType();
-
   TypeSourceInfo *TSI = nullptr;
   if (Capture.isVariableCapture()) {
-    const auto *Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
+    const VarDecl *Var = nullptr;
+    if (IsOpenMP) {
+      if (auto *BD = dyn_cast_or_null<BindingDecl>(Capture.getVariable())) {
+        Var = cast<VarDecl>(BD->getDecomposedDecl());
+        FieldType = Var->getType().getNonReferenceType();
+        if (Capture.isReferenceCapture())
+          FieldType = Context.getLValueReferenceType(FieldType);
+      } else if (auto *DD = dyn_cast_or_null<DecompositionDecl>(
+                     Capture.getVariable())) {
+        // OpenMP already transformed BindingDecl to DecompositionDecl
+        // before buildCapturedStmtCaptureList. Use the DecompositionDecl
+        // type.
+        Var = DD;
+        FieldType = DD->getType();
+        if (Capture.isReferenceCapture())
+          FieldType = Context.getLValueReferenceType(DD->getType());
+      }
+    }
+    if (!Var)
+      Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
     if (Var && Var->isInitCapture())
       TSI = Var->getTypeSourceInfo();
   }

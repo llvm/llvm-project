@@ -44,6 +44,21 @@ see {ref}`OpenMP implementation details <openmp-implementation-details>` and
   known at compile time. To prevent this conservative choice and use
   at most 32 bits, compile your program with the
   `-fopenmp-optimistic-collapse`.
+- C++20 structured bindings are now supported in OpenMP constructs.
+  Bindings from structured binding declarations can be used in data-sharing
+  clauses (``private``, ``firstprivate``, ``lastprivate``, ``shared``,
+  ``linear``), and in ``map`` clauses for target directives.
+  Limitations: tuple-like bindings (using the tuple protocol with ``get<N>()``)
+  are not yet supported; conditional lastprivate and reductions are not yet
+  supported; bare ``#pragma omp task`` directives (without an enclosing parallel
+  region) with ``firstprivate`` structured bindings do not execute correctly
+  and must be created within a parallel region.
+  Important restriction for target regions: if the original variable is
+  explicitly mapped (e.g., ``map(tofrom: t)``) but only bindings from it,
+  and not the original variable itself, are used in the target region, the
+  compiler emits an error. Either use the original variable directly in the
+  target region, or map the bindings explicitly instead of the original
+  variable.
 
 ## GPU devices support
 
