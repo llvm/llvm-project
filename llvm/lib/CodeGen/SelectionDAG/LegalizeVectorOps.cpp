@@ -488,6 +488,13 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_MATCH:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE: {
+    EVT VT = Node->getValueType(0);
+    unsigned Factor = Node->getNumOperands();
+    Action = TLI.getVectorInterleaveAction(Node->getOpcode(), Factor, VT);
+    break;
+  }
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
@@ -948,6 +955,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::MERGE_VALUES:
     for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
       Results.push_back(Node->getOperand(i));
+    return;
+  case ISD::VECTOR_INTERLEAVE:
+    TLI.expandVectorInterleave(Node, Results, DAG);
+    return;
+  case ISD::VECTOR_DEINTERLEAVE:
+    TLI.expandVectorDeinterleave(Node, Results, DAG);
     return;
   case ISD::SIGN_EXTEND_INREG:
     if (SDValue Expanded = ExpandSEXTINREG(Node)) {

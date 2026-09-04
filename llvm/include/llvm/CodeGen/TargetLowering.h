@@ -6027,6 +6027,14 @@ public:
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand a VECTOR_INTERLEAVE without introducing wider vector types.
+  void expandVectorInterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                              SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_DEINTERLEAVE without introducing wider vector types.
+  void expandVectorDeinterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                                SelectionDAG &DAG) const;
+
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;

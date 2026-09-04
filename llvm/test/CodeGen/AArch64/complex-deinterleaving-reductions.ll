@@ -31,8 +31,8 @@ define dso_local %"struct.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fcmla v0.2d, v4.2d, v2.2d, #90
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    zip2 v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uzp2 v2.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uzp1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
 ; CHECK-NEXT:    faddp d1, v2.2d
 ; CHECK-NEXT:    ret
@@ -98,8 +98,8 @@ define %"struct.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fcmla v0.2d, v4.2d, v2.2d, #90
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    zip2 v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uzp2 v2.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uzp1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
 ; CHECK-NEXT:    faddp d1, v2.2d
 ; CHECK-NEXT:    ret
@@ -168,10 +168,10 @@ define %"struct.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fcmla v3.2d, v18.2d, v16.2d, #90
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    zip2 v4.2d, v0.2d, v3.2d
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    zip2 v3.2d, v2.2d, v1.2d
-; CHECK-NEXT:    zip1 v1.2d, v2.2d, v1.2d
+; CHECK-NEXT:    uzp2 v4.2d, v0.2d, v3.2d
+; CHECK-NEXT:    uzp1 v0.2d, v0.2d, v3.2d
+; CHECK-NEXT:    uzp2 v3.2d, v2.2d, v1.2d
+; CHECK-NEXT:    uzp1 v1.2d, v2.2d, v1.2d
 ; CHECK-NEXT:    fadd v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    fadd v1.2d, v4.2d, v3.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
