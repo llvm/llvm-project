@@ -15,6 +15,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -30,23 +31,31 @@ const auto DefaultDefaultDeleters = "::std::default_delete";
 
 } // namespace
 
-// We remove wrappers that do not carry semantic load for classifying the value:
+// Remove wrappers that do not carry semantic load for classifying the value:
 // brackets, implicit casts, temporary objects, cleanup nodes.
 static const clang::Expr *stripWrappers(const clang::Expr *E) {
   while (E) {
     const clang::Expr *Prev = E;
     E = E->IgnoreParens();
-    if (const auto *ICE = llvm::dyn_cast<clang::ImplicitCastExpr>(E))
-      E = ICE->getSubExpr();
-    else if (const auto *EWC = llvm::dyn_cast<clang::ExprWithCleanups>(E))
-      E = EWC->getSubExpr();
-    else if (const auto *MTE =
-                 llvm::dyn_cast<clang::MaterializeTemporaryExpr>(E))
-      E = MTE->getSubExpr();
-    else if (const auto *BTE = llvm::dyn_cast<clang::CXXBindTemporaryExpr>(E))
-      E = BTE->getSubExpr();
-    else if (const auto *CE = llvm::dyn_cast<clang::ConstantExpr>(E))
-      E = CE->getSubExpr();
+    switch (E->getStmtClass()) {
+    case clang::Stmt::ImplicitCastExprClass:
+      E = cast<clang::ImplicitCastExpr>(E)->getSubExpr();
+      break;
+    case clang::Stmt::ExprWithCleanupsClass:
+      E = cast<clang::ExprWithCleanups>(E)->getSubExpr();
+      break;
+    case clang::Stmt::MaterializeTemporaryExprClass:
+      E = cast<clang::MaterializeTemporaryExpr>(E)->getSubExpr();
+      break;
+    case clang::Stmt::CXXBindTemporaryExprClass:
+      E = cast<clang::CXXBindTemporaryExpr>(E)->getSubExpr();
+      break;
+    case clang::Stmt::ConstantExprClass:
+      E = cast<clang::ConstantExpr>(E)->getSubExpr();
+      break;
+    default:
+      break;
+    }
     if (E == Prev)
       break;
   }
@@ -86,8 +95,8 @@ enum PointerState : unsigned {
 };
 
 struct Transition {
-  unsigned fromState;      // 0-3
-  unsigned toState;        // 0-3
+  PointerState fromState;  // 0-3
+  PointerState toState;    // 1-3
   const clang::Stmt *stmt; // instruction that caused the transition
 };
 
@@ -98,9 +107,11 @@ class TransitionsFinder;
 // does not store any inter-block state itself.
 class PointerStateVisitor
     : public clang::ConstStmtVisitor<PointerStateVisitor> {
-  using StateMap = std::map<PointerLocation, unsigned>;
+  using StateMap = std::map<PointerLocation, PointerState>;
+  using VariablesSet = llvm::SmallPtrSet<const clang::VarDecl *, 32>;
+  using FieldsSet = llvm::SmallPtrSet<const clang::FieldDecl *, 32>;
 
-  unsigned getState(const StateMap &M, const PointerLocation &Loc) {
+  PointerState getState(const StateMap &M, const PointerLocation &Loc) {
     auto It = M.find(Loc);
     return It == M.end() ? PS_Unknown : It->second;
   }
@@ -109,13 +120,11 @@ public:
   // Sink == nullptr -> transitions are not recorded, only the final state is
   // calculated (used in phase 1 / fixpoint, and in the preliminary location
   // detection phase).
-  PointerStateVisitor(
-      clang::ASTContext *Context,
-      const llvm::SmallPtrSet<const clang::VarDecl *, 32> &Vars,
-      const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &Fields,
-      llvm::ArrayRef<StringRef> SharedPointers,
-      llvm::ArrayRef<StringRef> UniquePointers, StateMap &State,
-      std::map<PointerLocation, std::vector<Transition>> *Sink)
+  PointerStateVisitor(clang::ASTContext *Context, const VariablesSet &Vars,
+                      const FieldsSet &Fields,
+                      llvm::ArrayRef<StringRef> SharedPointers,
+                      llvm::ArrayRef<StringRef> UniquePointers, StateMap &State,
+                      std::map<PointerLocation, std::vector<Transition>> *Sink)
       : Context(Context), PtrVars(Vars), PtrFields(Fields),
         SharedPointers(SharedPointers), UniquePointers(UniquePointers),
         CurrentState(State), Sink(Sink) {}
@@ -127,7 +136,7 @@ public:
       if (!VD || !PtrVars.count(VD))
         continue;
       if (const clang::Expr *Init = VD->getInit()) {
-        unsigned NewState = classify(Init);
+        PointerState NewState = classify(Init);
         addTransition(PointerLocation{VD, {}}, NewState, DS);
       }
     }
@@ -144,8 +153,8 @@ public:
     }
     PointerLocation Loc;
     if (resolveLocation(BO->getLHS(), Loc)) {
-      unsigned NewState = classify(BO->getRHS());
-      addTransition(Loc, NewState, BO);
+      PointerState NewState = classify(BO->getRHS());
+      addTransition(std::move(Loc), NewState, BO);
     }
     scanForSmartPtrWrap(BO);
   }
@@ -161,8 +170,8 @@ public:
 
 private:
   clang::ASTContext *Context;
-  const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars;
-  const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields;
+  const VariablesSet &PtrVars;
+  const FieldsSet &PtrFields;
 
   const llvm::ArrayRef<StringRef> SharedPointers;
   const llvm::ArrayRef<StringRef> UniquePointers;
@@ -287,7 +296,7 @@ private:
 
   // Defines the state that a pointer goes into when it is assigned/initialized
   // with the value of expression E.
-  unsigned classify(const clang::Expr *E) {
+  PointerState classify(const clang::Expr *E) {
     const clang::Expr *S = stripWrappers(E);
     if (!S)
       return PS_PlainPointer;
@@ -328,9 +337,9 @@ private:
     return PS_Unknown;
   }
 
-  void addTransition(const PointerLocation &Loc, unsigned NewState,
+  void addTransition(const PointerLocation &&Loc, PointerState NewState,
                      const clang::Stmt *S) {
-    unsigned From = getState(CurrentState, Loc);
+    PointerState From = getState(CurrentState, Loc);
     if (Sink)
       (*Sink)[Loc].push_back(Transition{From, NewState, S});
     CurrentState[Loc] = NewState;
@@ -377,7 +386,7 @@ private:
     for (const clang::Expr *Arg : CE->arguments()) {
       PointerLocation Loc;
       if (resolveLocation(Arg, Loc))
-        addTransition(Loc, PS_SmartPtrWrapper, EnclosingStmt);
+        addTransition(std::move(Loc), PS_SmartPtrWrapper, EnclosingStmt);
     }
   }
 
@@ -397,7 +406,7 @@ private:
     for (const clang::Expr *Arg : ME->arguments()) {
       PointerLocation Loc;
       if (resolveLocation(Arg, Loc))
-        addTransition(Loc, PS_SmartPtrWrapper, EnclosingStmt);
+        addTransition(std::move(Loc), PS_SmartPtrWrapper, EnclosingStmt);
     }
   }
 };
@@ -407,9 +416,11 @@ class TransitionsFinder {
   const llvm::ArrayRef<StringRef> SharedPointers;
   const llvm::ArrayRef<StringRef> UniquePointers;
 
-  using StateMap = std::map<PointerLocation, unsigned>;
+  using StateMap = std::map<PointerLocation, PointerState>;
+  using VariablesSet = llvm::SmallPtrSet<const clang::VarDecl *, 32>;
+  using FieldsSet = llvm::SmallPtrSet<const clang::FieldDecl *, 32>;
 
-  unsigned getState(const StateMap &M, const PointerLocation &Loc) {
+  PointerState getState(const StateMap &M, const PointerLocation &Loc) {
     auto It = M.find(Loc);
     return It == M.end() ? PS_Unknown : It->second;
   }
@@ -422,8 +433,7 @@ public:
         UniquePointers(UniquePointers) {}
 
   std::map<PointerLocation, std::vector<Transition>>
-  find(const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars,
-       const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields,
+  find(const VariablesSet &PtrVars, const FieldsSet &PtrFields,
        const FunctionDecl *Func, Stmt *Body) {
     // Settings to build CFG
     CFG::BuildOptions Options;
@@ -484,10 +494,9 @@ private:
   // INDEPENDENTLY (without propagating state between blocks—it's not needed
   // here), collecting the set of all PointerLocation s that are ever the target
   // of an assignment/initialization/argument to a smart pointer wrapper.
-  std::set<PointerLocation> discoverLocations(
-      const std::vector<const clang::CFGBlock *> &Order,
-      const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars,
-      const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields) {
+  std::set<PointerLocation>
+  discoverLocations(const std::vector<const clang::CFGBlock *> &Order,
+                    const VariablesSet &PtrVars, const FieldsSet &PtrFields) {
     std::set<PointerLocation> Domain;
     for (const clang::VarDecl *VD : PtrVars)
       Domain.insert(PointerLocation{VD, {}});
@@ -505,12 +514,10 @@ private:
   // Runs the "transfer function" of a single block: the input is the IN state,
   // the output is the final (OUT) state. If Sink != nullptr, it also records
   // the transitions.
-  StateMap runBlockTransfer(
-      const clang::CFGBlock &Block,
-      const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars,
-      const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields,
-      const StateMap &In,
-      std::map<PointerLocation, std::vector<Transition>> *Sink) {
+  StateMap
+  runBlockTransfer(const clang::CFGBlock &Block, const VariablesSet &PtrVars,
+                   const FieldsSet &PtrFields, const StateMap &In,
+                   std::map<PointerLocation, std::vector<Transition>> *Sink) {
     StateMap Working = In;
     PointerStateVisitor Visitor(Context, PtrVars, PtrFields, SharedPointers,
                                 UniquePointers, Working, Sink);
@@ -522,10 +529,9 @@ private:
     }
     return Working;
   }
-  std::map<PointerLocation, std::vector<Transition>> findInternally(
-      const llvm::SmallPtrSet<const clang::VarDecl *, 32> &PtrVars,
-      const llvm::SmallPtrSet<const clang::FieldDecl *, 32> &PtrFields,
-      const clang::CFG &cfg) {
+  std::map<PointerLocation, std::vector<Transition>>
+  findInternally(const VariablesSet &PtrVars, const FieldsSet &PtrFields,
+                 const clang::CFG &cfg) {
     std::map<PointerLocation, std::vector<Transition>> Result;
 
     std::vector<const clang::CFGBlock *> Order = computeReversePostOrder(cfg);
@@ -550,8 +556,8 @@ private:
     auto joinStates = [&](const StateMap &A, const StateMap &B) {
       StateMap R;
       for (const PointerLocation &Loc : Domain) {
-        unsigned a = getState(A, Loc);
-        unsigned b = getState(B, Loc);
+        PointerState a = getState(A, Loc);
+        PointerState b = getState(B, Loc);
         R[Loc] = (a == b) ? a : PS_Unknown;
       }
       return R;
