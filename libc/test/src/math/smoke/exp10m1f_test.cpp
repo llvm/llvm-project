@@ -17,10 +17,13 @@ TEST_F(LlvmLibcExp10m1fTest, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp10m1f(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_EQ(FPBits(aNaN).uintval(),
-            FPBits(LIBC_NAMESPACE::exp10m1f(aNaN)).uintval());
-  EXPECT_EQ(FPBits(neg_aNaN).uintval(),
-            FPBits(LIBC_NAMESPACE::exp10m1f(neg_aNaN)).uintval());
+  // Use EXPECT_FP_EQ (which treats any two NaNs as equal) rather than comparing
+  // raw bit patterns: exp10m1f(NaN) is computed as NaN + inf, and some targets
+  // (e.g. Hexagon) produce a non-canonical NaN encoding (0xFFFFFFFF) instead of
+  // the canonical quiet NaN. Both are valid NaNs, so only require NaN-ness
+  // here.
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp10m1f(aNaN));
+  EXPECT_FP_EQ(neg_aNaN, LIBC_NAMESPACE::exp10m1f(neg_aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::exp10m1f(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::exp10m1f(neg_inf));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp10m1f(zero));
