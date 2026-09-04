@@ -71,7 +71,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_bf_pad(%arg0: !cir.ptr<!rec_BFPad> {llvm.align = 8 : i64, llvm.byval = !rec_BFPad, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_bf_pad(%arg0: !cir.ptr<!rec_BFPad> {llvm.align = 8 : i64, llvm.byval = !rec_BFPad, llvm.noundef})
 
   // A zero-width bit-field takes no part in assigning eightbyte classes, but
   // the type it was declared with still marks the bits it sits in as read, so
