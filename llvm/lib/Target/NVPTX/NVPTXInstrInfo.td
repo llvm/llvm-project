@@ -992,7 +992,7 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
 
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.
-let hasSideEffects = false in {
+let hasSideEffects = false, isSelect = 1 in {
   multiclass SELP_PATTERN<string TypeStr, RegTyInfo t> {
     defvar asm_str = "selp." # TypeStr;
     def rr :

@@ -2,33 +2,38 @@
 ; RUN: llc -mcpu=sm_100 < %s | FileCheck %s
 ; RUN: %if ptxas-sm_100 %{ llc < %s -mcpu=sm_100 | %ptxas-verify -arch=sm_100 %}
 
-; NOTE: Currently SETP inversions require all users to be CBranch. However other users like selects
-;       can also be processed.
 target triple = "nvptx64-nvidia-cuda"
 
-define i32 @test_multiple_users(i32 %a, i32 %b) {
+define i32 @test_multiple_users(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: test_multiple_users(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param::func.b32 %r3, [test_multiple_users_param_1];
-; CHECK-NEXT:    ld.param::func.b32 %r2, [test_multiple_users_param_0];
-; CHECK-NEXT:    setp.eq.b32 %p1, %r2, %r3;
-; CHECK-NEXT:    mov.b32 %r5, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r8, [test_multiple_users_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r7, [test_multiple_users_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r6, [test_multiple_users_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r5, [test_multiple_users_param_0];
+; CHECK-NEXT:    setp.eq.b32 %p1, %r5, %r6;
+; CHECK-NEXT:    mov.b32 %r13, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB0_2;
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov.b32 %r5, 1;
+; CHECK-NEXT:    mov.b32 %r13, 1;
 ; CHECK-NEXT:  $L__BB0_2: // %merge1
-; CHECK-NEXT:    setp.ne.b32 %p2, %r2, %r3;
-; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p2;
-; CHECK-NEXT:    @%p2 bra $L__BB0_4;
+; CHECK-NEXT:    selp.b32 %r1, 0, 1, %p1;
+; CHECK-NEXT:    selp.b32 %r2, %r8, %r7, %p1;
+; CHECK-NEXT:    selp.b32 %r3, 7, %r7, %p1;
+; CHECK-NEXT:    selp.b32 %r4, %r8, 9, %p1;
+; CHECK-NEXT:    @!%p1 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.3: // %else
-; CHECK-NEXT:    mov.b32 %r5, 0;
+; CHECK-NEXT:    mov.b32 %r13, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
-; CHECK-NEXT:    add.s32 %r4, %r5, %r1;
-; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r4;
+; CHECK-NEXT:    add.s32 %r9, %r13, %r1;
+; CHECK-NEXT:    add.s32 %r10, %r9, %r2;
+; CHECK-NEXT:    add.s32 %r11, %r10, %r3;
+; CHECK-NEXT:    add.s32 %r12, %r11, %r4;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r12;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp1 = icmp eq i32 %a, %b
@@ -41,6 +46,9 @@ merge1:
   %phi1 = phi i32 [ 1, %then ], [ 0, %entry ]
   %cmp2 = icmp ne i32 %a, %b
   %val = select i1 %cmp2, i32 1, i32 0
+  %rr = select i1 %cmp2, i32 %x, i32 %y
+  %ri = select i1 %cmp2, i32 %x, i32 7
+  %ir = select i1 %cmp2, i32 9, i32 %y
   br i1 %cmp2, label %merge2, label %else
 
 else:
@@ -48,6 +56,9 @@ else:
 
 merge2:
   %phi2 = phi i32 [ %phi1, %merge1 ], [ 0, %else ]
-  %ret = add i32 %phi2, %val
+  %sum0 = add i32 %phi2, %val
+  %sum1 = add i32 %sum0, %rr
+  %sum2 = add i32 %sum1, %ri
+  %ret = add i32 %sum2, %ir
   ret i32 %ret
 }
