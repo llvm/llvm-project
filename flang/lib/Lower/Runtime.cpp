@@ -136,24 +136,6 @@ void Fortran::lower::genFailImageStatement(
   genUnreachable(builder, loc);
 }
 
-void Fortran::lower::genNotifyWaitStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::NotifyWaitStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: NOTIFY WAIT runtime");
-}
-
-void Fortran::lower::genEventPostStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::EventPostStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: EVENT POST runtime");
-}
-
-void Fortran::lower::genEventWaitStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::EventWaitStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: EVENT WAIT runtime");
-}
-
 void Fortran::lower::genLockStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::LockStmt &) {
