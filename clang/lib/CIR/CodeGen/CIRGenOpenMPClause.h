@@ -42,6 +42,8 @@ public:
 
   bool emitProcBind(mlir::omp::ProcBindClauseOps &result) const;
 
+  bool emitNumThreads(mlir::omp::NumThreadsClauseOps &result) const;
+
   /// Emit map clauses. The optional \p mapSyms parameter collects the
   /// VarDecls corresponding to each map operand.
   bool emitMap(mlir::omp::MapClauseOps &result,
