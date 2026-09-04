@@ -35,18 +35,23 @@ namespace elf {
 constexpr uint32_t RELOC_ABSOLUTE = R_X86_64_64;
 constexpr uint32_t RELOC_GLOB_DAT = R_X86_64_GLOB_DAT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_X86_64_JUMP_SLOT;
+constexpr uint32_t RELOC_TLS_OFFSET = R_X86_64_TPOFF64;
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-constexpr uint32_t RELOC_ABSOLUTE = 257; // R_AARCH64_ABS64
+constexpr uint32_t RELOC_ABSOLUTE = R_AARCH64_ABS64;
 constexpr uint32_t RELOC_GLOB_DAT = R_AARCH64_GLOB_DAT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_AARCH64_JUMP_SLOT;
+constexpr uint32_t RELOC_TLS_OFFSET = R_AARCH64_TLS_TPREL;
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-constexpr uint32_t RELOC_ABSOLUTE = 2; // R_RISCV_64
+constexpr uint32_t RELOC_ABSOLUTE = R_RISCV_64;
 constexpr uint32_t RELOC_GLOB_DAT = R_RISCV_JUMP_SLOT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_RISCV_JUMP_SLOT;
+constexpr uint32_t RELOC_TLS_OFFSET = R_RISCV_TLS_TPREL64;
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
-constexpr uint32_t RELOC_ABSOLUTE = 2; // R_ARM_ABS32
+constexpr uint32_t RELOC_ABSOLUTE = R_ARM_ABS32;
 constexpr uint32_t RELOC_GLOB_DAT = R_ARM_GLOB_DAT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_ARM_JUMP_SLOT;
+// ARM uses a different TLS model; not handled here yet.
+constexpr uint32_t RELOC_TLS_OFFSET = 0xffffffffu;
 #else
 // No loader runs on this architecture, so nothing binds symbols. These match
 // no relocation type.
@@ -85,8 +90,15 @@ public:
   LIBC_INLINE constexpr SearchOrder(const Module *modules, size_t count)
       : modules_(modules), count_(count) {}
 
-  // Returns the runtime address of `name`, or nothing if no module defines it.
-  LIBC_INLINE cpp::optional<ElfW(Addr)> resolve(const char *name) const {
+  struct Resolved {
+    ElfW(Addr) address;
+    // Which module defined it, so a thread local can be placed relative to
+    // that module's block rather than this one's.
+    size_t module;
+    ElfW(Addr) value;
+  };
+
+  LIBC_INLINE cpp::optional<Resolved> find(const char *name) const {
     for (size_t i = 0; i < count_; ++i) {
       const ElfW(Sym) *symbol = modules_[i].symbols().lookup(name);
       if (symbol == nullptr)
@@ -95,19 +107,39 @@ public:
       // section, and must not satisfy the lookup.
       if (symbol->st_shndx == SHN_UNDEF)
         continue;
-      return modules_[i].load_bias() + symbol->st_value;
+      return Resolved{modules_[i].load_bias() + symbol->st_value, i,
+                      symbol->st_value};
     }
     return cpp::nullopt;
   }
 
+  // Returns the runtime address of `name`, or nothing if no module defines it.
+  LIBC_INLINE cpp::optional<ElfW(Addr)> resolve(const char *name) const {
+    if (auto found = find(name))
+      return found->address;
+    return cpp::nullopt;
+  }
+
+  // Offsets of each module's thread local block from the thread pointer, as
+  // the loader laid them out. Needed to place a thread local symbol.
+  LIBC_INLINE void set_tls_offsets(const intptr_t *offsets) {
+    tls_offsets_ = offsets;
+  }
+  LIBC_INLINE const intptr_t *tls_offsets() const { return tls_offsets_; }
+
 private:
   const Module *modules_;
   size_t count_;
+  const intptr_t *tls_offsets_ = nullptr;
 };
 
 struct BindResult {
   size_t bound = 0;
   size_t unresolved = 0;
+  // The first symbol that could not be found, so that whoever gives up can
+  // say which one it was. A count on its own leaves the reader to work that
+  // out with a disassembler.
+  const char *missing = nullptr;
 };
 
 // Applies one table of symbol relocations against the search order.
@@ -115,6 +147,7 @@ struct BindResult {
 // A strong symbol that cannot be found is counted rather than fatal, so the
 // caller decides whether to fail the load.
 LIBC_INLINE BindResult bind_relocations(const Module &target,
+                                        size_t target_index,
                                         const RelaTable &table,
                                         const SearchOrder &order) {
   BindResult result;
@@ -125,12 +158,52 @@ LIBC_INLINE BindResult bind_relocations(const Module &target,
 
   for (const ElfW(Rela) *rela = table.begin(); rela != table.end(); ++rela) {
     const uint32_t type = reloc_type(rela->r_info);
+    const bool is_tls = type == RELOC_TLS_OFFSET;
     if (type != RELOC_ABSOLUTE && type != RELOC_GLOB_DAT &&
-        type != RELOC_JUMP_SLOT)
+        type != RELOC_JUMP_SLOT && !is_tls)
       continue;
 
-    const ElfW(Sym) &symbol = symtab[reloc_symbol(rela->r_info)];
+    const uint32_t symbol_index = reloc_symbol(rela->r_info);
+    const ElfW(Sym) &symbol = symtab[symbol_index];
     const char *name = strtab + symbol.st_name;
+
+    if (is_tls) {
+      // A thread local is addressed relative to the thread pointer, so what
+      // gets stored is the defining module's block offset plus the symbol's
+      // offset inside it, never an absolute address.
+      const intptr_t *offsets = order.tls_offsets();
+      if (offsets == nullptr) {
+        ++result.unresolved;
+        if (result.missing == nullptr)
+          result.missing = name;
+        continue;
+      }
+      intptr_t block = 0;
+      ElfW(Addr) value = 0;
+      if (symbol_index == 0 || symbol.st_shndx != SHN_UNDEF) {
+        // Either no symbol at all, where the addend alone gives the offset
+        // within this module's block, or one defined here. Most of a libc's
+        // own thread locals are hidden, so they are in no hash table and can
+        // only be resolved here rather than through the search order.
+        block = offsets[target_index];
+        value = symbol_index == 0 ? 0 : symbol.st_value;
+      } else if (auto defined = order.find(name)) {
+        block = offsets[defined->module];
+        value = defined->value;
+      } else {
+        ++result.unresolved;
+        if (result.missing == nullptr)
+          result.missing = name;
+        continue;
+      }
+      auto *slot =
+          reinterpret_cast<ElfW(Addr) *>(target.load_bias() + rela->r_offset);
+      *slot = static_cast<ElfW(Addr)>(block + static_cast<intptr_t>(value) +
+                                      rela->r_addend);
+      ++result.bound;
+      continue;
+    }
+
     auto found = order.resolve(name);
 
     // A weak undefined symbol is allowed to stay unresolved and is written as
@@ -140,6 +213,8 @@ LIBC_INLINE BindResult bind_relocations(const Module &target,
       value = *found;
     } else if (symbol_binding(symbol.st_info) != STB_WEAK) {
       ++result.unresolved;
+      if (result.missing == nullptr)
+        result.missing = name;
       continue;
     }
 
@@ -156,11 +231,14 @@ LIBC_INLINE BindResult bind_relocations(const Module &target,
 }
 
 // Binds both a module's ordinary and PLT relocations.
-LIBC_INLINE BindResult bind_module(const Module &target,
+LIBC_INLINE BindResult bind_module(const Module &target, size_t target_index,
                                    const SearchOrder &order) {
-  BindResult a = bind_relocations(target, target.relocations(), order);
-  BindResult b = bind_relocations(target, target.plt_relocations(), order);
-  return BindResult{a.bound + b.bound, a.unresolved + b.unresolved};
+  BindResult a =
+      bind_relocations(target, target_index, target.relocations(), order);
+  BindResult b =
+      bind_relocations(target, target_index, target.plt_relocations(), order);
+  return BindResult{a.bound + b.bound, a.unresolved + b.unresolved,
+                    a.missing != nullptr ? a.missing : b.missing};
 }
 
 } // namespace elf

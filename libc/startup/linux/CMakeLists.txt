@@ -91,6 +91,15 @@ endif()
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
 add_object_library(
+  app
+  SRCS
+    app.cpp
+  DEPENDS
+    libc.config.app_h
+    libc.src.__support.macros.config
+)
+
+add_object_library(
   gnu_property_section
   SRCS
     gnu_property_section.cpp
@@ -111,6 +120,7 @@ add_object_library(
     do_start.h
     irelative.h
   DEPENDS
+    .app
     libc.config.app_h
     libc.hdr.elf_proxy
     libc.hdr.link_macros
@@ -183,6 +193,7 @@ foreach(target IN LISTS startup_components)
     RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
     COMPONENT libc)
 endforeach()
+
 
 # Position independent executables start from Scrt1.o. The objects of a shared
 # build are position independent already, so crt1.o serves under both names.

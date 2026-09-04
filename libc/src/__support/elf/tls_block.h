@@ -53,9 +53,32 @@ struct TlsBlock {
 // pointer, indexed the same as `modules`. A module without TLS gets zero. A
 // caller building a DTV needs these, and recomputing them would mean keeping
 // the layout rules in two places.
+// Copies each module's thread local initialisation image into a block laid
+// out by allocate_tls_block.
+//
+// This is separate because the images are part of the modules' data and so
+// are subject to their relocations: a thread local initialised with the
+// address of anything is written by one. Copying before they are applied
+// takes the value the linker left, which is not the address of anything.
+LIBC_INLINE void copy_tls_images(const Module *modules, size_t count,
+                                 uintptr_t tp, const intptr_t *offsets) {
+  for (size_t i = 0; i < count; ++i) {
+    const ElfW(Phdr) *tls = modules[i].tls();
+    if (tls == nullptr || tls->p_filesz == 0)
+      continue;
+    auto *dest = reinterpret_cast<unsigned char *>(static_cast<intptr_t>(tp) +
+                                                   offsets[i]);
+    const void *image =
+        reinterpret_cast<const void *>(modules[i].load_bias() + tls->p_vaddr);
+    inline_memcpy(dest, image, tls->p_filesz);
+    // The rest is .tbss and is already zero from the fresh mapping.
+  }
+}
+
 LIBC_INLINE ErrorOr<TlsBlock> allocate_tls_block(const Module *modules,
                                                  size_t count,
-                                                 intptr_t *offsets = nullptr) {
+                                                 intptr_t *offsets = nullptr,
+                                                 bool copy_images = true) {
   TlsLayout layout;
   for (size_t i = 0; i < count; ++i) {
     const ElfW(Phdr) *tls = modules[i].tls();
@@ -91,6 +114,12 @@ LIBC_INLINE ErrorOr<TlsBlock> allocate_tls_block(const Module *modules,
   // below it; variant 1 puts it at the bottom with the modules above.
   const uintptr_t tp = TLS_VARIANT_2 ? base + below_tp : base;
 
+  // The ABI requires the first word of the thread control block to point at
+  // the thread pointer itself. Compiler generated thread local accesses read
+  // it to find their own base, so leaving it zero makes every one of them
+  // dereference an offset from address zero.
+  *reinterpret_cast<uintptr_t *>(tp) = tp;
+
   TlsLayout again;
   for (size_t i = 0; i < count; ++i) {
     const ElfW(Phdr) *tls = modules[i].tls();
@@ -102,13 +131,13 @@ LIBC_INLINE ErrorOr<TlsBlock> allocate_tls_block(const Module *modules,
     const intptr_t offset = again.add(tls->p_memsz, tls->p_align);
     if (offsets != nullptr)
       offsets[i] = offset;
-    unsigned char *dest =
+    if (!copy_images || tls->p_filesz == 0)
+      continue;
+    auto *dest =
         reinterpret_cast<unsigned char *>(static_cast<intptr_t>(tp) + offset);
-    if (tls->p_filesz != 0) {
-      const void *image =
-          reinterpret_cast<const void *>(modules[i].load_bias() + tls->p_vaddr);
-      inline_memcpy(dest, image, tls->p_filesz);
-    }
+    const void *image =
+        reinterpret_cast<const void *>(modules[i].load_bias() + tls->p_vaddr);
+    inline_memcpy(dest, image, tls->p_filesz);
     // The rest is .tbss and is already zero from the fresh mapping.
   }
 

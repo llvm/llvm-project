@@ -59,6 +59,14 @@ foreach(archive IN ZIP_LISTS
       add_dependencies(${archive_1} libc-startup)
     endif()
   endif()
+  # With LIBC_ENABLE_SHARED the definition of `app` moves out of crt1.o and
+  # into libc, so the archive needs it too or a static link is left with the
+  # weak declaration resolving to nothing.
+  if(LIBC_ENABLE_SHARED AND archive_1 STREQUAL "libc"
+    AND TARGET libc.startup.${LIBC_TARGET_OS}.app)
+    target_sources(${archive_1} PRIVATE
+      $<TARGET_OBJECTS:libc.startup.${LIBC_TARGET_OS}.app>)
+  endif()
   list(APPEND added_archive_targets ${archive_1})
 
   if(LIBC_ENABLE_SHARED)
@@ -78,9 +86,12 @@ foreach(archive IN ZIP_LISTS
     if(TARGET libc-startup)
       add_dependencies(${archive_1}-shared libc-startup)
     endif()
-    if(archive_1 STREQUAL "libc" AND TARGET ${tls_object})
-      target_sources(${archive_1}-shared
-        PRIVATE $<TARGET_OBJECTS:${tls_object}>)
+    set(app_object libc.startup.${LIBC_TARGET_OS}.app)
+    if(archive_1 STREQUAL "libc")
+      if(TARGET ${app_object})
+        target_sources(${archive_1}-shared
+          PRIVATE $<TARGET_OBJECTS:${app_object}>)
+      endif()
     else()
       # libm and libmvec reference errno and other libc internals.
       target_link_libraries(${archive_1}-shared PRIVATE libc-shared)

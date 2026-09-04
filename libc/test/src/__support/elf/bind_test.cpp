@@ -79,7 +79,7 @@ TEST(LlvmLibcElfBindTest, BindsLibmAgainstLibc) {
   Module modules[] = {m.module, c.module};
   SearchOrder order(modules, 2);
 
-  BindResult result = bind_module(m.module, order);
+  BindResult result = bind_module(m.module, 0, order);
   // Every strong symbol libm imports must have been found.
   EXPECT_EQ(result.unresolved, size_t(0));
 
