@@ -356,7 +356,7 @@ public:
 
   /// Generates code that evaluates if the \p AR expression will overflow.
   LLVM_ABI Value *generateOverflowCheck(const SCEVAddRecExpr *AR,
-                                        Instruction *Loc, bool Signed);
+                                        Instruction *Loc, bool IsStartSigned);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
   /// we are expanding code for a SCEVWrapPredicate.

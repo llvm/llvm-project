@@ -60,13 +60,13 @@ define void @nw_implies_nsw(i16 %n) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (128 + (-128 smax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-128,+,1}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {-128,+,1}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i16 -32641
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-128,+,1}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {-128,+,1}<%for.body> Added Flags: <nsuw>
 ; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is (128 + (-128 smax %n))
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-128,+,1}<%for.body> Added Flags: <nssw>
+; CHECK-NEXT:      {-128,+,1}<%for.body> Added Flags: <nsuw>
 ;
 entry:
   br label %for.body
