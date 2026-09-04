@@ -11,7 +11,10 @@
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
 // RUN:        | llvm-mc -triple=aarch64 -mattr=+mec -disassemble -show-encoding \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
-// RUN: llvm-mc -triple aarch64 -disassemble < %s 2>&1 | FileCheck --check-prefix=CHECK-NO-MEC %s
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+mec < %s \
+// RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
+// RUN:        | llvm-mc -triple=aarch64 -disassemble \
+// RUN:        | FileCheck %s --check-prefix=CHECK-NO-MEC
 
 
 mrs x0, MECIDR_EL2

@@ -1485,9 +1485,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // FIXME: The compare could also be removed if TC = M * vscale,
     // VF = N * vscale, and M <= N. Detecting that would require having the
     // trip count as a SCEV though.
-    Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
-    ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
-    if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+    if (VPCostContext::executesAtMostOnce(*getParent()->getPlan(), VF))
       return 0;
     // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
     Type *ValTy = getOperand(0)->getScalarType();
@@ -3334,9 +3332,17 @@ InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
 
   Type *ResultTy = toVectorTy(this->getScalarType(), VF);
   Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-  return (getNumIncomingValues() - 1) *
-         Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
-                                    CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
+
+  InstructionCost Cost = 0;
+  for (unsigned I = 1, E = getNumIncomingValues(); I != E; ++I) {
+    CmpPredicate Pred;
+    if (!match(getMask(I), m_Cmp(Pred, m_VPValue(), m_VPValue())))
+      Pred = getScalarType()->isFloatingPointTy() ? CmpInst::BAD_FCMP_PREDICATE
+                                                  : CmpInst::BAD_ICMP_PREDICATE;
+    Cost += Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
+                                       Pred, Ctx.CostKind);
+  }
+  return Cost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3500,7 +3506,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             CondTy, Pred, Ctx.CostKind);
     }
     return CondCost + Ctx.TTI.getPartialReductionCost(
-                          Opcode, ElementTy, ElementTy, ElementTy, VF,
+                          Opcode, ElementTy, nullptr, ElementTy, VF,
                           TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
                           OptionalFMF);
   }

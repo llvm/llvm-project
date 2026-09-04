@@ -1,7 +1,0 @@
----
-GlobalValueMap:
-  42:
-    - Live: false
-      TypeTests: [14276520915468743435] # guid("typeid1")
-WithGlobalValueDeadStripping: true
-...

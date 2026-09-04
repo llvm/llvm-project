@@ -9,10 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/LinkGraphLinkingLayer.h"
 
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "orc"

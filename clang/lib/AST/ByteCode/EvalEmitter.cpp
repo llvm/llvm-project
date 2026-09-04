@@ -21,14 +21,6 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk)
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
-EvalEmitter::~EvalEmitter() {
-  for (auto &V : Locals) {
-    Block *B = reinterpret_cast<Block *>(V.get());
-    if (B->isInitialized())
-      B->invokeDtor();
-  }
-}
-
 /// Clean up all our resources. This needs to done in failed evaluations before
 /// we call InterpStack::clear(), because there might be a Pointer on the stack
 /// pointing into a Block in the EvalEmitter.
@@ -149,13 +141,13 @@ void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
-Scope::Local EvalEmitter::createLocal(Descriptor *D) {
+Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
   // Allocate memory for a local.
-  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
-                                         Block::InlineDescMD);
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
-                                     /*IsStatic=*/false);
-  B->invokeCtorNoMemset();
+  char *Memory = reinterpret_cast<char *>(
+      S.allocate(sizeof(Block) + D->getAllocSize() + Block::InlineDescMD));
+  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
+                               /*IsStatic=*/false);
+  B->invokeCtor();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
@@ -169,8 +161,8 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.push_back(std::move(Memory));
-  return {Off, D};
+  Locals.push_back(Memory);
+  return {D, Off};
 }
 
 bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
@@ -260,6 +252,8 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
+    if (ConvertResultToRValue && Ptr.asFunctionPointer().Func->getDecl())
+      return false;
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
   }

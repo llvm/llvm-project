@@ -511,6 +511,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "zero-call-used-regs",
                                            zcsr.getValue()));
+    if (callOp.getUniformWorkGroupSizeAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "uniform-work-group-size"));
     if (StringAttr trapFunc = callOp.getTrapFuncNameAttr())
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "trap-func-name",
@@ -639,7 +642,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                               invOp.getOpBundleTags(), moduleTranslation);
     ArrayRef<llvm::Value *> operandsRef(operands);
     llvm::InvokeInst *result;
-    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
+    if (auto attr = invOp.getCalleeAttr()) {
       if (llvm::Function *function =
               moduleTranslation.lookupFunction(attr.getValue())) {
         result = builder.CreateInvoke(
@@ -665,6 +668,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
+    if (invOp.getUniformWorkGroupSizeAttr())
+      result->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "uniform-work-group-size"));
     moduleTranslation.convertFunctionAttrCollection(
         invOp.getDefaultFuncAttrsAttr(), result,
         ModuleTranslation::convertDefaultFuncAttr);

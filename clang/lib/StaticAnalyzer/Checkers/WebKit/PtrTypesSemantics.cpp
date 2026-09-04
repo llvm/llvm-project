@@ -219,6 +219,9 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
     } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
       auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
       return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *RD = type->getAs<RecordType>()) {
+      auto *Decl = RD->getDecl();
+      return Decl && Pred(Decl->getNameAsString());
     } else
       break;
   }
@@ -357,10 +360,13 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   std::string className = safeGetName(calleeMethodsClass);
   std::string method = safeGetName(M);
 
-  if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
+  auto OpType = M->getOverloadedOperator();
+  if (isCheckedPtr(className) &&
+      (method == "get" || method == "ptr" || OpType == OO_Star))
     return true;
 
-  if ((isRefType(className) && (method == "get" || method == "ptr")) ||
+  if ((isRefType(className) &&
+       (method == "get" || method == "ptr" || OpType == OO_Star)) ||
       ((className == "String" || className == "AtomString" ||
         className == "AtomStringImpl" || className == "UniqueString" ||
         className == "UniqueStringImpl" || className == "Identifier") &&
@@ -967,8 +973,10 @@ public:
     Arg = Arg->IgnoreParenCasts();
     if (!Arg->isPRValue())
       return Visit(Arg);
-    if (auto *ExprWithClean = dyn_cast<ExprWithCleanups>(Arg))
-      Arg = ExprWithClean->getSubExpr()->IgnoreParenCasts();
+    if (auto *Init = dyn_cast<InitListExpr>(Arg)) {
+      if (Init->getNumInits() == 1)
+        Arg = Init->getInit(0);
+    }
     if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
       // Only elide when the temporary *is* the returned object, i.e. it has the
       // same smart-pointer type as the return value. Compare canonical,
@@ -982,6 +990,22 @@ public:
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+    if (CE->getNumArgs() == 1) {
+      auto *InnerArg = CE->getArg(0);
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(InnerArg)) {
+        auto *InnerExpr = MTE->getSubExpr();
+        if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(InnerExpr))
+          InnerExpr = BTE->getSubExpr();
+        auto InnerQT = InnerExpr->getType();
+        if (auto *InnerDecl = InnerQT->getAsCXXRecordDecl()) {
+          auto *OuterCls = CE->getConstructor()->getParent();
+          if (isRefType(safeGetName(OuterCls)) &&
+              isRefType(safeGetName(InnerDecl)))
+            return Visit(InnerExpr);
+        }
+      }
+    }
+
     for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
         return false;

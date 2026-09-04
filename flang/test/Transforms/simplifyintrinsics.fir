@@ -849,6 +849,82 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // -----
 
+// Call to MAXVAL with a 1D UNSIGNED array is not replaced: the runtime call
+// returns a signless integer that differs from the unsigned element type, so
+// the inline reduction (signed identity/comparison) would be incorrect. The
+// runtime call must be preserved.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @maxval_1d_array_unsigned(%arg0: !fir.ref<!fir.array<10xui32>> {fir.bindc_name = "a"}) -> ui32 {
+    %c10 = arith.constant 10 : index
+    %0 = fir.alloca ui32
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xui32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xui32>>
+    %3 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %4 = fir.address_of(@_QQclXumax) : !fir.ref<!fir.char<1,13>>
+    %c5_i32 = arith.constant 5 : i32
+    %5 = fir.convert %2 : (!fir.box<!fir.array<10xui32>>) -> !fir.box<none>
+    %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+    %7 = fir.convert %c0 : (index) -> i32
+    %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+    %9 = fir.call @_FortranAMaxvalUnsigned4(%5, %6, %c5_i32, %7, %8) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+    %10 = fir.convert %9 : (i32) -> ui32
+    fir.store %10 to %0 : !fir.ref<ui32>
+    %11 = fir.load %0 : !fir.ref<ui32>
+    return %11 : ui32
+  }
+  func.func private @_FortranAMaxvalUnsigned4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
+  fir.global linkonce @_QQclXumax constant : !fir.char<1,13> {
+    %0 = fir.string_lit "./umax_1.f90\00"(13) : !fir.char<1,13>
+    fir.has_value %0 : !fir.char<1,13>
+  }
+}
+
+// CHECK-LABEL:   func.func @maxval_1d_array_unsigned(
+// CHECK-NOT:       fir.call @_FortranAMaxvalUnsigned4x1_simplified({{.*}})
+// CHECK:           fir.call @_FortranAMaxvalUnsigned4({{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+// CHECK-NOT:       fir.call @_FortranAMaxvalUnsigned4x1_simplified({{.*}})
+
+// -----
+
+// Call to SUM with a 1D UNSIGNED array is not replaced: the runtime call
+// returns a signless integer that differs from the unsigned element type, so
+// the inline reduction (arith.addi on an unsigned value) would be invalid. The
+// runtime call must be preserved.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @sum_1d_array_unsigned(%arg0: !fir.ref<!fir.array<10xui32>> {fir.bindc_name = "a"}) -> ui32 {
+    %c10 = arith.constant 10 : index
+    %0 = fir.alloca ui32
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xui32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xui32>>
+    %3 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %4 = fir.address_of(@_QQclXusum) : !fir.ref<!fir.char<1,13>>
+    %c5_i32 = arith.constant 5 : i32
+    %5 = fir.convert %2 : (!fir.box<!fir.array<10xui32>>) -> !fir.box<none>
+    %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+    %7 = fir.convert %c0 : (index) -> i32
+    %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+    %9 = fir.call @_FortranASumUnsigned4(%5, %6, %c5_i32, %7, %8) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+    %10 = fir.convert %9 : (i32) -> ui32
+    fir.store %10 to %0 : !fir.ref<ui32>
+    %11 = fir.load %0 : !fir.ref<ui32>
+    return %11 : ui32
+  }
+  func.func private @_FortranASumUnsigned4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
+  fir.global linkonce @_QQclXusum constant : !fir.char<1,13> {
+    %0 = fir.string_lit "./usum_1.f90\00"(13) : !fir.char<1,13>
+    fir.has_value %0 : !fir.char<1,13>
+  }
+}
+
+// CHECK-LABEL:   func.func @sum_1d_array_unsigned(
+// CHECK-NOT:       fir.call @_FortranASumUnsigned4x1_simplified({{.*}})
+// CHECK:           fir.call @_FortranASumUnsigned4({{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+// CHECK-NOT:       fir.call @_FortranASumUnsigned4x1_simplified({{.*}})
+
+// -----
+
 // Call to MAXVAL with 1D F64 is replaced.
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
   func.func @maxval_1d_real(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}) -> f64 {

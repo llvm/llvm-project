@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -374,6 +373,27 @@ static bool countsAsInstruction(const MachineInstr &MI) {
   return !(MI.isDebugInstr() || MI.isCFIInstruction());
 }
 
+static bool isPseudoProbeSensitiveInstruction(const MachineInstr &MI) {
+  if (MI.isPseudoProbe())
+    return true;
+  if (!MI.isCall())
+    return false;
+  const DILocation *DL = MI.getDebugLoc();
+  return DL && DILocation::isPseudoProbeDiscriminator(DL->getDiscriminator());
+}
+
+static bool haveSamePseudoProbeContext(const MachineInstr &MI1,
+                                       const MachineInstr &MI2) {
+  bool IsSensitive1 = isPseudoProbeSensitiveInstruction(MI1);
+  bool IsSensitive2 = isPseudoProbeSensitiveInstruction(MI2);
+  if (!IsSensitive1 && !IsSensitive2)
+    return true;
+  if (IsSensitive1 != IsSensitive2)
+    return false;
+
+  return MI1.getDebugLoc().isSameSourceLocation(MI2.getDebugLoc());
+}
+
 /// Iterate backwards from the given iterator \p I, towards the beginning of the
 /// block. If a MI satisfying 'countsAsInstruction' is found, return an iterator
 /// pointing to that MI. If no such MI is found, return the end iterator.
@@ -408,6 +428,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
     if (MBBI1 == MBB1->end() || MBBI2 == MBB2->end())
       break;
     if (!MBBI1->isIdenticalTo(*MBBI2) ||
+        !haveSamePseudoProbeContext(*MBBI1, *MBBI2) ||
         // FIXME: This check is dubious. It's used to get around a problem where
         // people incorrectly expect inline asm directives to remain in the same
         // relative order. This is untenable because normal compiler

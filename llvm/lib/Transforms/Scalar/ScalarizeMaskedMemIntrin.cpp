@@ -277,9 +277,13 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
   if (isSplatValue(Mask, /*Index=*/0)) {
     Value *Predicate = Builder.CreateExtractElement(Mask, uint64_t(0ull),
                                                     Mask->getName() + ".first");
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.load");
@@ -336,9 +340,13 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
     //  %Elt = load i32* %EltAddr
     //  VResult = insertelement <16 x i32> VResult, i32 %Elt, i32 Idx
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.load");
@@ -453,9 +461,13 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
   if (isSplatValue(Mask, /*Index=*/0)) {
     Value *Predicate = Builder.CreateExtractElement(Mask, uint64_t(0ull),
                                                     Mask->getName() + ".first");
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.store");
     Builder.SetInsertPoint(CondBlock->getTerminator());
@@ -507,9 +519,13 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
     //  %EltAddr = getelementptr i32* %1, i32 0
     //  %store i32 %OneElt, i32* %EltAddr
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.store");
@@ -905,9 +921,13 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
     //  %Elt = load i32* %EltAddr
     //  VResult = insertelement <16 x i32> VResult, i32 %Elt, i32 Idx
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.load");
@@ -1031,9 +1051,13 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
     //  %EltAddr = getelementptr i32* %1, i32 0
     //  %store i32 %OneElt, i32* %EltAddr
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.store");
@@ -1140,9 +1164,13 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
     Value *Predicate =
         Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
 
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.histogram.update");

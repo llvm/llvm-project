@@ -623,6 +623,42 @@ Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnClassStatic(
 
 } // namespace copy_elision_edge_cases
 
+namespace return_temp_ref_ptr {
+
+struct RefObj {
+  mutable unsigned m_refCount { 0 };
+  void ref() const { m_refCount++; }
+  void deref() const {
+    m_refCount--;
+    if (!m_refCount)
+      delete const_cast<RefObj*>(this);
+  }
+
+  static Ref<RefObj> create(int) {
+    return adoptRef(*new RefObj);
+  }
+};
+
+Ref<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRef() {
+  return RefObj::create(0);
+}
+
+Ref<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefWithInit() {
+  return { RefObj::create(0) };
+}
+
+RefPtr<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefPtrSafe() {
+  return { RefObj::create(0) };
+}
+
+int val();
+RefPtr<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefPtrUnsafe() {
+  return { RefObj::create(val()) };
+  // expected-warning@-1{{A function 'returnRefPtrUnsafe' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace return_temp_ref_ptr
+
 namespace temp_object_typecheck {
 
 struct Tracked {

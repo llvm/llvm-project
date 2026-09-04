@@ -1319,6 +1319,42 @@ ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
   return ConstantRange(Min, APInt(BitWidth, *AttrMax) + 1);
 }
 
+/// Return true if \p II reads a register named "vlenb". On RISC-V this is the
+/// VLENB CSR, which holds VLEN/8: a non-zero power of two bounded by the
+/// target's VLEN range. Callers must ensure the target is RISC-V.
+static bool isReadVLENB(const IntrinsicInst &II) {
+  auto *MAV = dyn_cast<MetadataAsValue>(II.getArgOperand(0));
+  if (!MAV)
+    return false;
+  auto *MD = dyn_cast<MDNode>(MAV->getMetadata());
+  if (!MD || MD->getNumOperands() != 1)
+    return false;
+  auto *RegName = dyn_cast<MDString>(MD->getOperand(0));
+  return RegName && RegName->getString() == "vlenb";
+}
+
+/// Return the value range of a RISC-V vlenb CSR read. RVV requires VLEN to be a
+/// power of two in [32, 65536] (Zvl32b is the smallest vector extension), so
+/// VLENB = VLEN/8 is in [4, 8192]. This architectural bound is independent of
+/// any function attribute and stays sound for Zvl32b, whose VLEN (32) is not
+/// representable as an integer vscale (VLEN / RVVBitsPerBlock). A vscale_range
+/// attribute, when present, pins the subtarget's VLEN in units of
+/// RVVBitsPerBlock (64 bits) and so gives a tighter VLENB = vscale *
+/// RVVBytesPerBlock.
+static ConstantRange getRISCVVLENBRange(const IntrinsicInst &II,
+                                        unsigned Width) {
+  // Architectural bounds: VLEN in [32, 65536] => VLENB in [4, 8192].
+  ConstantRange Range(APInt(Width, 32 / 8), APInt(Width, 65536 / 8) + 1);
+
+  const Function *F = II.getFunction();
+  if (F->getFnAttribute(Attribute::VScaleRange).isValid()) {
+    ConstantRange VScale = getVScaleRange(F, Width);
+    Range = Range.intersectWith(
+        VScale.multiply(ConstantRange(APInt(Width, RISCV::RVVBytesPerBlock))));
+  }
+  return Range;
+}
+
 void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
                                        Value *Arm, bool Invert,
                                        const SimplifyQuery &Q, unsigned Depth) {
@@ -2285,6 +2321,30 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = getVScaleRange(II->getFunction(), BitWidth).toKnownBits();
         break;
       }
+      case Intrinsic::stepvector: {
+        auto *VecTy = cast<VectorType>(II->getType());
+        unsigned MinNumElts = VecTy->getElementCount().getKnownMinValue();
+        if (!isUIntN(BitWidth, MinNumElts))
+          break;
+
+        bool Overflow = false;
+        APInt MaxNumElts(BitWidth, MinNumElts);
+        if (VecTy->isScalableTy()) {
+          if (!II->getParent() || !II->getFunction())
+            break;
+          MaxNumElts = getVScaleRange(II->getFunction(), BitWidth)
+                           .getUnsignedMax()
+                           .umul_ov(MaxNumElts, Overflow);
+        }
+
+        // Give up if the lane count could wrap. Stepvector truncates lane
+        // indices that do not fit in the element type.
+        if (Overflow)
+          break;
+
+        Known.Zero.setHighBits((MaxNumElts - 1).countl_zero());
+        break;
+      }
       }
     }
     break;
@@ -2849,6 +2909,15 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
         // VLMAX is VLEN * LMUL / SEW, which is always a non-zero power of two
         // for any valid vtype, so it is a power of two regardless of OrZero.
         return true;
+      case Intrinsic::read_register:
+      case Intrinsic::read_volatile_register: {
+        // The RISC-V vlenb CSR holds VLEN/8, which is always a non-zero power
+        // of two, so it is a power of two regardless of OrZero.
+        const Module *M = II->getModule();
+        if (!M || !M->getTargetTriple().isRISCV())
+          break;
+        return isReadVLENB(*II);
+      }
       default:
         break;
       }
@@ -5114,13 +5183,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (isa<ConstantAggregateZero>(V)) {
     Known.KnownFPClasses = fcPosZero;
-    Known.SignBit = false;
+    Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
     Known.KnownFPClasses = fcNone;
-    Known.SignBit = false;
+    Known.setSignBit(false);
     return;
   }
 
@@ -5159,7 +5228,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         SignBitAllOne = false;
     }
     if (SignBitAllOne != SignBitAllZero)
-      Known.SignBit = SignBitAllOne;
+      Known.setSignBit(SignBitAllOne);
     return;
   }
 
@@ -5209,8 +5278,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   llvm::scope_exit ClearClassesFromFlags([=, &Known] {
     Known.knownNot(KnownNotFromFlags);
-    if (!Known.SignBit && AssumedClasses.SignBit) {
-      if (*AssumedClasses.SignBit)
+    if (!Known.getSignBit() && AssumedClasses.getSignBit()) {
+      if (*AssumedClasses.getSignBit())
         Known.signBitMustBeOne();
       else
         Known.signBitMustBeZero();
@@ -5496,7 +5565,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                                   InterestedClasses, Q, Depth + 1);
       // Can only propagate sign if output is never NaN.
       if (!Known.isKnownNeverNaN())
-        Known.SignBit.reset();
+        Known.setSignBit(std::nullopt);
       break;
     }
       // reverse preserves all characteristics of the input vec's element.
@@ -6022,24 +6091,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                           Q, Depth + 1);
 
-    // Inf REM x and x REM 0 produce NaN.
-    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-        KnownLHS.isKnownNeverInfinity() &&
-        KnownRHS.isKnownNeverLogicalZero(Mode)) {
-      Known.knownNot(fcNan);
-    }
-
-    // The sign for frem is the same as the first operand.
-    if (KnownLHS.cannotBeOrderedLessThanZero())
-      Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-    if (KnownLHS.cannotBeOrderedGreaterThanZero())
-      Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-
-    // See if we can be more aggressive about the sign of 0.
-    if (KnownLHS.isKnownNever(fcNegative))
-      Known.knownNot(fcNegative);
-    if (KnownLHS.isKnownNever(fcPositive))
-      Known.knownNot(fcPositive);
+    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
 
     break;
   }
@@ -6457,7 +6509,7 @@ std::optional<bool> llvm::computeKnownFPSignBit(const Value *V,
                                                 const SimplifyQuery &SQ,
                                                 unsigned Depth) {
   KnownFPClass Known = computeKnownFPClass(V, fcAllFlags, SQ, Depth);
-  return Known.SignBit;
+  return Known.getSignBit();
 }
 
 bool llvm::canIgnoreSignBitOfZero(const Use &U) {
@@ -10539,6 +10591,15 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
+  case Intrinsic::read_register:
+  case Intrinsic::read_volatile_register: {
+    const Module *M = II.getModule();
+    if (!M || !M->getTargetTriple().isRISCV())
+      break;
+    if (II.getFunction() && isReadVLENB(II))
+      return getRISCVVLENBRange(II, Width);
+    break;
+  }
   default:
     break;
   }

@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_TASKGROUP_H
-#define ORC_RT_TASKGROUP_H
+#ifndef ORC_RT_BEDROCK_TASKGROUP_H
+#define ORC_RT_BEDROCK_TASKGROUP_H
 
-#include "orc-rt/bedrock/move_only_function.h"
+#include "orc-rt/support/move_only_function.h"
 
 #include <cassert>
 #include <memory>
@@ -224,4 +224,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_TASKGROUP_H
+#endif // ORC_RT_BEDROCK_TASKGROUP_H

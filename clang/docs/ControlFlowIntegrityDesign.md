@@ -279,6 +279,8 @@ The interleaving scheme implemented in LLVM is inspired by
 by Dimitar Bounov, Rami Gökhan Kıcı, and Sorin Lerner, but has its own
 enhancements (more in [Interleave virtual tables]).
 
+[^ivtbl]: [Protecting C++ Dynamic Dispatch Through VTable Interleaving](https://cseweb.ucsd.edu/~lerner/papers/ivtbl-ndss16.pdf). Dimitar Bounov, Rami Gökhan Kıcı, Sorin Lerner.
+
 #### Split virtual table groups into separate virtual tables
 
 The Itanium C++ ABI glues multiple individual virtual tables for a class into a combined virtual table (virtual table group).

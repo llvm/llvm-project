@@ -2136,6 +2136,56 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
 
+  // Packed Multiplication with Horizontal Addition.
+  class RVPHorizontalMulIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pm4add     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2add     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2add_x   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm4addu    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2addu    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pmq2add    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pmqr2add   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sadd    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sadd_x  : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sub     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sub_x   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm4addsu   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2addsu   : RVPHorizontalMulIntrinsic;
+
+  // Packed Multiply Parts. The packed forms multiply the selected element of
+  // every pair, so the operands are the result with each element split in two.
+  class RVPPackedMulPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMSubdivide2VectorType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmul_00   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmul_01   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmul_11   : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_00  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_01  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulu_11  : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulsu_00 : RVPPackedMulPartsIntrinsic;
+  def int_riscv_pmulsu_11 : RVPPackedMulPartsIntrinsic;
+
+  // The scalar forms select one element from each packed operand and keep that
+  // single product: <2 x i16> pairs with i32 and <2 x i32> with i64.
+  class RVPScalarMulPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mul_00   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mul_01   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mul_11   : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_00  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_01  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulu_11  : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulsu_00 : RVPScalarMulPartsIntrinsic;
+  def int_riscv_mulsu_11 : RVPScalarMulPartsIntrinsic;
+
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],
@@ -2162,30 +2212,24 @@ class RVPBinaryIntrinsic
   def int_riscv_pnclipp  : RVPNarrowingClipIntrinsic;
   def int_riscv_pnclipup : RVPNarrowingClipIntrinsic;
 
-  // Packed "Q-format" Multiply Parts Accumulate
+  // Packed "Q-format" Multiply Parts Accumulate.
   class RVPQFormatAccIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                               [LLVMMatchType<0>, llvm_any_ty,
                                LLVMMatchType<1>],
                               [IntrNoMem, IntrSpeculatable]>;
-  def int_riscv_mqacc_h00  : RVPQFormatAccIntrinsic;
-  def int_riscv_mqacc_h01  : RVPQFormatAccIntrinsic;
-  def int_riscv_mqacc_h11  : RVPQFormatAccIntrinsic;
-  def int_riscv_mqracc_h00 : RVPQFormatAccIntrinsic;
-  def int_riscv_mqracc_h01 : RVPQFormatAccIntrinsic;
-  def int_riscv_mqracc_h11 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_00  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_01  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_11  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_00 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_01 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_11 : RVPQFormatAccIntrinsic;
   def int_riscv_pmqacc_h00  : RVPQFormatAccIntrinsic;
   def int_riscv_pmqacc_h01  : RVPQFormatAccIntrinsic;
   def int_riscv_pmqacc_h11  : RVPQFormatAccIntrinsic;
   def int_riscv_pmqracc_h00 : RVPQFormatAccIntrinsic;
   def int_riscv_pmqracc_h01 : RVPQFormatAccIntrinsic;
   def int_riscv_pmqracc_h11 : RVPQFormatAccIntrinsic;
-  def int_riscv_mqacc_w00  : RVPQFormatAccIntrinsic;
-  def int_riscv_mqacc_w01  : RVPQFormatAccIntrinsic;
-  def int_riscv_mqacc_w11  : RVPQFormatAccIntrinsic;
-  def int_riscv_mqracc_w00 : RVPQFormatAccIntrinsic;
-  def int_riscv_mqracc_w01 : RVPQFormatAccIntrinsic;
-  def int_riscv_mqracc_w11 : RVPQFormatAccIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

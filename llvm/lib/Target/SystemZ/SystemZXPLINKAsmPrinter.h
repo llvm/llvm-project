@@ -23,7 +23,9 @@
 namespace llvm {
 class MCStreamer;
 class MCSymbolGOFF;
+class MachineFunction;
 class MachineInstr;
+class MachineOperand;
 class Module;
 class raw_ostream;
 
@@ -64,9 +66,10 @@ class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
     AssociatedDataAreaTable(uint64_t PointerSize) : PointerSize(PointerSize) {}
 
     /// @brief Add a function descriptor to the ADA.
-    /// @param MI Pointer to an ADA_ENTRY instruction.
+    /// @param MF The function containing the ADA_ENTRY instruction.
+    /// @param MO The operand describing the descriptor symbol.
     /// @return The displacement of the descriptor into the ADA.
-    uint32_t insert(const MachineOperand MO);
+    uint32_t insert(const MachineFunction &MF, const MachineOperand &MO);
 
     /// @brief Get the displacement into associated data area (ADA) for a name.
     /// If no displacement is already associated with the name, assign one and

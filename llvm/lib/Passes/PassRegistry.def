@@ -325,6 +325,7 @@ CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
 CGSCC_PASS("coro-annotation-elide", CoroAnnotationElidePass())
+CGSCC_PASS("trigger-crash-cgscc", TriggerCrashCGSCCPass())
 #undef CGSCC_PASS
 
 #ifndef CGSCC_PASS_WITH_PARAMS
@@ -799,6 +800,7 @@ LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(errs()))
 LOOP_PASS("print<hash-recognize>", HashRecognizePrinterPass(errs()))
 LOOP_PASS("print<iv-users>", IVUsersPrinterPass(errs()))
 LOOP_PASS("print<loopnest>", LoopNestPrinterPass(errs()))
+LOOP_PASS("trigger-crash-loop", TriggerCrashLoopPass())
 #undef LOOP_PASS
 
 #ifndef LOOP_PASS_WITH_PARAMS

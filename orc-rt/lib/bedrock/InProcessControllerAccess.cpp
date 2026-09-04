@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Contains the implementation of APIs in the
-// orc-rt/InProcessControllerAccess.h header.
+// orc-rt/bedrock/InProcessControllerAccess.h header.
 //
 //===----------------------------------------------------------------------===//
 

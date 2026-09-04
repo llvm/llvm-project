@@ -18,6 +18,7 @@
 
 namespace mlir {
 namespace arith {
+
 /// Maps arithmetic fastmath enum values to LLVM enum values.
 LLVM::FastmathFlags
 convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF);
@@ -51,17 +52,13 @@ getLLVMDefaultFPExceptionBehavior(MLIRContext &context);
 template <typename SourceOp, typename TargetOp>
 class AttrConvertFastMathToLLVM {
 public:
-  AttrConvertFastMathToLLVM(SourceOp srcOp) {
-    // Copy the source attributes.
-    convertedAttr = NamedAttrList{srcOp->getAttrs()};
-    // Get the name of the arith fastmath attribute.
-    StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
-    // Remove the source fastmath attribute.
-    auto arithFMFAttr = dyn_cast_if_present<arith::FastMathFlagsAttr>(
-        convertedAttr.erase(arithFMFAttrName));
+  AttrConvertFastMathToLLVM(SourceOp srcOp)
+      : convertedAttr(srcOp->getDiscardableAttrDictionary()) {
+    srcOp->getName().populateInherentAttrs(srcOp, convertedAttr);
+    convertedAttr.erase(SourceOp::getFastMathAttrName());
+    auto arithFMFAttr = srcOp.getFastMathFlagsAttr();
     if (arithFMFAttr) {
-      StringRef targetAttrName = TargetOp::getFastmathAttrName();
-      convertedAttr.set(targetAttrName,
+      convertedAttr.set(TargetOp::getFastmathAttrName(),
                         convertArithFastMathAttrToLLVM(arithFMFAttr));
     }
   }
@@ -78,17 +75,11 @@ private:
 template <typename SourceOp, typename TargetOp>
 class AttrConvertOverflowToLLVM {
 public:
-  AttrConvertOverflowToLLVM(SourceOp srcOp) {
+  AttrConvertOverflowToLLVM(SourceOp srcOp)
+      : convertedAttr(srcOp->getDiscardableAttrDictionary()) {
     using IntegerOverflowFlagsAttr = LLVM::IntegerOverflowFlagsAttr;
 
-    // Copy the source attributes.
-    convertedAttr = NamedAttrList{srcOp->getAttrs()};
-    // Get the name of the arith overflow attribute.
-    StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
-    // Remove the source overflow attribute from the set that will be present
-    // in the target.
-    if (auto arithAttr = dyn_cast_if_present<arith::IntegerOverflowFlagsAttr>(
-            convertedAttr.erase(arithAttrName))) {
+    if (auto arithAttr = srcOp.getOverflowAttr()) {
       auto llvmFlag = convertArithOverflowFlagsToLLVM(arithAttr.getValue());
       // Create a dictionary attribute holding the overflow flags property.
       // (In the LLVM dialect, the overflow flags are a property, not an
@@ -117,9 +108,9 @@ private:
 template <typename SourceOp, typename TargetOp>
 class AttrConvertNonNegToLLVM {
 public:
-  AttrConvertNonNegToLLVM(SourceOp srcOp) {
-    convertedAttr = NamedAttrList{srcOp->getAttrs()};
-    if (!convertedAttr.erase("nonNeg"))
+  AttrConvertNonNegToLLVM(SourceOp srcOp)
+      : convertedAttr(srcOp->getDiscardableAttrDictionary()) {
+    if (!srcOp.getNonNeg())
       return;
     MLIRContext *ctx = srcOp.getOperation()->getContext();
     Builder b(ctx);
@@ -142,26 +133,16 @@ class AttrConverterConstrainedFPToLLVM {
                 "LLVM::FPExceptionBehaviorOpInterface");
 
 public:
-  AttrConverterConstrainedFPToLLVM(SourceOp srcOp) {
-    // Copy the source attributes.
-    convertedAttr = NamedAttrList{srcOp->getAttrs()};
-
+  AttrConverterConstrainedFPToLLVM(SourceOp srcOp)
+      : convertedAttr(srcOp->getDiscardableAttrDictionary()) {
     if constexpr (TargetOp::template hasTrait<
                       LLVM::RoundingModeOpInterface::Trait>()) {
-      // Get the name of the rounding mode attribute.
-      StringRef arithAttrName = srcOp.getRoundingModeAttrName();
-      // Remove the source attribute.
-      auto arithAttr =
-          cast<arith::RoundingModeAttr>(convertedAttr.erase(arithAttrName));
-      // Set the target attribute.
+      auto arithAttr = srcOp.getRoundingModeAttr();
       convertedAttr.set(TargetOp::getRoundingModeAttrName(),
                         convertArithRoundingModeAttrToLLVM(arithAttr));
     }
     // Constrained intrinsics (llvm.intr.experimental.constrained.*) do not
-    // support fastmath flags. Remove the arith fastmath attribute if present.
-    if constexpr (SourceOp::template hasTrait<
-                      arith::ArithFastMathInterface::Trait>())
-      convertedAttr.erase(srcOp.getFastMathAttrName());
+    // support fastmath flags, so do not copy them from the source operation.
     convertedAttr.set(TargetOp::getFPExceptionBehaviorAttrName(),
                       getLLVMDefaultFPExceptionBehavior(*srcOp->getContext()));
   }

@@ -34,7 +34,12 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       "::mlir::StringAttr", "getNameAttr", (ins)
     >,
     InterfaceMethod<"Sets the name of this symbol.",
-      "void", "setName", (ins "::mlir::StringAttr":$name)
+      "void", "setSymbolName", (ins "::mlir::StringAttr":$name), [{}],
+      /*defaultImplementation=*/[{
+        auto *op = this->getOperation();
+        op->setInherentAttr(::mlir::StringAttr::get(
+            op->getContext(), mlir::SymbolTable::getSymbolAttrName()), name);
+      }]
     >,
     InterfaceMethod<"Gets the visibility of this symbol.",
       "mlir::SymbolTable::Visibility", "getVisibility", (ins)
@@ -135,9 +140,19 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       return getNameAttr().getValue();
     }
 
-    /// Convenience version of `setName` that takes a StringRef.
+    /// Convenience version of `setSymbolName` that takes a StringRef.
+    void setSymbolName(::mlir::StringRef name) {
+      setSymbolName(::mlir::StringAttr::get(getOperation()->getContext(), name));
+    }
+
+    [[deprecated("use setSymbolName instead")]]
+    void setName(::mlir::StringAttr name) {
+      setSymbolName(name);
+    }
+
+    [[deprecated("use setSymbolName instead")]]
     void setName(::mlir::StringRef name) {
-      setName(::mlir::StringAttr::get(getOperation()->getContext(), name));
+      setSymbolName(name);
     }
 
     /// Return the conventional symbol visibility attribute name.

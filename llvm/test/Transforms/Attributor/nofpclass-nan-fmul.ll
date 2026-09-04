@@ -200,7 +200,7 @@ define float @ret_fmul_ieee_inf(float %arg) {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], +inf
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
-  %fmul = fmul float %arg, 0x7FF0000000000000
+  %fmul = fmul float %arg, +inf
   ret float %fmul
 }
 

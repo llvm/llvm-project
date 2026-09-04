@@ -60,18 +60,24 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
 
   // Compute bucket contents and final ordering.
   Buckets.resize(BucketCount);
-  for (auto &E : Entries) {
-    uint32_t Bucket = E.second.HashValue % BucketCount;
-    Buckets[Bucket].push_back(&E.second);
-    E.second.Sym = Asm->createTempSymbol(Prefix);
-  }
+  for (auto &E : Entries)
+    Buckets[E.second.HashValue % BucketCount].push_back(&E.second);
 
   // Sort the contents of the buckets by hash value so that hash collisions end
-  // up together. Stable sort makes testing easier and doesn't cost much more.
-  for (auto &Bucket : Buckets)
-    llvm::stable_sort(Bucket, [](HashData *LHS, HashData *RHS) {
-      return LHS->HashValue < RHS->HashValue;
+  // up together. Entries is keyed by name, so breaking ties by name yields a
+  // total order that does not depend on the order names were added in.
+  for (HashList &Bucket : Buckets)
+    llvm::sort(Bucket, [](const HashData *LHS, const HashData *RHS) {
+      if (LHS->HashValue != RHS->HashValue)
+        return LHS->HashValue < RHS->HashValue;
+      return LHS->Name.getString() < RHS->Name.getString();
     });
+
+  // Create the labels in bucket order so that their numbering matches the
+  // order they are emitted in.
+  for (HashList &Bucket : Buckets)
+    for (HashData *Hash : Bucket)
+      Hash->Sym = Asm->createTempSymbol(Prefix);
 }
 
 namespace {
@@ -443,9 +449,8 @@ void Dwarf5AccelTableWriter::populateAbbrevsMap() {
           Abbrev.addAttribute({dwarf::DW_IDX_parent, *MaybeParentForm});
         FoldingSetNodeID ID;
         Abbrev.Profile(ID);
-        void *InsertPos;
-        if (DebugNamesAbbrev *Existing =
-                AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
+        FoldingSetInsertToken Token;
+        if (DebugNamesAbbrev *Existing = AbbreviationsSet.lookup(ID, Token)) {
           Value->setAbbrevNumber(Existing->getNumber());
           continue;
         }
@@ -453,7 +458,7 @@ void Dwarf5AccelTableWriter::populateAbbrevsMap() {
             new (Alloc) DebugNamesAbbrev(std::move(Abbrev));
         AbbreviationsVector.push_back(NewAbbrev);
         NewAbbrev->setNumber(AbbreviationsVector.size());
-        AbbreviationsSet.InsertNode(NewAbbrev, InsertPos);
+        AbbreviationsSet.insert(NewAbbrev, Token);
         Value->setAbbrevNumber(NewAbbrev->getNumber());
       }
     }
