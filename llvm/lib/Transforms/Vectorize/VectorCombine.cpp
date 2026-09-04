@@ -160,6 +160,7 @@ private:
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
   bool foldBitOrderReverseAndSwap(Instruction &I);
+  bool foldDisjunctionToConstantMatch(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -584,6 +585,115 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
   // may enable further optimization.
   // Codegen can reverse this transform (scalarize) if it was not profitable.
   return OldCost < NewCost;
+}
+
+/// Attempts to fold chains of `eq` comparisons to `vector.match`. For example:
+///
+/// ```
+/// %c0 = icmp eq <vscale x 4 x i16> %vec, splat (i16 100)
+/// %c1 = icmp eq <vscale x 4 x i16> %vec, splat (i16 32)
+/// %c2 = icmp eq <vscale x 4 x i16> %vec, splat (i16 10)
+/// %or = or <vscale x 4 x i1> %c0, %c1
+/// %r = or <vscale x 4 x i1> %or, %c2
+/// ```
+/// folds to:
+/// ```
+/// %r = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(
+///        <vscale x 4 x i16> %vec, <i16 100, i16 32, i16 10, i16 100>,
+///        splat (i1 true))
+/// ```
+bool VectorCombine::foldDisjunctionToConstantMatch(Instruction &I) {
+  if (I.getOpcode() != Instruction::Or)
+    return false;
+
+  // The vector being checked (%vec in the example).
+  Value *CompareSource = nullptr;
+  // The values being searched for (e.g, 100, 32, 10).
+  SmallSetVector<Constant *, 16> SearchValues;
+
+  unsigned NumVisited = 0;
+  InstructionCost OldCost = 0;
+  SmallPtrSet<Value *, 4> Visited;
+  SmallVector<Value *> Worklist = {&I};
+  while (!Worklist.empty()) {
+    auto *Op = dyn_cast<Instruction>(Worklist.pop_back_val());
+    if (!Op || ++NumVisited >= MaxInstrsToScan)
+      return false;
+
+    if (Op != &I && !Op->hasOneUse())
+      return false;
+
+    if (!Visited.insert(Op).second)
+      continue;
+
+    Constant *C;
+    Value *Source = nullptr;
+    if (match(Op, m_c_SpecificICmp(CmpInst::ICMP_EQ, m_Value(Source),
+                                   m_ConstantSplat(m_Constant(C)))) &&
+        !C->getType()->isPointerTy()) {
+      // TODO: Extend to "not equals" compares.
+      SearchValues.insert(C);
+    } else if (match(Op, m_Intrinsic<Intrinsic::experimental_vector_match>(
+                             m_Value(Source), m_Constant(C),
+                             m_ConstantSplat(m_SpecificInt(1))))) {
+      // Merge with any previous vector match. This ensures the combine always
+      // creates the largest possible match (even if the combine applies to an
+      // `or` earlier in the chain).
+      unsigned NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
+      for (unsigned I = 0; I < NumElts; ++I)
+        if (Constant *Elt = C->getAggregateElement(I))
+          SearchValues.insert(Elt);
+    } else if (Op->getOpcode() == Instruction::Or) {
+      Worklist.append({Op->getOperand(0), Op->getOperand(1)});
+    } else {
+      // InstCombine can fold compares with nearby values to check ranges, which
+      // means this combine does not match. TODO: Extend this fold to cover
+      // these cases too?
+      return false;
+    }
+
+    // Ensure all comparisons are against the same vector.
+    if (!CompareSource)
+      CompareSource = Source;
+    else if (Source && CompareSource != Source)
+      return false;
+
+    OldCost += TTI.getInstructionCost(Op, CostKind);
+  }
+
+  if (SearchValues.size() <= 1)
+    return false;
+
+  auto *ResultTy = cast<VectorType>(I.getType());
+  auto *SrcType = cast<VectorType>(CompareSource->getType());
+  ElementCount SrcElts = SrcType->getElementCount();
+
+  // Look for a match needle size (up to the size of SrcType) that's profitable.
+  InstructionCost NewCost;
+  Constant *NeedleVector;
+  SmallVector<Constant *> MatchValues(SearchValues.getArrayRef());
+  do {
+    NeedleVector = ConstantVector::get(MatchValues);
+    IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_match, ResultTy,
+                                {SrcType, NeedleVector->getType(), ResultTy});
+    NewCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+    if (NewCost < OldCost)
+      break;
+
+    // Extend the needle vector by duplicating the first element.
+    MatchValues.resize(NextPowerOf2(MatchValues.size()), MatchValues[0]);
+  } while (MatchValues.size() <= SrcElts.getKnownMinValue());
+
+  if (NewCost >= OldCost)
+    return false;
+
+  Value *Match = Builder.CreateIntrinsic(
+      Intrinsic::experimental_vector_match, {SrcType, NeedleVector->getType()},
+      {CompareSource, NeedleVector,
+       ConstantVector::getSplat(ResultTy->getElementCount(),
+                                Builder.getTrue())});
+  replaceValue(I, *Match);
+  return true;
 }
 
 /// Create a shuffle that translates (shifts) 1 element from the input vector
@@ -6934,6 +7044,10 @@ bool VectorCombine::run() {
         return true;
     if (Opcode == Instruction::BitCast)
       if (foldBitOrderReverseAndSwap(I))
+        return true;
+
+    if (IsVectorType && Opcode == Instruction::Or)
+      if (foldDisjunctionToConstantMatch(I))
         return true;
 
     // Otherwise, try folds that improve codegen but may interfere with
