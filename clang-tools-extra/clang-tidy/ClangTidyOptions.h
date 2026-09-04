@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 
 #include "clang/Basic/DiagnosticIDs.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -69,6 +70,9 @@ struct ClangTidyOptions {
 
   /// Checks filter.
   std::optional<std::string> Checks;
+
+  /// Line filter.
+  std::optional<std::vector<FileFilter>> LineFilter;
 
   /// WarningsAsErrors filter.
   std::optional<std::string> WarningsAsErrors;
@@ -337,6 +341,12 @@ public:
 
   std::vector<OptionsSource> getRawOptions(StringRef FileName) override;
 };
+
+/// Returns true if a diagnostic at \p LineNumber in \p FileName should be
+/// displayed according to \p LineFilter. An empty filter allows all
+/// diagnostics.
+bool passesLineFilter(llvm::ArrayRef<FileFilter> LineFilter,
+                      llvm::StringRef FileName, unsigned LineNumber);
 
 /// Parses LineFilter from JSON and stores it to the \p Options.
 std::error_code parseLineFilter(StringRef LineFilter,

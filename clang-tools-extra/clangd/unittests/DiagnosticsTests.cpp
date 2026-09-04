@@ -2118,6 +2118,25 @@ TEST(Diagnostics, TidyDiagsArentAffectedFromWerror) {
                 diagSeverity(DiagnosticsEngine::Error)))));
 }
 
+TEST(Diagnostics, TidyLineFilter) {
+  Annotations Test(R"cpp(
+    $skip[[typedef int Skip]];
+    $keep[[typedef int Keep]];
+    $after[[typedef int After]];
+  )cpp");
+  TestTU TU = TestTU::withCode(Test.code());
+  unsigned KeepLine = Test.range("keep").start.line + 1;
+  TU.ClangTidyProvider = [KeepLine](tidy::ClangTidyOptions &Opts,
+                                    llvm::StringRef) {
+    Opts.Checks = "modernize-use-using";
+    Opts.LineFilter =
+        std::vector<tidy::FileFilter>{{"TestTU.cpp", {{KeepLine, KeepLine}}}};
+  };
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(ElementsAre(Diag(
+                  Test.range("keep"), "use 'using' instead of 'typedef'"))));
+}
+
 TEST(Diagnostics, DeprecatedDiagsAreHints) {
   ClangdDiagnosticOptions Opts;
   std::optional<clangd::Diagnostic> Diag;

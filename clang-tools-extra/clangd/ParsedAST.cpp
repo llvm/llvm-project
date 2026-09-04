@@ -384,6 +384,23 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
   }
 }
 
+bool passesTidyLineFilter(const tidy::ClangTidyOptions &Options,
+                          SourceLocation Loc, const SourceManager &SM) {
+  if (!Options.LineFilter)
+    return true;
+
+  if (!Loc.isValid())
+    return true;
+
+  FileID FID = SM.getDecomposedExpansionLoc(Loc).first;
+  OptionalFileEntryRef File = SM.getFileEntryRefForID(FID);
+  if (!File)
+    return true;
+
+  return tidy::passesLineFilter(*Options.LineFilter, File->getName(),
+                                SM.getExpansionLineNumber(Loc));
+}
+
 std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
                                          const ThreadsafeFS &TFS) {
   auto &Cfg = Config::current();
@@ -606,50 +623,54 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                                           SourceLocation());
     }
 
-    ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
-                                  const clang::Diagnostic &Info) {
-      auto It = OverriddenSeverity.find(Info.getID());
-      if (It != OverriddenSeverity.end())
-        DiagLevel = It->second;
+    ASTDiags.setLevelAdjuster(
+        [&](DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &Info) {
+          auto It = OverriddenSeverity.find(Info.getID());
+          if (It != OverriddenSeverity.end())
+            DiagLevel = It->second;
 
-      if (!CTChecks.empty()) {
-        std::string CheckName = CTContext->getCheckName(Info.getID());
-        bool IsClangTidyDiag = !CheckName.empty();
-        if (IsClangTidyDiag) {
-          if (Cfg.Diagnostics.Suppress.contains(CheckName))
-            return DiagnosticsEngine::Ignored;
-          // Check for suppression comment. Skip the check for diagnostics not
-          // in the main file, because we don't want that function to query the
-          // source buffer for preamble files. For the same reason, we ask
-          // shouldSuppressDiagnostic to avoid I/O.
-          // We let suppression comments take precedence over warning-as-error
-          // to match clang-tidy's behaviour.
-          bool IsInsideMainFile =
-              Info.hasSourceManager() &&
-              isInsideMainFile(Info.getLocation(), Info.getSourceManager());
-          SmallVector<tooling::Diagnostic, 1> TidySuppressedErrors;
-          if (IsInsideMainFile && CTContext->shouldSuppressDiagnostic(
-                                      DiagLevel, Info, TidySuppressedErrors,
-                                      /*AllowIO=*/false,
-                                      /*EnableNolintBlocks=*/true)) {
-            // FIXME: should we expose the suppression error (invalid use of
-            // NOLINT comments)?
-            return DiagnosticsEngine::Ignored;
-          }
-          if (!CTContext->getOptions().SystemHeaders.value_or(false) &&
-              Info.hasSourceManager() &&
-              Info.getSourceManager().isInSystemMacro(Info.getLocation()))
-            return DiagnosticsEngine::Ignored;
+          if (!CTChecks.empty()) {
+            std::string CheckName = CTContext->getCheckName(Info.getID());
+            bool IsClangTidyDiag = !CheckName.empty();
+            if (IsClangTidyDiag) {
+              if (Cfg.Diagnostics.Suppress.contains(CheckName))
+                return DiagnosticsEngine::Ignored;
+              if (Info.hasSourceManager() &&
+                  !passesTidyLineFilter(ClangTidyOpts, Info.getLocation(),
+                                        Info.getSourceManager()))
+                return DiagnosticsEngine::Ignored;
+              // Check for suppression comment. Skip the check for diagnostics
+              // not in the main file, because we don't want that function to
+              // query the source buffer for preamble files. For the same
+              // reason, we ask shouldSuppressDiagnostic to avoid I/O. We let
+              // suppression comments take precedence over warning-as-error to
+              // match clang-tidy's behaviour.
+              bool IsInsideMainFile =
+                  Info.hasSourceManager() &&
+                  isInsideMainFile(Info.getLocation(), Info.getSourceManager());
+              SmallVector<tooling::Diagnostic, 1> TidySuppressedErrors;
+              if (IsInsideMainFile && CTContext->shouldSuppressDiagnostic(
+                                          DiagLevel, Info, TidySuppressedErrors,
+                                          /*AllowIO=*/false,
+                                          /*EnableNolintBlocks=*/true)) {
+                // FIXME: should we expose the suppression error (invalid use of
+                // NOLINT comments)?
+                return DiagnosticsEngine::Ignored;
+              }
+              if (!CTContext->getOptions().SystemHeaders.value_or(false) &&
+                  Info.hasSourceManager() &&
+                  Info.getSourceManager().isInSystemMacro(Info.getLocation()))
+                return DiagnosticsEngine::Ignored;
 
-          // Check for warning-as-error.
-          if (DiagLevel == DiagnosticsEngine::Warning &&
-              CTContext->treatAsError(CheckName)) {
-            return DiagnosticsEngine::Error;
+              // Check for warning-as-error.
+              if (DiagLevel == DiagnosticsEngine::Warning &&
+                  CTContext->treatAsError(CheckName)) {
+                return DiagnosticsEngine::Error;
+              }
+            }
           }
-        }
-      }
-      return DiagLevel;
-    });
+          return DiagLevel;
+        });
 
     // Add IncludeFixer which can recover diagnostics caused by missing includes
     // (e.g. incomplete type) and attach include insertion fixes to diagnostics.

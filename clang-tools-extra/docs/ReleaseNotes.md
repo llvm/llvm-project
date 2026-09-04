@@ -100,6 +100,10 @@ infrastructure are described first, followed by tool-specific sections.
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
 
+- Added support for specifying `LineFilter` in {program}`clang-tidy`
+  configuration files. This is particularly useful for tools such as
+  {program}`clangd` that consume `.clang-tidy` files directly.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
