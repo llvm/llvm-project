@@ -65,7 +65,9 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
 ///   * inferred from the static dims in the input and output tensors.
 /// Bails out if:
 ///   * vector sizes are not user-provided, and
-///   * at least one dim is dynamic (in both the input and output tensors).
+///   * at least one dim is dynamic (in both the input and output tensors),
+/// or if the strides are not 1, or if the source is not inserted into the
+/// most minor dims of the destination.
 ///
 /// Before:
 ///     !t_in_type = tensor<1x2x3xf32>
@@ -1990,6 +1992,20 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
   if (!VectorType::isValidElementType(sourceType.getElementType()))
     return failure();
 
+  // The source is read in full and written at the slice offsets with a minor
+  // identity map. That only matches tensor.insert_slice when the strides are
+  // 1 and the source is inserted into the most minor dims of the destination,
+  // i.e. when any rank-reduced dims are the leading ones.
+  if (!sliceOp.hasUnitStride()) {
+    LDBG() << "Only unit strides are supported";
+    return failure();
+  }
+  int64_t rankDiff = sliceOp.getResultType().getRank() - sourceType.getRank();
+  if (sliceOp.getDroppedDims().find_last() >= rankDiff) {
+    LDBG() << "Only inserts into the most minor dims are supported";
+    return failure();
+  }
+
   // Get the pad value.
   // TransferReadOp (which is used to vectorize InsertSliceOp), requires a
   // scalar padding value. Note that:
@@ -3030,9 +3046,8 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
     } else if (!resultType.isDynamicDim(i)) {
       // Source shape is not statically known, but result shape is.
       // Vectorize with size of result shape. This may be larger than the
-      // source size.
-      // FIXME: Using rankDiff implies that the source tensor is inserted at
-      // the end of the destination tensor. However, that's not required.
+      // source size. The precondition guarantees that the source is inserted
+      // into the most minor dims of the result, so this is the matching dim.
       vecShape.push_back(resultType.getDimSize(rankDiff + i));
     } else {
       // Neither source nor result dim of padOp is static. Cannot vectorize
