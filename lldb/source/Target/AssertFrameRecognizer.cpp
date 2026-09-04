@@ -42,6 +42,7 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
     location.symbols.push_back(ConstString("__GI_raise"));
     location.symbols.push_back(ConstString("gsignal"));
     location.symbols.push_back(ConstString("pthread_kill"));
+    location.symbols.push_back(ConstString("__pthread_kill_implementation"));
     location.symbols_are_regex = true;
     break;
   default:
@@ -142,7 +143,7 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   if (!GetAssertLocation(os, location))
     return RecognizedStackFrameSP();
 
-  const uint32_t frames_to_fetch = 6;
+  const uint32_t frames_to_fetch = 8;
   const uint32_t last_frame_index = frames_to_fetch - 1;
   StackFrameSP prev_frame_sp = nullptr;
 
