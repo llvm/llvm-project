@@ -4906,16 +4906,17 @@ entry:
 define i32 @test_udot_v33i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-SD-LABEL: test_udot_v33i8_nomla:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr b1, [x0, #32]
+; CHECK-SD-NEXT:    ldrb w8, [x0, #32]
 ; CHECK-SD-NEXT:    ldp q3, q2, [x0]
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-SD-NEXT:    fmov s1, w8
 ; CHECK-SD-NEXT:    ushll v4.8h, v2.8b, #0
 ; CHECK-SD-NEXT:    ushll v5.8h, v3.8b, #0
 ; CHECK-SD-NEXT:    ushll2 v2.8h, v2.16b, #0
 ; CHECK-SD-NEXT:    ushll2 v3.8h, v3.16b, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-SD-NEXT:    uaddl2 v6.4s, v5.8h, v4.8h
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    mov v0.s[0], v1.s[0]
 ; CHECK-SD-NEXT:    uaddl2 v1.4s, v3.8h, v2.8h
 ; CHECK-SD-NEXT:    uaddl v2.4s, v3.4h, v2.4h
