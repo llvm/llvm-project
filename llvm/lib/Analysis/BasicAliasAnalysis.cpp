@@ -362,6 +362,18 @@ struct CastedValue {
     return N;
   }
 
+  KnownBits evaluateWith(KnownBits K) const {
+    assert(K.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
+           "Incompatible bit width");
+    if (TruncBits)
+      K = K.trunc(K.getBitWidth() - TruncBits);
+    if (SExtBits)
+      K = K.sext(K.getBitWidth() + SExtBits);
+    if (ZExtBits)
+      K = K.zext(K.getBitWidth() + ZExtBits);
+    return K;
+  }
+
   bool canDistributeOver(bool NUW, bool NSW) const {
     // zext(x op<nuw> y) == zext(x) op<nuw> zext(y)
     // sext(x op<nsw> y) == sext(x) op<nsw> sext(y)
@@ -589,6 +601,7 @@ struct BasicAAResult::DecomposedGEP {
 struct BasicAAResult::VariableGEPOffsetInfo {
   APInt GCD;
   ConstantRange OffsetRange;
+  SmallVector<KnownBits, 4> VarIndexKnownBits;
 };
 
 /// If V is a symbolic pointer expression, decompose it into a base pointer
@@ -1303,7 +1316,7 @@ AliasResult BasicAAResult::aliasGEP(
   // Analyze the variable indices, and compute the GCD that the total
   // variable offset is guaranteed to be a multiple of, and its approximate
   // range.
-  auto [GCD, OffsetRange] = analyzeVariableOffsets(DecompGEP1, DT);
+  auto [GCD, OffsetRange, VIKnownBits] = analyzeVariableOffsets(DecompGEP1, DT);
 
   // We now have accesses at two offsets from the same base:
   //  1. (...)*GCD + DecompGEP1.Offset with size V1Size
@@ -1329,7 +1342,8 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If a minimum absolute variable offset can be established, employ it to
   // prove that the two accesses are far enough apart.
-  if (auto MinAbsVarIndex = computeMinAbsVarOffset(DecompGEP1, DT, AAQI)) {
+  if (auto MinAbsVarIndex =
+          computeMinAbsVarOffset(DecompGEP1, VIKnownBits, DT, AAQI)) {
     // The constant offset will have added at least +/-MinAbsVarIndex to it.
     APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
     APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
@@ -1924,6 +1938,8 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
                                       DominatorTree *DT) {
   APInt GCD;
   ConstantRange OffsetRange(GEP.Offset);
+  SmallVector<KnownBits, 4> VarIndexKnownBits;
+  VarIndexKnownBits.reserve(GEP.VarIndices.size());
 
   for (unsigned I = 0, E = GEP.VarIndices.size(); I != E; ++I) {
     const VariableGEPIndex &Index = GEP.VarIndices[I];
@@ -1931,6 +1947,7 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
 
     SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
     KnownBits Known = computeKnownBits(Index.Val.V, SQ);
+    VarIndexKnownBits.emplace_back(Known);
 
     APInt ScaleForGCD = Scale;
     if (!Index.IsNSW)
@@ -1973,11 +1990,12 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
       OffsetRange = OffsetRange.add(CR);
   }
 
-  return {GCD, OffsetRange};
+  return {GCD, OffsetRange, std::move(VarIndexKnownBits)};
 }
 
 std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
-    const DecomposedGEP &GEP, DominatorTree *DT, const AAQueryInfo &AAQI) {
+    const DecomposedGEP &GEP, ArrayRef<KnownBits> VIKnownBits,
+    DominatorTree *DT, const AAQueryInfo &AAQI) {
   // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
   // potentially wrapping math.
   auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
@@ -2018,14 +2036,48 @@ std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     // inequality of values across loop iterations.
     const VariableGEPIndex &Var0 = VarIndices[0];
     const VariableGEPIndex &Var1 = VarIndices[1];
-    if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
-        Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
-        MultiplyByScaleNoWrap(Var0) && MultiplyByScaleNoWrap(Var1) &&
+    bool Preconditions =
+        Var0.Val.TruncBits == 0 && Var0.Val.hasSameCastsAs(Var1.Val) &&
+        !AAQI.MayBeCrossIteration && MultiplyByScaleNoWrap(Var0) &&
+        MultiplyByScaleNoWrap(Var1);
+    if (Var0.hasNegatedScaleOf(Var1) && Preconditions &&
         isKnownNonEqual(Var0.Val.V, Var1.Val.V,
                         SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
                                                        ? Var0.CxtI
                                                        : Var1.CxtI)))
       return Var0.Scale.abs();
+
+    if (!Preconditions)
+      return std::nullopt;
+
+    // On the chance we have not found a min abs, fallback to the generalization
+    // of the two variables case being handled to different scales:
+    // VarIndex = Scale0*V0 + (-Scale1)*V1 = ScaleGCD*(C0*V0 - C1*V1)
+    // where C0 = abs(Scale0)/ScaleGCD, C1 = abs(Scale1)/ScaleGCD.
+    // If C0*V0 != C1*V1, then abs(VarIndex) >= ScaleGCD, leading to the min
+    // absolute value being ScaleGCD.
+
+    // Ensure scales, after subtraction, have opposite signs.
+    bool EffectiveNeg0 = Var0.IsNegated ^ Var0.Scale.isNegative();
+    bool EffectiveNeg1 = Var1.IsNegated ^ Var1.Scale.isNegative();
+    if (EffectiveNeg0 != EffectiveNeg1) {
+      APInt AbsScale0 = Var0.Scale.abs();
+      APInt AbsScale1 = Var1.Scale.abs();
+      APInt ScaleGCD = APIntOps::GreatestCommonDivisor(AbsScale0, AbsScale1);
+      APInt C0 = AbsScale0.udiv(ScaleGCD);
+      APInt C1 = AbsScale1.udiv(ScaleGCD);
+
+      // Try to check whether C0*V0 and C1*V1 are provably distinct (i.e., one
+      // is guaranteed even while the other is guaranteed odd).
+      auto Known0 = KnownBits::mul(Var0.Val.evaluateWith(VIKnownBits[0]),
+                                   KnownBits::makeConstant(C0));
+
+      auto Known1 = KnownBits::mul(Var1.Val.evaluateWith(VIKnownBits[1]),
+                                   KnownBits::makeConstant(C1));
+
+      if (auto Res = KnownBits::ne(Known0, Known1); Res && *Res)
+        return ScaleGCD;
+    }
   }
 
   return std::nullopt;

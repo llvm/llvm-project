@@ -28,6 +28,7 @@ class DataLayout;
 class DominatorTree;
 class Function;
 class GEPOperator;
+struct KnownBits;
 class PHINode;
 class SelectInst;
 class TargetLibraryInfo;
@@ -127,6 +128,7 @@ private:
   /// VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex, thus
   /// establishing a minimum absolute value of the variable offset.
   std::optional<APInt> computeMinAbsVarOffset(const DecomposedGEP &GEP,
+                                              ArrayRef<KnownBits> VIKnownBits,
                                               DominatorTree *DT,
                                               const AAQueryInfo &AAQI);
 
