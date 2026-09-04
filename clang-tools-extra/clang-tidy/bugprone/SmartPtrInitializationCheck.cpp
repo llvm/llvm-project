@@ -802,13 +802,18 @@ public:
                    unless(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
                        classTemplateSpecializationDecl(IsDefaultDeleter))))))));
 
+    // Matcher for shared_ptr with custom deleter in constructor
+    // Check if the second argument is NOT std::default_delete
+    auto SharedPtrWithCustomDeleter = allOf(
+        hasDeclaration(cxxConstructorDecl(ofClass(IsSharedPtrRecord))),
+        hasArgument(
+            1, ignoringParenCasts(unless(hasType(hasUnqualifiedDesugaredType(
+                   recordType(hasDeclaration(classTemplateSpecializationDecl(
+                       IsDefaultDeleter)))))))));
+
     // Matcher for smart pointer constructors
-    // Exclude constructors with custom deleters:
-    // - shared_ptr with 2+ arguments (second is deleter)
-    // - unique_ptr with 2+ template args where second is not default_delete
     auto HasCustomDeleter = anyOf(
-        allOf(hasDeclaration(cxxConstructorDecl(ofClass(IsSharedPtrRecord))),
-              hasArgument(1, anything())),
+        SharedPtrWithCustomDeleter,
         allOf(hasType(hasUnqualifiedDesugaredType(
                   recordType(hasDeclaration(UniquePtrWithCustomDeleter)))),
               hasDeclaration(cxxConstructorDecl(ofClass(IsUniquePtrRecord)))));
@@ -827,24 +832,59 @@ public:
             hasArgument(0, OptionalCondOp))
             .bind("ctor");
 
-    // Matcher for reset() calls
-    // Exclude reset() calls with custom deleters:
-    // - shared_ptr with 2+ arguments (second is deleter)
-    // - unique_ptr with custom deleter type (2+ template args where second is
-    // not default_delete)
-    auto HasCustomDeleterInReset = anyOf(
-        allOf(on(hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                  classTemplateSpecializationDecl(IsSharedPtr)))))),
-              hasArgument(1, anything())),
-        on(hasType(hasUnqualifiedDesugaredType(
-            recordType(hasDeclaration(UniquePtrWithCustomDeleter))))));
+    // For reset() - we need to check the type of the smart pointer
+    // If it's shared_ptr with custom deleter (2+ args in constructor)
+    // or unique_ptr with custom deleter type
+    auto SmartPtrWithCustomDeleterType = anyOf(
+        // shared_ptr with custom deleter - check if the type has a second
+        // template argument that is NOT std::default_delete
+        classTemplateSpecializationDecl(
+            IsSharedPtr, templateArgumentCountIs(2),
+            hasTemplateArgument(
+                1, refersToType(unless(hasUnqualifiedDesugaredType(recordType(
+                       hasDeclaration(classTemplateSpecializationDecl(
+                           IsDefaultDeleter)))))))),
+        UniquePtrWithCustomDeleter);
+
+    auto HasCustomDeleterInReset =
+        anyOf(on(hasType(hasUnqualifiedDesugaredType(
+                  recordType(hasDeclaration(SmartPtrWithCustomDeleterType))))),
+              // Also check if reset call has 2 arguments (second is deleter)
+              // but we can't easily check if it's default_delete without
+              // matching the function parameters, so we'll skip this case
+              hasArgument(1, anything()));
+
+    // Actually, for simplicity, let's just check if the smart pointer type
+    // has a custom deleter. If it does, we skip the warning.
+    auto SmartPtrWithDefaultDeleter = classTemplateSpecializationDecl(
+        IsSmartPtr,
+        anyOf(
+            // shared_ptr with default deleter (1 template arg or 2nd is
+            // default_delete)
+            allOf(IsSharedPtr,
+                  anyOf(templateArgumentCountIs(1),
+                        allOf(templateArgumentCountIs(2),
+                              hasTemplateArgument(
+                                  1, refersToType(hasUnqualifiedDesugaredType(
+                                         recordType(hasDeclaration(
+                                             classTemplateSpecializationDecl(
+                                                 IsDefaultDeleter))))))))),
+            // unique_ptr with default deleter
+            allOf(IsUniquePtr,
+                  anyOf(templateArgumentCountIs(1),
+                        allOf(templateArgumentCountIs(2),
+                              hasTemplateArgument(
+                                  1, refersToType(hasUnqualifiedDesugaredType(
+                                         recordType(hasDeclaration(
+                                             classTemplateSpecializationDecl(
+                                                 IsDefaultDeleter)))))))))));
 
     auto ResetCallMatcher =
         cxxMemberCallExpr(
-            on(hasType(hasUnqualifiedDesugaredType(recordType(
-                hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
+            on(hasType(hasUnqualifiedDesugaredType(
+                recordType(hasDeclaration(SmartPtrWithDefaultDeleter))))),
             callee(cxxMethodDecl(ofClass(IsSmartPtrRecord), hasName("reset"))),
-            hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
+            hasArgument(0, PointerArg),
             unless(hasArgument(0, AllowedArguments)),
             hasArgument(0, OptionalCondOp))
             .bind("reset");

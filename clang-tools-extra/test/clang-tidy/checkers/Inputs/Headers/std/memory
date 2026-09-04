@@ -90,6 +90,8 @@ public:
   T *get() const { return ptr; }
   void reset() {}
   void reset(T *p) {}
+  template<typename D>
+  void reset(T *p, D d) {}
   explicit operator bool() const noexcept { return this->get() != nullptr; }
 
   shared_ptr &operator=(shared_ptr &&) { return *this; }
