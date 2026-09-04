@@ -399,6 +399,9 @@ static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaximum_magf128(Float128(0.0),
                                                        Float128(0.0)));
 static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximum_mag_numf128(Float128(0.0),
+                                                           Float128(0.0)));
+static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaximum_numf128(Float128(0.0),
                                                        Float128(0.0)));
 static_assert(Float128(0.0) ==
@@ -407,6 +410,10 @@ static_assert(Float128(0.0) ==
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_magf128(Float128(0.0),
                                                        Float128(0.0)));
+
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fminimum_mag_numf128(Float128(0.0),
+                                                           Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_numf128(Float128(0.0),
                                                        Float128(0.0)));
@@ -477,12 +484,6 @@ static_assert(float128(0.0) == [] {
   float128 iptr{};
   return LIBC_NAMESPACE::shared::modff128(float128(0.0), &iptr);
 }());
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fmaximum_mag_numf128(float128(0.0),
-                                                           float128(0.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fminimum_mag_numf128(float128(0.0),
-                                                           float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::remainderf128(float128(1.0),
                                                     float128(1.0)));
