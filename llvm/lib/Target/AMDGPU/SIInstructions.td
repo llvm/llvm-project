@@ -422,6 +422,38 @@ foreach Op = Operations in {
                                                       Op.VT, Op.RetReg, Op.Reg>;
 }
 
+// Register-pinning hints, one pseudo per register width. Expanded by the
+// SIPreColorPins pass (pre-RA, in SSA form) into either a hard physical-register
+// assignment or a soft COPY + allocation hint for the numbered VGPR/AGPR tuple.
+class PinPseudo<RegisterClass DstRC, RegisterClass SrcRC> :
+  VPseudoInstSI <(outs DstRC:$vdst), (ins SrcRC:$src, i32imm:$regno), []> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+foreach w = [32,64,96,128,160,192,224,256,288,320,352,384,512,1024] in {
+  defvar VRC = !cast<RegisterClass>(!if(!eq(w,32), "VGPR_32", "VReg_"#w));
+  defvar ARC = !cast<RegisterClass>(!if(!eq(w,32), "AGPR_32", "AReg_"#w));
+  // AV source: the pinned value arrives in a VGPR, but SIFoldOperands' AGPR load
+  // fold may rewrite it to an AGPR in place (a native buffer_load into AGPR), so
+  // the source must accept either file.
+  defvar AVRC = !cast<RegisterClass>(!if(!eq(w,32), "AV_32", "AV_"#w));
+  def PIN_VGPR_B#w : PinPseudo<VRC, VRC>;
+  def PIN_AGPR_B#w : PinPseudo<ARC, AVRC>;
+}
+
+// Selection patterns for the supported value types. Clang decomposes wider or
+// non-i32 values into these i32-based widths (see emitAMDGPUPinnedValue); an
+// unlisted type reaching ISel is unsupported and reports "cannot select".
+foreach vt = [i32, f32, v2i32, v4i32, v4f32, v8f16,
+              v8i32, v8f32, v16i32, v16f32] in {
+  def : GCNPat<(vt (int_amdgcn_pin_vgpr vt:$s, (i32 timm:$r))),
+               (!cast<Instruction>("PIN_VGPR_B"#vt.Size) $s, $r)>;
+  def : GCNPat<(vt (int_amdgcn_pin_agpr vt:$s, (i32 timm:$r))),
+               (!cast<Instruction>("PIN_AGPR_B"#vt.Size) $s, $r)>;
+}
+
 let usesCustomInserter = 1, Defs = [VCC] in {
 def V_ADD_U64_PSEUDO : VPseudoInstSI <
   (outs VReg_64_AlignTarget:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),

@@ -45,6 +45,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -3048,7 +3049,78 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
   }
 
   assert(Src.isScalar() && "Can't emit an agg store with this method");
-  EmitStoreOfScalar(Src.getScalarVal(), Dst, isInit);
+  llvm::Value *SV = Src.getScalarVal();
+  if (Dst.isSimple() && !AMDGPUPinnedLocals.empty())
+    SV = emitAMDGPUPinnedValue(SV, Dst.getPointer(*this));
+  EmitStoreOfScalar(SV, Dst, isInit);
+}
+
+void CodeGenFunction::tryTrackAMDGPUPinnedCapture(const VarDecl *VD,
+                                                  const LValue &LV) {
+  bool IsAGPR = VD->hasAttr<AMDGPUPinAGPRAttr>();
+  if (!IsAGPR && !VD->hasAttr<AMDGPUPinVGPRAttr>())
+    return;
+  if (!getTarget().getTriple().isAMDGCN() || !LV.isSimple())
+    return;
+  const Expr *RegE = IsAGPR ? VD->getAttr<AMDGPUPinAGPRAttr>()->getReg()
+                            : VD->getAttr<AMDGPUPinVGPRAttr>()->getReg();
+  unsigned Reg = RegE->EvaluateKnownConstInt(getContext()).getZExtValue();
+  AMDGPUPinnedLocals[LV.getPointer(*this)] = {IsAGPR, Reg};
+}
+
+llvm::Value *CodeGenFunction::emitAMDGPUPinnedValue(llvm::Value *V,
+                                                    llvm::Value *Addr) {
+  auto It = AMDGPUPinnedLocals.find(Addr);
+  if (It == AMDGPUPinnedLocals.end())
+    return V;
+  // The pin intrinsics are AMDGCN-only; ignore the attribute on other targets
+  // rather than emit invalid IR.
+  if (!getTarget().getTriple().isAMDGCN())
+    return V;
+  bool IsAGPR = It->second.first;
+  unsigned Reg = It->second.second;
+  llvm::Type *Ty = V->getType();
+  unsigned Bits = CGM.getDataLayout().getTypeSizeInBits(Ty);
+  if (Bits == 0 || (Bits % 32) != 0)
+    return V; // Only whole-dword values are pinnable.
+  unsigned Lanes = Bits / 32;
+
+  llvm::Intrinsic::ID IID = IsAGPR ? llvm::Intrinsic::amdgcn_pin_agpr
+                                   : llvm::Intrinsic::amdgcn_pin_vgpr;
+
+  // Patterns exist only for i32 widths 1/2/4/8/16 (float bases would need
+  // v1f32/v2f32, which have no pattern and crash isel), so bitcast to <N x i32>
+  // and decompose into those widths (e.g. 12 -> 8 + 4).
+  auto *VecTy = llvm::FixedVectorType::get(Int32Ty, Lanes);
+  llvm::Value *Vec = Builder.CreateBitCast(V, VecTy);
+
+  auto Pin = [&](llvm::Value *Chunk, unsigned RegNo) -> llvm::Value * {
+    llvm::Function *Fn = CGM.getIntrinsic(IID, {Chunk->getType()});
+    return Builder.CreateCall(Fn,
+                              {Chunk, llvm::ConstantInt::get(Int32Ty, RegNo)});
+  };
+  auto FloorWidth = [](unsigned L) -> unsigned {
+    for (unsigned W : {16u, 8u, 4u, 2u})
+      if (L >= W)
+        return W;
+    return 1;
+  };
+
+  for (unsigned Off = 0; Off < Lanes;) {
+    unsigned W = FloorWidth(Lanes - Off);
+    if (W == 1) {
+      llvm::Value *Idx = llvm::ConstantInt::get(Int32Ty, Off);
+      llvm::Value *Elt = Builder.CreateExtractElement(Vec, Idx);
+      Vec = Builder.CreateInsertElement(Vec, Pin(Elt, Reg + Off), Idx);
+    } else {
+      llvm::Value *Idx = llvm::ConstantInt::get(Int64Ty, Off);
+      llvm::Value *Sub = Builder.CreateExtractVector(
+          llvm::FixedVectorType::get(Int32Ty, W), Vec, Idx);
+      Vec = Builder.CreateInsertVector(VecTy, Vec, Pin(Sub, Reg + Off), Idx);
+    }
+    Off += W;
+  }
+  return Builder.CreateBitCast(Vec, Ty);
 }
 
 void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
@@ -3668,8 +3740,11 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     // Check for captured variables.
     if (E->refersToEnclosingVariableOrCapture()) {
       VD = VD->getCanonicalDecl();
-      if (auto *FD = LambdaCaptureFields.lookup(VD))
-        return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
+      if (auto *FD = LambdaCaptureFields.lookup(VD)) {
+        LValue CapLVal = EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
+        tryTrackAMDGPUPinnedCapture(VD, CapLVal);
+        return CapLVal;
+      }
       if (CapturedStmtInfo) {
         auto I = LocalDeclMap.find(VD);
         if (I != LocalDeclMap.end()) {

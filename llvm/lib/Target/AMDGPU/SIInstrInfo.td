@@ -3576,6 +3576,16 @@ def getAGPRFormOp : InstrMapping {
   let ValueCols = [["AGPR"]];
 }
 
+// Map from an mfma using AGPRs for srcC/vdst to the VGPR (vgprcd) form. Used to
+// pin an accumulator into VGPRs while its inputs stay in AGPRs.
+def getMFMASrcCVDstVGPROp : InstrMapping {
+  let FilterClass = "MFMATable";
+  let RowFields = ["AGPRFormOp"];
+  let ColFields = ["AGPRFormKind"];
+  let KeyCol = ["AGPR"];
+  let ValueCols = [["VGPR"]];
+}
+
 // Maps an v_cmp instruction to its v_cmpx equivalent.
 def getVCMPXOpFromVCMP : InstrMapping {
   let FilterClass = "VCMPVCMPXTable";
