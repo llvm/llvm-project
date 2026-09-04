@@ -69,7 +69,7 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
 };
 
 char MachineFunctionPrinterPass::ID = 0;
-} // namespace
+}
 
 char &llvm::MachineFunctionPrinterPassID = MachineFunctionPrinterPass::ID;
 INITIALIZE_PASS(MachineFunctionPrinterPass, "machineinstr-printer",
