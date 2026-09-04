@@ -1631,6 +1631,29 @@ BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
 }
 
 BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addRWTextureLoadMethods(ResourceDimension Dim,
+                                                bool IsArray) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+
+  ASTContext &AST = Record->getASTContext();
+  // A UAV binds a single mip slice: no mip component, no offset overload.
+  uint32_t CoordSize = getResourceDimensions(Dim) + (IsArray ? 1 : 0);
+  QualType LocationTy = AST.getExtVectorType(AST.IntTy, CoordSize);
+  QualType ReturnType = getHandleElementType();
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // T Load(int2 location)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+      .addParam("Location", LocationTy)
+      .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
+                   PH::_0)
+      .finalize();
+
+  return *this;
+}
+
+BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addTextureLoadMSMethods(ResourceDimension Dim,
                                                 bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
@@ -1727,6 +1750,8 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   // original-value parameter for each entry.
   addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_add");
+  addByteAddressBufferInterlockedMethod("InterlockedAnd", AST.UnsignedIntTy,
+                                        "__builtin_hlsl_interlocked_and");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.IntTy,
                                         "__builtin_hlsl_interlocked_min");
   addByteAddressBufferInterlockedMethod("InterlockedMin", AST.UnsignedIntTy,
@@ -1746,6 +1771,9 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAdd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_add");
+    addByteAddressBufferInterlockedMethod("InterlockedAnd64",
+                                          AST.UnsignedLongTy,
+                                          "__builtin_hlsl_interlocked_and");
     addByteAddressBufferInterlockedMethod("InterlockedMin64", AST.LongTy,
                                           "__builtin_hlsl_interlocked_min");
     addByteAddressBufferInterlockedMethod("InterlockedMin64",

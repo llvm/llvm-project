@@ -1,0 +1,94 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:lit_test.bzl", "lit_expand_template")
+
+licenses(["notice"])
+
+lit_expand_template(
+    name = "lit_site_cfg_py",
+    testonly = True,
+    out = "lit.site.cfg.py",
+    dirname_substitutions = {
+        "@CURRENT_LIBS_DIR@": "//lld:BUILD.bazel",
+        "@CURRENT_TOOLS_DIR@": "//lld:BUILD.bazel",
+        "@LLD_SOURCE_DIR@": "//lld:BUILD.bazel",
+        "@LLVM_BINARY_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_LIBS_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_LIT_TOOLS_DIR@": "//llvm/utils/lit:BUILD.bazel",
+        "@LLVM_SOURCE_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_TOOLS_DIR@": "//llvm:BUILD.bazel",
+        "@SHLIBDIR@": "//llvm:BUILD.bazel",
+    },
+    substitutions = {
+        # Lit needs a writable execution root inside the test sandbox. Keep
+        # temporary test outputs out of Bazel's collected undeclared outputs.
+        "r\"@LLD_BINARY_DIR@\"": "os.environ[\"TEST_TMPDIR\"]",
+        "@CMAKE_SIZEOF_VOID_P@": "8",
+        "@ENABLE_BACKTRACES@": "1",
+        "@LLD_DEFAULT_LD_LLD_IS_MINGW@": "0",
+        "@LLVM_BUILD_EXAMPLES@": "0",
+        "@LLVM_BYE_LINK_INTO_TOOLS@": "0",
+        "@LLVM_ENABLE_DIA_SDK@": "0",
+        "@LLVM_ENABLE_LIBXML2@": "0",
+        "@LLVM_ENABLE_PLUGINS@": "0",
+        "@LLVM_ENABLE_THREADS@": "1",
+        "@LLVM_ENABLE_ZLIB@": "1",
+        "@LLVM_ENABLE_ZSTD@": "1",
+        "@LLVM_HOST_TRIPLE@": "x86_64-unknown-linux-gnu",
+        "@LLVM_LIT_ERRC_MESSAGES@": "",
+        "@LLVM_TARGET_TRIPLE@": "x86_64-unknown-linux-gnu",
+        "@Python3_EXECUTABLE@": "python3",
+        "@SHLIBEXT@": ".so",
+    },
+    template = "lit.site.cfg.py.in",
+)
+
+filegroup(
+    name = "lit_data",
+    testonly = True,
+    data = [
+        "lit.cfg.py",
+        "lit.site.cfg.py",
+        "//lld:ld.lld",
+        "//lld:ld64.lld",
+        "//lld:lld-link",
+        "//lld:wasm-ld",
+        "//llvm:FileCheck",
+        "//llvm:count",
+        "//llvm:dsymutil",
+        "//llvm:dtlto_test_scripts",
+        "//llvm:llc",
+        "//llvm:llvm-ar",
+        "//llvm:llvm-as",
+        "//llvm:llvm-bcanalyzer",
+        "//llvm:llvm-cgdata",
+        "//llvm:llvm-config",
+        "//llvm:llvm-cvtres",
+        "//llvm:llvm-dis",
+        "//llvm:llvm-dlltool",
+        "//llvm:llvm-dwarfdump",
+        "//llvm:llvm-lib",
+        "//llvm:llvm-link",
+        "//llvm:llvm-lipo",
+        "//llvm:llvm-mc",
+        "//llvm:llvm-nm",
+        "//llvm:llvm-objcopy",
+        "//llvm:llvm-objdump",
+        "//llvm:llvm-otool",
+        "//llvm:llvm-pdbutil",
+        "//llvm:llvm-profdata",
+        "//llvm:llvm-readelf",
+        "//llvm:llvm-readobj",
+        "//llvm:llvm-strings",
+        "//llvm:llvm-strip",
+        "//llvm:llvm-symbolizer",
+        "//llvm:not",
+        "//llvm:obj2yaml",
+        "//llvm:opt",
+        "//llvm:split-file",
+        "//llvm:yaml2obj",
+    ],
+    visibility = ["//lld/test:__subpackages__"],
+)

@@ -10,6 +10,10 @@
 // RUN:   -fsyntax-only -finclude-default-header \
 // RUN:   -verify=expected,nooffset,dim3 -DOFFSET_ARG="int3(1, 2, 3)" \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -fsyntax-only -finclude-default-header \
+// RUN:   -verify=expected,nooffset,dim3 -DOFFSET_ARG="int3(1, 2, 3)" \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

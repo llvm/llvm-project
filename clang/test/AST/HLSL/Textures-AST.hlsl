@@ -50,6 +50,23 @@
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
 
+// UAV: CXXMethodDecl {{.*}} Load 'element_type (vector<int, [[INDEX_DIM]]>)' inline
+// UAV-NEXT: ParmVarDecl {{.*}} Location 'vector<int, [[INDEX_DIM]]>'
+// UAV-NEXT: CompoundStmt
+// UAV-NEXT: ReturnStmt
+// UAV-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
+// UAV-NEXT: CallExpr {{.*}} '<dependent type>'
+// UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_level' 'void (...) noexcept'
+// UAV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
+// UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
+// UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// UAV-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// UAV-SAME: ' lvalue .__handle
+// UAV-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// UAV-NEXT: DeclRefExpr {{.*}} 'vector<int, [[INDEX_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[INDEX_DIM]]>'
+// UAV-NEXT: AlwaysInlineAttr
+
 // SRV: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(vector<unsigned int, [[INDEX_DIM]]>) const' inline
 // SRV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[INDEX_DIM]]>'
 // SRV-NEXT: CompoundStmt

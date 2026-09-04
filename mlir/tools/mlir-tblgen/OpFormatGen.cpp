@@ -77,8 +77,13 @@ struct AttributeVariable
     shouldBeQualifiedFlag = qualified;
   }
 
+  /// Indicate if this attribute is formatted using its underlying enum value.
+  bool shouldFormatAsEnum() const { return shouldFormatAsEnumFlag; }
+  void setShouldFormatAsEnum() { shouldFormatAsEnumFlag = true; }
+
 private:
   bool shouldBeQualifiedFlag = false;
+  bool shouldFormatAsEnumFlag = false;
 };
 
 /// This class represents a variable that refers to an operand argument.
@@ -471,30 +476,36 @@ static bool canFormatEnumAttr(const NamedAttribute *attr) {
   if (!baseAttr.isEnumAttr())
     return false;
 
-  // For newer EnumAttr-based attributes (which extend AttrDef), only apply
-  // enum keyword formatting when the attribute uses the default "$value"
-  // assembly format. If it has a custom format (e.g., `<` $value `>`), the
-  // attribute's own AttrDef parser/printer handles formatting — using the
-  // keyword path here would conflict with that custom format.
-  if (baseAttr.isSubClassOf("EnumAttr")) {
-    llvm::StringRef asmFmt =
-        baseAttr.getDef().getValueAsString("assemblyFormat");
-    if (asmFmt != "$value")
-      return false;
-  }
-
-  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
-
-  // Unquoted bit enums may consist of multiple keywords separated by a comma
-  // or vertical bar. Their attribute parser handles this syntax, whereas the
-  // operation-level enum parser expects a single keyword or string.
-  if (baseAttr.isSubClassOf("EnumAttr") && enumInfo.isBitEnum() &&
-      !enumInfo.printBitEnumQuoted())
+  // New-style EnumAttr-based attributes have a custom AttrDef parser and
+  // printer. Only format their symbolic value directly when requested with an
+  // `enum` directive.
+  if (baseAttr.isSubClassOf("EnumAttr"))
     return false;
 
   // The attribute must have a valid underlying type and a constant builder.
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   return !enumInfo.getUnderlyingType().empty() &&
          !baseAttr.getConstBuilderTemplate().empty();
+}
+
+/// Returns true if a keyed `prop-dict` field should use the underlying enum
+/// syntax instead of the default EnumAttr body syntax. Custom EnumAttr formats
+/// continue to use their own parser and printer.
+static bool shouldStripEnumAttrInPropDict(const NamedAttribute *attr) {
+  Attribute baseAttr = attr->attr.getBaseAttr();
+  return baseAttr.isSubClassOf("EnumAttr") &&
+         baseAttr.getDef().getValueAsString("assemblyFormat") ==
+             "`<` $value `>`";
+}
+
+/// Returns true if a stripped EnumAttr field needs brackets to disambiguate
+/// commas in an unquoted bit enum from commas separating `prop-dict` fields.
+static bool needsPropDictEnumBrackets(const NamedAttribute *attr) {
+  if (!shouldStripEnumAttrInPropDict(attr))
+    return false;
+  EnumInfo enumInfo(getEnumInfoRecord(attr->attr.getBaseAttr()));
+  return enumInfo.isBitEnum() &&
+         enumInfo.getDef().getValueAsString("separator").trim() == ",";
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -581,6 +592,44 @@ const char *const enumAttrParserCode = R"(
         return parser.emitError(loc, "invalid ")
                << "{0} attribute specification: \"" << attrStr << '"';;
 
+      {0}Attr = {3};
+      {6}
+    }
+  }
+)";
+
+/// The code snippet used to generate a parser call for an unquoted bit enum
+/// attribute.
+///
+/// {0}: The name of the attribute.
+/// {1}: The C++ namespace for the enum symbolize functions.
+/// {2}: The function to symbolize a string of the enum.
+/// {3}: The constant builder call to create an attribute of the enum type.
+/// {4}: The set of allowed enum keywords.
+/// {5}: The error message on failure when the enum isn't present.
+/// {6}: The attribute assignment expression.
+/// {7}: The C++ enum type.
+/// {8}: The optional parser for the enum separator.
+const char *const unquotedBitEnumAttrParserCode = R"(
+  {
+    ::llvm::StringRef attrStr;
+    auto loc = parser.getCurrentLocation();
+    if (parser.parseOptionalKeyword(&attrStr, {4})) {
+      {5}
+    } else {
+      {7} flags = {{};
+      while (true) {
+        auto flag = {1}::{2}(attrStr);
+        if (!flag)
+          return parser.emitError(loc, "invalid ")
+                 << "{0} attribute specification: \"" << attrStr << '"';;
+        flags = flags | *flag;
+        if (failed(parser.{8}()))
+          break;
+        if (parser.parseKeyword(&attrStr))
+          return ::mlir::failure();
+      }
+      auto attrOptional = ::std::optional<{7}>(flags);
       {0}Attr = {3};
       {6}
     }
@@ -1216,7 +1265,9 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
 /// Generate the parser for a enum attribute.
 static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
-                              bool useProperties, StringRef opCppClassName) {
+                              bool useProperties, StringRef opCppClassName,
+                              bool formatAsEnumDirective,
+                              bool formatBitEnumAsUnquoted = false) {
   Attribute baseAttr = var->attr.getBaseAttr();
   EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
@@ -1230,12 +1281,19 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
   }
 
   // Build a string containing the cases that can be formatted as a keyword.
-  std::string validCaseKeywordsStr = "{";
+  std::string validCaseKeywordsStr;
   llvm::raw_string_ostream validCaseKeywordsOS(validCaseKeywordsStr);
-  for (const EnumCase &attrCase : cases)
-    if (canFormatStringAsKeyword(attrCase.getStr()))
-      validCaseKeywordsOS << '"' << attrCase.getStr() << "\",";
-  validCaseKeywordsOS.str().back() = '}';
+  validCaseKeywordsOS << '{';
+  bool isFirstKeyword = true;
+  for (const EnumCase &attrCase : cases) {
+    if (!canFormatStringAsKeyword(attrCase.getStr()))
+      continue;
+    if (!isFirstKeyword)
+      validCaseKeywordsOS << ',';
+    isFirstKeyword = false;
+    validCaseKeywordsOS << '"' << attrCase.getStr() << '"';
+  }
+  validCaseKeywordsOS << '}';
 
   // If the attribute is not optional, build an error message for the missing
   // attribute.
@@ -1258,6 +1316,23 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
   } else {
     attrAssignment =
         formatv("result.addAttribute(\"{0}\", {0}Attr);", var->name);
+  }
+
+  if (formatAsEnumDirective && enumInfo.isBitEnum() &&
+      (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
+    StringRef separator = enumInfo.getDef().getValueAsString("separator");
+    StringRef parseSeparatorFn = llvm::StringSwitch<StringRef>(separator.trim())
+                                     .Case("|", "parseOptionalVerticalBar")
+                                     .Case(",", "parseOptionalComma")
+                                     .Default("invalid bit enum separator");
+    std::string enumType =
+        (enumInfo.getCppNamespace() + "::" + enumInfo.getEnumClassName()).str();
+    body << formatv(unquotedBitEnumAttrParserCode, var->name,
+                    enumInfo.getCppNamespace(),
+                    enumInfo.getStringToSymbolFnName(), attrBuilderStr,
+                    validCaseKeywordsStr, errorMessage, attrAssignment,
+                    enumType, parseSeparatorFn);
+    return;
   }
 
   body << formatv(enumAttrParserCode, var->name, enumInfo.getCppNamespace(),
@@ -1296,9 +1371,10 @@ static void genAttrParser(AttributeVariable *attr, MethodBody &body,
   const NamedAttribute *var = attr->getVar();
 
   // Check to see if we can parse this as an enum attribute.
-  if (canFormatEnumAttr(var))
+  if (attr->shouldFormatAsEnum() || canFormatEnumAttr(var))
     return genEnumAttrParser(var, body, attrTypeCtx, parseAsOptional,
-                             useProperties, opCppClassName);
+                             useProperties, opCppClassName,
+                             attr->shouldFormatAsEnum());
 
   // Check to see if we should parse this as a symbol name attribute.
   if (shouldFormatSymbolNameAttr(var)) {
@@ -1706,9 +1782,24 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
     } else {
       body << "      " << attribute.attr.getStorageType() << " "
            << attribute.name << "Attr;\n";
-      genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
-                    /*parseAsOptional=*/false, /*useProperties=*/true,
-                    fmt.opCppClassName);
+      if (shouldStripEnumAttrInPropDict(&attribute)) {
+        bool useBrackets = needsPropDictEnumBrackets(&attribute);
+        if (useBrackets)
+          body << "      if (parser.parseLSquare())\n"
+                  "        return ::mlir::failure();\n";
+        genEnumAttrParser(&attribute, body.indent(), attrTypeCtx,
+                          /*parseAsOptional=*/false, /*useProperties=*/true,
+                          fmt.opCppClassName,
+                          /*formatAsEnumDirective=*/true,
+                          /*formatBitEnumAsUnquoted=*/true);
+        if (useBrackets)
+          body << "      if (parser.parseRSquare())\n"
+                  "        return ::mlir::failure();\n";
+      } else {
+        genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
+                      /*parseAsOptional=*/false, /*useProperties=*/true,
+                      fmt.opCppClassName);
+      }
     }
     body.unindent() << "    }\n";
     isFirst = false;
@@ -2203,6 +2294,13 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
 void OperationFormat::genParserOperandTypeResolution(
     Operator &op, MethodBody &body,
     function_ref<void(TypeResolution &, StringRef)> emitTypeResolver) {
+  // Fixed-length parser variables are represented as ArrayRefs to scalar
+  // storage. Coverity does not track the explicit length and reports the
+  // resolveOperands calls as ARRAY_VS_SINGLETON.
+  auto emitArrayVsSingletonSuppression = [&] {
+    body << "  // coverity[ARRAY_VS_SINGLETON]\n";
+  };
+
   // Early exit if there are no operands.
   if (op.getNumOperands() == 0)
     return;
@@ -2212,6 +2310,7 @@ void OperationFormat::genParserOperandTypeResolution(
   if (allOperandTypes) {
     // If `operands` was specified, use the full operand list directly.
     if (allOperands) {
+      emitArrayVsSingletonSuppression();
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
               "    return ::mlir::failure();\n";
@@ -2220,6 +2319,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
     // Otherwise, use llvm::concat to merge the disjoint operand lists together.
     // llvm::concat does not allow the case of a single range, so guard it here.
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(";
     if (op.getNumOperands() > 1) {
       body << "::llvm::concat<const ::mlir::OpAsmParser::UnresolvedOperand>(";
@@ -2237,6 +2337,7 @@ void OperationFormat::genParserOperandTypeResolution(
 
   // Handle the case where all operands are grouped together with "operands".
   if (allOperands) {
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(allOperands, ";
 
     // Group all of the operand types together to perform the resolution all at
@@ -2272,6 +2373,7 @@ void OperationFormat::genParserOperandTypeResolution(
         operand.isOptional() && !operandType.isDirectlyParsed();
     if (guardOptionalOperand)
       body << "  if (!" << operand.name << "Operands.empty()) {\n";
+    emitArrayVsSingletonSuppression();
     body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
 
     // Resolve the type of this operand.
@@ -2450,7 +2552,9 @@ static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
 }
 
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
-                               MethodBody &body, StringRef valueExpression);
+                               MethodBody &body, StringRef valueExpression,
+                               bool formatAsEnumDirective = false,
+                               bool formatBitEnumAsUnquoted = false);
 
 /// Generate the key-value printer used by the default `prop-dict` printer.
 static void genKeyValuePropDictPrinter(OperationFormat &fmt, Operator &op,
@@ -2558,6 +2662,19 @@ auto shouldPrint = [&](::llvm::StringRef name) {
 
     if (isUnitAttr) {
       // Unit attributes are represented by the presence of their key.
+    } else if (shouldStripEnumAttrInPropDict(&namedAttr)) {
+      bool useBrackets = needsPropDictEnumBrackets(&namedAttr);
+      if (useBrackets)
+        body << "  _odsPrinter << \"[\";\n";
+      FmtContext conversionContext;
+      conversionContext.withSelf("prop." + name);
+      std::string valueExpression = std::string(tgfmt(
+          namedAttr.attr.getConvertFromStorageCall(), &conversionContext));
+      genEnumAttrPrinter(&namedAttr, op, body, valueExpression,
+                         /*formatAsEnumDirective=*/true,
+                         /*formatBitEnumAsUnquoted=*/true);
+      if (useBrackets)
+        body << "  _odsPrinter << \"]\";\n";
     } else if (canFormatEnumAttr(&namedAttr)) {
       FmtContext conversionContext;
       conversionContext.withSelf("prop." + name);
@@ -2836,11 +2953,11 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 
 /// Generate the printer for an enum attribute.
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
-                               MethodBody &body,
-                               StringRef valueExpression = {}) {
+                               MethodBody &body, StringRef valueExpression,
+                               bool formatAsEnumDirective,
+                               bool formatBitEnumAsUnquoted) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
-  std::vector<EnumCase> cases = enumInfo.getAllCases();
   bool dereferenceGetter =
       var->attr.isOptional() && !var->attr.hasDefaultValue();
 
@@ -2851,6 +2968,15 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
     caseValue = "*(" + caseValue + ")";
   body << formatv(enumAttrBeginPrinterCode, caseValue,
                   enumInfo.getSymbolToStringFnName());
+
+  if (formatAsEnumDirective && enumInfo.isBitEnum() &&
+      (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
+    body << "    _odsPrinter << caseValueStr;\n"
+            "  }\n";
+    return;
+  }
+
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
@@ -3130,8 +3256,9 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     const NamedAttribute *var = attr->getVar();
 
     // If we are formatting as an enum, symbolize the attribute as a string.
-    if (canFormatEnumAttr(var))
-      return genEnumAttrPrinter(var, op, body);
+    if (attr->shouldFormatAsEnum() || canFormatEnumAttr(var))
+      return genEnumAttrPrinter(var, op, body, /*valueExpression=*/{},
+                                attr->shouldFormatAsEnum());
 
     // If we are formatting as a symbol name, handle it as a symbol name.
     if (shouldFormatSymbolNameAttr(var)) {
@@ -3326,6 +3453,10 @@ private:
   /// Verify that the attribute dictionary directive isn't followed by a region.
   LogicalResult verifyAttrDictRegion(SMLoc loc,
                                      ArrayRef<FormatElement *> elements);
+  /// Verify that an unquoted bit enum isn't followed by an indistinguishable
+  /// separator literal.
+  LogicalResult verifyEnumAdjacentLiterals(SMLoc loc,
+                                           ArrayRef<FormatElement *> elements);
 
   /// Verify the state of operation operands within the format.
   LogicalResult
@@ -3375,6 +3506,7 @@ private:
   FailureOr<FormatElement *> parsePropDictDirective(SMLoc loc, Context context);
   FailureOr<FormatElement *> parseAttrDictDirective(SMLoc loc, Context context,
                                                     bool withKeyword);
+  FailureOr<FormatElement *> parseEnumDirective(SMLoc loc, Context context);
   FailureOr<FormatElement *> parseFunctionalTypeDirective(SMLoc loc,
                                                           Context context);
   FailureOr<FormatElement *> parseOIListDirective(SMLoc loc, Context context);
@@ -3451,6 +3583,7 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       failed(verifyResults(loc, variableTyResolver)) ||
       failed(verifyOperands(loc, variableTyResolver)) ||
       failed(verifyRegions(loc)) || failed(verifySuccessors(loc)) ||
+      failed(verifyEnumAdjacentLiterals(loc, elements)) ||
       failed(verifyOIListElements(loc, elements)))
     return failure();
 
@@ -3830,6 +3963,38 @@ LogicalResult OpFormatParser::verifySuccessors(SMLoc loc) {
 }
 
 LogicalResult
+OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
+                                           ArrayRef<FormatElement *> elements) {
+  for (auto [index, element] : llvm::enumerate(elements)) {
+    auto *attr = dyn_cast<AttributeVariable>(element);
+    if (!attr || !attr->shouldFormatAsEnum())
+      continue;
+
+    Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
+    EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+    if (!enumInfo.isBitEnum() || enumInfo.printBitEnumQuoted())
+      continue;
+
+    auto remaining = elements.drop_front(index + 1);
+    auto next = llvm::find_if_not(remaining, llvm::IsaPred<WhitespaceElement>);
+    if (next == remaining.end())
+      continue;
+
+    auto *literal = dyn_cast<LiteralElement>(*next);
+    if (!literal)
+      continue;
+
+    StringRef separator =
+        enumInfo.getDef().getValueAsString("separator").trim();
+    if (literal->getSpelling() == separator) {
+      return emitError(loc, "unquoted bit enum cannot be followed by its '" +
+                                separator + "' separator literal");
+    }
+  }
+  return success();
+}
+
+LogicalResult
 OpFormatParser::verifyOIListElements(SMLoc loc,
                                      ArrayRef<FormatElement *> elements) {
   // Check for ambiguous literals in and around oilist elements.
@@ -4057,6 +4222,8 @@ OpFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
   case FormatToken::kw_attr_dict_w_keyword:
     return parseAttrDictDirective(loc, ctx,
                                   /*withKeyword=*/true);
+  case FormatToken::kw_enum:
+    return parseEnumDirective(loc, ctx);
   case FormatToken::kw_functional_type:
     return parseFunctionalTypeDirective(loc, ctx);
   case FormatToken::kw_operands:
@@ -4075,6 +4242,50 @@ OpFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
   default:
     return emitError(loc, "unsupported directive kind");
   }
+}
+
+FailureOr<FormatElement *> OpFormatParser::parseEnumDirective(SMLoc loc,
+                                                              Context context) {
+  if (context != TopLevelContext)
+    return emitError(loc, "'enum' directive can only be used at the top level");
+
+  FailureOr<FormatElement *> element;
+  if (failed(parseToken(FormatToken::l_paren,
+                        "expected '(' before argument list")) ||
+      failed(element = parseElement(context)) ||
+      failed(
+          parseToken(FormatToken::r_paren, "expected ')' after argument list")))
+    return failure();
+
+  auto *attr = dyn_cast<AttributeVariable>(*element);
+  if (!attr)
+    return emitError(loc, "'enum' directive expects an enum attribute");
+
+  Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
+  if (!baseAttr.isEnumAttr())
+    return emitError(loc, "'enum' directive expects an enum attribute");
+
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+  if (enumInfo.getUnderlyingType().empty() ||
+      baseAttr.getConstBuilderTemplate().empty()) {
+    return emitError(
+        loc, "'enum' directive requires an enum attribute with an underlying "
+             "type and a constant builder");
+  }
+
+  if (enumInfo.isBitEnum() &&
+      llvm::none_of(enumInfo.getAllCases(), [](const EnumCase &attrCase) {
+        return attrCase.getValue() == 0;
+      })) {
+    return emitError(loc, "'enum' directive requires a bit enum to define a "
+                          "zero-valued case");
+  }
+
+  if (attr->shouldBeQualified())
+    return emitError(loc,
+                     "'enum' and 'qualified' directives cannot be combined");
+  attr->setShouldFormatAsEnum();
+  return attr;
 }
 
 FailureOr<FormatElement *>
@@ -4338,7 +4549,14 @@ FailureOr<FormatElement *> OpFormatParser::parseTypeDirective(SMLoc loc,
 
 LogicalResult OpFormatParser::markQualified(SMLoc loc, FormatElement *element) {
   return TypeSwitch<FormatElement *, LogicalResult>(element)
-      .Case<AttributeVariable, TypeDirective>([](auto *element) {
+      .Case([&](AttributeVariable *element) {
+        if (element->shouldFormatAsEnum())
+          return emitError(
+              loc, "'enum' and 'qualified' directives cannot be combined");
+        element->setShouldBeQualified();
+        return success();
+      })
+      .Case<TypeDirective>([](auto *element) {
         element->setShouldBeQualified();
         return success();
       })
@@ -4400,6 +4618,8 @@ OpFormatParser::parseTypeDirectiveOperand(SMLoc loc, bool isRefChild) {
 
 LogicalResult OpFormatParser::verifyOptionalGroupElements(
     SMLoc loc, ArrayRef<FormatElement *> elements, FormatElement *anchor) {
+  if (failed(verifyEnumAdjacentLiterals(loc, elements)))
+    return failure();
   for (FormatElement *element : elements) {
     if (failed(verifyOptionalGroupElement(loc, element, element == anchor)))
       return failure();

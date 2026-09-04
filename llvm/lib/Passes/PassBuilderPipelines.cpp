@@ -30,6 +30,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PGOOptions.h"
@@ -150,7 +151,6 @@
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
-#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
@@ -565,8 +565,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
       PGOOpt->Action != PGOOptions::SampleUse)
     LPM2.addPass(LoopFullUnrollPass(static_cast<int>(Level),
                                     /* OnlyWhenForced= */ !PTO.LoopUnrolling,
-                                    PTO.ForgetAllSCEVInLoopUnroll,
-                                    /* PrepareForLTO= */ isLTOPreLink(Phase)));
+                                    PTO.ForgetAllSCEVInLoopUnroll));
 
   invokeLoopOptimizerEndEPCallbacks(LPM2, Level);
 
@@ -748,8 +747,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       PGOOpt->Action != PGOOptions::SampleUse)
     LPM2.addPass(LoopFullUnrollPass(static_cast<int>(Level),
                                     /* OnlyWhenForced= */ !PTO.LoopUnrolling,
-                                    PTO.ForgetAllSCEVInLoopUnroll,
-                                    /* PrepareForLTO= */ isLTOPreLink(Phase)));
+                                    PTO.ForgetAllSCEVInLoopUnroll));
 
   invokeLoopOptimizerEndEPCallbacks(LPM2, Level);
 

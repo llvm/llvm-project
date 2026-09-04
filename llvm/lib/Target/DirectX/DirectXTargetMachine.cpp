@@ -175,6 +175,12 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
   TargetPassConfig *PassConfig = createPassConfig(PM);
+  PM.add(PassConfig);
+
+  if (!MMIWP)
+    MMIWP = new MachineModuleInfoWrapperPass(this);
+  PM.add(MMIWP);
+
   PM.add(createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
   PassConfig->addCodeGenPrepare();
 
@@ -190,9 +196,6 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       PM.add(createDXContainerGlobalsPass());
       PM.add(createDXContainerPDBPass());
 
-      if (!MMIWP)
-        MMIWP = new MachineModuleInfoWrapperPass(this);
-      PM.add(MMIWP);
       if (addAsmPrinter(PM, Out, DwoOut, FileType,
                         MMIWP->getMMI().getContext()))
         return true;

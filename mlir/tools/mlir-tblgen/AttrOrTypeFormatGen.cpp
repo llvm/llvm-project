@@ -10,6 +10,7 @@
 #include "FormatGen.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/BitVector.h"
@@ -107,6 +108,31 @@ static bool isUndelimitedArrayRefParam(const ParameterElement *el) {
     return false;
   return defInit->getDef()->isSubClassOf("ArrayRefParameter") ||
          defInit->getDef()->isSubClassOf("OptionalArrayRefParameter");
+}
+
+/// If the parameter wraps an EnumAttr, return its definition.
+static const llvm::Record *getEnumAttrDef(const ParameterElement *el) {
+  const auto *defInit = dyn_cast<llvm::DefInit>(el->getParam().getDef());
+  if (!defInit || !defInit->getDef()->isSubClassOf("EnumAttrParameter"))
+    return nullptr;
+  return defInit->getDef()->getValueAsDef("attr");
+}
+
+/// Returns true if the parameter wraps an unquoted, comma-separated bit enum.
+/// Its underlying parser may consume the comma that separates struct entries.
+static bool isUndelimitedCommaBitEnumParam(const ParameterElement *el) {
+  const llvm::Record *enumAttr = getEnumAttrDef(el);
+  if (!enumAttr)
+    return false;
+  EnumInfo enumInfo(enumAttr->getValueAsDef("enum"));
+  return enumInfo.isBitEnum() && !enumInfo.printBitEnumQuoted() &&
+         enumInfo.getDef().getValueAsString("separator").trim() == ",";
+}
+
+/// Returns true if a non-final struct parameter needs brackets to separate its
+/// value from the following key-value pair.
+static bool needsStructBrackets(const ParameterElement *el) {
+  return isUndelimitedArrayRefParam(el) || isUndelimitedCommaBitEnumParam(el);
 }
 
 /// Shorthand functions that can be used with ranged-based conditions.
@@ -220,7 +246,12 @@ private:
   void genLiteralParser(StringRef value, FmtContext &ctx, MethodBody &os,
                         bool isOptional = false);
   /// Generate the parser code for a variable.
-  void genVariableParser(ParameterElement *el, FmtContext &ctx, MethodBody &os);
+  void
+  genVariableParser(ParameterElement *el, FmtContext &ctx, MethodBody &os,
+                    std::optional<StringRef> parserOverride = std::nullopt);
+  /// Generate a stripped parser for an EnumAttr parameter in a `struct`.
+  void genStructParameterParser(ParameterElement *el, FmtContext &ctx,
+                                MethodBody &os);
   /// Generate the parser code for a `params` directive.
   void genParamsParser(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the parser code for a `struct` directive.
@@ -237,12 +268,18 @@ private:
   /// Generate the printer code for a literal.
   void genLiteralPrinter(StringRef value, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a variable.
-  void genVariablePrinter(ParameterElement *el, FmtContext &ctx, MethodBody &os,
-                          bool skipGuard = false);
+  void
+  genVariablePrinter(ParameterElement *el, FmtContext &ctx, MethodBody &os,
+                     bool skipGuard = false,
+                     std::optional<StringRef> printerOverride = std::nullopt,
+                     std::optional<StringRef> selfOverride = std::nullopt);
+  /// Generate a stripped printer for an EnumAttr parameter in a `struct`.
+  void genStructParameterPrinter(ParameterElement *el, FmtContext &ctx,
+                                 MethodBody &os);
   /// Generate a printer for comma-separated format elements.
   void genCommaSeparatedPrinter(
       ArrayRef<FormatElement *> params, FmtContext &ctx, MethodBody &os,
-      function_ref<void(FormatElement *)> extra,
+      function_ref<void(FormatElement *)> extra, bool stripEnumAttrs = false,
       function_ref<void(FormatElement *)> extraPost = nullptr);
   /// Generate the printer code for a `params` directive.
   void genParamsPrinter(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
@@ -432,10 +469,11 @@ void DefFormat::genLiteralParser(StringRef value, FmtContext &ctx,
 }
 
 void DefFormat::genVariableParser(ParameterElement *el, FmtContext &ctx,
-                                  MethodBody &os) {
+                                  MethodBody &os,
+                                  std::optional<StringRef> parserOverride) {
   // Check for a custom parser. Use the default attribute parser otherwise.
   const AttrOrTypeParameter &param = el->getParam();
-  auto customParser = param.getParser();
+  auto customParser = parserOverride ? parserOverride : param.getParser();
   auto parser =
       customParser ? *customParser : StringRef(defaultParameterParser);
 
@@ -462,6 +500,29 @@ void DefFormat::genVariableParser(ParameterElement *el, FmtContext &ctx,
                 tgfmt(parser, &ctx, param.getCppStorageType()),
                 tgfmt(parserErrorStr, &ctx), def.getName(), param.getCppType(),
                 dialectLoading);
+}
+
+void DefFormat::genStructParameterParser(ParameterElement *el, FmtContext &ctx,
+                                         MethodBody &os) {
+  const llvm::Record *enumAttr = getEnumAttrDef(el);
+  if (!enumAttr)
+    return genVariableParser(el, ctx, os);
+
+  const AttrOrTypeParameter &param = el->getParam();
+  EnumInfo enumInfo(enumAttr->getValueAsDef("enum"));
+  std::string enumType =
+      (enumInfo.getCppNamespace() + "::" + enumInfo.getEnumClassName()).str();
+
+  std::string parser;
+  llvm::raw_string_ostream parserOS(parser);
+  parserOS << "[&]() -> ::mlir::FailureOr<" << param.getCppStorageType()
+           << "> {\n  auto odsEnumValue = "
+           << tgfmt(defaultParameterParser, &ctx, enumType)
+           << ";\n  if (::mlir::failed(odsEnumValue))\n"
+              "    return ::mlir::failure();\n  return "
+           << param.getCppStorageType() << "::get(" << tgfmt("$_ctxt", &ctx)
+           << ", *odsEnumValue);\n}()";
+  genVariableParser(el, ctx, os, parserOS.str());
 }
 
 void DefFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
@@ -603,14 +664,14 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
     // An `ArrayRefParameter` without a custom parser in a non-last position
     // uses `[...]` delimiters to avoid ambiguity with the struct-level comma.
     bool useBrackets = isa<ParameterElement>(arg) &&
-                       isUndelimitedArrayRefParam(param) &&
+                       needsStructBrackets(param) &&
                        idx != structElems.size() - 1;
     if (useBrackets) {
       os.indent();
       genLiteralParser("[", ctx, os);
     }
     if (isa<ParameterElement>(arg))
-      genVariableParser(param, ctx, os.indent());
+      genStructParameterParser(param, ctx, os.indent());
     else if (auto *custom = dyn_cast<CustomDirective>(arg))
       genCustomParser(custom, ctx, os.indent());
     if (useBrackets) {
@@ -826,9 +887,13 @@ void DefFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
 }
 
 void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
-                                   MethodBody &os, bool skipGuard) {
+                                   MethodBody &os, bool skipGuard,
+                                   std::optional<StringRef> printerOverride,
+                                   std::optional<StringRef> selfOverride) {
   const AttrOrTypeParameter &param = el->getParam();
-  ctx.withSelf(param.getAccessorName() + "()");
+  std::string self =
+      selfOverride ? selfOverride->str() : param.getAccessorName() + "()";
+  ctx.withSelf(self);
 
   // Guard the printer on the presence of optional parameters and that they
   // aren't equal to their default values (if they have one).
@@ -843,7 +908,9 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
   shouldEmitSpace = true;
   lastWasPunctuation = false;
 
-  if (el->shouldBeQualified())
+  if (printerOverride)
+    os << tgfmt(*printerOverride, &ctx) << ";\n";
+  else if (el->shouldBeQualified())
     os << tgfmt(qualifiedParameterPrinter, &ctx) << ";\n";
   else if (auto printer = param.getPrinter())
     os << tgfmt(*printer, &ctx) << ";\n";
@@ -852,6 +919,17 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
 
   if (el->isOptional() && !skipGuard)
     os.unindent() << "}\n";
+}
+
+void DefFormat::genStructParameterPrinter(ParameterElement *el, FmtContext &ctx,
+                                          MethodBody &os) {
+  const llvm::Record *enumAttr = getEnumAttrDef(el);
+  if (!enumAttr || el->shouldBeQualified())
+    return genVariablePrinter(el, ctx, os);
+
+  std::string self = el->getParam().getAccessorName() + "().getValue()";
+  genVariablePrinter(el, ctx, os, /*skipGuard=*/false, "$_printer << $_self",
+                     self);
 }
 
 /// Generate code to guard printing on the presence of any optional parameters.
@@ -884,7 +962,7 @@ static void guardOnAnyOptional(FmtContext &ctx, MethodBody &os,
 
 void DefFormat::genCommaSeparatedPrinter(
     ArrayRef<FormatElement *> args, FmtContext &ctx, MethodBody &os,
-    function_ref<void(FormatElement *)> extra,
+    function_ref<void(FormatElement *)> extra, bool stripEnumAttrs,
     function_ref<void(FormatElement *)> extraPost) {
   // Emit a space if necessary, but only if the struct is present.
   if (shouldEmitSpace || !lastWasPunctuation) {
@@ -911,9 +989,12 @@ void DefFormat::genCommaSeparatedPrinter(
       extra(arg);
       shouldEmitSpace = false;
       lastWasPunctuation = true;
-      if (auto *realParam = dyn_cast<ParameterElement>(arg))
-        genVariablePrinter(realParam, ctx, os);
-      else if (auto *custom = dyn_cast<CustomDirective>(arg))
+      if (auto *realParam = dyn_cast<ParameterElement>(arg)) {
+        if (stripEnumAttrs)
+          genStructParameterPrinter(realParam, ctx, os);
+        else
+          genVariablePrinter(realParam, ctx, os);
+      } else if (auto *custom = dyn_cast<CustomDirective>(arg))
         genCustomPrinter(custom, ctx, os);
       if (extraPost)
         extraPost(arg);
@@ -930,16 +1011,18 @@ void DefFormat::genParamsPrinter(ParamsDirective *el, FmtContext &ctx,
       el->getElements(), [](ParameterElement *param) -> FormatElement * {
         return static_cast<FormatElement *>(param);
       });
-  genCommaSeparatedPrinter(args, ctx, os, [&](FormatElement *param) {});
+  genCommaSeparatedPrinter(
+      args, ctx, os, [&](FormatElement *param) {},
+      /*stripEnumAttrs=*/false);
 }
 
 void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
                                  MethodBody &os) {
   ArrayRef<FormatElement *> elems = el->getElements();
-  // An `ArrayRefParameter` without a custom printer in a non-last struct
-  // position must be wrapped in `[...]` to avoid ambiguity with the
-  // struct-level comma separator. Track the element index via elemIdx, which is
-  // incremented once per element in the extraPost callback.
+  // A non-final parameter whose parser may consume commas must be wrapped in
+  // `[...]` to avoid ambiguity with the struct-level comma separator. Track the
+  // element index via elemIdx, which is incremented once per element in the
+  // extraPost callback.
   size_t elemIdx = 0;
   genCommaSeparatedPrinter(
       elems, ctx, os,
@@ -947,13 +1030,14 @@ void DefFormat::genStructPrinter(StructDirective *el, FmtContext &ctx,
         ParameterElement *param = getEncapsulatedParameterElement(arg);
         os << tgfmt("$_printer << \"$0 = \";\n", &ctx, param->getName());
         auto *paramEl = dyn_cast<ParameterElement>(arg);
-        if (paramEl && isUndelimitedArrayRefParam(paramEl) &&
+        if (paramEl && needsStructBrackets(paramEl) &&
             elemIdx + 1 < elems.size())
           os << tgfmt("$_printer << \"[\";\n", &ctx);
       },
+      /*stripEnumAttrs=*/true,
       [&](FormatElement *arg) {
         auto *paramEl = dyn_cast<ParameterElement>(arg);
-        if (paramEl && isUndelimitedArrayRefParam(paramEl) &&
+        if (paramEl && needsStructBrackets(paramEl) &&
             elemIdx + 1 < elems.size())
           os << tgfmt("$_printer << \"]\";\n", &ctx);
         ++elemIdx;
