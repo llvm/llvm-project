@@ -421,6 +421,17 @@ void Watchpoint::SetEnabled(bool enabled, bool notify) {
   }
   bool changed = enabled != m_enabled;
   m_enabled = enabled;
+  // Update the current value, if this is a user enabling
+  // a watchpoint that was disabled.
+  // (lldb will disable and re-enable watchpoints as we step over
+  // the accesses, those will have notify==false)
+  if (notify && changed && enabled && m_target.GetProcessSP()) {
+    m_old_value_sp.reset();
+    m_new_value_sp.reset();
+    ExecutionContext exe_ctx;
+    m_target.GetProcessSP()->CalculateExecutionContext(exe_ctx);
+    CaptureWatchedValue(exe_ctx);
+  }
   if (notify && !m_is_ephemeral && changed)
     SendWatchpointChangedEvent(enabled ? eWatchpointEventTypeEnabled
                                        : eWatchpointEventTypeDisabled);

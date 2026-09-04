@@ -65,9 +65,21 @@ public:
 
   bool IsEnabled() const;
 
-  // This doesn't really enable/disable the watchpoint.   It is currently just
-  // for use in the Process plugin's {Enable,Disable}Watchpoint, which should
-  // be used instead.
+  // Enable or disable this watchpoint.
+  // Most callers should use Process::EnableWatchpoint/DisableWatchpoint.
+  //
+  // If a disabled watchpoint is being re-enabled, we may need to
+  // read the contents of the watched memory range to a local buffer
+  // at this point.
+  //
+  // \param[in] enabled
+  //     Whether to enable or disable this watchpoint.
+  //
+  // \param[in] notify
+  //     When this is is reflecting a user command, notify should be true.
+  //     To handle watchpoints on some targets, we need to disable the wp,
+  //     instruction-step, re-enable the wp (all private stops).  These
+  //     private stop enable/disablings are notify false.
   void SetEnabled(bool enabled, bool notify = true);
 
   bool IsHardware() const override;
