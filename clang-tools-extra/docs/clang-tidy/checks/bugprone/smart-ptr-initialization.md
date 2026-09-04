@@ -42,7 +42,7 @@ void f() {
   A semicolon-separated list of (fully qualified) default deleter type names.
   Smart pointers with deleters matching these types are considered to use the
   default deleter and are checked. Smart pointers with custom deleters are
-  ignored. Default value is `::std::default_delete`.
+  ignored when `StrictMode`. Default value is `::std::default_delete`.
 
 - **StrictMode**
   
