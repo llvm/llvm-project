@@ -126,3 +126,54 @@ for.body:
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
+
+
+define void @red(ptr %base.0, ptr %base.1, i64 %end) {
+; CHECK-SCALAR-LABEL: red
+; CHECK-SCALAR:      LV(REG): VF = 1
+; CHECK-SCALAR-NEXT: LV(REG): Found max usage: 1 item
+; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 7 registers
+; CHECK-LMUL1-LABEL: 'red'
+; CHECK-LMUL1:       LV(REG): VF = vscale x 1
+; CHECK-LMUL1-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 6 registers
+; CHECK-LMUL2-LABEL: 'red'
+; CHECK-LMUL2:       LV(REG): VF = vscale x 2
+; CHECK-LMUL2-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 12 registers
+; CHECK-LMUL4-LABEL: 'red'
+; CHECK-LMUL4:       LV(REG): VF = vscale x 4
+; CHECK-LMUL4-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 24 registers
+; CHECK-LMUL8-LABEL: 'red'
+; CHECK-LMUL8:       LV(REG): VF = vscale x 8
+; CHECK-LMUL8-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 48 registers
+entry:
+  br label %loop.body
+
+loop.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.body ]
+  %red.0 = phi i64 [ 0, %entry ], [ %red.0.next, %loop.body ]
+  %red.1 = phi i64 [ 0, %entry ], [ %red.1.next, %loop.body ]
+  %red.2 = phi i64 [ 0, %entry ], [ %red.2.next, %loop.body ]
+  %red.3 = phi i64 [ 0, %entry ], [ %red.3.next, %loop.body ]
+  %ptr.0 = getelementptr i8, ptr %base.0, i64 %iv
+  %0 = load i64, ptr %ptr.0, align 8
+  %ptr.1 = getelementptr i8, ptr %base.1, i64 %iv
+  %1 = load i64, ptr %ptr.1, align 8
+  %red.0.next = tail call i64 @llvm.smin.i64(i64 %0, i64 %red.0)
+  %red.2.next = tail call i64 @llvm.smax.i64(i64 %0, i64 %red.2)
+  %red.1.next = tail call i64 @llvm.smin.i64(i64 %1, i64 %red.1)
+  %red.3.next = tail call i64 @llvm.smax.i64(i64 %1, i64 %red.3)
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, %end
+  br i1 %exitcond, label %loop.exit, label %loop.body
+
+loop.exit:
+  ret void
+}

@@ -127,6 +127,23 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
   if (!Plan.getVectorTripCount().user_empty())
     LoopInvariants.insert(&Plan.getVectorTripCount());
 
+  // For the vp_merge dealing with the tail poison for the outer loop
+  // reduction, it won't generate any assembly. Instead, it will be handled by
+  // the `vsetvl` with tail-undisturb policy.
+  auto MatchAndGetReductionTailPoisonMerge = [](VPRecipeBase *R) -> VPValue * {
+    auto *SingleR = dyn_cast<VPSingleDefRecipe>(R);
+    VPValue *InLoopOp, *RedPhiVal;
+    if (!SingleR || !match(SingleR, m_Intrinsic<Intrinsic::vp_merge>(
+                                        m_True(), m_VPValue(InLoopOp),
+                                        m_VPValue(RedPhiVal), m_VPValue())))
+      return nullptr;
+    auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(RedPhiVal);
+    // Only outer loop reduction will generate vp_merge to clean up tail poison.
+    if (!RedPhi || RedPhi->isInLoop() || RedPhi->getBackedgeValue() != SingleR)
+      return nullptr;
+    return InLoopOp;
+  };
+
   // We scan the loop in a topological order in order and assign a number to
   // each recipe. We use RPO to ensure that defs are met before their users. We
   // assume that each recipe that has in-loop users starts an interval. We
@@ -141,8 +158,22 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
     for (VPRecipeBase &R : *VPBB) {
       Idx2Recipe.push_back(&R);
 
+      // For the outer loop reduction, don't add the live-range between
+      // ReductionPHI and the vp_merge since the vp_merge won't be generated in
+      // assembly. Also, not recording an end-of-use point for the in-loop
+      // operand lets its live range extend to the end of the block, matching
+      // the PHI backedge's behavior.
+      if (MatchAndGetReductionTailPoisonMerge(&R))
+        continue;
+
       // Save the end location of each USE.
       for (VPValue *U : R.operands()) {
+        // Since the vp_merge for tail poison won't be generated,
+        // update the Def of the user of the vp_merge to its true operand.
+        if (VPRecipeBase *Def = U->getDefiningRecipe())
+          if (VPValue *InLoopOp = MatchAndGetReductionTailPoisonMerge(Def))
+            U = InLoopOp;
+
         if (isa<VPRecipeValue>(U)) {
           // Overwrite previous end points.
           EndPoint[U] = Idx2Recipe.size();
