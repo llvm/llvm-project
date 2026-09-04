@@ -384,6 +384,7 @@ static cl::opt<uint64_t> ClMappingMin(
     "asan-mapping-min",
     cl::desc("Omit shadow memory checks for pointers below this address"),
     cl::Hidden, cl::init(0));
+
 static cl::opt<uint64_t> ClMappingMax(
     "asan-mapping-max",
     cl::desc("Omit shadow memory checks for pointers above this address"),
@@ -1990,7 +1991,7 @@ Instruction *
 AddressSanitizer::instrumentRangeLimitedAddress(Instruction *InsertBefore,
                                                 Value *Addr) {
   if (Mapping.Min) {
-    // Insert a cmp+br to skip sanitising low addresses, such as ROM.
+    // Insert a cmp+br to skip sanitizing low addresses, such as ROM.
     IRBuilder<> IRB(InsertBefore);
     Value *AddrInt = IRB.CreatePtrToAddr(Addr);
     Value *Cmp = IRB.CreateICmpUGE(
@@ -2003,7 +2004,7 @@ AddressSanitizer::instrumentRangeLimitedAddress(Instruction *InsertBefore,
     // Insert a cmp+br to skip sanitising high addresses, such as device memory.
     IRBuilder<> IRB(InsertBefore);
     Value *AddrInt = IRB.CreatePtrToAddr(Addr);
-    Value *Cmp = IRB.CreateICmpULT(
+    Value *Cmp = IRB.CreateICmpULE(
         AddrInt, ConstantInt::get(AddrInt->getType(), *Mapping.Max));
     Value *SkipLanding = SplitBlockAndInsertIfThen(Cmp, InsertBefore, false);
     InsertBefore = cast<Instruction>(SkipLanding);
