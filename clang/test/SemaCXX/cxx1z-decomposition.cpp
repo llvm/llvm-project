@@ -229,4 +229,10 @@ namespace by_value_array_copy {
     auto [d] = T{};
   }
 
+  typedef int array_type[3];
+  void explicit_array_type() {
+    int arr[4]{1, 2, 3, 4};
+    array_type [a, b, c]{arr}; // expected-error {{structured binding declaration cannot be declared with type 'array_type' (aka 'int[3]'); declared type must be 'auto' or reference to 'auto'}}
+  }
+
 } // namespace by_value_array_copy

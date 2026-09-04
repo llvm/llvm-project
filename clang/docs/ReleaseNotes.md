@@ -536,6 +536,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed an assertion when a structured binding was declared with an explicit
+  (non-`auto`) array type. (#GH200834)
+
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
   anonymous-namespace helper) declared in the global module fragment of the
   current translation unit was removed from the overload set when the calling
