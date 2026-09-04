@@ -138,6 +138,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -156,6 +157,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -351,10 +353,18 @@ class SeparateConstOffsetFromGEPLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  SeparateConstOffsetFromGEPLegacyPass(bool LowerGEP = false)
-      : FunctionPass(ID), LowerGEP(LowerGEP) {
+  SeparateConstOffsetFromGEPLegacyPass(
+      bool LowerGEP = false, bool ShareScalableVectorGEPBaseOnly = false)
+      : FunctionPass(ID), LowerGEP(LowerGEP),
+        ShareScalableVectorGEPBaseOnly(ShareScalableVectorGEPBaseOnly) {
     initializeSeparateConstOffsetFromGEPLegacyPassPass(
         *PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override {
+    if (ShareScalableVectorGEPBaseOnly)
+      return "Share bases of scalable-vector GEPs";
+    return FunctionPass::getPassName();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -369,6 +379,7 @@ public:
 
 private:
   bool LowerGEP;
+  bool ShareScalableVectorGEPBaseOnly;
 };
 
 /// A pass that tries to split every GEP in the function into a variadic
@@ -378,8 +389,10 @@ class SeparateConstOffsetFromGEP {
 public:
   SeparateConstOffsetFromGEP(
       DominatorTree *DT, LoopInfo *LI, TargetLibraryInfo *TLI,
-      function_ref<TargetTransformInfo &(Function &)> GetTTI, bool LowerGEP)
-      : DT(DT), LI(LI), TLI(TLI), GetTTI(GetTTI), LowerGEP(LowerGEP) {}
+      function_ref<TargetTransformInfo &(Function &)> GetTTI, bool LowerGEP,
+      bool ShareScalableVectorGEPBaseOnly = false)
+      : DT(DT), LI(LI), TLI(TLI), GetTTI(GetTTI), LowerGEP(LowerGEP),
+        ShareScalableVectorGEPBaseOnly(ShareScalableVectorGEPBaseOnly) {}
 
   bool run(Function &F);
 
@@ -393,6 +406,24 @@ private:
       return {A, B};
     return {B, A};
   }
+
+  struct VectorGEPOffsetTerm {
+    Value *Scalar;
+    bool IsSub;
+  };
+
+  struct VectorGEPCandidate {
+    GetElementPtrInst *GEP;
+    Value *VaryingIndex;
+    SmallVector<VectorGEPOffsetTerm, 4> OffsetTerms;
+    uint64_t Stride;
+  };
+
+  bool collectVectorGEPCandidate(GetElementPtrInst *GEP,
+                                 VectorGEPCandidate &Candidate);
+  static bool haveSameVectorGEPOffset(const VectorGEPCandidate &LHS,
+                                      const VectorGEPCandidate &RHS);
+  bool shareScalableVectorGEPBase(BasicBlock &BB);
 
   /// Tries to split the given GEP into a variadic base and a constant offset,
   /// and returns true if the splitting succeeds.
@@ -481,6 +512,10 @@ private:
   /// multiple GEPs with a single index.
   bool LowerGEP;
 
+  /// Run only scalable-vector base sharing, without splitting or lowering
+  /// scalar GEPs.
+  bool ShareScalableVectorGEPBaseOnly;
+
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingAdds;
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingSubs;
 };
@@ -505,6 +540,10 @@ INITIALIZE_PASS_END(
 
 FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
   return new SeparateConstOffsetFromGEPLegacyPass(LowerGEP);
+}
+
+FunctionPass *llvm::createShareScalableVectorGEPBasePass() {
+  return new SeparateConstOffsetFromGEPLegacyPass(false, true);
 }
 
 // Checks if it is safe to reorder an add/sext result used in a GEP.
@@ -1172,6 +1211,217 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   return true;
 }
 
+bool SeparateConstOffsetFromGEP::haveSameVectorGEPOffset(
+    const VectorGEPCandidate &LHS, const VectorGEPCandidate &RHS) {
+  if (LHS.OffsetTerms.size() != RHS.OffsetTerms.size())
+    return false;
+
+  for (unsigned I = 0; I != LHS.OffsetTerms.size(); ++I) {
+    const VectorGEPOffsetTerm &LT = LHS.OffsetTerms[I];
+    const VectorGEPOffsetTerm &RT = RHS.OffsetTerms[I];
+
+    if (LT.Scalar != RT.Scalar || LT.IsSub != RT.IsSub)
+      return false;
+  }
+
+  return true;
+}
+
+/// Collect a scalable vector GEP whose index is a varying value plus or minus
+/// loop invariant splats. The invariant terms become scalar byte offsets.
+bool SeparateConstOffsetFromGEP::collectVectorGEPCandidate(
+    GetElementPtrInst *GEP, VectorGEPCandidate &Candidate) {
+  if (GEP->getNumIndices() != 1 || !GEP->getPointerOperandType()->isPointerTy())
+    return false;
+
+  auto *GEPType = dyn_cast<VectorType>(GEP->getType());
+  if (!GEPType || !GEPType->getElementCount().isScalable())
+    return false;
+
+  if (GEP->isInBounds() || GEP->hasNoUnsignedWrap() ||
+      GEP->hasNoUnsignedSignedWrap())
+    return false;
+
+  Value *Index = GEP->getOperand(1);
+  auto *IndexType = dyn_cast<VectorType>(Index->getType());
+  if (!IndexType || !IndexType->getElementCount().isScalable() ||
+      !IndexType->getElementType()->isIntegerTy())
+    return false;
+
+  Type *PointerIndexType = DL->getIndexType(GEP->getPointerOperandType());
+  if (IndexType->getElementType() != PointerIndexType)
+    return false;
+
+  TypeSize ElementSize = DL->getTypeAllocSize(GEP->getSourceElementType());
+  if (ElementSize.isScalable())
+    return false;
+
+  Loop *L = LI->getLoopFor(GEP->getParent());
+  if (!L || !L->getLoopPreheader())
+    return false;
+
+  SmallVector<VectorGEPOffsetTerm, 4> OffsetTerms;
+  Value *VaryingIndex = Index;
+
+  // Peel loop-invariant splats from an add/sub chain.
+  while (auto *BO = dyn_cast<BinaryOperator>(VaryingIndex)) {
+    unsigned Opcode = BO->getOpcode();
+    if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
+      break;
+
+    Value *NextIndex = nullptr;
+    Value *ScalarOffset = nullptr;
+    bool IsSub = false;
+
+    auto GetInvariantSplat = [&](Value *V) -> Value * {
+      Value *Splat = getSplatValue(V);
+      if (!Splat || Splat->getType() != IndexType->getElementType() ||
+          !L->isLoopInvariant(Splat))
+        return nullptr;
+      return Splat;
+    };
+
+    unsigned SplatOperand = 1;
+    Value *Splat = GetInvariantSplat(BO->getOperand(SplatOperand));
+
+    if (!Splat && Opcode == Instruction::Add) {
+      SplatOperand = 0;
+      Splat = GetInvariantSplat(BO->getOperand(SplatOperand));
+    }
+
+    if (Splat) {
+      NextIndex = BO->getOperand(1 - SplatOperand);
+      ScalarOffset = Splat;
+      IsSub = Opcode == Instruction::Sub;
+    }
+
+    if (!NextIndex)
+      break;
+
+    OffsetTerms.push_back({ScalarOffset, IsSub});
+    VaryingIndex = NextIndex;
+  }
+
+  if (OffsetTerms.empty())
+    return false;
+
+  Candidate = {GEP, VaryingIndex, std::move(OffsetTerms),
+               ElementSize.getFixedValue()};
+
+  return true;
+}
+
+/// Find compatible scalable vector GEPs in \p BB that share a base pointer and
+/// varying index. Rewrite them to share one scaled vector GEP, with each
+/// original GEP represented by a scalar byte offset from the common address.
+bool SeparateConstOffsetFromGEP::shareScalableVectorGEPBase(BasicBlock &BB) {
+  SmallVector<VectorGEPCandidate, 8> Candidates;
+
+  for (Instruction &I : BB) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(&I);
+    if (!GEP)
+      continue;
+
+    VectorGEPCandidate Candidate;
+    if (collectVectorGEPCandidate(GEP, Candidate))
+      Candidates.push_back(std::move(Candidate));
+  }
+
+  SmallVector<bool, 8> Rewritten(Candidates.size(), false);
+  SmallVector<WeakTrackingVH, 8> DeadIndices;
+  bool Changed = false;
+
+  for (unsigned I = 0; I != Candidates.size(); ++I) {
+    if (Rewritten[I])
+      continue;
+
+    SmallVector<unsigned, 4> Group;
+    Group.push_back(I);
+
+    const VectorGEPCandidate &Leader = Candidates[I];
+    for (unsigned J = I + 1; J != Candidates.size(); ++J) {
+      if (Rewritten[J])
+        continue;
+
+      const VectorGEPCandidate &Other = Candidates[J];
+      if (Other.GEP->getPointerOperand() == Leader.GEP->getPointerOperand() &&
+          Other.GEP->getSourceElementType() ==
+              Leader.GEP->getSourceElementType() &&
+          Other.VaryingIndex == Leader.VaryingIndex)
+        Group.push_back(J);
+    }
+
+    if (Group.size() < 2)
+      continue;
+
+    bool HasDistinctOffset = false;
+    for (unsigned K = 1; K != Group.size(); ++K) {
+      if (!haveSameVectorGEPOffset(Leader, Candidates[Group[K]])) {
+        HasDistinctOffset = true;
+        break;
+      }
+    }
+
+    if (!HasDistinctOffset)
+      continue;
+
+    GetElementPtrInst *FirstGEP = Leader.GEP;
+    IRBuilder<> BaseBuilder(FirstGEP);
+    BaseBuilder.SetCurrentDebugLocation(FirstGEP->getDebugLoc());
+    Loop *L = LI->getLoopFor(FirstGEP->getParent());
+    assert(L && L->getLoopPreheader() &&
+           "candidate must belong to a loop with a preheader");
+    Instruction *PreheaderTerminator = L->getLoopPreheader()->getTerminator();
+
+    // Computing the varying portion once avoids a vector multiply-add for every
+    // unrolled part. The remaining uniform offsets can be calculated scalarly.
+    Value *CommonBase = BaseBuilder.CreateGEP(
+        FirstGEP->getSourceElementType(), FirstGEP->getPointerOperand(),
+        Leader.VaryingIndex, "vector.gep.base");
+
+    for (unsigned CandidateIndex : Group) {
+      VectorGEPCandidate &Current = Candidates[CandidateIndex];
+      GetElementPtrInst *GEP = Current.GEP;
+
+      IRBuilder<> OffsetBuilder(PreheaderTerminator);
+      OffsetBuilder.SetCurrentDebugLocation(GEP->getDebugLoc());
+      IRBuilder<> Builder(GEP);
+      Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
+
+      Type *OffsetType =
+          cast<VectorType>(GEP->getOperand(1)->getType())->getElementType();
+      Value *Offset = ConstantInt::get(OffsetType, 0);
+
+      for (const VectorGEPOffsetTerm &Term : Current.OffsetTerms) {
+        Offset = Term.IsSub ? OffsetBuilder.CreateSub(Offset, Term.Scalar,
+                                                      "vector.gep.offset")
+                            : OffsetBuilder.CreateAdd(Offset, Term.Scalar,
+                                                      "vector.gep.offset");
+      }
+
+      Value *ByteOffset = OffsetBuilder.CreateMul(
+          Offset, ConstantInt::get(OffsetType, Current.Stride),
+          "vector.gep.byte.offset");
+      Value *NewGEP =
+          Builder.CreatePtrAdd(CommonBase, ByteOffset, GEP->getName());
+
+      if (auto *NewI = dyn_cast<Instruction>(NewGEP)) {
+        NewI->copyMetadata(*GEP);
+        NewI->takeName(GEP);
+      }
+
+      DeadIndices.emplace_back(GEP->getOperand(1));
+      GEP->replaceAllUsesWith(NewGEP);
+      GEP->eraseFromParent();
+      Rewritten[CandidateIndex] = true;
+      Changed = true;
+    }
+  }
+
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadIndices, TLI);
+  return Changed;
+}
+
 bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // Skip vector GEPs.
   if (GEP->getType()->isVectorTy())
@@ -1393,7 +1643,8 @@ bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
   auto GetTTI = [this](Function &F) -> TargetTransformInfo & {
     return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   };
-  SeparateConstOffsetFromGEP Impl(DT, LI, TLI, GetTTI, LowerGEP);
+  SeparateConstOffsetFromGEP Impl(DT, LI, TLI, GetTTI, LowerGEP,
+                                  ShareScalableVectorGEPBaseOnly);
   return Impl.run(F);
 }
 
@@ -1409,14 +1660,19 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
     if (!DT->isReachableFromEntry(B))
       continue;
 
-    for (Instruction &I : llvm::make_early_inc_range(*B))
-      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
-        Changed |= splitGEP(GEP);
-    // No need to split GEP ConstantExprs because all its indices are constant
-    // already.
+    if (!ShareScalableVectorGEPBaseOnly) {
+      for (Instruction &I : llvm::make_early_inc_range(*B))
+        if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
+          Changed |= splitGEP(GEP);
+      // No need to split GEP ConstantExprs because all its indices are
+      // constant already.
+    }
+    if (LowerGEP || ShareScalableVectorGEPBaseOnly)
+      Changed |= shareScalableVectorGEPBase(*B);
   }
 
-  Changed |= reuniteExts(F);
+  if (!ShareScalableVectorGEPBaseOnly)
+    Changed |= reuniteExts(F);
 
   if (VerifyNoDeadCode)
     verifyNoDeadCode(F);
