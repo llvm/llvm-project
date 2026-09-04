@@ -19,6 +19,7 @@ include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIREnumAttr.td"
+include "clang/CIR/Dialect/IR/CIRTypeConstraints.td"
 
 include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
@@ -1574,6 +1575,71 @@ def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_CXXAssignAttr,
   CIR_FuncIdentityAttr
 ], "function information attribute">;
+
+//===----------------------------------------------------------------------===//
+// BitFieldDeclAttr
+//===----------------------------------------------------------------------===//
+
+// A flag spelled as the bare `unnamed` keyword.  A named bit-field leaves the
+// keyword out, so the parameter defaults to false and prints nothing.
+def CIR_UnnamedBitFieldParameter
+    : AttrOrTypeParameter<"bool", "unnamed bit-field flag"> {
+  let parser = [{ [&]() -> ::mlir::FailureOr<bool> {
+    if ($_parser.parseKeyword("unnamed"))
+      return ::mlir::failure();
+    return true;
+  }() }];
+  let printer = [{ $_printer << "unnamed" }];
+  let defaultValue = "false";
+}
+
+def CIR_BitFieldDeclAttr : CIR_Attr<"BitFieldDecl", "bitfield_decl"> {
+  let summary = "How the source declared one bit-field";
+  let description = [{
+    Records a single bit-field as its declaration wrote it: the declared type,
+    the number of bits the field holds, and whether the declaration named it.
+
+    A run of bit-fields shares one access unit whose width the compiler picks,
+    so none of this can be recovered from the unit.  The fields in a run need
+    not even agree on a declared type: `struct { int a : 2; long long b : 30; }`
+    packs an `int` and a `long long` into a single 32-bit unit.  This attribute
+    is therefore per field, and `!cir.bitfield` carries one of them for every
+    bit-field in the unit.
+
+    A width of zero is a zero-width bit-field, `int : 0`, which holds no bits
+    and exists only to end the run before it.
+
+    `unnamed` marks a bit-field the source cannot read, `int : 3`.  It still
+    occupies bits of the unit, and the x86-64 classifier reads it, but it is
+    not a field any expression names.  Every zero-width bit-field is unnamed.
+
+    Example:
+    ```
+      #cir.bitfield_decl<!s32i, 4>
+      #cir.bitfield_decl<!s64i, 30>
+      #cir.bitfield_decl<!s32i, 3, unnamed>
+      #cir.bitfield_decl<!u32i, 0, unnamed>
+    ```
+  }];
+
+  let parameters = (ins CIR_AnyIntOrBoolType:$declared_type, "uint64_t":$width,
+                        CIR_UnnamedBitFieldParameter:$is_unnamed);
+
+  let assemblyFormat = [{
+    `<` $declared_type `,` $width (`,` $is_unnamed^)? `>`
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$declaredType,
+                                        "uint64_t":$width,
+                                        CArg<"bool", "false">:$isUnnamed), [{
+      return $_get(declaredType.getContext(), declaredType, width, isUnnamed);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
