@@ -584,6 +584,8 @@ if(MSVC)
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
   add_link_options("$<${_is_exe}:LINKER:/STACK:10000000>")
+elseif(WIN32 AND LINKER_IS_LLD_LINK)
+  add_link_options(-Xlinker /STACK:10000000)
 elseif(MINGW OR CYGWIN)
   add_link_options("$<${_is_exe}:LINKER:--stack,16777216>")
 
