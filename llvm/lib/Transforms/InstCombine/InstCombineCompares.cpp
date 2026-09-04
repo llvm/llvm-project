@@ -8434,12 +8434,16 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
       return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
     }
   } else {
-    // If the RHS value is > UnsignedMax, fold the comparison. This handles
-    // +INF and large values.
-    APFloat UMax(RHS->getSemantics());
-    UMax.convertFromAPInt(APInt::getMaxValue(IntWidth), false,
-                          APFloat::rmNearestTiesToEven);
-    if (UMax < *RHS) { // umax < 13123.0
+    // If the RHS value is above the defined upper bound, fold the comparison.
+    // This handles +INF and large values.
+    // For uitofp nneg, negative signed inputs are poison, so the defined upper
+    // bound is signed max rather than unsigned max.
+    bool IsNonNegUIToFP = cast<PossiblyNonNegInst>(LHSI)->hasNonNeg();
+    APInt MaxInt = IsNonNegUIToFP ? APInt::getSignedMaxValue(IntWidth)
+                                  : APInt::getMaxValue(IntWidth);
+    APFloat Max(RHS->getSemantics());
+    Max.convertFromAPInt(MaxInt, false, APFloat::rmNearestTiesToEven);
+    if (Max < *RHS) { // max < 13123.0
       if (Pred == ICmpInst::ICMP_NE || Pred == ICmpInst::ICMP_ULT ||
           Pred == ICmpInst::ICMP_ULE)
         return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
