@@ -862,6 +862,23 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
+static Attr *getAnySemanticAttr(const Decl *D) {
+  if (Attr *A = D->getAttr<HLSLParsedSemanticAttr>())
+    return A;
+  if (Attr *A = D->getAttr<HLSLUnparsedSemanticAttr>())
+    return A;
+  return nullptr;
+}
+
+static std::optional<uint32_t> getSemanticIndexOf(const Attr *A) {
+  if (const auto *PA = dyn_cast<HLSLParsedSemanticAttr>(A))
+    return PA->getSemanticIndex();
+  if (const auto *UA = dyn_cast<HLSLUnparsedSemanticAttr>(A))
+    return UA->getExplicitIndex() ? std::optional<uint32_t>(UA->getIndex())
+                                  : std::nullopt;
+  return std::nullopt;
+}
+
 static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
                                 HLSLAppliedSemanticAttr *Semantic,
                                 bool IsInput) {
@@ -892,9 +909,9 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
                                                SemanticInfo &ActiveSemantic,
                                                SemaHLSL::SemanticContext &SC) {
   if (ActiveSemantic.Semantic == nullptr) {
-    ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
+    ActiveSemantic.Semantic = getAnySemanticAttr(D);
     if (ActiveSemantic.Semantic)
-      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+      ActiveSemantic.Index = getSemanticIndexOf(ActiveSemantic.Semantic);
   }
 
   if (!ActiveSemantic.Semantic) {
@@ -954,9 +971,9 @@ bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
                                        SemanticInfo &ActiveSemantic,
                                        SemaHLSL::SemanticContext &SC) {
   if (ActiveSemantic.Semantic == nullptr) {
-    ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
+    ActiveSemantic.Semantic = getAnySemanticAttr(D);
     if (ActiveSemantic.Semantic)
-      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+      ActiveSemantic.Index = getSemanticIndexOf(ActiveSemantic.Semantic);
   }
 
   const Type *T = D == FD ? &*FD->getReturnType() : &*D->getType();
@@ -1050,9 +1067,9 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
 
   for (ParmVarDecl *Param : FD->parameters()) {
     SemanticInfo ActiveSemantic;
-    ActiveSemantic.Semantic = Param->getAttr<HLSLParsedSemanticAttr>();
+    ActiveSemantic.Semantic = getAnySemanticAttr(Param);
     if (ActiveSemantic.Semantic)
-      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+      ActiveSemantic.Index = getSemanticIndexOf(ActiveSemantic.Semantic);
 
     // FIXME: Verify output semantics in parameters.
     if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic, InputSC)) {
@@ -1064,9 +1081,9 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   SemanticInfo ActiveSemantic;
   SemaHLSL::SemanticContext OutputSC = {};
   OutputSC.CurrentIOType = IOType::Out;
-  ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
+  ActiveSemantic.Semantic = getAnySemanticAttr(FD);
   if (ActiveSemantic.Semantic)
-    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+    ActiveSemantic.Index = getSemanticIndexOf(ActiveSemantic.Semantic);
   if (!FD->getReturnType()->isVoidType())
     determineActiveSemantic(FD, FD, FD, ActiveSemantic, OutputSC);
 }
@@ -2018,11 +2035,13 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   assert(IndexValue > 0 ? ExplicitIndex : true);
   std::optional<unsigned> Index =
       ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
-
-  if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
+  if (AL.getKind() == ParsedAttr::AT_HLSLParsedSemantic ||
+      AL.getAttrName()->getName().starts_with_insensitive("SV_")) {
     diagnoseSystemSemanticAttr(D, AL, Index);
-  else
-    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+  } else {
+    D->addAttr(HLSLUnparsedSemanticAttr::Create(SemaRef.getASTContext(),
+                                                IndexValue, ExplicitIndex, AL));
+  }
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
