@@ -1095,8 +1095,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          OtherVT, Expand);
       }
 
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
@@ -1194,8 +1195,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          OtherVT, Expand);
       }
 
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
       setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT},
                          VT, Custom);
@@ -1379,8 +1381,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
                          VT, Custom);
 
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
       setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE_LEFT,
                           ISD::VECTOR_SPLICE_RIGHT},
@@ -1427,10 +1430,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
                           ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
-                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
                           ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE_LEFT,
                           ISD::VECTOR_SPLICE_RIGHT, ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
       MVT EltVT = VT.getVectorElementType();
@@ -1480,11 +1485,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                           ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_DEINTERLEAVE,
-                          ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE,
+                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
                           ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT,
                           ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+          {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
       setOperationAction(
           {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM}, VT,
           Legal);
@@ -1607,8 +1614,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             {ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS, ISD::VECTOR_REVERSE}, VT,
             Custom);
 
-        setOperationAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                           VT, Custom);
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+            {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                            VT, Custom);
@@ -1786,8 +1794,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
         setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
 
-        setOperationAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                           VT, Custom);
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+            {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
 
         setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
                             ISD::MGATHER, ISD::MSCATTER},
