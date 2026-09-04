@@ -1920,9 +1920,9 @@ static bool isIndvarOverflowCheckKnownFalse(
           /*ComputeUpperBoundOnly=*/true)) {
     // Compute the maximum runtime values of VF and the trip count.
     std::optional<uint64_t> MaxStep =
-        getMaxRuntimeElementCount(VF * MaxUF, *Cost->TheFunction, Cost->TTI);
+        getMaxRuntimeElementCount(VF * MaxUF, *Cost->TheFunction);
     std::optional<uint64_t> MaxTC =
-        getMaxRuntimeElementCount(*TC, *Cost->TheFunction, Cost->TTI);
+        getMaxRuntimeElementCount(*TC, *Cost->TheFunction);
     if (!MaxStep || !MaxTC)
       return false;
 
@@ -2994,7 +2994,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   std::optional<unsigned> MaxPowerOf2RuntimeVF =
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
-    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
+    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction);
     if (MaxVScale) {
       MaxPowerOf2RuntimeVF = std::max<unsigned>(
           *MaxPowerOf2RuntimeVF,
@@ -5751,7 +5751,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
                  VectorPH);
   std::optional<uint64_t> MaxRuntimeStep = getMaxRuntimeElementCount(
-      BestVF * BestUF, *OrigLoop->getHeader()->getParent(), TTI);
+      BestVF * BestUF, *OrigLoop->getHeader()->getParent());
 
   assert((LI->getUniqueLatchExitBlock(*OrigLoop) || RequiresScalarEpilogue) &&
          "loops not exiting via the latch without required epilogue?");
