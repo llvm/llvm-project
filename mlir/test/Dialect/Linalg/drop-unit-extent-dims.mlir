@@ -993,6 +993,22 @@ func.func @drop_unit_pad_dims(%arg0: tensor<1x1x3x1x1xf32>) -> tensor<1x2x3x1x3x
 
 // -----
 
+func.func @drop_unit_pad_dims_constant_inside(%arg0: tensor<1x1xf32>) -> tensor<1x2xf32> {
+  %0 = tensor.pad %arg0 low[0, 0] high[0, 1] {
+    ^bb0(%arg1: index, %arg2: index):
+      %cst2 = arith.constant 2.0 : f32
+      tensor.yield %cst2 : f32
+  } : tensor<1x1xf32> to tensor<1x2xf32>
+  return %0 : tensor<1x2xf32>
+}
+
+// CHECK-LABEL: func @drop_unit_pad_dims_constant_inside
+//       CHECK:   %[[CST:.*]] = arith.constant 2.000000e+00 : f32
+//       CHECK:   tensor.pad
+//       CHECK:     tensor.yield %[[CST]] : f32
+
+// -----
+
 func.func @drop_unit_pad_dynamic_dims(%arg0: tensor<1x?xf32>) -> tensor<1x?xf32>
 {
   %c0 = arith.constant 0 : index
