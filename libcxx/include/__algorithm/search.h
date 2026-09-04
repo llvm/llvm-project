@@ -12,6 +12,7 @@
 
 #include <__algorithm/comp.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/mismatch.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/advance.h>
@@ -40,8 +41,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __searc
     _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
   if (__first2 == __last2)
     return std::make_pair(__first1, __first1); // Everything matches an empty sequence
+
   while (true) {
-    // Find first element in sequence 1 that matchs *__first2, with a mininum of loop checks
+    // Find first element in sequence 1 that matches *__first2
     while (true) {
       if (__first1 == __last1) { // return __last1 if no element matches *__first2
         _IterOps<_AlgPolicy>::__advance_to(__first1, __last1);
@@ -51,21 +53,19 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __searc
         break;
       ++__first1;
     }
-    // *__first1 matches *__first2, now match elements after here
+
+    // *__first1 matches *__first2, now match the elements after here
     _Iter1 __m1 = __first1;
     _Iter2 __m2 = __first2;
-    while (true) {
-      if (++__m2 == __last2) // If pattern exhausted, __first1 is the answer (works for 1 element pattern)
-        return std::make_pair(__first1, ++__m1);
-      if (++__m1 == __last1) { // Otherwise if source exhaused, pattern not found
-        return std::make_pair(__m1, __m1);
-      }
+    std::pair<_Iter1, _Iter2> __pair = std::__mismatch(++__m1, __last1, ++__m2, __last2, __pred, __proj1, __proj2);
+    if (__pair.second == __last2) { // Reach end of __m2, so this is the answer
+      return std::make_pair(__first1, __pair.first);
 
-      // if there is a mismatch, restart with a new __first1
-      if (!std::__invoke(__pred, std::__invoke(__proj1, *__m1), std::__invoke(__proj2, *__m2))) {
-        ++__first1;
-        break;
-      } // else there is a match, check next elements
+    } else if (__pair.first == __last1) { // Otherwise if source exhausted, pattern not found
+      return std::make_pair(__pair.first, __pair.first);
+
+    } else { // if there is a mismatch, restart with a new __first1
+      ++__first1;
     }
   }
 }
