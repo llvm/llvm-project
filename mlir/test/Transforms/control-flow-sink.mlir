@@ -235,3 +235,35 @@ func.func @test_not_sunk_deeply(%arg0: i32) -> i32 {
   }) : () -> i32
   return %1 : i32
 }
+
+// Test that a non-pure operation whose result is used as an affine dimension
+// is not sunk into a conditionally executed region. `index.remu` is
+// memory-effect-free but not pure, so moving it into the `scf.if` would make
+// its result an invalid affine dimension operand (`affine.load` requires its
+// index to be defined at the top level of the affine scope or produced by a
+// pure op).
+
+// CHECK-LABEL: func.func @test_not_sunk_non_pure(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: i1) -> i32 {
+// CHECK-NEXT:  %[[V0:.*]] = index.constant 8
+// CHECK-NEXT:  %[[V1:.*]] = index.remu %[[ARG1]], %[[V0]]
+// CHECK-NEXT:  %[[V2:.*]] = scf.if %[[ARG2]] -> (i32) {
+// CHECK-NEXT:    %[[V3:.*]] = affine.load %[[ARG0]][%[[V1]]] : memref<8xi32>
+// CHECK-NEXT:    scf.yield %[[V3]] : i32
+// CHECK-NEXT:  } else {
+// CHECK-NEXT:    %[[V4:.*]] = index.castu %[[ARG1]] : index to i32
+// CHECK-NEXT:    scf.yield %[[V4]] : i32
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return %[[V2]] : i32
+func.func @test_not_sunk_non_pure(%arg0: memref<8xi32>, %arg1: index, %arg2: i1) -> i32 {
+  %0 = index.constant 8
+  %1 = index.remu %arg1, %0
+  %2 = scf.if %arg2 -> (i32) {
+    %3 = affine.load %arg0[%1] : memref<8xi32>
+    scf.yield %3 : i32
+  } else {
+    %4 = index.castu %arg1 : index to i32
+    scf.yield %4 : i32
+  }
+  return %2 : i32
+}
