@@ -45,7 +45,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, const std::nothro
 _LIBCPP_OVERRIDABLE_FUNC_VIS void operator delete[](void* __p, std::size_t __sz) _NOEXCEPT;
 #  endif
 
-#  if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#  if _LIBCPP_HAS_ALIGNED_ALLOCATION
 [[__nodiscard__]] _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, std::align_val_t) _THROW_BAD_ALLOC;
 [[__nodiscard__]] _LIBCPP_OVERRIDABLE_FUNC_VIS void*
 operator new(std::size_t __sz, std::align_val_t, const std::nothrow_t&) _NOEXCEPT _LIBCPP_NOALIAS;
