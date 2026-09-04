@@ -137,6 +137,7 @@ private:
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeExtExtract(Instruction &I);
+  bool foldFDivToUDiv(Instruction &I);
   bool foldConcatOfBoolMasks(Instruction &I);
   bool foldPermuteOfBinops(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
@@ -2462,6 +2463,90 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     Value *And = Builder.CreateAnd(LShr, Mask);
     U->replaceAllUsesWith(And);
   }
+  return true;
+}
+
+/// Try to fold fptoui(fdiv(x,y)) to udiv(x,y), where x & y are either uitofp
+/// instructions or fp-constants that exactly represent integers.
+bool VectorCombine::foldFDivToUDiv(Instruction &I) {
+  const DataLayout &DL = I.getDataLayout();
+  Value *X, *Y;
+  if (!match(&I, m_FPToUI(m_OneUse(m_FDiv(m_Value(X), m_Value(Y))))))
+    return false;
+
+  Type *IntTy = I.getType();
+
+  auto MatchConstOrInst = [&](Value *V) -> Value * {
+    Value *Src;
+    // match uitofp
+    if (match(V, m_OneUse(m_UIToFP(m_Value(Src))))) {
+      if (Src->getType() != IntTy)
+        return nullptr;
+      return Src;
+    }
+    // match FP constants that survive FP->integer->FP casts.
+    Constant *C;
+    if (match(V, m_Constant(C))) {
+      Constant *IntC =
+          ConstantFoldCastOperand(Instruction::FPToUI, C, IntTy, DL);
+      if (!IntC)
+        return nullptr;
+      Constant *FloatC =
+          ConstantFoldCastOperand(Instruction::UIToFP, IntC, C->getType(), DL);
+      if (C != FloatC)
+        return nullptr;
+      return IntC;
+    }
+    return nullptr;
+  };
+
+  Value *SrcX = MatchConstOrInst(X);
+  if (!SrcX)
+    return false;
+  Value *SrcY = MatchConstOrInst(Y);
+  if (!SrcY)
+    return false;
+
+  SimplifyQuery S = SQ.getWithInstruction(&I);
+
+  TTI::OperandValueInfo OpSrcX = TTI::getOperandInfo(SrcX);
+  TTI::OperandValueInfo OpSrcY = TTI::getOperandInfo(SrcY);
+
+  Type *FloatTy = X->getType();
+  unsigned Precision =
+      APFloat::semanticsPrecision(FloatTy->getScalarType()->getFltSemantics());
+  // Use known bits so values narrower than their integer type can be accepted.
+  if (computeKnownBits(SrcX, S).countMaxActiveBits() > Precision ||
+      computeKnownBits(SrcY, S).countMaxActiveBits() > Precision)
+    return false;
+
+  // Integer division by zero is UB. We must prove the divisor
+  // is known non-zero to safely transform fdiv into udiv.
+  if (!isKnownNonZero(SrcY, S))
+    return false;
+
+  InstructionCost OldCost =
+      TTI.getInstructionCost(&I, CostKind) +
+      TTI.getArithmeticInstrCost(Instruction::FDiv, FloatTy, CostKind);
+  // Add cost if the src is an uitofp instruction.
+  if (auto *InstX = dyn_cast<Instruction>(X))
+    OldCost += TTI.getInstructionCost(InstX, CostKind);
+  if (auto *InstY = dyn_cast<Instruction>(Y))
+    OldCost += TTI.getInstructionCost(InstY, CostKind);
+  // NewCost = udiv
+  InstructionCost NewCost = TTI.getArithmeticInstrCost(
+      Instruction::UDiv, IntTy, CostKind, OpSrcX, OpSrcY, {SrcX, SrcY});
+
+  LLVM_DEBUG(dbgs() << "Found division of vector float to unsigned integer: "
+                    << I << "\n  OldCost: " << OldCost
+                    << " vs NewCost: " << NewCost << "\n");
+
+  if (NewCost > OldCost) {
+    return false;
+  }
+
+  Value *NewInst = Builder.CreateUDiv(SrcX, SrcY);
+  replaceValue(I, *NewInst);
   return true;
 }
 
@@ -6934,6 +7019,9 @@ bool VectorCombine::run() {
         return true;
     if (Opcode == Instruction::BitCast)
       if (foldBitOrderReverseAndSwap(I))
+        return true;
+    if (Opcode == Instruction::FPToUI)
+      if (foldFDivToUDiv(I))
         return true;
 
     // Otherwise, try folds that improve codegen but may interfere with
