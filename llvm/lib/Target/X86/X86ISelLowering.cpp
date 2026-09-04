@@ -53910,11 +53910,8 @@ static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
   //   (or (and X, HighBitsMask(C)), (srl Y, C))
   // Do not combine if there are multi-use AND and OR.
   // It does not result in more performant code.
-  bool Match =
-      sd_match(N, m_Or(m_OneUse(m_And(m_Value(X), m_ConstInt(Mask))),
-                       m_OneUse(m_Shl(m_Value(Y), m_ConstInt(ShiftAmount)))));
-
-  if (!Match)
+  if (!sd_match(N, m_Or(m_OneUse(m_And(m_Value(X), m_ConstInt(Mask))),
+                        m_OneUse(m_Shl(m_Value(Y), m_ConstInt(ShiftAmount))))))
     return SDValue();
 
   // Max bit-width of operands
