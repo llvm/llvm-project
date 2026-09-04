@@ -330,6 +330,30 @@ getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
   llvm_unreachable("Unhandled atomicrmw operation");
 }
 
+// Compute the (coord0, coord1) pair for a resource atomic operation. For
+// non-struct buffers (RawBuffer or TypedBuffer), the byte offset is folded
+// into the index and coord1 is poison — only StructuredBuffer atomics use both
+// a struct index and a byte offset.
+static std::pair<Value *, Value *>
+getAtomicResourceCoords(IntrinsicInst *II, Value *PointerOperand,
+                        dxil::ResourceTypeInfo &RTI, IRBuilder<> &Builder,
+                        const DataLayout &DL) {
+  Value *Index = II->getOperand(1);
+
+  // The offset for the rawbuffer load/store/atomic ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset = traverseGEPOffsets(DL, Builder, PointerOperand, AccessSize);
+
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  return {Index, Offset};
+}
+
 static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
                               dxil::ResourceTypeInfo &RTI) {
   std::optional<dxil::AtomicBinOpCode> BinOpCode =
@@ -341,22 +365,8 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
 
   const DataLayout &DL = AI->getDataLayout();
   IRBuilder<> Builder(AI);
-  Value *Index = II->getOperand(1);
-
-  // The offset for the rawbuffer load/store/atomic ops is always in bytes.
-  uint64_t AccessSize = 1;
-  Value *Offset =
-      traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
-
-  // For non-struct buffers (RawBuffer or TypedBuffer), fold the byte offset
-  // into the index and mark the coord1 arg as poison — only StructuredBuffer
-  // atomics use both a struct index and a byte offset.
-  if (!RTI.isStruct()) {
-    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
-    if (!ConstantOffset || !ConstantOffset->isZero())
-      Index = Builder.CreateAdd(Index, Offset);
-    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
-  }
+  auto [Index, Offset] =
+      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
 
   Value *BinOp = Builder.getInt32(static_cast<uint32_t>(*BinOpCode));
 
@@ -370,13 +380,41 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
   AI->replaceAllUsesWith(Result);
 }
 
-static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
-                                       dxil::ResourceTypeInfo &RTI) {
+static void createAtomicCompareExchange(IntrinsicInst *II,
+                                        AtomicCmpXchgInst *AI,
+                                        dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  auto [Index, Offset] =
+      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
+
+  Value *Compare = AI->getCompareOperand();
+  Value *NewValue = AI->getNewValOperand();
+
+  Value *Original = Builder.CreateIntrinsic(
+      NewValue->getType(), Intrinsic::dx_resource_atomic_compare_exchange,
+      {II->getOperand(0), Index, Offset, Compare, NewValue});
+
+  // `cmpxchg` yields a { original, success } pair, but the DXIL op returns
+  // only the original value. Recover the success flag by comparing the
+  // returned value against the expected one.
+  Value *Success = Builder.CreateICmpEQ(Original, Compare);
+  Value *Result =
+      Builder.CreateInsertValue(PoisonValue::get(AI->getType()), Original, 0);
+  Result = Builder.CreateInsertValue(Result, Success, 1);
+
+  AI->replaceAllUsesWith(Result);
+}
+
+// Diagnose resource kinds that cannot carry atomic operations. `OpName` names
+// the LLVM instruction being lowered so the diagnostic matches the source.
+static void checkAtomicResourceKind(dxil::ResourceTypeInfo &RTI,
+                                    StringRef OpName) {
   switch (RTI.getResourceKind()) {
   case dxil::ResourceKind::TypedBuffer:
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createAtomicBinOp(II, AI, RTI);
+    return;
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -388,21 +426,34 @@ static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    reportFatalUsageError(
-        "DXIL atomicrmw not implemented for texture resources");
+    reportFatalUsageError(Twine("DXIL ") + OpName +
+                          " not implemented for texture resources");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
   case dxil::ResourceKind::TBuffer:
-    reportFatalUsageError(
-        "DXIL atomicrmw not implemented for this resource type");
+    reportFatalUsageError(Twine("DXIL ") + OpName +
+                          " not implemented for this resource type");
     return;
   case dxil::ResourceKind::RTAccelerationStructure:
   case dxil::ResourceKind::Invalid:
   case dxil::ResourceKind::NumEntries:
-    llvm_unreachable("Invalid resource kind for atomicrmw");
+    llvm_unreachable("Invalid resource kind for atomic operation");
   }
   llvm_unreachable("Unhandled case in switch");
+}
+
+static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
+                                       dxil::ResourceTypeInfo &RTI) {
+  checkAtomicResourceKind(RTI, "atomicrmw");
+  createAtomicBinOp(II, AI, RTI);
+}
+
+static void createAtomicCompareExchangeIntrinsic(IntrinsicInst *II,
+                                                 AtomicCmpXchgInst *AI,
+                                                 dxil::ResourceTypeInfo &RTI) {
+  checkAtomicResourceKind(RTI, "cmpxchg");
+  createAtomicCompareExchange(II, AI, RTI);
 }
 
 static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
@@ -720,6 +771,8 @@ static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
     return dyn_cast<Instruction>(SI->getPointerOperand());
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(AI))
     return dyn_cast<Instruction>(RMWI->getPointerOperand());
+  if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(AI))
+    return dyn_cast<Instruction>(CXI->getPointerOperand());
 
   return nullptr;
 }
@@ -1001,6 +1054,9 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
     } else if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
       createAtomicBinOpIntrinsic(II, AI, RTI);
       DeadInsts.push_back(AI);
+    } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(U)) {
+      createAtomicCompareExchangeIntrinsic(II, CXI, RTI);
+      DeadInsts.push_back(CXI);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }
