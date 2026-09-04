@@ -36,15 +36,63 @@ e.g. `-mllvm -print-after-all`.
 
 If you have a miscompilation introduced by a pass, it is
 frequently possible to identify the pass where things go wrong
-by searching a pass-by-pass printout, which is enabled using the
-`-print-after-all` flag. Pipe stderr into `less` (append `2>&1 |
-less` to command line) and use text search to move between passes
-(e.g. type `/Dump After<Enter>`, `n` to move to next pass,
-`N` to move to previous pass). If the name of the function
-containing the buggy IR is known, you can filter the output by passing
-`-filter-print-funcs=functionname`. You can sometimes pass `-debug` to
-get useful details about what passes are doing. See also  [PrintPasses.cpp]
-for more useful options.
+by searching a pass-by-pass printout. The following options control when IR is
+printed:
+
+- `-print-before-all` and `-print-after-all` print IR before or after every
+  pass.
+- `-print-before=<pass-name>` and `-print-after=<pass-name>` print IR around
+  selected passes. Multiple pass names can be separated by commas.
+- `-print-pass-numbers` prints the pass names and their ordinals.
+  `-print-before-pass-number=<number>` and
+  `-print-after-pass-number=<number>` can then select particular pass
+  invocations. Multiple numbers can be separated by commas.
+- `-print-changed` prints IR only after passes that change it. Its optional
+  modes include `quiet`, `diff`, `diff-quiet`, `cdiff`, `cdiff-quiet`,
+  `dot-cfg`, and `dot-cfg-quiet`. `-print-before-changed` also prints the IR
+  before each detected change.
+
+The following options reduce or organize the output:
+
+- `-filter-print-funcs=<function-name>` limits output to the listed functions.
+  Multiple names can be separated by commas.
+- `-filter-print-source-locs=<file>:<line-list>` limits output to IR units that
+  contain a matching debug location. A line list can contain individual lines
+  and inclusive ranges, for example
+  `-filter-print-source-locs=example.cpp:12,20-25`. The file may be a basename,
+  a complete path, or a path suffix. Inlined locations are also considered.
+  Repeat the option to select locations from more than one file. This option
+  requires debug information, such as that produced by Clang's `-g` option. It
+  selects whole functions, loops, or other IR units containing a match; it does
+  not remove individual nonmatching instructions from them.
+- `-filter-passes=<pass-name>` limits `-print-changed` output to the listed
+  passes. Multiple names can be separated by commas.
+- `-print-module-scope` prints the whole module instead of the IR unit on which
+  a pass runs. `-print-loop-func-scope` prints the containing function for loop
+  passes.
+- `-ir-dump-directory=<directory>` writes `-print-before` and `-print-after`
+  output to files instead of standard error.
+
+For example, the following command prints the IR after every pass, but only for
+functions containing instructions associated with the selected source lines:
+
+```text
+clang -O2 -g -mllvm -print-after-all \
+  -mllvm -filter-print-source-locs=example.cpp:12,20-25 example.cpp -c
+```
+
+By default, dumps are written to standard error. Pipe standard error into
+`less` (append `2>&1 | less` to the command line) and use text search to move
+between passes (for example, type `/Dump After<Enter>`, `n` to move to the next
+pass, and `N` to move to the previous pass).
+
+Metadata IDs remain stable across repeated pass and debug dumps, which makes
+nodes easier to follow between snapshots. These IDs may contain gaps or appear
+in a different order from normal complete-module LLVM IR output, where metadata
+IDs are renumbered into a contiguous canonical sequence.
+
+You can sometimes pass `-debug` to get useful details about what passes are
+doing. See also [PrintPasses.cpp] for the option definitions.
 
 ## Creating a debug build of LLVM
 

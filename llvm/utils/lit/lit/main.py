@@ -124,7 +124,7 @@ def main(builtin_params={}):
         record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
-        selected_tests, discovered_tests
+        selected_tests, discovered_tests, opts
     )
 
     if opts.time_tests:

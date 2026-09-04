@@ -886,6 +886,36 @@ define void @call_save_reg_params() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_uniform_work_group_size
+define void @call_uniform_work_group_size() {
+; CHECK: llvm.call @f() {uniform_work_group_size}
+  call void @f() "uniform-work-group-size"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL: @invoke_uniform_work_group_size
+define void @invoke_uniform_work_group_size() personality ptr @__gxx_personality_v0 {
+entry:
+; CHECK: llvm.invoke @f() to ^bb1 unwind ^bb2 {uniform_work_group_size}
+  invoke void @f() "uniform-work-group-size" to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_zero_call_used_regs
 define void @call_zero_call_used_regs() {
 ; CHECK: llvm.call @f() {zero_call_used_regs = "used"}

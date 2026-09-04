@@ -238,6 +238,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* Fixed a crash
+  ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
+  compiling a function containing a static alloca of `(size_t)-1` bytes, whose
+  size collided with the sentinel value MachineFrameInfo used to mark dead
+  stack objects.
+
 ### Changes to the Metadata Info
 
 ### Changes to the Debug Info
