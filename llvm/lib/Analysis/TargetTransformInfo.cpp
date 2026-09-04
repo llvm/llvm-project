@@ -38,6 +38,12 @@ static cl::opt<unsigned> CacheLineSize(
     cl::desc("Use this to override the target cache line size when "
              "specified by the user."));
 
+static cl::opt<int> StoreLoadForwardingConflictCost(
+    "store-load-forwarding-conflict-cost", cl::init(-1), cl::Hidden,
+    cl::desc("Override the per-occurrence cost the SLP vectorizer adds for a "
+             "store-to-load forwarding conflict (negative = use target "
+             "value)."));
+
 static cl::opt<unsigned> MinPageSize(
     "min-page-size", cl::init(0), cl::Hidden,
     cl::desc("Use this to override the target's minimum page size."));
@@ -879,6 +885,14 @@ bool TargetTransformInfo::shouldConsiderAddressTypePromotion(
 unsigned TargetTransformInfo::getCacheLineSize() const {
   return CacheLineSize.getNumOccurrences() > 0 ? CacheLineSize
                                                : TTIImpl->getCacheLineSize();
+}
+
+InstructionCost TargetTransformInfo::getStoreLoadForwardingConflictCost(
+    Type *VecTy, TargetCostKind CostKind) const {
+  // A negative override means "unset"; fall back to the target's value.
+  if (StoreLoadForwardingConflictCost >= 0)
+    return InstructionCost(StoreLoadForwardingConflictCost);
+  return TTIImpl->getStoreLoadForwardingConflictCost(VecTy, CostKind);
 }
 
 std::optional<unsigned>

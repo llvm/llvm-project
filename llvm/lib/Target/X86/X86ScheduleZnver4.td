@@ -53,6 +53,10 @@ def Znver4Model : SchedMachineModel {
   // The branch misprediction penalty is in the range from 11 to 18 cycles,
   // <...>. The common case penalty is 13 cycles.
   let MispredictPenalty = 13;
+  // AMD SOG Zen4, 2.12: a failed store-to-load forward costs roughly a full
+  // L1 load latency of extra delay while the store drains. Used by the SLP
+  // vectorizer to price store chains that would break forwarding.
+  let StoreLoadForwardingPenalty = 13;
 
   let PostRAScheduler = 1; // Enable Post RegAlloc Scheduler pass.
 
