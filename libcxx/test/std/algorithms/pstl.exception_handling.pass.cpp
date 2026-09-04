@@ -262,6 +262,18 @@ int main(int, char**) {
       }
 
       {
+        auto comp = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // is_heap_until(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_heap_until(policy, std::move(first1), std::move(last1)); });
+
+        // is_heap_until(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_heap_until(policy, std::move(first1), std::move(last1), comp);
+        });
+      }
+
+      {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
         // is_partitioned(first, last, pred)

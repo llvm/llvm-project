@@ -699,6 +699,7 @@ set(files
   __pstl/cpu_algos/find_end.h
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
+  __pstl/cpu_algos/is_heap_until.h
   __pstl/cpu_algos/merge.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
