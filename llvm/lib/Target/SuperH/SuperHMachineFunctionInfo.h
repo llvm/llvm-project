@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SUPERH_SUPERHMACHINEFUNCTION_H
 
 #include "SuperHConstantPoolValue.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Register.h"
@@ -27,6 +28,8 @@ class SuperHMachineFunctionInfo : public MachineFunctionInfo {
 
   /// CPIndexCount - How many constant pool indices are allocated. 
   unsigned CPIndexCount = 0;
+
+  BitVector UsedRegs;
 
 public:
   explicit SuperHMachineFunctionInfo(const Function &F,

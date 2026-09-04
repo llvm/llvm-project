@@ -19,6 +19,8 @@
 #include "SuperH.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -85,12 +87,40 @@ BitVector SuperHRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+/// getLoadBaseOffset - Gets the base offset to emit a load/store from.
+static int64_t getLoadStoreBaseOffset(unsigned Opcode) {
+  switch(Opcode) {
+  case SH::MOVBL4:
+  case SH::MOVBS4:
+    return 12;
+
+  case SH::MOVWL4:
+  case SH::MOVWS4:
+    return 28;
+
+  case SH::MOVLS4:
+  case SH::MOVLL4:
+    return 60;
+
+  default:
+    return 0;
+  }
+}
+
+static void replaceFI(const MachineFunction &MF, MachineBasicBlock::iterator II,
+                      MachineInstr &MI, const DebugLoc &dl,
+                      unsigned FIOperandNum, int Offset, Register FramePtr) {
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(FramePtr, false);
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+}
+
 bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                            int SPAdj,
                                            unsigned FIOperandNum,
                                            RegScavenger *RS) const {
   MachineInstr &MI = *II;
-  DebugLoc dl = MI.getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -99,33 +129,105 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetInstrInfo &TII = *TM.getSubtargetImpl(MF.getFunction())->getInstrInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  int64_t Size = MFI.getObjectSize(FrameIndex);
-  int64_t StackSize = MFI.getStackSize() + 8;
-  int64_t Offset = MFI.getObjectOffset(FrameIndex);
-  
-  // Add 4 to offset because SP points to saved FP
-  Offset += StackSize - TFI->getOffsetOfLocalArea() + 4;
+  dbgs() << FrameIndex << " " << TII.getName(MI.getDesc().getOpcode()) << "\n";
 
-  // Fold incoming offset.
-  Offset += MI.getOperand(FIOperandNum + 1).getImm();
+  // Get the register offset to fetch.
+  Register FrameReg;
+  int64_t Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
+  Offset += MFI.getStackSize();
 
-  if (MI.getOpcode() == SH::SHFrmIdx) {
-    Register DstReg = MI.getOperand(0).getReg();
+  int64_t ROff = getLoadStoreBaseOffset(MI.getOpcode());
 
-    // mov r14,r1
-    // add #-<frame size>,r1
-    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::MOV), DstReg)
-      .addReg(SH::R14);
-    BuildMI(MBB, MI, DebugLoc(), TII.get(SH::ADDI), DstReg)
-      .addReg(DstReg)
-      .addImm(-StackSize);
+  // Handle frame loads and stores.
+  switch(MI.getOpcode()) {
 
-    II++;
-    MI.eraseFromParent();
+  // Stack Store
+  case SH::MOVBS4:
+  case SH::MOVWS4: {
+    Register SrcReg = MI.getOperand(0).getReg();
+
+    MI.dump();
+    dbgs() << "\n";
+    
+    // Expand sequence to
+    // mov      <base reg>,r1
+    // add      #-ROff,r1
+    // mov      <src reg>, r0
+    // mov.w/b  r0,@(ROff+Offset,r1)
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::MOV), SH::R1)
+      .addReg(FrameReg);
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::ADDI), SH::R1)
+      .addReg(SH::R1)
+      .addImm(-ROff);
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::MOV), SH::R0)
+      .addReg(SrcReg);
+
+    Offset = ROff+Offset;
+    FrameReg = SH::R1;
+    break;
+  }
+  case SH::MOVLS4: {
+
+    MI.dump();
+    dbgs() << "\n";
+    
+    // Expand sequence to
+    // mov      <base reg>,r1
+    // add      #-ROff,r1
+    // mov.l    <src reg>,@(ROff+Offset,r1)
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::MOV), SH::R1)
+      .addReg(FrameReg);
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::ADDI), SH::R1)
+      .addReg(SH::R1)
+      .addImm(-ROff);
+    Offset = ROff+Offset;
+    FrameReg = SH::R1;
+    break;
   }
 
-  MI.getOperand(FIOperandNum).ChangeToRegister(SH::R1, false);
-  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  // Stack Load
+  case SH::MOVBL4:
+  case SH::MOVWL4: {
+    Register DstReg = MI.getOperand(0).getReg();
+
+    // Expand sequence to
+    // mov      <base reg>,r1
+    // add      #-ROff,r1
+    // mov.w/b  @(ROff+Offset,r1),r0
+    // mov      r0,<dst reg>
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::MOV), SH::R1)
+      .addReg(FrameReg);
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::ADDI), SH::R1)
+      .addReg(SH::R1)
+      .addImm(-ROff);
+
+    // This inserts it after our instruction
+    BuildMI(*MI.getParent(), MI, DL, TII.get(SH::ADDI), DstReg)
+      .addReg(SH::R0)
+      .addImm(-ROff);
+
+    Offset = ROff+Offset;
+    FrameReg = SH::R1;
+    break;
+  }
+  case SH::MOVLL4: {
+
+    // Expand sequence to
+    // mov    <base reg>,r1
+    // add    #-ROff,r1
+    // mov.l  @(ROff+Offset,r1),<dst reg>
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::MOV), SH::R1)
+      .addReg(FrameReg);
+    BuildMI(*MI.getParent(), II, DL, TII.get(SH::ADDI), SH::R1)
+      .addReg(SH::R1)
+      .addImm(-ROff);
+    Offset = ROff+Offset;
+    FrameReg = SH::R1;
+    break;
+  }
+  }
+
+  replaceFI(MF, II, MI, DL, FIOperandNum, Offset, FrameReg);
   return false;
 }
 
