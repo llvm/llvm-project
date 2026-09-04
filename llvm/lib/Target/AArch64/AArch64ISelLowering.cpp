@@ -6569,12 +6569,22 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
       !DAG.getTargetLoweringInfo().isTypeLegal(Op1VT))
     return SDValue();
 
-  assert((Op1VT.getVectorElementType() == MVT::i8 ||
-          Op1VT.getVectorElementType() == MVT::i16) &&
-         "Expected 8-bit or 16-bit characters.");
+  if (Op1VT.getVectorElementType() != MVT::i8 &&
+      Op1VT.getVectorElementType() != MVT::i16)
+    return SDValue();
 
-  SDValue ID =
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
+  if (Op2VT.getFixedSizeInBits() > 128) {
+    // For VLS SVE fixed-vector types > 128-bit can be legal. These still need
+    // splitting as `match` works per 128-bit segment.
+    auto [NeedleLo, NeedleHi] = DAG.SplitVector(Op2, DL);
+
+    SDValue MatchLo =
+        DAG.getNode(ISD::VECTOR_MATCH, DL, ResVT, Op1, NeedleLo, Mask);
+    SDValue MatchHi =
+        DAG.getNode(ISD::VECTOR_MATCH, DL, ResVT, Op1, NeedleHi, Mask);
+
+    return DAG.getNode(ISD::OR, DL, ResVT, MatchLo, MatchHi);
+  }
 
   // Scalable vector type used to wrap operands.
   // A single container is enough for both operands because ultimately the
@@ -6601,6 +6611,9 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
     Op2 = DAG.getSplatVector(Op2PromotedVT, DL, Op2);
     Op2 = DAG.getBitcast(OpContainerVT, Op2);
   }
+
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
 
   // If the result is scalable, we just need to carry out the MATCH.
   if (ResVT.isScalableVector())
