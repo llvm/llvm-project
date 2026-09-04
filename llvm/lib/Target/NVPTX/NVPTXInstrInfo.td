@@ -170,6 +170,8 @@ def hasSHFL : PredNot<PredAnd<[SM70, PTX64]>>;
 def allowFP16Math : SubtargetPredicate;
 def hasBF16Math : SubtargetPredicate;
 
+def hasCLMAD : SubtargetPredicate;
+
 def hasTcgen05InstSupport : SubtargetPredicate;
 def hasTensormapReplaceSupport : SubtargetPredicate;
 
@@ -1196,6 +1198,45 @@ let Predicates = [hasOptEnabled] in {
     defm MAD_WIDE_U32 : MADInst<"wide.u32", umul_wide, I64RT, I32RT>;
     defm MAD_WIDE_S32 : MADInst<"wide.s32", smul_wide, I64RT, I32RT>;
   }
+}
+
+//
+// Carryless multiply-add
+//
+multiclass CLMADInst<string mode, SDPatternOperator op> {
+  def rrr: BasicNVPTXInst<
+      (outs B64:$dst),
+      (ins B64:$a, B64:$b, B64:$c),
+      "clmad." # mode # ".u64",
+      [(set i64:$dst,
+            (xor (OneUse2<op> i64:$a, i64:$b), i64:$c))]>;
+  def rri: BasicNVPTXInst<
+      (outs B64:$dst),
+      (ins B64:$a, B64:$b, i64imm:$c),
+      "clmad." # mode # ".u64",
+      [(set i64:$dst,
+            (xor (OneUse2<op> i64:$a, i64:$b), imm:$c))]>;
+  def rir: BasicNVPTXInst<
+      (outs B64:$dst),
+      (ins B64:$a, i64imm:$b, B64:$c),
+      "clmad." # mode # ".u64",
+      [(set i64:$dst,
+            (xor (OneUse2<op> i64:$a, imm:$b), i64:$c))]>;
+  def rii: BasicNVPTXInst<
+      (outs B64:$dst),
+      (ins B64:$a, i64imm:$b, i64imm:$c),
+      "clmad." # mode # ".u64",
+      [(set i64:$dst,
+            (xor (OneUse2<op> i64:$a, imm:$b), imm:$c))]>;
+  def : Pat<(op i64:$a, i64:$b),
+            (!cast<NVPTXInst>(NAME # "rri") $a, $b, 0)>;
+  def : Pat<(op i64:$a, imm:$b),
+            (!cast<NVPTXInst>(NAME # "rii") $a, imm:$b, 0)>;
+}
+
+let Predicates = [hasCLMAD] in {
+  defm CLMAD_HI : CLMADInst<"hi", clmulh>;
+  defm CLMAD_LO : CLMADInst<"lo", clmul>;
 }
 
 //-----------------------------------
