@@ -22,29 +22,29 @@ SuperHMCInstLower::lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                       const SuperHSubtarget &Subtarget) const {
   const MCExpr *Expr = nullptr;
   switch (MO.getTargetFlags()) {
-    case SHII::MO_NO_FLAG:
-      Expr = MCSymbolRefExpr::create(Sym, SH::S_DIR, Ctx);
-      break;
+  case SHII::MO_NO_FLAG:
+    Expr = MCSymbolRefExpr::create(Sym, SH::S_DIR, Ctx);
+    break;
 
-    case SHII::MO_GOT:
-      Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT, Ctx);
-      break;
+  case SHII::MO_GOT:
+    Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT, Ctx);
+    break;
 
-    case SHII::MO_GOTPC:
-      Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT_PCREL, Ctx);
-      break;
+  case SHII::MO_GOTPC:
+    Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT_PCREL, Ctx);
+    break;
 
-    case SHII::MO_GOTOFF:
-      Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT_OFF, Ctx);
-      break;
+  case SHII::MO_GOTOFF:
+    Expr = MCSymbolRefExpr::create(Sym, SH::S_GOT_OFF, Ctx);
+    break;
 
-    case SHII::MO_DIR:
-      Expr = MCSymbolRefExpr::create(Sym, SH::S_DIR, Ctx);
-      break;
+  case SHII::MO_DIR:
+    Expr = MCSymbolRefExpr::create(Sym, SH::S_DIR, Ctx);
+    break;
 
-    case SHII::MO_PCREL:
-      Expr = MCSymbolRefExpr::create(Sym, SH::S_PCREL, Ctx);
-      break;
+  case SHII::MO_PCREL:
+    Expr = MCSymbolRefExpr::create(Sym, SH::S_PCREL, Ctx);
+    break;
   }
   return MCOperand::createExpr(Expr);
 }

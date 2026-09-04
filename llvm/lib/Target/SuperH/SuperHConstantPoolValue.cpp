@@ -42,7 +42,7 @@ StringRef SuperHConstantPoolValue::getModifierText() const {
   case SHCP::GOT_PCREL:
     return "gotpcrel";
   case SHCP::DIR:
-    return "";
+    return "dir";
   }
   llvm_unreachable("Unknown modifier!");
 }

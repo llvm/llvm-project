@@ -143,8 +143,6 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
   auto DL = CurDAG->getDataLayout();
   MVT PtrVT = getTargetLowering()->getPointerTy(DL);
 
-  LLVM_DEBUG(dbgs() << "SelectAddr\n");
-
   // if the address is a frame index get the TargetFrameIndex.
   if (const FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), PtrVT);
@@ -170,28 +168,34 @@ bool SuperHDAGToDAGISel::trySelectWrapper(SDNode *N) {
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
   SDValue N0 = N->getOperand(0);
 
-  // External Symbols
-  if (auto *CPV = SFI->tryGetConstant((ExternalSymbolSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
-    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
-    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
-    ReplaceNode(N, Res);
-    return true;
-  }
-
   // Global Addresses
-  if (auto *CPV = SFI->tryGetConstant((GlobalAddressSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
-    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
-    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
-    ReplaceNode(N, Res);
-    return true;
+  if (GlobalAddressSDNode* GA = dyn_cast<GlobalAddressSDNode>(N0.getNode())) {
+    if (auto *CPV = SFI->tryGetConstant(GA, *CurDAG, SHCP::no_modifier)) {
+      SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+      MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
+      ReplaceNode(N, Res);
+      return true;
+    }
   }
 
   // Block Addresses
-  if (auto *CPV = SFI->tryGetConstant((BlockAddressSDNode*)N0.getNode(), *CurDAG, SHCP::no_modifier)) {
-    SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
-    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
-    ReplaceNode(N, Res);
-    return true;
+  if (BlockAddressSDNode* BA = dyn_cast<BlockAddressSDNode>(N0.getNode())) {
+    if (auto *CPV = SFI->tryGetConstant(BA, *CurDAG, SHCP::no_modifier)) {
+      SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+      MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
+      ReplaceNode(N, Res);
+      return true;
+    }
+  }
+
+  // External Symbols
+  if (ExternalSymbolSDNode* Sym = dyn_cast<ExternalSymbolSDNode>(N0.getNode())) {
+    if (auto *CPV = SFI->tryGetConstant(Sym, *CurDAG, SHCP::no_modifier)) {
+      SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+      MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
+      ReplaceNode(N, Res);
+      return true;
+    }
   }
 
   return false;

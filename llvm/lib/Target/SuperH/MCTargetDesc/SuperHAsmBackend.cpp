@@ -77,45 +77,13 @@ MCFixupKindInfo SuperHAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // SuperHFixupKinds.h.
       //
       // Name                    offset  bits  flags
-      {"fixup_got32",            0,      32,   0},
-      {"fixup_got_low16",        10,     16,   0},
-      {"fixup_got_medlow16",     10,     16,   0},
-      {"fixup_got_medhi16",      10,     16,   0},
-      {"fixup_got_hi16",         10,     16,   0},
-      {"fixup_got10by4",         10,     10,   0},
-      {"fixup_got10by8",         10,     10,   0},
-      {"fixup_plt32",            0,      32,   0},
-      {"fixup_plt_low16",        10,     16,   0},
-      {"fixup_plt_medlow16",     10,     16,   0},
-      {"fixup_plt_medhi16",      10,     16,   0},
-      {"fixup_plt_hi16",         10,     16,   0},
-      {"fixup_gotplt32",         0,      32,   0},
-      {"fixup_gotplt_low16",     10,     16,   0},
-      {"fixup_gotplt_medlow16",  10,     16,   0},
-      {"fixup_gotplt_medhi16",   10,     16,   0},
-      {"fixup_gotplt_hi16",      10,     16,   0},
-      {"fixup_gotoff",           0,      32,   0},
-      {"fixup_gotoff_low16",     10,     16,   0},
-      {"fixup_gotoff_medlow16",  10,     16,   0},
-      {"fixup_gotoff_medhi16",   10,     16,   0},
-      {"fixup_gotoff_hi16",      10,     16,   0},
-      {"fixup_gotpc",            0,      32,   0},
-      {"fixup_gotpc_low16" ,     10,     16,   0},
-      {"fixup_gotpc_medlow16" ,  10,     16,   0},
-      {"fixup_gotpc_medhi16" ,   10,     16,   0},
-      {"fixup_gotpc_hi16" ,      10,     16,   0},
-      {"fixup_copy",             0,      0,    0},
-      {"fixup_copy64",           0,      0,    0},
-      {"fixup_glob_dat",         0,      32,   0},
-      {"fixup_glob_dat64",       0,      64,   0},
-      {"fixup_jump_slot",        0,      32,   0},
-      {"fixup_jump_slot64",      0,      64,   0},
-      {"fixup_relative",         0,      32,   0},
-      {"fixup_relative64",       0,      64,   0},
-      {"fixup_dir32",            0,      32,   0},
-      {"fixup_rel32",            0,      32,   0},
-      {"fixup_64",               0,      64,   0},
-      {"fixup_64_pcrel",         0,      64,   0},
+      {"fixup_32",               0,      32,   0},
+      {"fixup_pcrel4_by2",       0,      16,   0},
+      {"fixup_pcrel4_by4",       0,      16,   0},
+      {"fixup_pcrel8_by4",       0,      16,   0},
+      {"fixup_pcrel8_4by2",      0,      16,   0},
+      {"fixup_pcrel8_4by4",      0,      16,   0},
+      {"fixup_pcrel12_4by2",     0,      16,   0},
   };
   // clang-format on
 
@@ -131,11 +99,6 @@ MCFixupKindInfo SuperHAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-std::optional<bool> SuperHAsmBackend::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
-                                                    MCValue &Target, uint64_t &FixedValue) {
-  return {};
-}
-
 unsigned SuperHAsmBackend::adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
                                             const MCValue &Target, uint64_t Value,
                                             bool IsResolved, MCContext &Ctx,
@@ -147,55 +110,58 @@ unsigned SuperHAsmBackend::adjustFixupValue(const MCAssembler &Asm, const MCFixu
   default:
     return Value;
 
-  case FK_Data_2:
-  case FK_Data_4:
-    // NOTE:  Largest possible displacement is 12 bit, so force this.
-    return (Value & 0xFFF);
+  case SH::fixup_32:
+    return (Value+Addend) & 0xFFFFFFFF;
 
-  case SH::fixup_got_low16:
-    return (Value+Addend) & 65535;
+  case SH::fixup_pcrel4_by2:
+    return ((Value+Addend) / 2) & 0xF;
 
-  case SH::fixup_got_medlow16:
-    return ((Value+Addend) >> 16) & 65535;
-
-  case SH::fixup_got_medhi16:
-    return ((Value+Addend) >> 32) & 65535;
-
-  case SH::fixup_got_hi16:
-    return ((Value+Addend) >> 48) & 65535;
-
-  case SH::fixup_got10by4:
-    return (Value+Addend) / 4;
-
-  case SH::fixup_got10by8:
-    return (Value+Addend) / 8;
-
-  case SH::fixup_relative:
-  case SH::fixup_relative64:
-    return Value+Addend;
-
-  case SH::fixup_dir32:
-    return (Value+Addend);
-
-  case SH::fixup_rel32:
-    return Value+Addend;
+  case SH::fixup_pcrel4_by4:
+    return ((Value+Addend) / 4) & 0xF;
+  
+  case SH::fixup_pcrel8_by4:
+    return ((Value+Addend) / 4) & 0xFF;
+  
+  case SH::fixup_pcrel8_4by2:
+    return ((alignTo(Value, 2) + Addend - 4) / 2) & 0xFF;
+  
+  case SH::fixup_pcrel8_4by4:
+    return ((alignTo(Value, 4) + Addend - 4) / 4) & 0xFF;
+  
+  case SH::fixup_pcrel12_4by2:
+    return ((alignTo(Value, 2) + Addend - 4) / 2) & 0xFFF;
   }
 }
 
 bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
+  if (!IsResolved) {
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+    return false;
+  }
+  return true;
+}
+
+std::optional<bool> SuperHAsmBackend::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
+                                                    MCValue &Target, uint64_t &FixedValue) {
   MCValue PCITarget; // PC-Indirect Target
 
   // Get indirect target location.
   switch(Fixup.getKind()) {
   default: 
-    return false;
+    return {};
 
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
-  case FK_Data_8: {
+  case FK_Data_8: 
+  case SH::fixup_pcrel4_by2:
+  case SH::fixup_pcrel4_by4:
+  case SH::fixup_pcrel8_by4:
+  case SH::fixup_pcrel8_4by2:
+  case SH::fixup_pcrel8_4by4:
+  case SH::fixup_pcrel12_4by2: {
     const auto *EValue = Fixup.getValue();
     if (!EValue->evaluateAsRelocatable(PCITarget, Asm))
       return true;
@@ -213,20 +179,17 @@ bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
     return false;
 
   // Check if resolvable.
-  IsResolved = &SA.getSection() == F.getParent() &&
-                SA.getBinding() == ELF::STB_LOCAL &&
-                SA.getType() != ELF::STT_GNU_IFUNC;
-  if (!IsResolved) {
-    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+  bool IsResolved = &SA.getSection() == F.getParent() &&
+                     SA.getBinding() == ELF::STB_LOCAL &&
+                     SA.getType() != ELF::STT_GNU_IFUNC;
+  if (!IsResolved)
     return false;
-  }
 
   // Calculate fixed offset value.
   // Note that the PC relative jumps are based on the start of the address.
   // So it must be subtracted from the fixed value.
   FixedValue = Asm->getSymbolOffset(SA) + PCITarget.getConstant();
   FixedValue -= (Asm->getFragmentOffset(F) + Fixup.getOffset());
-  FixedValue /= 4; // Values are aligned to 4 bytes.
   return true;
 }
 
