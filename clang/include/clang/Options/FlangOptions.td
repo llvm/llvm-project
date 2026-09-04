@@ -148,6 +148,7 @@ def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>
 file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
+  Values<"unknown,native,little-endian,big-endian,swap">,
   HelpText<"Set endian conversion of data for unformatted files">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,
   HelpText<"Set the default double precision kind to an 8 byte wide type">;
