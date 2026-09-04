@@ -252,18 +252,61 @@ void initializer_list_capture() {
 // Implicit object param 'this' is captured
 // ****************************************************************************
 namespace this_is_captured {
-struct X {} x;
+struct X {} x;    // cfg-note {{this global dangles}}
 struct S {
   void capture(X &x) [[clang::lifetime_capture_by(x)]];
 };
 
-// FIXME: Add support for capture of method declarations in -Wlifetime-safety
 void use() {
-  S{}.capture(x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  S s;
-  s.capture(x);
+  S{}.capture(x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                  // cfg-warning {{temporary object does not live long enough}} \
+                  // cfg-note {{temporary object is destroyed here}}
+  (void)x;        // cfg-note {{later used here}}
+  S s;            
+  s.capture(x);   // cfg-warning {{stack memory associated with local variable 's' escapes to the global variable 'x' which will dangle}}
 }
 } // namespace this_is_captured
+
+namespace method_decl_capture {
+struct Container {
+  const void* stored = nullptr;
+  void add(const void* s) { stored = s; }
+};
+struct Obj {
+  void register_into(Container& c) const [[clang::lifetime_capture_by(c)]] {
+    c.add(this);
+  }
+};
+void test() {
+  Container c;
+  {
+    Obj local_obj;
+    local_obj.register_into(c);   // cfg-warning {{local variable 'local_obj' does not live long enough}}
+  }                               // cfg-note {{local variable 'local_obj' is destroyed here}}
+  (void)c.stored;                 // cfg-note {{later used here}}
+}
+} // namespace method_decl_capture
+
+namespace method_capture_chaining {
+struct Container {
+  const void* stored = nullptr;
+  void capture(const void* v [[clang::lifetime_capture_by_this]]);
+};
+struct Obj {
+  const void* data = nullptr;
+  void addTo(Container& c) const [[clang::lifetime_capture_by(c)]] {
+    c.capture(data);
+  }
+};
+void test() {
+  Container c;
+  {
+    Obj local_obj;
+    local_obj.addTo(c);           // cfg-warning {{local variable 'local_obj' does not live long enough}}
+  }                               // cfg-note {{local variable 'local_obj' is destroyed here}}
+  (void)c.stored;                 // cfg-note {{later used here}}
+}
+} // namespace method_capture_chaining
 
 namespace temporary_capturing_object {
 struct S {

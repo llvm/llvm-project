@@ -107,23 +107,29 @@ private:
     const auto *MD = dyn_cast<CXXMethodDecl>(FD);
     bool IsInstance = MD && MD->isInstance();
     int Offset = (MD && MD->isImplicitObjectMemberFunction()) ? 1 : 0;
+    auto ProcessAttr = [&](const LifetimeCaptureByAttr *Attr) {
+      for (int Idx : Attr->params()) {
+        if (Idx == LifetimeCaptureByAttr::Global ||
+            Idx == LifetimeCaptureByAttr::Unknown ||
+            Idx == LifetimeCaptureByAttr::Invalid)
+          continue;
+        if (Idx == LifetimeCaptureByAttr::This) {
+          if (IsInstance)
+            CollectedTypes.push_back(MD->getFunctionObjectParameterType());
+        } else if (int LogicalIdx = Idx - Offset;
+                   LogicalIdx >= 0 &&
+                   (unsigned)LogicalIdx < FD->getNumParams()) {
+          CollectedTypes.push_back(
+              FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
+        }
+      }
+    };
+    if (const auto *MethodAttr =
+            IsInstance ? getCaptureByAttrFromFunctionType(FD) : nullptr)
+      ProcessAttr(MethodAttr);
     for (const auto *Param : FD->parameters()) {
       if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
-        for (int Idx : Attr->params()) {
-          if (Idx == LifetimeCaptureByAttr::Global ||
-              Idx == LifetimeCaptureByAttr::Unknown ||
-              Idx == LifetimeCaptureByAttr::Invalid)
-            continue;
-          if (Idx == LifetimeCaptureByAttr::This) {
-            if (IsInstance)
-              CollectedTypes.push_back(MD->getFunctionObjectParameterType());
-          } else if (int LogicalIdx = Idx - Offset;
-                     LogicalIdx >= 0 &&
-                     (unsigned)LogicalIdx < FD->getNumParams()) {
-            CollectedTypes.push_back(
-                FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
-          }
-        }
+        ProcessAttr(Attr);
       }
     }
   }
