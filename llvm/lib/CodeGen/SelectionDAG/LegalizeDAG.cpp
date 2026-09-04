@@ -1272,6 +1272,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE:
+    Action = TLI.getVectorInterleaveAction(
+        Node->getOpcode(), Node->getNumOperands(), Node->getValueType(0));
+    break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Action = TLI.getOperationAction(
         Node->getOpcode(),
