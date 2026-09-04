@@ -74,6 +74,15 @@
 #define LIBC_NAMESPACE_DECL LIBC_NAMESPACE
 #endif
 
+// Marks an internal symbol that startup code or a sibling LLVM-libc shared
+// object has to bind to across a shared object boundary. LIBC_NAMESPACE_DECL
+// would otherwise give it hidden visibility, which makes it local to libc.so.
+#ifdef LIBC_COPT_SHARED_LIBRARY
+#define LIBC_SHARED_INTERNAL __attribute__((visibility("default")))
+#else
+#define LIBC_SHARED_INTERNAL
+#endif
+
 // IMPORTANT (USE WITH CAUTION): This macro is intended to be used at the top of
 // the file and set to 1. It alters the signatures of some functions to have
 // constexpr qualifier and forces the use of constexpr-compatible
