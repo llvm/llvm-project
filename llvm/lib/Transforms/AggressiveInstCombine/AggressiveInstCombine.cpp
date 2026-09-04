@@ -2476,8 +2476,8 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
     return false;
 
   SimplifyQuery SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo=*/true);
-  KnownBits KnownLen = computeKnownBits(
-      MI->getLength(), SQ.getWithoutUndef().getWithInstruction(MI));
+  KnownBits KnownLen =
+      computeKnownBits(MI->getLength(), SQ.getWithInstruction(MI));
   if (!KnownLen.getMaxValue().isOne())
     return false;
 
