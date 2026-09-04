@@ -65214,9 +65214,19 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
   if (hasInlineStackProbe(MF))
     return "";
 
-  // If the function specifically requests stack probes, emit them.
-  if (MF.getFunction().hasFnAttribute("probe-stack"))
-    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString();
+  // If the function specifically requests a named stack probe function, use it.
+  if (MF.getFunction().hasFnAttribute("probe-stack")) {
+    StringRef Value =
+        MF.getFunction().getFnAttribute("probe-stack").getValueAsString();
+    // "inline-asm" is a sentinel value requesting inline stack probes rather
+    // than a function call. hasInlineStackProbe() already handles this and
+    // returned false (e.g. because Windows targets use their own mechanism).
+    // Don't return the sentinel as a literal symbol name; fall through to
+    // the platform default. Also skip empty values, which would crash
+    // downstream in the mangler.
+    if (Value != "inline-asm" && !Value.empty())
+      return Value;
+  }
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.
