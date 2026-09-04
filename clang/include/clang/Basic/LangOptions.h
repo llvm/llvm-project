@@ -823,8 +823,8 @@ public:
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
 
-  /// Languages that launch full work-groups opt in; leftover groups are
-  /// OpenCL 2.0+.
+  /// Default for OffloadUniformBlock: false for OpenCL 2.0+ and HLSL, true
+  /// otherwise. OpenCL may opt in with -cl-uniform-work-group-size.
   bool defaultOffloadUniformBlock() const;
 
   /// Return the OpenMP version.
