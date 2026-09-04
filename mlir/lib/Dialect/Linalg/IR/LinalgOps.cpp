@@ -5190,8 +5190,7 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
   p.printAttribute(getKindAttr());
   SmallVector<StringRef, 3> elidedAttrs = {"operandSegmentSizes", "kind",
                                            "indexing_maps"};
-  unsigned arity =
-      getArityGroupAsUInt(getArityGroupAndKind(getKind()).arityGroup);
+  unsigned arity = static_cast<unsigned>(getArityGroup());
   unsigned numDims = getResultRank();
 
   SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector<3>(
@@ -5273,6 +5272,49 @@ void ElementwiseOp::getEffects(
 
 Speculation::Speculatability ElementwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
+
+ElementwiseKind ElementwiseOp::getElementwiseKind() { return getKind(); }
+
+ElementwiseArityGroup ElementwiseOp::getArityGroup() {
+  return getArityGroupAndKind(getKind()).arityGroup;
+}
+
+//===----------------------------------------------------------------------===//
+// Shared utilities for named elementwise ops (AddOp, SubOp, ExpOp, etc.)
+//===----------------------------------------------------------------------===//
+
+void buildElementwiseRegion(ImplicitLocOpBuilder &b, Block &block,
+                            ElementwiseKind kind,
+                            function_ref<InFlightDiagnostic()> emitError) {
+  ArityGroupAndKind groupAndKind = getArityGroupAndKind(kind);
+  auto arityGroup = groupAndKind.arityGroup;
+  auto fnKind = groupAndKind.kind;
+
+  unsigned expectedArgs = getArityGroupAsUInt(arityGroup) + 1;
+  assert(block.getNumArguments() == expectedArgs &&
+         "elementwise regionBuilder arg count mismatch");
+
+  RegionBuilderHelper helper(b, block);
+  Value result;
+
+  switch (arityGroup) {
+  case ElementwiseArityGroup::Unary:
+    result = helper.buildUnaryFn(fnKind.unaryFn, block.getArgument(0));
+    break;
+  case ElementwiseArityGroup::Binary:
+    result = helper.buildBinaryFn(fnKind.binaryFn, block.getArgument(0),
+                                  block.getArgument(1), emitError);
+    break;
+  case ElementwiseArityGroup::Ternary:
+    result = helper.buildTernaryFn(fnKind.ternaryFn, block.getArgument(0),
+                                   block.getArgument(1), block.getArgument(2));
+    break;
+  }
+
+  if (!result)
+    return;
+  helper.yieldOutputs({result});
 }
 
 //===----------------------------------------------------------------------===//
