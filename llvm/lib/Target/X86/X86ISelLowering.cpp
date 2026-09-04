@@ -44551,12 +44551,10 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
            LHS.getValueType() == RHS.getValueType() &&
            "Unexpected PCLMULQDQ types");
 
-    // TODO: Modify demanded masks based off DemandedElts as well, check if each
-    // 128-bit lane is demanded at all.
-    APInt DemandedLHS =
-        APInt::getSplat(NumElts, APInt(2, (Imm & 0x01) ? 2 : 1));
-    APInt DemandedRHS =
-        APInt::getSplat(NumElts, APInt(2, (Imm & 0x10) ? 2 : 1));
+    APInt LaneLo = (DemandedElts | DemandedElts.lshr(1)) &
+                   APInt::getSplat(NumElts, APInt(2, 1));
+    APInt DemandedLHS = LaneLo << (Imm & 0x01);
+    APInt DemandedRHS = LaneLo << ((Imm & 0x10) >> 4);
 
     if (SimplifyDemandedVectorElts(LHS, DemandedLHS, LHSUndef, LHSZero, TLO,
                                    Depth + 1))

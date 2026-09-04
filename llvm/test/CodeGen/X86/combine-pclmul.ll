@@ -220,6 +220,20 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_17(<4 x i64> %a0, <4 x i64> %
   ret <4 x i64> %res
 }
 
+define <4 x i64> @test_demanded_elts_pclmulqdq_512_sparse_17(<8 x i64> %a0, <8 x i64> %a1, <2 x i64> %dead0, <2 x i64> %dead1) {
+; CHECK-LABEL: test_demanded_elts_pclmulqdq_512_sparse_17:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %lhs = call <8 x i64> @llvm.vector.insert.v8i64.v2i64(<8 x i64> %a0, <2 x i64> %dead0, i64 6)
+  %rhs = call <8 x i64> @llvm.vector.insert.v8i64.v2i64(<8 x i64> %a1, <2 x i64> %dead1, i64 6)
+  %product = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> %lhs, <8 x i64> %rhs, i8 17)
+  %result = shufflevector <8 x i64> %product, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  ret <4 x i64> %result
+}
+
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_0(<8 x i64> %a0, <8 x i64> %a1, i64 %s0, i64 %s1) {
 ; CHECK-LABEL: test_demanded_elts_pclmulqdq_512_0:
 ; CHECK:       # %bb.0:
@@ -313,3 +327,5 @@ define <2 x i64> @pclmul_sentinel_zero(<2 x i64> %a0, <2 x i64> %a1) {
   %res = tail call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %and, <2 x i64> %a1, i8 0)
   ret <2 x i64> %res
 }
+
+declare <8 x i64> @llvm.vector.insert.v8i64.v2i64(<8 x i64>, <2 x i64>, i64 immarg)
