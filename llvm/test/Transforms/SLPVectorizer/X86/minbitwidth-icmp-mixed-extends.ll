@@ -12,7 +12,9 @@ define i32 @slt_zext_sext(i16 %0, i16 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <2 x i16> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i16> [[TMP7]] to <2 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <2 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP10]], <2 x i16> zeroinitializer, <2 x i16> [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x i16> [[TMP5]], <6 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i16> [[TMP11]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -61,7 +63,9 @@ define i32 @ult_zext_sext(i16 %0, i16 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i16> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i16> [[TMP7]] to <2 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP10]], <2 x i16> zeroinitializer, <2 x i16> [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x i16> [[TMP5]], <6 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i16> [[TMP11]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -110,7 +114,9 @@ define i32 @eq_zext_sext(i16 %0, i16 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <2 x i16> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i16> [[TMP7]] to <2 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <2 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP10]], <2 x i16> zeroinitializer, <2 x i16> [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x i16> [[TMP5]], <6 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i16> [[TMP11]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -208,7 +214,9 @@ define i32 @samesign_slt_zext_sext(i16 %0, i16 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <2 x i16> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i16> [[TMP7]] to <2 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp samesign slt <2 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP10]], <2 x i16> zeroinitializer, <2 x i16> [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <6 x i16> [[TMP5]], <6 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i16> [[TMP11]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -257,7 +265,7 @@ define i32 @samesign_slt_sext_sext(i16 %0, i16 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <6 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <2 x i16> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp samesign slt <2 x i16> [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP8]], <2 x i16> zeroinitializer, <2 x i16> [[TMP3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <6 x i16> [[TMP5]], <6 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i16> [[TMP9]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
