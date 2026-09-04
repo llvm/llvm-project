@@ -1,0 +1,29 @@
+# Replace with the LLVM commit you want to use.
+LLVM_COMMIT = "2d1bc9f5a212dc4c8fa14a5741af2a7a5e60ff36"
+
+# The easiest way to calculate this for a new commit is to set it to empty and
+# then run a bazel build and it will report the digest necessary to cache the
+# archive and make the build reproducible.
+LLVM_INTEGRITY = "sha256-KST3jta9pEHT0igBUxNaUoJysbefc0yBJ22UEzWcINs="
+
+bazel_dep(name = "llvm-raw")
+archive_override(
+    module_name = "llvm-raw",
+    integrity = LLVM_INTEGRITY,
+    patch_cmds = [
+        "cat utils/bazel/MODULE.bazel | grep -v '\"llvm-raw\"' | sed 's|llvm-project-overlay|llvm-raw|g' > MODULE.bazel",
+    ],
+    strip_prefix = "llvm-project-" + LLVM_COMMIT,
+    urls = ["https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT)],
+)
+
+llvm = use_extension("@llvm-raw//utils/bazel:configure.bzl", "llvm")
+
+# Optionally configure LLVM targets here
+# llvm.configure(
+#     targets = [
+#         "X86",
+#         ...
+#     ],
+# )
+use_repo(llvm, "llvm-project")
