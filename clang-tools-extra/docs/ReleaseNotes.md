@@ -86,6 +86,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Cross-references
 
+- Improved Go to Definition in projects with alternative source
+  implementations. Definitions from files in the project index are now
+  preferred over definitions from open files outside the active project.
+
 #### Objective-C
 
 #### Miscellaneous

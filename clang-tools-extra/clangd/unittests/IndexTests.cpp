@@ -41,6 +41,22 @@ MATCHER_P(refRange, Range, "") {
 }
 MATCHER_P(fileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
 
+class CountingIndex : public SwapIndex {
+public:
+  explicit CountingIndex(std::unique_ptr<SymbolIndex> Index)
+      : SwapIndex(std::move(Index)) {}
+
+  void
+  lookup(const LookupRequest &Req,
+         llvm::function_ref<void(const Symbol &)> Callback) const override {
+
+    ++LookupCount;
+    SwapIndex::lookup(Req, Callback);
+  }
+
+  mutable unsigned LookupCount = 0;
+};
+
 TEST(SymbolLocation, Position) {
   using Position = SymbolLocation::Position;
   Position Pos;
@@ -289,6 +305,69 @@ TEST(MergeIndexTest, Lookup) {
               UnorderedElementsAre("ns::A", "ns::C"));
   EXPECT_THAT(lookup(M, SymbolID("ns::D")), UnorderedElementsAre());
   EXPECT_THAT(lookup(M, {}), UnorderedElementsAre());
+}
+
+TEST(ProjectDefinitionIndexTest, DefinitionPolicy) {
+  constexpr llvm::StringLiteral DynamicURI("unittest:///dynamic.cpp");
+  constexpr llvm::StringLiteral ProjectURI("unittest:///project.cpp");
+  Symbol DynamicSymbol = symbol("target");
+  DynamicSymbol.Definition.FileURI = DynamicURI.data();
+  DynamicSymbol.Documentation = "dynamic documentation";
+  Symbol ProjectSymbol = symbol("target");
+  ProjectSymbol.Definition.FileURI = ProjectURI.data();
+
+  auto MakeIndex = [](const Symbol &S,
+                      llvm::ArrayRef<llvm::StringRef> IndexedFiles) {
+    SymbolSlab::Builder Symbols;
+    Symbols.insert(S);
+    SymbolSlab SymbolData = std::move(Symbols).build();
+    RefSlab RefData;
+    auto Size = SymbolData.bytes() + RefData.bytes();
+    auto Data = std::make_pair(std::move(SymbolData), std::move(RefData));
+    llvm::StringSet<> Files;
+    for (llvm::StringRef File : IndexedFiles)
+      Files.insert(File);
+    return std::make_unique<MemIndex>(Data.first, Data.second, RelationSlab(),
+                                      std::move(Files), IndexContents::Symbols,
+                                      std::move(Data), Size);
+  };
+  auto DefinitionURI = [](const SymbolIndex &Index) {
+    std::string Result;
+    LookupRequest Req;
+    Req.IDs.insert(SymbolID("target"));
+    Index.lookup(Req, [&](const Symbol &S) {
+      Result = S.Definition.FileURI;
+      EXPECT_EQ(S.Documentation, "dynamic documentation");
+    });
+    return Result;
+  };
+
+  auto Dynamic = MakeIndex(DynamicSymbol, {});
+  auto Project = MakeIndex(ProjectSymbol, {ProjectURI});
+  ProjectDefinitionIndex UnlistedDynamic(Dynamic.get(), Project.get());
+  EXPECT_EQ(DefinitionURI(UnlistedDynamic), ProjectURI);
+
+  auto ProjectCoveringDynamic =
+      MakeIndex(ProjectSymbol, {ProjectURI, DynamicURI});
+  ProjectDefinitionIndex ActiveDynamic(Dynamic.get(),
+                                       ProjectCoveringDynamic.get());
+  EXPECT_EQ(DefinitionURI(ActiveDynamic), DynamicURI);
+
+  ProjectSymbol.Definition = {};
+  auto ProjectWithoutDefinition = MakeIndex(ProjectSymbol, {ProjectURI});
+  ProjectDefinitionIndex DynamicFallback(Dynamic.get(),
+                                         ProjectWithoutDefinition.get());
+  EXPECT_EQ(DefinitionURI(DynamicFallback), DynamicURI);
+
+  MergedIndex OrdinaryMerge(Dynamic.get(), Project.get());
+  EXPECT_EQ(DefinitionURI(OrdinaryMerge), DynamicURI);
+
+  CountingIndex CountedDynamic(MakeIndex(DynamicSymbol, {}));
+  CountingIndex CountedProject(MakeIndex(ProjectSymbol, {ProjectURI}));
+  ProjectDefinitionIndex Counted(&CountedDynamic, &CountedProject);
+  DefinitionURI(Counted);
+  EXPECT_EQ(CountedDynamic.LookupCount, 1u);
+  EXPECT_EQ(CountedProject.LookupCount, 1u);
 }
 
 TEST(MergeIndexTest, LookupRemovedDefinition) {

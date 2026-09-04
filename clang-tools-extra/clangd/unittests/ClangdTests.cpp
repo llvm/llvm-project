@@ -368,6 +368,45 @@ TEST(ClangdServerTest, RespectsConfig) {
   EXPECT_NE(Result->front().PreferredDeclaration.range, Example.range());
 }
 
+TEST(ClangdServerTest, PrefersProjectDefinitionForNavigation) {
+  TestTU ActiveTU;
+  ActiveTU.HeaderCode = "void target();";
+  ActiveTU.Code = "void target() {}";
+  ActiveTU.Filename = "active.cpp";
+  auto ProjectIndex = ActiveTU.index();
+
+  auto Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+  Opts.StaticIndex = ProjectIndex.get();
+  MockCompilationDatabase CDB;
+  MockFS FS;
+  ClangdServer Server(CDB, FS, Opts);
+
+  runAddDocument(Server, testPath("inactive.cpp"), "void target() {}");
+  Annotations Main(R"cpp(
+    void target();
+    int main() { ^target(); }
+  )cpp");
+  runAddDocument(Server, testPath("main.cpp"), Main.code());
+
+  auto Result = runLocateSymbolAt(Server, testPath("main.cpp"), Main.point());
+  ASSERT_TRUE(bool(Result)) << Result.takeError();
+  ASSERT_THAT(*Result, SizeIs(1));
+  ASSERT_TRUE(Result->front().Definition);
+  EXPECT_EQ(Result->front().Definition->uri.file(), testPath("active.cpp"));
+
+  Annotations Unsaved(R"cpp(
+    void target() {}
+    int main() { ^target(); }
+  )cpp");
+  runAddDocument(Server, testPath("main.cpp"), Unsaved.code());
+  Result = runLocateSymbolAt(Server, testPath("main.cpp"), Unsaved.point());
+  ASSERT_TRUE(bool(Result)) << Result.takeError();
+  ASSERT_THAT(*Result, SizeIs(1));
+  ASSERT_TRUE(Result->front().Definition);
+  EXPECT_EQ(Result->front().Definition->uri.file(), testPath("main.cpp"));
+}
+
 TEST(ClangdServerTest, PropagatesVersion) {
   MockCompilationDatabase CDB;
   MockFS FS;
