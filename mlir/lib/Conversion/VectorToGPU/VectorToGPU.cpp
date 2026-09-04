@@ -210,8 +210,7 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
 
   MLIRContext *ctx = writeOp.getContext();
   AffineExpr innerDim = getAffineDimExpr(permutationMap.getNumDims() - 1, ctx);
-  // TODO: Support transpose once it is added to GPU dialect ops.
-  return permutationMap.getResult(1) == innerDim;
+  return llvm::is_contained(permutationMap.getResults(), innerDim);
 }
 
 /// Return true if the constant is a splat to a 2D vector so that it can be
@@ -623,12 +622,18 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
   rewriter.setInsertionPoint(op);
 
   assert(transferWriteSupportsMMAMatrixType(op));
+  AffineMap permutationMap = op.getPermutationMap();
   std::optional<int64_t> stride =
-      getStaticallyKnownRowStride(op.getShapedType(), op.getPermutationMap());
+      getStaticallyKnownRowStride(op.getShapedType(), permutationMap);
   if (!stride.has_value()) {
     LDBG() << "no stride";
     return rewriter.notifyMatchFailure(op, "no stride");
   }
+
+  // As for transfer_read, transferWriteSupportsMMAMatrixType ensures that
+  // either of the map results is the most minor dimension, so the first result
+  // being that dimension means a transposed store.
+  const bool isTranspose = isFirstResultLastMapDimension(permutationMap);
 
   auto it = valueMapping.find(op.getVector());
   if (it == valueMapping.end()) {
@@ -639,7 +644,8 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
   Value matrix = it->second;
   auto store = gpu::SubgroupMmaStoreMatrixOp::create(
       rewriter, op.getLoc(), matrix, op.getBase(), op.getIndices(),
-      rewriter.getIndexAttr(*stride), /*transpose=*/UnitAttr());
+      rewriter.getIndexAttr(*stride),
+      isTranspose ? rewriter.getUnitAttr() : UnitAttr());
   (void)store;
 
   LDBG() << "transfer write to: " << store;
