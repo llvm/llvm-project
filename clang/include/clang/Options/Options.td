@@ -1286,10 +1286,10 @@ def no_offload_arch_EQ : CommaJoined<["--"], "no-offload-arch=">,
 
 def offload_new_driver : Flag<["--"], "offload-new-driver">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
+  HelpText<"Deprecated; the new driver is always used for offloading compilation.">;
 def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  HelpText<"Don't Use the new driver for offloading compilation.">;
+  HelpText<"Deprecated; the legacy offloading driver has been removed.">;
 def cuda_emit_nvcc_abi : Flag<["--"], "cuda-emit-nvcc-abi">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"CUDANVCCABI">>,
@@ -4375,11 +4375,10 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden], []>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
-  HelpText<"Use the new driver for OpenMP offloading.">;
+def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">,
+  Flags<[HelpHidden]>, Alias<offload_new_driver>;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
-  Flags<[HelpHidden]>,
-  HelpText<"Don't use the new driver for OpenMP offloading.">;
+  Flags<[HelpHidden]>, Alias<no_offload_new_driver>;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">,
@@ -4825,22 +4824,6 @@ def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
   HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
   HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
-defm enable_new_pm_codegen
-    : BoolFOption<"enable-new-pm-codegen", CodeGenOpts<"EnableNewPMCodeGen">, DefaultFalse,
-                  NegFlag<SetFalse, [], [CC1Option],
-                          "Do not use the NewPM for the Codegen Pipeline">,
-                  PosFlag<SetTrue, [], [CC1Option],
-                          "Use the NewPM for the Codegen Pipeline">>,
-      DocBrief<
-          [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
-def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
-    Group<f_Group>,
-    Visibility<[CC1Option]>,
-    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
-    Values<"auto,force-on,force-disable">,
-    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
-    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
-    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",

@@ -1503,7 +1503,7 @@ define <4 x float> @insertelement_constant_chain() {
   %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
   %ins.1 = insertelement <4 x float> %ins.0, float 0.0, i32 1
   %ins.2 = insertelement <4 x float> %ins.1, float -9.0, i32 2
-  %ins.3 = insertelement <4 x float> %ins.2, float 0x7FF0000000000000, i32 3
+  %ins.3 = insertelement <4 x float> %ins.2, float +inf, i32 3
   ret <4 x float> %ins.3
 }
 
@@ -1539,7 +1539,7 @@ define <vscale x 4 x float> @insertelement_scalable_constant_chain() {
   %ins.0 = insertelement <vscale x 4 x float> poison, float 1.0, i32 0
   %ins.1 = insertelement <vscale x 4 x float> %ins.0, float 0.0, i32 1
   %ins.2 = insertelement <vscale x 4 x float> %ins.1, float -9.0, i32 2
-  %ins.3 = insertelement <vscale x 4 x float> %ins.2, float 0x7FF0000000000000, i32 3
+  %ins.3 = insertelement <vscale x 4 x float> %ins.2, float +inf, i32 3
   ret <vscale x 4 x float> %ins.3
 }
 
@@ -1600,7 +1600,7 @@ define <4 x float> @insertelement_index_oob_chain() {
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float +inf, i32 4
 ; CHECK-NEXT:    ret <4 x float> [[INSERT]]
 ;
-  %insert = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
+  %insert = insertelement <4 x float> zeroinitializer, float +inf, i32 4
   ret <4 x float> %insert
 }
 

@@ -2601,11 +2601,11 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       FirstEpilogSEH = std::next(FirstEpilogSEH);
     BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADRP))
         .addReg(AArch64::X0, RegState::Define)
-        .addMBB(TargetMBB);
+        .addMBB(TargetMBB, AArch64II::MO_PAGE);
     BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADDXri))
         .addReg(AArch64::X0, RegState::Define)
         .addReg(AArch64::X0)
-        .addMBB(TargetMBB)
+        .addMBB(TargetMBB, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
         .addImm(0);
     TargetMBB->setMachineBlockAddressTaken();
     return true;
@@ -11787,7 +11787,7 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   if (AFL.getArgumentStackToRestore(MF, MBB)) {
     Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
     Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
-    if (Subtarget.hasPAuthLR())
+    if (AFI->branchProtectionPAuthLR())
       Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
     return;
   }

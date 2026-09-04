@@ -9,5 +9,6 @@ unittest("ABITests") {
   sources = [
     "AArch64TargetInfoTest.cpp",
     "X86TargetInfoTest.cpp",
+    "TypesTest.cpp",
   ]
 }

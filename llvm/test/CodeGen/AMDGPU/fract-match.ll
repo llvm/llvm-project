@@ -273,7 +273,7 @@ define <3 x float> @safe_math_fract_v3f32(<3 x float> %x, ptr addrspace(1) write
   %uno = fcmp uno <3 x float> %x, <float 0.0, float poison, float 0.0>
   %cond = select <3 x i1> %uno, <3 x float> %x, <3 x float> %min
   %fabs = tail call <3 x float> @llvm.fabs.v3f32(<3 x float> %x)
-  %cmpinf = fcmp oeq <3 x float> %fabs, <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <3 x float> %fabs, <float +inf, float poison, float +inf>
   %cond6 = select <3 x i1> %cmpinf, <3 x float> <float 0.0, float poison, float 0.0>, <3 x float> %cond
   store <3 x float> %floor, ptr addrspace(1) %ip, align 4
   ret <3 x float> %cond6
@@ -408,7 +408,7 @@ define <2 x float> @safe_math_fract_v2f32_const_splat_poison(<2 x float> %x, ptr
   %uno = fcmp uno <2 x float> %x, zeroinitializer
   %cond = select <2 x i1> %uno, <2 x float> %x, <2 x float> %min
   %fabs = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
-  %cmpinf = fcmp oeq <2 x float> %fabs, splat (float 0x7FF0000000000000)
+  %cmpinf = fcmp oeq <2 x float> %fabs, splat (float +inf)
   %cond6 = select <2 x i1> %cmpinf, <2 x float> zeroinitializer, <2 x float> %cond
   store <2 x float> %floor, ptr addrspace(1) %ip, align 4
   ret <2 x float> %cond6
@@ -2503,7 +2503,7 @@ entry:
   %uno = fcmp uno <2 x float> %x, zeroinitializer
   %cond = select <2 x i1> %uno, <2 x float> %x, <2 x float> %min
   %fabs = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
-  %cmpinf = fcmp oeq <2 x float> %fabs, <float 0x7FF0000000000000, float 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <2 x float> %fabs, <float +inf, float +inf>
   %cond6 = select <2 x i1> %cmpinf, <2 x float> zeroinitializer, <2 x float> %cond
   store <2 x float> %floor, ptr addrspace(1) %ip, align 4
   ret <2 x float> %cond6
@@ -5381,7 +5381,7 @@ entry:
   %sub = fsub <3 x float> %x, %floor
   %min = call <3 x float> @llvm.minnum.v3f32(<3 x float> %sub, <3 x float> <float 0x3FEFFFFFE0000000, float poison, float 0x3FEFFFFFE0000000>)
   %x.fabs = call <3 x float> @llvm.fabs.v3f32(<3 x float> %x)
-  %not.inf = fcmp une <3 x float> %x.fabs, <float 0x7FF0000000000000, float poison, float 0x7FF0000000000000>
+  %not.inf = fcmp une <3 x float> %x.fabs, <float +inf, float poison, float +inf>
   %cond = select <3 x i1> %not.inf, <3 x float> %min, <3 x float> <float 0.0, float poison, float 0.0>
   %not.nan = fcmp ord <3 x float> %x, <float 0.0, float poison, float 0.0>
   %cond8 = select <3 x i1> %not.nan, <3 x float> %cond, <3 x float> %x

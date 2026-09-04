@@ -998,7 +998,8 @@ def ANDES_AX25 : RISCVProcessorModel<"andes-ax25",
                                       FeatureStdExtC,
                                       FeatureVendorXAndesPerf]>;
 
-defvar Andes45TuneFeatures = [TuneAndes45,
+defvar Andes45TuneFeatures = [FeatureUnalignedScalarMem,
+                              TuneAndes45,
                               TuneNoDefaultUnroll,
                               TuneShortForwardBranchIALU,
                               TunePostRAScheduler];
