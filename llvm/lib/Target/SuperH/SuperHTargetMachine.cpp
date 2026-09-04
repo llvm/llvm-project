@@ -96,7 +96,6 @@ SuperHTargetMachine::SuperHTargetMachine(const Target &T, const Triple &TT,
                                RM.value_or(Reloc::Static),
                                getEffectiveCodeModel(CM, CodeModel::Small),
                                OL), TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
-
   initAsmInfo();
 }
 

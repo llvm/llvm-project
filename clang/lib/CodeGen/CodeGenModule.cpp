@@ -246,6 +246,11 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     bool EABI = ABIStr.ends_with("e");
     return createRISCVTargetCodeGenInfo(CGM, XLen, ABIFLen, EABI);
   }
+  
+  case llvm::Triple::sh:
+  case llvm::Triple::shl: {
+    return createSuperHTargetCodeGenInfo(CGM);
+  }
 
   case llvm::Triple::systemz: {
     bool SoftFloat = CodeGenOpts.FloatABI == "soft";

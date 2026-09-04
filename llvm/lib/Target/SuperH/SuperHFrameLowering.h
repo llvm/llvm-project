@@ -29,7 +29,7 @@ public:
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown,
                           /*StackAlignment*/Align(4),
                           /*LocalAreaOffset*/0,
-                          /*TransAl*/Align(4),
+                          /*TransAl*/Align(1),
                           /*StackReal*/false),
       STI(STI) {}
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
@@ -41,13 +41,20 @@ public:
                                  ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const override;
   bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                                    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const override;
-  
-  MachineBasicBlock::iterator
-  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator I) const override;
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
+  
+
+  /// getFrameIndexReference - This method should return the base register
+  /// and offset used to reference a frame index location. The offset is
+  /// returned directly, and the base register is returned via FrameReg.
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
+
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) const override;
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };
