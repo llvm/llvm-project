@@ -23,11 +23,10 @@ end program
 ! CHECK: %[[COORD:.*]] = fir.coordinate_of %[[DECL]]#0, a
 ! CHECK: %[[BOUNDS:.*]] = omp.map.bounds
 ! CHECK: %[[BOX_OFF:.*]] = fir.box_offset %[[COORD]] base_addr
-! CHECK: %[[MEMBER_PTR:.*]] = omp.map.info var_ptr(%[[COORD]] {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%[[BOX_OFF]] {{.*}}) bounds(%[[BOUNDS]]) name("")
-! CHECK: %[[DESC:.*]] = omp.map.info var_ptr(%[[COORD]] {{.*}}) map_clauses(always, implicit, to) capture(ByRef) name("")
-! CHECK: %[[ATTACH:.*]] = omp.map.info var_ptr(%[[COORD]] {{.*}}) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BOX_OFF]] {{.*}}) bounds(%[[BOUNDS]]) name("")
-! CHECK: %[[PARENT:.*]] = omp.map.info var_ptr(%[[DECL]]#1 {{.*}}) map_clauses(implicit) capture(ByRef) members(%[[DESC]], %[[MEMBER_PTR]] : [0], [0, 0] {{.*}}) name("") partial_map(true)
-! CHECK: omp.declare_mapper.info map_entries(%[[PARENT]], %[[DESC]], %[[ATTACH]], %[[MEMBER_PTR]]
+! CHECK: %[[MEMBER_PTR:.*]] = omp.map.info var_ptr(%[[COORD]] {{.*}}) map_clauses(implicit, tofrom, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BOX_OFF]] {{.*}}) bounds(%[[BOUNDS]]) name("")
+! CHECK: %[[ATTACH:.*]] = omp.map.info var_ptr(%[[COORD]] {{.*}}) map_clauses(attach, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BOX_OFF]] {{.*}}) bounds(%[[BOUNDS]]) name("")
+! CHECK: %[[PARENT:.*]] = omp.map.info var_ptr(%[[DECL]]#1 {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) members(%[[MEMBER_PTR]] : [0] {{.*}}) name("")
+! CHECK: omp.declare_mapper.info map_entries(%[[PARENT]], %[[MEMBER_PTR]], %[[ATTACH]]
 
 ! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<[[TYPE]]>, [[TYPE]]) map_clauses(implicit, tofrom) capture(ByRef) mapper(@[[MAPPER]]) name("x")
 ! CHECK: omp.target {{.*}}map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<[[TYPE]]>)
