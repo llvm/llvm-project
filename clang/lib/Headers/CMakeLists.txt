@@ -392,6 +392,8 @@ set(openmp_wrapper_files
 
 set(llvm_offload_gpu_wrapper_files
   llvm_offload_wrappers/gpu/device_functions.h
+  llvm_offload_wrappers/gpu/__clang_gpu_libclc_declares.h
+  llvm_offload_wrappers/gpu/__clang_gpu_math.h
   llvm_offload_wrappers/gpu/__clang_gpu_runtime_wrapper.h
   llvm_offload_wrappers/gpu/__clang_gpu_builtin_vars.h
   llvm_offload_wrappers/gpu/__clang_gpu_device_functions.h

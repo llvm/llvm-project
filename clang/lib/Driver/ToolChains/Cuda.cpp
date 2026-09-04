@@ -923,15 +923,18 @@ void CudaToolChain::addClangTargetOptions(
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-target-abi", "shortptr"});
 
+  if (UsesLLVMOffloading) {
+    if (DeviceOffloadingKind == Action::OFK_Cuda)
+      addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
+    return;
+  }
+
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
     return;
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP &&
       DriverArgs.hasArg(options::OPT_S))
-    return;
-
-  if (UsesLLVMOffloading)
     return;
 
   std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
