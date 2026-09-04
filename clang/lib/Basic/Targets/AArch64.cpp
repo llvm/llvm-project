@@ -1859,6 +1859,33 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 }
 
+UEFIAArch64TargetInfo::UEFIAArch64TargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+  // UEFI images are PE/COFF, but we keep the AArch64 LP64 data model (inherited
+  // from the freestanding ELF base) rather than the Windows LLP64 model. The
+  // UEFI spec does not mandate a C integer model, a freestanding Swift firmware
+  // does not interop with UEFI/Windows C `long`, and LP64 keeps `long` == word
+  // size, which is what higher-level toolchains (e.g. Swift's Int <-> C integer
+  // mapping) assume. Only the object format and CFI are Windows-like -- see
+  // setDataLayout() below and the AArch64 frame lowering.
+}
+
+void UEFIAArch64TargetInfo::setDataLayout() {
+  // PE/COFF image: use the same data layout the LLVM AArch64 TargetMachine
+  // computes for COFF. This must be an override (not just a ctor call) because
+  // handleTargetFeatures() re-invokes setDataLayout() after construction, and
+  // the AArch64le base only knows MachO/ELF -- it would otherwise revert to an
+  // ELF layout that mismatches the backend.
+  resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
+                  "i64:64-i128:128-n32:64-S128-Fn32");
+}
+
+AArch64TargetInfo::BuiltinVaListKind
+UEFIAArch64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
 AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
     const llvm::Triple &Triple, const TargetOptions &Opts)
     : AppleMachOTargetInfo<AArch64leTargetInfo>(Triple, Opts) {}

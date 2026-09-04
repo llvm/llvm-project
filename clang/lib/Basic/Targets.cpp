@@ -190,6 +190,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       default: // Assume MSVC for unknown environments
         return std::make_unique<MicrosoftARM64TargetInfo>(Triple, Opts);
       }
+    case llvm::Triple::UEFI:
+      return std::make_unique<UEFIAArch64TargetInfo>(Triple, Opts);
     default:
       return std::make_unique<AArch64leTargetInfo>(Triple, Opts);
     }

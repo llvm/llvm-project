@@ -384,12 +384,13 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  // TODO: Should this include targets like UEFI (which use Windows CFI)?
-  // Note: Currently, there is not AArch64 support for UEFI. The value returned
-  // here must align with the predicate used for returning the list of callee
-  // saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we use
+  // UEFI images are PE/COFF and use Windows CFI, so for frame-record layout and
+  // unwind they behave like Windows. This value must align with the predicate
+  // used for returning the list of callee saved regs in
+  // AArch64RegisterInfo::getCalleeSavedRegs(), so that we use
   // invalidateWindowsRegisterPairing() where appropriate.
-  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  return STI.isTargetWindows() || STI.isTargetUEFI();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
