@@ -1563,8 +1563,8 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
   unsigned Fast = 0;
-  bool Allowed = Width >= 16 && isPowerOf2_64(Width) &&
-                 DL.fitsInLegalInteger(Width);
+  bool Allowed =
+      Width >= 16 && isPowerOf2_64(Width) && DL.fitsInLegalInteger(Width);
   if (!Allowed ||
       !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
