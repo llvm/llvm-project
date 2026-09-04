@@ -791,20 +791,21 @@ private:
           continue;
         }
 
-        // If TCDifference is not set or if it is zero, peeling is not needed.
-        // In this case we must ensure if the loops are guarded the guards
-        // are identical.
-        if (!TCDifference || *TCDifference == 0) {
-          if (FC0.GuardBranch && FC1.GuardBranch &&
-              !haveIdenticalGuards(FC0, FC1)) {
-            LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
-                                 "guards. Not Fusing.\n");
-            ++NonIdenticalGuards;
-            reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "NonIdenticalGuards",
-                "Candidates have different guards");
-            continue;
-          }
+        // If Loops are guarded, we expect the guards to be identical.
+        // Currently peeling is supported only for loops with constant
+        // iteration counts. If two loops have different loop guards
+        // there is no mechanism in loop fusion to make their fusion legal.
+        // The trivial case where the guards compare two constant values can be
+        // ignored. Those guards will be optimized away by other passes.
+        if (FC0.GuardBranch && FC1.GuardBranch &&
+            !haveIdenticalGuards(FC0, FC1)) {
+          LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
+                               "guards. Not Fusing.\n");
+          ++NonIdenticalGuards;
+          reportLoopFusion<OptimizationRemarkMissed>(
+              FC0, FC1, "NonIdenticalGuards",
+              "Candidates have different guards");
+          continue;
         }
 
         if (FC0.GuardBranch) {
@@ -1114,7 +1115,7 @@ private:
     if (!DepResult)
       return true;
     // If two stores write the same SSA value, fusion is safe regardless of
-    // aliasing — writing the same value twice is idempotent.
+    // aliasing - writing the same value twice is idempotent.
     if (isa<StoreInst>(I0) && isa<StoreInst>(I1)) {
       auto *S0 = cast<StoreInst>(&I0);
       auto *S1 = cast<StoreInst>(&I1);
@@ -1162,6 +1163,20 @@ private:
         LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
                           << (DepResult->isInput() ? "input" : "output")
                           << " dependency\n");
+        NumDA++;
+        return true;
+      }
+      // Same-iteration scalar flow/anti dependences between adjacent loops are
+      // preserved by placing FC0's body before FC1's body in the fused loop.
+      // This enables fusing accumulation chains such as:
+      //   for (i)
+      //     A[i] = ...;
+      //   for (i)
+      //     A[i] += ...;
+      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+      if (!(CurDir & Dependence::DVEntry::GT) &&
+          !(CurDir & Dependence::DVEntry::LT)) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse same-iteration scalar dependence\n");
         NumDA++;
         return true;
       }

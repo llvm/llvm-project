@@ -111,6 +111,13 @@ Type *Variable::GetType() {
   return nullptr;
 }
 
+lldb::TypeSP Variable::GetEnclosingType() {
+  Type *type = GetType();
+  if (type)
+    return type->GetSymbolFile()->GetTypeEnclosingVariableUID(GetID());
+  return nullptr;
+}
+
 void Variable::Dump(Stream *s, bool show_context) const {
   s->Printf("%p: ", static_cast<const void *>(this));
   s->Indent();

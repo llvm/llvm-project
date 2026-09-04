@@ -203,12 +203,12 @@ Any access to `addrspace(0)` (aka flat or generic) always results in a
 *store-available* or *load-visible* operation with scope "workgroup", if the
 flat address resolves to `addrspace(3)`.
 
-```{note}
+:::{note}
 This is independent of the `syncscope` of an atomic access. For example, even if
 a `store atomic` to `addrspace(3)` specifies a smaller `syncscope` such as "wavefront", the
 side-effects are made available at "workgroup" scope. In other words, the scope
 for atomicity is not always the same as the scope for availability/visibility.
-```
+:::
 
 ### volatile Accesses
 
@@ -228,12 +228,12 @@ A `volatile` atomic access is not widened in this way. Its availability and
 visibility remain limited to its `syncscope`, as described for atomic accesses
 above.
 
-```{note}
+:::{note}
 The availability and visibility of volatile accesses is specific to AMDGPU, and
 orthogonal to the {ref}`base semantics defined in LLVM IR<volatile>`. This fully
 specifies the behavior that the {ref}`LLVM memory model<memmodel>` otherwise
 leaves target-dependent for `volatile` accesses.
-```
+:::
 
 (amdgpu-av-metadata)=
 

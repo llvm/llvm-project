@@ -163,6 +163,38 @@ static std::string describeSanitizeArg(const llvm::opt::Arg *A,
 /// Sanitizers set.
 static std::string toString(const clang::SanitizerSet &Sanitizers);
 
+/// Map a Hexagon callee-saved register number (16-27) to its -ffixed-rN
+/// option, used to check that the shadow call stack pointer is reserved.
+static options::ID getHexagonFixedRegOption(unsigned RegNo) {
+  switch (RegNo) {
+  case 16:
+    return options::OPT_ffixed_r16;
+  case 17:
+    return options::OPT_ffixed_r17;
+  case 18:
+    return options::OPT_ffixed_r18;
+  case 19:
+    return options::OPT_ffixed_r19;
+  case 20:
+    return options::OPT_ffixed_r20;
+  case 21:
+    return options::OPT_ffixed_r21;
+  case 22:
+    return options::OPT_ffixed_r22;
+  case 23:
+    return options::OPT_ffixed_r23;
+  case 24:
+    return options::OPT_ffixed_r24;
+  case 25:
+    return options::OPT_ffixed_r25;
+  case 26:
+    return options::OPT_ffixed_r26;
+  case 27:
+    return options::OPT_ffixed_r27;
+  }
+  llvm_unreachable("not a Hexagon callee-saved register");
+}
+
 /// Produce a string containing comma-separated names of sanitizers and
 /// sanitizer groups in \p Sanitizers set.
 static std::string toStringWithGroups(const clang::SanitizerSet &Sanitizers);
@@ -784,11 +816,26 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   if ((Kinds & SanitizerKind::ShadowCallStack) &&
-      TC.getTriple().getArch() == llvm::Triple::hexagon &&
-      !Args.hasArg(options::OPT_ffixed_r19) && DiagnoseErrors) {
-    D.Diag(diag::err_drv_argument_only_allowed_with)
-        << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
-        << "-ffixed-r19";
+      TC.getTriple().getArch() == llvm::Triple::hexagon && DiagnoseErrors) {
+    // The register holding the shadow call stack pointer must be reserved, so
+    // that neither the register allocator uses it nor the prologue saves and
+    // restores it as an ordinary callee-saved register.  It defaults to r18
+    // and is selectable with -mscs-reg=.
+    unsigned RegNo = 18;
+    if (Arg *A = Args.getLastArg(options::OPT_mhexagon_scs_reg)) {
+      StringRef Val(A->getValue());
+      unsigned Parsed = 0;
+      // An out-of-range or malformed value is diagnosed by the toolchain; fall
+      // back to the default here so we do not emit a second, confusing error.
+      if (Val.consume_front("r") && !Val.getAsInteger(10, Parsed) &&
+          Parsed >= 16 && Parsed <= 27)
+        RegNo = Parsed;
+    }
+    if (!Args.hasArg(getHexagonFixedRegOption(RegNo)))
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << lastArgumentForMask(D, Args,
+                                 Kinds & SanitizerKind::ShadowCallStack)
+          << ("-ffixed-r" + Twine(RegNo)).str();
   }
 
   // Report error if there are non-trapping sanitizers that require

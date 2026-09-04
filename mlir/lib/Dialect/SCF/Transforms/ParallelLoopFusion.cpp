@@ -21,6 +21,7 @@
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -65,10 +66,23 @@ static bool equalIterationSpaces(ParallelOp firstPloop,
   if (firstPloop.getNumLoops() != secondPloop.getNumLoops())
     return false;
 
+  // Two bounds match if they are the same value, or if both are constants
+  // holding the same value. The latter matters because equivalent bounds are
+  // often materialized by distinct `arith.constant` ops, which leaves the
+  // iteration spaces equal even though the SSA values differ.
   auto matchOperands = [&](const OperandRange &lhs,
                            const OperandRange &rhs) -> bool {
-    // TODO: Extend this to support aliases and equal constants.
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    // TODO: Extend this to support aliases.
+    return std::equal(lhs.begin(), lhs.end(), rhs.begin(),
+                      [](Value lhsValue, Value rhsValue) {
+                        if (lhsValue == rhsValue)
+                          return true;
+                        std::optional<int64_t> lhsConst =
+                            getConstantIntValue(lhsValue);
+                        std::optional<int64_t> rhsConst =
+                            getConstantIntValue(rhsValue);
+                        return lhsConst && rhsConst && *lhsConst == *rhsConst;
+                      });
   };
   return matchOperands(firstPloop.getLowerBound(),
                        secondPloop.getLowerBound()) &&

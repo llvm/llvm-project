@@ -272,41 +272,6 @@ define amdgpu_kernel void @variable_memcpy_caller0(ptr addrspace(1) %dst, ptr ad
   ret void
 }
 
-define amdgpu_kernel void @variable_memcpy_caller1(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 %n) #0 {
-; OPT-LABEL: @variable_memcpy_caller1(
-; OPT-NEXT:    [[TMP2:%.*]] = and i64 [[N:%.*]], 15
-; OPT-NEXT:    [[TMP3:%.*]] = sub i64 [[N]], [[TMP2]]
-; OPT-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
-; OPT-NEXT:    br i1 [[TMP4]], label [[LOOP_MEMCPY_EXPANSION:%.*]], label [[LOOP_MEMCPY_RESIDUAL_HEADER:%.*]]
-; OPT:       dynamic-memcpy-expansion-main-body:
-; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP8:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP5]], align 1
-; OPT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store <4 x i32> [[TMP6]], ptr addrspace(1) [[TMP7]], align 1
-; OPT-NEXT:    [[TMP8]] = add i64 [[LOOP_INDEX]], 16
-; OPT-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[TMP8]], [[TMP3]]
-; OPT-NEXT:    br i1 [[TMP9]], label [[LOOP_MEMCPY_EXPANSION]], label [[LOOP_MEMCPY_RESIDUAL_HEADER]]
-; OPT:       dynamic-memcpy-expansion-residual-cond:
-; OPT-NEXT:    [[TMP16:%.*]] = icmp ne i64 [[TMP2]], 0
-; OPT-NEXT:    br i1 [[TMP16]], label [[LOOP_MEMCPY_RESIDUAL:%.*]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
-; OPT:       dynamic-memcpy-expansion-residual-body:
-; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL]] ]
-; OPT-NEXT:    [[TMP10:%.*]] = add i64 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
-; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP10]]
-; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 1
-; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP10]]
-; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 1
-; OPT-NEXT:    [[TMP14]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
-; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP14]], [[TMP2]]
-; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION]]
-; OPT:       dynamic-memcpy-post-expansion:
-; OPT-NEXT:    ret void
-;
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 %n, i1 false)
-  ret void
-}
-
 define amdgpu_kernel void @memcpy_multi_use_one_function(ptr addrspace(1) %dst0, ptr addrspace(1) %dst1, ptr addrspace(1) %src, i64 %n, i64 %m) #0 {
 ; OPT-LABEL: @memcpy_multi_use_one_function(
 ; OPT-NEXT:    [[TMP2:%.*]] = and i64 [[N:%.*]], 15

@@ -465,7 +465,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
 void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+      FT, FT->getExtInfo().withCallingConv(CC_C));
 }
 
 // LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
@@ -542,8 +542,14 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
     return;
 
   unsigned N = M.getLangOpts().GPUMaxThreadsPerBlock;
-  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>())
+  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
     N = FlatWGS->getMax()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+  } else if (auto LB = FD->getAttr<CUDALaunchBoundsAttr>()) {
+    if (uint64_t MaxThreads = LB->getMaxThreads()
+                                  ->EvaluateKnownConstInt(M.getContext())
+                                  .getExtValue())
+      N = MaxThreads;
+  }
 
   // We encode the maximum flat WG size in the first component of the 3D
   // max_work_group_size attribute, which will get reverse translated into the
@@ -914,7 +920,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   IntParams[2] = static_cast<unsigned>(attributes.IsArray);
 
   // MS
-  IntParams[3] = 0;
+  IntParams[3] = static_cast<unsigned>(attributes.isMultiSampled());
 
   // Sampled
   IntParams[4] =

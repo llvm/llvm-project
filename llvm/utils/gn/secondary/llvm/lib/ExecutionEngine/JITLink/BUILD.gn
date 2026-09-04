@@ -37,6 +37,7 @@ static_library("JITLink") {
     "ELF_x86.cpp",
     "ELF_x86_64.cpp",
     "JITLink.cpp",
+    "JITLinkDylib.cpp",
     "JITLinkGeneric.cpp",
     "JITLinkMemoryManager.cpp",
     "MachO.cpp",

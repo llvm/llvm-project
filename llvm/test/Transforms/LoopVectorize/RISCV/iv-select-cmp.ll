@@ -63,8 +63,8 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[UMIN]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP1]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()

@@ -44,10 +44,6 @@ struct CASTestingEnv {
 
 void setMaxOnDiskCASMappingSize();
 
-/// \returns the path of the libCASPluginTest dynamic library, which implements
-/// the CAS plugin API for testing purposes.
-std::string getCASPluginPath();
-
 // Test fixture for on-disk data base tests.
 class OnDiskCASTest : public ::testing::Test {
 protected:

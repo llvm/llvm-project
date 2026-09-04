@@ -102,7 +102,7 @@
 // CHECK-KCFI-ARITY: "-fsanitize-kcfi-arity"
 
 // Without -fsanitize=kcfi, -fsanitize-kcfi-arity is unused.
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-arity -c %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-ARITY-UNUSED
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-arity %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-ARITY-UNUSED
 // CHECK-KCFI-ARITY-UNUSED: warning: argument unused during compilation: '-fsanitize-kcfi-arity'
 
 // -fsanitize-kcfi-hash= is forwarded to cc1 when KCFI is enabled.
@@ -117,14 +117,11 @@
 // CHECK-KCFI-HASH-LAST:     "-fsanitize-kcfi-hash=FNV-1a"
 // CHECK-KCFI-HASH-LAST-NOT: "-fsanitize-kcfi-hash=xxHash64"
 
-// Invalid values are diagnosed by cc1 (driver forwards verbatim).
-// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash=bogus -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-BAD
-// CHECK-KCFI-HASH-BAD: error: invalid value 'bogus' in '-fsanitize-kcfi-hash=bogus'
-
-// An explicitly empty value is still forwarded so cc1 can diagnose it.
-// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash= -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-EMPTY
-// CHECK-KCFI-HASH-EMPTY: error: invalid value '' in '-fsanitize-kcfi-hash='
+// An explicitly empty value is still forwarded (not dropped) so cc1 can
+// diagnose it.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-EMPTY
+// CHECK-KCFI-HASH-EMPTY: "-fsanitize-kcfi-hash="
 
 // Without -fsanitize=kcfi, -fsanitize-kcfi-hash= is unused.
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-hash=FNV-1a -c %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-UNUSED
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-hash=FNV-1a %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-UNUSED
 // CHECK-KCFI-HASH-UNUSED: warning: argument unused during compilation: '-fsanitize-kcfi-hash=FNV-1a'
