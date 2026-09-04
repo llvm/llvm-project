@@ -92,6 +92,7 @@ private:
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineInstr &MI) const;
   bool selectUnmergeValues(MachineInstr &MI) const;
+  bool selectMergeValues(MachineInstr &MI) const;
   void addVectorLoadStoreOperands(MachineInstr &I,
                                   SmallVectorImpl<Register> &SrcOps,
                                   unsigned &CurOp, bool IsMasked,
@@ -1470,6 +1471,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectImplicitDef(MI);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI);
+  case TargetOpcode::G_MERGE_VALUES:
+    return selectMergeValues(MI);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
     GLoadStore &LdSt = cast<GLoadStore>(MI);
@@ -1502,9 +1505,17 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       return true;
     }
 
-    const unsigned NewOpc = selectRegImmLoadStoreOp(MI.getOpcode(), MemSize);
-    if (NewOpc == MI.getOpcode())
-      return false;
+    // RV32+Zilsd uses the pair load/store pseudo (LD_RV32/SD_RV32) for 64-bit
+    // accesses; selectRegImmLoadStoreOp would otherwise return LD/SD, which
+    // are RV64-only.
+    unsigned NewOpc;
+    if (!STI.is64Bit() && STI.hasStdExtZilsd() && MemSize == 64) {
+      NewOpc = isa<GStore>(MI) ? RISCV::SD_RV32 : RISCV::LD_RV32;
+    } else {
+      NewOpc = selectRegImmLoadStoreOp(MI.getOpcode(), MemSize);
+      if (NewOpc == MI.getOpcode())
+        return false;
+    }
 
     // Check if we can fold anything into the addressing mode.
     auto AddrModeFns = selectAddrRegImm(MI.getOperand(1));
@@ -1543,15 +1554,36 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
 
-  if (!Subtarget->hasStdExtZfa())
-    return false;
-
-  // Split F64 Src into two s32 parts
+  // Split Src into two s32 parts.
   if (MI.getNumOperands() != 3)
     return false;
   Register Src = MI.getOperand(2).getReg();
   Register Lo = MI.getOperand(0).getReg();
   Register Hi = MI.getOperand(1).getReg();
+
+  // RV32+Zilsd: split a GPRPair (i64) into its two s32 GPR halves via
+  // subregister extracts.
+  if (!Subtarget->is64Bit() && Subtarget->hasStdExtZilsd() &&
+      MRI->getType(Src) == LLT::scalar(64) && isRegInGprb(Src) &&
+      isRegInGprb(Lo) && isRegInGprb(Hi)) {
+    if (!RBI.constrainGenericRegister(Src, RISCV::GPRPairRegClass, *MRI))
+      return false;
+    auto ExtractHalf = [&](Register Dst, unsigned SubIdx) {
+      RBI.constrainGenericRegister(Dst, RISCV::GPRRegClass, *MRI);
+      MachineInstr &C = *BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                 TII.get(TargetOpcode::COPY), Dst)
+                             .addReg(Src, RegState::NoFlags, SubIdx);
+      constrainSelectedInstRegOperands(C, TII, TRI, RBI);
+    };
+    ExtractHalf(Lo, RISCV::sub_gpr_even);
+    ExtractHalf(Hi, RISCV::sub_gpr_odd);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (!Subtarget->hasStdExtZfa())
+    return false;
+
   if (!isRegInFprb(Src) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
     return false;
 
@@ -1567,6 +1599,32 @@ bool RISCVInstructionSelector::selectUnmergeValues(MachineInstr &MI) const {
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectMergeValues(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
+
+  if (MI.getNumOperands() != 3)
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Lo = MI.getOperand(1).getReg();
+  Register Hi = MI.getOperand(2).getReg();
+
+  // RV32+Zilsd: build a GPRPair (i64) from two s32 GPR halves.
+  if (!Subtarget->is64Bit() && Subtarget->hasStdExtZilsd() &&
+      MRI->getType(Dst) == LLT::scalar(64) && isRegInGprb(Dst) &&
+      isRegInGprb(Lo) && isRegInGprb(Hi)) {
+    MachineInstr &Seq = *BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                 TII.get(TargetOpcode::REG_SEQUENCE), Dst)
+                             .addReg(Lo)
+                             .addImm(RISCV::sub_gpr_even)
+                             .addReg(Hi)
+                             .addImm(RISCV::sub_gpr_odd);
+    MI.eraseFromParent();
+    constrainSelectedInstRegOperands(Seq, TII, TRI, RBI);
+    return true;
+  }
+  return false;
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineInstr &MI,
