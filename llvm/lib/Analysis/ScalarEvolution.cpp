@@ -999,8 +999,8 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
       return Coeff;
 
     const SCEV *Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff);
-    Result = SE.getAddExpr(Result, Mul, SCEV::FlagAnyWrap, /*Depth=*/0,
-                           UseFlags);
+    Result =
+        SE.getAddExpr(Result, Mul, SCEV::FlagAnyWrap, /*Depth=*/0, UseFlags);
   }
   return Result;
 }
