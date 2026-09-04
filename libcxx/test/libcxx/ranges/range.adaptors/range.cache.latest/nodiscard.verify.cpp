@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+#include "test_macros.h"
+
 void test() {
   std::vector<int> range;
   std::ranges::cache_latest_view clv{range};
