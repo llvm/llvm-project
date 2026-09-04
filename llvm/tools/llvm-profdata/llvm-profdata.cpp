@@ -129,10 +129,11 @@ static cl::opt<unsigned> MaxDbgCorrelationWarnings(
     cl::desc("The maximum number of warnings to emit when correlating "
              "profile from debug info (0 = no limit)"),
     cl::sub(MergeSubcommand), cl::sub(ShowSubcommand), cl::init(5));
-static cl::opt<std::string> ProfiledBinary(
-    "profiled-binary", cl::init(""),
-    cl::desc("Path to binary from which the profile was collected."),
-    cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
+static cl::list<std::string> ProfiledBinaries(
+    "profiled-binary",
+    cl::desc("Path to a binary from which the profile was collected. May be "
+             "specified more than once for MemProf profiles."),
+    cl::ZeroOrMore, cl::sub(ShowSubcommand), cl::sub(MergeSubcommand));
 static cl::opt<std::string> DebugInfoFilename(
     "debug-info", cl::init(""),
     cl::desc(
@@ -723,8 +724,9 @@ static void overlapInput(const std::string &BaseFilename,
 /// Load an input into a writer context.
 static void
 loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
-          const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
-          WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
+          const InstrProfCorrelator *Correlator,
+          ArrayRef<StringRef> ProfiledBinaries, WriterContext *WC,
+          const object::BuildIDFetcher *BIDFetcher = nullptr,
           const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
@@ -735,7 +737,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
   using ::llvm::memprof::RawMemProfReader;
   if (RawMemProfReader::hasFormat(Input.Filename)) {
-    auto ReaderOrErr = RawMemProfReader::create(Input.Filename, ProfiledBinary);
+    auto ReaderOrErr =
+        RawMemProfReader::create(Input.Filename, ProfiledBinaries);
     if (!ReaderOrErr) {
       exitWithError(ReaderOrErr.takeError(), Input.Filename);
     }
@@ -996,7 +999,7 @@ static void writeInstrProfile(StringRef OutputFilename,
 static void mergeInstrProfile(const WeightedFileVector &Inputs,
                               SymbolRemapper *Remapper,
                               int MaxDbgCorrelationWarnings,
-                              const StringRef ProfiledBinary) {
+                              ArrayRef<StringRef> ProfiledBinaries) {
   const uint64_t TraceReservoirSize = TemporalProfTraceReservoirSize.getValue();
   const uint64_t MaxTraceLength = TemporalProfMaxTraceLength.getValue();
   if (OutputFormat == PF_Compact_Binary)
@@ -1071,7 +1074,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
-      loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
+      loadInput(Input, Remapper, Correlator.get(), ProfiledBinaries,
                 Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
   } else {
     DefaultThreadPool Pool(hardware_concurrency(NumThreads));
@@ -1079,7 +1082,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
     for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
+      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinaries,
                  Contexts[Ctx].get(), BIDFetcher.get(),
                  &BIDFetcherCorrelateKind);
       Ctx = (Ctx + 1) % NumThreads;
@@ -1503,7 +1506,7 @@ static void supplementInstrProfile(const WeightedFileVector &Inputs,
   SmallSet<instrprof_error, 4> WriterErrorCodes;
   auto WC = std::make_unique<WriterContext>(OutputSparse, ErrorLock,
                                             WriterErrorCodes);
-  loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinary=*/"", WC.get());
+  loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinaries=*/{}, WC.get());
   if (WC->Errors.size() > 0)
     exitWithError(std::move(WC->Errors[0].first), InstrFilename);
 
@@ -1846,10 +1849,12 @@ static int merge_main(StringRef ProgName) {
     return 0;
   }
 
-  if (ProfileKind == instr)
+  if (ProfileKind == instr) {
+    SmallVector<StringRef> ProfiledBinaryRefs(ProfiledBinaries.begin(),
+                                              ProfiledBinaries.end());
     mergeInstrProfile(WeightedInputs, Remapper.get(), MaxDbgCorrelationWarnings,
-                      ProfiledBinary);
-  else
+                      ProfiledBinaryRefs);
+  } else
     mergeSampleProfile(WeightedInputs, Remapper.get(), ProfileSymbolListFile,
                        OutputSizeLimit);
   return 0;
@@ -1876,7 +1881,7 @@ static void overlapInstrProfile(const std::string &BaseFilename,
     OS << "Sum of edge counts for profile " << TestFilename << " is 0.\n";
     exit(0);
   }
-  loadInput(WeightedInput, nullptr, nullptr, /*ProfiledBinary=*/"", &Context);
+  loadInput(WeightedInput, nullptr, nullptr, /*ProfiledBinaries=*/{}, &Context);
   overlapInput(BaseFilename, TestFilename, &Context, Overlap, FuncFilter, OS,
                IsCS);
   Overlap.dump(OS);
@@ -3338,8 +3343,10 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   // Show the raw profile in YAML.
   if (memprof::RawMemProfReader::hasFormat(Filename)) {
+    SmallVector<StringRef> ProfiledBinaryRefs(ProfiledBinaries.begin(),
+                                              ProfiledBinaries.end());
     auto ReaderOr = llvm::memprof::RawMemProfReader::create(
-        Filename, ProfiledBinary, /*KeepNames=*/true);
+        Filename, ProfiledBinaryRefs, /*KeepNames=*/true);
     if (Error E = ReaderOr.takeError()) {
       // Since the error can be related to the profile or the binary we do not
       // pass whence. Instead additional context is provided where necessary in
