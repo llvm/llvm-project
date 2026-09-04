@@ -6667,6 +6667,136 @@ define <4 x i32> @clmul_v4i32_allones(<4 x i32> %x) nounwind {
   ret <4 x i32> %r
 }
 
+define <4 x i32> @clmul_v4i32_zext_allones(<4 x i16> %x) nounwind {
+; SSE2-NOPCLMUL-LABEL: clmul_v4i32_zext_allones:
+; SSE2-NOPCLMUL:       # %bb.0:
+; SSE2-NOPCLMUL-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NOPCLMUL-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NOPCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NOPCLMUL-NEXT:    paddd %xmm1, %xmm1
+; SSE2-NOPCLMUL-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NOPCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NOPCLMUL-NEXT:    pslld $2, %xmm1
+; SSE2-NOPCLMUL-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NOPCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NOPCLMUL-NEXT:    pslld $4, %xmm1
+; SSE2-NOPCLMUL-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NOPCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NOPCLMUL-NEXT:    pslld $8, %xmm1
+; SSE2-NOPCLMUL-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NOPCLMUL-NEXT:    retq
+;
+; SSE42-NOPCLMUL-LABEL: clmul_v4i32_zext_allones:
+; SSE42-NOPCLMUL:       # %bb.0:
+; SSE42-NOPCLMUL-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE42-NOPCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE42-NOPCLMUL-NEXT:    paddd %xmm1, %xmm1
+; SSE42-NOPCLMUL-NEXT:    pxor %xmm0, %xmm1
+; SSE42-NOPCLMUL-NEXT:    movdqa %xmm1, %xmm0
+; SSE42-NOPCLMUL-NEXT:    pslld $2, %xmm0
+; SSE42-NOPCLMUL-NEXT:    pxor %xmm1, %xmm0
+; SSE42-NOPCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE42-NOPCLMUL-NEXT:    pslld $4, %xmm1
+; SSE42-NOPCLMUL-NEXT:    pxor %xmm0, %xmm1
+; SSE42-NOPCLMUL-NEXT:    movdqa %xmm1, %xmm0
+; SSE42-NOPCLMUL-NEXT:    pslld $8, %xmm0
+; SSE42-NOPCLMUL-NEXT:    pxor %xmm1, %xmm0
+; SSE42-NOPCLMUL-NEXT:    retq
+;
+; SSE2-PCLMUL-LABEL: clmul_v4i32_zext_allones:
+; SSE2-PCLMUL:       # %bb.0:
+; SSE2-PCLMUL-NEXT:    pxor %xmm1, %xmm1
+; SSE2-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; SSE2-PCLMUL-NEXT:    movq %rax, %xmm2
+; SSE2-PCLMUL-NEXT:    pextrw $3, %xmm0, %eax
+; SSE2-PCLMUL-NEXT:    movd %eax, %xmm3
+; SSE2-PCLMUL-NEXT:    pextrw $1, %xmm0, %eax
+; SSE2-PCLMUL-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-PCLMUL-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-PCLMUL-NEXT:    pclmulqdq $1, %xmm2, %xmm1
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
+; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm0
+; SSE2-PCLMUL-NEXT:    movd %eax, %xmm3
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
+; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; SSE2-PCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-PCLMUL-NEXT:    retq
+;
+; SSE42-PCLMUL-LABEL: clmul_v4i32_zext_allones:
+; SSE42-PCLMUL:       # %bb.0:
+; SSE42-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; SSE42-PCLMUL-NEXT:    movq %rax, %xmm2
+; SSE42-PCLMUL-NEXT:    pextrw $1, %xmm0, %eax
+; SSE42-PCLMUL-NEXT:    movd %eax, %xmm3
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
+; SSE42-PCLMUL-NEXT:    pextrw $0, %xmm0, %eax
+; SSE42-PCLMUL-NEXT:    movd %eax, %xmm1
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm1
+; SSE42-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSE42-PCLMUL-NEXT:    pextrw $2, %xmm0, %eax
+; SSE42-PCLMUL-NEXT:    movd %eax, %xmm3
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm3
+; SSE42-PCLMUL-NEXT:    movq %xmm3, %rax
+; SSE42-PCLMUL-NEXT:    pinsrd $2, %eax, %xmm1
+; SSE42-PCLMUL-NEXT:    pextrw $3, %xmm0, %eax
+; SSE42-PCLMUL-NEXT:    movd %eax, %xmm0
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm0
+; SSE42-PCLMUL-NEXT:    movq %xmm0, %rax
+; SSE42-PCLMUL-NEXT:    pinsrd $3, %eax, %xmm1
+; SSE42-PCLMUL-NEXT:    movdqa %xmm1, %xmm0
+; SSE42-PCLMUL-NEXT:    retq
+;
+; AVX2-LABEL: clmul_v4i32_zext_allones:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; AVX2-NEXT:    vmovq %rax, %xmm1
+; AVX2-NEXT:    vpextrw $1, %xmm0, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm2
+; AVX2-NEXT:    vpclmulqdq $0, %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm3
+; AVX2-NEXT:    vpclmulqdq $0, %xmm1, %xmm3, %xmm3
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; AVX2-NEXT:    vpextrw $2, %xmm0, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm3
+; AVX2-NEXT:    vpclmulqdq $0, %xmm1, %xmm3, %xmm3
+; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; AVX2-NEXT:    vpextrw $3, %xmm0, %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: clmul_v4i32_zext_allones:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vpextrw $1, %xmm0, %eax
+; AVX512-NEXT:    vmovd %eax, %xmm2
+; AVX512-NEXT:    vpclmulqdq $0, %xmm1, %xmm2, %xmm2
+; AVX512-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX512-NEXT:    vmovd %eax, %xmm3
+; AVX512-NEXT:    vpclmulqdq $0, %xmm1, %xmm3, %xmm3
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; AVX512-NEXT:    vpextrw $2, %xmm0, %eax
+; AVX512-NEXT:    vmovd %eax, %xmm3
+; AVX512-NEXT:    vpclmulqdq $0, %xmm1, %xmm3, %xmm3
+; AVX512-NEXT:    vmovq %xmm3, %rax
+; AVX512-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; AVX512-NEXT:    vpextrw $3, %xmm0, %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
+; AVX512-NEXT:    retq
+  %x32 = zext <4 x i16> %x to <4 x i32>
+  %r = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %x32, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>)
+  ret <4 x i32> %r
+}
+
 define <2 x i64> @clmul_v2i64_allones(<2 x i64> %x) nounwind {
 ; SSE-NOPCLMUL-LABEL: clmul_v2i64_allones:
 ; SSE-NOPCLMUL:       # %bb.0:

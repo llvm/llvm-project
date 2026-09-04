@@ -3748,6 +3748,48 @@ define i32 @clmul_i32_allones(i32 %x) nounwind {
   ret i32 %r
 }
 
+define i32 @clmul_i32_zext_allones(i16 %x) nounwind {
+; SCALAR-LABEL: clmul_i32_zext_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movzwl %di, %eax
+; SCALAR-NEXT:    leal (%rax,%rax), %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    leal (,%rcx,4), %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $4, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %ecx, %eax
+; SCALAR-NEXT:    shll $8, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i32_zext_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movzwl %di, %eax
+; SSE-PCLMUL-NEXT:    movl $65535, %ecx # imm = 0xFFFF
+; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i32_zext_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl %di, %eax
+; AVX-NEXT:    movl $65535, %ecx # imm = 0xFFFF
+; AVX-NEXT:    vmovq %rcx, %xmm0
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX-NEXT:    retq
+  %x32 = zext i16 %x to i32
+  %r = call i32 @llvm.clmul.i32(i32 %x32, i32 65535)
+  ret i32 %r
+}
+
 define i64 @clmul_i64_allones(i64 %x) nounwind {
 ; SCALAR-LABEL: clmul_i64_allones:
 ; SCALAR:       # %bb.0:
