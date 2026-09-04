@@ -321,10 +321,9 @@ def enable_llc(llc_executable):
     config.available_features.add("llc")
     tools.extend(
         [
-            ToolSubst("%llc", llc_executable),
             ToolSubst(
                 "%llc-verify",
-                f"{llc_executable} -verify-machineinstrs -o /dev/null",
+                f"{llc_executable} -verify-machineinstrs -o {os.devnull}",
             ),
         ]
     )
