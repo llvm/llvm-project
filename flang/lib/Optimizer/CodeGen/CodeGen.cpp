@@ -2777,6 +2777,7 @@ private:
     unsigned shiftOps = rebox.getShiftOperandIndex();
     auto strideOps = inputStrides.begin();
     const unsigned inputRank = inputStrides.size();
+    mlir::Value originalBase = base;
     for (unsigned i = 0; i < inputRank;
          ++i, ++strideOps, ++shiftOps, sliceOps += 3) {
       mlir::Value sliceLb =
@@ -2811,6 +2812,18 @@ private:
             mlir::LLVM::MulOp::create(rewriter, loc, idxTy, step, inputStride);
         slicedStrides.emplace_back(stride);
       }
+    }
+    if (!slicedExtents.empty()) {
+      mlir::Value isNonEmpty = mlir::LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI1Type(), rewriter.getBoolAttr(true));
+      for (mlir::Value extent : slicedExtents) {
+        mlir::Value notZero = mlir::LLVM::ICmpOp::create(
+            rewriter, loc, mlir::LLVM::ICmpPredicate::ne, extent, zero);
+        isNonEmpty =
+            mlir::LLVM::AndOp::create(rewriter, loc, isNonEmpty, notZero);
+      }
+      base = mlir::LLVM::SelectOp::create(rewriter, loc, isNonEmpty, base,
+                                          originalBase);
     }
     return finalizeRebox(rebox, adaptor, destBoxTy, dest, base,
                          /*lbounds*/ {}, slicedExtents, slicedStrides,
