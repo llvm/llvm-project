@@ -15704,7 +15704,7 @@ bool ASTContext::hasPFPFields(QualType Ty) const {
   return !findPFPFields(Ty).empty();
 }
 
-bool ASTContext::isPFPField(const FieldDecl *FD) const {
+bool ASTContext::isPFPField(const FieldDecl *FD) {
   if (auto *RD = dyn_cast<CXXRecordDecl>(FD->getParent()))
     return RD->isPFPType() && FD->getType()->isPointerType() &&
            !FD->hasAttr<NoFieldProtectionAttr>();
