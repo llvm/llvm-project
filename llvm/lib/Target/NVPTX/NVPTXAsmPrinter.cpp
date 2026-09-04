@@ -253,7 +253,7 @@ private:
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
-  void emitCallPrototype(const CallBase &CB, unsigned UniqueCallSite,
+  void emitCallPrototype(const CallBase &CB, MCSymbol *PrototypeSymbol,
                          raw_ostream &O) const;
   void emitJumpTable(const MachineJumpTableEntry &MJT, unsigned MJTI) const;
 
@@ -605,6 +605,8 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
   case MachineOperand::MO_MachineBasicBlock:
     return MCOperand::createExpr(
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), OutContext));
+  case MachineOperand::MO_MCSymbol:
+    return GetSymbolRef(MO.getMCSymbol());
   case MachineOperand::MO_ExternalSymbol:
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
   case MachineOperand::MO_MCSymbol:
@@ -729,7 +731,7 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
 }
 
 void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
-                                        unsigned UniqueCallSite,
+                                        MCSymbol *PrototypeSymbol,
                                         raw_ostream &O) const {
   const DataLayout &DL = getDataLayout();
   const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
@@ -737,7 +739,8 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   const auto PtrVT = TLI->getPointerTy(DL);
   Type *RetTy = CB.getFunctionType()->getReturnType();
 
-  O << "prototype_" << UniqueCallSite << " : .callprototype ";
+  PrototypeSymbol->print(O, MAI);
+  O << " : .callprototype ";
 
   if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
     O << "()";
@@ -939,8 +942,10 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   emitDemotedVars(&MF->getFunction(), O);
 
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
-  for (const auto &[Id, CB] : MFI->getCallPrototypes())
-    emitCallPrototype(*CB, Id, O);
+  for (const auto &Entry : MFI->getCallPrototypes()) {
+    const auto &Prototype = Entry.second;
+    emitCallPrototype(*Prototype.CB, Prototype.Symbol, O);
+  }
 
   OutStreamer->emitRawText(O.str());
 

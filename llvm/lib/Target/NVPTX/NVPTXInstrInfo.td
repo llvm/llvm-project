@@ -1979,9 +1979,9 @@ foreach is_convergent = [0, 1] in {
   let isCall = 1, isConvergent = is_convergent in {
     def CALL # convergent_suffix :
       NVPTXInst<(outs),
-                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params, 
-                     i32imm:$proto),
-                "call${rets:RetList} $addr, (${params:ParamList}), prototype_$proto;">;
+                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params,
+                     ADDR_base:$proto),
+                "call${rets:RetList} $addr, (${params:ParamList}), $proto;">;
 
     def CALL_UNI # convergent_suffix :
       NVPTXInst<(outs),

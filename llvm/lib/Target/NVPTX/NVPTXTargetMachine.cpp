@@ -135,6 +135,7 @@ public:
   bool addInstSelector() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
+  void addPreEmitPass2() override;
 
   FunctionPass *createTargetRegisterAllocator(bool) override;
   void addFastRegAlloc() override;
@@ -353,6 +354,10 @@ void NVPTXPassConfig::addPostRegAlloc() {
     // will replace VRFrame with VRFrameLocal when possible.
     addPass(createNVPTXPeepholeLegacyPass());
   }
+}
+
+void NVPTXPassConfig::addPreEmitPass2() {
+  addPass(createNVPTXPreEmitSymbolLoweringLegacyPass(getNVPTXTargetMachine()));
 }
 
 FunctionPass *NVPTXPassConfig::createTargetRegisterAllocator(bool) {
