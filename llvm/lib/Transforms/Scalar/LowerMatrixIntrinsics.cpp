@@ -27,6 +27,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -49,6 +50,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/MatrixUtils.h"
+#include "llvm/Transforms/Utils/MemoryOpRemark.h"
 
 #include <cmath>
 
@@ -99,6 +101,11 @@ static cl::opt<MatrixLayoutTy> MatrixLayout(
 static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
                                             cl::init(false));
 
+static cl::opt<unsigned> MemOpRemarkSizeThreshold(
+    "memop-remark-size-threshold", cl::init(128), cl::Hidden,
+    cl::desc(
+        "Do not emit remarks for loads/stores under this size (in bytes)."));
+
 static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
     "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
     cl::desc("Illegal remainder vectors over this size in bits should be split "
@@ -115,6 +122,18 @@ static DISubprogram *getSubprogram(DIScope *Scope) {
   if (auto *Subprogram = dyn_cast<DISubprogram>(Scope))
     return Subprogram;
   return cast<DILocalScope>(Scope)->getSubprogram();
+}
+
+/// Emit a series of missed remarks describing the inlining chain.
+static void emitRemarksForInlineChain(const Instruction &I,
+                                      OptimizationRemarkEmitter &ORE) {
+  DILocation *Context = I.getDebugLoc();
+  while (Context) {
+    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "inlined-at",
+                                      DebugLoc(Context), I.getParent())
+             << "inlined at");
+    Context = DebugLoc(Context).getInlinedAt();
+  }
 }
 
 /// Return true if V is a splat of a value (which is used when multiplying a
@@ -394,6 +413,7 @@ class LowerMatrixIntrinsics {
   DominatorTree *DT = nullptr;
   LoopInfo *LI = nullptr;
   OptimizationRemarkEmitter *ORE = nullptr;
+  const TargetLibraryInfo *TLI = nullptr;
 
   /// Contains estimates of the number of operations (loads, stores, compute)
   /// required to lower a matrix operation.
@@ -1132,6 +1152,31 @@ public:
       AA = &AM->getResult<AAManager>(Func);
       DT = &AM->getResult<DominatorTreeAnalysis>(Func);
       LI = &AM->getResult<LoopAnalysis>(Func);
+      TLI = &AM->getResult<TargetLibraryAnalysis>(Func);
+    }
+
+    // Emit remarks for all loads and stores over a certain size limit.
+    if (ORE && TLI && ORE->allowExtraAnalysis(DEBUG_TYPE)) {
+      for (BasicBlock &BB : Func) {
+        for (Instruction &I : BB) {
+          if (!MemoryOpRemark::canHandle(&I, *TLI))
+            continue;
+          // Skip all the loads under a certain size limit.
+          if (auto *Load = dyn_cast<LoadInst>(&I))
+            if (DL.getTypeStoreSize(Load->getType()) < MemOpRemarkSizeThreshold)
+              continue;
+
+          // Skip all the stores under a certain size limit.
+          if (auto *Store = dyn_cast<StoreInst>(&I))
+            if (DL.getTypeStoreSize(Store->getValueOperand()->getType()) <
+                MemOpRemarkSizeThreshold)
+              continue;
+
+          MemoryOpRemark R(*ORE, DEBUG_TYPE, DL, *TLI);
+          R.visit(&I);
+          emitRemarksForInlineChain(I, *ORE);
+        }
+      }
     }
 
     // Propagate shapes until nothing changes any longer.
