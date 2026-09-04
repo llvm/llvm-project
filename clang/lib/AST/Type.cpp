@@ -70,7 +70,7 @@ bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
 }
 
 // The memory region designated by a SYCL or OpenCL address space. Address
-// spaces that are neither SYCL nor OpenCL map to NotOpenCLSYCL.
+// spaces that are neither SYCL nor OpenCL map to Unknown.
 enum class MemoryRegion {
   Global,
   Local,
@@ -79,7 +79,7 @@ enum class MemoryRegion {
   Constant,
   GlobalDevice,
   GlobalHost,
-  NotOpenCLSYCL,
+  Unknown,
 };
 
 static MemoryRegion getMemoryRegion(LangAS AS) {
@@ -106,7 +106,7 @@ static MemoryRegion getMemoryRegion(LangAS AS) {
   case LangAS::opencl_global_host:
     return MemoryRegion::GlobalHost;
   default:
-    return MemoryRegion::NotOpenCLSYCL;
+    return MemoryRegion::Unknown;
   }
 }
 
@@ -119,8 +119,8 @@ static MemoryRegion getMemoryRegion(LangAS AS) {
 static bool isConvertibleOpenCLSYCLAddressSpace(LangAS A, LangAS B) {
   MemoryRegion RegionA = getMemoryRegion(A);
   MemoryRegion RegionB = getMemoryRegion(B);
-  if (RegionA == MemoryRegion::NotOpenCLSYCL ||
-      RegionB == MemoryRegion::NotOpenCLSYCL)
+  if (RegionA == MemoryRegion::Unknown ||
+      RegionB == MemoryRegion::Unknown)
     return false;
 
   if (RegionA == RegionB)
@@ -131,8 +131,6 @@ static bool isConvertibleOpenCLSYCLAddressSpace(LangAS A, LangAS B) {
 
 bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
                                                 const ASTContext &Ctx) {
-  const bool IsOpenCLExecEnv =
-      Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::OpenCL;
 
   // In OpenCL C v2.0 s6.5.5: every address space except for __constant can be
   // used as __generic. When targeting the OpenCL execution environment this is
@@ -168,7 +166,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
       (B == LangAS::Default && A == LangAS::sycl_generic))
     return true;
 
-  if (IsOpenCLExecEnv && isConvertibleOpenCLSYCLAddressSpace(A, B))
+  if (isConvertibleOpenCLSYCLAddressSpace(A, B))
     return true;
 
   // In HIP device compilation, any cuda address space is allowed to implicitly
