@@ -255,6 +255,11 @@ features cannot lower the translation-unit ABI level;
   path share one module cache, and is only sound when no module needs the path
   -- a lookup that would have resolved through an ignored path simply fails.
 
+- Added a new `-ast-dump-filter-path` option to filter AST dump output
+  based on the source file path of declarations. The filter uses glob-style
+  matching on the presumed source location (accounting for macro expansions
+  and `#line` directives).
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
