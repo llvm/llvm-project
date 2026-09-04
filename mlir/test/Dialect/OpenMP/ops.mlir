@@ -218,6 +218,21 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
   return
 }
 
+omp.private {type = private} @scope_allocate_private : memref<i32>
+
+// CHECK-LABEL: omp_scope_pretty
+func.func @omp_scope_pretty(%data_var : memref<i32>, %allocator : si32) -> () {
+  // CHECK: omp.scope allocate(
+  // CHECK-SAME: allocate_alignments([64]) allocate_private_indices([0])
+  // CHECK-SAME: private(
+  omp.scope allocate(%allocator : si32 -> %data_var : memref<i32>) allocate_alignments([64]) allocate_private_indices([0])
+      private(@scope_allocate_private %data_var -> %private : memref<i32>) {
+    omp.terminator
+  }
+
+  return
+}
+
 // CHECK-LABEL: omp_loop_nest
 func.func @omp_loop_nest(%lb : index, %ub : index, %step : index) -> () {
   omp.wsloop {

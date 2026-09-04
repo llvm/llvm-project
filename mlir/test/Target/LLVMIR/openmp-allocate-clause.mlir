@@ -97,12 +97,18 @@ llvm.func @allocator_reverse_free(%x: !llvm.ptr, %y: !llvm.ptr,
 // CHECK-LABEL: define internal void @allocator_reverse_free..omp_par
 // CHECK: %[[CAPTURED_X:.*]] = load ptr, ptr %{{.*}}, align 8
 // CHECK: %[[CAPTURED_Y:.*]] = load ptr, ptr %{{.*}}, align 8
+// CHECK-NOT: call ptr @__kmpc_{{(aligned_)?}}alloc
 // CHECK: %[[X_ALLOC:.*]] = call ptr @__kmpc_aligned_alloc(i32 %{{.*}}, i64 64, i64 4, ptr %[[CAPTURED_X]])
+// CHECK-NOT: call ptr @__kmpc_{{(aligned_)?}}alloc
 // CHECK: %[[Y_ALLOC:.*]] = call ptr @__kmpc_aligned_alloc(i32 %{{.*}}, i64 128, i64 4, ptr %[[CAPTURED_Y]])
+// CHECK-NOT: call ptr @__kmpc_{{(aligned_)?}}alloc
 // CHECK: store i32 1, ptr %[[X_ALLOC]], align 4
 // CHECK: store i32 1, ptr %[[Y_ALLOC]], align 4
+// CHECK-NOT: call void @__kmpc_free
 // CHECK: call void @private_dealloc(ptr %[[X_ALLOC]])
+// CHECK-NOT: call void @__kmpc_free
 // CHECK: call void @__kmpc_free({{.*}}, ptr %[[Y_ALLOC]], ptr %[[CAPTURED_Y]])
+// CHECK-NOT: call void @__kmpc_free
 // CHECK: call void @__kmpc_free({{.*}}, ptr %[[X_ALLOC]], ptr %[[CAPTURED_X]])
 // CHECK-NOT: call void @__kmpc_free
 
@@ -304,5 +310,5 @@ llvm.func @allocator_device() {
   llvm.return
 }
 
-// DEVICE: allocate clause on a device parallel region is not supported
+// DEVICE: allocate clause in an OpenMP device context is not supported
 // DEVICE: LLVM Translation failed for operation: omp.parallel

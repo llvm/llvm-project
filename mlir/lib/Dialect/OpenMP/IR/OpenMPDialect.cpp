@@ -707,9 +707,12 @@ static LogicalResult verifyAllocateClause(
     return op->emitError(
         "expected as many allocate private indices as allocate variables");
 
+  DenseSet<Value> usedAllocateVars;
   DenseSet<int64_t> usedPrivateSlots;
   for (auto [allocateVar, privateIndex] :
        llvm::zip_equal(allocateVars, indices)) {
+    if (!usedAllocateVars.insert(allocateVar).second)
+      return op->emitError("allocate variable appears more than once");
     if (privateIndex < 0 ||
         static_cast<uint64_t>(privateIndex) >= privateVars.size())
       return op->emitError("allocate private index is out of range");
@@ -722,6 +725,10 @@ static LogicalResult verifyAllocateClause(
       return op->emitError()
              << "type mismatch between allocate variable and private variable "
                 "at index "
+             << privateIndex;
+    if (allocateVar != privateVar)
+      return op->emitError()
+             << "allocate variable does not match private variable at index "
              << privateIndex;
 
     if (!privateSyms ||
@@ -3276,7 +3283,8 @@ LogicalResult ScopeOp::verify() {
   if (failed(verifyAllocateClause(
           getOperation(), getAllocateVars(), getAllocatorVars(),
           getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
-          getPrivateVars(), getPrivateSymsAttr())))
+          getPrivateVars(), getPrivateSymsAttr(),
+          /*requirePrivateIndices=*/true)))
     return failure();
 
   if (failed(verifyPrivateVarList(*this)))
