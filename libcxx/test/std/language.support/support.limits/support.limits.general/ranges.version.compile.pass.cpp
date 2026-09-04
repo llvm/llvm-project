@@ -609,6 +609,13 @@
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++29"
 #  endif
 
+#  ifndef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should be defined in c++29"
+#  endif
+#  if __cpp_lib_ranges_cache_latest != 202411L
+#    error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++29"
+#  endif
+
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++29"
