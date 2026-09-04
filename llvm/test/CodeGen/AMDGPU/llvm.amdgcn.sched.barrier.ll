@@ -9,12 +9,14 @@ define amdgpu_kernel void @test_sched_barrier() #0 {
 ; GCN-NEXT:    ; sched_barrier mask(0x00000001)
 ; GCN-NEXT:    ; sched_barrier mask(0x00000004)
 ; GCN-NEXT:    ; sched_barrier mask(0x0000000F)
+; GCN-NEXT:    ; sched_barrier mask(0xFFFFFFFFFFFFFFFF)
 ; GCN-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 0) #1
   call void @llvm.amdgcn.sched.barrier(i32 1) #1
   call void @llvm.amdgcn.sched.barrier(i32 4) #1
   call void @llvm.amdgcn.sched.barrier(i32 15) #1
+  call void @llvm.amdgcn.sched.barrier(i32 -1) #1
   ret void
 }
 
