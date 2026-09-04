@@ -551,6 +551,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
+- Fixed a crash when filling in the ``TypeLoc`` for an ``AttributedType``
+  that was inherited from a different declarator, for example when
+  ``__typeof__`` resolves to the type of another, already-processed
+  declaration. (#GH217489)
 
 ### OpenACC Specific Changes
 
