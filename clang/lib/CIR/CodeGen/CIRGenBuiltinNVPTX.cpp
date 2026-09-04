@@ -74,15 +74,15 @@ static mlir::Value emitBar0Reduction(CIRGenFunction &cgf, const CallExpr *expr,
                                      bool returnsPred) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(expr->getExprLoc());
-  mlir::Value zero = builder.getConstInt(loc, builder.getSInt32Ty(), 0);
+  mlir::Type si32Ty = builder.getSInt32Ty();
+  mlir::Value zero = builder.getNullValue(si32Ty, loc);
   mlir::Value pred = builder.createCompare(
       loc, cir::CmpOpKind::ne, cgf.emitScalarExpr(expr->getArg(0)), zero);
-  mlir::Type resultTy =
-      returnsPred ? mlir::Type(builder.getBoolTy()) : builder.getSInt32Ty();
+  mlir::Type resultTy = returnsPred ? mlir::Type(builder.getBoolTy()) : si32Ty;
   mlir::Value result = builder.emitIntrinsicCallOp(
       loc, intrinsicName, resultTy, mlir::ValueRange{zero, pred});
   if (returnsPred)
-    result = builder.createBoolToInt(result, builder.getSInt32Ty());
+    result = builder.createBoolToInt(result, si32Ty);
   return result;
 }
 
