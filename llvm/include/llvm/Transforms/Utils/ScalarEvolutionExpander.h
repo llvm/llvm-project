@@ -78,6 +78,11 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
 
+  // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
+  DenseMap<std::tuple<Value *, Value *, Instruction *>,
+           std::pair<TrackingVH<Value>, TrackingVH<Value>>>
+      InsertedOverflowChecks;
+
   // InsertedValues only flags inserted instructions so needs no RAUW.
   DenseSet<AssertingVH<Value>> InsertedValues;
   DenseSet<AssertingVH<Value>> InsertedPostIncValues;
@@ -211,6 +216,7 @@ public:
   /// places within the same BasicBlock can do so.
   void clear() {
     InsertedExpressions.clear();
+    InsertedOverflowChecks.clear();
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
@@ -489,6 +495,11 @@ private:
   Value *FindValueInExprValueMap(
       SCEVUse S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
+
+  /// Like FindValueInExprValueMap, but on a successful lookup also drops the
+  /// poison-generating flags that reusing the value requires.
+  Value *findExistingExpansionAndDropPoisonFlags(SCEVUse S,
+                                                 const Instruction *InsertPt);
 
   LLVM_ABI Value *expand(SCEVUse S);
   Value *expand(SCEVUse S, BasicBlock::iterator I) {

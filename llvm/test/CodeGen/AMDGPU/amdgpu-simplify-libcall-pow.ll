@@ -5987,7 +5987,7 @@ define float @test_pow_f32__y_known_integral_nearbyint_assume(float %x, float %y
 ;
   %y = call float @llvm.nearbyint.f32(float %y.arg)
   %y.fabs = call float @llvm.fabs.f32(float %y)
-  %y.is.finite = fcmp one float %y.fabs, 0x7FF0000000000000
+  %y.is.finite = fcmp one float %y.fabs, +inf
   call void @llvm.assume(i1 %y.is.finite)
   %pow = tail call float @_Z3powff(float %x, float %y)
   ret float %pow
@@ -6014,7 +6014,7 @@ define float @test_pow_f32__y_known_integral_nearbyint_assume_arg_input(float %x
 ; NOPRELINK-NEXT:    ret float [[POW]]
 ;
   %y.arg.fabs = call float @llvm.fabs.f32(float %y.arg)
-  %is.finite = fcmp one float %y.arg.fabs, 0x7FF0000000000000
+  %is.finite = fcmp one float %y.arg.fabs, +inf
   call void @llvm.assume(i1 %is.finite)
   %y = call float @llvm.nearbyint.f32(float %y.arg)
   %pow = tail call float @_Z3powff(float %x, float %y)
@@ -6107,6 +6107,14 @@ define <2 x float> @test_pow_v2f32_known_integral_constant_vector_poison_elt(<2 
 ;
   %pow = tail call <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> <float 4.0, float poison>)
   ret <2 x float> %pow
+}
+
+define float @test_pow_f32_known_args_with_fpclass() {
+; CHECK-LABEL: define float @test_pow_f32_known_args_with_fpclass() {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %pow = call fast nofpclass(nan inf) float @_Z3powff(float noundef nofpclass(nan inf) 0.0, float noundef nofpclass(nan inf) 0.0)
+  ret float %pow
 }
 
 attributes #0 = { minsize }

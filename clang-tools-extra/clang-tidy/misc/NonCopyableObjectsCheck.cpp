@@ -36,7 +36,7 @@ void NonCopyableObjectsCheck::registerMatchers(MatchFinder *Finder) {
       hasType(namedDecl(hasAnyName("::pthread_cond_t", "::pthread_mutex_t",
                                    "pthread_cond_t", "pthread_mutex_t"))
                   .bind("type_decl"));
-  auto BadEitherType = anyOf(BadFILEType, BadPOSIXType);
+  const auto BadEitherType = anyOf(BadFILEType, BadPOSIXType);
 
   Finder->addMatcher(
       namedDecl(anyOf(varDecl(BadFILEType), fieldDecl(BadFILEType)))

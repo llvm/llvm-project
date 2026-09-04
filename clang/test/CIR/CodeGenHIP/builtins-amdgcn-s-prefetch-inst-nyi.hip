@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1250 -fcuda-is-device -emit-cir %s -verify -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu12.50-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN:            -fcuda-is-device -emit-cir %s -verify -o %t.cir
 
 #define __device__ __attribute__((device))
 

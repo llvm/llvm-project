@@ -68,7 +68,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -180,7 +179,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -371,7 +369,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   if (Copy->getOpcode() != AMDGPU::COPY)
     return false;
 
-  if (!MoveImm->isMoveImmediate())
+  if (!MoveImm || !MoveImm->isMoveImmediate())
     return false;
 
   const MachineOperand *ImmOp =

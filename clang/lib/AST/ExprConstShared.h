@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
-#include "clang/Basic/TypeTraits.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include <cstdint>
 #include <optional>
 
@@ -109,5 +109,7 @@ llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
 std::optional<llvm::APFloat>
 EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
+
+const Expr *ignorePointerCastsAndParens(const Expr *E);
 
 #endif

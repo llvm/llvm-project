@@ -38,6 +38,10 @@ protected:
   DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
 private:
+  /// The number of fetched frames a caller is told about, which the target's
+  /// maximum backtrace depth bounds.
+  uint32_t GetVisibleFrameCount();
+
   std::vector<lldb::addr_t> m_frames;
   bool m_unwind_complete = false;
 

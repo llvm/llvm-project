@@ -127,7 +127,7 @@ protected:
 
     KnownFPClass Known = computeKnownFPClass(TestVal, M->getDataLayout());
     EXPECT_EQ(KnownTrue, Known.KnownFPClasses);
-    EXPECT_EQ(SignBitKnown, Known.SignBit);
+    EXPECT_EQ(SignBitKnown, Known.getSignBit());
   }
 };
 }
@@ -1543,29 +1543,26 @@ TEST_F(ComputeKnownFPClassTest, SelectPosOrNeg0) {
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectPosInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0x7FF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float +inf, float +inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcPosInf, false);
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectNegInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0xFFF0000000000000, float 0xFFF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float -inf, float -inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcNegInf, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectPosOrNegInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0xFFF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float +inf, float -inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcInf, std::nullopt);
 }
 
@@ -1912,6 +1909,18 @@ TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
   expectKnownFPClass(fcPositive, false, A7);
 }
 
+TEST_F(ComputeKnownFPClassTest, PowUseRHSToRuleOutNegativeResults) {
+  parseAssembly("declare float @llvm.pow.f32(float, float)\n"
+                "define float @test(float nofpclass(ninf nsub nnorm) %base,\n"
+                "                   float nofpclass(pnorm) %exp) {\n"
+                "  %A = call float @llvm.pow.f32(float %base, float %exp)\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass Known = computeKnownFPClass(A, M->getDataLayout(), fcNegative);
+  EXPECT_EQ(~(fcNegNormal | fcNegSubnormal | fcNegZero), Known.KnownFPClasses);
+}
+
 TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
   parseAssembly(
       "declare float @llvm.powi.f32.i32(float, i32)\n"
@@ -1937,7 +1946,7 @@ TEST_F(ComputeKnownFPClassTest, PowiInfFirst) {
   expectKnownFPClass(~fcInf, std::nullopt, A4);
   expectKnownFPClass(fcAllFlags, std::nullopt, A5);
   expectKnownFPClass(fcAllFlags, std::nullopt, A6);
-  expectKnownFPClass(~fcInf, std::nullopt, A7);
+  expectKnownFPClass(~(fcInf | fcNegNormal | fcNegSubnormal), std::nullopt, A7);
 
   auto ExpectKnownNeverInf = [&](Instruction *I, bool Expected) {
     KnownFPClass Known = computeKnownFPClass(I, M->getDataLayout(), fcInf);
@@ -1973,11 +1982,34 @@ TEST_F(ComputeKnownFPClassTest, PowiInfSecond) {
       "}\n");
   expectKnownFPClass(fcPosNormal | fcNan, std::nullopt, A);
   expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
-  expectKnownFPClass(~fcInf, std::nullopt, A4);
-  expectKnownFPClass(~fcInf, std::nullopt, A5);
+  expectKnownFPClass(~(fcNegNormal | fcNegSubnormal | fcNegZero), std::nullopt,
+                     A3);
+  expectKnownFPClass(~(fcInf | fcNegNormal | fcNegSubnormal), std::nullopt, A4);
+  expectKnownFPClass(~(fcInf | fcNegNormal | fcNegSubnormal), std::nullopt, A5);
   expectKnownFPClass(fcAllFlags, std::nullopt, A6);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A7);
+  expectKnownFPClass(~(fcNegNormal | fcNegSubnormal | fcNegZero), std::nullopt,
+                     A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, Atan2DemandXSign) {
+  parseAssembly("declare float @llvm.atan2.f32(float, float)\n"
+                "declare float @llvm.fabs.f32(float)\n"
+                "define float @test(float %y, float %x) #0 {\n"
+                "  %abs = call float @llvm.fabs.f32(float %x)\n"
+                "  %sum = fadd float %abs, 1.0\n"
+                "  %negative = fneg float %sum\n"
+                "  %A = call float @llvm.atan2.f32(float %y, float %negative)\n"
+                "  ret float %A\n"
+                "}\n"
+                "attributes #0 = { \"denormal-fp-math\"=\"ieee,ieee\" }\n");
+  // atan2(y, -(|x| + 1.0))
+  // Note that -(|x| + 1.0) is never positive, zero, or subnormal.
+  // atan2(y, negative_x) is never zero or subnormal. But we need to know that
+  // x is never positive or a negative subnormal to make this deduction. Which
+  // requires us to pass more than just InterestedClasses, which is the purpose
+  // of this test.
+  KnownFPClass Known = computeKnownFPClass(A, M->getDataLayout(), fcPosZero);
+  EXPECT_EQ(fcNan | fcNormal, Known.KnownFPClasses);
 }
 
 TEST_F(ComputeKnownFPClassTest, Phi) {
@@ -2176,12 +2208,12 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_OrdNan) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp olt double %arg, 0xFFF0000000000000"
-                "  %A2 = fcmp uge double %arg, 0xFFF0000000000000"
-                "  %A3 = fcmp ogt double %arg, 0xFFF0000000000000"
-                "  %A4 = fcmp ule double %arg, 0xFFF0000000000000"
-                "  %A5 = fcmp oge double %arg, 0xFFF0000000000000"
-                "  %A6 = fcmp ult double %arg, 0xFFF0000000000000"
+                "  %A = fcmp olt double %arg, -inf"
+                "  %A2 = fcmp uge double %arg, -inf"
+                "  %A3 = fcmp ogt double %arg, -inf"
+                "  %A4 = fcmp ule double %arg, -inf"
+                "  %A5 = fcmp oge double %arg, -inf"
+                "  %A6 = fcmp ult double %arg, -inf"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2225,12 +2257,12 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
   parseAssembly("declare double @llvm.fabs.f64(double)\n"
                 "define i1 @test(double %arg) {\n"
                 "  %fabs.arg = call double @llvm.fabs.f64(double %arg)\n"
-                "  %A = fcmp olt double %fabs.arg, 0xFFF0000000000000"
-                "  %A2 = fcmp uge double %fabs.arg, 0xFFF0000000000000"
-                "  %A3 = fcmp ogt double %fabs.arg, 0xFFF0000000000000"
-                "  %A4 = fcmp ule double %fabs.arg, 0xFFF0000000000000"
-                "  %A5 = fcmp oge double %fabs.arg, 0xFFF0000000000000"
-                "  %A6 = fcmp ult double %fabs.arg, 0xFFF0000000000000"
+                "  %A = fcmp olt double %fabs.arg, -inf"
+                "  %A2 = fcmp uge double %fabs.arg, -inf"
+                "  %A3 = fcmp ogt double %fabs.arg, -inf"
+                "  %A4 = fcmp ule double %fabs.arg, -inf"
+                "  %A5 = fcmp oge double %fabs.arg, -inf"
+                "  %A6 = fcmp ult double %fabs.arg, -inf"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2274,10 +2306,10 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp ogt double %arg, 0x7FF0000000000000"
-                "  %A2 = fcmp ule double %arg, 0x7FF0000000000000"
-                "  %A3 = fcmp ole double %arg, 0x7FF0000000000000"
-                "  %A4 = fcmp ugt double %arg, 0x7FF0000000000000"
+                "  %A = fcmp ogt double %arg, +inf"
+                "  %A2 = fcmp ule double %arg, +inf"
+                "  %A3 = fcmp ole double %arg, +inf"
+                "  %A4 = fcmp ugt double %arg, +inf"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2324,13 +2356,13 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, nullptr, nullptr,
                             nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(SqrtMask, UseInstrInfo.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfo.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfo.getSignBit());
 
     KnownFPClass NoUseInstrInfo =
         computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, nullptr, nullptr,
                             nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(SqrtMask, NoUseInstrInfo.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfo.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfo.getSignBit());
   }
 
   {
@@ -2338,13 +2370,13 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZ =
         computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(SqrtMask, NoUseInstrInfoNSZ.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZ.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZ.getSignBit());
   }
 
   {
@@ -2353,14 +2385,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               UseInstrInfoNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.getSignBit());
 
     KnownFPClass NoUseInstrInfoNoNan =
         computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(fcPosNormal | fcPosInf | fcZero | fcQNan,
               NoUseInstrInfoNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.getSignBit());
   }
 
   {
@@ -2369,14 +2401,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcPosZero | fcQNan,
               UseInstrInfoNSZNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.getSignBit());
 
     KnownFPClass NoUseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
     EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               NoUseInstrInfoNSZNoNan.KnownFPClasses);
-    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.SignBit);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.getSignBit());
   }
 }
 
@@ -2395,23 +2427,23 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         ConstantAggregateZero::get(V4F32), M->getDataLayout(), fcAllFlags);
 
     EXPECT_EQ(fcPosZero, ConstAggZero.KnownFPClasses);
-    ASSERT_TRUE(ConstAggZero.SignBit);
-    EXPECT_FALSE(*ConstAggZero.SignBit);
+    ASSERT_TRUE(ConstAggZero.getSignBit());
+    EXPECT_FALSE(*ConstAggZero.getSignBit());
   }
 
   {
     KnownFPClass Undef = computeKnownFPClass(UndefValue::get(F32),
                                              M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcAllFlags, Undef.KnownFPClasses);
-    EXPECT_FALSE(Undef.SignBit);
+    EXPECT_FALSE(Undef.getSignBit());
   }
 
   {
     KnownFPClass Poison = computeKnownFPClass(PoisonValue::get(F32),
                                               M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcNone, Poison.KnownFPClasses);
-    ASSERT_TRUE(Poison.SignBit);
-    EXPECT_FALSE(*Poison.SignBit);
+    ASSERT_TRUE(Poison.getSignBit());
+    EXPECT_FALSE(*Poison.getSignBit());
   }
 
   {
@@ -2423,8 +2455,8 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         computeKnownFPClass(ConstantVector::get({ZeroF32, PoisonF32}),
                             M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcPosZero, PartiallyPoison.KnownFPClasses);
-    ASSERT_TRUE(PartiallyPoison.SignBit);
-    EXPECT_FALSE(*PartiallyPoison.SignBit);
+    ASSERT_TRUE(PartiallyPoison.getSignBit());
+    EXPECT_FALSE(*PartiallyPoison.getSignBit());
   }
 
   {
@@ -2436,8 +2468,8 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         computeKnownFPClass(ConstantVector::get({NegZeroF32, PoisonF32}),
                             M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
-    ASSERT_TRUE(PartiallyPoison.SignBit);
-    EXPECT_TRUE(*PartiallyPoison.SignBit);
+    ASSERT_TRUE(PartiallyPoison.getSignBit());
+    EXPECT_TRUE(*PartiallyPoison.getSignBit());
   }
 
   {
@@ -2449,7 +2481,7 @@ TEST_F(ComputeKnownFPClassTest, Constants) {
         computeKnownFPClass(ConstantVector::get({PoisonF32, NegZeroF32}),
                             M->getDataLayout(), fcAllFlags);
     EXPECT_EQ(fcNegZero, PartiallyPoison.KnownFPClasses);
-    EXPECT_TRUE(PartiallyPoison.SignBit);
+    EXPECT_TRUE(PartiallyPoison.getSignBit());
   }
 }
 

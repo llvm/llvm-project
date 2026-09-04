@@ -11,6 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 let Component = "Lex", CategoryName = "Lexical or Preprocessor Issue" in {
+// C23 compatibility with C17 and earlier.
+defm c23_pp_directive : C23Compat<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is", /*ext_warn*/true>;
+
+// C++23 compatibility with C++20 and earlier.
+defm cxx23_pp_directive : CXX23Compat<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive is">;
+
+// C++26 compatibility with C++23 and earlier.
+defm raw_string_literal_character_set : CXX26Compat<
+  "'%0' in a raw string literal delimiter is", /*ext_warn*/false>;
 
 def null_in_char_or_string : Warning<
   "null character(s) preserved in %select{char|string}0 literal">,
@@ -93,7 +104,8 @@ def err_conflict_marker : Error<"version control conflict marker in file">;
 def err_counter_overflow : Error<
   "'__COUNTER__' value cannot exceed 2'147'483'647">;
 def ext_counter : Extension<
-  "'__COUNTER__' is a C2y extension">, InGroup<C2y>, SuppressInSystemMacro;
+  "'__COUNTER__' is a C2y extension">,
+  InGroup<CounterExt>, SuppressInSystemMacro;
 def warn_counter : Warning<
   "'__COUNTER__' is incompatible with standards before C2y">,
   InGroup<CPre2yCompat>, DefaultIgnore, SuppressInSystemMacro;
@@ -112,14 +124,6 @@ def err_unterminated_raw_string : Error<
 def warn_cxx98_compat_raw_string_literal : Warning<
   "raw string literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-
-def warn_cxx26_compat_raw_string_literal_character_set : Warning<
-  " '%0' in a raw string literal delimiter is incompatible "
-  "with standards before C++2c">,
-  InGroup<CXXPre26Compat>, DefaultIgnore;
-def ext_cxx26_raw_string_literal_character_set : Extension<
-  " '%0' in a raw string literal delimiter is a C++2c extension">,
-  InGroup<CXX26>, DefaultIgnore;
 
 def warn_multichar_character_literal : Warning<
   "multi-character character constant">, InGroup<MultiChar>;
@@ -145,6 +149,8 @@ def warn_utf8_symbol_homoglyph : Warning<
 def warn_utf8_symbol_zero_width : Warning<
   "identifier contains character %0 that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
+defm mathematical_notation : CXX29Compat<
+  "mathematical notation character %0 in an identifier is">;
 def ext_mathematical_notation : ExtWarn<
   "mathematical notation character %0 in an identifier is a Clang extension">,
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
@@ -834,23 +840,6 @@ def warn_cxx98_compat_pp_line_too_big : Warning<
   "#line number greater than 32767 is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 
-def warn_c23_compat_pp_directive : Warning<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
-def ext_c23_pp_directive : ExtWarn<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is a C23 extension">,
-  InGroup<C23>;
-def warn_cxx23_compat_pp_directive : Warning<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is incompatible with C++ standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
-def ext_cxx23_pp_directive : ExtWarn<
-  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is a C++23 extension">,
-  InGroup<CXX23>;
-
 def err_pp_visibility_non_macro : Error<"no macro named %0">;
 
 def err_pp_arc_cf_code_audited_syntax : Error<"expected 'begin' or 'end'">;
@@ -863,6 +852,13 @@ def err_pp_include_in_arc_cf_code_audited : Error<
   "inside '#pragma clang arc_cf_code_audited'">;
 def err_pp_eof_in_arc_cf_code_audited : Error<
   "'#pragma clang arc_cf_code_audited' was not ended within this file">;
+
+def err_pp_pragma_set_pp_state_expected_name : Error<
+  "expected identifier after '#pragma clang __set_pp_state'">;
+def err_pp_pragma_set_pp_state_expected_int_after : Error<
+  "expected integer after '#pragma clang __set_pp_state %0'">;
+def err_pp_pragma_set_pp_state_invalid_arg : Error<
+  "invalid argument %0 in '#pragma clang __set_pp_state'">;
 
 def warn_pp_date_time : Warning<
   "expansion of date or time macro is not reproducible">,
@@ -1039,9 +1035,6 @@ def err_pp_module_name_is_macro : Error<
   "%select{module|partition}0 name component %1 cannot be a object-like macro">;
 def err_pp_module_expected_ident : Error<
   "expected %select{identifier after '.' in |}0module name">;
-def err_pp_unexpected_tok_after_module_name : Error<
-  "unexpected preprocessing token '%0' after module name, "
-  "only ';' and '[' (start of attribute specifier sequence) are allowed">;
 def warn_pp_extra_tokens_at_module_directive_eol
     : Warning<"extra tokens after semicolon in '%0' directive">,
       InGroup<ExtraTokens>;

@@ -7,7 +7,7 @@
 !CHECK-LABEL: func.func @_QPtest_interop_init(
 !CHECK-SAME:    %[[ARG:.*]]: !fir.ref<i64> {fir.bindc_name = "obj"})
 !CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG]]
-!CHECK:         omp.interop.init %[[DECL]]#0 : !fir.ref<i64> interop_types([#omp<interop_type(target)>])
+!CHECK:         omp.interop.init %[[DECL]]#0 : !fir.ref<i64> interop_types([#omp.interop_type<target>])
 subroutine test_interop_init(obj)
   integer(8) :: obj
   !$omp interop init(target: obj)
@@ -18,7 +18,7 @@ end subroutine
 !===============================================================================
 
 !CHECK-LABEL: func.func @_QPtest_interop_init_targetsync(
-!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp<interop_type(targetsync)>])
+!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp.interop_type<targetsync>])
 subroutine test_interop_init_targetsync(obj)
   integer(8) :: obj
   !$omp interop init(targetsync: obj)
@@ -29,7 +29,7 @@ end subroutine
 !===============================================================================
 
 !CHECK-LABEL: func.func @_QPtest_interop_init_both(
-!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>])
+!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp.interop_type<targetsync>, #omp.interop_type<target>])
 subroutine test_interop_init_both(obj)
   integer(8) :: obj
   !$omp interop init(targetsync, target: obj)
@@ -51,7 +51,7 @@ end subroutine
 !===============================================================================
 
 !CHECK-LABEL: func.func @_QPtest_interop_init_nowait(
-!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp<interop_type(target)>]) nowait
+!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp.interop_type<target>]) nowait
 subroutine test_interop_init_nowait(obj)
   integer(8) :: obj
   !$omp interop init(target: obj) nowait
@@ -63,7 +63,7 @@ end subroutine
 
 !CHECK-LABEL: func.func @_QPtest_interop_device(
 !CHECK:         %[[DEV:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp<interop_type(target)>]) device(%[[DEV]] : i32)
+!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp.interop_type<target>]) device(%[[DEV]] : i32)
 subroutine test_interop_device(obj, dev)
   integer(8) :: obj
   integer :: dev
@@ -75,7 +75,7 @@ end subroutine
 !===============================================================================
 
 !CHECK-LABEL: func.func @_QPtest_interop_prefer_str(
-!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp<interop_type(targetsync)>]) prefer_type([1, 6])
+!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp.interop_type<targetsync>]) prefer_type([1, 6])
 subroutine test_interop_prefer_str(obj)
   integer(8) :: obj
   !$omp interop init(prefer_type("cuda", "level_zero"), targetsync: obj)
@@ -86,7 +86,7 @@ end subroutine
 !===============================================================================
 
 !CHECK-LABEL: func.func @_QPtest_interop_prefer_hip(
-!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp<interop_type(target)>]) prefer_type([5])
+!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp.interop_type<target>]) prefer_type([5])
 subroutine test_interop_prefer_hip(obj)
   integer(8) :: obj
   !$omp interop init(prefer_type("hip"), target: obj)
@@ -97,7 +97,7 @@ end subroutine
 !===============================================================================
 
 !CHECK-LABEL: func.func @_QPtest_interop_prefer_int(
-!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp<interop_type(targetsync)>]) prefer_type([4])
+!CHECK:         omp.interop.init %{{.*}} : !fir.ref<i64> interop_types([#omp.interop_type<targetsync>]) prefer_type([4])
 subroutine test_interop_prefer_int(obj)
   integer(8) :: obj
   integer, parameter :: omp_ifr_sycl = 4
@@ -172,4 +172,31 @@ subroutine test_interop_destroy_device(obj, dev)
   integer(8) :: obj
   integer :: dev
   !$omp interop destroy(obj) device(dev)
+end subroutine
+
+!===============================================================================
+! Interop Init — array element interop-var
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPtest_interop_init_array_element(
+!CHECK:         %[[EL:.*]] = hlfir.designate %{{.*}} (%{{.*}}) : (!fir.ref<!fir.array<10xi64>>, index) -> !fir.ref<i64>
+!CHECK:         omp.interop.init %[[EL]] : !fir.ref<i64> interop_types([#omp.interop_type<target>])
+subroutine test_interop_init_array_element(arr)
+  integer(8) :: arr(10)
+  !$omp interop init(target: arr(1))
+end subroutine
+
+!===============================================================================
+! Interop Use — derived-type component interop-var
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPtest_interop_use_component(
+!CHECK:         %[[COMP:.*]] = hlfir.designate %{{.*}}{"obj"} : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<i64>
+!CHECK:         omp.interop.use %[[COMP]] : !fir.ref<i64>
+subroutine test_interop_use_component(rec)
+  type t
+    integer(8) :: obj
+  end type
+  type(t) :: rec
+  !$omp interop use(rec%obj)
 end subroutine

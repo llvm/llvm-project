@@ -25,7 +25,7 @@ define zeroext i1 @abs_isinff(float %x) {
 ; P9-NEXT:    blr
 entry:
   %0 = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %0, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %0, +inf
   ret i1 %cmpinf
 }
 
@@ -50,7 +50,7 @@ define zeroext i1 @abs_isinf(double %x) {
 ; P9-NEXT:    blr
 entry:
   %0 = tail call double @llvm.fabs.f64(double %x)
-  %cmpinf = fcmp oeq double %0, 0x7FF0000000000000
+  %cmpinf = fcmp oeq double %0, +inf
   ret i1 %cmpinf
 }
 
@@ -103,7 +103,7 @@ define zeroext i1 @abs_isinfornanf(float %x) {
 ; P9-NEXT:    blr
 entry:
   %0 = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp ueq float %0, 0x7FF0000000000000
+  %cmpinf = fcmp ueq float %0, +inf
   ret i1 %cmpinf
 }
 
@@ -127,7 +127,7 @@ define zeroext i1 @abs_isinfornan(double %x) {
 ; P9-NEXT:    blr
 entry:
   %0 = tail call double @llvm.fabs.f64(double %x)
-  %cmpinf = fcmp ueq double %0, 0x7FF0000000000000
+  %cmpinf = fcmp ueq double %0, +inf
   ret i1 %cmpinf
 }
 
@@ -178,7 +178,7 @@ define <4 x i1> @abs_isinfv4f32(<4 x float> %x) {
 ; P9-NEXT:    blr
 entry:
   %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %x)
-  %cmpinf = fcmp oeq <4 x float> %0, <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <4 x float> %0, <float +inf, float +inf, float +inf, float +inf>
   ret <4 x i1> %cmpinf
 }
 
@@ -202,7 +202,7 @@ define <2 x i1> @abs_isinfv2f64(<2 x double> %x) {
 ; P9-NEXT:    blr
 entry:
   %0 = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
-  %cmpinf = fcmp oeq <2 x double> %0, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <2 x double> %0, <double +inf, double +inf>
   ret <2 x i1> %cmpinf
 }
 

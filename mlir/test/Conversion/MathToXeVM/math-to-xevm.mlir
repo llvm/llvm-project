@@ -67,6 +67,9 @@ module @test_module {
     // CHECK: llvm.call @_Z22__spirv_ocl_native_expd(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
     %exp_afn_f64 = math.exp %c1_f64 fastmath<afn> : f64
 
+    // CHECK: llvm.call @_Z22__spirv_ocl_native_expd(%{{.*}}) {aaa = 0 : i32, fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
+    %exp_with_discardable_attr = math.exp %c1_f64 fastmath<afn> {aaa = 0 : i32} : f64
+
     // CHECK: math.exp
     %exp_none_f16 = math.exp %c1_f16 fastmath<none> : f16
     // CHECK: math.exp
@@ -100,6 +103,18 @@ module @test_module {
     %exp_v16_f32 = math.exp %v16_c1_f32 fastmath<fast> : vector<16xf32>
     // CHECK: llvm.call @_Z22__spirv_ocl_native_expDv4_Dh(%{{.*}}) {fastmathFlags = #llvm.fastmath<fast>} : (vector<4xf16>) -> vector<4xf16>
     %exp_v4_f16 = math.exp %v4_c1_f16 fastmath<fast> : vector<4xf16>
+
+    // Check size-1 vectors are unwrapped to the scalar intrinsic: SPIRV has no
+    // size-1 vector type, so these degenerate vectors (produced e.g. by the
+    // XeGPU per-lane distribution + linearization pipeline) must go through the
+    // scalar native func rather than being left as unconverted math ops.
+
+    %v1_c1_f32 = arith.constant dense<1.> : vector<1xf32>
+
+    // CHECK: %[[V1_ELT:.*]] = vector.extract %{{.*}}[0] : f32 from vector<1xf32>
+    // CHECK: %[[V1_EXP:.*]] = llvm.call @_Z22__spirv_ocl_native_expf(%[[V1_ELT]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+    // CHECK: vector.broadcast %[[V1_EXP]] : f32 to vector<1xf32>
+    %exp_v1_f32 = math.exp %v1_c1_f32 fastmath<fast> : vector<1xf32>
 
     // Check unsupported vector sizes are not converted:
 

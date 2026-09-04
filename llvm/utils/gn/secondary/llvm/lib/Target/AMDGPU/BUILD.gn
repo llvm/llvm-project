@@ -68,6 +68,7 @@ tablegen("AMDGPUGenRegisterBank") {
     ":LLVMAMDGPUCodeGen",
     "MCTargetDesc",
     "Utils",
+    "//llvm/tools/llvm-calc-occupancy",
     "//llvm/unittests/MC/AMDGPU:AMDGPUMCTests",
     "//llvm/unittests/Target/AMDGPU:AMDGPUTests",
   ]

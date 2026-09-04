@@ -184,7 +184,7 @@ bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
     }
     LLDB_LOG(log,
              "SectionLoadList::{0} (section = {1:x} ({2}.{3}), load_addr = "
-             "0x{4,16:x})",
+             "{4:x16})",
              __FUNCTION__, static_cast<void *>(section_sp.get()),
              module_name.c_str(), section_sp->GetName(), load_addr);
   }

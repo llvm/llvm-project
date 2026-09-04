@@ -53,12 +53,19 @@ llvm::Error SystemInitializerCommon::Initialize() {
     ::SetErrorMode(GetErrorMode() | SEM_FAILCRITICALERRORS |
                    SEM_NOGPFAULTERRORBOX);
 
+#ifdef _MSC_VER
+    // crtdbg.h expands these to no-ops unless _DEBUG is set, in which case
+    // they become real calls into the debug CRT. That macro means both "this
+    // code is built in debug mode" and "a debug CRT is linked", which go
+    // together for MSVC but not for MinGW: a debug MinGW build normally still
+    // links the release CRT, which does not export them.
     _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
     _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
     _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
     _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
     _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+#endif // _MSC_VER
   }
 #endif
 

@@ -34,7 +34,6 @@ def ROCDL_BufferOOBModeAttr :
     Specifies the AMDGPU buffer out-of-bounds mode encoded in
     `amdgpu.buffer.oob.mode` or `amdgpu.tbuffer.oob.mode` LLVM module flags.
   }];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 class ROCDL_BufferOOBModeModuleFlagAttrBase<string attrName, string mnemonic>

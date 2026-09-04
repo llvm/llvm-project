@@ -566,6 +566,7 @@ cc_library(
     hdrs = glob(["Process/wasm/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginObjectFileWasm",
         ":PluginProcessGDBRemote",
         "//lldb:CoreHeaders",
         "//lldb:Headers",
@@ -1338,6 +1339,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1703,19 +1705,23 @@ cc_library(
 )
 
 cc_library(
-    name = "PluginInstrumentationRuntimeASanLibsanitizers",
-    srcs = glob(["InstrumentationRuntime/ASanLibsanitizers/*.cpp"]),
-    hdrs = glob(["InstrumentationRuntime/ASanLibsanitizers/*.h"]),
+    name = "PluginInstrumentationRuntimeBoundsSafety",
+    srcs = glob(["InstrumentationRuntime/BoundsSafety/*.cpp"]),
+    hdrs = glob(["InstrumentationRuntime/BoundsSafety/*.h"]),
     includes = [".."],
     deps = [
         ":PluginInstrumentationRuntimeUtility",
+        ":PluginProcessUtility",
+        "//clang:codegen",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1749,11 +1755,13 @@ cc_library(
         ":PluginInstrumentationRuntimeUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Expression",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2050,6 +2058,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2077,6 +2086,7 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -2414,6 +2424,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

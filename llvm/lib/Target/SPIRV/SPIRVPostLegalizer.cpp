@@ -18,19 +18,22 @@
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
-#include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
 
 using namespace llvm;
 
 namespace {
-class SPIRVPostLegalizer : public MachineFunctionPass {
+class SPIRVPostLegalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPostLegalizer() : MachineFunctionPass(ID) {}
+  SPIRVPostLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
@@ -49,7 +52,12 @@ static SPIRVTypeInst deduceIntTypeFromResult(Register ResVReg,
                                              MachineIRBuilder &MIB,
                                              SPIRVGlobalRegistry *GR) {
   const LLT &Ty = MIB.getMRI()->getType(ResVReg);
-  return GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
+  SPIRVTypeInst ScalarType =
+      GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
+  if (Ty.isVector())
+    return GR->getOrCreateSPIRVVectorType(ScalarType, Ty.getNumElements(), MIB,
+                                          false);
+  return ScalarType;
 }
 
 static SPIRVTypeInst deduceTypeFromSingleOperand(MachineInstr *I,
@@ -149,6 +157,7 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     LLVM_DEBUG(dbgs() << "Looking at use " << Use);
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_SHUFFLE_VECTOR:
     case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     case TargetOpcode::G_UNMERGE_VALUES:
     case TargetOpcode::G_ADD:
@@ -164,6 +173,10 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_FDIV:
     case TargetOpcode::G_FREM:
     case TargetOpcode::G_FMA:
+    case TargetOpcode::G_FATAN2:
+    case TargetOpcode::G_FPOW:
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMAXNUM:
     case TargetOpcode::COPY:
     case TargetOpcode::G_STRICT_FMA:
       ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
@@ -222,7 +235,8 @@ static SPIRVTypeInst deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
     switch (PointeeType->getOpcode()) {
     case SPIRV::OpTypeArray:
     case SPIRV::OpTypeRuntimeArray:
-    case SPIRV::OpTypeVector: {
+    case SPIRV::OpTypeVector:
+    case SPIRV::OpTypeVectorIdEXT: {
       Register ElemTypeReg = PointeeType->getOperand(1).getReg();
       PointeeType = GR->getSPIRVTypeForVReg(ElemTypeReg);
       break;
@@ -317,7 +331,7 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
   Register SrcReg = I->getOperand(I->getNumOperands() - 1).getReg();
   SPIRVTypeInst ScalarType = nullptr;
   if (SPIRVTypeInst DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
-    assert(DefType->getOpcode() == SPIRV::OpTypeVector);
+    assert(isVectorType(DefType));
     ScalarType = GR->getScalarOrVectorComponentType(DefType);
   }
 
@@ -545,7 +559,7 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
   }
 }
 
-bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
+static bool runPostLegalizer(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
@@ -555,11 +569,22 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-INITIALIZE_PASS(SPIRVPostLegalizer, DEBUG_TYPE, "SPIRV post legalizer", false,
-                false)
+INITIALIZE_PASS(SPIRVPostLegalizerLegacy, DEBUG_TYPE, "SPIRV post legalizer",
+                false, false)
 
-char SPIRVPostLegalizer::ID = 0;
+char SPIRVPostLegalizerLegacy::ID = 0;
 
-FunctionPass *llvm::createSPIRVPostLegalizerPass() {
-  return new SPIRVPostLegalizer();
+FunctionPass *llvm::createSPIRVPostLegalizerLegacyPass() {
+  return new SPIRVPostLegalizerLegacy();
+}
+
+bool SPIRVPostLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runPostLegalizer(MF);
+}
+
+PreservedAnalyses
+SPIRVPostLegalizerPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  return runPostLegalizer(MF) ? getMachineFunctionPassPreservedAnalyses()
+                              : PreservedAnalyses::all();
 }

@@ -26,8 +26,8 @@ void foo() {
 // CIR:         cir.store{{.*}} %[[DECAY]], %[[TMP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 
 // LLVM-LABEL: define{{.*}} void @_Z3foov()
-// LLVM:         %[[FMT:.*]] = alloca [6 x i8], i64 1, align 1, addrspace(5)
-// LLVM-NEXT:    %[[TMP:.*]] = alloca ptr, i64 1, align 8, addrspace(5)
+// LLVM:         %[[FMT:.*]] = alloca [6 x i8], align 1, addrspace(5)
+// LLVM-NEXT:    %[[TMP:.*]] = alloca ptr, align 8, addrspace(5)
 // LLVM-DAG:     %[[FMT_CAST:.*]] = addrspacecast ptr addrspace(5) %[[FMT]] to ptr
 // LLVM-DAG:     %[[TMP_CAST:.*]] = addrspacecast ptr addrspace(5) %[[TMP]] to ptr
 // LLVM:         %[[DECAY:.*]] = getelementptr {{.*}} ptr %[[FMT_CAST]],

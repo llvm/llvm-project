@@ -46,6 +46,7 @@ def GPRAsFPR16 : AsmOperandClass {
   let Name = "GPRAsFPR16";
   let ParserMethod = "parseGPRAsFPR";
   let RenderMethod = "addRegOperands";
+  let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
 
 def FPR16INX : RegisterOperand<GPRF16> {
@@ -59,6 +60,8 @@ def ZfhminExt  : ExtInfo<"", "", [HasStdExtZfhmin],
 def ZfhDExt    : ExtInfo<"", "", [HasStdExtZfh, HasStdExtD],
                          ?, ?, FPR32, FPR64, FPR16>;
 def ZfhminDExt : ExtInfo<"", "", [HasStdExtZfhmin, HasStdExtD],
+                         ?, ?, FPR32, FPR64, FPR16>;
+def ZfhminQExt : ExtInfo<"", "", [HasStdExtZfhmin, HasStdExtQ],
                          ?, ?, FPR32, FPR64, FPR16>;
 
 def ZhinxExt            : ExtInfo<"_INX", "Zfinx",
@@ -224,14 +227,17 @@ foreach Ext = ZfhminDExts in {
                   Sched<[WriteFCvtF16ToF64, ReadFCvtF16ToF64]>;
 } // foreach Ext = ZfhminDExts
 
+defm FCVT_H_Q : FPUnaryOp_r_frm_m<0b0100010, 0b00011, ZfhminQExt,
+                                  ZfhminQExt.F16Ty, FPR128, "fcvt.h.q">,
+                 Sched<[WriteFCvtF128ToF16, ReadFCvtF128ToF16]>;
+
+defm FCVT_Q_H : FPUnaryOp_r_frmlegacy_m<0b0100011, 0b00010, ZfhminQExt,
+                                        FPR128, ZfhminQExt.F16Ty, "fcvt.q.h">,
+                 Sched<[WriteFCvtF16ToF128, ReadFCvtF16ToF128]>;
+
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 //===----------------------------------------------------------------------===//
-
-let Predicates = [HasHalfFPLoadStoreMove] in {
-def : InstAlias<"flh $rd, (${rs1})",  (FLH FPR16:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsh $rs2, (${rs1})", (FSH FPR16:$rs2, GPR:$rs1, 0), 0>;
-} // Predicates = [HasStdExtZfhmin]
 
 let Predicates = [HasStdExtZfh] in {
 def : InstAlias<"fmv.h $rd, $rs",  (FSGNJ_H  FPR16:$rd, FPR16:$rs, FPR16:$rs)>;

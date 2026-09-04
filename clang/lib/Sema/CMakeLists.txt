@@ -107,6 +107,9 @@ add_clang_library(clangSema
   acc_gen
   omp_gen
   ClangDriverOptions
+  # SemaAMDGPU.cpp includes AMDGPUTargetParser.h, which includes generated
+  # TargetParser headers.
+  target_parser_gen
 
   LINK_LIBS
   clangAPINotes

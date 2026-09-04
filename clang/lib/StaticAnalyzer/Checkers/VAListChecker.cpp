@@ -96,8 +96,8 @@ private:
       ID.AddPointer(&X);
       ID.AddPointer(Reg);
     }
-    PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
-                                      const ExplodedNode *EndPathNode,
+    PathDiagnosticPieceRef getEndPath(const ExplodedNode *EndPathNode,
+                                      BugReporterContext &BRC,
                                       PathSensitiveBugReport &BR) override {
       if (!IsLeak)
         return nullptr;
