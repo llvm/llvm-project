@@ -28,6 +28,7 @@ struct DeclOrExpr {
   bool isExpr() const { return isa_and_nonnull<const Expr *>(V); }
   bool isDecl() const { return isa_and_nonnull<const Decl *>(V); }
   bool isValueDecl() const { return isa_and_nonnull<ValueDecl>(asDecl()); }
+  bool isVarDecl() const { return isa_and_nonnull<VarDecl>(asDecl()); }
 
   const Expr *asExpr() const { return V.dyn_cast<const Expr *>(); }
   const Decl *asDecl() const { return V.dyn_cast<const Decl *>(); }
@@ -48,6 +49,12 @@ struct DeclOrExpr {
     if (const auto *VD = asValueDecl())
       return VD->getType();
     return asExpr()->getType();
+  }
+
+  SourceLocation getLocation() const {
+    if (const auto *VD = asValueDecl())
+      return VD->getLocation();
+    return asExpr()->getExprLoc();
   }
 };
 static_assert(sizeof(DeclOrExpr) == sizeof(void *));
