@@ -53894,7 +53894,7 @@ static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
   // If not optimizing for code size and SHLD is slow, then bail.
   bool IsOptSize = DAG.getMachineFunction().getFunction().hasOptSize();
   if (!IsOptSize && Subtarget.isSHLDSlow())
-      return SDValue();
+    return SDValue();
 
   EVT VT = N->getValueType(0);
 
@@ -54001,7 +54001,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     return R;
 
   if (SDValue R = combineOrOnSHLToSHRD(N, dl, DAG, Subtarget))
-  	  return R;
+    return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
