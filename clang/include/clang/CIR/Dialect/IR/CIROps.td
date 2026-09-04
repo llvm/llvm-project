@@ -985,6 +985,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 
 def CIR_IfOp : CIR_Op<"if", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "the if-then-else operation";
@@ -1277,6 +1278,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 
 def CIR_ScopeOp : CIR_Op<"scope", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -3222,6 +3224,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 
 def CIR_TernaryOp : CIR_Op<"ternary", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
