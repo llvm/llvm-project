@@ -247,6 +247,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
     libc.src.math.fminimum_mag_numl
+    libc.src.math.fmodf128
     libc.src.math.fmul
     libc.src.math.fmod
     libc.src.math.fmodf
@@ -318,6 +319,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
+    libc.src.math.remainderf128
     libc.src.math.remainderl
     libc.src.math.remquof
     libc.src.math.remquo

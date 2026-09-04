@@ -4704,10 +4704,11 @@ add_fp_unittest(
   HDRS
     FModTest.h
   DEPENDS
+    libc.src.math.fmodf128
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
-    libc.src.math.fmodf128
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
   # FIXME: Currently fails on the GPU build.
 )
 
