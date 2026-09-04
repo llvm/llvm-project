@@ -42,6 +42,40 @@ add_entrypoint_object(
     .pwd_utils
 )
 
+add_entrypoint_object(
+  getpwnam_r
+  SRCS
+    getpwnam_r.cpp
+  HDRS
+    getpwnam_r.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_passwd
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .pwd_utils
+)
+
+add_entrypoint_object(
+  getpwuid_r
+  SRCS
+    getpwuid_r.cpp
+  HDRS
+    getpwuid_r.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_passwd
+    libc.hdr.types.uid_t
+    libc.src.__support.CPP.span
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .pwd_utils
+)
+
 add_object_library(
   pwd_utils
   HDRS

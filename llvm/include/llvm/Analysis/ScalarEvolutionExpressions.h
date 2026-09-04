@@ -382,9 +382,15 @@ public:
 
   /// Return the value of this chain of recurrences at the specified iteration
   /// number. Takes an explicit list of operands to represent an AddRec.
-  LLVM_ABI static const SCEV *evaluateAtIteration(ArrayRef<SCEVUse> Operands,
-                                                  const SCEV *It,
-                                                  ScalarEvolution &SE);
+  LLVM_ABI static SCEVUse
+  evaluateAtIteration(ArrayRef<SCEVUse> Operands, const SCEV *It,
+                      ScalarEvolution &SE,
+                      SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
+
+  /// Return the value of this recurrences when its loop exits, i.e. its value
+  /// at the loop's exact backedge-taken count, or SCEVCouldNotCompute if that
+  /// count cannot be computed.
+  LLVM_ABI SCEVUse getExitValue(ScalarEvolution &SE) const;
 
   /// Return the number of iterations of this loop that produce
   /// values in the specified constant range.  Another way of

@@ -1533,7 +1533,7 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         // attributes to byval arguments. Even if CalledFunction
         // doesn't e.g. write to the argument (readonly), the call to
         // NewInnerCB may write to its by-value copy.
-        if (NewInnerCB->paramHasAttr(I, Attribute::ByVal))
+        if (NewInnerCB->isByValArgument(I))
           continue;
 
         // Don't bother propagating attrs to constants.

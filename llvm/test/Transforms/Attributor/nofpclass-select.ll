@@ -109,7 +109,7 @@ define float @clamp_nonfinite_to_normal_olt(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.finite = fcmp olt float %fabs, 0x7FF0000000000000
+  %is.finite = fcmp olt float %fabs, +inf
   %select = select i1 %is.finite, float %arg, float 1024.0
   ret float %select
 }
@@ -123,7 +123,7 @@ define float @clamp_eq_inf_to_pnormal(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   %select = select i1 %is.inf, float 1024.0, float %arg
   ret float %select
 }
@@ -135,7 +135,7 @@ define float @clamp_eq_pinf_to_pnormal(float %arg) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 1.024000e+03, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
-  %is.inf = fcmp oeq float %arg, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %arg, +inf
   %select = select i1 %is.inf, float 1024.0, float %arg
   ret float %select
 }
@@ -147,7 +147,7 @@ define float @clamp_eq_ninf_to_negnormal(float %arg) {
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float -1.024000e+03, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
-  %is.inf = fcmp oeq float %arg, 0xFFF0000000000000
+  %is.inf = fcmp oeq float %arg, -inf
   %select = select i1 %is.inf, float -1024.0, float %arg
   ret float %select
 }
@@ -161,7 +161,7 @@ define float @clamp_eq_inf_to_nan(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   %select = select i1 %is.inf, float 0x7FF8000000000000, float %arg
   ret float %select
 }
@@ -187,7 +187,7 @@ define float @isfinite_select_fabs_val_0(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.finite = fcmp olt float %fabs, 0x7FF0000000000000
+  %is.finite = fcmp olt float %fabs, +inf
   %select = select i1 %is.finite, float %fabs, float 1024.0
   ret float %select
 }
@@ -273,7 +273,7 @@ define float @clamp_inf_to_fabs(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   %select = select i1 %is.inf, float %fabs, float %arg
   ret float %select
 }
@@ -287,7 +287,7 @@ define float @not_clamp_inf_to_fabs(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   %select = select i1 %is.inf, float %arg, float %fabs
   ret float %select
 }

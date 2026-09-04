@@ -818,17 +818,23 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
-    // Neglect the cost of canonical IV, matching the legacy cost model.
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
-    InstructionCost BackedgeCost =
-        ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost)
-            : Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind);
-    LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
-                      << ": vector loop backedge\n");
-    Cost += BackedgeCost;
+    // Add the costs of the loop's backedge and canonical IV increment
+    auto AddCost = [&](InstructionCost C, const char *Name) {
+      if (ForceTargetInstructionCost.getNumOccurrences())
+        C = InstructionCost(ForceTargetInstructionCost);
+      LLVM_DEBUG(dbgs() << "Cost of " << C << " for VF " << VF << ": " << Name
+                        << "\n");
+      Cost += C;
+    };
+    AddCost(Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind),
+            "vector loop backedge");
+    if (!VPCostContext::executesAtMostOnce(*getPlan(), VF))
+      AddCost(Ctx.TTI.getArithmeticInstrCost(
+                  Instruction::Add, getCanonicalIVType(), Ctx.CostKind),
+              "canonical IV increment");
     return Cost;
   }
 

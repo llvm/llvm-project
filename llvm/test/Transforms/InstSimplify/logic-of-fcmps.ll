@@ -255,7 +255,7 @@ define <2 x i1> @uno8(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp1 = fcmp uno <2 x double> %y, %x
-  %cmp2 = fcmp uno <2 x double> %x, <double 0x7ff0000000000000, double 42.0>
+  %cmp2 = fcmp uno <2 x double> %x, <double +inf, double 42.0>
   %r = or <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %r
 }

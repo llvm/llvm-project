@@ -1648,8 +1648,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
     }
     for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}) {
       setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
@@ -1725,8 +1726,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
+      if (Subtarget->hasSME2() && Subtarget->isStreaming())
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
+            Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -1898,8 +1904,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
+      if (Subtarget->hasSME2() && Subtarget->isStreaming())
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
+            Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::FREM, ISD::STRICT_FREM}, VT, Expand);
@@ -1968,8 +1979,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setVectorInterleaveAction(
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          Custom);
+      if (Subtarget->hasSME2() && Subtarget->isStreaming())
+        setVectorInterleaveAction(
+            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
+            Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
@@ -2417,8 +2433,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
-  setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
-  setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+  setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
+                            {2, 3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -6569,12 +6585,22 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
       !DAG.getTargetLoweringInfo().isTypeLegal(Op1VT))
     return SDValue();
 
-  assert((Op1VT.getVectorElementType() == MVT::i8 ||
-          Op1VT.getVectorElementType() == MVT::i16) &&
-         "Expected 8-bit or 16-bit characters.");
+  if (Op1VT.getVectorElementType() != MVT::i8 &&
+      Op1VT.getVectorElementType() != MVT::i16)
+    return SDValue();
 
-  SDValue ID =
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
+  if (Op2VT.getFixedSizeInBits() > 128) {
+    // For VLS SVE fixed-vector types > 128-bit can be legal. These still need
+    // splitting as `match` works per 128-bit segment.
+    auto [NeedleLo, NeedleHi] = DAG.SplitVector(Op2, DL);
+
+    SDValue MatchLo =
+        DAG.getNode(ISD::VECTOR_MATCH, DL, ResVT, Op1, NeedleLo, Mask);
+    SDValue MatchHi =
+        DAG.getNode(ISD::VECTOR_MATCH, DL, ResVT, Op1, NeedleHi, Mask);
+
+    return DAG.getNode(ISD::OR, DL, ResVT, MatchLo, MatchHi);
+  }
 
   // Scalable vector type used to wrap operands.
   // A single container is enough for both operands because ultimately the
@@ -6601,6 +6627,9 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
     Op2 = DAG.getSplatVector(Op2PromotedVT, DL, Op2);
     Op2 = DAG.getBitcast(OpContainerVT, Op2);
   }
+
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
 
   // If the result is scalable, we just need to carry out the MATCH.
   if (ResVT.isScalableVector())
@@ -15518,22 +15547,6 @@ static bool isEXTMaskWithSplat(ArrayRef<int> M, EVT VT, unsigned SplatOperand,
   return false;
 }
 
-/// isTRN_v_undef_Mask - Special case of isTRNMask for canonical form of
-/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
-/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
-static bool isTRN_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + WhichResult))
-      return false;
-  }
-  return true;
-}
-
 static bool isINSMask(ArrayRef<int> M, int NumInputElements,
                       bool &DstIsLeft, int &Anomaly) {
   if (M.size() != static_cast<size_t>(NumInputElements))
@@ -16255,7 +16268,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
-  if (isTRN_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return DAG.getNode(Opc, DL, V1.getValueType(), V1, V1);
   }
@@ -18038,7 +18051,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isTRNMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned, DummyUnsigned) ||
-          isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
+          isTRN_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isUZP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isZIP_v_undef_Mask(M, NumElts, DummyUnsigned) ||
           isINSMask(M, NumElts, DummyBool, DummyInt) ||
@@ -27807,6 +27820,9 @@ static SDValue
 performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                SelectionDAG &DAG);
 
+static SDValue performLegalizedInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG);
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -27839,6 +27855,9 @@ static SDValue performSTORECombine(SDNode *N,
     return Res;
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))
+    return Res;
+
+  if (SDValue Res = performLegalizedInterleavedStoreCombine(ST, DCI, DAG))
     return Res;
 
   // Cast ptr32 and ptr64 pointers to the default address space before a store.
@@ -28198,6 +28217,72 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
                                  DAG.getVTList(MVT::Other), Ops,
                                  MemN->getMemoryVT(), MemN->getMemOperand());
+}
+
+static SDValue performLegalizedInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  // Type legalization splits a wide interleaved store into consecutive legal
+  // stores. Combine each group that directly stores all results of a legal
+  // VECTOR_INTERLEAVE into a structured store.
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes ||
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
+    return SDValue();
+
+  SDValue StoredValue = ST->getValue();
+  SDNode *Interleave = StoredValue.getNode();
+  if (Interleave->getOpcode() != ISD::VECTOR_INTERLEAVE)
+    return SDValue();
+
+  unsigned NumParts = Interleave->getNumOperands();
+  if (NumParts < 2 || NumParts > 4)
+    return SDValue();
+
+  EVT SubVecTy = Interleave->getValueType(0);
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+    return SDValue();
+
+  SmallVector<StoreSDNode *, 4> Stores(NumParts, nullptr);
+  for (SDUse &Use : Interleave->uses()) {
+    unsigned ResNo = Use.getResNo();
+    auto *Store = dyn_cast<StoreSDNode>(Use.getUser());
+    if (Stores[ResNo] || !Store)
+      return SDValue();
+    Stores[ResNo] = Store;
+  }
+
+  if (llvm::is_contained(Stores, nullptr))
+    return SDValue();
+
+  StoreSDNode *BaseStore = Stores[0];
+  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  for (auto [Idx, Store] : enumerate(Stores)) {
+    if (!DAG.areNonVolatileConsecutiveStores(Store, BaseStore, Bytes, Idx))
+      return SDValue();
+  }
+
+  static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::aarch64_neon_st2,
+                                                 Intrinsic::aarch64_neon_st3,
+                                                 Intrinsic::aarch64_neon_st4};
+  SDLoc DL(Interleave);
+  SmallVector<SDValue, 8> Ops = {
+      BaseStore->getChain(),
+      DAG.getTargetConstant(NEONStores[NumParts - 2], DL, MVT::i64)};
+  Ops.append(Interleave->op_begin(), Interleave->op_end());
+  Ops.push_back(BaseStore->getBasePtr());
+
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(BaseStore->getMemOperand(), 0, NumParts * Bytes);
+  SDValue NewStore = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
+
+  for (StoreSDNode *Store : Stores)
+    if (Store != ST)
+      DCI.CombineTo(Store, NewStore);
+  return NewStore;
 }
 
 static SDValue performMSTORECombine(SDNode *N,
@@ -35623,7 +35708,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op1));
 
-  if (isTRN_v_undef_Mask(ShuffleMask, VT, WhichResult)) {
+  if (isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
