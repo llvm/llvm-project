@@ -3019,43 +3019,69 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
 // Transfer functions: Loads and stores.
 //===----------------------------------------------------------------------===//
 
+std::optional<std::pair<SVal, QualType>>
+ExprEngine::resolveAsLambdaCapturedVar(const Expr *Ex, const ValueDecl *VD,
+                                       const ExplodedNode *Pred) const {
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
+  const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
+  if (!AMgr.options.ShouldInlineLambdas || !DeclRefEx ||
+      !DeclRefEx->refersToEnclosingVariableOrCapture() || !MD ||
+      !MD->getParent()->isLambda()) {
+    return std::nullopt;
+  }
+  // Lookup the field of the lambda.
+  const CXXRecordDecl *CXXRec = MD->getParent();
+  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
+  FieldDecl *LambdaThisCaptureField;
+  CXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
+
+  // Sema follows a sequence of complex rules to determine whether the
+  // variable should be captured.
+  if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
+    if (MD->isImplicitObjectMemberFunction()) {
+      Loc CXXThis = svalBuilder.getCXXThis(MD, SF);
+      SVal CXXThisVal = State->getSVal(CXXThis);
+      return {{State->getLValue(FD, CXXThisVal), FD->getType()}};
+    }
+    const ParmVarDecl *PVD = MD->getParamDecl(0);
+    if (const Expr *CallSite = SF->getCallSite()) {
+      const ParamVarRegion *PVR =
+          MRMgr.getParamVarRegion(CallSite, /*Index=*/0, SF);
+      const Expr *SelfArgExpr = cast<CallExpr>(CallSite)->getArg(0);
+      if (PVD->getType()->isReferenceType()) {
+        // TODO: This binding should happen at call entry instead. The same way
+        // it does for the implicit object parameter (CXXThisRegion, bound in
+        // CXXInstanceCall::getInitialStackFrameContents). The explicit object
+        // parameter's ParamVarRegion is never bound there today, so this
+        // binding is just a workaround. A follow-up PR should properly bind it
+        // at call entry, so it is no longer needed here.
+        State =
+            State->bindLoc(loc::MemRegionVal(PVR),
+                           State->getSVal(SelfArgExpr, SF->getParent()), SF);
+        SVal ParamSVal = State->getSVal(loc::MemRegionVal(PVR));
+        return {{State->getLValue(FD, ParamSVal), FD->getType()}};
+      }
+      return {{State->getLValue(FD, loc::MemRegionVal(PVR)), FD->getType()}};
+    }
+  }
+  return std::nullopt;
+}
+
 void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
                                         ExplodedNode *Pred,
                                         ExplodedNodeSet &Dst) {
   ProgramStateRef state = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
-  auto resolveAsLambdaCapturedVar =
-      [&](const ValueDecl *VD) -> std::optional<std::pair<SVal, QualType>> {
-    const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
-    const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
-    if (AMgr.options.ShouldInlineLambdas && DeclRefEx &&
-        DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
-        MD->getParent()->isLambda()) {
-      // Lookup the field of the lambda.
-      const CXXRecordDecl *CXXRec = MD->getParent();
-      llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
-      FieldDecl *LambdaThisCaptureField;
-      CXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
-
-      // Sema follows a sequence of complex rules to determine whether the
-      // variable should be captured.
-      if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
-        Loc CXXThis = svalBuilder.getCXXThis(MD, SF);
-        SVal CXXThisVal = state->getSVal(CXXThis);
-        return std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
-      }
-    }
-
-    return std::nullopt;
-  };
-
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     // C permits "extern void v", and if you cast the address to a valid type,
     // you can even do things with it. We simply pretend
     assert(Ex->isGLValue() || VD->getType()->isVoidType());
     std::optional<std::pair<SVal, QualType>> VInfo =
-        resolveAsLambdaCapturedVar(VD);
+        resolveAsLambdaCapturedVar(Ex, VD, Pred);
 
     if (!VInfo)
       VInfo = std::make_pair(state->getLValue(VD, SF), VD->getType());
@@ -3097,7 +3123,7 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
     // Handle structured bindings captured by lambda.
     if (std::optional<std::pair<SVal, QualType>> VInfo =
-            resolveAsLambdaCapturedVar(BD)) {
+            resolveAsLambdaCapturedVar(Ex, BD, Pred)) {
       auto [V, T] = VInfo.value();
 
       if (T->isReferenceType()) {
