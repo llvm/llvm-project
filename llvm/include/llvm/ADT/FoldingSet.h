@@ -315,7 +315,6 @@ class FoldingSetNode {
 public:
   FoldingSetNode() = default;
 
-  // Accessors
   uint32_t getFoldingSetHash() const { return FoldingSetHash; }
   void setFoldingSetHash(uint32_t Hash) { FoldingSetHash = Hash; }
 };
@@ -348,11 +347,11 @@ public:
 
   T *operator->() const { return &operator*(); }
 
-  inline FoldingSetIterator &operator++() { // Preincrement
+  FoldingSetIterator &operator++() {
     advance();
     return *this;
   }
-  FoldingSetIterator operator++(int) { // Postincrement
+  FoldingSetIterator operator++(int) {
     FoldingSetIterator tmp = *this;
     ++*this;
     return tmp;
