@@ -13,26 +13,57 @@
 ;
 
 define void @all_eq(ptr %A) {
-; CHECK-LABEL: define void @all_eq(
-; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
-; CHECK-NEXT:    br label %[[LOOP_J:.*]]
-; CHECK:       [[LOOP_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER]] ], [ [[J_INC:%.*]], %[[LOOP_J]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[J]]
-; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[J_INC]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 100
-; CHECK-NEXT:    br i1 [[EC_J]], label %[[LOOP_I_LATCH]], label %[[LOOP_J]]
-; CHECK:       [[LOOP_I_LATCH]]:
-; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 100
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_I_HEADER]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-PROFIT-INSTORDER-LABEL: define void @all_eq(
+; CHECK-PROFIT-INSTORDER-SAME: ptr [[A:%.*]]) {
+; CHECK-PROFIT-INSTORDER-NEXT:  [[ENTRY:.*]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    br label %[[LOOP_I_HEADER:.*]]
+; CHECK-PROFIT-INSTORDER:       [[LOOP_I_HEADER]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
+; CHECK-PROFIT-INSTORDER-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK-PROFIT-INSTORDER:       [[LOOP_J]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER]] ], [ [[J_INC:%.*]], %[[LOOP_J]] ]
+; CHECK-PROFIT-INSTORDER-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[J]]
+; CHECK-PROFIT-INSTORDER-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-PROFIT-INSTORDER-NEXT:    [[J_INC]] = add i64 [[J]], 1
+; CHECK-PROFIT-INSTORDER-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 100
+; CHECK-PROFIT-INSTORDER-NEXT:    br i1 [[EC_J]], label %[[LOOP_I_LATCH]], label %[[LOOP_J]]
+; CHECK-PROFIT-INSTORDER:       [[LOOP_I_LATCH]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; CHECK-PROFIT-INSTORDER-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 100
+; CHECK-PROFIT-INSTORDER-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_I_HEADER]]
+; CHECK-PROFIT-INSTORDER:       [[EXIT]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    ret void
+;
+; CHECK-PROFIT-IGNORE-LABEL: define void @all_eq(
+; CHECK-PROFIT-IGNORE-SAME: ptr [[A:%.*]]) {
+; CHECK-PROFIT-IGNORE-NEXT:  [[ENTRY:.*:]]
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_J_PREHEADER:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_I_HEADER_PREHEADER:.*]]:
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_I_HEADER:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_I_HEADER]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J_PREHEADER]]:
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J_SPLIT1]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[J]]
+; CHECK-PROFIT-IGNORE-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 100
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_I_LATCH]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J_SPLIT]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[TMP0]] = add i64 [[J]], 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 100
+; CHECK-PROFIT-IGNORE-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_I_LATCH]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 100
+; CHECK-PROFIT-IGNORE-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
+; CHECK-PROFIT-IGNORE:       [[EXIT]]:
+; CHECK-PROFIT-IGNORE-NEXT:    ret void
 ;
 entry:
   br label %loop.i.header
@@ -68,26 +99,57 @@ exit:
 ;
 
 define void @eq_all(ptr %A) {
-; CHECK-LABEL: define void @eq_all(
-; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
-; CHECK-NEXT:    br label %[[LOOP_J:.*]]
-; CHECK:       [[LOOP_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER]] ], [ [[J_INC:%.*]], %[[LOOP_J]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[J_INC]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 100
-; CHECK-NEXT:    br i1 [[EC_J]], label %[[LOOP_I_LATCH]], label %[[LOOP_J]]
-; CHECK:       [[LOOP_I_LATCH]]:
-; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 100
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_I_HEADER]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-PROFIT-INSTORDER-LABEL: define void @eq_all(
+; CHECK-PROFIT-INSTORDER-SAME: ptr [[A:%.*]]) {
+; CHECK-PROFIT-INSTORDER-NEXT:  [[ENTRY:.*]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    br label %[[LOOP_I_HEADER:.*]]
+; CHECK-PROFIT-INSTORDER:       [[LOOP_I_HEADER]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
+; CHECK-PROFIT-INSTORDER-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK-PROFIT-INSTORDER:       [[LOOP_J]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER]] ], [ [[J_INC:%.*]], %[[LOOP_J]] ]
+; CHECK-PROFIT-INSTORDER-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[I]]
+; CHECK-PROFIT-INSTORDER-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-PROFIT-INSTORDER-NEXT:    [[J_INC]] = add i64 [[J]], 1
+; CHECK-PROFIT-INSTORDER-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 100
+; CHECK-PROFIT-INSTORDER-NEXT:    br i1 [[EC_J]], label %[[LOOP_I_LATCH]], label %[[LOOP_J]]
+; CHECK-PROFIT-INSTORDER:       [[LOOP_I_LATCH]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; CHECK-PROFIT-INSTORDER-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 100
+; CHECK-PROFIT-INSTORDER-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_I_HEADER]]
+; CHECK-PROFIT-INSTORDER:       [[EXIT]]:
+; CHECK-PROFIT-INSTORDER-NEXT:    ret void
+;
+; CHECK-PROFIT-IGNORE-LABEL: define void @eq_all(
+; CHECK-PROFIT-IGNORE-SAME: ptr [[A:%.*]]) {
+; CHECK-PROFIT-IGNORE-NEXT:  [[ENTRY:.*:]]
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_J_PREHEADER:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_I_HEADER_PREHEADER:.*]]:
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_I_HEADER:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_I_HEADER]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J_PREHEADER]]:
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_J:.*]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J_SPLIT1]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[I]]
+; CHECK-PROFIT-IGNORE-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 100
+; CHECK-PROFIT-IGNORE-NEXT:    br label %[[LOOP_I_LATCH]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_J_SPLIT]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[TMP0]] = add i64 [[J]], 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 100
+; CHECK-PROFIT-IGNORE-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK-PROFIT-IGNORE:       [[LOOP_I_LATCH]]:
+; CHECK-PROFIT-IGNORE-NEXT:    [[I_INC]] = add i64 [[I]], 1
+; CHECK-PROFIT-IGNORE-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 100
+; CHECK-PROFIT-IGNORE-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
+; CHECK-PROFIT-IGNORE:       [[EXIT]]:
+; CHECK-PROFIT-IGNORE-NEXT:    ret void
 ;
 entry:
   br label %loop.i.header
@@ -113,5 +175,4 @@ exit:
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-PROFIT-IGNORE: {{.*}}
-; CHECK-PROFIT-INSTORDER: {{.*}}
+; CHECK: {{.*}}
