@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCLFIREWRITER_H
 
 #include "AArch64AddressingModes.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCRegister.h"
@@ -75,6 +76,11 @@ private:
   /// the guard and the branch so the relocation stays on the BLR.
   const MCExpr *PendingTLSDescCall = nullptr;
 
+  // Deferred memory hint instruction (e.g. `stshh keep`). This instruction
+  // must be emitted immediately before a store and is deferred until after
+  // LFI inserts any guard instructions.
+  std::optional<MCInst> PendingMemHintInst;
+
   /// Rewriter state for implementing the guard-elimination optimization, which
   /// allows redundant add masks to be skipped. When it holds a value, x28 is
   /// known to already hold the guarded value of that register.
@@ -93,6 +99,7 @@ private:
   void emitBranch(unsigned Opcode, MCRegister Target, MCStreamer &Out,
                   const MCSubtargetInfo &STI);
   void emitPendingTLSDescCall(MCStreamer &Out, const MCSubtargetInfo &STI);
+  void emitPendingMemHintInst(MCStreamer &Out, const MCSubtargetInfo &STI);
   void emitMov(MCRegister Dest, MCRegister Src, MCStreamer &Out,
                const MCSubtargetInfo &STI);
   void emitAddImm(MCRegister Dest, MCRegister Src, int64_t Imm, MCStreamer &Out,

@@ -3283,8 +3283,8 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
 
   MCInst Store;
   Store.setOpcode(StOpc);
-  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
   Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
   Store.setFlags(MI->getFlags());
   if (Relaxed)
     Store.addOperand(MCOperand::createImm(0));
@@ -3343,9 +3343,9 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
 
   MCInst Store;
   Store.setOpcode(StOpc);
-  Store.addOperand(MCOperand::createReg(MI->getOperand(2).getReg())); // Data
   Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg())); // Rn
   Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg())); // Rm
+  Store.addOperand(MCOperand::createReg(MI->getOperand(2).getReg())); // Data
   Store.addOperand(MCOperand::createImm(MI->getOperand(3).getImm())); // Signed
   Store.addOperand(MCOperand::createImm(MI->getOperand(4).getImm())); // Shift
   Store.setFlags(MI->getFlags());
@@ -3404,8 +3404,8 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
 
   MCInst Store;
   Store.setOpcode(StOpc);
-  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg())); // Data
   Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg())); // Rn
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg())); // Data
   Store.addOperand(MCOperand::createImm(MI->getOperand(2).getImm())); // Imm
   Store.setFlags(MI->getFlags());
   EmitToStreamer(*OutStreamer, Store);

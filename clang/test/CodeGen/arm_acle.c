@@ -8,6 +8,7 @@
 
 
 #include <arm_acle.h>
+#include <stdbool.h>
 
 // REQUIRES: arm-registered-target,aarch64-registered-target
 
@@ -1791,6 +1792,18 @@ void test_atomic_store_hint_schar(signed char *ptr, signed char data) {
   __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
 }
 
+// AArch64-LABEL: @test_atomic_store_hint_bool(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STOREDV:%.*]] = zext i1 [[DATA:%.*]] to i8
+// AArch64-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[STOREDV]], 0
+// AArch64-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
+// AArch64-NEXT:    store atomic i8 [[STOREDV1]], ptr [[PTR:%.*]] monotonic, align 1, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_bool(bool *ptr, bool data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
+}
+
 // AArch64-LABEL: @test_atomic_store_hint_mfloat(
 // AArch64-NEXT:  entry:
 // AArch64-NEXT:    store atomic <1 x i8> [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 1, !mem.cache_hint [[HINT1]]
@@ -1933,6 +1946,47 @@ void test_atomic_store_hint_long_long_uint(unsigned long long int *ptr, unsigned
 //
 void test_atomic_store_hint_double(double *ptr, double data) {
   __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 1);
+}
+
+typedef int aliased_int;
+
+// AArch64-LABEL: @test_atomic_store_hint_typedef_ptr(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[VALUE:%.*]], ptr [[PTR:%.*]] monotonic, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_typedef_ptr(aliased_int *ptr, int value) {
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELAXED, 0);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_typedef_val(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[VALUE:%.*]], ptr [[PTR:%.*]] release, align 4, !mem.cache_hint [[HINT3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_typedef_val(int *ptr, aliased_int value) {
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELEASE, 1);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_volatile(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic volatile i32 [[VALUE:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_volatile(volatile int *ptr, int value) {
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_SEQ_CST, 0);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_array_arg(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STORAGE:%.*]] = alloca [1 x i32], align 4
+// AArch64-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x i32], ptr [[STORAGE]], i64 0, i64 0
+// AArch64-NEXT:    store atomic i32 0, ptr [[ARRAYDECAY]] monotonic, align 4, !mem.cache_hint [[HINT3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_array_arg() {
+  int storage[1];
+  __builtin_arm_atomic_store_with_hint(storage, 0, __ATOMIC_RELAXED, 1);
 }
 
 // AArch64: [[HINT1]] = !{i32 1, [[HINT2:![0-9]+]]}
