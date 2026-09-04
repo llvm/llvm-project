@@ -6058,7 +6058,7 @@ define i512 @bitreverse_i512(i512 %a0) nounwind {
 ; AVX512VL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512VL-NEXT:    vpshufb %zmm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VL-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -6090,7 +6090,7 @@ define i512 @bitreverse_i512(i512 %a0) nounwind {
 ; AVX512VBMI-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512VBMI-NEXT:    vpshufb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
@@ -6400,7 +6400,7 @@ define i512 @bitreverse_i512_vector(<8 x i64> %v0) nounwind {
 ; AVX512VL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512VL-NEXT:    vpshufb %zmm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VL-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -6421,7 +6421,7 @@ define i512 @bitreverse_i512_vector(<8 x i64> %v0) nounwind {
 ; AVX512VBMI-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512VBMI-NEXT:    vpshufb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
@@ -6731,7 +6731,7 @@ define i512 @bitreverse_i512_load(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512VL-NEXT:    vpshufb %zmm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VL-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -6752,7 +6752,7 @@ define i512 @bitreverse_i512_load(ptr %p0) nounwind {
 ; AVX512VBMI-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512VBMI-NEXT:    vpshufb %zmm0, %zmm1, %zmm0
-; AVX512VBMI-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
 ; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq

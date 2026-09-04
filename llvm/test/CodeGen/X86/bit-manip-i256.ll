@@ -3628,7 +3628,7 @@ define i256 @bitreverse_i256(i256 %a0) nounwind {
 ; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; AVX512VL-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -3654,7 +3654,7 @@ define i256 @bitreverse_i256(i256 %a0) nounwind {
 ; AVX512VBMI-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512VBMI-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
-; AVX512VBMI-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VBMI-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
@@ -3832,7 +3832,7 @@ define i256 @bitreverse_i256_vector(<4 x i64> %v0) nounwind {
 ; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; AVX512VL-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -3852,7 +3852,7 @@ define i256 @bitreverse_i256_vector(<4 x i64> %v0) nounwind {
 ; AVX512VBMI-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512VBMI-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
-; AVX512VBMI-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VBMI-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
@@ -4031,7 +4031,7 @@ define i256 @bitreverse_i256_load(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VL-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
-; AVX512VL-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; AVX512VL-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -4051,7 +4051,7 @@ define i256 @bitreverse_i256_load(ptr %p0) nounwind {
 ; AVX512VBMI-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; AVX512VBMI-NEXT:    # ymm1 = mem[0,1,0,1]
 ; AVX512VBMI-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
-; AVX512VBMI-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VBMI-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq

@@ -1168,20 +1168,35 @@ define dso_local i32 @sad_unroll_nonzero_initial(ptr %arg, ptr %arg1, ptr %arg2,
 ; AVX2-NEXT:    incl %eax
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: sad_unroll_nonzero_initial:
-; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX512-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqu (%rdx), %xmm1
-; AVX512-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,0,0,0]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: sad_unroll_nonzero_initial:
+; AVX512F:       # %bb.0: # %bb
+; AVX512F-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512F-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX512F-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX512F-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512F-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,0,0,0]
+; AVX512F-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512F-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm0, %eax
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: sad_unroll_nonzero_initial:
+; AVX512BW:       # %bb.0: # %bb
+; AVX512BW-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512BW-NEXT:    vpsadbw (%rsi), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovdqu (%rdx), %xmm1
+; AVX512BW-NEXT:    vpsadbw (%rcx), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,0,0,0]
+; AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    retq
 bb:
   %tmp = load <16 x i8>, ptr %arg, align 1
   %tmp4 = load <16 x i8>, ptr %arg1, align 1

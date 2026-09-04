@@ -2287,7 +2287,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX512-NEXT:    vmovq %xmm0, %rax
 ; AVX512-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
 ; AVX512-NEXT:    vpsrld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a.ext = zext <4 x i32> %a to <4 x i64>
   %b.ext = zext <4 x i32> %b to <4 x i64>
@@ -2897,7 +2897,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX512-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX512-NEXT:    vpsrlq $63, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a.ext = zext <2 x i64> %a to <2 x i128>
   %b.ext = zext <2 x i64> %b to <2 x i128>
@@ -6147,7 +6147,7 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; AVX512-NEXT:    vpaddq %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX512-NEXT:    vpsrlq $63, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX512-NEXT:    retq

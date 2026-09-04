@@ -63,7 +63,7 @@ define <64 x i8> @test_or_no_fold_multi_use(<64 x i8> %src, <64 x i8> %matrix, p
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdi)
-; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; AVX512-NEXT:    retq
   %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %matrix, i8 0)
   store <64 x i8> %gfni, ptr %out                     ; second use

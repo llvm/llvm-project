@@ -1515,7 +1515,7 @@ define <8 x i32> @clmulr_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX512-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
 ; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpsrld $31, %ymm0, %ymm0
-; AVX512-NEXT:    vpor %ymm4, %ymm0, %ymm0
+; AVX512-NEXT:    vpaddd %ymm4, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %a.ext = zext <8 x i32> %a to <8 x i64>
   %b.ext = zext <8 x i32> %b to <8 x i64>
@@ -1583,7 +1583,7 @@ define <4 x i64> @clmulr_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX512-NEXT:    vpaddq %ymm1, %ymm1, %ymm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
 ; AVX512-NEXT:    vpsrlq $63, %ymm0, %ymm0
-; AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %a.ext = zext <4 x i64> %a to <4 x i128>
   %b.ext = zext <4 x i64> %b to <4 x i128>
