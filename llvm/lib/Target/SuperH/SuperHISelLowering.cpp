@@ -200,8 +200,8 @@ SDValue SuperHTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) 
     auto PtrVT = getPointerTy(DAG.getDataLayout());
     auto DL = SDLoc(G);
 
-    // SHRefClass OpFlags = Subtarget->classifyGlobalReference(G->getGlobal());
-    SDValue Addr = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0);
+    SHRefClass OpFlags = Subtarget->classifyGlobalReference(G->getGlobal());
+    SDValue Addr = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, 0, OpFlags);
     return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
   }
   return SDValue();
@@ -218,7 +218,7 @@ SDValue SuperHTargetLowering::LowerExternalSymbol(SDValue Op, SelectionDAG &DAG)
     const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
     SHRefClass OpFlags = Subtarget->classifyGlobalFunctionReference(nullptr, *Mod);
 
-    SDValue Addr = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT);
+    SDValue Addr = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, OpFlags);
     return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
   }
   return SDValue();
@@ -235,7 +235,7 @@ SDValue SuperHTargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) c
     const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
     SHRefClass OpFlags = Subtarget->classifyGlobalFunctionReference(nullptr, *Mod);
 
-    SDValue Addr = DAG.getTargetBlockAddress(BA->getBlockAddress(), PtrVT);
+    SDValue Addr = DAG.getTargetBlockAddress(BA->getBlockAddress(), PtrVT, 0, OpFlags);
     return DAG.getNode(SHISD::WRAPPER, DL, MVT::i32, Addr);
   }
   return SDValue();

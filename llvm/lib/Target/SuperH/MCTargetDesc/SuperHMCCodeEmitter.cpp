@@ -125,38 +125,58 @@ unsigned SuperHMCCodeEmitter::getOpBits(const MCInst &MI,
 // the given opcode.
 // This is neccesary due to the various opcodes that access memory
 // have different scaling factors applied.
-static std::optional<MCFixup> getFixupForOpcode(unsigned Opcode, const MCExpr *Expr, MCContext &Ctx) {
-  bool isOp32 = isOpcode32(Opcode) ? FK_Data_4 : FK_Data_2;
+static MCFixup getFixupForOpcode(unsigned Opcode, const MCExpr *Expr, MCContext &Ctx) {
+
+  // NOTE:  A few (DSP and SH2A) instructions are 32-bits wide.
+  //        We handle those quite crudely.
+  MCFixupKind Kind = isOpcode32(Opcode) ? FK_Data_4 : FK_Data_2;
 
   switch(Opcode) {
   default: break;
 
-  // disp * 2
-  case SH::BF:
-  case SH::BFS:
-  case SH::BT:
-  case SH::BTS:
-  case SH::BSR:
-  case SH::BRA:
-  case SH::MOVWI:
+  // disp4 * 2
   case SH::MOVWL4:
   case SH::MOVWLG:
   case SH::MOVWS4:
   case SH::MOVWSG:
-    Expr = MCBinaryExpr::createDiv(Expr, MCConstantExpr::create(2, Ctx), Ctx);
+    Kind = SH::fixup_pcrel4_by2;
     break;
 
-  // disp * 4
-  case SH::MOVA:
-  case SH::MOVLI:
-  case SH::MOVLL4:
+  // disp4 * 4
   case SH::MOVLLG:
   case SH::MOVLS4:
   case SH::MOVLSG:
-    Expr = MCBinaryExpr::createDiv(Expr, MCConstantExpr::create(4, Ctx), Ctx);
+    Kind = SH::fixup_pcrel4_by4;
+    break;
+
+  // disp8 * 4
+  case SH::MOVA:
+    Kind = SH::fixup_pcrel8_by4;
+    break;
+
+  // (disp8 * 2) + 4
+  case SH::BF:
+  case SH::BFS:
+  case SH::BT:
+  case SH::BTS:
+  case SH::MOVWI:
+  case SH::MOVLL4:
+    Kind = SH::fixup_pcrel8_4by2;
+    break;
+
+  // (disp8 * 4) + 4
+  case SH::MOVLI:
+    Kind = SH::fixup_pcrel8_4by4;
+    break;
+
+  // (disp12 * 2) + 4
+  case SH::BSR:
+  case SH::BRA:
+    Kind = SH::fixup_pcrel12_4by2;
     break;
   }
-  return MCFixup::create(0, Expr, isOp32 ? FK_Data_4 : FK_Data_2, true);
+
+  return MCFixup::create(0, Expr, Kind, true);
 }
 
 void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
@@ -199,9 +219,7 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
   if (!Expr)
     return 0;
 
-  MCExpr::ExprKind Kind = Expr->getKind();
-
-  switch(Kind) {
+  switch(Expr->getKind()) {
   case MCExpr::ExprKind::Binary: {
     unsigned Res = getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getLHS(), Fixups, STI);
     Res += getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getRHS(), Fixups, STI);
@@ -216,11 +234,7 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
     return 0;
   }
   case MCExpr::ExprKind::SymbolRef: {
-
-    // NOTE:  A few (DSP and SH2A) instructions are 32-bits wide.
-    //        We handle those quite crudely.
-    uint32_t OpCode = getOpBits(MI, Fixups, STI);
-    Fixups.push_back(MCFixup::create(0, Expr, isOpcode32(OpCode) ? FK_Data_4 : FK_Data_2, true));
+    Fixups.push_back(getFixupForOpcode(MI.getOpcode(), Expr, Ctx));
     return 0;
   }
   case MCExpr::ExprKind::Constant: {

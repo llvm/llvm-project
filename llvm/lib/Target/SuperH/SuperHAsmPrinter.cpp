@@ -29,7 +29,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "asm-printer"
+#define DEBUG_TYPE "sh-asm-printer"
 
 namespace {
 
@@ -84,6 +84,7 @@ public:
 } // namespace
 
 bool SuperHAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "***** SuperHAsmPrinter *****\n");
   MCP = MF.getConstantPool();
   return AsmPrinter::runOnMachineFunction(MF);
 }
@@ -188,13 +189,24 @@ void SuperHAsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MC
     const BlockAddress *BA =
       cast<SuperHConstantPoolConstant>(SCPV)->getBlockAddress();
     MCSym = GetBlockAddressSymbol(BA);
+
+    dbgs() << "Emit CPV BlockAddress " << SCPV->getLabelId() 
+           << " \"" << MCSym->getName() << "\"...\n";
+
   } else if (SCPV->isGlobalValue()) {
     const GlobalValue *GV = cast<SuperHConstantPoolConstant>(SCPV)->getGV();
     MCSym = getSymbolPreferLocal(*GV);
+
+    dbgs() << "Emit CPV GlobalValue " << SCPV->getLabelId() 
+           << " \"" << MCSym->getName() << "\"...\n";
+  
   } else {
     assert(SCPV->isExtSymbol() && "unrecognized constant pool value");
     auto Sym = cast<SuperHConstantPoolSymbol>(SCPV)->getSymbol();
     MCSym = GetExternalSymbolSymbol(Sym);
+
+    dbgs() << "Emit CPV GlobalValue " << SCPV->getLabelId() 
+           << " \"" << MCSym->getName() << "\"...\n";
   }
 
   // Create an MCSymbol for the reference.
