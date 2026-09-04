@@ -26,6 +26,8 @@ namespace llvm {
 
 class AAResults;
 class DataLayout;
+class Instruction;
+class LoadInst;
 class Loop;
 class raw_ostream;
 class TargetTransformInfo;
@@ -729,7 +731,8 @@ public:
                           const TargetTransformInfo *TTI,
                           const TargetLibraryInfo *TLI, AAResults *AA,
                           DominatorTree *DT, LoopInfo *LI, AssumptionCache *AC,
-                          bool AllowPartial = false);
+                          bool AllowPartial = false,
+                          ArrayRef<const SCEVPredicate *> Assumptions = {});
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -748,6 +751,8 @@ public:
   /// results, it instead has partial results for those memory accesses that
   /// could be analyzed.
   bool hasAllowPartial() const { return AllowPartial; }
+
+  ArrayRef<const SCEVPredicate *> getAssumptions() const { return Assumptions; }
 
   const RuntimePointerChecking *getRuntimePointerChecking() const {
     return PtrRtChecking.get();
@@ -872,6 +877,9 @@ private:
   /// Determines whether we should generate partial runtime checks when not all
   /// memory accesses could be analyzed.
   bool AllowPartial;
+
+  /// Assumptions under which analysis is constructed
+  SmallVector<const SCEVPredicate *, 2> Assumptions;
 
   unsigned NumLoads = 0;
   unsigned NumStores = 0;
@@ -1012,6 +1020,16 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
 
+/// This function will detect whether the loop is uncountabel because the
+/// tripcount is based on a load. If yes, then it will build a dependency chain
+/// of instructions, and a list of loads which are used to compute the
+/// tripcount.
+LLVM_ABI bool
+collectInvariantLoadsBoundChain(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
+                                AssumptionCache *AC,
+                                SmallVectorImpl<Instruction *> &HoistedDeps,
+                                SmallVectorImpl<LoadInst *> &BoundLoads);
+
 class LoopAccessInfoManager {
   /// The cache.
   DenseMap<Loop *, std::unique_ptr<LoopAccessInfo>> LoopAccessInfoMap;
@@ -1032,6 +1050,10 @@ public:
       : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC) {}
 
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
+
+  LLVM_ABI const LoopAccessInfo &
+  getInfo(Loop &L, bool AllowPartial,
+          ArrayRef<const SCEVPredicate *> Assumptions);
 
   LLVM_ABI void clear();
 

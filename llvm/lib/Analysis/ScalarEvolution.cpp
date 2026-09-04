@@ -8460,8 +8460,15 @@ const SCEV *ScalarEvolution::getPredicatedExitCount(
 }
 
 const SCEV *ScalarEvolution::getPredicatedBackedgeTakenCount(
-    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
-  return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds,
+    const SCEVPredicate *Assumptions) {
+  if (!Assumptions || Assumptions->isAlwaysTrue())
+    return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
+
+  (void)getBackedgeTakenInfo(L);
+
+  SaveAndRestore<const SCEVPredicate *> Assumed(AssumedPreds, Assumptions);
+  return computeBackedgeTakenCount(L, true).getExact(L, this, &Preds);
 }
 
 const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
@@ -8478,8 +8485,16 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
 }
 
 const SCEV *ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
-    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
-  return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds,
+    const SCEVPredicate *Assumptions) {
+  if (!Assumptions || Assumptions->isAlwaysTrue())
+    return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
+
+  (void)getBackedgeTakenInfo(L);
+
+  SaveAndRestore<const SCEVPredicate *> Assumed(AssumedPreds, Assumptions);
+  BackedgeTakenInfo BTI = computeBackedgeTakenCount(L, true);
+  return BTI.getSymbolicMax(L, this, &Preds);
 }
 
 const SCEV *ScalarEvolution::getPredicatedConstantMaxBackedgeTakenCount(
@@ -9294,6 +9309,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 
   const SCEV *LHS = getSCEV(ExitCond->getOperand(0));
   const SCEV *RHS = getSCEV(ExitCond->getOperand(1));
+
+  // Rewrite the SCEV with the equivalent SCEV mapped in predicates.
+  if (AssumedPreds) {
+    LHS = rewriteUsingPredicate(LHS, L, *AssumedPreds);
+    RHS = rewriteUsingPredicate(RHS, L, *AssumedPreds);
+  }
 
   ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
                                           AllowPredicates);
@@ -15584,7 +15605,8 @@ const SCEV *PredicatedScalarEvolution::getPredicatedSCEV(const SCEV *Expr) {
 const SCEV *PredicatedScalarEvolution::getBackedgeTakenCount() {
   if (!BackedgeCount) {
     SmallVector<const SCEVPredicate *, 4> Preds;
-    BackedgeCount = SE.getPredicatedBackedgeTakenCount(&L, Preds);
+    BackedgeCount =
+        SE.getPredicatedBackedgeTakenCount(&L, Preds, UnionAssumptions.get());
     for (const auto *P : Preds)
       addPredicate(*P);
   }
@@ -15594,8 +15616,8 @@ const SCEV *PredicatedScalarEvolution::getBackedgeTakenCount() {
 const SCEV *PredicatedScalarEvolution::getSymbolicMaxBackedgeTakenCount() {
   if (!SymbolicMaxBackedgeCount) {
     SmallVector<const SCEVPredicate *, 4> Preds;
-    SymbolicMaxBackedgeCount =
-        SE.getPredicatedSymbolicMaxBackedgeTakenCount(&L, Preds);
+    SymbolicMaxBackedgeCount = SE.getPredicatedSymbolicMaxBackedgeTakenCount(
+        &L, Preds, UnionAssumptions.get());
     for (const auto *P : Preds)
       addPredicate(*P);
   }
@@ -15620,6 +15642,19 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   NewPreds.push_back(&Pred);
   Preds = std::make_unique<SCEVUnionPredicate>(NewPreds, SE);
   updateGeneration();
+}
+
+void PredicatedScalarEvolution::addAssumption(const SCEVPredicate *Assumption) {
+  if (Assumption->isAlwaysTrue() || is_contained(Assumptions, Assumption))
+    return;
+
+  Assumptions.push_back(Assumption);
+  UnionAssumptions = std::make_unique<SCEVUnionPredicate>(Assumptions, SE);
+
+  // Forcing recomputation of the backedge taken count with new assumptions
+  BackedgeCount = nullptr;
+  SymbolicMaxBackedgeCount = nullptr;
+  SmallConstantMaxTripCount.reset();
 }
 
 void PredicatedScalarEvolution::addPredicates(
@@ -15679,7 +15714,11 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(
     : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L),
       Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates(),
                                                  SE)),
-      Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {}
+      Generation(Init.Generation), BackedgeCount(Init.BackedgeCount),
+      Assumptions(Init.Assumptions) {
+  if (!Assumptions.empty())
+    UnionAssumptions = std::make_unique<SCEVUnionPredicate>(Assumptions, SE);
+}
 
 void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
   // For each block.
