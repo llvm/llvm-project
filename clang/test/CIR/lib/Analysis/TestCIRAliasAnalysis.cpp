@@ -29,7 +29,7 @@ struct TestCIRAliasAnalysisPass
   }
   void runOnOperation() override {
     mlir::AliasAnalysis aliasAnalysis(getOperation());
-    cir::registerCIRAliasAnalyses(aliasAnalysis);
+    cir::registerCIRAliasAnalyses(aliasAnalysis, getOperation());
     runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }
 };
@@ -51,7 +51,7 @@ struct TestCIRAliasAnalysisModRefPass
   }
   void runOnOperation() override {
     mlir::AliasAnalysis aliasAnalysis(getOperation());
-    cir::registerCIRAliasAnalyses(aliasAnalysis);
+    cir::registerCIRAliasAnalyses(aliasAnalysis, getOperation());
     runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }
 };
