@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[noreturn]] void exit(int status);
+[[noreturn]] LIBC_SHARED_INTERNAL void exit(int status);
 
 } // namespace LIBC_NAMESPACE_DECL
 
