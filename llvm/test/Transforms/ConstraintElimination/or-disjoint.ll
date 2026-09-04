@@ -583,10 +583,8 @@ define void @test_or_disjoint_as_add_variable_operands_unsigned(i8 %a, i8 %b, i8
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i8 [[A]], [[B]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[OR_1]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[OR_1]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[OR_NO_DISJOINT_1:%.*]] = or i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[OR_NO_DISJOINT_1]], [[C]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
@@ -596,10 +594,8 @@ define void @test_or_disjoint_as_add_variable_operands_unsigned(i8 %a, i8 %b, i8
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[OR_2:%.*]] = or disjoint i8 [[A]], [[B]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[OR_2]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[OR_2]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[OR_NO_DISJOINT_2:%.*]] = or i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[OR_NO_DISJOINT_2]], [[C]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
