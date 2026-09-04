@@ -206,7 +206,7 @@ public:
 };
 
 char PrintRegionPass::ID = 0;
-}  //end anonymous namespace
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // RegionPass
