@@ -751,9 +751,14 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
-  Attrs.ExecFlags =
-      IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
-             : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+  if (IsSPMD && canPromoteToNoLoop(D))
+    Attrs.ExecFlags =
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  else
+    Attrs.ExecFlags =
+        IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
+               : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+
   computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
 
   CGBuilderTy &Bld = CGF.Builder;
@@ -1143,6 +1148,17 @@ bool CGOpenMPRuntimeGPU::isDelayedVariableLengthDecl(CodeGenFunction &CGF,
 
   // Check variable declaration is delayed:
   return llvm::is_contained(I->getSecond().DelayedVariableLengthDecls, VD);
+}
+
+bool CGOpenMPRuntimeGPU::canPromoteToNoLoop(
+    const OMPExecutableDirective &D) const {
+  OpenMPDirectiveKind DKind = D.getDirectiveKind();
+  const LangOptions &LangOpts = CGM.getLangOpts();
+  return (DKind == OMPD_target_teams_distribute_parallel_for ||
+          DKind == OMPD_target_teams_distribute_parallel_for_simd) &&
+         LangOpts.OpenMPTeamSubscription && LangOpts.OpenMPThreadSubscription &&
+         !D.hasClausesOfKind<OMPNumTeamsClause>() &&
+         !D.hasClausesOfKind<OMPReductionClause>();
 }
 
 std::pair<llvm::Value *, llvm::Value *>

@@ -1055,7 +1055,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
               "OMPIRBuilder finalization \n";
   };
 
-  if (!OffloadInfoManager.empty())
+  if (!Fn && !OffloadInfoManager.empty())
     createOffloadEntriesAndInfoMetadata(ErrorReportFn);
 
   // Rewrite uses of globals to their replacement declare target globals if
@@ -6592,11 +6592,32 @@ static void workshareLoopTargetCallback(
   CLI->invalidate();
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    WorksharingLoopType LoopType, bool NoLoop) {
+    bool NeedsBarrier, WorksharingLoopType LoopType, bool NoLoop,
+    bool NeedsLastIter) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
+
+  // Mirrors host runtime reporting of last iteration by in-body computation.
+  if (NeedsLastIter) {
+    Type *I32Type = Type::getInt32Ty(M.getContext());
+    Builder.restoreIP(AllocaIP);
+    AllocaInst *PLastIter =
+        Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
+    Builder.CreateStore(ConstantInt::get(I32Type, 0), PLastIter);
+    CLI->setLastIter(PLastIter);
+
+    Builder.SetInsertPoint(CLI->getBody(),
+                           CLI->getBody()->getFirstInsertionPt());
+    Value *TripCount = CLI->getTripCount();
+    Value *LastIter =
+        Builder.CreateSub(TripCount, ConstantInt::get(TripCount->getType(), 1));
+    Value *IsLast =
+        Builder.CreateICmpEQ(CLI->getIndVar(), LastIter, "omp.is_last_iter");
+    Builder.CreateStore(Builder.CreateZExt(IsLast, I32Type), PLastIter);
+  }
+
   IdentFlag Flag = IdentFlag(0);
   switch (LoopType) {
   case WorksharingLoopType::ForStaticLoop:
@@ -6693,6 +6714,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
                                 LoopType, NoLoop);
   };
   addOutlineInfo(std::move(OI));
+
+  if (NeedsBarrier) {
+    Builder.SetInsertPoint(CLI->getExit(),
+                           CLI->getExit()->getTerminator()->getIterator());
+    InsertPointOrErrorTy BarrierIP =
+        createBarrier(LocationDescription(Builder.saveIP(), DL),
+                      omp::Directive::OMPD_for, /* ForceSimpleCall */ false,
+                      /* CheckCancelFlag*/ false);
+    if (!BarrierIP)
+      return BarrierIP.takeError();
+  }
+
   return CLI->getAfterIP();
 }
 
@@ -6702,9 +6735,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
-    Value *DistScheduleChunkSize) {
+    Value *DistScheduleChunkSize, bool NeedsLastIter) {
   if (Config.isTargetDevice())
-    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
+    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, NeedsBarrier, LoopType,
+                                    NoLoop, NeedsLastIter);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
       HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
