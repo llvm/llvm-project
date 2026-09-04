@@ -703,9 +703,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                                          float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), setpayloadsigf128_res);
 
-  float128 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
-  float128 min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
-
 #ifdef LIBC_TYPES_HAS_FLOAT16
   EXPECT_FP_EQ(10.0f16, LIBC_NAMESPACE::shared::f16fmaf128(
                             float128(2.0), float128(3.0), float128(4.0)));
