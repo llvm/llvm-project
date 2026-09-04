@@ -36,6 +36,10 @@ struct MappedModule {
   void *reservation = nullptr;
   size_t reservation_size = 0;
   ElfW(Addr) load_bias = 0;
+  // The path the module was loaded from, held inside the reservation so that
+  // it lasts exactly as long as the module does. Null where the path was too
+  // long to keep.
+  const char *name = nullptr;
 };
 
 LIBC_INLINE int segment_protection(ElfW(Word) flags) {
@@ -57,17 +61,24 @@ LIBC_INLINE int segment_protection(ElfW(Word) flags) {
 // have to keep their relative offsets for the module's own relocations to be
 // correct.
 //
+// A copy of `path` is kept in a page of its own past the segments. The string
+// a caller passes in is often a buffer it is about to reuse or release, and
+// the module has to be able to say where it came from for as long as it is
+// loaded.
+//
 // On failure the reservation is released, so a caller never has to unmap a
 // partially built module.
 LIBC_INLINE ErrorOr<MappedModule> map_segments(int fd, const ElfW(Phdr) * phdrs,
                                                ElfW(Half) phnum,
-                                               size_t page_size) {
+                                               size_t page_size,
+                                               const char *path) {
   LoadLayout layout(phdrs, phnum);
   if (layout.empty())
     return Error(ENOEXEC);
 
   const size_t span = layout.reservation_size(page_size);
-  auto reservation = linux_syscalls::mmap(nullptr, span, PROT_NONE,
+  const size_t total = span + page_size;
+  auto reservation = linux_syscalls::mmap(nullptr, total, PROT_NONE,
                                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (!reservation.has_value())
     return Error(reservation.error());
@@ -78,7 +89,7 @@ LIBC_INLINE ErrorOr<MappedModule> map_segments(int fd, const ElfW(Phdr) * phdrs,
   const ElfW(Addr) bias = base - first;
 
   auto fail = [&](int error) -> ErrorOr<MappedModule> {
-    linux_syscalls::munmap(reservation.value(), span);
+    linux_syscalls::munmap(reservation.value(), total);
     return Error(error);
   };
 
@@ -146,10 +157,30 @@ LIBC_INLINE ErrorOr<MappedModule> map_segments(int fd, const ElfW(Phdr) * phdrs,
     }
   }
 
+  auto name_page = linux_syscalls::mmap(
+      reinterpret_cast<void *>(base + span), page_size, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+  if (!name_page.has_value())
+    return fail(name_page.error());
+
+  const char *stored = nullptr;
+  if (path != nullptr) {
+    char *out = reinterpret_cast<char *>(base + span);
+    size_t i = 0;
+    for (; path[i] != '\0' && i + 1 < page_size; ++i)
+      out[i] = path[i];
+    out[i] = '\0';
+    // A path with no room to be kept whole is better left unnamed than
+    // truncated: a truncated name could compare equal to another module's.
+    if (path[i] == '\0')
+      stored = out;
+  }
+
   MappedModule module;
   module.reservation = reservation.value();
-  module.reservation_size = span;
+  module.reservation_size = total;
   module.load_bias = bias;
+  module.name = stored;
   return module;
 }
 

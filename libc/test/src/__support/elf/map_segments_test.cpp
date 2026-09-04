@@ -70,7 +70,7 @@ ElfW(Phdr)
 TEST(LlvmLibcElfMapSegmentsTest, RejectsModuleWithNoLoadSegments) {
   ElfW(Phdr) phdrs[1]{};
   phdrs[0].p_type = PT_DYNAMIC;
-  auto result = map_segments(-1, phdrs, 1, PAGE);
+  auto result = map_segments(-1, phdrs, 1, PAGE, PATH);
   EXPECT_FALSE(result.has_value());
 }
 
@@ -85,14 +85,17 @@ TEST(LlvmLibcElfMapSegmentsTest, MapsSegmentsAndZeroesBss) {
       load(PAGE, PAGE, PAGE, 2 * PAGE, PF_R | PF_W),
   };
 
-  auto result = map_segments(fd, phdrs, 2, PAGE);
+  auto result = map_segments(fd, phdrs, 2, PAGE, PATH);
   LIBC_NAMESPACE::linux_syscalls::close(fd);
   ASSERT_TRUE(result.has_value());
 
   MappedModule module = result.value();
   ASSERT_TRUE(module.reservation != nullptr);
-  // Three pages: one read only, one read write, one .bss.
-  EXPECT_EQ(module.reservation_size, size_t(3 * PAGE));
+  // Three pages: one read only, one read write, one .bss, plus the page the
+  // name is kept in.
+  EXPECT_EQ(module.reservation_size, size_t(4 * PAGE));
+  ASSERT_TRUE(module.name != nullptr);
+  EXPECT_STREQ(module.name, PATH);
 
   const unsigned char *base =
       reinterpret_cast<const unsigned char *>(module.load_bias);
@@ -116,7 +119,7 @@ TEST(LlvmLibcElfMapSegmentsTest, PartialPageBssIsZeroed) {
   // holds file bytes and has to be cleared.
   ElfW(Phdr) phdrs[] = {load(0, 0, PAGE / 2, PAGE, PF_R | PF_W)};
 
-  auto result = map_segments(fd, phdrs, 1, PAGE);
+  auto result = map_segments(fd, phdrs, 1, PAGE, PATH);
   LIBC_NAMESPACE::linux_syscalls::close(fd);
   ASSERT_TRUE(result.has_value());
 
@@ -156,7 +159,7 @@ TEST(LlvmLibcElfMapSegmentsTest, ASegmentWithNothingInTheFileStillGetsMemory) {
 
   auto fd = LIBC_NAMESPACE::linux_syscalls::open(PATH, O_RDONLY, 0);
   ASSERT_TRUE(fd.has_value());
-  auto mapped = map_segments(fd.value(), headers, 2, PAGE);
+  auto mapped = map_segments(fd.value(), headers, 2, PAGE, PATH);
   LIBC_NAMESPACE::linux_syscalls::close(fd.value());
   ASSERT_TRUE(mapped.has_value());
 
@@ -172,4 +175,49 @@ TEST(LlvmLibcElfMapSegmentsTest, ASegmentWithNothingInTheFileStillGetsMemory) {
     ASSERT_EQ(bss[i], static_cast<unsigned char>(i + 1));
 
   unmap_module(mapped.value());
+}
+
+TEST(LlvmLibcElfMapSegmentsTest, KeepsACopyOfTheName) {
+  int fd = write_backing_file();
+  ASSERT_GE(fd, 0);
+  ElfW(Phdr) phdrs[] = {load(0, 0, PAGE, PAGE, PF_R)};
+
+  // A caller is free to reuse the buffer it passed in as soon as the call
+  // returns, so what the module reports has to be somewhere else.
+  char path[sizeof(PATH)];
+  for (size_t i = 0; i < sizeof(PATH); ++i)
+    path[i] = PATH[i];
+
+  auto result = map_segments(fd, phdrs, 1, PAGE, path);
+  LIBC_NAMESPACE::linux_syscalls::close(fd);
+  ASSERT_TRUE(result.has_value());
+
+  MappedModule module = result.value();
+  ASSERT_TRUE(module.name != nullptr);
+  EXPECT_TRUE(module.name != path);
+  for (size_t i = 0; i < sizeof(path); ++i)
+    path[i] = 'x';
+  EXPECT_STREQ(module.name, PATH);
+
+  unmap_module(module);
+}
+
+TEST(LlvmLibcElfMapSegmentsTest, LeavesAModuleUnnamedRatherThanTruncateIt) {
+  int fd = write_backing_file();
+  ASSERT_GE(fd, 0);
+  ElfW(Phdr) phdrs[] = {load(0, 0, PAGE, PAGE, PF_R)};
+
+  char path[PAGE + 1];
+  for (size_t i = 0; i < PAGE; ++i)
+    path[i] = 'a';
+  path[PAGE] = '\0';
+
+  auto result = map_segments(fd, phdrs, 1, PAGE, path);
+  LIBC_NAMESPACE::linux_syscalls::close(fd);
+  ASSERT_TRUE(result.has_value());
+
+  MappedModule module = result.value();
+  EXPECT_TRUE(module.name == nullptr);
+
+  unmap_module(module);
 }

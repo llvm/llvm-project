@@ -127,3 +127,27 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  load_module
+  HDRS
+    load_module.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.lseek
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.elf.map_segments
+    libc.src.__support.elf.module
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
