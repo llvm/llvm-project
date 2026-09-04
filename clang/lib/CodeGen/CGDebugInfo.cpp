@@ -3239,11 +3239,17 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
   if (isClassOrMethodDLLImport(RD))
     return false;
 
-  if (RD->isLambda() || RD->isAggregate() ||
-      RD->hasTrivialDefaultConstructor() ||
-      RD->hasConstexprNonCopyMoveConstructor())
+  if (RD->isLambda() || RD->isAggregate() || RD->hasTrivialDefaultConstructor())
     return false;
 
+  // Skip this optimization if the class has an implicit constexpr default
+  // constructor, since those constructors can be invoked without emitting type
+  // information for the constructor.
+  if (RD->needsImplicitDefaultConstructor() &&
+      RD->defaultedDefaultConstructorIsConstexpr())
+    return false;
+
+  bool HasNonDeletedCtor = false;
   for (const CXXConstructorDecl *Ctor : RD->ctors()) {
     if (Ctor->isCopyOrMoveConstructor())
       continue;
@@ -3254,11 +3260,15 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
       // copy/move constructor, which does not enable homing.
       if (CtorDef->isDelegatingConstructor())
         continue;
+      // Skip this optimization if we see a defined constexpr constructor, which
+      // can be invoked without emitting type info.
+      if (Ctor->isConstexpr() && !Ctor->isDeleted())
+        return false;
     }
     if (!Ctor->isDeleted())
-      return true;
+      HasNonDeletedCtor = true;
   }
-  return false;
+  return HasNonDeletedCtor;
 }
 
 static bool shouldOmitDefinition(llvm::codegenoptions::DebugInfoKind DebugKind,

@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
 ; Test case for https://github.com/llvm/llvm-project/issues/87378.
-define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64 %a, i64 %b, i64 %c) {
+define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64 %a, i64 %b, i64 %c) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @pr87378_vpinstruction_or_drop_poison_generating_flags(
 ; CHECK-SAME: ptr [[ARG:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:

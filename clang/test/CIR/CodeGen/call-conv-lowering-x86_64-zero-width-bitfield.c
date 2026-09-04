@@ -29,11 +29,10 @@ typedef struct { int x; unsigned : 0; }
     __attribute__((ms_struct, aligned(16))) MsTail;
 typedef union { int a; Mid m; } ZeroWidthUnion;
 
-// An initializer the lowering builds a member at a time writes the empty field
-// in place of the bit-field's element, since the field holds no bytes and is
-// not the declared type the element carries.  A relocatable and a `_BitInt`
-// both take that path, reached through an array element and a member record
-// as well.
+// An initializer the lowering builds a member at a time leaves out the
+// bit-field, since a member holding no bytes is no field of the lowered
+// struct.  A relocatable and a `_BitInt` both take that path, reached through
+// an array element and a member record as well.
 extern int arr[4];
 typedef struct { int *p; int : 0; int y; } InitPtr;
 InitPtr gInitPtr = {&arr[2], 5};
@@ -42,12 +41,13 @@ InitBitInt gInitBitInt = {3, 4};
 InitPtr gInitArr[2] = {{&arr[1], 1}, {&arr[2], 2}};
 typedef struct { InitPtr inner; int z; } InitNest;
 InitNest gInitNest = {{&arr[3], 7}, 9};
-// LLVM-CIR-DAG: @gInitPtr = global %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), [0 x i8] zeroinitializer, i32 5 }, align 8
+// The tail padding is where the two still part ways: CIR leaves it to the
+// record's alignment while classic codegen spells it out in an unnamed type.
+// LLVM-CIR-DAG: @gInitPtr = global %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), i32 5 }, align 8
 // LLVM-OGCG-DAG: @gInitPtr = global { ptr, i32, [4 x i8] } { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), i32 5, [4 x i8] zeroinitializer }, align 8
-// LLVM-CIR-DAG: @gInitBitInt = global %struct.InitBitInt { i8 3, [3 x i8] zeroinitializer, [0 x i8] zeroinitializer, i32 4 }, align 4
-// LLVM-OGCG-DAG: @gInitBitInt = global { i8, [3 x i8], i32 } { i8 3, [3 x i8] zeroinitializer, i32 4 }, align 4
-// LLVM-CIR-DAG: @gInitArr = global [2 x %struct.InitPtr] [%struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 4), [0 x i8] zeroinitializer, i32 1 }, %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), [0 x i8] zeroinitializer, i32 2 }], align 16
-// LLVM-CIR-DAG: @gInitNest = global %struct.InitNest { %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 12), [0 x i8] zeroinitializer, i32 7 }, i32 9 }, align 8
+// LLVM-DAG: @gInitBitInt = global {{.*}} { i8 3, [3 x i8] zeroinitializer, i32 4 }, align 4
+// LLVM-CIR-DAG: @gInitArr = global [2 x %struct.InitPtr] [%struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 4), i32 1 }, %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), i32 2 }], align 16
+// LLVM-CIR-DAG: @gInitNest = global %struct.InitNest { %struct.InitPtr { ptr getelementptr{{.*}}(i8, ptr @arr, i64 12), i32 7 }, i32 9 }, align 8
 
 // A flexible array member's field holds no bytes too, but it does have the
 // element's type, so it keeps its own initializer.
@@ -55,30 +55,30 @@ typedef struct { int *p; int fam[]; } FamRel;
 FamRel gFamRel = {&arr[2]};
 // LLVM-DAG: @gFamRel = global %struct.FamRel { ptr getelementptr{{.*}}(i8, ptr @arr, i64 8), [0 x i32] zeroinitializer }, align 8
 
-// CIR-DAG: !rec_Tail = !cir.struct<"Tail" {data !s32i, bitfield !cir.array<!u32i x 0>, pad !cir.array<!u8i x 12>}>
-// CIR-DAG: !rec_Mid = !cir.struct<"Mid" {data !s8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, data !s32i}>
-// CIR-DAG: !rec_Plain = !cir.struct<"Plain" {data !s32i, bitfield !cir.array<!s32i x 0>, data !s32i}>
-// CIR-DAG: !rec_Wide = !cir.struct<"Wide" {data !s8i, pad !cir.array<!u8i x 7>, bitfield !cir.array<!s64i x 0>, pad !cir.array<!u8i x 8>}>
-// CIR-DAG: !rec_Twice = !cir.struct<"Twice" {data !s8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, data !s16i, pad !cir.array<!u8i x 2>, bitfield !cir.array<!s32i x 0>}>
-// CIR-DAG: !rec_Adjacent = !cir.struct<"Adjacent" {data !s8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, pad !cir.array<!u8i x 4>, bitfield !cir.array<!s64i x 0>, data !s16i}>
-// CIR-DAG: !rec_AtStart = !cir.struct<"AtStart" {bitfield !cir.array<!s32i x 0>, data !s32i, pad !cir.array<!u8i x 12>}>
-// CIR-DAG: !rec_Pair = !cir.struct<"Pair" {data !s64i, data !s32i, bitfield !cir.array<!u32i x 0>}>
-// CIR-DAG: !rec_TooBig = !cir.struct<"TooBig" {data !s8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, data !cir.array<!s8i x 24>}>
-// CIR-DAG: !rec_AfterZeroWidth = !cir.struct<"AfterZeroWidth" {data !s8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, data !s64i}>
-// CIR-DAG: !rec_WiderThanRecord = !cir.struct<"WiderThanRecord" {data !s8i, pad !cir.array<!u8i x 7>, bitfield !cir.array<!s64i x 0>, data !s8i}>
-// CIR-DAG: !rec_Packed = !cir.struct<"Packed" {data !s8i, pad !cir.array<!u8i x 3>, bitfield !cir.array<!s32i x 0>, data !s32i}>
+// CIR-DAG: !rec_Tail = !cir.struct<"Tail" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>, pad !cir.array<!u8i x 12>}>
+// CIR-DAG: !rec_Mid = !cir.struct<"Mid" {data !s8i, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !s32i}>
+// CIR-DAG: !rec_Plain = !cir.struct<"Plain" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !s32i}>
+// CIR-DAG: !rec_Wide = !cir.struct<"Wide" {data !s8i, pad !cir.array<!u8i x 7>, empty !cir.bitfield<[#cir.bitfield_decl<!s64i, 0, unnamed>]>, pad !cir.array<!u8i x 8>}>
+// CIR-DAG: !rec_Twice = !cir.struct<"Twice" {data !s8i, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !s16i, pad !cir.array<!u8i x 2>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>}>
+// CIR-DAG: !rec_Adjacent = !cir.struct<"Adjacent" {data !s8i, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, pad !cir.array<!u8i x 4>, empty !cir.bitfield<[#cir.bitfield_decl<!s64i, 0, unnamed>]>, data !s16i}>
+// CIR-DAG: !rec_AtStart = !cir.struct<"AtStart" {empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !s32i, pad !cir.array<!u8i x 12>}>
+// CIR-DAG: !rec_Pair = !cir.struct<"Pair" {data !s64i, data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>}>
+// CIR-DAG: !rec_TooBig = !cir.struct<"TooBig" {data !s8i, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !cir.array<!s8i x 24>}>
+// CIR-DAG: !rec_AfterZeroWidth = !cir.struct<"AfterZeroWidth" {data !s8i, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !s64i}>
+// CIR-DAG: !rec_WiderThanRecord = !cir.struct<"WiderThanRecord" {data !s8i, pad !cir.array<!u8i x 7>, empty !cir.bitfield<[#cir.bitfield_decl<!s64i, 0, unnamed>]>, data !s8i}>
+// CIR-DAG: !rec_Packed = !cir.struct<"Packed" {data !s8i, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !s32i}>
 
 // The Microsoft layout builds bit-field runs on its own path.
-// CIR-DAG: !rec_MsTail = !cir.struct<"MsTail" {data !s32i, bitfield !cir.array<!u32i x 0>, pad !cir.array<!u8i x 12>}>
+// CIR-DAG: !rec_MsTail = !cir.struct<"MsTail" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>, pad !cir.array<!u8i x 12>}>
 
-// CIR-DAG: !rec_OnlyZeroWidth = !cir.struct<"OnlyZeroWidth" {bitfield !cir.array<!s32i x 0>}>
+// CIR-DAG: !rec_OnlyZeroWidth = !cir.struct<"OnlyZeroWidth" {empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>}>
 
 // An anonymous record reaches the same path under its generated name.
-// CIR-DAG: !rec_anon2E0 = !cir.struct<"anon.0" {data !s32i, bitfield !cir.array<!u32i x 0>, pad !cir.array<!u8i x 12>}>
+// CIR-DAG: !rec_anon2E0 = !cir.struct<"anon.0" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>, pad !cir.array<!u8i x 12>}>
 
 // A zero-length array under `data` is a flexible array member, which keeps
 // its alignment contribution.
-// CIR-DAG: !rec_ZeroWidthAndFam = !cir.struct<"ZeroWidthAndFam" {data !s32i, bitfield !cir.array<!s32i x 0>, data !cir.array<!s32i x 0>}>
+// CIR-DAG: !rec_ZeroWidthAndFam = !cir.struct<"ZeroWidthAndFam" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !cir.array<!s32i x 0>}>
 
 // CIR-DAG: !rec_NoZeroWidth = !cir.struct<"NoZeroWidth" {data !s32i, pad !cir.array<!u8i x 12>}>
 // CIR-DAG: !rec_NoZeroWidthPair = !cir.struct<"NoZeroWidthPair" {data !s8i, data !s64i}>
@@ -88,16 +88,15 @@ FamRel gFamRel = {&arr[2]};
 // The alias number depends on emission order, so bind it by content.
 // CIR-DAG: ![[PAIR_RET:rec_anon_struct[0-9]*]] = !cir.struct<{data !s64i, data !u64i}>
 
-// The lowered member carries no type.  The declared type would make
-// `WiderThanRecord` eight-byte aligned where the source says one.
-// LLVM-CIR-DAG: %struct.Tail = type { i32, [0 x i8], [12 x i8] }
-// LLVM-OGCG-DAG: %struct.Tail = type { i32, [12 x i8] }
-// LLVM-CIR-DAG: %struct.Mid = type { i8, [3 x i8], [0 x i8], i32 }
+// A bit-field holding no bytes leaves no field behind, so the lowered structs
+// agree wherever the padding around them is spelled the same way.  Where they
+// differ it is only over padding: CIR keeps each run of it as its own member.
+// LLVM-DAG: %struct.Tail = type { i32, [12 x i8] }
+// LLVM-CIR-DAG: %struct.Mid = type { i8, [3 x i8], i32 }
 // LLVM-OGCG-DAG: %struct.Mid = type { i8, i32 }
-// LLVM-CIR-DAG: %struct.Wide = type { i8, [7 x i8], [0 x i8], [8 x i8] }
+// LLVM-CIR-DAG: %struct.Wide = type { i8, [7 x i8], [8 x i8] }
 // LLVM-OGCG-DAG: %struct.Wide = type { i8, [15 x i8] }
-// LLVM-CIR-DAG: %struct.WiderThanRecord = type { i8, [7 x i8], [0 x i8], i8 }
-// LLVM-OGCG-DAG: %struct.WiderThanRecord = type { i8, [7 x i8], i8 }
+// LLVM-DAG: %struct.WiderThanRecord = type { i8, [7 x i8], i8 }
 
 // The bit-field extends the eightbyte's user data past `x`, so it stays i64
 // instead of narrowing to i32 the way the same over-aligned shape does without

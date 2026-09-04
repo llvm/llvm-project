@@ -11,27 +11,27 @@ void acc_data(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: acc.enter_data dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data copyin(readonly, alwaysin: parmVar)
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = "readonly,alwaysin"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = [readonly,alwaysin]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data copyin(readonly, alwaysin: parmVar) async
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async structured(false) name("parmVar") <modifiers = "readonly,alwaysin"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async structured(false) name("parmVar") <modifiers = [readonly,alwaysin]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data async dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data async copyin(readonly, alwaysin: parmVar)
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async structured(false) name("parmVar") <modifiers = "readonly,alwaysin"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async structured(false) name("parmVar") <modifiers = [readonly,alwaysin]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data async dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data copyin(readonly, alwaysin: parmVar) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) structured(false) name("parmVar") <modifiers = "readonly,alwaysin"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) structured(false) name("parmVar") <modifiers = [readonly,alwaysin]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data async(%[[PARM_CAST]] : si32) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data async(parmVar) copyin(readonly, alwaysin: parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) structured(false) name("parmVar") <modifiers = "readonly,alwaysin"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) structured(false) name("parmVar") <modifiers = [readonly,alwaysin]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data async(%[[PARM_CAST]] : si32) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data create(parmVar)
@@ -39,17 +39,17 @@ void acc_data(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: acc.enter_data dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data create(zero: parmVar)
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = zero> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = [zero]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data create(zero: parmVar) async
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) async structured(false) name("parmVar") <modifiers = zero> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) async structured(false) name("parmVar") <modifiers = [zero]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data async dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data create(zero: parmVar) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) structured(false) name("parmVar") <modifiers = zero> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) structured(false) name("parmVar") <modifiers = [zero]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.enter_data async(%[[PARM_CAST]] : si32) dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>)
 
 #pragma acc enter data attach(ptrParmVar)
