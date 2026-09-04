@@ -1188,7 +1188,7 @@ bool AArch64CallLowering::lowerTailCall(
 
     MIB.addImm(IntDisc);
     MIB.addUse(AddrDisc);
-    if (AddrDisc != AArch64::NoRegister) {
+    if (AddrDisc.isValid()) {
       MIB->getOperand(4).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
           *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(),
@@ -1463,7 +1463,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     MIB.addImm(IntDisc);
     MIB.addUse(AddrDisc);
-    if (AddrDisc != AArch64::NoRegister) {
+    if (AddrDisc.isValid()) {
       constrainOperandRegClass(MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
                                *MF.getSubtarget().getRegBankInfo(), *MIB,
                                MIB->getDesc(), MIB->getOperand(CalleeOpNo + 3),
