@@ -39,6 +39,7 @@ static_library("Checkers") {
     "ChrootChecker.cpp",
     "CloneChecker.cpp",
     "ContainerModeling.cpp",
+    "ContainerOfModeling.cpp",
     "ConversionChecker.cpp",
     "DanglingPtrDeref.cpp",
     "DeadStoresChecker.cpp",
