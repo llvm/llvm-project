@@ -52,6 +52,9 @@ void ClangExternalASTSourceCallbacks::FindExternalLexicalDecls(
 bool ClangExternalASTSourceCallbacks::FindExternalVisibleDeclsByName(
     const clang::DeclContext *DC, clang::DeclarationName Name,
     const clang::DeclContext *OriginalDC) {
+  // Unlike the callbacks above this one touches the AST directly instead of
+  // going through a TypeSystemClang entry point, so it takes the lock itself.
+  std::lock_guard<std::recursive_mutex> guard(m_ast.GetMutex());
   llvm::SmallVector<clang::NamedDecl *, 4> decls;
   // Objective-C methods are not added into the LookupPtr when they originate
   // from an external source. SetExternalVisibleDeclsForName() adds them.
@@ -66,6 +69,7 @@ bool ClangExternalASTSourceCallbacks::FindExternalVisibleDeclsByName(
 
 OptionalClangModuleID
 ClangExternalASTSourceCallbacks::RegisterModule(clang::Module *module) {
+  std::lock_guard<std::recursive_mutex> guard(m_ast.GetMutex());
   m_modules.push_back(module);
   unsigned id = m_modules.size();
   m_ids.insert({module, id});
@@ -80,6 +84,7 @@ ClangExternalASTSourceCallbacks::getSourceDescriptor(unsigned id) {
 }
 
 clang::Module *ClangExternalASTSourceCallbacks::getModule(unsigned id) {
+  std::lock_guard<std::recursive_mutex> guard(m_ast.GetMutex());
   if (id && id <= m_modules.size())
     return m_modules[id - 1];
   return nullptr;
@@ -87,5 +92,6 @@ clang::Module *ClangExternalASTSourceCallbacks::getModule(unsigned id) {
 
 OptionalClangModuleID
 ClangExternalASTSourceCallbacks::GetIDForModule(clang::Module *module) {
+  std::lock_guard<std::recursive_mutex> guard(m_ast.GetMutex());
   return OptionalClangModuleID(m_ids[module]);
 }

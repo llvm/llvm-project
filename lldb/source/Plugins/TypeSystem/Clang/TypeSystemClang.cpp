@@ -548,7 +548,13 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
   if (module) {
     std::string ast_name =
         "ASTContext for '" + module->GetFileSpec().GetPath() + "'";
-    return std::make_shared<TypeSystemClang>(ast_name, triple);
+    auto type_system = std::make_shared<TypeSystemClang>(ast_name, triple);
+    // This ASTContext is filled in by the Module's SymbolFile, which does that
+    // while holding the Module's lock. Guard the ASTContext with that same lock
+    // so that parsing types into it and completing types from it can't deadlock
+    // each other. See TypeSystemClang::GetMutex().
+    type_system->SetSharedMutex(module->GetMutex());
+    return type_system;
   } else if (target && target->IsValid())
     return std::make_shared<ScratchTypeSystemClang>(*target, triple);
   return lldb::TypeSystemSP();
@@ -595,6 +601,7 @@ void TypeSystemClang::Terminate() {
 }
 
 void TypeSystemClang::Finalize() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   assert(m_ast_up);
   GetASTMap().Erase(m_ast_up.get());
   if (!m_ast_owned)
@@ -611,6 +618,7 @@ void TypeSystemClang::Finalize() {
 }
 
 void TypeSystemClang::setSema(Sema *s) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // Ensure that the new sema actually belongs to our ASTContext.
   assert(s == nullptr || &s->getASTContext() == m_ast_up.get());
   m_sema = s;
@@ -621,11 +629,13 @@ const char *TypeSystemClang::GetTargetTriple() {
 }
 
 void TypeSystemClang::SetTargetTriple(llvm::StringRef target_triple) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   m_target_triple = target_triple.str();
 }
 
 void TypeSystemClang::SetExternalSource(
     llvm::IntrusiveRefCntPtr<ExternalASTSource> ast_source_sp) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
   ast.getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
   ast.setExternalSource(std::move(ast_source_sp));
@@ -659,6 +669,7 @@ private:
 };
 
 void TypeSystemClang::CreateASTContext() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   assert(!m_ast_up);
   m_ast_owned = true;
 
@@ -755,6 +766,7 @@ static inline bool QualTypeMatchesBitSize(const uint64_t bit_size,
 CompilerType
 TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
                                                      size_t bit_size) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
 
   if (!ast.VoidPtrTy)
@@ -893,6 +905,7 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
 }
 
 uint32_t TypeSystemClang::GetPointerByteSize() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (m_pointer_byte_size != 0)
     return m_pointer_byte_size;
   auto size_or_err =
@@ -906,6 +919,7 @@ uint32_t TypeSystemClang::GetPointerByteSize() {
 }
 
 CompilerType TypeSystemClang::GetBasicType(lldb::BasicType basic_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::ASTContext &ast = getASTContext();
 
   lldb::opaque_compiler_type_t clang_type =
@@ -918,6 +932,7 @@ CompilerType TypeSystemClang::GetBasicType(lldb::BasicType basic_type) {
 
 CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     llvm::StringRef type_name, uint32_t dw_ate, uint32_t bit_size) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
 
   if (!ast.VoidPtrTy)
@@ -1157,6 +1172,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
 }
 
 CompilerType TypeSystemClang::GetCStringType(bool is_const) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
   QualType char_type(ast.CharTy);
 
@@ -1187,6 +1203,7 @@ bool TypeSystemClang::AreTypesSame(CompilerType type1, CompilerType type2,
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!opaque_decl)
     return CompilerType();
 
@@ -1197,12 +1214,14 @@ CompilerType TypeSystemClang::GetTypeForDecl(void *opaque_decl) {
 }
 
 CompilerDeclContext TypeSystemClang::CreateDeclContext(DeclContext *ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // Check that the DeclContext actually belongs to this ASTContext.
   assert(&ctx->getParentASTContext() == &getASTContext());
   return CompilerDeclContext(this, ctx);
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(clang::NamedDecl *decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (clang::ObjCInterfaceDecl *interface_decl =
       llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl))
     return GetTypeForDecl(interface_decl);
@@ -1214,14 +1233,17 @@ CompilerType TypeSystemClang::GetTypeForDecl(clang::NamedDecl *decl) {
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(TagDecl *decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return GetType(getASTContext().getCanonicalTagType(decl));
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(ObjCInterfaceDecl *decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return GetType(getASTContext().getObjCInterfaceType(decl));
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(clang::ValueDecl *value_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return GetType(value_decl->getType());
 }
 
@@ -1241,6 +1263,7 @@ OptionalClangModuleID
 TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
                                         OptionalClangModuleID parent,
                                         bool is_framework, bool is_explicit) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // Get the external AST source which holds the modules.
   auto *ast_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
       getASTContext().getExternalSource());
@@ -1277,6 +1300,7 @@ CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     llvm::StringRef name, int kind, LanguageType language,
     std::optional<ClangASTMetadata> metadata, bool exports_symbols) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
 
   if (decl_ctx == nullptr)
@@ -1453,6 +1477,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
 void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
     FunctionDecl *func_decl, clang::FunctionTemplateDecl *func_tmpl_decl,
     const TemplateParameterInfos &infos) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   TemplateArgumentList *template_args_ptr = TemplateArgumentList::CreateCopy(
       func_decl->getASTContext(), infos.GetArgs());
 
@@ -1631,6 +1656,7 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
 
 TemplateTemplateParmDecl *
 TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
 
   auto *decl_ctx = ast.getTranslationUnitDecl();
@@ -1661,6 +1687,7 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     ClassTemplateDecl *class_template_decl, int kind,
     const TemplateParameterInfos &template_param_infos) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
   llvm::SmallVector<clang::TemplateArgument, 2> args(
       template_param_infos.Size() +
@@ -1704,6 +1731,7 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
 
 CompilerType TypeSystemClang::CreateClassTemplateSpecializationType(
     ClassTemplateSpecializationDecl *class_template_specialization_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (class_template_specialization_decl) {
     ASTContext &ast = getASTContext();
     return GetType(ast.getCanonicalTagType(class_template_specialization_decl));
@@ -1757,6 +1785,7 @@ bool TypeSystemClang::CheckOverloadedOperatorKindParameterCount(
 
 bool TypeSystemClang::FieldIsBitfield(FieldDecl *field,
                                       uint32_t &bitfield_bit_size) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
   if (field == nullptr)
     return false;
@@ -1775,6 +1804,7 @@ bool TypeSystemClang::FieldIsBitfield(FieldDecl *field,
 }
 
 bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (record_decl == nullptr)
     return false;
 
@@ -1814,6 +1844,7 @@ CompilerType TypeSystemClang::CreateObjCClass(
     llvm::StringRef name, clang::DeclContext *decl_ctx,
     OptionalClangModuleID owning_module, bool isInternal,
     std::optional<ClangASTMetadata> metadata) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ASTContext &ast = getASTContext();
   assert(!name.empty());
   if (!decl_ctx)
@@ -1833,12 +1864,14 @@ CompilerType TypeSystemClang::CreateObjCClass(
 }
 
 bool TypeSystemClang::BaseSpecifierIsEmpty(const CXXBaseSpecifier *b) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return !TypeSystemClang::RecordHasFields(b->getType()->getAsCXXRecordDecl());
 }
 
 uint32_t
 TypeSystemClang::GetNumBaseClasses(const CXXRecordDecl *cxx_record_decl,
                                    bool omit_empty_base_classes) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   uint32_t num_bases = 0;
   if (cxx_record_decl) {
     if (omit_empty_base_classes) {
@@ -1925,6 +1958,7 @@ NamespaceDecl *TypeSystemClang::GetUniqueNamespaceDeclaration(
 clang::BlockDecl *
 TypeSystemClang::CreateBlockDeclaration(clang::DeclContext *ctx,
                                         OptionalClangModuleID owning_module) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (ctx) {
     clang::BlockDecl *decl =
         clang::BlockDecl::CreateDeserialized(getASTContext(), GlobalDeclID());
@@ -1975,6 +2009,7 @@ clang::UsingDecl *
 TypeSystemClang::CreateUsingDeclaration(clang::DeclContext *current_decl_ctx,
                                         OptionalClangModuleID owning_module,
                                         clang::NamedDecl *target) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (current_decl_ctx && target) {
     clang::UsingDecl *using_decl = clang::UsingDecl::Create(
         getASTContext(), current_decl_ctx, clang::SourceLocation(),
@@ -2089,6 +2124,7 @@ TypeSystemClang::GetOpaqueCompilerType(clang::ASTContext *ast,
 clang::DeclarationName
 TypeSystemClang::GetDeclarationName(llvm::StringRef name,
                                     const CompilerType &function_clang_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::OverloadedOperatorKind op_kind = clang::NUM_OVERLOADED_OPERATORS;
   if (!IsOperator(name, op_kind) || op_kind == clang::NUM_OVERLOADED_OPERATORS)
     return DeclarationName(&getASTContext().Idents.get(
@@ -2114,6 +2150,7 @@ TypeSystemClang::GetDeclarationName(llvm::StringRef name,
 }
 
 PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
   printing_policy.SuppressTagKeyword = true;
   // Inline namespaces are important for some type formatters (e.g., libc++
@@ -2138,6 +2175,7 @@ PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
 
 std::string TypeSystemClang::GetTypeNameForDecl(const NamedDecl *named_decl,
                                                 bool qualified) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::PrintingPolicy printing_policy = GetTypePrintingPolicy();
   std::string result;
   llvm::raw_string_ostream os(result);
@@ -2195,6 +2233,7 @@ CompilerType TypeSystemClang::CreateFunctionType(
     const CompilerType &result_type, llvm::ArrayRef<CompilerType> args,
     bool is_variadic, unsigned type_quals, clang::CallingConv cc,
     clang::RefQualifierKind ref_qual) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!result_type || !ClangUtil::IsClangType(result_type))
     return CompilerType(); // invalid return type
 
@@ -2246,6 +2285,7 @@ ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
 
 CompilerType
 TypeSystemClang::CreateBlockPointerType(const CompilerType &function_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   QualType block_type = m_ast_up->getBlockPointerType(
       clang::QualType::getFromOpaquePtr(function_type.GetOpaqueQualType()));
 
@@ -2258,6 +2298,7 @@ CompilerType
 TypeSystemClang::CreateArrayType(const CompilerType &element_type,
                                  std::optional<size_t> element_count,
                                  bool is_vector) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!element_type.IsValid())
     return {};
 
@@ -2286,6 +2327,7 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   CompilerType type;
   if (!type_name.empty() && (type = GetTypeForIdentifier<clang::CXXRecordDecl>(
                                  getASTContext(), type_name))
@@ -2311,6 +2353,7 @@ CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   CompilerType type;
   if ((type = GetTypeForIdentifier<clang::CXXRecordDecl>(getASTContext(),
                                                          type_name))
@@ -2327,6 +2370,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
     OptionalClangModuleID owning_module, const Declaration &decl,
     const CompilerType &integer_clang_type, bool is_scoped,
     std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // TODO: Do something intelligent with the Declaration object passed in
   // like maybe filling in the SourceLocation with it...
   ASTContext &ast = getASTContext();
@@ -2358,6 +2402,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
 
 CompilerType TypeSystemClang::GetIntTypeFromBitSize(size_t bit_size,
                                                     bool is_signed) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::ASTContext &ast = getASTContext();
 
   if (!ast.VoidPtrTy)
@@ -2404,6 +2449,7 @@ CompilerType TypeSystemClang::GetIntTypeFromBitSize(size_t bit_size,
 }
 
 CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!getASTContext().VoidPtrTy)
     return {};
 
@@ -2412,6 +2458,7 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
 }
 
 CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // Check if builtin types are initialized.
   if (!getASTContext().VoidPtrTy)
     return {};
@@ -2506,6 +2553,7 @@ bool TypeSystemClang::GetCompleteDecl(clang::ASTContext *ast,
 
 void TypeSystemClang::SetMetadataAsUserID(const clang::Decl *decl,
                                           user_id_t user_id) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ClangASTMetadata meta_data;
   meta_data.SetUserID(user_id);
   SetMetadata(decl, meta_data);
@@ -2513,6 +2561,7 @@ void TypeSystemClang::SetMetadataAsUserID(const clang::Decl *decl,
 
 void TypeSystemClang::SetMetadataAsUserID(const clang::Type *type,
                                           user_id_t user_id) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ClangASTMetadata meta_data;
   meta_data.SetUserID(user_id);
   SetMetadata(type, meta_data);
@@ -2520,16 +2569,19 @@ void TypeSystemClang::SetMetadataAsUserID(const clang::Type *type,
 
 void TypeSystemClang::SetMetadata(const clang::Decl *object,
                                   ClangASTMetadata metadata) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   m_decl_metadata[object] = metadata;
 }
 
 void TypeSystemClang::SetMetadata(const clang::Type *object,
                                   ClangASTMetadata metadata) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   m_type_metadata[object] = metadata;
 }
 
 std::optional<ClangASTMetadata>
 TypeSystemClang::GetMetadata(const clang::Decl *object) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto It = m_decl_metadata.find(object);
   if (It != m_decl_metadata.end())
     return It->second;
@@ -2539,6 +2591,7 @@ TypeSystemClang::GetMetadata(const clang::Decl *object) {
 
 std::optional<ClangASTMetadata>
 TypeSystemClang::GetMetadata(const clang::Type *object) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto It = m_type_metadata.find(object);
   if (It != m_type_metadata.end())
     return It->second;
@@ -2553,6 +2606,7 @@ TypeSystemClang::GetDeclContextForType(const CompilerType &type) {
 
 CompilerDeclContext
 TypeSystemClang::GetCompilerDeclContextForType(const CompilerType &type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (auto *decl_context = GetDeclContextForType(type))
     return CreateDeclContext(decl_context);
   return CompilerDeclContext();
@@ -2790,11 +2844,13 @@ static bool GetCompleteQualType(const clang::ASTContext *ast,
 
 #ifndef NDEBUG
 bool TypeSystemClang::Verify(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return !type || llvm::isa<clang::Type>(GetQualType(type).getTypePtr());
 }
 #endif
 
 bool TypeSystemClang::IsAggregateType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type(RemoveWrappingTypes(GetCanonicalQualType(type)));
 
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -2816,6 +2872,7 @@ bool TypeSystemClang::IsAggregateType(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::IsAnonymousType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type(RemoveWrappingTypes(GetCanonicalQualType(type)));
 
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -2840,6 +2897,7 @@ bool TypeSystemClang::IsAnonymousType(lldb::opaque_compiler_type_t type) {
 bool TypeSystemClang::IsArrayType(lldb::opaque_compiler_type_t type,
                                   CompilerType *element_type_ptr,
                                   uint64_t *size, bool *is_incomplete) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type(RemoveWrappingTypes(GetCanonicalQualType(type)));
 
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -2909,6 +2967,7 @@ bool TypeSystemClang::IsArrayType(lldb::opaque_compiler_type_t type,
 
 bool TypeSystemClang::IsVectorType(lldb::opaque_compiler_type_t type,
                                    CompilerType *element_type, uint64_t *size) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type(GetCanonicalQualType(type));
 
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -2945,6 +3004,7 @@ bool TypeSystemClang::IsVectorType(lldb::opaque_compiler_type_t type,
 
 bool TypeSystemClang::IsRuntimeGeneratedType(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::DeclContext *decl_ctx = GetDeclContextForType(GetQualType(type));
   if (!decl_ctx)
     return false;
@@ -2963,10 +3023,12 @@ bool TypeSystemClang::IsRuntimeGeneratedType(
 }
 
 bool TypeSystemClang::IsCharType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return GetQualType(type).getUnqualifiedType()->isCharType();
 }
 
 bool TypeSystemClang::IsCompleteType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // If the type hasn't been lazily completed yet, complete it now so that we
   // can give the caller an accurate answer whether the type actually has a
   // definition. Without completing the type now we would just tell the user
@@ -2976,11 +3038,13 @@ bool TypeSystemClang::IsCompleteType(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::IsConst(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return GetQualType(type).isConstQualified();
 }
 
 bool TypeSystemClang::IsCStringType(lldb::opaque_compiler_type_t type,
                                     uint32_t &length) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   CompilerType pointee_or_element_clang_type;
   length = 0;
   Flags type_flags(GetTypeInfo(type, &pointee_or_element_clang_type));
@@ -3005,6 +3069,7 @@ bool TypeSystemClang::IsCStringType(lldb::opaque_compiler_type_t type,
 }
 
 unsigned TypeSystemClang::GetPtrAuthKey(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     if (auto pointer_auth = qual_type.getPointerAuth())
@@ -3015,6 +3080,7 @@ unsigned TypeSystemClang::GetPtrAuthKey(lldb::opaque_compiler_type_t type) {
 
 unsigned
 TypeSystemClang::GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     if (auto pointer_auth = qual_type.getPointerAuth())
@@ -3025,6 +3091,7 @@ TypeSystemClang::GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) {
 
 bool TypeSystemClang::GetPtrAuthAddressDiversity(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     if (auto pointer_auth = qual_type.getPointerAuth())
@@ -3034,6 +3101,7 @@ bool TypeSystemClang::GetPtrAuthAddressDiversity(
 }
 
 bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto isFunctionType = [&](clang::QualType qual_type) {
     return qual_type->isFunctionType();
   };
@@ -3045,6 +3113,7 @@ bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type) {
 uint32_t
 TypeSystemClang::IsHomogeneousAggregate(lldb::opaque_compiler_type_t type,
                                         CompilerType *base_type_ptr) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return 0;
 
@@ -3127,6 +3196,7 @@ TypeSystemClang::IsHomogeneousAggregate(lldb::opaque_compiler_type_t type,
 
 size_t TypeSystemClang::GetNumberOfFunctionArguments(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     const clang::FunctionProtoType *func =
@@ -3140,6 +3210,7 @@ size_t TypeSystemClang::GetNumberOfFunctionArguments(
 CompilerType
 TypeSystemClang::GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
                                             const size_t index) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetQualType(type));
     const clang::FunctionProtoType *func =
@@ -3155,6 +3226,7 @@ TypeSystemClang::GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type,
 bool TypeSystemClang::IsTypeImpl(
     lldb::opaque_compiler_type_t type,
     llvm::function_ref<bool(clang::QualType)> predicate) const {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
@@ -3180,6 +3252,7 @@ bool TypeSystemClang::IsTypeImpl(
 
 bool TypeSystemClang::IsMemberFunctionPointerType(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto isMemberFunctionPointerType = [](clang::QualType qual_type) {
     return qual_type->isMemberFunctionPointerType();
   };
@@ -3189,6 +3262,7 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
 
 bool TypeSystemClang::IsMemberDataPointerType(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto isMemberDataPointerType = [](clang::QualType qual_type) {
     return qual_type->isMemberDataPointerType();
   };
@@ -3197,6 +3271,7 @@ bool TypeSystemClang::IsMemberDataPointerType(
 }
 
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto isFunctionPointerType = [](clang::QualType qual_type) {
     return qual_type->isFunctionPointerType();
   };
@@ -3207,6 +3282,7 @@ bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
 bool TypeSystemClang::IsBlockPointerType(
     lldb::opaque_compiler_type_t type,
     CompilerType *function_pointer_type_ptr) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto isBlockPointerType = [&](clang::QualType qual_type) {
     if (qual_type->isBlockPointerType()) {
       if (function_pointer_type_ptr) {
@@ -3228,6 +3304,7 @@ bool TypeSystemClang::IsBlockPointerType(
 
 bool TypeSystemClang::IsIntegerType(lldb::opaque_compiler_type_t type,
                                     bool &is_signed) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
 
@@ -3248,6 +3325,7 @@ bool TypeSystemClang::IsIntegerType(lldb::opaque_compiler_type_t type,
 
 bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
                                         bool &is_signed) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     const clang::EnumType *enum_type = llvm::dyn_cast<clang::EnumType>(
         GetCanonicalQualType(type)->getCanonicalTypeInternal());
@@ -3263,6 +3341,7 @@ bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
 
 bool TypeSystemClang::IsScopedEnumerationType(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     const clang::EnumType *enum_type = llvm::dyn_cast<clang::EnumType>(
         GetCanonicalQualType(type)->getCanonicalTypeInternal());
@@ -3277,6 +3356,7 @@ bool TypeSystemClang::IsScopedEnumerationType(
 
 bool TypeSystemClang::IsPointerType(lldb::opaque_compiler_type_t type,
                                     CompilerType *pointee_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3330,6 +3410,7 @@ bool TypeSystemClang::IsPointerType(lldb::opaque_compiler_type_t type,
 
 bool TypeSystemClang::IsPointerOrReferenceType(
     lldb::opaque_compiler_type_t type, CompilerType *pointee_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3398,6 +3479,7 @@ bool TypeSystemClang::IsPointerOrReferenceType(
 bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
                                       CompilerType *pointee_type,
                                       bool *is_rvalue) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3432,6 +3514,7 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
 
@@ -3443,6 +3526,7 @@ bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::IsDefined(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
 
@@ -3503,6 +3587,7 @@ bool TypeSystemClang::IsEnumType(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::IsPolymorphicClass(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3532,6 +3617,7 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                             CompilerType *dynamic_pointee_type,
                                             bool check_cplusplus,
                                             bool check_objc) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (dynamic_pointee_type)
     dynamic_pointee_type->Clear();
   if (!type)
@@ -3642,6 +3728,7 @@ bool TypeSystemClang::IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsScalarType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
 
@@ -3649,6 +3736,7 @@ bool TypeSystemClang::IsScalarType(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::IsTypedefType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   return RemoveWrappingTypes(GetQualType(type), {clang::Type::Typedef})
@@ -3656,6 +3744,7 @@ bool TypeSystemClang::IsTypedefType(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   return GetCanonicalQualType(type)->isVoidType();
@@ -3663,12 +3752,14 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
 
 bool TypeSystemClang::HasPointerAuthQualifier(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
     return record_decl->canPassInRegisters();
@@ -3677,6 +3768,7 @@ bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
 }
 
 bool TypeSystemClang::SupportsLanguage(lldb::LanguageType language) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return TypeSystemClangSupportsLanguage(language);
 }
 
@@ -3705,6 +3797,7 @@ bool TypeSystemClang::IsCXXClassType(const CompilerType &type) {
 }
 
 bool TypeSystemClang::IsBeingDefined(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   clang::QualType qual_type(GetCanonicalQualType(type));
@@ -3745,6 +3838,7 @@ bool TypeSystemClang::IsObjCObjectPointerType(const CompilerType &type,
 // Type Completion
 
 bool TypeSystemClang::GetCompleteType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   return GetCompleteQualType(&getASTContext(), GetQualType(type));
@@ -3752,6 +3846,7 @@ bool TypeSystemClang::GetCompleteType(lldb::opaque_compiler_type_t type) {
 
 ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type,
                                          bool base_only) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return ConstString();
 
@@ -3784,6 +3879,7 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type,
 
 ConstString
 TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return ConstString();
 
@@ -3800,6 +3896,7 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
 uint32_t
 TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
                              CompilerType *pointee_or_element_clang_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return 0;
 
@@ -4013,6 +4110,7 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
 
 lldb::LanguageType
 TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return lldb::eLanguageTypeC;
 
@@ -4097,6 +4195,7 @@ TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
 
 lldb::TypeClass
 TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return lldb::eTypeClassInvalid;
 
@@ -4243,6 +4342,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
 }
 
 unsigned TypeSystemClang::GetTypeQualifiers(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return GetQualType(type).getQualifiers().getCVRQualifiers();
   return 0;
@@ -4253,6 +4353,7 @@ unsigned TypeSystemClang::GetTypeQualifiers(lldb::opaque_compiler_type_t type) {
 CompilerType
 TypeSystemClang::GetArrayElementType(lldb::opaque_compiler_type_t type,
                                      ExecutionContextScope *exe_scope) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetQualType(type));
 
@@ -4269,6 +4370,7 @@ TypeSystemClang::GetArrayElementType(lldb::opaque_compiler_type_t type,
 
 CompilerType TypeSystemClang::GetArrayType(lldb::opaque_compiler_type_t type,
                                            uint64_t size) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     clang::ASTContext &ast_ctx = getASTContext();
@@ -4286,6 +4388,7 @@ CompilerType TypeSystemClang::GetArrayType(lldb::opaque_compiler_type_t type,
 
 CompilerType
 TypeSystemClang::GetCanonicalType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return GetType(GetCanonicalQualType(type));
   return CompilerType();
@@ -4312,6 +4415,7 @@ static clang::QualType GetFullyUnqualifiedType_Impl(clang::ASTContext *ast,
 
 CompilerType
 TypeSystemClang::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return GetType(
         GetFullyUnqualifiedType_Impl(&getASTContext(), GetQualType(type)));
@@ -4320,6 +4424,7 @@ TypeSystemClang::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return GetEnumerationIntegerType(GetType(GetCanonicalQualType(type)));
   return CompilerType();
@@ -4327,6 +4432,7 @@ TypeSystemClang::GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) {
 
 int TypeSystemClang::GetFunctionArgumentCount(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     const clang::FunctionProtoType *func =
         llvm::dyn_cast<clang::FunctionProtoType>(GetCanonicalQualType(type));
@@ -4338,6 +4444,7 @@ int TypeSystemClang::GetFunctionArgumentCount(
 
 CompilerType TypeSystemClang::GetFunctionArgumentTypeAtIndex(
     lldb::opaque_compiler_type_t type, size_t idx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     const clang::FunctionProtoType *func =
         llvm::dyn_cast<clang::FunctionProtoType>(GetQualType(type));
@@ -4352,6 +4459,7 @@ CompilerType TypeSystemClang::GetFunctionArgumentTypeAtIndex(
 
 CompilerType
 TypeSystemClang::GetFunctionReturnType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetQualType(type));
     const clang::FunctionProtoType *func =
@@ -4364,6 +4472,7 @@ TypeSystemClang::GetFunctionReturnType(lldb::opaque_compiler_type_t type) {
 
 size_t
 TypeSystemClang::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   size_t num_functions = 0;
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
@@ -4418,6 +4527,7 @@ TypeSystemClang::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
 TypeMemberFunctionImpl
 TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
                                           size_t idx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   std::string name;
   MemberFunctionKind kind(MemberFunctionKind::eMemberFunctionKindUnknown);
   CompilerType clang_type;
@@ -4528,6 +4638,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
 
 CompilerType
 TypeSystemClang::GetNonReferenceType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return GetType(GetQualType(type).getNonReferenceType());
   return CompilerType();
@@ -4535,6 +4646,7 @@ TypeSystemClang::GetNonReferenceType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::GetPointeeType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetQualType(type));
     return GetType(qual_type.getTypePtr()->getPointeeType());
@@ -4544,6 +4656,7 @@ TypeSystemClang::GetPointeeType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::GetPointerType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetQualType(type));
 
@@ -4561,6 +4674,7 @@ TypeSystemClang::GetPointerType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::GetLValueReferenceType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return GetType(getASTContext().getLValueReferenceType(GetQualType(type)));
   else
@@ -4569,6 +4683,7 @@ TypeSystemClang::GetLValueReferenceType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::GetRValueReferenceType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return GetType(getASTContext().getRValueReferenceType(GetQualType(type)));
   else
@@ -4576,6 +4691,7 @@ TypeSystemClang::GetRValueReferenceType(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType TypeSystemClang::GetAtomicType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return CompilerType();
   return GetType(getASTContext().getAtomicType(GetQualType(type)));
@@ -4583,6 +4699,7 @@ CompilerType TypeSystemClang::GetAtomicType(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::AddConstModifier(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType result(GetQualType(type));
     result.addConst();
@@ -4594,6 +4711,7 @@ TypeSystemClang::AddConstModifier(lldb::opaque_compiler_type_t type) {
 CompilerType
 TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                     uint32_t payload) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::ASTContext &clang_ast = getASTContext();
     auto pauth = PointerAuthQualifier::fromOpaqueValue(payload);
@@ -4606,6 +4724,7 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 
 CompilerType
 TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType result(GetQualType(type));
     result.addVolatile();
@@ -4616,6 +4735,7 @@ TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
 
 CompilerType
 TypeSystemClang::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType result(GetQualType(type));
     result.addRestrict();
@@ -4627,6 +4747,7 @@ TypeSystemClang::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
 CompilerType TypeSystemClang::CreateTypedef(
     lldb::opaque_compiler_type_t type, const char *typedef_name,
     const CompilerDeclContext &compiler_decl_ctx, uint32_t payload) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type && typedef_name && typedef_name[0]) {
     clang::ASTContext &clang_ast = getASTContext();
     clang::QualType qual_type(GetQualType(type));
@@ -4671,6 +4792,7 @@ CompilerType TypeSystemClang::CreateTypedef(
 
 CompilerType
 TypeSystemClang::GetTypedefedType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     const clang::TypedefType *typedef_type = llvm::dyn_cast<clang::TypedefType>(
         RemoveWrappingTypes(GetQualType(type), {clang::Type::Typedef}));
@@ -4683,10 +4805,12 @@ TypeSystemClang::GetTypedefedType(lldb::opaque_compiler_type_t type) {
 // Create related types using the current type's AST
 
 CompilerType TypeSystemClang::GetBasicTypeFromAST(lldb::BasicType basic_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return TypeSystemClang::GetBasicType(basic_type);
 }
 
 CompilerType TypeSystemClang::CreateGenericFunctionPrototype() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::ASTContext &ast = getASTContext();
   const FunctionType::ExtInfo generic_ext_info(
     /*noReturn=*/false,
@@ -4704,6 +4828,7 @@ CompilerType TypeSystemClang::CreateGenericFunctionPrototype() {
 
 const llvm::fltSemantics &
 TypeSystemClang::GetFloatTypeSemantics(size_t byte_size, lldb::Format format) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::ASTContext &ast = getASTContext();
   const size_t bit_size = byte_size * 8;
   if (bit_size == ast.getTypeSize(ast.FloatTy))
@@ -4727,6 +4852,7 @@ TypeSystemClang::GetFloatTypeSemantics(size_t byte_size, lldb::Format format) {
 llvm::Expected<uint64_t>
 TypeSystemClang::GetObjCBitSize(QualType qual_type,
                                 ExecutionContextScope *exe_scope) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   assert(qual_type->isObjCObjectOrInterfaceType());
   ExecutionContext exe_ctx(exe_scope);
   if (Process *process = exe_ctx.GetProcessPtr()) {
@@ -4760,6 +4886,7 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
 llvm::Expected<uint64_t>
 TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
                             ExecutionContextScope *exe_scope) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   const bool base_name_only = true;
   if (!GetCompleteType(type))
     return llvm::createStringError(
@@ -4798,12 +4925,14 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
 std::optional<size_t>
 TypeSystemClang::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                                  ExecutionContextScope *exe_scope) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (GetCompleteType(type))
     return getASTContext().getTypeAlign(GetQualType(type));
   return {};
 }
 
 lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return lldb::eEncodingInvalid;
 
@@ -5114,6 +5243,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
 }
 
 lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return lldb::eFormatDefault;
 
@@ -5312,6 +5442,7 @@ llvm::Expected<uint32_t>
 TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
                                 bool omit_empty_base_classes,
                                 const ExecutionContext *exe_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return llvm::createStringError("invalid clang type");
 
@@ -5446,6 +5577,7 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   StringRef name_ref = name.GetStringRef();
   // We compile the regex only the type name fulfills certain
   // necessary conditions. Otherwise we do not bother.
@@ -5466,6 +5598,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
 
 lldb::BasicType
 TypeSystemClang::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -5546,6 +5679,7 @@ void TypeSystemClang::ForEachEnumerator(
     std::function<bool(const CompilerType &integer_type,
                        ConstString name,
                        const llvm::APSInt &value)> const &callback) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   const clang::EnumType *enum_type =
       llvm::dyn_cast<clang::EnumType>(GetCanonicalQualType(type));
   if (enum_type) {
@@ -5569,6 +5703,7 @@ void TypeSystemClang::ForEachEnumerator(
 #pragma mark Aggregate Types
 
 uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return 0;
 
@@ -5686,6 +5821,7 @@ CompilerType TypeSystemClang::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
                                               uint64_t *bit_offset_ptr,
                                               uint32_t *bitfield_bit_size_ptr,
                                               bool *is_bitfield_ptr) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return CompilerType();
 
@@ -5788,6 +5924,7 @@ CompilerType TypeSystemClang::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
 
 uint32_t
 TypeSystemClang::GetNumDirectBaseClasses(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   uint32_t count = 0;
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -5840,6 +5977,7 @@ TypeSystemClang::GetNumDirectBaseClasses(lldb::opaque_compiler_type_t type) {
 
 uint32_t
 TypeSystemClang::GetNumVirtualBaseClasses(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   uint32_t count = 0;
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -5861,6 +5999,7 @@ TypeSystemClang::GetNumVirtualBaseClasses(lldb::opaque_compiler_type_t type) {
 
 CompilerType TypeSystemClang::GetDirectBaseClassAtIndex(
     lldb::opaque_compiler_type_t type, size_t idx, uint32_t *bit_offset_ptr) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
@@ -5956,6 +6095,7 @@ CompilerType TypeSystemClang::GetDirectBaseClassAtIndex(
 
 CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
     lldb::opaque_compiler_type_t type, size_t idx, uint32_t *bit_offset_ptr) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
   switch (type_class) {
@@ -6000,6 +6140,7 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
 CompilerDecl
 TypeSystemClang::GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
                                         llvm::StringRef name) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
   switch (qual_type->getTypeClass()) {
   case clang::Type::Record: {
@@ -6170,6 +6311,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetDereferencedType(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
     std::string &deref_name, uint32_t &deref_byte_size,
     int32_t &deref_byte_offset, ValueObject *valobj, uint64_t &language_flags) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   bool type_valid = IsPointerOrReferenceType(type, nullptr) ||
                     IsArrayType(type, nullptr, nullptr, nullptr);
   if (!type_valid)
@@ -6192,6 +6334,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
     bool &child_is_base_class, bool &child_is_deref_of_parent,
     ValueObject *valobj, uint64_t &language_flags) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return llvm::createStringError("invalid type");
 
@@ -6643,6 +6786,7 @@ uint32_t TypeSystemClang::GetIndexForRecordBase(
     const clang::RecordDecl *record_decl,
     const clang::CXXBaseSpecifier *base_spec,
     bool omit_empty_base_classes) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   uint32_t child_idx = 0;
 
   const clang::CXXRecordDecl *cxx_record_decl =
@@ -6670,6 +6814,7 @@ uint32_t TypeSystemClang::GetIndexForRecordBase(
 uint32_t TypeSystemClang::GetIndexForRecordChild(
     const clang::RecordDecl *record_decl, clang::NamedDecl *canonical_decl,
     bool omit_empty_base_classes) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   uint32_t child_idx = TypeSystemClang::GetNumBaseClasses(
       llvm::dyn_cast<clang::CXXRecordDecl>(record_decl),
       omit_empty_base_classes);
@@ -6720,6 +6865,7 @@ uint32_t TypeSystemClang::GetIndexForRecordChild(
 size_t TypeSystemClang::GetIndexOfChildMemberWithName(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -6921,6 +7067,7 @@ llvm::Expected<uint32_t>
 TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                          llvm::StringRef name,
                                          bool omit_empty_base_classes) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type && !name.empty()) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
@@ -7058,6 +7205,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
 CompilerType
 TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
                                              llvm::StringRef name) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type || name.empty())
     return CompilerType();
 
@@ -7091,6 +7239,7 @@ TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
 }
 
 bool TypeSystemClang::IsTemplateType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   CompilerType ct(weak_from_this(), type);
@@ -7104,6 +7253,7 @@ bool TypeSystemClang::IsTemplateType(lldb::opaque_compiler_type_t type) {
 size_t
 TypeSystemClang::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                          bool expand_pack) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return 0;
 
@@ -7143,6 +7293,7 @@ TypeSystemClang::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
 const clang::ClassTemplateSpecializationDecl *
 TypeSystemClang::GetAsTemplateSpecialization(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return nullptr;
 
@@ -7200,6 +7351,7 @@ GetNthTemplateArgument(const clang::ClassTemplateSpecializationDecl *decl,
 lldb::TemplateArgumentKind
 TypeSystemClang::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
                                          size_t arg_idx, bool expand_pack) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   const clang::ClassTemplateSpecializationDecl *template_decl =
       GetAsTemplateSpecialization(type);
   if (!template_decl)
@@ -7246,6 +7398,7 @@ TypeSystemClang::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
 CompilerType
 TypeSystemClang::GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
                                          size_t idx, bool expand_pack) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   const clang::ClassTemplateSpecializationDecl *template_decl =
       GetAsTemplateSpecialization(type);
   if (!template_decl)
@@ -7261,6 +7414,7 @@ TypeSystemClang::GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
 std::optional<CompilerType::IntegralTemplateArgument>
 TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
                                              size_t idx, bool expand_pack) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   const clang::ClassTemplateSpecializationDecl *template_decl =
       GetAsTemplateSpecialization(type);
   if (!template_decl)
@@ -7291,6 +7445,7 @@ TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type)
     return ClangUtil::RemoveFastQualifiers(CompilerType(weak_from_this(), type));
   return CompilerType();
@@ -7298,12 +7453,14 @@ CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
 
 bool TypeSystemClang::IsPromotableIntegerType(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qual_type(GetCanonicalQualType(type));
   return getASTContext().isPromotableIntegerType(qual_type);
 }
 
 CompilerType
 TypeSystemClang::GetPromotedIntegerType(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!IsPromotableIntegerType(type))
     return CompilerType();
   clang::QualType qual_type(GetCanonicalQualType(type));
@@ -7648,6 +7805,7 @@ llvm::SmallVector<clang::ParmVarDecl *>
 TypeSystemClang::CreateParameterDeclarations(
     clang::FunctionDecl *func, const clang::FunctionProtoType &prototype,
     const llvm::SmallVector<llvm::StringRef> &parameter_names) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   assert(func);
   assert(parameter_names.empty() ||
          parameter_names.size() == prototype.getNumParams());
@@ -7850,6 +8008,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
 
 void TypeSystemClang::AddMethodOverridesForCXXRecordType(
     lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (auto *record = GetAsCXXRecordDecl(type))
     for (auto *method : record->methods())
       addOverridesForMethod(method);
@@ -7861,6 +8020,7 @@ std::unique_ptr<clang::CXXBaseSpecifier>
 TypeSystemClang::CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
                                           AccessType access, bool is_virtual,
                                           bool base_of_class) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return nullptr;
 
@@ -7874,6 +8034,7 @@ TypeSystemClang::CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
 bool TypeSystemClang::TransferBaseClasses(
     lldb::opaque_compiler_type_t type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   clang::CXXRecordDecl *cxx_record_decl = GetAsCXXRecordDecl(type);
@@ -8465,6 +8626,7 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
 }
 
 CompilerType TypeSystemClang::GetEnumerationIntegerType(CompilerType type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::QualType qt(ClangUtil::GetQualType(type));
   const clang::Type *clang_type = qt.getTypePtrOrNull();
   const auto *enum_type = llvm::dyn_cast_or_null<clang::EnumType>(clang_type);
@@ -8496,6 +8658,7 @@ TypeSystemClang::CreateMemberPointerType(const CompilerType &type,
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void
 TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return;
   clang::QualType qual_type(GetQualType(type));
@@ -8524,6 +8687,7 @@ struct ScopedASTColor {
 
 void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
                            bool show_color) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   ScopedASTColor colored(getASTContext(), show_color);
 
   auto consumer =
@@ -8539,6 +8703,7 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
 
 void TypeSystemClang::DumpFromSymbolFile(Stream &s,
                                          llvm::StringRef symbol_name) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   SymbolFile *symfile = GetSymbolFile();
 
   if (!symfile)
@@ -8683,6 +8848,7 @@ bool TypeSystemClang::DumpTypeValue(
     const lldb_private::DataExtractor &data, lldb::offset_t byte_offset,
     size_t byte_size, uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
     ExecutionContextScope *exe_scope) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!type)
     return false;
   if (IsAggregateType(type)) {
@@ -8797,6 +8963,7 @@ bool TypeSystemClang::DumpTypeValue(
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   StreamFile s(stdout, false);
   DumpTypeDescription(type, s, level);
 
@@ -8810,6 +8977,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           Stream &s,
                                           lldb::DescriptionLevel level) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type =
         RemoveWrappingTypes(GetQualType(type), {clang::Type::Typedef});
@@ -8979,6 +9147,7 @@ clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
 }
 
 void TypeSystemClang::CompleteTagDecl(clang::TagDecl *decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   SymbolFile *sym_file = GetSymbolFile();
   if (sym_file) {
     CompilerType clang_type = GetTypeForDecl(decl);
@@ -8989,6 +9158,7 @@ void TypeSystemClang::CompleteTagDecl(clang::TagDecl *decl) {
 
 void TypeSystemClang::CompleteObjCInterfaceDecl(
     clang::ObjCInterfaceDecl *decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   SymbolFile *sym_file = GetSymbolFile();
   if (sym_file) {
     CompilerType clang_type = GetTypeForDecl(decl);
@@ -9024,6 +9194,7 @@ bool TypeSystemClang::LayoutRecordType(
         &base_offsets,
     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
         &vbase_offsets) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   lldb_private::ClangASTImporter *importer = nullptr;
   if (m_dwarf_ast_parser_up)
     importer = &m_dwarf_ast_parser_up->GetClangASTImporter();
@@ -9041,6 +9212,7 @@ bool TypeSystemClang::LayoutRecordType(
 // CompilerDecl override functions
 
 ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (opaque_decl) {
     clang::NamedDecl *nd =
         llvm::dyn_cast<NamedDecl>((clang::Decl *)opaque_decl);
@@ -9066,6 +9238,7 @@ ExtractMangledNameFromFunctionCallLabel(llvm::StringRef label) {
 }
 
 ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::NamedDecl *nd = llvm::dyn_cast_or_null<clang::NamedDecl>(
       static_cast<clang::Decl *>(opaque_decl));
 
@@ -9106,12 +9279,14 @@ ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
 }
 
 CompilerDeclContext TypeSystemClang::DeclGetDeclContext(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (opaque_decl)
     return CreateDeclContext(((clang::Decl *)opaque_decl)->getDeclContext());
   return CompilerDeclContext();
 }
 
 CompilerType TypeSystemClang::DeclGetFunctionReturnType(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (clang::FunctionDecl *func_decl =
           llvm::dyn_cast<clang::FunctionDecl>((clang::Decl *)opaque_decl))
     return GetType(func_decl->getReturnType());
@@ -9123,6 +9298,7 @@ CompilerType TypeSystemClang::DeclGetFunctionReturnType(void *opaque_decl) {
 }
 
 size_t TypeSystemClang::DeclGetFunctionNumArguments(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (clang::FunctionDecl *func_decl =
           llvm::dyn_cast<clang::FunctionDecl>((clang::Decl *)opaque_decl))
     return func_decl->param_size();
@@ -9176,6 +9352,7 @@ InsertCompilerContext(TypeSystemClang *ts, clang::DeclContext *decl_ctx,
 
 std::vector<lldb_private::CompilerContext>
 TypeSystemClang::DeclGetCompilerContext(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   std::vector<lldb_private::CompilerContext> context;
   ConstString decl_name = DeclGetName(opaque_decl);
   if (decl_name) {
@@ -9193,6 +9370,7 @@ TypeSystemClang::DeclGetCompilerContext(void *opaque_decl) {
 
 CompilerType TypeSystemClang::DeclGetFunctionArgumentType(void *opaque_decl,
                                                           size_t idx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (clang::FunctionDecl *func_decl =
           llvm::dyn_cast<clang::FunctionDecl>((clang::Decl *)opaque_decl)) {
     if (idx < func_decl->param_size()) {
@@ -9210,6 +9388,7 @@ CompilerType TypeSystemClang::DeclGetFunctionArgumentType(void *opaque_decl,
 }
 
 Scalar TypeSystemClang::DeclGetConstantValue(void *opaque_decl) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   clang::Decl *decl = static_cast<clang::Decl *>(opaque_decl);
   clang::VarDecl *var_decl = llvm::dyn_cast<clang::VarDecl>(decl);
   if (!var_decl)
@@ -9228,6 +9407,7 @@ Scalar TypeSystemClang::DeclGetConstantValue(void *opaque_decl) {
 
 std::vector<CompilerDecl> TypeSystemClang::DeclContextFindDeclByName(
     void *opaque_decl_ctx, ConstString name, const bool ignore_using_decls) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   std::vector<CompilerDecl> found_decls;
   SymbolFile *symbol_file = GetSymbolFile();
   if (opaque_decl_ctx && symbol_file) {
@@ -9326,6 +9506,7 @@ uint32_t TypeSystemClang::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
                                           clang::DeclContext *child_decl_ctx,
                                           ConstString *child_name,
                                           CompilerType *child_type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   SymbolFile *symbol_file = GetSymbolFile();
   if (frame_decl_ctx && symbol_file) {
     std::set<DeclContext *> searched;
@@ -9405,6 +9586,7 @@ uint32_t TypeSystemClang::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
 }
 
 ConstString TypeSystemClang::DeclContextGetName(void *opaque_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (opaque_decl_ctx) {
     clang::NamedDecl *named_decl =
         llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
@@ -9422,6 +9604,7 @@ ConstString TypeSystemClang::DeclContextGetName(void *opaque_decl_ctx) {
 
 ConstString
 TypeSystemClang::DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (opaque_decl_ctx) {
     clang::NamedDecl *named_decl =
         llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
@@ -9432,6 +9615,7 @@ TypeSystemClang::DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) {
 }
 
 bool TypeSystemClang::DeclContextIsClassMethod(void *opaque_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!opaque_decl_ctx)
     return false;
 
@@ -9451,6 +9635,7 @@ bool TypeSystemClang::DeclContextIsClassMethod(void *opaque_decl_ctx) {
 
 std::vector<lldb_private::CompilerContext>
 TypeSystemClang::DeclContextGetCompilerContext(void *opaque_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
   std::vector<lldb_private::CompilerContext> context;
   InsertCompilerContext(this, decl_ctx, context);
@@ -9459,6 +9644,7 @@ TypeSystemClang::DeclContextGetCompilerContext(void *opaque_decl_ctx) {
 
 bool TypeSystemClang::DeclContextIsContainedInLookup(
     void *opaque_decl_ctx, void *other_opaque_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
   auto *other = (clang::DeclContext *)other_opaque_decl_ctx;
 
@@ -9486,6 +9672,7 @@ bool TypeSystemClang::DeclContextIsContainedInLookup(
 
 lldb::LanguageType
 TypeSystemClang::DeclContextGetLanguage(void *opaque_decl_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (!opaque_decl_ctx)
     return eLanguageTypeUnknown;
 
@@ -9630,6 +9817,7 @@ ScratchTypeSystemClang::ScratchTypeSystemClang(Target &target,
 }
 
 void ScratchTypeSystemClang::Finalize() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   TypeSystemClang::Finalize();
   m_scratch_ast_source_up.reset();
 }
@@ -9670,6 +9858,7 @@ GetNameForIsolatedASTKind(ScratchTypeSystemClang::IsolatedASTKind kind) {
 
 void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output,
                                   llvm::StringRef filter, bool show_color) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // First dump the main scratch AST.
   output << "State of scratch Clang type system:\n";
   TypeSystemClang::Dump(output, filter, show_color);
@@ -9721,6 +9910,7 @@ FunctionCaller *ScratchTypeSystemClang::GetFunctionCaller(
 std::unique_ptr<UtilityFunction>
 ScratchTypeSystemClang::CreateUtilityFunction(std::string text,
                                               std::string name) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   TargetSP target_sp = m_target_wp.lock();
   if (!target_sp)
     return {};
@@ -9732,11 +9922,13 @@ ScratchTypeSystemClang::CreateUtilityFunction(std::string text,
 
 PersistentExpressionState *
 ScratchTypeSystemClang::GetPersistentExpressionState() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return m_persistent_variables.get();
 }
 
 void ScratchTypeSystemClang::ForgetSource(ASTContext *src_ctx,
                                           ClangASTImporter &importer) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   // Remove it as a source from the main AST.
   importer.ForgetSource(&getASTContext(), src_ctx);
   // Remove it as a source from all created sub-ASTs.
@@ -9745,6 +9937,7 @@ void ScratchTypeSystemClang::ForgetSource(ASTContext *src_ctx,
 }
 
 std::unique_ptr<ClangASTSource> ScratchTypeSystemClang::CreateASTSource() {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   return std::make_unique<ClangASTSource>(
       m_target_wp.lock()->shared_from_this(),
       m_persistent_variables->GetClangASTImporter());
@@ -9774,6 +9967,7 @@ TypeSystemClang &ScratchTypeSystemClang::GetIsolatedAST(
 }
 
 bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (type) {
     clang::QualType qual_type(GetQualType(type));
     const clang::RecordType *record_type =
@@ -9789,6 +9983,7 @@ bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
 }
 
 bool TypeSystemClang::SetDeclIsForcefullyCompleted(const clang::TagDecl *td) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (td == nullptr)
     return false;
   std::optional<ClangASTMetadata> metadata = GetMetadata(td);
@@ -9802,6 +9997,7 @@ bool TypeSystemClang::SetDeclIsForcefullyCompleted(const clang::TagDecl *td) {
 }
 
 void TypeSystemClang::LogCreation() const {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
   if (auto *log = GetLog(LLDBLog::Expressions))
     LLDB_LOG(log, "Created new TypeSystem for (ASTContext*){0:x} '{1}'",
              &getASTContext(), getDisplayName());

@@ -33,6 +33,44 @@
 using namespace lldb_private;
 using namespace clang;
 
+namespace {
+/// RAII lock guard that also tracks whether the ClangASTImporter is in a
+/// nested import call.
+///
+/// Once all imports are done, this RAII also completes all queued
+/// Objective-C interface completions.
+///
+/// \see ClangASTImporter::m_queued_objc_interfaces
+class ImportLock {
+public:
+  ImportLock(ClangASTImporter &importer, std::recursive_mutex &mutex)
+      : m_importer(importer), m_mutex(mutex) {
+    m_mutex.lock();
+    m_importer.m_nested_imports_depth++;
+  }
+
+  ~ImportLock() {
+    assert(m_importer.m_nested_imports_depth > 0 && "Not currently importing?");
+    m_importer.m_nested_imports_depth--;
+
+    bool done_importing = (m_importer.m_nested_imports_depth == 0);
+    m_mutex.unlock();
+    // We are no longer importing anything else and shouldn't hold
+    // any important locks anymore. It is now safe to complete
+    // any Objective-C declarations that we queued.
+    if (done_importing)
+      m_importer.CompleteQueuedObjCInterfaces();
+  }
+
+  ImportLock(const ImportLock &) = delete;
+  ImportLock &operator=(const ImportLock &) = delete;
+
+private:
+  ClangASTImporter &m_importer;
+  std::recursive_mutex &m_mutex;
+};
+} // namespace
+
 CompilerType ClangASTImporter::CopyType(TypeSystemClang &dst_ast,
                                         const CompilerType &src_type) {
   clang::ASTContext &dst_clang_ast = dst_ast.getASTContext();
@@ -641,6 +679,12 @@ bool ClangASTImporter::importRecordLayoutFromOrigin(
   if (origin_record.IsInvalid())
     return false;
 
+  // Lock the origin TypeSystemClang which might be shared between threads.
+  std::optional<ImportLock> origin_guard;
+  if (TypeSystemClang *origin_ast =
+          TypeSystemClang::GetASTContext(&origin_record->getASTContext()))
+    origin_guard.emplace(*this, origin_ast->GetMutex());
+
   std::remove_reference_t<decltype(field_offsets)> origin_field_offsets;
   std::remove_reference_t<decltype(base_offsets)> origin_base_offsets;
   std::remove_reference_t<decltype(vbase_offsets)> origin_virtual_base_offsets;
@@ -825,6 +869,31 @@ bool ClangASTImporter::CompleteTagDeclWithOrigin(clang::TagDecl *decl,
 }
 
 bool ClangASTImporter::CompleteObjCInterfaceDecl(
+    clang::ObjCInterfaceDecl *interface_decl) {
+  if (m_nested_imports_depth > 0) {
+    // We're already importing something and hold locks. Queue up the
+    // completion of the Objective-C interface for later.
+    m_queued_objc_interfaces.insert(interface_decl);
+    return true;
+  }
+
+  return CompleteQueuedObjCInterface(interface_decl);
+}
+
+void ClangASTImporter::CompleteQueuedObjCInterfaces() {
+  // Keep looping until there are no more Objective-C interfaces
+  // that need to be completed. Note that completing an interface
+  // might trigger more completions.
+  while (!m_queued_objc_interfaces.empty()) {
+    llvm::SmallSetVector<clang::ObjCInterfaceDecl *, 4> pending =
+        std::move(m_queued_objc_interfaces);
+    m_queued_objc_interfaces.clear();
+    for (clang::ObjCInterfaceDecl *interface_decl : pending)
+      CompleteQueuedObjCInterface(interface_decl);
+  }
+}
+
+bool ClangASTImporter::CompleteQueuedObjCInterface(
     clang::ObjCInterfaceDecl *interface_decl) {
   DeclOrigin decl_origin = GetDeclOrigin(interface_decl);
 
@@ -1046,6 +1115,12 @@ ClangASTImporter::MapCompleter::~MapCompleter() = default;
 
 llvm::Expected<Decl *>
 ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
+  // Lock the origin TypeSystemClang which might be shared between threads.
+  std::optional<ImportLock> source_guard;
+  if (TypeSystemClang *source_ast =
+          TypeSystemClang::GetASTContext(m_source_ctx))
+    source_guard.emplace(m_main, source_ast->GetMutex());
+
   // FIXME: The Minimal import mode of clang::ASTImporter does not correctly
   // import Lambda definitions. Work around this for now by not importing
   // lambdas at all. This is most likely encountered when importing decls from
@@ -1139,6 +1214,12 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
 
 void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
     clang::Decl *to, clang::Decl *from) {
+  // Lock the origin TypeSystemClang which might be shared between threads.
+  std::optional<ImportLock> source_guard;
+  if (TypeSystemClang *source_ast =
+          TypeSystemClang::GetASTContext(m_source_ctx))
+    source_guard.emplace(m_main, source_ast->GetMutex());
+
   Log *log = GetLog(LLDBLog::Expressions);
 
   auto getDeclName = [](Decl const *decl) {
