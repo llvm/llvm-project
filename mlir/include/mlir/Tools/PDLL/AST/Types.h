@@ -140,6 +140,12 @@ struct TypeStorageBase<ConcreteT, void> : public Type::Storage {
 struct AttributeTypeStorage : public TypeStorageBase<AttributeTypeStorage> {};
 
 //===----------------------------------------------------------------------===//
+// BlockTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct BlockTypeStorage : public TypeStorageBase<BlockTypeStorage> {};
+
+//===----------------------------------------------------------------------===//
 // ConstraintTypeStorage
 //===----------------------------------------------------------------------===//
 
@@ -169,6 +175,12 @@ struct OperationTypeStorage
 struct RangeTypeStorage : public TypeStorageBase<RangeTypeStorage, Type> {
   using Base::Base;
 };
+
+//===----------------------------------------------------------------------===//
+// RegionTypeStorage
+//===----------------------------------------------------------------------===//
+
+struct RegionTypeStorage : public TypeStorageBase<RegionTypeStorage> {};
 
 //===----------------------------------------------------------------------===//
 // RewriteTypeStorage
@@ -221,6 +233,19 @@ public:
 
   /// Return an instance of the Attribute type.
   static AttributeType get(Context &context);
+};
+
+//===----------------------------------------------------------------------===//
+// BlockType
+//===----------------------------------------------------------------------===//
+
+/// This class represents a PDLL type that corresponds to an mlir::Block.
+class BlockType : public Type::TypeBase<detail::BlockTypeStorage> {
+public:
+  using Base::Base;
+
+  /// Return an instance of the Block type.
+  static BlockType get(Context &context);
 };
 
 //===----------------------------------------------------------------------===//
@@ -311,6 +336,19 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// RegionType
+//===----------------------------------------------------------------------===//
+
+/// This class represents a PDLL type that corresponds to an mlir::Region.
+class RegionType : public Type::TypeBase<detail::RegionTypeStorage> {
+public:
+  using Base::Base;
+
+  /// Return an instance of the Region type.
+  static RegionType get(Context &context);
+};
+
+//===----------------------------------------------------------------------===//
 // RewriteType
 //===----------------------------------------------------------------------===//
 
@@ -383,9 +421,11 @@ public:
 } // namespace mlir
 
 MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::AttributeTypeStorage)
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::BlockTypeStorage)
 MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::ConstraintTypeStorage)
 MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::OperationTypeStorage)
 MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::RangeTypeStorage)
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::RegionTypeStorage)
 MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::RewriteTypeStorage)
 MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::TupleTypeStorage)
 MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::TypeTypeStorage)

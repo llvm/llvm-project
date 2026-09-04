@@ -92,10 +92,18 @@ enum OpCode : ByteCodeField {
   AreRangesEqual,
   /// Unconditional branch.
   Branch,
+  /// Compare the number of block arguments with a constant.
+  CheckBlockArgCount,
+  /// Compare the number of blocks in a region with a constant.
+  CheckBlockCount,
+  /// Check if an operation's parent block matches an expected block.
+  CheckParentBlock,
   /// Compare the operand count of an operation with a constant.
   CheckOperandCount,
   /// Compare the name of an operation with a constant.
   CheckOperationName,
+  /// Compare the number of regions of an operation with a constant.
+  CheckRegionCount,
   /// Compare the result count of an operation with a constant.
   CheckResultCount,
   /// Compare a range of types to a constant range of types.
@@ -122,10 +130,18 @@ enum OpCode : ByteCodeField {
   Finalize,
   /// Iterate over a range of values.
   ForEach,
+  /// Get all operations within a block.
+  GetBlockOps,
   /// Get a specific attribute of an operation.
   GetAttribute,
   /// Get the type of an attribute.
   GetAttributeType,
+  /// Get a specific block from a region.
+  GetBlock,
+  /// Get a specific argument from a block.
+  GetBlockArgument,
+  /// Get a group of arguments from a block.
+  GetBlockArguments,
   /// Get the defining operation of a value.
   GetDefiningOp,
   /// Get a specific operand of an operation.
@@ -136,6 +152,8 @@ enum OpCode : ByteCodeField {
   GetOperandN,
   /// Get a specific operand group of an operation.
   GetOperands,
+  /// Get a specific region from an operation.
+  GetRegion,
   /// Get a specific result of an operation.
   GetResult0,
   GetResult1,
@@ -152,6 +170,10 @@ enum OpCode : ByteCodeField {
   GetValueRangeTypes,
   /// Check if a generic value is not null.
   IsNotNull,
+  /// Move a block before another block.
+  MoveBlock,
+  /// Move the contents of one region into another.
+  TakeRegion,
   /// Record a successful pattern match.
   RecordMatch,
   /// Replace an operation.
@@ -265,8 +287,12 @@ private:
   void generate(pdl_interp::AreEqualOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::BranchOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CheckAttributeOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::CheckBlockArgCountOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::CheckBlockCountOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::CheckParentBlockOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CheckOperandCountOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CheckOperationNameOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::CheckRegionCountOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CheckResultCountOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CheckTypeOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::CheckTypesOp op, ByteCodeWriter &writer);
@@ -280,16 +306,23 @@ private:
   void generate(pdl_interp::ExtractOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::FinalizeOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::ForEachOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::GetBlockOpsOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetAttributeOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetAttributeTypeOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::GetBlockOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::GetBlockArgumentOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::GetBlockArgumentsOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetDefiningOpOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetOperandOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetOperandsOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::GetRegionOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetResultOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetResultsOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetUsersOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::GetValueTypeOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::IsNotNullOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::MoveBlockOp op, ByteCodeWriter &writer);
+  void generate(pdl_interp::TakeRegionOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::RecordMatchOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::ReplaceOp op, ByteCodeWriter &writer);
   void generate(pdl_interp::SwitchAttributeOp op, ByteCodeWriter &writer);
@@ -402,8 +435,10 @@ struct ByteCodeWriter {
         TypeSwitch<Type, PDLValue::Kind>(type)
             .Case<pdl::AttributeType>(
                 [](Type) { return PDLValue::Kind::Attribute; })
+            .Case<pdl::BlockType>([](Type) { return PDLValue::Kind::Block; })
             .Case<pdl::OperationType>(
                 [](Type) { return PDLValue::Kind::Operation; })
+            .Case<pdl::RegionType>([](Type) { return PDLValue::Kind::Region; })
             .Case([](pdl::RangeType rangeTy) {
               if (isa<pdl::TypeType>(rangeTy.getElementType()))
                 return PDLValue::Kind::TypeRange;
@@ -746,23 +781,28 @@ void Generator::generate(Operation *op, ByteCodeWriter &writer) {
   TypeSwitch<Operation *>(op)
       .Case<pdl_interp::ApplyConstraintOp, pdl_interp::ApplyRewriteOp,
             pdl_interp::AreEqualOp, pdl_interp::BranchOp,
-            pdl_interp::CheckAttributeOp, pdl_interp::CheckOperandCountOp,
-            pdl_interp::CheckOperationNameOp, pdl_interp::CheckResultCountOp,
+            pdl_interp::CheckAttributeOp, pdl_interp::CheckBlockArgCountOp,
+            pdl_interp::CheckBlockCountOp, pdl_interp::CheckParentBlockOp,
+            pdl_interp::CheckOperandCountOp, pdl_interp::CheckOperationNameOp,
+            pdl_interp::CheckRegionCountOp, pdl_interp::CheckResultCountOp,
             pdl_interp::CheckTypeOp, pdl_interp::CheckTypesOp,
             pdl_interp::ContinueOp, pdl_interp::CreateAttributeOp,
             pdl_interp::CreateOperationOp, pdl_interp::CreateRangeOp,
             pdl_interp::CreateTypeOp, pdl_interp::CreateTypesOp,
             pdl_interp::EraseOp, pdl_interp::ExtractOp, pdl_interp::FinalizeOp,
             pdl_interp::ForEachOp, pdl_interp::GetAttributeOp,
-            pdl_interp::GetAttributeTypeOp, pdl_interp::GetDefiningOpOp,
+            pdl_interp::GetAttributeTypeOp, pdl_interp::GetBlockOp,
+            pdl_interp::GetBlockArgumentOp, pdl_interp::GetBlockArgumentsOp,
+            pdl_interp::GetBlockOpsOp, pdl_interp::GetDefiningOpOp,
             pdl_interp::GetOperandOp, pdl_interp::GetOperandsOp,
-            pdl_interp::GetResultOp, pdl_interp::GetResultsOp,
-            pdl_interp::GetUsersOp, pdl_interp::GetValueTypeOp,
-            pdl_interp::IsNotNullOp, pdl_interp::RecordMatchOp,
-            pdl_interp::ReplaceOp, pdl_interp::SwitchAttributeOp,
-            pdl_interp::SwitchTypeOp, pdl_interp::SwitchTypesOp,
-            pdl_interp::SwitchOperandCountOp, pdl_interp::SwitchOperationNameOp,
-            pdl_interp::SwitchResultCountOp>(
+            pdl_interp::GetRegionOp, pdl_interp::GetResultOp,
+            pdl_interp::GetResultsOp, pdl_interp::GetUsersOp,
+            pdl_interp::GetValueTypeOp, pdl_interp::IsNotNullOp,
+            pdl_interp::MoveBlockOp, pdl_interp::TakeRegionOp,
+            pdl_interp::RecordMatchOp, pdl_interp::ReplaceOp,
+            pdl_interp::SwitchAttributeOp, pdl_interp::SwitchTypeOp,
+            pdl_interp::SwitchTypesOp, pdl_interp::SwitchOperandCountOp,
+            pdl_interp::SwitchOperationNameOp, pdl_interp::SwitchResultCountOp>(
           [&](auto interpOp) { this->generate(interpOp, writer); })
       .DefaultUnreachable("unknown `pdl_interp` operation");
 }
@@ -829,6 +869,23 @@ void Generator::generate(pdl_interp::CheckAttributeOp op,
   writer.append(OpCode::AreEqual, op.getAttribute(), op.getConstantValue(),
                 op.getSuccessors());
 }
+void Generator::generate(pdl_interp::CheckBlockArgCountOp op,
+                         ByteCodeWriter &writer) {
+  writer.append(OpCode::CheckBlockArgCount, op.getInputBlock(), op.getCount(),
+                static_cast<ByteCodeField>(op.getCompareAtLeast()),
+                op.getSuccessors());
+}
+void Generator::generate(pdl_interp::CheckBlockCountOp op,
+                         ByteCodeWriter &writer) {
+  writer.append(OpCode::CheckBlockCount, op.getInputRegion(), op.getCount(),
+                static_cast<ByteCodeField>(op.getCompareAtLeast()),
+                op.getSuccessors());
+}
+void Generator::generate(pdl_interp::CheckParentBlockOp op,
+                         ByteCodeWriter &writer) {
+  writer.append(OpCode::CheckParentBlock, op.getInputOp(), op.getInputBlock(),
+                op.getSuccessors());
+}
 void Generator::generate(pdl_interp::CheckOperandCountOp op,
                          ByteCodeWriter &writer) {
   writer.append(OpCode::CheckOperandCount, op.getInputOp(), op.getCount(),
@@ -839,6 +896,12 @@ void Generator::generate(pdl_interp::CheckOperationNameOp op,
                          ByteCodeWriter &writer) {
   writer.append(OpCode::CheckOperationName, op.getInputOp(),
                 OperationName(op.getName(), ctx), op.getSuccessors());
+}
+void Generator::generate(pdl_interp::CheckRegionCountOp op,
+                         ByteCodeWriter &writer) {
+  writer.append(OpCode::CheckRegionCount, op.getInputOp(), op.getCount(),
+                static_cast<ByteCodeField>(op.getCompareAtLeast()),
+                op.getSuccessors());
 }
 void Generator::generate(pdl_interp::CheckResultCountOp op,
                          ByteCodeWriter &writer) {
@@ -928,6 +991,11 @@ void Generator::generate(pdl_interp::ForEachOp op, ByteCodeWriter &writer) {
   generate(&op.getRegion(), writer);
   --curLoopLevel;
 }
+void Generator::generate(pdl_interp::GetBlockOpsOp op, ByteCodeWriter &writer) {
+  writer.append(OpCode::GetBlockOps, op.getBlock());
+  writer.append(getMemIndex(op.getOperations()),
+                getRangeStorageIndex(op.getOperations()));
+}
 void Generator::generate(pdl_interp::GetAttributeOp op,
                          ByteCodeWriter &writer) {
   writer.append(OpCode::GetAttribute, op.getAttribute(), op.getInputOp(),
@@ -936,6 +1004,28 @@ void Generator::generate(pdl_interp::GetAttributeOp op,
 void Generator::generate(pdl_interp::GetAttributeTypeOp op,
                          ByteCodeWriter &writer) {
   writer.append(OpCode::GetAttributeType, op.getResult(), op.getValue());
+}
+void Generator::generate(pdl_interp::GetBlockOp op, ByteCodeWriter &writer) {
+  writer.append(OpCode::GetBlock, op.getIndex(), op.getInputRegion(),
+                op.getBlock());
+}
+void Generator::generate(pdl_interp::GetBlockArgumentOp op,
+                         ByteCodeWriter &writer) {
+  writer.append(OpCode::GetBlockArgument, op.getIndex(), op.getInputBlock(),
+                op.getValue());
+}
+void Generator::generate(pdl_interp::GetBlockArgumentsOp op,
+                         ByteCodeWriter &writer) {
+  Value result = op.getValue();
+  std::optional<uint32_t> index = op.getIndex();
+  writer.append(OpCode::GetBlockArguments,
+                index.value_or(std::numeric_limits<uint32_t>::max()),
+                op.getInputBlock());
+  if (isa<pdl::RangeType>(result.getType()))
+    writer.append(getRangeStorageIndex(result));
+  else
+    writer.append(std::numeric_limits<ByteCodeField>::max());
+  writer.append(result);
 }
 void Generator::generate(pdl_interp::GetDefiningOpOp op,
                          ByteCodeWriter &writer) {
@@ -961,6 +1051,10 @@ void Generator::generate(pdl_interp::GetOperandsOp op, ByteCodeWriter &writer) {
   else
     writer.append(std::numeric_limits<ByteCodeField>::max());
   writer.append(result);
+}
+void Generator::generate(pdl_interp::GetRegionOp op, ByteCodeWriter &writer) {
+  writer.append(OpCode::GetRegion, op.getIndex(), op.getInputOp(),
+                op.getRegion());
 }
 void Generator::generate(pdl_interp::GetResultOp op, ByteCodeWriter &writer) {
   uint32_t index = op.getIndex();
@@ -1000,6 +1094,12 @@ void Generator::generate(pdl_interp::GetValueTypeOp op,
 }
 void Generator::generate(pdl_interp::IsNotNullOp op, ByteCodeWriter &writer) {
   writer.append(OpCode::IsNotNull, op.getValue(), op.getSuccessors());
+}
+void Generator::generate(pdl_interp::MoveBlockOp op, ByteCodeWriter &writer) {
+  writer.append(OpCode::MoveBlock, op.getBlock(), op.getDest());
+}
+void Generator::generate(pdl_interp::TakeRegionOp op, ByteCodeWriter &writer) {
+  writer.append(OpCode::TakeRegion, op.getSource(), op.getDest());
 }
 void Generator::generate(pdl_interp::RecordMatchOp op, ByteCodeWriter &writer) {
   ByteCodeField patternIndex = patterns.size();
@@ -1151,8 +1251,12 @@ private:
   void executeAreEqual();
   void executeAreRangesEqual();
   void executeBranch();
+  void executeCheckBlockArgCount();
+  void executeCheckBlockCount();
+  void executeCheckParentBlock();
   void executeCheckOperandCount();
   void executeCheckOperationName();
+  void executeCheckRegionCount();
   void executeCheckResultCount();
   void executeCheckTypes();
   void executeContinue();
@@ -1166,17 +1270,24 @@ private:
   void executeExtract();
   void executeFinalize();
   void executeForEach();
+  void executeGetBlockOps();
   void executeGetAttribute();
   void executeGetAttributeType();
+  void executeGetBlock();
+  void executeGetBlockArgument();
+  void executeGetBlockArguments();
   void executeGetDefiningOp();
   void executeGetOperand(unsigned index);
   void executeGetOperands();
+  void executeGetRegion();
   void executeGetResult(unsigned index);
   void executeGetResults();
   void executeGetUsers();
   void executeGetValueType();
   void executeGetValueRangeTypes();
   void executeIsNotNull();
+  void executeMoveBlock(PatternRewriter &rewriter);
+  void executeTakeRegion(PatternRewriter &rewriter);
   void executeRecordMatch(PatternRewriter &rewriter,
                           SmallVectorImpl<PDLByteCode::MatchResult> &matches);
   void executeReplaceOp(PatternRewriter &rewriter);
@@ -1326,8 +1437,12 @@ private:
     switch (read<PDLValue::Kind>()) {
     case PDLValue::Kind::Attribute:
       return read<Attribute>();
+    case PDLValue::Kind::Block:
+      return read<Block *>();
     case PDLValue::Kind::Operation:
       return read<Operation *>();
+    case PDLValue::Kind::Region:
+      return read<Region *>();
     case PDLValue::Kind::Type:
       return read<Type>();
     case PDLValue::Kind::Value:
@@ -1559,6 +1674,46 @@ void ByteCodeExecutor::executeBranch() {
   curCodeIt = &code[read<ByteCodeAddr>()];
 }
 
+void ByteCodeExecutor::executeCheckBlockArgCount() {
+  LDBG() << "Executing CheckBlockArgCount:";
+  auto *block = read<Block *>();
+  uint32_t expectedCount = read<uint32_t>();
+  bool compareAtLeast = read();
+
+  unsigned numArgs = block ? block->getNumArguments() : 0;
+  LDBG() << "  * Found: " << numArgs << "\n  * Expected: " << expectedCount
+         << "\n  * Comparator: " << (compareAtLeast ? ">=" : "==");
+  if (compareAtLeast)
+    selectJump(numArgs >= expectedCount);
+  else
+    selectJump(numArgs == expectedCount);
+}
+
+void ByteCodeExecutor::executeCheckBlockCount() {
+  LDBG() << "Executing CheckBlockCount:";
+  auto *region = read<Region *>();
+  uint32_t expectedCount = read<uint32_t>();
+  bool compareAtLeast = read();
+
+  unsigned numBlocks = region ? llvm::range_size(region->getBlocks()) : 0;
+  LDBG() << "  * Found: " << numBlocks << "\n  * Expected: " << expectedCount
+         << "\n  * Comparator: " << (compareAtLeast ? ">=" : "==");
+  if (compareAtLeast)
+    selectJump(numBlocks >= expectedCount);
+  else
+    selectJump(numBlocks == expectedCount);
+}
+
+void ByteCodeExecutor::executeCheckParentBlock() {
+  LDBG() << "Executing CheckParentBlock:";
+  auto *op = read<Operation *>();
+  auto *expectedBlock = read<Block *>();
+  Block *actualBlock = op ? op->getBlock() : nullptr;
+  LDBG() << "  * Op: " << op << "\n  * Expected Block: " << expectedBlock
+         << "\n  * Actual Block: " << actualBlock;
+  selectJump(actualBlock == expectedBlock);
+}
+
 void ByteCodeExecutor::executeCheckOperandCount() {
   LDBG() << "Executing CheckOperandCount:";
   Operation *op = read<Operation *>();
@@ -1582,6 +1737,21 @@ void ByteCodeExecutor::executeCheckOperationName() {
   LDBG() << "  * Found: \"" << op->getName() << "\"\n  * Expected: \""
          << expectedName << "\"";
   selectJump(op->getName() == expectedName);
+}
+
+void ByteCodeExecutor::executeCheckRegionCount() {
+  LDBG() << "Executing CheckRegionCount:";
+  Operation *op = read<Operation *>();
+  uint32_t expectedCount = read<uint32_t>();
+  bool compareAtLeast = read();
+
+  unsigned numRegions = op ? op->getNumRegions() : 0;
+  LDBG() << "  * Found: " << numRegions << "\n  * Expected: " << expectedCount
+         << "\n  * Comparator: " << (compareAtLeast ? ">=" : "==");
+  if (compareAtLeast)
+    selectJump(numRegions >= expectedCount);
+  else
+    selectJump(numRegions == expectedCount);
 }
 
 void ByteCodeExecutor::executeCheckResultCount() {
@@ -1718,6 +1888,24 @@ void ByteCodeExecutor::executeExtract() {
 
 void ByteCodeExecutor::executeFinalize() { LDBG() << "Executing Finalize"; }
 
+void ByteCodeExecutor::executeGetBlockOps() {
+  LDBG() << "Executing GetBlockOps:";
+  auto *block = read<Block *>();
+  unsigned memIndex = read();
+  unsigned rangeIndex = read();
+
+  std::vector<Operation *> &range = opRangeMemory[rangeIndex];
+  range.clear();
+
+  if (block) {
+    for (Operation &op : block->getOperations())
+      range.push_back(&op);
+  }
+
+  LDBG() << "  * Result: " << range.size() << " operations";
+  memory[memIndex] = &range;
+}
+
 void ByteCodeExecutor::executeForEach() {
   LDBG() << "Executing ForEach:";
   const ByteCodeField *prevCodeIt = getPrevCodeIt();
@@ -1809,6 +1997,73 @@ void ByteCodeExecutor::executeGetAttributeType() {
   memory[memIndex] = type.getAsOpaquePointer();
 }
 
+void ByteCodeExecutor::executeGetBlock() {
+  LDBG() << "Executing GetBlock:";
+  unsigned index = read<uint32_t>();
+  auto *region = read<Region *>();
+  unsigned memIndex = read();
+
+  Block *block = nullptr;
+  if (region && !region->empty()) {
+    auto it = region->begin();
+    while (index-- > 0 && it != region->end())
+      ++it;
+    if (it != region->end())
+      block = &*it;
+  }
+
+  LDBG() << "  * Index: " << index << "\n  * Result: " << block;
+  memory[memIndex] = block;
+}
+
+void ByteCodeExecutor::executeGetBlockArgument() {
+  LDBG() << "Executing GetBlockArgument:";
+  unsigned index = read<uint32_t>();
+  auto *block = read<Block *>();
+  unsigned memIndex = read();
+
+  Value arg;
+  if (block && index < block->getNumArguments())
+    arg = block->getArgument(index);
+
+  LDBG() << "  * Index: " << index << "\n  * Result: " << arg;
+  memory[memIndex] = arg.getAsOpaquePointer();
+}
+
+void ByteCodeExecutor::executeGetBlockArguments() {
+  LDBG() << "Executing GetBlockArguments:";
+  unsigned index = read<uint32_t>();
+  auto *block = read<Block *>();
+  ByteCodeField rangeIndex = read();
+
+  if (!block) {
+    LDBG() << "  * Null block";
+    memory[read()] = nullptr;
+    return;
+  }
+
+  // Get all block arguments or a subrange starting at the given index.
+  auto args = block->getArguments();
+  if (index != std::numeric_limits<uint32_t>::max()) {
+    if (index <= args.size())
+      args = args.drop_front(index);
+    else
+      args = args.drop_front(args.size()); // empty
+  }
+
+  LDBG() << "  * Index: " << index << "\n  * Num args: " << args.size();
+
+  // If the range index is valid, we are returning a range.
+  if (rangeIndex != std::numeric_limits<ByteCodeField>::max()) {
+    valueRangeMemory[rangeIndex] = args;
+    memory[read()] = &valueRangeMemory[rangeIndex];
+  } else {
+    // Scalar case: the range must have exactly one element.
+    memory[read()] =
+        args.size() == 1 ? args.front().getAsOpaquePointer() : nullptr;
+  }
+}
+
 void ByteCodeExecutor::executeGetDefiningOp() {
   LDBG() << "Executing GetDefiningOp:";
   unsigned memIndex = read();
@@ -1839,6 +2094,21 @@ void ByteCodeExecutor::executeGetOperand(unsigned index) {
   LDBG() << "  * Operation: " << *op << "\n  * Index: " << index
          << "\n  * Result: " << operand;
   memory[memIndex] = operand.getAsOpaquePointer();
+}
+
+void ByteCodeExecutor::executeGetRegion() {
+  LDBG() << "Executing GetRegion:";
+  unsigned index = read<uint32_t>();
+  Operation *op = read<Operation *>();
+  unsigned memIndex = read();
+
+  Region *region = nullptr;
+  if (op && index < op->getNumRegions())
+    region = &op->getRegion(index);
+
+  LDBG() << "  * Operation: " << (op ? op->getName().getStringRef() : "null")
+         << "\n  * Index: " << index << "\n  * Result: " << region;
+  memory[memIndex] = region;
 }
 
 /// This function is the internal implementation of `GetResults` and
@@ -2057,6 +2327,27 @@ void ByteCodeExecutor::executeRecordMatch(
   curCodeIt = dest;
 }
 
+void ByteCodeExecutor::executeMoveBlock(PatternRewriter &rewriter) {
+  LDBG() << "Executing MoveBlock:";
+  Block *block = read<Block *>();
+  Block *destBlock = read<Block *>();
+  LDBG() << "  * Moving block before destination block";
+  assert(block && destBlock && "Invalid block or destination block");
+  rewriter.moveBlockBefore(block, destBlock);
+}
+
+void ByteCodeExecutor::executeTakeRegion(PatternRewriter &rewriter) {
+  LDBG() << "Executing TakeRegion:";
+  Region *source = read<Region *>();
+  Region *dest = read<Region *>();
+  LDBG() << "  * Moving region contents into destination region";
+  // Move the source region's body into the destination region.
+  // This uses inlineRegionBefore to preserve proper notification to the pattern
+  // rewriter.
+  assert(source && dest && "Invalid source or destination region");
+  rewriter.inlineRegionBefore(*source, *dest, dest->end());
+}
+
 void ByteCodeExecutor::executeReplaceOp(PatternRewriter &rewriter) {
   LDBG() << "Executing ReplaceOp:";
   Operation *op = read<Operation *>();
@@ -2167,11 +2458,23 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
     case Branch:
       executeBranch();
       break;
+    case CheckBlockArgCount:
+      executeCheckBlockArgCount();
+      break;
+    case CheckBlockCount:
+      executeCheckBlockCount();
+      break;
+    case CheckParentBlock:
+      executeCheckParentBlock();
+      break;
     case CheckOperandCount:
       executeCheckOperandCount();
       break;
     case CheckOperationName:
       executeCheckOperationName();
+      break;
+    case CheckRegionCount:
+      executeCheckRegionCount();
       break;
     case CheckResultCount:
       executeCheckResultCount();
@@ -2214,11 +2517,23 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
     case ForEach:
       executeForEach();
       break;
+    case GetBlockOps:
+      executeGetBlockOps();
+      break;
     case GetAttribute:
       executeGetAttribute();
       break;
     case GetAttributeType:
       executeGetAttributeType();
+      break;
+    case GetBlock:
+      executeGetBlock();
+      break;
+    case GetBlockArgument:
+      executeGetBlockArgument();
+      break;
+    case GetBlockArguments:
+      executeGetBlockArguments();
       break;
     case GetDefiningOp:
       executeGetDefiningOp();
@@ -2238,6 +2553,9 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
       break;
     case GetOperands:
       executeGetOperands();
+      break;
+    case GetRegion:
+      executeGetRegion();
       break;
     case GetResult0:
     case GetResult1:
@@ -2266,6 +2584,12 @@ ByteCodeExecutor::execute(PatternRewriter &rewriter,
       break;
     case IsNotNull:
       executeIsNotNull();
+      break;
+    case MoveBlock:
+      executeMoveBlock(rewriter);
+      break;
+    case TakeRegion:
+      executeTakeRegion(rewriter);
       break;
     case RecordMatch:
       assert(matches &&

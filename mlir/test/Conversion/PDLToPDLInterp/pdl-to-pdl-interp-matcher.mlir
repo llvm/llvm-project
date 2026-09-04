@@ -756,3 +756,123 @@ module @common_connector_range {
     rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
   }
 }
+// -----
+
+// Test that basic region navigation ops are accepted by the lowering pass
+// (even though the region/block values may be unused in the matcher tree).
+// CHECK-LABEL: module @region_navigation
+// CHECK: pdl_interp.func @matcher
+// CHECK: pdl_interp.check_operation_name of %{{.*}} is "test.op_with_region"
+module @region_navigation {
+  pdl.pattern : benefit(1) {
+    %root = operation "test.op_with_region"
+    %region = pdl.region_of %root at 0
+    %block = pdl.block_of %region at 0
+    %arg0 = pdl.block_arg %block at 0
+    rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// Test multi-region navigation.
+// CHECK-LABEL: module @multi_region_navigation
+// CHECK: pdl_interp.func @matcher
+// CHECK: pdl_interp.check_operation_name of %{{.*}} is "test.op_with_two_regions"
+module @multi_region_navigation {
+  pdl.pattern : benefit(1) {
+    %root = operation "test.op_with_two_regions"
+    %region0 = pdl.region_of %root at 0
+    %region1 = pdl.region_of %root at 1
+    %block0 = pdl.block_of %region0 at 0
+    %block1 = pdl.block_of %region1 at 0
+    rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// Test deep navigation with multiple block arguments.
+// CHECK-LABEL: module @deep_block_arg_navigation
+// CHECK: pdl_interp.func @matcher
+// CHECK: pdl_interp.check_operation_name of %{{.*}} is "test.op_with_region"
+module @deep_block_arg_navigation {
+  pdl.pattern : benefit(1) {
+    %root = operation "test.op_with_region"
+    %region = pdl.region_of %root at 0
+    %block = pdl.block_of %region at 0
+    %arg0 = pdl.block_arg %block at 0
+    %arg1 = pdl.block_arg %block at 1
+    rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// Test variadic block arg range navigation (pdl.block_args).
+// CHECK-LABEL: module @block_args_range_navigation
+// CHECK: pdl_interp.func @matcher
+// CHECK: pdl_interp.check_operation_name of %{{.*}} is "test.op_with_region"
+module @block_args_range_navigation {
+  pdl.pattern : benefit(1) {
+    %root = operation "test.op_with_region"
+    %region = pdl.region_of %root at 0
+    %block = pdl.block_of %region at 0
+    %first = pdl.block_arg %block at 0
+    %rest = pdl.block_args %block at 1 -> !pdl.range<value>
+    rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// Test inner operation matching via parentBlock.
+// The lowering should emit get_block_ops + foreach + check_parent_block.
+// CHECK-LABEL: module @inner_op_matching
+// CHECK: pdl_interp.func @matcher
+// CHECK: pdl_interp.get_region %{{.*}} at 0
+// CHECK: pdl_interp.get_block %{{.*}} at 0
+// CHECK: pdl_interp.get_block_ops
+// CHECK: pdl_interp.foreach
+// CHECK:   pdl_interp.check_operation_name of %{{.*}} is "test.outer"
+// CHECK:   pdl_interp.check_operation_name of %{{.*}} is "test.inner"
+// CHECK:   pdl_interp.check_parent_block
+module @inner_op_matching {
+  pdl.pattern : benefit(1) {
+    %root = operation "test.outer"
+    %region = pdl.region_of %root at 0
+    %block = pdl.block_of %region at 0
+    %inner = operation "test.inner" in %block
+    rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// Test predicate tree fusion: two patterns sharing structural prefix
+// should emit get_block_ops and foreach only once, with a switch on
+// the inner operation name.
+// CHECK-LABEL: module @structural_fusion
+// CHECK: pdl_interp.func @matcher
+// CHECK: pdl_interp.get_region %{{.*}} at 0
+// CHECK: pdl_interp.get_block %{{.*}} at 0
+// CHECK: pdl_interp.get_block_ops
+// CHECK: pdl_interp.foreach
+// CHECK:   pdl_interp.check_operation_name of %{{.*}} is "test.outer"
+// CHECK:   pdl_interp.switch_operation_name of %{{.*}} to ["test.inner_a", "test.inner_b"]
+module @structural_fusion {
+  pdl.pattern @A : benefit(1) {
+    %root = operation "test.outer"
+    %region = pdl.region_of %root at 0
+    %block = pdl.block_of %region at 0
+    %inner = operation "test.inner_a" in %block
+    rewrite %root with "rewriter_a"
+  }
+  pdl.pattern @B : benefit(1) {
+    %root = operation "test.outer"
+    %region = pdl.region_of %root at 0
+    %block = pdl.block_of %region at 0
+    %inner = operation "test.inner_b" in %block
+    rewrite %root with "rewriter_b"
+  }
+}

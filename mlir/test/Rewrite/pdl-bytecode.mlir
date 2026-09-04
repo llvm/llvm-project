@@ -1816,3 +1816,544 @@ module @patterns {
 module @ir attributes { test.switch_types_1 } {
   %results:2 = "test.op"() : () -> (i64, i64)
 }
+
+// -----
+
+// Note: These tests exercise the region/block structural matching and rewrite
+// primitives added to the PDL bytecode interpreter.
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckRegionCountOp
+//===----------------------------------------------------------------------===//
+
+// Test matching an operation based on its region count.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op_with_region" -> ^check_regions, ^end
+
+  ^check_regions:
+    pdl_interp.check_region_count of %root is 1 -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.check_region_count_1
+// CHECK-NOT: "test.op_with_region"
+// CHECK: "test.success"
+// CHECK: "test.no_region"
+module @ir attributes { test.check_region_count_1 } {
+  "test.op_with_region"() ({
+    "test.inner"() : () -> ()
+  }) : () -> ()
+  "test.no_region"() : () -> ()
+}
+
+// -----
+
+// Test matching with at_least region count.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_region_count of %root is at_least 2 -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.check_region_count_at_least
+// CHECK: "test.one_region"
+// CHECK-NOT: "test.two_regions"
+// CHECK: "test.success"
+module @ir attributes { test.check_region_count_at_least } {
+  "test.one_region"() ({
+    "test.inner"() : () -> ()
+  }) : () -> ()
+  "test.two_regions"() ({
+    "test.inner1"() : () -> ()
+  }, {
+    "test.inner2"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetRegionOp + pdl_interp::CheckBlockCountOp
+//===----------------------------------------------------------------------===//
+
+// Test navigating from an operation to its region and checking block count.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op_with_region" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^check_blocks, ^end
+
+  ^check_blocks:
+    pdl_interp.check_block_count of %region is 1 -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_region_check_block_count
+// CHECK-NOT: "test.op_with_region"
+// CHECK: "test.success"
+module @ir attributes { test.get_region_check_block_count } {
+  "test.op_with_region"() ({
+    "test.inner"() : () -> ()
+  }) : () -> ()
+}
+
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckBlockArgCountOp
+//===----------------------------------------------------------------------===//
+
+// Test matching based on block argument count.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op_with_args" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^get_block, ^end
+
+  ^get_block:
+    %block = pdl_interp.get_block %region at 0
+    pdl_interp.is_not_null %block : !pdl.block -> ^check_args, ^end
+
+  ^check_args:
+    pdl_interp.check_block_arg_count of %block is 2 -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.check_block_arg_count_1
+// The op with 2 block args should match, the one with 1 should not.
+// CHECK: "test.op_with_args"
+// CHECK-NOT: test.op_with_args
+// CHECK: "test.success"
+module @ir attributes { test.check_block_arg_count_1 } {
+  "test.op_with_args"() ({
+  ^bb0(%arg0: i32):
+    "test.inner"(%arg0) : (i32) -> ()
+  }) : () -> ()
+  "test.op_with_args"() ({
+  ^bb0(%arg0: i32, %arg1: i64):
+    "test.inner"(%arg0) : (i32) -> ()
+  }) : () -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetBlockArgumentOp
+//===----------------------------------------------------------------------===//
+
+// Test getting a block argument and using it in a rewrite.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.with_block_arg" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^get_block, ^end
+
+  ^get_block:
+    %block = pdl_interp.get_block %region at 0
+    pdl_interp.is_not_null %block : !pdl.block -> ^check_args, ^end
+
+  ^check_args:
+    pdl_interp.check_block_arg_count of %block is at_least 1 -> ^get_arg, ^end
+
+  ^get_arg:
+    %arg = pdl_interp.get_block_argument %block at 0
+    pdl_interp.is_not_null %arg : !pdl.value -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root, %arg : !pdl.operation, !pdl.value) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation, %arg : !pdl.value) {
+      %argType = pdl_interp.get_value_type of %arg : !pdl.type
+      %op = pdl_interp.create_operation "test.success" -> (%argType : !pdl.type)
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_block_argument_1
+// CHECK-NOT: "test.with_block_arg"
+// CHECK: "test.success"() : () -> i32
+module @ir attributes { test.get_block_argument_1 } {
+  "test.with_block_arg"() ({
+  ^bb0(%arg0: i32):
+    "test.use"(%arg0) : (i32) -> ()
+  }) : () -> ()
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::MoveBlockOp
+//===----------------------------------------------------------------------===//
+
+// Test moving a block before another block (reversing block order).
+// Uses unregistered op successor syntax [^bb1] to make the second block
+// reachable, preventing the greedy driver from removing it.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.two_blocks" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^check_blocks, ^end
+
+  ^check_blocks:
+    pdl_interp.check_block_count of %region is 2 -> ^get_blocks, ^end
+
+  ^get_blocks:
+    %block0 = pdl_interp.get_block %region at 0
+    %block1 = pdl_interp.get_block %region at 1
+    pdl_interp.is_not_null %block0 : !pdl.block -> ^check1, ^end
+
+  ^check1:
+    pdl_interp.is_not_null %block1 : !pdl.block -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@move_block(%root, %block0, %block1 : !pdl.operation, !pdl.block, !pdl.block) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @move_block(%root : !pdl.operation, %block0 : !pdl.block, %block1 : !pdl.block) {
+      // Move block1 before block0, making block1 the new entry block.
+      pdl_interp.move_block %block1 before %block0
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.move_block_1
+// After moving block1 before block0, "test.second" should be the entry block.
+// The greedy driver then removes the now-unreachable old block0.
+// CHECK: "test.two_blocks"
+// CHECK:   "test.second"
+// CHECK:   "test.ret"
+// CHECK-NOT: "test.first"
+module @ir attributes { test.move_block_1 } {
+  "test.two_blocks"() ({
+    "test.first"() : () -> ()
+    "test.br"()[^bb1] : () -> ()
+  ^bb1:
+    "test.second"() : () -> ()
+    "test.ret"() : () -> ()
+  }) : () -> ()
+}
+
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetBlockArgumentsOp
+//===----------------------------------------------------------------------===//
+
+// Test getting a range of block arguments starting from an index.
+// This matches a block with at least 2 args, captures the first as a scalar
+// and the rest (from index 1) as a range. The rewrite creates a success op
+// whose result type matches the first block arg's type.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.with_varargs" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^get_block, ^end
+
+  ^get_block:
+    %block = pdl_interp.get_block %region at 0
+    pdl_interp.is_not_null %block : !pdl.block -> ^check_args, ^end
+
+  ^check_args:
+    pdl_interp.check_block_arg_count of %block is at_least 2 -> ^get_args, ^end
+
+  ^get_args:
+    %first = pdl_interp.get_block_argument %block at 0
+    %rest = pdl_interp.get_block_arguments %block at 1 : !pdl.range<value>
+    pdl_interp.is_not_null %first : !pdl.value -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root, %first : !pdl.operation, !pdl.value) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation, %first : !pdl.value) {
+      %firstType = pdl_interp.get_value_type of %first : !pdl.type
+      %op = pdl_interp.create_operation "test.success" -> (%firstType : !pdl.type)
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_block_arguments_1
+// The op with 3 block args should match (at_least 2); result type = first arg type.
+// CHECK-NOT: "test.with_varargs"
+// CHECK: "test.success"() : () -> i32
+module @ir attributes { test.get_block_arguments_1 } {
+  "test.with_varargs"() ({
+  ^bb0(%arg0: i32, %arg1: i64, %arg2: f32):
+    "test.use"(%arg0) : (i32) -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// Test that get_block_arguments with at_least 2 does NOT match a single-arg block.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.with_varargs" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^get_block, ^end
+
+  ^get_block:
+    %block = pdl_interp.get_block %region at 0
+    pdl_interp.is_not_null %block : !pdl.block -> ^check_args, ^end
+
+  ^check_args:
+    pdl_interp.check_block_arg_count of %block is at_least 2 -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_block_arguments_no_match
+// The op with only 1 block arg should NOT match (needs at_least 2).
+// CHECK: "test.with_varargs"
+// CHECK-NOT: "test.success"
+module @ir attributes { test.get_block_arguments_no_match } {
+  "test.with_varargs"() ({
+  ^bb0(%arg0: i32):
+    "test.use"(%arg0) : (i32) -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// Test out-of-bounds get_block call (returns null, which fails is_not_null).
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.one_block" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^get_block, ^end
+
+  ^get_block:
+    // Out of bounds (only 1 block exists)
+    %block = pdl_interp.get_block %region at 1
+    pdl_interp.is_not_null %block : !pdl.block -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %op = pdl_interp.create_operation "test.success"
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.get_block_out_of_bounds
+// CHECK: "test.one_block"
+// CHECK-NOT: "test.success"
+module @ir attributes { test.get_block_out_of_bounds } {
+  "test.one_block"() ({
+  ^bb0:
+    "test.inner"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// Test extracting an empty block args range (returns empty range).
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.empty_args_range" -> ^get_region, ^end
+
+  ^get_region:
+    %region = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %region : !pdl.region -> ^get_block, ^end
+
+  ^get_block:
+    %block = pdl_interp.get_block %region at 0
+    pdl_interp.is_not_null %block : !pdl.block -> ^check_args, ^end
+
+  ^check_args:
+    // Exact match for 1 arg
+    pdl_interp.check_block_arg_count of %block is 1 -> ^get_args, ^end
+
+  ^get_args:
+    %first = pdl_interp.get_block_argument %block at 0
+    // Extract range starting at 1 (which is empty)
+    %rest = pdl_interp.get_block_arguments %block at 1 : !pdl.range<value>
+    pdl_interp.is_not_null %first : !pdl.value -> ^pat, ^end
+
+  ^pat:
+    // Pass empty range to rewriter
+    pdl_interp.record_match @rewriters::@success(%root, %rest : !pdl.operation, !pdl.range<value>) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation, %rest : !pdl.range<value>) {
+      // Create a success operation and pass the empty range as operands
+      %op = pdl_interp.create_operation "test.success"(%rest : !pdl.range<value>)
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.empty_block_args_range
+// CHECK-NOT: "test.empty_args_range"
+// CHECK: "test.success"() : () -> ()
+module @ir attributes { test.empty_block_args_range } {
+  "test.empty_args_range"() ({
+  ^bb0(%arg0: i32):
+    "test.inner"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// Test take_region: moving blocks from one region to another, leaving the first empty.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.two_regions" -> ^get_src_region, ^end
+
+  ^get_src_region:
+    %srcRegion = pdl_interp.get_region %root at 0
+    pdl_interp.is_not_null %srcRegion : !pdl.region -> ^get_dest_region, ^end
+
+  ^get_dest_region:
+    %destRegion = pdl_interp.get_region %root at 1
+    pdl_interp.is_not_null %destRegion : !pdl.region -> ^check_src, ^end
+
+  ^check_src:
+    pdl_interp.check_block_count of %srcRegion is at_least 1 -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@take_region(%root, %srcRegion, %destRegion : !pdl.operation, !pdl.region, !pdl.region) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @take_region(%root : !pdl.operation, %srcRegion : !pdl.region, %destRegion : !pdl.region) {
+      pdl_interp.take_region %srcRegion before %destRegion
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.take_region_leaves_empty
+// CHECK: "test.two_regions"() ({
+// CHECK-NEXT: }, {
+// CHECK-NEXT:   "test.inner_a"() : () -> ()
+// CHECK-NEXT:   "test.inner_b"() : () -> ()
+// CHECK-NEXT: }) : () -> ()
+module @ir attributes { test.take_region_leaves_empty } {
+  "test.two_regions"() ({
+  ^bb0:
+    "test.inner_a"() : () -> ()
+    "test.inner_b"() : () -> ()
+  }, {
+  }) : () -> ()
+}

@@ -25,8 +25,14 @@ void PDLValue::print(raw_ostream &os) const {
   case Kind::Attribute:
     os << cast<Attribute>();
     break;
+  case Kind::Block:
+    os << *cast<Block *>();
+    break;
   case Kind::Operation:
     os << *cast<Operation *>();
+    break;
+  case Kind::Region:
+    os << *cast<Region *>();
     break;
   case Kind::Type:
     os << cast<Type>();
@@ -48,8 +54,14 @@ void PDLValue::print(raw_ostream &os, Kind kind) {
   case Kind::Attribute:
     os << "Attribute";
     break;
+  case Kind::Block:
+    os << "Block";
+    break;
   case Kind::Operation:
     os << "Operation";
+    break;
+  case Kind::Region:
+    os << "Region";
     break;
   case Kind::Type:
     os << "Type";

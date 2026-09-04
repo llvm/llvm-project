@@ -29,14 +29,25 @@ namespace mlir {
 class PDLValue {
 public:
   /// The underlying kind of a PDL value.
-  enum class Kind { Attribute, Operation, Type, TypeRange, Value, ValueRange };
+  enum class Kind {
+    Attribute,
+    Block,
+    Operation,
+    Region,
+    Type,
+    TypeRange,
+    Value,
+    ValueRange
+  };
 
   /// Construct a new PDL value.
   PDLValue(const PDLValue &other) = default;
   PDLValue(std::nullptr_t = nullptr) {}
   PDLValue(Attribute value)
       : value(value.getAsOpaquePointer()), kind(Kind::Attribute) {}
+  PDLValue(Block *value) : value(value), kind(Kind::Block) {}
   PDLValue(Operation *value) : value(value), kind(Kind::Operation) {}
+  PDLValue(Region *value) : value(value), kind(Kind::Region) {}
   PDLValue(Type value) : value(value.getAsOpaquePointer()), kind(Kind::Type) {}
   PDLValue(TypeRange *value) : value(value), kind(Kind::TypeRange) {}
   PDLValue(Value value)
@@ -95,8 +106,9 @@ private:
   /// Return the kind used for the given T.
   template <typename T>
   static Kind getKindOf() {
-    return static_cast<Kind>(index_of_t<T, Attribute, Operation *, Type,
-                                        TypeRange, Value, ValueRange>::value);
+    return static_cast<Kind>(
+        index_of_t<T, Attribute, Block *, Operation *, Region *, Type,
+                   TypeRange, Value, ValueRange>::value);
   }
 
   /// The internal implementation of `cast`, that returns the underlying value

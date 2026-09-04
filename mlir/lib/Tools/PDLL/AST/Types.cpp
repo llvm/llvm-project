@@ -15,9 +15,11 @@ using namespace mlir::pdll;
 using namespace mlir::pdll::ast;
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::AttributeTypeStorage)
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::BlockTypeStorage)
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::ConstraintTypeStorage)
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::OperationTypeStorage)
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::RangeTypeStorage)
+MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::RegionTypeStorage)
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::RewriteTypeStorage)
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::TupleTypeStorage)
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::pdll::ast::detail::TypeTypeStorage)
@@ -54,6 +56,14 @@ Type Type::refineWith(Type other) const {
 //===----------------------------------------------------------------------===//
 
 AttributeType AttributeType::get(Context &context) {
+  return context.getTypeUniquer().get<ImplTy>();
+}
+
+//===----------------------------------------------------------------------===//
+// BlockType
+//===----------------------------------------------------------------------===//
+
+BlockType BlockType::get(Context &context) {
   return context.getTypeUniquer().get<ImplTy>();
 }
 
@@ -133,6 +143,14 @@ ValueRangeType ValueRangeType::get(Context &context) {
 //===----------------------------------------------------------------------===//
 
 RewriteType RewriteType::get(Context &context) {
+  return context.getTypeUniquer().get<ImplTy>();
+}
+
+//===----------------------------------------------------------------------===//
+// RegionType
+//===----------------------------------------------------------------------===//
+
+RegionType RegionType::get(Context &context) {
   return context.getTypeUniquer().get<ImplTy>();
 }
 

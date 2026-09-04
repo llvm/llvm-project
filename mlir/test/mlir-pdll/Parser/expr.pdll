@@ -313,3 +313,285 @@ Pattern {
 
   erase _: Op;
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// BlockExpr (within operation region)
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.func>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<my_dialect.foo>>
+Pattern {
+  erase op<my_dialect.func> {
+    op<my_dialect.foo>;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// RegionExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-RegionExpr {{.*}} Type<Region>
+// CHECK:   `Blocks`
+// CHECK:     `-BlockExpr {{.*}} Type<Block>
+// CHECK:       `Children`
+// CHECK:         `-OperationExpr {{.*}} Type<Op<my_dialect.bar>>
+// CHECK:           `-OpNameDecl {{.*}} Name<my_dialect.bar>
+Pattern {
+  // Shorthand: region body is an implicit single block.
+  let rgn = op<my_dialect.foo> {
+    op<my_dialect.bar>;
+  };
+
+  erase _: Op;
+}
+
+// -----
+
+// Test region with multiple explicit blocks.
+
+// CHECK: Module
+// CHECK: `-RegionExpr {{.*}} Type<Region>
+// CHECK:   `Blocks`
+// CHECK:     |-BlockExpr {{.*}} Type<Block>
+// CHECK:       `Children`
+// CHECK:         `-OperationExpr {{.*}} Type<Op<my_dialect.entry>>
+// CHECK:     `-BlockExpr {{.*}} Type<Block>
+// CHECK:       `Children`
+// CHECK:         `-OperationExpr {{.*}} Type<Op<my_dialect.exit>>
+Pattern {
+  let outer = op<my_dialect.foo> {
+    ^: { op<my_dialect.entry>; }
+    ^: { op<my_dialect.exit>; }
+  };
+
+  erase _: Op;
+}
+
+// -----
+
+// Test operation with attached region using shorthand syntax.
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.outer>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<my_dialect.inner>>
+Pattern {
+  erase op<my_dialect.outer> {
+    op<my_dialect.inner>;
+  };
+}
+
+// -----
+
+// Test block with arguments.
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.loop>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Args`
+// CHECK:             `-VariableDecl {{.*}} Name<iv>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<my_dialect.body>>
+Pattern {
+  erase op<my_dialect.loop> {
+    ^(iv: Value): {
+      op<my_dialect.body>;
+    }
+  };
+}
+
+// -----
+
+// Test block with ValueRange (variadic) block argument.
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.loop>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Args`
+// CHECK:             |-VariableDecl {{.*}} Name<iv>
+// CHECK:             `-VariableDecl {{.*}} Name<rest> Type<ValueRange>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<my_dialect.body>>
+Pattern {
+  erase op<my_dialect.loop> {
+    ^(iv: Value, rest: ValueRange): {
+      op<my_dialect.body>;
+    }
+  };
+}
+
+// -----
+
+// Test block with only a ValueRange block argument (captures all args).
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.loop>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Args`
+// CHECK:             `-VariableDecl {{.*}} Name<allArgs> Type<ValueRange>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<my_dialect.body>>
+Pattern {
+  erase op<my_dialect.loop> {
+    ^(allArgs: ValueRange): {
+      op<my_dialect.body>;
+    }
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Named block: basic definition and reference (unconstrained args)
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<test.op>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK: VariableDecl {{.*}} Name<b> Type<Block>
+// CHECK:   `-DeclRefExpr {{.*}} Type<Block>
+// CHECK:     `-VariableDecl {{.*}} Name<bb0> Type<Block>
+Pattern {
+  let op = op<test.op> {
+    ^bb0: {}
+  };
+
+  let b = ^bb0;
+
+  erase op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Named block: with arguments
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<test.loop>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Args`
+// CHECK:             `-VariableDecl {{.*}} Name<iv>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<test.body>>
+Pattern {
+  erase op<test.loop> {
+    ^entry(iv: Value): {
+      op<test.body>;
+    }
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Multiple named blocks with zero-arg constraint
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<test.branch>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         |-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<test.entry>>
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<test.exit>>
+Pattern {
+  erase op<test.branch> {
+    ^bb0(): { op<test.entry>; }
+    ^bb1(): { op<test.exit>; }
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Named block: reference in let binding
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: VariableDecl {{.*}} Name<entryBlock> Type<Block>
+// CHECK:   `-DeclRefExpr {{.*}} Type<Block>
+// CHECK:     `-VariableDecl {{.*}} Name<entry> Type<Block>
+Pattern {
+  let op = op<test.func> {
+    ^entry(arg: Value): {
+      op<test.use>;
+    }
+  };
+
+  let entryBlock = ^entry;
+
+  erase op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Unnamed block: unconstrained args
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<test.simple>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+// CHECK:           `Children`
+// CHECK:             `-OperationExpr {{.*}} Type<Op<test.inner>>
+Pattern {
+  erase op<test.simple> {
+    ^: { op<test.inner>; }
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Unnamed block: zero args
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<test.zero>>
+// CHECK:   `Regions`
+// CHECK:     `-RegionExpr {{.*}} Type<Region>
+// CHECK:       `Blocks`
+// CHECK:         `-BlockExpr {{.*}} Type<Block>
+Pattern {
+  erase op<test.zero> {
+    ^(): {}
+  };
+}

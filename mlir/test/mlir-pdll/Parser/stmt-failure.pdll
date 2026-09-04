@@ -376,3 +376,61 @@ Pattern {
       return root;
   };
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `take_region`
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected `before` after source region expression
+Pattern {
+  rewrite root: Op with {
+    take_region root;
+  };
+}
+
+// -----
+
+// CHECK: expected expression
+Pattern {
+  rewrite root: Op with {
+    take_region;
+  };
+}
+
+// -----
+
+// CHECK: `take_region` cannot be used within a Constraint
+Constraint Foo(arg: Op) {
+  take_region arg before arg;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// `move_block`
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected `before` after source block expression
+Pattern {
+  rewrite root: Op with {
+    move_block root;
+  };
+}
+
+// -----
+
+// CHECK: expected expression
+Pattern {
+  rewrite root: Op with {
+    move_block;
+  };
+}
+
+// -----
+
+// CHECK: `move_block` cannot be used within a Constraint
+Constraint Bar(arg: Op) {
+  move_block arg before arg;
+}

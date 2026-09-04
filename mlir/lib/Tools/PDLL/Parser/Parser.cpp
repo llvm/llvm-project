@@ -314,6 +314,10 @@ private:
 
   /// Identifier expressions.
   FailureOr<ast::Expr *> parseAttributeExpr();
+  FailureOr<ast::Expr *>
+  parseBlockExpr(std::optional<StringRef> blockName = std::nullopt,
+                 SMRange nameLoc = SMRange());
+  FailureOr<ast::Expr *> parseCaretExpr();
   FailureOr<ast::Expr *> parseCallExpr(ast::Expr *parentExpr,
                                        bool isNegated = false);
   FailureOr<ast::Expr *> parseDeclRefExpr(StringRef name, SMRange loc);
@@ -327,6 +331,7 @@ private:
   FailureOr<ast::Expr *>
   parseOperationExpr(OpResultTypeContext inputResultTypeContext =
                          OpResultTypeContext::Explicit);
+  FailureOr<ast::Expr *> parseRegionExpr();
   FailureOr<ast::Expr *> parseTupleExpr();
   FailureOr<ast::Expr *> parseTypeExpr();
   FailureOr<ast::Expr *> parseUnderscoreExpr();
@@ -341,6 +346,12 @@ private:
   FailureOr<ast::ReplaceStmt *> parseReplaceStmt();
   FailureOr<ast::ReturnStmt *> parseReturnStmt();
   FailureOr<ast::RewriteStmt *> parseRewriteStmt();
+  FailureOr<ast::TakeRegionStmt *> parseTakeRegionStmt();
+  FailureOr<ast::MoveBlockStmt *> parseMoveBlockStmt();
+
+  template <typename T>
+  FailureOr<T *> parseMoveStmt(StringRef stmtKeyword, StringRef srcName,
+                               Token::Kind kw);
 
   //===--------------------------------------------------------------------===//
   // Creation+Analysis
@@ -424,7 +435,8 @@ private:
                       OpResultTypeContext resultTypeContext,
                       SmallVectorImpl<ast::Expr *> &operands,
                       MutableArrayRef<ast::NamedAttributeDecl *> attributes,
-                      SmallVectorImpl<ast::Expr *> &results);
+                      SmallVectorImpl<ast::Expr *> &results,
+                      ArrayRef<ast::Expr *> regions = {});
   LogicalResult
   validateOperationOperands(SMRange loc, std::optional<StringRef> name,
                             const ods::Operation *odsOp,
@@ -1697,6 +1709,9 @@ Parser::parseConstraint(std::optional<SMRange> &typeConstraint,
     return ast::ConstraintRef(
         ast::AttrConstraintDecl::create(ctx, loc, typeExpr), loc);
   }
+  case Token::kw_Block:
+    consumeToken(Token::kw_Block);
+    return ast::ConstraintRef(ast::BlockConstraintDecl::create(ctx, loc), loc);
   case Token::kw_Op: {
     consumeToken(Token::kw_Op);
 
@@ -1710,6 +1725,9 @@ Parser::parseConstraint(std::optional<SMRange> &typeConstraint,
     return ast::ConstraintRef(ast::OpConstraintDecl::create(ctx, loc, *opName),
                               loc);
   }
+  case Token::kw_Region:
+    consumeToken(Token::kw_Region);
+    return ast::ConstraintRef(ast::RegionConstraintDecl::create(ctx, loc), loc);
   case Token::kw_Type:
     consumeToken(Token::kw_Type);
     return ast::ConstraintRef(ast::TypeConstraintDecl::create(ctx, loc), loc);
@@ -1822,6 +1840,9 @@ FailureOr<ast::Expr *> Parser::parseExpr() {
   case Token::l_paren:
     lhsExpr = parseTupleExpr();
     break;
+  case Token::caret:
+    lhsExpr = parseCaretExpr();
+    break;
   default:
     return emitError("expected expression");
   }
@@ -1866,6 +1887,125 @@ FailureOr<ast::Expr *> Parser::parseAttributeExpr() {
           parseToken(Token::greater, "expected `>` after attribute literal")))
     return failure();
   return ast::AttributeExpr::create(ctx, loc, attrExpr);
+}
+
+FailureOr<ast::Expr *>
+Parser::parseBlockExpr(std::optional<StringRef> blockName, SMRange nameLoc) {
+  SMRange loc = blockName ? nameLoc : curToken.getLoc();
+
+  StringRef label;
+  if (blockName) {
+    // Name was pre-parsed by parseCaretExpr (^ already consumed).
+    label = *blockName;
+  } else {
+    // Called from parseRegionExpr — consume ^ and optional name.
+    if (failed(
+            parseToken(Token::caret, "expected `^` to start block definition")))
+      return failure();
+    if (curToken.is(Token::identifier)) {
+      label = curToken.getSpelling();
+      nameLoc = curToken.getLoc();
+      consumeToken(Token::identifier);
+    }
+  }
+
+  // Parse optional block argument list: (name: Constraint, ...)
+  //   No parens      → unconstrained (don't check block arg count)
+  //   ()             → exactly zero block args
+  //   (iv: Value)    → exactly those block args
+  SmallVector<ast::VariableDecl *> args;
+  if (consumeIf(Token::l_paren)) {
+    if (!consumeIf(Token::r_paren)) {
+      do {
+        // Parse each block argument as `name: Constraint`.
+        if (curToken.isNot(Token::identifier) && !curToken.isDependentKeyword())
+          return emitError("expected identifier for block argument name");
+
+        StringRef name = curToken.getSpelling();
+        SMRange argNameLoc = curToken.getLoc();
+        consumeToken();
+
+        if (failed(parseToken(Token::colon,
+                              "expected `:` before block argument constraint")))
+          return failure();
+
+        FailureOr<ast::ConstraintRef> cst = parseArgOrResultConstraint();
+        if (failed(cst))
+          return failure();
+
+        FailureOr<ast::VariableDecl *> argDecl =
+            createArgOrResultVariableDecl(name, argNameLoc, *cst);
+        if (failed(argDecl))
+          return failure();
+        args.push_back(*argDecl);
+      } while (consumeIf(Token::comma));
+
+      // Validate that ValueRange args are trailing: only the last block
+      // argument may have a ValueRange type.
+      for (unsigned i = 0, e = args.size(); i < e; ++i) {
+        if (isa<ast::ValueRangeType>(args[i]->getType()) && i != e - 1)
+          return emitError(args[i]->getLoc(),
+                           "variadic block argument (ValueRange) must be the "
+                           "last argument in the block argument list");
+      }
+
+      if (failed(parseToken(Token::r_paren,
+                            "expected `)` after block argument list")))
+        return failure();
+    }
+  }
+
+  // Require `:` after block header.
+  if (failed(parseToken(Token::colon, "expected `:` after block header")))
+    return failure();
+
+  // Parse the block body: `{` ... `}`
+  if (failed(parseToken(Token::l_brace, "expected `{` to start block body")))
+    return failure();
+
+  SmallVector<ast::Expr *> children;
+  while (curToken.isNot(Token::r_brace)) {
+    FailureOr<ast::Expr *> child = parseExpr();
+    if (failed(child))
+      return failure();
+    children.push_back(*child);
+
+    // Consume an optional semicolon between children.
+    consumeIf(Token::semicolon);
+  }
+
+  loc.End = curToken.getEndLoc();
+  if (failed(parseToken(Token::r_brace, "expected `}` to close block body")))
+    return failure();
+
+  ast::Expr *blockExpr = ast::BlockExpr::create(ctx, loc, args, children);
+
+  // Register block label in scope if present.
+  if (!label.empty()) {
+    ast::Type blockType = ast::BlockType::get(ctx);
+    auto varDecl = defineVariableDecl(label, nameLoc, blockType, blockExpr, {});
+    if (failed(varDecl))
+      return failure();
+  }
+
+  return blockExpr;
+}
+
+FailureOr<ast::Expr *> Parser::parseCaretExpr() {
+  consumeToken(Token::caret);
+
+  if (curToken.isNot(Token::identifier))
+    return emitError("expected identifier after `^`");
+
+  StringRef name = curToken.getSpelling();
+  SMRange nameLoc = curToken.getLoc();
+  consumeToken(Token::identifier);
+
+  if (curToken.isAny(Token::l_paren, Token::colon)) {
+    return parseBlockExpr(name, nameLoc);
+  }
+
+  return parseDeclRefExpr(name, nameLoc);
 }
 
 FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr,
@@ -2089,19 +2229,53 @@ Parser::parseOperationExpr(OpResultTypeContext inputResultTypeContext) {
   }
 
   // Check for the optional list of attributes.
+  // Disambiguate between attribute dict `{ name = val }` and region body
+  // `{ op<...>; }` by looking ahead. An attribute dict starts with
+  // `{ (identifier|keyword|string) (= | , | })` while a region body starts
+  // with any other expression, like `op<`, `(`, nested `{`, etc.
   SmallVector<ast::NamedAttributeDecl *> attributes;
-  if (consumeIf(Token::l_brace)) {
-    do {
-      FailureOr<ast::NamedAttributeDecl *> decl =
-          parseNamedAttributeDecl(opName);
-      if (failed(decl))
-        return failure();
-      attributes.emplace_back(*decl);
-    } while (consumeIf(Token::comma));
+  if (curToken.is(Token::l_brace)) {
+    SMRange braceStart = curToken.getLoc();
+    consumeToken(Token::l_brace);
 
-    if (failed(parseToken(Token::r_brace,
-                          "expected `}` after operation attribute list")))
-      return failure();
+    // Check if this looks like an attribute dict by examining the first token.
+    bool isAttrDict = false;
+    if (curToken.is(Token::identifier) || curToken.isKeyword() ||
+        curToken.isString()) {
+      // Save position, peek at what follows the name.
+      Token nameTok = curToken;
+      consumeToken();
+      isAttrDict = curToken.isAny(Token::equal, Token::comma, Token::r_brace);
+      // Reset back to the name token — we'll re-parse properly.
+      resetToken(nameTok.getLoc());
+    } else if (curToken.is(Token::code_complete)) {
+      // Code completion in attribute context.
+      isAttrDict = true;
+    } else if (curToken.is(Token::r_brace)) {
+      // Empty `{}` — treat as empty attribute dict for backward compat.
+      isAttrDict = true;
+    }
+
+    if (isAttrDict) {
+      // Parse attribute dict normally.
+      if (curToken.isNot(Token::r_brace)) {
+        do {
+          FailureOr<ast::NamedAttributeDecl *> decl =
+              parseNamedAttributeDecl(opName);
+          if (failed(decl))
+            return failure();
+          attributes.emplace_back(*decl);
+        } while (consumeIf(Token::comma));
+      }
+
+      if (failed(parseToken(Token::r_brace,
+                            "expected `}` after operation attribute list")))
+        return failure();
+    } else {
+      // Not an attribute dict — reset to before the `{` so region parsing
+      // can consume it.
+      resetToken(braceStart);
+    }
   }
 
   // Handle the result types of the operation.
@@ -2153,8 +2327,63 @@ Parser::parseOperationExpr(OpResultTypeContext inputResultTypeContext) {
     resultTypeContext = OpResultTypeContext::Interface;
   }
 
+  // Parse optional attached region expressions.
+  // Regions use brace syntax: op<name> { ... } where `{` starts a region.
+  SmallVector<ast::Expr *> regions;
+  while (curToken.is(Token::l_brace)) {
+    FailureOr<ast::Expr *> region = parseRegionExpr();
+    if (failed(region))
+      return failure();
+    regions.push_back(*region);
+  }
+
   return createOperationExpr(loc, *opNameDecl, resultTypeContext, operands,
-                             attributes, resultTypes);
+                             attributes, resultTypes, regions);
+}
+
+FailureOr<ast::Expr *> Parser::parseRegionExpr() {
+  SMRange loc = curToken.getLoc();
+  consumeToken(Token::l_brace);
+
+  // A Region expression uses `{ ... }` containing block expressions.
+  // All explicit blocks start with `^` — the universal block introducer.
+  // Bare expressions are shorthand — implicit single block, unconstrained args.
+  SmallVector<ast::Expr *> blocks;
+
+  // Check if the region body contains explicit blocks.
+  bool hasExplicitBlocks = false;
+  if (curToken.isNot(Token::r_brace)) {
+    hasExplicitBlocks = curToken.is(Token::caret);
+  }
+
+  if (hasExplicitBlocks) {
+    // Parse explicit block(s).
+    while (curToken.isNot(Token::r_brace)) {
+      FailureOr<ast::Expr *> block = parseBlockExpr();
+      if (failed(block))
+        return failure();
+      blocks.push_back(*block);
+    }
+  } else {
+    // Shorthand: treat the entire region body as a single implicit block
+    // with no arguments.
+    SmallVector<ast::Expr *> children;
+    while (curToken.isNot(Token::r_brace)) {
+      FailureOr<ast::Expr *> child = parseExpr();
+      if (failed(child))
+        return failure();
+      children.push_back(*child);
+      consumeIf(Token::semicolon);
+    }
+    blocks.push_back(ast::BlockExpr::create(ctx, loc, /*args=*/{}, children));
+  }
+
+  loc.End = curToken.getEndLoc();
+  if (failed(parseToken(Token::r_brace,
+                        "expected `}` to close region expression body")))
+    return failure();
+
+  return ast::RegionExpr::create(ctx, loc, blocks);
 }
 
 FailureOr<ast::Expr *> Parser::parseTupleExpr() {
@@ -2272,6 +2501,12 @@ FailureOr<ast::Stmt *> Parser::parseStmt(bool expectTerminalSemicolon) {
     break;
   case Token::kw_rewrite:
     stmt = parseRewriteStmt();
+    break;
+  case Token::kw_take_region:
+    stmt = parseTakeRegionStmt();
+    break;
+  case Token::kw_move_block:
+    stmt = parseMoveBlockStmt();
     break;
   default:
     stmt = parseExpr();
@@ -2481,6 +2716,43 @@ FailureOr<ast::RewriteStmt *> Parser::parseRewriteStmt() {
   return createRewriteStmt(loc, *rootOp, *rewriteBody);
 }
 
+template <typename T>
+FailureOr<T *> Parser::parseMoveStmt(StringRef stmtKeyword, StringRef srcName,
+                                     Token::Kind kw) {
+  if (parserContext == ParserContext::Constraint)
+    return emitError("`" + stmtKeyword +
+                     "` cannot be used within a Constraint");
+  SMRange loc = curToken.getLoc();
+  consumeToken(kw);
+
+  FailureOr<ast::Expr *> srcExpr = parseExpr();
+  if (failed(srcExpr))
+    return failure();
+
+  // 'before' is a contextual keyword, parsed as an identifier rather than a
+  // dedicated Token::kw_before, since it is only used in move statements.
+  if (curToken.isNot(Token::identifier) || curToken.getSpelling() != "before")
+    return emitError("expected `before` after source " + srcName +
+                     " expression");
+  consumeToken();
+
+  FailureOr<ast::Expr *> destExpr = parseExpr();
+  if (failed(destExpr))
+    return failure();
+
+  return T::create(ctx, loc, *srcExpr, *destExpr);
+}
+
+FailureOr<ast::TakeRegionStmt *> Parser::parseTakeRegionStmt() {
+  return parseMoveStmt<ast::TakeRegionStmt>("take_region", "region",
+                                            Token::kw_take_region);
+}
+
+FailureOr<ast::MoveBlockStmt *> Parser::parseMoveBlockStmt() {
+  return parseMoveStmt<ast::MoveBlockStmt>("move_block", "block",
+                                           Token::kw_move_block);
+}
+
 //===----------------------------------------------------------------------===//
 // Creation+Analysis
 //===----------------------------------------------------------------------===//
@@ -2635,6 +2907,10 @@ LogicalResult Parser::validateVariableConstraint(const ast::ConstraintRef &ref,
         return failure();
     }
     constraintType = valueRangeTy;
+  } else if (isa<ast::RegionConstraintDecl>(ref.constraint)) {
+    constraintType = ast::RegionType::get(ctx);
+  } else if (isa<ast::BlockConstraintDecl>(ref.constraint)) {
+    constraintType = ast::BlockType::get(ctx);
   } else if (const auto *cst =
                  dyn_cast<ast::UserConstraintDecl>(ref.constraint)) {
     ArrayRef<ast::VariableDecl *> inputs = cst->getInputs();
@@ -2838,7 +3114,7 @@ FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
     OpResultTypeContext resultTypeContext,
     SmallVectorImpl<ast::Expr *> &operands,
     MutableArrayRef<ast::NamedAttributeDecl *> attributes,
-    SmallVectorImpl<ast::Expr *> &results) {
+    SmallVectorImpl<ast::Expr *> &results, ArrayRef<ast::Expr *> regions) {
   std::optional<StringRef> opNameRef = name->getName();
   const ods::Operation *odsOp = lookupODSOperation(opNameRef);
 
@@ -2875,7 +3151,7 @@ FailureOr<ast::OperationExpr *> Parser::createOperationExpr(
   }
 
   return ast::OperationExpr::create(ctx, loc, odsOp, name, operands, results,
-                                    attributes);
+                                    attributes, regions);
 }
 
 LogicalResult

@@ -14,7 +14,9 @@ using namespace mlir::pdll::ast;
 
 Context::Context(ods::Context &odsContext) : odsContext(odsContext) {
   typeUniquer.registerSingletonStorageType<detail::AttributeTypeStorage>();
+  typeUniquer.registerSingletonStorageType<detail::BlockTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::ConstraintTypeStorage>();
+  typeUniquer.registerSingletonStorageType<detail::RegionTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::RewriteTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::TypeTypeStorage>();
   typeUniquer.registerSingletonStorageType<detail::ValueTypeStorage>();

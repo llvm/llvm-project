@@ -54,15 +54,17 @@ public:
         .Case<
             // Statements.
             const CompoundStmt, const EraseStmt, const LetStmt,
-            const ReplaceStmt, const ReturnStmt, const RewriteStmt,
+            const TakeRegionStmt, const MoveBlockStmt, const ReplaceStmt,
+            const ReturnStmt, const RewriteStmt,
 
             // Expressions.
-            const AttributeExpr, const CallExpr, const DeclRefExpr,
-            const MemberAccessExpr, const OperationExpr, const RangeExpr,
-            const TupleExpr, const TypeExpr,
+            const AttributeExpr, const BlockExpr, const CallExpr,
+            const DeclRefExpr, const MemberAccessExpr, const OperationExpr,
+            const RangeExpr, const RegionExpr, const TupleExpr, const TypeExpr,
 
             // Core Constraint Decls.
-            const AttrConstraintDecl, const OpConstraintDecl,
+            const AttrConstraintDecl, const BlockConstraintDecl,
+            const OpConstraintDecl, const RegionConstraintDecl,
             const TypeConstraintDecl, const TypeRangeConstraintDecl,
             const ValueConstraintDecl, const ValueRangeConstraintDecl,
 
@@ -92,8 +94,22 @@ private:
     visit(stmt->getRootOpExpr());
     visit(stmt->getRewriteBody());
   }
+  void visitImpl(const TakeRegionStmt *stmt) {
+    visit(stmt->getRegion());
+    visit(stmt->getDestOp());
+  }
+  void visitImpl(const MoveBlockStmt *stmt) {
+    visit(stmt->getBlock());
+    visit(stmt->getDestBlock());
+  }
 
   void visitImpl(const AttributeExpr *expr) {}
+  void visitImpl(const BlockExpr *expr) {
+    for (const Node *arg : expr->getArgs())
+      visit(arg);
+    for (const Node *child : expr->getChildren())
+      visit(child);
+  }
   void visitImpl(const CallExpr *expr) {
     visit(expr->getCallableExpr());
     for (const Node *child : expr->getArguments())
@@ -109,9 +125,15 @@ private:
       visit(child);
     for (const Node *child : expr->getAttributes())
       visit(child);
+    for (const Node *child : expr->getRegions())
+      visit(child);
   }
   void visitImpl(const RangeExpr *expr) {
     for (const Node *child : expr->getElements())
+      visit(child);
+  }
+  void visitImpl(const RegionExpr *expr) {
+    for (const Node *child : expr->getBlocks())
       visit(child);
   }
   void visitImpl(const TupleExpr *expr) {
@@ -122,6 +144,8 @@ private:
 
   void visitImpl(const AttrConstraintDecl *decl) { visit(decl->getTypeExpr()); }
   void visitImpl(const OpConstraintDecl *decl) { visit(decl->getNameDecl()); }
+  void visitImpl(const BlockConstraintDecl *decl) {}
+  void visitImpl(const RegionConstraintDecl *decl) {}
   void visitImpl(const TypeConstraintDecl *decl) {}
   void visitImpl(const TypeRangeConstraintDecl *decl) {}
   void visitImpl(const ValueConstraintDecl *decl) {
@@ -253,6 +277,26 @@ ReturnStmt *ReturnStmt::create(Context &ctx, SMRange loc, Expr *resultExpr) {
 }
 
 //===----------------------------------------------------------------------===//
+// TakeRegionStmt
+//===----------------------------------------------------------------------===//
+
+TakeRegionStmt *TakeRegionStmt::create(Context &ctx, SMRange loc, Expr *region,
+                                       Expr *destOp) {
+  return new (ctx.getAllocator().Allocate<TakeRegionStmt>())
+      TakeRegionStmt(loc, region, destOp);
+}
+
+//===----------------------------------------------------------------------===//
+// MoveBlockStmt
+//===----------------------------------------------------------------------===//
+
+MoveBlockStmt *MoveBlockStmt::create(Context &ctx, SMRange loc, Expr *block,
+                                     Expr *destBlock) {
+  return new (ctx.getAllocator().Allocate<MoveBlockStmt>())
+      MoveBlockStmt(loc, block, destBlock);
+}
+
+//===----------------------------------------------------------------------===//
 // AttributeExpr
 //===----------------------------------------------------------------------===//
 
@@ -260,6 +304,24 @@ AttributeExpr *AttributeExpr::create(Context &ctx, SMRange loc,
                                      StringRef value) {
   return new (ctx.getAllocator().Allocate<AttributeExpr>())
       AttributeExpr(ctx, loc, copyStringWithNull(ctx, value));
+}
+
+//===----------------------------------------------------------------------===//
+// BlockExpr
+//===----------------------------------------------------------------------===//
+
+BlockExpr *BlockExpr::create(Context &ctx, SMRange loc,
+                             ArrayRef<VariableDecl *> args,
+                             ArrayRef<Expr *> children) {
+  unsigned allocSize = BlockExpr::totalSizeToAlloc<VariableDecl *, Expr *>(
+      args.size(), children.size());
+  void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(BlockExpr));
+
+  BlockExpr *expr =
+      new (rawData) BlockExpr(ctx, loc, args.size(), children.size());
+  llvm::uninitialized_copy(args, expr->getArgs().begin());
+  llvm::uninitialized_copy(children, expr->getChildren().begin());
+  return expr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -303,23 +365,27 @@ MemberAccessExpr *MemberAccessExpr::create(Context &ctx, SMRange loc,
 // OperationExpr
 //===----------------------------------------------------------------------===//
 
-OperationExpr *
-OperationExpr::create(Context &ctx, SMRange loc, const ods::Operation *odsOp,
-                      const OpNameDecl *name, ArrayRef<Expr *> operands,
-                      ArrayRef<Expr *> resultTypes,
-                      ArrayRef<NamedAttributeDecl *> attributes) {
+OperationExpr *OperationExpr::create(Context &ctx, SMRange loc,
+                                     const ods::Operation *odsOp,
+                                     const OpNameDecl *name,
+                                     ArrayRef<Expr *> operands,
+                                     ArrayRef<Expr *> resultTypes,
+                                     ArrayRef<NamedAttributeDecl *> attributes,
+                                     ArrayRef<Expr *> regions) {
   unsigned allocSize =
       OperationExpr::totalSizeToAlloc<Expr *, NamedAttributeDecl *>(
-          operands.size() + resultTypes.size(), attributes.size());
+          operands.size() + resultTypes.size() + regions.size(),
+          attributes.size());
   void *rawData =
       ctx.getAllocator().Allocate(allocSize, alignof(OperationExpr));
 
   Type resultType = OperationType::get(ctx, name->getName(), odsOp);
   OperationExpr *opExpr = new (rawData)
       OperationExpr(loc, resultType, name, operands.size(), resultTypes.size(),
-                    attributes.size(), name->getLoc());
+                    attributes.size(), regions.size(), name->getLoc());
   llvm::uninitialized_copy(operands, opExpr->getOperands().begin());
   llvm::uninitialized_copy(resultTypes, opExpr->getResultTypes().begin());
+  llvm::uninitialized_copy(regions, opExpr->getRegions().begin());
   llvm::uninitialized_copy(attributes, opExpr->getAttributes().begin());
   return opExpr;
 }
@@ -339,6 +405,20 @@ RangeExpr *RangeExpr::create(Context &ctx, SMRange loc,
 
   RangeExpr *expr = new (rawData) RangeExpr(loc, type, elements.size());
   llvm::uninitialized_copy(elements, expr->getElements().begin());
+  return expr;
+}
+
+//===----------------------------------------------------------------------===//
+// RegionExpr
+//===----------------------------------------------------------------------===//
+
+RegionExpr *RegionExpr::create(Context &ctx, SMRange loc,
+                               ArrayRef<Expr *> blocks) {
+  unsigned allocSize = RegionExpr::totalSizeToAlloc<Expr *>(blocks.size());
+  void *rawData = ctx.getAllocator().Allocate(allocSize, alignof(RegionExpr));
+
+  RegionExpr *expr = new (rawData) RegionExpr(ctx, loc, blocks.size());
+  llvm::uninitialized_copy(blocks, expr->getBlocks().begin());
   return expr;
 }
 
@@ -403,6 +483,24 @@ OpConstraintDecl *OpConstraintDecl::create(Context &ctx, SMRange loc,
 
 std::optional<StringRef> OpConstraintDecl::getName() const {
   return getNameDecl()->getName();
+}
+
+//===----------------------------------------------------------------------===//
+// BlockConstraintDecl
+//===----------------------------------------------------------------------===//
+
+BlockConstraintDecl *BlockConstraintDecl::create(Context &ctx, SMRange loc) {
+  return new (ctx.getAllocator().Allocate<BlockConstraintDecl>())
+      BlockConstraintDecl(loc);
+}
+
+//===----------------------------------------------------------------------===//
+// RegionConstraintDecl
+//===----------------------------------------------------------------------===//
+
+RegionConstraintDecl *RegionConstraintDecl::create(Context &ctx, SMRange loc) {
+  return new (ctx.getAllocator().Allocate<RegionConstraintDecl>())
+      RegionConstraintDecl(loc);
 }
 
 //===----------------------------------------------------------------------===//

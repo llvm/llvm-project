@@ -85,6 +85,12 @@ private:
   void generateRewriter(pdl::EraseOp eraseOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
+  void generateRewriter(pdl::TakeRegionOp takeRegionOp,
+                        DenseMap<Value, Value> &rewriteValues,
+                        function_ref<Value(Value)> mapRewriteValue);
+  void generateRewriter(pdl::MoveBlockOp moveBlockOp,
+                        DenseMap<Value, Value> &rewriteValues,
+                        function_ref<Value(Value)> mapRewriteValue);
   void generateRewriter(pdl::OperationOp operationOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
@@ -380,6 +386,41 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
     value = i->second->getResult(constrResPos->getIndex());
     break;
   }
+  case Predicates::RegionPos: {
+    auto *regionPos = cast<RegionPosition>(pos);
+    value = pdl_interp::GetRegionOp::create(
+        builder, loc, builder.getType<pdl::RegionType>(), parentVal,
+        regionPos->getRegionNumber());
+    break;
+  }
+  case Predicates::BlockPos: {
+    auto *blockPos = cast<BlockPosition>(pos);
+    value = pdl_interp::GetBlockOp::create(
+        builder, loc, builder.getType<pdl::BlockType>(), parentVal,
+        blockPos->getBlockNumber());
+    break;
+  }
+  case Predicates::BlockArgPos: {
+    auto *blockArgPos = cast<BlockArgPosition>(pos);
+    value = pdl_interp::GetBlockArgumentOp::create(
+        builder, loc, builder.getType<pdl::ValueType>(), parentVal,
+        blockArgPos->getArgNumber());
+    break;
+  }
+  case Predicates::BlockArgRangePos: {
+    auto *blockArgRangePos = cast<BlockArgRangePosition>(pos);
+    Type valueTy = builder.getType<pdl::ValueType>();
+    value = pdl_interp::GetBlockArgumentsOp::create(
+        builder, loc, pdl::RangeType::get(valueTy), parentVal,
+        std::optional<unsigned>(blockArgRangePos->getStartIndex()));
+    break;
+  }
+  case Predicates::BlockOpsPos: {
+    value = pdl_interp::GetBlockOpsOp::create(
+        builder, loc,
+        pdl::RangeType::get(builder.getType<pdl::OperationType>()), parentVal);
+    break;
+  }
   default:
     llvm_unreachable("Generating unknown Position getter");
     break;
@@ -404,6 +445,9 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
   } else if (auto *cstQuestion = dyn_cast<ConstraintQuestion>(question)) {
     for (Position *position : cstQuestion->getArgs())
       args.push_back(getValueAt(currentBlock, position));
+  } else if (auto *parentBlockQ =
+                 dyn_cast<CheckParentBlockQuestion>(question)) {
+    args = {getValueAt(currentBlock, parentBlockQ->getBlockPosition())};
   }
 
   // Generate a new block as success successor and get the failure successor.
@@ -456,6 +500,27 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
         /*compareAtLeast=*/kind == Predicates::ResultCountAtLeastQuestion,
         success, failure);
     break;
+  case Predicates::RegionCountQuestion:
+    pdl_interp::CheckRegionCountOp::create(
+        builder, loc, val, cast<UnsignedAnswer>(answer)->getValue(),
+        /*compareAtLeast=*/false, success, failure);
+    break;
+  case Predicates::BlockCountQuestion:
+    pdl_interp::CheckBlockCountOp::create(
+        builder, loc, val, cast<UnsignedAnswer>(answer)->getValue(),
+        /*compareAtLeast=*/false, success, failure);
+    break;
+  case Predicates::BlockArgCountAtLeastQuestion:
+  case Predicates::BlockArgCountQuestion:
+    pdl_interp::CheckBlockArgCountOp::create(
+        builder, loc, val, cast<UnsignedAnswer>(answer)->getValue(),
+        /*compareAtLeast=*/kind == Predicates::BlockArgCountAtLeastQuestion,
+        success, failure);
+    break;
+  case Predicates::CheckParentBlockQuestion:
+    pdl_interp::CheckParentBlockOp::create(builder, loc, val, args.front(),
+                                           success, failure);
+    break;
   case Predicates::EqualToQuestion: {
     bool trueAnswer = isa<TrueAnswer>(answer);
     pdl_interp::AreEqualOp::create(builder, loc, val, args.front(),
@@ -505,7 +570,8 @@ void PatternLowering::generate(SwitchNode *switchNode, Block *currentBlock,
   // cases, we generate a special block sequence.
   Predicates::Kind kind = question->getKind();
   if (kind == Predicates::OperandCountAtLeastQuestion ||
-      kind == Predicates::ResultCountAtLeastQuestion) {
+      kind == Predicates::ResultCountAtLeastQuestion ||
+      kind == Predicates::BlockArgCountAtLeastQuestion) {
     // Order the children such that the cases are in reverse numerical order.
     SmallVector<unsigned> sortedChildren = llvm::to_vector<16>(
         llvm::seq<unsigned>(0, switchNode->getChildren().size()));
@@ -549,6 +615,11 @@ void PatternLowering::generate(SwitchNode *switchNode, Block *currentBlock,
         pdl_interp::CheckResultCountOp::create(builder, loc, val, ans,
                                                /*compareAtLeast=*/true,
                                                childBlock, defaultDest);
+        break;
+      case Predicates::BlockArgCountAtLeastQuestion:
+        pdl_interp::CheckBlockArgCountOp::create(builder, loc, val, ans,
+                                                 /*compareAtLeast=*/true,
+                                                 childBlock, defaultDest);
         break;
       default:
         llvm_unreachable("Generating invalid AtLeast operation");
@@ -702,8 +773,9 @@ SymbolRefAttr PatternLowering::generateRewriter(
     for (Operation &rewriteOp : *rewriter.getBody()) {
       llvm::TypeSwitch<Operation *>(&rewriteOp)
           .Case<pdl::ApplyNativeRewriteOp, pdl::AttributeOp, pdl::EraseOp,
-                pdl::OperationOp, pdl::RangeOp, pdl::ReplaceOp, pdl::ResultOp,
-                pdl::ResultsOp, pdl::TypeOp, pdl::TypesOp>([&](auto op) {
+                pdl::TakeRegionOp, pdl::MoveBlockOp, pdl::OperationOp,
+                pdl::RangeOp, pdl::ReplaceOp, pdl::ResultOp, pdl::ResultsOp,
+                pdl::TypeOp, pdl::TypesOp>([&](auto op) {
             this->generateRewriter(op, rewriteValues, mapRewriteValue);
           });
     }
@@ -888,6 +960,24 @@ void PatternLowering::generateRewriter(
     rewriteValues[typeOp] = pdl_interp::CreateTypesOp::create(
         builder, typeOp.getLoc(), typeOp.getType(), typeAttr);
   }
+}
+
+void PatternLowering::generateRewriter(
+    pdl::TakeRegionOp takeRegionOp, DenseMap<Value, Value> &rewriteValues,
+    function_ref<Value(Value)> mapRewriteValue) {
+  pdl_interp::TakeRegionOp::create(
+      builder, takeRegionOp.getLoc(),
+      mapRewriteValue(takeRegionOp.getSourceRegion()),
+      mapRewriteValue(takeRegionOp.getDestRegion()));
+}
+
+void PatternLowering::generateRewriter(
+    pdl::MoveBlockOp moveBlockOp, DenseMap<Value, Value> &rewriteValues,
+    function_ref<Value(Value)> mapRewriteValue) {
+  pdl_interp::MoveBlockOp::create(
+      builder, moveBlockOp.getLoc(),
+      mapRewriteValue(moveBlockOp.getSourceBlock()),
+      mapRewriteValue(moveBlockOp.getInsertBeforeBlock()));
 }
 
 void PatternLowering::generateOperationResultTypeRewriter(

@@ -39,7 +39,10 @@ void PDLDialect::initialize() {
 static bool hasBindingUse(Operation *op) {
   for (Operation *user : op->getUsers())
     // A result by itself is not binding, it must also be bound.
-    if (!isa<ResultOp, ResultsOp>(user) || hasBindingUse(user))
+    // Region/block navigation ops (RegionOp, BlockOp) count as binding because
+    // they establish structural constraints on the parent operation/region.
+    if (isa<RegionOp, BlockOp>(user) || !isa<ResultOp, ResultsOp>(user) ||
+        hasBindingUse(user))
       return true;
   return false;
 }
@@ -50,6 +53,11 @@ static LogicalResult verifyHasBindingUse(Operation *op) {
   // If the parent is not a pattern, there is nothing to do.
   if (!llvm::isa_and_nonnull<PatternOp>(op->getParentOp()))
     return success();
+  // An OperationOp with a parentBlock is structurally bound to its containing
+  // block — it is inherently connected to the pattern's match tree.
+  if (auto opOp = dyn_cast<OperationOp>(op))
+    if (opOp.getParentBlock())
+      return success();
   if (hasBindingUse(op))
     return success();
   return op->emitOpError(
@@ -57,8 +65,8 @@ static LogicalResult verifyHasBindingUse(Operation *op) {
       "`pdl.pattern`");
 }
 
-/// Visits all the pdl.operand(s), pdl.result(s), and pdl.operation(s)
-/// connected to the given operation.
+/// Visits all the pdl.operand(s), pdl.result(s), pdl.operation(s),
+/// pdl.region_of(s), and pdl.block_of(s) connected to the given operation.
 static void visit(Operation *op, DenseSet<Operation *> &visited) {
   // If the parent is not a pattern, there is nothing to do.
   if (!isa<PatternOp>(op->getParentOp()) || isa<RewriteOp>(op))
@@ -73,9 +81,21 @@ static void visit(Operation *op, DenseSet<Operation *> &visited) {
       .Case([&visited](OperationOp operation) {
         for (Value operand : operation.getOperandValues())
           visit(operand.getDefiningOp(), visited);
+        // Traverse the parent block if this operation is scoped.
+        if (Value block = operation.getParentBlock())
+          visit(block.getDefiningOp(), visited);
       })
       .Case<ResultOp, ResultsOp>([&visited](auto result) {
         visit(result.getParent().getDefiningOp(), visited);
+      })
+      .Case([&visited](RegionOp regionOp) {
+        visit(regionOp.getParent().getDefiningOp(), visited);
+      })
+      .Case([&visited](BlockOp blockOp) {
+        visit(blockOp.getParent().getDefiningOp(), visited);
+      })
+      .Case<BlockArgOp, BlockArgsOp>([&visited](auto blockArgOp) {
+        visit(blockArgOp.getParent().getDefiningOp(), visited);
       });
 
   // Traverse the users.
@@ -350,7 +370,8 @@ LogicalResult PatternOp::verifyRegions() {
   DenseSet<Operation *> visited;
   for (Operation &op : body.front()) {
     // The following are the operations forming the connected component.
-    if (!isa<OperandOp, OperandsOp, ResultOp, ResultsOp, OperationOp>(op))
+    if (!isa<OperandOp, OperandsOp, ResultOp, ResultsOp, OperationOp, RegionOp,
+             BlockOp, BlockArgOp, BlockArgsOp>(op))
       continue;
 
     // Determine if the operation has a user in `pdl.rewrite`.
@@ -461,13 +482,23 @@ static ParseResult parseResultsValueType(OpAsmParser &p, IntegerAttr index,
   return success();
 }
 
-static void printResultsValueType(OpAsmPrinter &p, ResultsOp op,
+template <typename OpTy>
+static void printResultsValueType(OpAsmPrinter &p, OpTy /*op*/,
                                   IntegerAttr index, Type resultType) {
   if (index)
     p << " -> " << resultType;
 }
 
 LogicalResult ResultsOp::verify() {
+  if (!getIndex() && llvm::isa<pdl::ValueType>(getType())) {
+    return emitOpError() << "expected `pdl.range<value>` result type when "
+                            "no index is specified, but got: "
+                         << getType();
+  }
+  return success();
+}
+
+LogicalResult BlockArgsOp::verify() {
   if (!getIndex() && llvm::isa<pdl::ValueType>(getType())) {
     return emitOpError() << "expected `pdl.range<value>` result type when "
                             "no index is specified, but got: "

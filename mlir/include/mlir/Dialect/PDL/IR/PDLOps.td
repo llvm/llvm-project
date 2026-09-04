@@ -267,12 +267,22 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     a handle to the operation itself. Handles to the results of the operation
     can be extracted via `pdl.result`.
 
+    An optional `parentBlock` operand may be specified to scope the operation
+    match to a specific block. When set, the operation is only matched within
+    the given block rather than globally. This is typically used for matching
+    inner operations within region/block structural patterns.
+
     Example:
 
     ```mlir
     // Define an instance of a `foo.op` operation.
     %op = pdl.operation "foo.op"(%arg0, %arg1 : !pdl.value, !pdl.value)
       {"attrA" = %attr0} -> (%type, %type : !pdl.type, !pdl.type)
+
+    // Define an operation scoped to a specific block.
+    %region = pdl.region_of %op at 0
+    %block = pdl.block_of %region at 0
+    %inner = pdl.operation "bar.op" in %block
     ```
 
     When used within a matching context, the name of the operation may be
@@ -353,12 +363,15 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
                        Variadic<PDL_InstOrRangeOf<PDL_Value>>:$operandValues,
                        Variadic<PDL_Attribute>:$attributeValues,
                        StrArrayAttr:$attributeValueNames,
-                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$typeValues);
+                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$typeValues,
+                       Optional<PDL_Block>:$parentBlock);
   let results = (outs PDL_Operation:$op);
   let assemblyFormat = [{
     ($opName^)? (`(` $operandValues^ `:` type($operandValues) `)`)?
     custom<OperationOpAttributes>($attributeValues, $attributeValueNames)
-    (`->` `(` $typeValues^ `:` type($typeValues) `)`)? attr-dict
+    (`->` `(` $typeValues^ `:` type($typeValues) `)`)?
+    (`in` $parentBlock^)?
+    attr-dict
   }];
 
   let builders =
@@ -366,12 +379,13 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
                      CArg<"ValueRange", "{}">:$operandValues,
                      CArg<"ArrayRef<StringRef>", "{}">:$attrNames,
                      CArg<"ValueRange", "{}">:$attrValues,
-                     CArg<"ValueRange", "{}">:$resultTypes),
+                     CArg<"ValueRange", "{}">:$resultTypes,
+                     CArg<"Value", "{}">:$parentBlock),
                  [{
       auto nameAttr = name ? $_builder.getStringAttr(*name) : StringAttr();
       build($_builder, $_state, $_builder.getType<OperationType>(), nameAttr,
             operandValues, attrValues, $_builder.getStrArrayAttr(attrNames),
-            resultTypes);
+            resultTypes, parentBlock);
     }]>,
   ];
   let extraClassDeclaration = [{
@@ -721,6 +735,176 @@ def PDL_TypesOp : PDL_Op<"types"> {
   let results = (outs PDL_RangeOf<PDL_Type>:$result);
   let assemblyFormat = "attr-dict (`:` $constantTypes^)?";
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::RegionOp
+//===----------------------------------------------------------------------===//
+
+def PDL_RegionOp : PDL_Op<"region_of", [Pure]> {
+  let summary = "Extract a region from an operation by index";
+  let description = [{
+    `pdl.region_of` operations extract region edges from an operation node
+    within a pattern or rewrite region. The provided index is zero-based.
+
+    Example:
+
+    ```mlir
+    // Extract the first region of an operation:
+    %operation = pdl.operation ...
+    %region = pdl.region_of %operation at 0
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$parent, ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
+  let results = (outs PDL_Region:$region);
+  let assemblyFormat = "$parent `at` $index attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::BlockOp
+//===----------------------------------------------------------------------===//
+
+def PDL_BlockOp : PDL_Op<"block_of", [Pure]> {
+  let summary = "Extract a block from a region by index";
+  let description = [{
+    `pdl.block_of` operations extract a block from a region at a given
+    index. The provided index is zero-based, where index 0 refers to the
+    entry block.
+
+    Example:
+
+    ```mlir
+    // Extract the entry block of a region:
+    %region = pdl.region_of %operation at 0
+    %block = pdl.block_of %region at 0
+    ```
+  }];
+
+  let arguments = (ins PDL_Region:$parent, ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
+  let results = (outs PDL_Block:$block);
+  let assemblyFormat = "$parent `at` $index attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::BlockArgOp
+//===----------------------------------------------------------------------===//
+
+def PDL_BlockArgOp : PDL_Op<"block_arg", [Pure]> {
+  let summary = "Extract a block argument by index";
+  let description = [{
+    `pdl.block_arg` operations extract a block argument from a block at a
+    given index. This is used for matching block arguments within regions,
+    such as loop induction variables or function parameters.
+
+    Example:
+
+    ```mlir
+    // Extract the first block argument:
+    %block = pdl.block_of %region at 0
+    %arg0 = pdl.block_arg %block at 0
+    ```
+  }];
+
+  let arguments = (ins PDL_Block:$parent, ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
+  let results = (outs PDL_Value:$val);
+  let assemblyFormat = "$parent `at` $index attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::BlockArgsOp
+//===----------------------------------------------------------------------===//
+
+def PDL_BlockArgsOp : PDL_Op<"block_args", [Pure]> {
+  let summary = "Extract a block argument group from a block";
+  let description = [{
+    `pdl.block_args` operations extract a range of block arguments from a block.
+    If an index is provided, this operation extracts block arguments starting
+    from that index. If no index is provided, this operation extracts all block
+    arguments.
+
+    Example:
+
+    ```mlir
+    // Extract all block arguments:
+    %block = pdl.block_of %region at 0
+    %args = pdl.block_args %block
+
+    // Extract block arguments starting at index 1:
+    %block = pdl.block_of %region at 0
+    %rest = pdl.block_args %block at 1 -> !pdl.range<value>
+
+    // Extract a single block argument at index 0 (scalar):
+    %block = pdl.block_of %region at 0
+    %arg0 = pdl.block_args %block at 0 -> !pdl.value
+    ```
+  }];
+
+  let arguments = (ins PDL_Block:$parent, OptionalAttr<I32Attr>:$index);
+  let results = (outs PDL_InstOrRangeOf<PDL_Value>:$val);
+  let assemblyFormat = [{
+    $parent (`at` $index^)? custom<ResultsValueType>(ref($index), type($val))
+    attr-dict
+  }];
+  let builders = [
+    OpBuilder<(ins "Type":$resultType, "Value":$parent,
+                   "std::optional<unsigned>":$index), [{
+      build($_builder, $_state, resultType, parent,
+            index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
+    }]>,
+    OpBuilder<(ins "Value":$parent), [{
+      build($_builder, $_state,
+            RangeType::get($_builder.getType<ValueType>()), parent,
+            IntegerAttr());
+    }]>,
+  ];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::TakeRegionOp
+//===----------------------------------------------------------------------===//
+
+def PDL_TakeRegionOp
+    : PDL_Op<"take_region", [HasParent<"pdl::RewriteOp">]> {
+  let summary = "Move the contents of a region to a destination region";
+  let description = [{
+    `pdl.take_region` operations are used within `pdl.rewrite` regions to move
+    all blocks from a source region into a destination region. This corresponds
+    to the `Region::takeBody` or `PatternRewriter::inlineRegionBefore` API.
+
+    Example:
+
+    ```mlir
+    pdl.take_region %source_region before %dest_region
+    ```
+  }];
+
+  let arguments = (ins PDL_Region:$sourceRegion, PDL_Region:$destRegion);
+  let assemblyFormat = "$sourceRegion `before` $destRegion attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::MoveBlockOp
+//===----------------------------------------------------------------------===//
+
+def PDL_MoveBlockOp
+    : PDL_Op<"move_block", [HasParent<"pdl::RewriteOp">]> {
+  let summary = "Move a block before a destination block";
+  let description = [{
+    `pdl.move_block` operations are used within `pdl.rewrite` regions to move
+    a source block before a destination block. This corresponds to the
+    `Block::moveBefore` API.
+
+    Example:
+
+    ```mlir
+    pdl.move_block %source_block before %dest_block
+    ```
+  }];
+
+  let arguments = (ins PDL_Block:$sourceBlock, PDL_Block:$insertBeforeBlock);
+  let assemblyFormat = "$sourceBlock `before` $insertBeforeBlock attr-dict";
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLOPS

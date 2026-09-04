@@ -364,7 +364,7 @@ def PDLInterp_CheckTypesOp
 
 def PDLInterp_ContinueOp
     : PDLInterp_Op<"continue", [Pure, HasParent<"ForEachOp">,
-                               Terminator]> {
+                                Terminator]> {
   let summary = "Breaks the current iteration";
   let description = [{
     `pdl_interp.continue` operation breaks the current iteration within the
@@ -1326,6 +1326,325 @@ def PDLInterp_SwitchTypesOp : PDLInterp_SwitchOp<"switch_types",
     auto getCaseTypes() { return getCaseValues().getAsRange<ArrayAttr>(); }
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckRegionCountOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CheckRegionCountOp
+    : PDLInterp_PredicateOp<"check_region_count", [Pure]> {
+  let summary = "Check the number of regions of an `Operation`";
+  let description = [{
+    `pdl_interp.check_region_count` operations compare the number of regions
+    of a given operation value with a constant. The comparison is either exact
+    or at_least. On success, this operation branches to the true destination,
+    otherwise the false destination is taken.
+
+    Example:
+
+    ```mlir
+    // Check for exact equality.
+    pdl_interp.check_region_count of %op is 1 -> ^matchDest, ^failureDest
+
+    // Check for at least N regions.
+    pdl_interp.check_region_count of %op is at_least 1 -> ^matchDest, ^failureDest
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$inputOp,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$count,
+                       UnitAttr:$compareAtLeast);
+  let assemblyFormat = [{
+    `of` $inputOp `is` (`at_least` $compareAtLeast^)? $count attr-dict
+    `->` successors
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckBlockCountOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CheckBlockCountOp
+    : PDLInterp_PredicateOp<"check_block_count", [Pure]> {
+  let summary = "Check the number of blocks in a `Region`";
+  let description = [{
+    `pdl_interp.check_block_count` operations compare the number of blocks
+    in a given region with a constant. The comparison is either exact or
+    at_least. On success, this operation branches to the true destination,
+    otherwise the false destination is taken.
+
+    Example:
+
+    ```mlir
+    // Check for exact equality.
+    pdl_interp.check_block_count of %region is 1 -> ^matchDest, ^failureDest
+
+    // Check for at least N blocks.
+    pdl_interp.check_block_count of %region is at_least 2 -> ^matchDest, ^failureDest
+    ```
+  }];
+
+  let arguments = (ins PDL_Region:$inputRegion,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$count,
+                       UnitAttr:$compareAtLeast);
+  let assemblyFormat = [{
+    `of` $inputRegion `is` (`at_least` $compareAtLeast^)? $count attr-dict
+    `->` successors
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckBlockArgCountOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CheckBlockArgCountOp
+    : PDLInterp_PredicateOp<"check_block_arg_count", [Pure]> {
+  let summary = "Check the number of arguments of a `Block`";
+  let description = [{
+    `pdl_interp.check_block_arg_count` operations compare the number of
+    arguments of a given block with a constant. The comparison is either exact
+    or at_least. On success, this operation branches to the true destination,
+    otherwise the false destination is taken.
+
+    Example:
+
+    ```mlir
+    // Check for exact equality.
+    pdl_interp.check_block_arg_count of %block is 2 -> ^matchDest, ^failureDest
+
+    // Check for at least N arguments.
+    pdl_interp.check_block_arg_count of %block is at_least 1 -> ^matchDest, ^failureDest
+    ```
+  }];
+
+  let arguments = (ins PDL_Block:$inputBlock,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$count,
+                       UnitAttr:$compareAtLeast);
+  let assemblyFormat = [{
+    `of` $inputBlock `is` (`at_least` $compareAtLeast^)? $count attr-dict
+    `->` successors
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckParentBlockOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CheckParentBlockOp
+    : PDLInterp_PredicateOp<"check_parent_block", [Pure]> {
+  let summary = "Check if an operation is contained within a specific block";
+  let description = [{
+    `pdl_interp.check_parent_block` operations check whether a given operation
+    is contained within (i.e., is a direct child of) a specified block. On
+    success, this operation branches to the true destination, otherwise the
+    false destination is taken.
+
+    Example:
+
+    ```mlir
+    pdl_interp.check_parent_block of %op is %block -> ^matchDest, ^failureDest
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$inputOp,
+                       PDL_Block:$inputBlock);
+  let assemblyFormat = [{
+    `of` $inputOp `is` $inputBlock attr-dict `->` successors
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetRegionOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_GetRegionOp : PDLInterp_Op<"get_region", [Pure]> {
+  let summary = "Get a specified region from an `Operation`";
+  let description = [{
+    `pdl_interp.get_region` operations try to get a specific region from an
+    operation. If the operation does not have a region for the given index, a
+    null value is returned.
+
+    Example:
+
+    ```mlir
+    %region = pdl_interp.get_region %op at 0
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$inputOp,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
+  let results = (outs PDL_Region:$region);
+  let assemblyFormat = "$inputOp `at` $index attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetBlockOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_GetBlockOp : PDLInterp_Op<"get_block", [Pure]> {
+  let summary = "Get a specified block from a `Region`";
+  let description = [{
+    `pdl_interp.get_block` operations try to get a specific block from a
+    region. If the region does not have a block at the given index, a null
+    value is returned.
+
+    Example:
+
+    ```mlir
+    %block = pdl_interp.get_block %region at 0
+    ```
+  }];
+
+  let arguments = (ins PDL_Region:$inputRegion,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
+  let results = (outs PDL_Block:$block);
+  let assemblyFormat = "$inputRegion `at` $index attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetBlockArgumentOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_GetBlockArgumentOp
+    : PDLInterp_Op<"get_block_argument", [Pure]> {
+  let summary = "Get a specified argument from a `Block`";
+  let description = [{
+    `pdl_interp.get_block_argument` operations try to get a specific argument
+    from a block. If the block does not have an argument at the given index,
+    a null value is returned.
+
+    Example:
+
+    ```mlir
+    %arg = pdl_interp.get_block_argument %block at 0
+    ```
+  }];
+
+  let arguments = (ins PDL_Block:$inputBlock,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
+  let results = (outs PDL_Value:$value);
+  let assemblyFormat = "$inputBlock `at` $index attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetBlockArgumentsOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_GetBlockArgumentsOp
+    : PDLInterp_Op<"get_block_arguments", [Pure]> {
+  let summary = "Get a group of arguments from a `Block`";
+  let description = [{
+    `pdl_interp.get_block_arguments` operations try to get a group of
+    arguments from a block. If an index is provided, this operation extracts
+    arguments starting from that index. The result may be a single
+    `!pdl.value` or a `!pdl.range<value>` depending on whether an index is
+    provided and the expected result type. If no index is provided, all block
+    arguments are returned as a range.
+
+    Example:
+
+    ```mlir
+    // Get all block arguments.
+    %args = pdl_interp.get_block_arguments %block : !pdl.range<value>
+
+    // Get block arguments starting at index 1.
+    %rest = pdl_interp.get_block_arguments %block at 1 : !pdl.range<value>
+    ```
+  }];
+
+  let arguments = (ins
+    PDL_Block:$inputBlock,
+    OptionalAttr<ConfinedAttr<I32Attr, [IntNonNegative]>>:$index
+  );
+  let results = (outs PDL_InstOrRangeOf<PDL_Value>:$value);
+  let assemblyFormat = "$inputBlock (`at` $index^)? `:` type($value) attr-dict";
+  let builders = [
+    OpBuilder<(ins "Type":$resultType, "Value":$inputBlock,
+                   "std::optional<unsigned>":$index), [{
+      build($_builder, $_state, resultType, inputBlock,
+            index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetBlockOpsOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_GetBlockOpsOp : PDLInterp_Op<"get_block_ops", [Pure]> {
+  let summary = "Get all operations within a `Block`";
+  let description = [{
+    `pdl_interp.get_block_ops` operations get all operations contained within
+    a given block as a range. This can be combined with `pdl_interp.foreach`
+    to iterate over the operations in a block.
+
+    Example:
+
+    ```mlir
+    %ops = pdl_interp.get_block_ops of %block
+    pdl_interp.foreach %op : !pdl.operation in %ops {
+      // match against %op
+      pdl_interp.continue
+    } -> ^next
+    ```
+  }];
+
+  let arguments = (ins PDL_Block:$block);
+  let results = (outs PDL_RangeOf<PDL_Operation>:$operations);
+  let assemblyFormat = "`of` $block attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "Value":$block), [{
+      build($_builder, $_state,
+            pdl::RangeType::get($_builder.getType<pdl::OperationType>()),
+            block);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::TakeRegionOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_TakeRegionOp : PDLInterp_Op<"take_region"> {
+  let summary = "Move the contents of a region to a destination region";
+  let description = [{
+    `pdl_interp.take_region` operations move all blocks from a source region
+    into a destination region. The source region is left empty after the
+    operation. This corresponds to `Region::takeBody` or
+    `PatternRewriter::inlineRegionBefore`.
+
+    Example:
+
+    ```mlir
+    pdl_interp.take_region %source before %dest
+    ```
+  }];
+
+  let arguments = (ins PDL_Region:$source, PDL_Region:$dest);
+  let assemblyFormat = "$source `before` $dest attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::MoveBlockOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_MoveBlockOp : PDLInterp_Op<"move_block"> {
+  let summary = "Move a block before a destination block";
+  let description = [{
+    `pdl_interp.move_block` operations move a block before a destination block.
+    This corresponds to `Block::moveBefore`.
+
+    Example:
+
+    ```mlir
+    pdl_interp.move_block %block before %dest_block
+    ```
+  }];
+
+  let arguments = (ins PDL_Block:$block, PDL_Block:$dest);
+  let assemblyFormat = "$block `before` $dest attr-dict";
 }
 
 #endif // MLIR_DIALECT_PDLINTERP_IR_PDLINTERPOPS

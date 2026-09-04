@@ -78,18 +78,24 @@ private:
   void printImpl(const ReplaceStmt *stmt);
   void printImpl(const ReturnStmt *stmt);
   void printImpl(const RewriteStmt *stmt);
+  void printImpl(const TakeRegionStmt *stmt);
+  void printImpl(const MoveBlockStmt *stmt);
 
   void printImpl(const AttributeExpr *expr);
+  void printImpl(const BlockExpr *expr);
   void printImpl(const CallExpr *expr);
   void printImpl(const DeclRefExpr *expr);
   void printImpl(const MemberAccessExpr *expr);
   void printImpl(const OperationExpr *expr);
   void printImpl(const RangeExpr *expr);
+  void printImpl(const RegionExpr *expr);
   void printImpl(const TupleExpr *expr);
   void printImpl(const TypeExpr *expr);
 
   void printImpl(const AttrConstraintDecl *decl);
+  void printImpl(const BlockConstraintDecl *decl);
   void printImpl(const OpConstraintDecl *decl);
+  void printImpl(const RegionConstraintDecl *decl);
   void printImpl(const TypeConstraintDecl *decl);
   void printImpl(const TypeRangeConstraintDecl *decl);
   void printImpl(const UserConstraintDecl *decl);
@@ -130,6 +136,7 @@ void NodePrinter::print(Type type) {
 
   TypeSwitch<Type>(type)
       .Case([&](AttributeType) { os << "Attr"; })
+      .Case([&](BlockType) { os << "Block"; })
       .Case([&](ConstraintType) { os << "Constraint"; })
       .Case([&](OperationType type) {
         os << "Op";
@@ -140,6 +147,7 @@ void NodePrinter::print(Type type) {
         print(type.getElementType());
         os << "Range";
       })
+      .Case([&](RegionType) { os << "Region"; })
       .Case([&](RewriteType) { os << "Rewrite"; })
       .Case([&](TupleType type) {
         os << "Tuple<";
@@ -166,15 +174,17 @@ void NodePrinter::print(const Node *node) {
       .Case<
           // Statements.
           const CompoundStmt, const EraseStmt, const LetStmt, const ReplaceStmt,
-          const ReturnStmt, const RewriteStmt,
+          const ReturnStmt, const RewriteStmt, const TakeRegionStmt,
+          const MoveBlockStmt,
 
           // Expressions.
-          const AttributeExpr, const CallExpr, const DeclRefExpr,
-          const MemberAccessExpr, const OperationExpr, const RangeExpr,
-          const TupleExpr, const TypeExpr,
+          const AttributeExpr, const BlockExpr, const CallExpr,
+          const DeclRefExpr, const MemberAccessExpr, const OperationExpr,
+          const RangeExpr, const RegionExpr, const TupleExpr, const TypeExpr,
 
           // Decls.
-          const AttrConstraintDecl, const OpConstraintDecl,
+          const AttrConstraintDecl, const BlockConstraintDecl,
+          const OpConstraintDecl, const RegionConstraintDecl,
           const TypeConstraintDecl, const TypeRangeConstraintDecl,
           const UserConstraintDecl, const ValueConstraintDecl,
           const ValueRangeConstraintDecl, const NamedAttributeDecl,
@@ -217,8 +227,26 @@ void NodePrinter::printImpl(const RewriteStmt *stmt) {
   printChildren(stmt->getRootOpExpr(), stmt->getRewriteBody());
 }
 
+void NodePrinter::printImpl(const TakeRegionStmt *stmt) {
+  os << "TakeRegionStmt " << stmt << "\n";
+  printChildren(stmt->getRegion(), stmt->getDestOp());
+}
+
+void NodePrinter::printImpl(const MoveBlockStmt *stmt) {
+  os << "MoveBlockStmt " << stmt << "\n";
+  printChildren(stmt->getBlock(), stmt->getDestBlock());
+}
+
 void NodePrinter::printImpl(const AttributeExpr *expr) {
   os << "AttributeExpr " << expr << " Value<\"" << expr->getValue() << "\">\n";
+}
+
+void NodePrinter::printImpl(const BlockExpr *expr) {
+  os << "BlockExpr " << expr << " Type<";
+  print(expr->getType());
+  os << ">\n";
+  printChildren("Args", expr->getArgs());
+  printChildren("Children", expr->getChildren());
 }
 
 void NodePrinter::printImpl(const CallExpr *expr) {
@@ -256,6 +284,7 @@ void NodePrinter::printImpl(const OperationExpr *expr) {
   printChildren("Operands", expr->getOperands());
   printChildren("Result Types", expr->getResultTypes());
   printChildren("Attributes", expr->getAttributes());
+  printChildren("Regions", expr->getRegions());
 }
 
 void NodePrinter::printImpl(const RangeExpr *expr) {
@@ -264,6 +293,13 @@ void NodePrinter::printImpl(const RangeExpr *expr) {
   os << ">\n";
 
   printChildren(expr->getElements());
+}
+
+void NodePrinter::printImpl(const RegionExpr *expr) {
+  os << "RegionExpr " << expr << " Type<";
+  print(expr->getType());
+  os << ">\n";
+  printChildren("Blocks", expr->getBlocks());
 }
 
 void NodePrinter::printImpl(const TupleExpr *expr) {
@@ -287,6 +323,14 @@ void NodePrinter::printImpl(const AttrConstraintDecl *decl) {
 void NodePrinter::printImpl(const OpConstraintDecl *decl) {
   os << "OpConstraintDecl " << decl << "\n";
   printChildren(decl->getNameDecl());
+}
+
+void NodePrinter::printImpl(const RegionConstraintDecl *decl) {
+  os << "RegionConstraintDecl " << decl << "\n";
+}
+
+void NodePrinter::printImpl(const BlockConstraintDecl *decl) {
+  os << "BlockConstraintDecl " << decl << "\n";
 }
 
 void NodePrinter::printImpl(const TypeConstraintDecl *decl) {

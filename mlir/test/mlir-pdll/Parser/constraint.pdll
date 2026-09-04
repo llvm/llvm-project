@@ -80,3 +80,36 @@ Constraint Outer() {
   Constraint() {};
   Constraint() => attr<"10">;
 }
+
+// -----
+
+// CHECK: Module
+// CHECK: `-UserConstraintDecl {{.*}} Name<FooRegion> ResultType<Tuple<>>
+// CHECK:   `Inputs`
+// CHECK:     `-VariableDecl {{.*}} Name<r> Type<Region>
+// CHECK:       `Constraints`
+// CHECK:         `-RegionConstraintDecl {{.*}}
+Constraint FooRegion(r: Region);
+
+// -----
+
+// CHECK: Module
+// CHECK: `-UserConstraintDecl {{.*}} Name<BarRegion> ResultType<Region>
+Constraint BarRegion() -> Region;
+
+// -----
+
+// CHECK: Module
+// CHECK: `-UserConstraintDecl {{.*}} Name<BazBlock> ResultType<Tuple<>>
+// CHECK:   `Inputs`
+// CHECK:     `-VariableDecl {{.*}} Name<b> Type<Block>
+// CHECK:       `Constraints`
+// CHECK:         `-BlockConstraintDecl {{.*}}
+Constraint BazBlock(b: Block);
+
+// -----
+
+// CHECK: Module
+// CHECK: `-UserConstraintDecl {{.*}} Name<QuxBlock> ResultType<Block>
+Constraint QuxBlock() -> Block;
+

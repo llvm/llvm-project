@@ -285,7 +285,7 @@ Pattern {
 // -----
 
 Pattern {
-  // CHECK: expected identifier or string attribute name
+  // CHECK: expected expression
   let foo = op<> { 10;
 }
 
@@ -299,7 +299,7 @@ Pattern {
 // -----
 
 Pattern {
-  // CHECK: expected `}` after operation attribute list
+  // CHECK: expected expression
   let foo = op<> { "foo" {;
 }
 
@@ -398,4 +398,90 @@ Pattern {
 Pattern {
   // CHECK: expected `>` after type literal
   let foo = type<"";
+}
+// -----
+
+//===----------------------------------------------------------------------===//
+// Region/Block Structural Syntax
+//===----------------------------------------------------------------------===//
+
+// Missing `:` before block argument constraint.
+Pattern {
+  // CHECK: expected `:` before block argument constraint
+  erase op<my_dialect.test> {
+    ^(arg Value): { op<my_dialect.inner>; }
+  };
+}
+
+// -----
+
+// Invalid block argument — non-identifier token.
+Pattern {
+  // CHECK: expected identifier for block argument name
+  erase op<my_dialect.test> {
+    ^(42: Value): { op<my_dialect.inner>; }
+  };
+}
+
+// -----
+
+// Missing `)` after block argument list.
+Pattern {
+  // CHECK: expected identifier for block argument name
+  erase op<my_dialect.test> {
+    ^(arg: Value, : { op<my_dialect.inner>; }
+  };
+}
+
+// -----
+
+// Missing `:` after block header (unnamed block, no args).
+Pattern {
+  // CHECK: expected `:` after block header
+  erase op<my_dialect.test> {
+    ^ { op<my_dialect.inner>; }
+  };
+}
+
+// -----
+
+// Missing `:` after named block header.
+Pattern {
+  // CHECK: expected `:` after block header
+  erase op<my_dialect.test> {
+    ^bb0 { op<my_dialect.inner>; };
+  };
+}
+
+// -----
+
+// Undefined block reference via caret.
+Pattern {
+  // CHECK: undefined reference to `unknown_block`
+  let b = ^unknown_block;
+  erase op<my_dialect.test>;
+}
+
+// -----
+
+// Variadic (ValueRange) block argument must be the last in the list.
+Pattern {
+  // CHECK: variadic block argument (ValueRange) must be the last argument in the block argument list
+  erase op<my_dialect.test> {
+    ^(rest: ValueRange, iv: Value): {
+      op<my_dialect.inner>;
+    }
+  };
+}
+
+// -----
+
+// Duplicate block names within the same region.
+Pattern {
+  // CHECK: `entry` has already been defined
+  // CHECK: see previous definition here
+  erase op<my_dialect.test> {
+    ^entry: { op<my_dialect.first>; }
+    ^entry: { op<my_dialect.second>; }
+  };
 }

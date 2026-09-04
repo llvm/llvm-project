@@ -156,6 +156,28 @@
 // CHECK-NEXT:        "sortText": "0"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "Region constraint",
+// CHECK-NEXT:        "documentation": {
+// CHECK-NEXT:          "kind": "markdown",
+// CHECK-NEXT:          "value": "A single entity core constraint of type `mlir::Region *`"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 7,
+// CHECK-NEXT:        "label": "Region",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "detail": "Block constraint",
+// CHECK-NEXT:        "documentation": {
+// CHECK-NEXT:          "kind": "markdown",
+// CHECK-NEXT:          "value": "A single entity core constraint of type `mlir::Block *`"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 7,
+// CHECK-NEXT:        "label": "Block",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
 // CHECK-NEXT:        "detail": "Attr<type> constraint",
 // CHECK-NEXT:        "documentation": {
 // CHECK-NEXT:          "kind": "markdown",

@@ -819,6 +819,246 @@ let trueConstant = op<arith.constant> {value = attr<"true">};
 let applyResult = op<affine.apply>(args: ValueRange) {map = attr<"affine_map<(d0, d1) -> (d1 - 3)>">}
 ```
 
+### Region Expressions
+
+A region expression in PDLL represents a match/rewrite of an MLIR region
+attached to an operation. PDLL operations can have trailing `{ ... }` region
+expressions that describe the structural contents of their regions. This enables
+matching and constraining the nested structure below an operation including the
+number of regions, blocks within those regions, block arguments, and the
+operations within blocks.
+
+#### Grammar
+
+Region and block expressions extend the operation grammar as follows:
+
+```
+OperationExpr ::= 'op' '<' name '>' '(' operands ')' AttrDict?
+                  '->' '(' results ')'
+                  RegionExpr*
+
+AttrDict      ::= '{' NamedAttr (',' NamedAttr)* '}'
+
+RegionExpr    ::= '{' BlockExpr* '}'         // explicit blocks
+                | '{' Expr* '}'              // shorthand: implicit single block
+
+BlockExpr     ::= '^' identifier? ('(' ArgList? ')')? ':' '{' Expr* '}'
+
+BlockRef      ::= '^' identifier             // reference to a labeled block
+
+ArgList       ::= Arg (',' Arg)*
+Arg           ::= identifier ':' TypeConstraint
+
+RewriteStmt   ::= 'move_block' Expr 'before' Expr ';'
+                | 'take_region' Expr 'before' Expr ';'
+```
+
+Every explicit block begins with the `^` introducer, mirroring MLIR's
+`^bb0(%arg0: i32):` assembly syntax. When parsing a region body, a leading `^`
+selects explicit block parsing; any other token is treated as shorthand region
+contents. This keeps parsing unambiguous: `^` never starts an attribute
+dictionary or a bare expression, so labeled block references such as `^name` are
+always distinguishable in rewrite statements.
+
+#### Shorthand Form
+
+The simplest form wraps expressions directly in `{ ... }`. This matches a region
+with a single implicit block whose arguments are unconstrained:
+
+```pdll
+// Match an operation with a single region containing a specific inner op.
+Pattern {
+  erase op<my_dialect.outer> {
+    op<my_dialect.inner>;
+  };
+}
+```
+
+#### Multiple Regions
+
+Multiple regions are specified as consecutive `{ ... }` expressions after the
+operation:
+
+```pdll
+// Match an operation with two regions.
+Pattern {
+  erase op<scf.if>
+    { op<arith.addi>; }     // "then" region
+    { op<arith.muli>; };    // "else" region
+}
+```
+
+#### Explicit Blocks with `^`
+
+For finer control, blocks can be explicitly specified using the `^` introducer.
+This mirrors MLIR's `^bb0:` block label syntax. Every explicit block starts with
+a `^`:
+
+```pdll
+// Explicit (named and unnamed) blocks in a region.
+Pattern {
+  erase op<my_dialect.branch> {
+    ^: { op<my_dialect.entry>; }
+    ^bb: { op<my_dialect.exit>; }
+  };
+}
+```
+
+#### Block Arguments
+
+Block arguments are first-class PDLL variables. They can be bound and
+constrained using standard PDLL variable syntax. The presence of parentheses
+controls argument matching:
+
+Syntax                     | Meaning
+-------------------------- | ------------------------------------------------
+`^: { ... }`               | Unnamed block, argument count unconstrained
+`^foo: { ... }`            | Named block, argument count unconstrained
+`^(): { ... }`             | Unnamed block, exactly zero arguments
+`^foo(): { ... }`          | Named block, exactly zero arguments
+`^(iv: Value): { ... }`    | Unnamed block, argument(s) bound and constrained
+`^foo(iv: Value): { ... }` | Named block, argument(s) bound and constrained
+
+```pdll
+// Match an scf.for by its induction variable.
+Pattern {
+  let forOp = op<scf.for> {
+    ^(iv: Value, iterArg: Value): {
+      op<arith.addi>(iv);
+    }
+  };
+  rewrite forOp { ... }
+}
+```
+
+#### Variadic Block Argument Capture
+
+A trailing `ValueRange` block argument captures all remaining block arguments as
+a range, analogous to operand `ValueRange` capture. This is useful when only the
+leading arguments have known roles. The `ValueRange` argument must be the
+**last** in the argument list. To prevent PDLL from optimizing away the unused
+`ValueRange`, pass it to an operation; if the element count is unknown, use an
+unregistered operation to bypass strict signature checking:
+
+```pdll
+Pattern MatchForWithVarArgs {
+  let forOp = op<scf.for> {
+    ^(iv: Value, rest: ValueRange): {
+      op<test.custom_op>(iv, rest);
+    }
+  };
+  rewrite forOp { ... }
+}
+```
+
+This generates `check_block_arg_count ... at_least N` (where N is the number of
+scalar arguments) and captures the tail via `pdl_interp.get_block_arguments`.
+
+#### Block Labels
+
+Blocks can be labeled with `^name` to create a `!pdl.block`-typed variable.
+These labels can be referenced later in rewrite expressions (e.g., for
+`move_block` operations):
+
+```pdll
+Pattern MoveEntryBlock {
+  let srcOp = op<my_dialect.source> {
+    ^entry: {
+      op<my_dialect.body>;
+    }
+  };
+  let destOp = op<my_dialect.dest> {
+    ^target: {}
+  };
+  rewrite srcOp {
+    move_block ^entry before ^target;
+  }
+}
+```
+
+#### Nested Regions
+
+Regions can be nested naturally as each `{ ... }` after an operation is that
+operation's region:
+
+```pdll
+Pattern MatchNested {
+  erase op<my_dialect.pipeline> {
+    op<my_dialect.stage> {
+      op<my_dialect.compute>;
+    };
+  };
+}
+```
+
+#### Matching Semantics
+
+Region and block matching follows PDLL's refinement model:
+
+*   **Elision means unconstrained.** An operation with no trailing `{ ... }` has
+    no constraint on its regions. A block with no `()` has no constraint on its
+    arguments.
+*   **Block body matching is existential.** When a block body specifies inner
+    operations, the block must *contain* those operations, but may also contain
+    others. This is consistent with how top-level PDL matching works — patterns
+    search for a matching subgraph, not an exact graph.
+*   **Block argument matching is positional.** Arguments in `^(iv: Value):`
+    constrain by count and position, analogous to operation operand matching.
+
+#### End-to-End Examples
+
+The following examples show concrete IR input and the resulting output after
+applying a region/block pattern.
+
+Match and replace by region count:
+
+```
+Input:                              Output:
+"test.op_with_region"() ({          "test.success"() : () -> ()
+  "test.inner"() : () -> ()         "test.no_region"() : () -> ()
+}) : () -> ()
+"test.no_region"() : () -> ()
+```
+
+Match by inner operation name:
+
+```
+Input:                              Output:
+"test.container"() ({               "test.success"() : () -> ()
+  "test.target"() : () -> ()        "test.other_container"() ({
+}) : () -> ()                         "test.other"() : () -> ()
+"test.other_container"() ({         }) : () -> ()
+  "test.other"() : () -> ()
+}) : () -> ()
+```
+
+Extract block argument type for rewrite:
+
+```
+Input:                              Output:
+"test.with_block_arg"() ({          "test.success"() : () -> i32
+^bb0(%arg0: i32):                   // result type = extracted block arg type
+  "test.use"(%arg0) : (i32) -> ()
+}) : () -> ()
+```
+
+#### Common Region and Block Idioms
+
+The following table summarizes how common region and block transformations in
+LLVM and MLIR map to PDLL constructs:
+
+Category | C++ Idiom / Example | PDLL Support | Implementation Guide
+-------- | ------------------- | ------------ | --------------------
+**Region Body Transfer** | `newOp.getRegion().takeBody(oldOp.getRegion())` | **Yes** | Use `take_region src before dest;` in the rewrite block.
+**Special Inliners** | Handling terminators and block merging during inlining | **Yes** | Use `move_block` to preserve operation pointers, then match and replace terminators directly.
+**Block Manipulation** | `region.hasOneBlock()` | **Yes** | Checked automatically or via interpreter constraints.
+**Control Flow Lowering** | Lowering `scf.for` / `scf.if` to branches | **C++ Fallback** | Full CFG generation and block argument remapping require custom C++ rewriters.
+**Branch / Case Analysis** | Accessing blocks in specific branches | **Yes** | Use `pdl.region_of` and `pdl.block_of` for indexed access.
+
+**Summary:** Structural inspection and whole-body transfer are fully supported
+in PDLL. Complex Control Flow Graph (CFG) generation and custom inlining logic
+remain as areas where C++ rewrite fallbacks should be used.
+
 ### Type Expression
 
 A type expression represents a literal MLIR type. It allows for statically
@@ -1343,6 +1583,86 @@ of nested rewriters. The root operation is not implicitly erased or replaced,
 and any transformations to it must be expressed within the nested rewrite block.
 The inner body may contain any number of other rewrite statements, variables, or
 expressions.
+
+##### `take_region` statement
+
+```pdll
+// Move the entire body of one operation's region to another.
+Pattern {
+  let src = op<my_dialect.source> -> (type<"i32">);
+  let dest = op<my_dialect.dest>(src.0);
+  rewrite src with {
+    take_region src before dest;
+  };
+}
+```
+
+The `take_region` statement transfers all blocks from the source operation's
+region to the destination operation's region, corresponding to the
+`Region::takeBody` API. When the operands are `Op`-typed variables, the codegen
+automatically inserts `pdl.region_of` ops to extract the first region. For
+explicit control over which region to move, use a region-typed variable.
+
+##### `move_block` statement
+
+```pdll
+// Move a specific block before another block.
+Pattern {
+  let src = op<my_dialect.source> -> (type<"i32">);
+  let dest = op<my_dialect.dest>(src.0);
+  rewrite src with {
+    move_block src before dest;
+  };
+}
+```
+
+The `move_block` statement moves a source block before a destination block,
+corresponding to the `Block::moveBefore` API. When the operands are `Op`-typed
+variables, the codegen automatically inserts `pdl.region_of` and `pdl.block_of`
+ops to extract the entry block of the first region.
+
+Named blocks from the match section can also be referenced directly:
+
+```pdll
+Pattern {
+  let outer = op<test.outer> -> (type<"i32">) {
+    ^body: {
+      op<test.inner>;
+    }
+  };
+  let dest = op<test.dest>(outer.0);
+  rewrite outer with {
+    move_block ^body before dest;
+  };
+}
+```
+
+`move_block` preserves operation pointers (it relinks the block in MLIR's
+intrusive list), so a terminator matched in the source block remains valid after
+the move and can be replaced using the existing handle:
+
+```pdll
+Pattern InlineWithTerminatorRewrite {
+  let srcOp = op<my_dialect.source> {
+    ^body(iv: Value): {
+      op<my_dialect.work>;
+      let term = op<my_dialect.old_terminator>;
+    }
+  };
+  let destOp = op<my_dialect.dest> {
+    ^target(): {}
+  };
+  rewrite srcOp {
+    move_block ^body before ^target;
+    // `term` still points to the same operation, now in ^target's region.
+    replace term with op<my_dialect.new_terminator>;
+  }
+}
+```
+
+This covers common inlining scenarios where the terminator of the inlined block
+must be adapted to the destination's control-flow convention (e.g., replacing
+`my_dialect.old_terminator` with `scf.yield`) without requiring a C++ fallback.
 
 #### Defining Rewriters in PDLL
 

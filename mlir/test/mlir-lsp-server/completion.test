@@ -257,6 +257,18 @@
 // CHECK-NEXT:        "kind": 14,
 // CHECK-NEXT:        "label": "value",
 // CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "region",
+// CHECK-NEXT:        "sortText": "0"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "insertTextFormat": 1,
+// CHECK-NEXT:        "kind": 14,
+// CHECK-NEXT:        "label": "block",
+// CHECK-NEXT:        "sortText": "0"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:  }

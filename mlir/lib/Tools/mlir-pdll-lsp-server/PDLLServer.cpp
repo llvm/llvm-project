@@ -583,7 +583,9 @@ PDLDocument::buildHoverForCoreConstraint(const ast::CoreConstraintDecl *decl,
         .Case([&](const ast::ValueConstraintDecl *) { hoverOS << "Value"; })
         .Case([&](const ast::ValueRangeConstraintDecl *) {
           hoverOS << "ValueRange";
-        });
+        })
+        .Case([&](const ast::RegionConstraintDecl *) { hoverOS << "Region"; })
+        .Case([&](const ast::BlockConstraintDecl *) { hoverOS << "Block"; });
     hoverOS << "`\n";
   }
   return hover;
@@ -814,6 +816,8 @@ public:
       addCoreConstraint("ValueRange", "mlir::ValueRange");
       addCoreConstraint("Type", "mlir::Type");
       addCoreConstraint("TypeRange", "mlir::TypeRange");
+      addCoreConstraint("Region", "mlir::Region *");
+      addCoreConstraint("Block", "mlir::Block *");
     }
     if (allowInlineTypeConstraints) {
       /// Attr<Type>.
