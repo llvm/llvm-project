@@ -15879,6 +15879,21 @@ static unsigned getDUPLANEOp(EVT EltType) {
   llvm_unreachable("Invalid vector element type?");
 }
 
+static bool isPromotedExtractForWiderVectorElement(SDValue Value, EVT VecVT) {
+  if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return false;
+
+  // A promoted extract only defines the source vector element's bits. Scalar
+  // vector construction with wider elements would make promoted high bits
+  // observable.
+  EVT ValueVT = Value.getValueType();
+  EVT ExtractVT = Value.getOperand(0).getValueType().getVectorElementType();
+  EVT EltVT = VecVT.getVectorElementType();
+  return ValueVT.isInteger() && ExtractVT.isInteger() && EltVT.isInteger() &&
+         ExtractVT.bitsLT(ValueVT) && ExtractVT.bitsLT(EltVT) &&
+         EltVT.bitsLE(ValueVT);
+}
+
 static SDValue constructDup(SDValue V, int Lane, SDLoc DL, EVT VT,
                             unsigned Opcode, SelectionDAG &DAG) {
   // Try to eliminate a bitcasted extract subvector before a DUPLANE.
@@ -17349,24 +17364,27 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (!isConstant) {
       if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
           Value.getValueType() != VT) {
-        LLVM_DEBUG(
-            dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
-        return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
+        if (!isPromotedExtractForWiderVectorElement(Value, VT)) {
+          LLVM_DEBUG(dbgs()
+                     << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
+          return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
+        }
+      } else {
+        // This is actually a DUPLANExx operation, which keeps everything
+        // vectory.
+
+        SDValue Lane = Value.getOperand(1);
+        Value = Value.getOperand(0);
+        if (Value.getValueSizeInBits() == 64) {
+          LLVM_DEBUG(dbgs()
+                     << "LowerBUILD_VECTOR: DUPLANE works on 128-bit vectors, "
+                        "widening it\n");
+          Value = WidenVector(Value, DAG);
+        }
+
+        unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
+        return DAG.getNode(Opcode, DL, VT, Value, Lane);
       }
-
-      // This is actually a DUPLANExx operation, which keeps everything vectory.
-
-      SDValue Lane = Value.getOperand(1);
-      Value = Value.getOperand(0);
-      if (Value.getValueSizeInBits() == 64) {
-        LLVM_DEBUG(
-            dbgs() << "LowerBUILD_VECTOR: DUPLANE works on 128-bit vectors, "
-                      "widening it\n");
-        Value = WidenVector(Value, DAG);
-      }
-
-      unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
-      return DAG.getNode(Opcode, DL, VT, Value, Lane);
     }
 
     if (VT.getVectorElementType().isFloatingPoint()) {
