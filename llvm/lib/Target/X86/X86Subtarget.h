@@ -437,6 +437,8 @@ public:
 
   bool enableEarlyIfConversion() const override;
 
+  bool enableCCMPFormation() const override;
+
   void getPostRAMutations(std::vector<std::unique_ptr<ScheduleDAGMutation>>
                               &Mutations) const override;
 

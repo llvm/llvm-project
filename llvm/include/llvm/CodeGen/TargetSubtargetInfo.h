@@ -343,6 +343,10 @@ public:
   /// Enable the use of the early if conversion pass.
   virtual bool enableEarlyIfConversion() const { return false; }
 
+  /// Enable the target-independent conditional-compare formation pass
+  /// (MachineConditionalCompares) for this subtarget.
+  virtual bool enableCCMPFormation() const { return false; }
+
   /// Return PBQPConstraint(s) for the target.
   ///
   /// Override to provide custom PBQP constraints.

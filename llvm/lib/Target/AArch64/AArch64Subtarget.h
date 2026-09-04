@@ -390,6 +390,8 @@ public:
 
   bool enableEarlyIfConversion() const override;
 
+  bool enableCCMPFormation() const override;
+
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
 
   bool isCallingConvWin64(CallingConv::ID CC, bool IsVarArg) const {

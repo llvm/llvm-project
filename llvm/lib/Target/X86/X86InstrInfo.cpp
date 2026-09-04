@@ -19,6 +19,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -26,6 +27,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -49,6 +51,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-instr-info"
+
+// Conditional-compare formation rejection reasons (see findConvertibleCompare).
+STATISTIC(NumMultEFLAGSUses, "Number of ccmps rejected (EFLAGS used)");
+STATISTIC(NumUnknEFLAGSDefs, "Number of ccmps rejected (EFLAGS def unknown)");
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
@@ -3267,6 +3273,258 @@ int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   case X86::COND_P:
     return PF;
   }
+}
+
+//===----------------------------------------------------------------------===//
+//   Conditional-compare formation hooks (see MachineConditionalCompares).
+//===----------------------------------------------------------------------===//
+
+// Parse the condition code analyzeBranch produced for a conditional Jcc, and
+// reject the explicitly unsupported (e.g. compound) codes. An X86 conditional
+// branch always carries a single valid condition-code immediate.
+static bool parseCCMPCond(ArrayRef<MachineOperand> Cond, X86::CondCode &CC,
+                          ArrayRef<X86::CondCode> UnsupportedCCs = {}) {
+  assert(Cond.size() == 1 && "Unexpected X86 branch condition");
+  CC = static_cast<X86::CondCode>(Cond[0].getImm());
+  assert(CC != X86::COND_INVALID && "Invalid X86 branch condition");
+
+  for (X86::CondCode UnsupportedCC : UnsupportedCCs)
+    if (CC == UnsupportedCC)
+      return false;
+
+  return true;
+}
+
+// Count the number of conditional branches in the terminator sequence of MBB.
+static unsigned getNumOfJcc(const MachineBasicBlock *MBB) {
+  unsigned NumOfJcc = 0;
+  for (auto It = MBB->rbegin(); It != MBB->rend(); ++It) {
+    if (!It->isTerminator())
+      return NumOfJcc;
+    if (It->getOpcode() == X86::JCC_1)
+      ++NumOfJcc;
+  }
+  return NumOfJcc;
+}
+
+// Return true if DstReg is a virtual-register def with no uses; it will be
+// marked dead later. CCMP/CTEST produce no general-purpose result, so only a
+// dead compare def can be folded.
+static bool isDeadDef(const MachineRegisterInfo &MRI, Register DstReg) {
+  if (!DstReg.isVirtual())
+    return false;
+  return MRI.use_nodbg_empty(DstReg);
+}
+
+// Find the compare instruction in MBB that controls the conditional branch and
+// can be converted to a ccmp/ctest. Return nullptr if none is found.
+static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetRegisterInfo *TRI) {
+  MachineBasicBlock::iterator I = MBB->getFirstTerminator();
+  if (I == MBB->end())
+    return nullptr;
+  // The caller only reaches this hook once analyzeBranch has accepted CmpBB's
+  // conditional branch, so its terminator is a JCC_1 that reads EFLAGS.
+
+  // Now find the instruction controlling the terminator.
+  for (MachineBasicBlock::iterator B = MBB->begin(); I != B;) {
+    I = prev_nodbg(I, MBB->begin());
+    assert(!I->isTerminator() && "Spurious terminator");
+
+    switch (I->getOpcode()) {
+    // This pass runs before peephole optimization, so the SUB has not been
+    // optimized to CMP yet.
+    case X86::SUB8rr:
+    case X86::SUB16rr:
+    case X86::SUB32rr:
+    case X86::SUB64rr:
+    case X86::SUB8ri:
+    case X86::SUB16ri:
+    case X86::SUB32ri:
+    case X86::SUB64ri32:
+    case X86::SUB8rr_ND:
+    case X86::SUB16rr_ND:
+    case X86::SUB32rr_ND:
+    case X86::SUB64rr_ND:
+    case X86::SUB8ri_ND:
+    case X86::SUB16ri_ND:
+    case X86::SUB32ri_ND:
+    case X86::SUB64ri32_ND: {
+      if (!isDeadDef(MRI, I->getOperand(0).getReg()))
+        return nullptr;
+      return &*I;
+    }
+    case X86::CMP8rr:
+    case X86::CMP16rr:
+    case X86::CMP32rr:
+    case X86::CMP64rr:
+    case X86::CMP8ri:
+    case X86::CMP16ri:
+    case X86::CMP32ri:
+    case X86::CMP64ri32:
+    case X86::TEST8rr:
+    case X86::TEST16rr:
+    case X86::TEST32rr:
+    case X86::TEST64rr:
+    case X86::TEST8ri:
+    case X86::TEST16ri:
+    case X86::TEST32ri:
+    case X86::TEST64ri32:
+      return &*I;
+    default:
+      break;
+    }
+
+    // Check for flag reads and clobbers.
+    PhysRegInfo PRI = AnalyzePhysRegInBundle(*I, X86::EFLAGS, TRI);
+
+    if (PRI.Read) {
+      // The ccmp doesn't produce exactly the same flags as the original
+      // compare, so reject the transform if there are uses of the flags
+      // besides the terminators.
+      ++NumMultEFLAGSUses;
+      return nullptr;
+    }
+
+    if (PRI.Defined || PRI.Clobbered) {
+      ++NumUnknEFLAGSDefs;
+      return nullptr;
+    }
+  }
+  return nullptr;
+}
+
+// Return the conditional-compare opcode for a flag-setting compare opcode.
+static unsigned getCCMPOpcode(unsigned CmpOpc) {
+  switch (CmpOpc) {
+  default:
+    llvm_unreachable("Unknown compare opcode");
+  case X86::SUB8rr:
+  case X86::SUB8rr_ND:
+    return X86::CCMP8rr;
+  case X86::SUB16rr:
+  case X86::SUB16rr_ND:
+    return X86::CCMP16rr;
+  case X86::SUB32rr:
+  case X86::SUB32rr_ND:
+    return X86::CCMP32rr;
+  case X86::SUB64rr:
+  case X86::SUB64rr_ND:
+    return X86::CCMP64rr;
+  case X86::SUB8ri:
+  case X86::SUB8ri_ND:
+    return X86::CCMP8ri;
+  case X86::SUB16ri:
+  case X86::SUB16ri_ND:
+    return X86::CCMP16ri;
+  case X86::SUB32ri:
+  case X86::SUB32ri_ND:
+    return X86::CCMP32ri;
+  case X86::SUB64ri32:
+  case X86::SUB64ri32_ND:
+    return X86::CCMP64ri32;
+  case X86::CMP8rr:
+    return X86::CCMP8rr;
+  case X86::CMP16rr:
+    return X86::CCMP16rr;
+  case X86::CMP32rr:
+    return X86::CCMP32rr;
+  case X86::CMP64rr:
+    return X86::CCMP64rr;
+  case X86::CMP8ri:
+    return X86::CCMP8ri;
+  case X86::CMP16ri:
+    return X86::CCMP16ri;
+  case X86::CMP32ri:
+    return X86::CCMP32ri;
+  case X86::CMP64ri32:
+    return X86::CCMP64ri32;
+  case X86::TEST8rr:
+    return X86::CTEST8rr;
+  case X86::TEST16rr:
+    return X86::CTEST16rr;
+  case X86::TEST32rr:
+    return X86::CTEST32rr;
+  case X86::TEST64rr:
+    return X86::CTEST64rr;
+  case X86::TEST8ri:
+    return X86::CTEST8ri;
+  case X86::TEST16ri:
+    return X86::CTEST16ri;
+  case X86::TEST32ri:
+    return X86::CTEST32ri;
+  case X86::TEST64ri32:
+    return X86::CTEST64ri32;
+  }
+}
+
+// Indices into Info.TargetData: the parsed Head->CmpBB and CmpBB->Tail
+// condition codes.
+enum { HeadCCIdx = 0, TailCCIdx = 1 };
+
+MCRegister X86InstrInfo::getConditionalCompareFlagReg() const {
+  return X86::EFLAGS;
+}
+
+bool X86InstrInfo::canConvertToCCMP(
+    MachineBasicBlock &Head, MachineBasicBlock &CmpBB,
+    ArrayRef<MachineOperand> HeadCond, bool HeadTBBIsCmpBB,
+    ArrayRef<MachineOperand> CmpBBCond, bool CmpBBTBBIsTail,
+    const MachineRegisterInfo &MRI, CCmpConvInfo &Info) const {
+  // CCMP/CTEST resets all the bits of EFLAGS, so Head must contain only a
+  // single conditional branch.
+  if (getNumOfJcc(&Head) > 1)
+    return false;
+
+  X86::CondCode HeadCmpBBCC;
+  if (!parseCCMPCond(HeadCond, HeadCmpBBCC, {X86::COND_P, X86::COND_NP}))
+    return false;
+  // The condition code should make Head branch to CmpBB.
+  if (!HeadTBBIsCmpBB)
+    HeadCmpBBCC = X86::GetOppositeBranchCondition(HeadCmpBBCC);
+
+  X86::CondCode CmpBBTailCC;
+  if (!parseCCMPCond(CmpBBCond, CmpBBTailCC,
+                     {X86::COND_NE_OR_P, X86::COND_E_AND_NP}))
+    return false;
+  // The condition code should make CmpBB branch to Tail.
+  if (!CmpBBTBBIsTail)
+    CmpBBTailCC = X86::GetOppositeBranchCondition(CmpBBTailCC);
+
+  MachineInstr *CmpMI = findConvertibleCompare(&CmpBB, MRI, &getRegisterInfo());
+  if (!CmpMI)
+    return false;
+
+  Info.CmpMI = CmpMI;
+  Info.TargetData[HeadCCIdx] = HeadCmpBBCC;
+  Info.TargetData[TailCCIdx] = CmpBBTailCC;
+  return true;
+}
+
+MachineInstr *X86InstrInfo::convertToCCMP(MachineBasicBlock &Head,
+                                          MachineBasicBlock::iterator SpliceLoc,
+                                          const DebugLoc &HeadTermDL,
+                                          ArrayRef<MachineOperand> HeadCond,
+                                          const CCmpConvInfo &Info,
+                                          MachineRegisterInfo &MRI) const {
+  // SpliceLoc/HeadTermDL/HeadCond are unused: an X86 Head is always a plain
+  // JCC_1, so there is no Head terminator to synthesize or re-insert.
+  MachineInstr *CmpMI = Info.CmpMI;
+  auto HeadCmpBBCC = static_cast<X86::CondCode>(Info.TargetData[HeadCCIdx]);
+  auto CmpBBTailCC = static_cast<X86::CondCode>(Info.TargetData[TailCCIdx]);
+
+  unsigned Opc = getCCMPOpcode(CmpMI->getOpcode());
+  const MCInstrDesc &MCID = get(Opc);
+  unsigned NumDefs = CmpMI->getDesc().getNumDefs();
+  MachineOperand Op0 = CmpMI->getOperand(NumDefs);
+  MachineOperand Op1 = CmpMI->getOperand(NumDefs + 1);
+  DebugLoc DL = CmpMI->getDebugLoc();
+  return BuildMI(Head, CmpMI, DL, MCID)
+      .add(Op0)
+      .add(Op1)
+      .addImm(X86::getCCMPCondFlagsFromCondCode(CmpBBTailCC))
+      .addImm(HeadCmpBBCC);
 }
 
 #define GET_X86_NF_TRANSFORM_TABLE

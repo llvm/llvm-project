@@ -58,10 +58,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
-                                cl::desc("Enable the CCMP formation pass"),
-                                cl::init(true), cl::Hidden);
-
 static cl::opt<bool>
     EnableCondBrTuning("aarch64-enable-cond-br-tune",
                        cl::desc("Enable the conditional branch tuning pass"),
@@ -249,7 +245,6 @@ LLVMInitializeAArch64Target() {
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
-  initializeAArch64ConditionalComparesLegacyPass(PR);
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoLegacyPass(PR);
@@ -833,8 +828,7 @@ void AArch64PassConfig::addMachineSSAOptimization() {
 bool AArch64PassConfig::addILPOpts() {
   if (EnableCondOpt)
     addPass(createAArch64ConditionOptimizerLegacyPass());
-  if (EnableCCMP)
-    addPass(createAArch64ConditionalCompares());
+  addPass(&MachineConditionalComparesLegacyID);
   if (EnableMCR)
     addPass(&MachineCombinerID);
   if (EnableCondBrTuning)

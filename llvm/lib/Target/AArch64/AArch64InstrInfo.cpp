@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -52,6 +53,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -77,6 +79,15 @@ STATISTIC(NumZCRegMoveInstrsFPR, "Number of zero-cycle FPR register move "
 STATISTIC(NumZCZeroingInstrsGPR, "Number of zero-cycle GPR zeroing "
                                  "instructions expanded from canonical COPY");
 // NumZCZeroingInstrsFPR is counted at AArch64AsmPrinter
+
+// Conditional-compare formation rejection reasons (see findConvertibleCompare)
+// and the number of cbz/cbnz branches converted (see convertToCCMP).
+STATISTIC(NumCmpTermRejs, "Number of ccmps rejected (CmpBB is cbz...)");
+STATISTIC(NumImmRangeRejs, "Number of ccmps rejected (Imm out of range)");
+STATISTIC(NumLiveDstRejs, "Number of ccmps rejected (Cmp dest live)");
+STATISTIC(NumMultNZCVUses, "Number of ccmps rejected (NZCV used)");
+STATISTIC(NumUnknNZCVDefs, "Number of ccmps rejected (NZCV def unknown)");
+STATISTIC(NumCompBranches, "Number of cbz/cbnz branches converted");
 
 static cl::opt<unsigned>
     CBDisplacementBits("aarch64-cb-offset-bits", cl::Hidden, cl::init(9),
@@ -1341,6 +1352,338 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
       .addReg(TrueReg)
       .addReg(FalseReg)
       .addImm(CC);
+}
+
+//===----------------------------------------------------------------------===//
+//   Conditional-compare formation hooks (see MachineConditionalCompares).
+//===----------------------------------------------------------------------===//
+
+// Parse a condition code returned by analyzeBranch, and compute the CondCode
+// corresponding to TBB. Return false for branch types that can't be converted
+// to ccmp + br.cond (e.g. tbz/tbnz).
+static bool parseCCMPCond(ArrayRef<MachineOperand> Cond,
+                          AArch64CC::CondCode &CC) {
+  // A normal br.cond simply has the condition code.
+  if (Cond[0].getImm() != -1) {
+    assert(Cond.size() == 1 && "Unknown Cond array format");
+    CC = (AArch64CC::CondCode)(int)Cond[0].getImm();
+    return true;
+  }
+  // For tbz and cbz instructions, the opcode is next.
+  switch (Cond[1].getImm()) {
+  default:
+    // This includes tbz / tbnz branches which can't be converted to
+    // ccmp + br.cond.
+    return false;
+  case AArch64::CBZW:
+  case AArch64::CBZX:
+    assert(Cond.size() == 3 && "Unknown Cond array format");
+    CC = AArch64CC::EQ;
+    return true;
+  case AArch64::CBNZW:
+  case AArch64::CBNZX:
+    assert(Cond.size() == 3 && "Unknown Cond array format");
+    CC = AArch64CC::NE;
+    return true;
+  }
+}
+
+// Conditional-compare formation runs before the AArch64DeadRegisterDefinitions
+// pass, so compares are still writing virtual registers without any uses.
+static bool isDeadDef(const MachineRegisterInfo &MRI, unsigned DstReg) {
+  // Writes to the zero register are dead.
+  if (DstReg == AArch64::WZR || DstReg == AArch64::XZR)
+    return true;
+  if (!Register::isVirtualRegister(DstReg))
+    return false;
+  // A virtual register def without any uses will be marked dead later, and
+  // eventually replaced by the zero register.
+  return MRI.use_nodbg_empty(DstReg);
+}
+
+// Find the compare instruction in MBB that controls the conditional branch and
+// can be converted to a ccmp/ccmn/fccmp. Return nullptr if none is found.
+static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
+                                            const MachineRegisterInfo &MRI,
+                                            const TargetRegisterInfo *TRI) {
+  MachineBasicBlock::iterator I = MBB->getFirstTerminator();
+  if (I == MBB->end())
+    return nullptr;
+  // The terminator must be controlled by the flags.
+  if (!I->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+    switch (I->getOpcode()) {
+    case AArch64::CBZW:
+    case AArch64::CBZX:
+    case AArch64::CBNZW:
+    case AArch64::CBNZX:
+      // These can be converted into a ccmp against #0.
+      return &*I;
+    }
+    ++NumCmpTermRejs;
+    LLVM_DEBUG(dbgs() << "Flags not used by terminator: " << *I);
+    return nullptr;
+  }
+
+  // Now find the instruction controlling the terminator.
+  for (MachineBasicBlock::iterator B = MBB->begin(); I != B;) {
+    I = prev_nodbg(I, MBB->begin());
+    assert(!I->isTerminator() && "Spurious terminator");
+    switch (I->getOpcode()) {
+    // cmp is an alias for subs with a dead destination register.
+    case AArch64::SUBSWri:
+    case AArch64::SUBSXri:
+    // cmn is an alias for adds with a dead destination register.
+    case AArch64::ADDSWri:
+    case AArch64::ADDSXri:
+      // Check that the immediate operand is within range, ccmp wants a uimm5.
+      // Rd = SUBSri Rn, imm, shift
+      if (I->getOperand(3).getImm() || !isUInt<5>(I->getOperand(2).getImm())) {
+        LLVM_DEBUG(dbgs() << "Immediate out of range for ccmp: " << *I);
+        ++NumImmRangeRejs;
+        return nullptr;
+      }
+      [[fallthrough]];
+    case AArch64::SUBSWrr:
+    case AArch64::SUBSXrr:
+    case AArch64::ADDSWrr:
+    case AArch64::ADDSXrr:
+      if (isDeadDef(MRI, I->getOperand(0).getReg()))
+        return &*I;
+      LLVM_DEBUG(dbgs() << "Can't convert compare with live destination: "
+                        << *I);
+      ++NumLiveDstRejs;
+      return nullptr;
+    case AArch64::FCMPSrr:
+    case AArch64::FCMPDrr:
+    case AArch64::FCMPESrr:
+    case AArch64::FCMPEDrr:
+      return &*I;
+    }
+
+    // Check for flag reads and clobbers.
+    PhysRegInfo PRI = AnalyzePhysRegInBundle(*I, AArch64::NZCV, TRI);
+
+    if (PRI.Read) {
+      // The ccmp doesn't produce exactly the same flags as the original
+      // compare, so reject the transform if there are uses of the flags
+      // besides the terminators.
+      LLVM_DEBUG(dbgs() << "Can't create ccmp with multiple uses: " << *I);
+      ++NumMultNZCVUses;
+      return nullptr;
+    }
+
+    if (PRI.Defined || PRI.Clobbered) {
+      LLVM_DEBUG(dbgs() << "Not convertible compare: " << *I);
+      ++NumUnknNZCVDefs;
+      return nullptr;
+    }
+  }
+  LLVM_DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB)
+                    << '\n');
+  return nullptr;
+}
+
+// Indices into Info.TargetData: the parsed Head->CmpBB and CmpBB->Tail
+// condition codes.
+enum { HeadCCIdx = 0, TailCCIdx = 1 };
+
+MCRegister AArch64InstrInfo::getConditionalCompareFlagReg() const {
+  return AArch64::NZCV;
+}
+
+bool AArch64InstrInfo::canConvertToCCMP(
+    MachineBasicBlock &Head, MachineBasicBlock &CmpBB,
+    ArrayRef<MachineOperand> HeadCond, bool HeadTBBIsCmpBB,
+    ArrayRef<MachineOperand> CmpBBCond, bool CmpBBTBBIsTail,
+    const MachineRegisterInfo &MRI, CCmpConvInfo &Info) const {
+  AArch64CC::CondCode HeadCmpBBCC;
+  if (!parseCCMPCond(HeadCond, HeadCmpBBCC))
+    return false;
+  // The condition code should make Head branch to CmpBB.
+  if (!HeadTBBIsCmpBB)
+    HeadCmpBBCC = AArch64CC::getInvertedCondCode(HeadCmpBBCC);
+
+  AArch64CC::CondCode CmpBBTailCC;
+  if (!parseCCMPCond(CmpBBCond, CmpBBTailCC))
+    return false;
+  // The condition code should make CmpBB branch to Tail.
+  if (!CmpBBTBBIsTail)
+    CmpBBTailCC = AArch64CC::getInvertedCondCode(CmpBBTailCC);
+
+  MachineInstr *CmpMI = findConvertibleCompare(&CmpBB, MRI, &getRegisterInfo());
+  if (!CmpMI)
+    return false;
+
+  Info.CmpMI = CmpMI;
+  Info.TargetData[HeadCCIdx] = HeadCmpBBCC;
+  Info.TargetData[TailCCIdx] = CmpBBTailCC;
+
+  // Estimate the code-size delta of the conversion for the MinSize heuristic.
+  int Delta = 0;
+  // If the Head terminator is one of the cbz / cbnz branches with a built-in
+  // compare, we need to insert an explicit compare instruction in its place
+  // (see convertToCCMP), so the conversion grows the code by one instruction.
+  if (HeadCond[0].getImm() == -1) {
+    switch (HeadCond[1].getImm()) {
+    case AArch64::CBZW:
+    case AArch64::CBNZW:
+    case AArch64::CBZX:
+    case AArch64::CBNZX:
+      Delta = 1;
+      break;
+    default:
+      llvm_unreachable("Cannot convert Head branch");
+    }
+  }
+  // If CmpMI is one of the cbz / cbnz branches with a built-in compare, it is
+  // turned into a compare instruction in Head, so no instruction is saved.
+  // Otherwise, the CmpBB branch is removed, saving one instruction.
+  switch (CmpMI->getOpcode()) {
+  default:
+    --Delta;
+    break;
+  case AArch64::CBZW:
+  case AArch64::CBNZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZX:
+    break;
+  }
+  Info.CodeSizeDelta = Delta;
+  return true;
+}
+
+MachineInstr *AArch64InstrInfo::convertToCCMP(
+    MachineBasicBlock &Head, MachineBasicBlock::iterator SpliceLoc,
+    const DebugLoc &HeadTermDL, ArrayRef<MachineOperand> HeadCond,
+    const CCmpConvInfo &Info, MachineRegisterInfo &MRI) const {
+  MachineInstr *CmpMI = Info.CmpMI;
+  auto HeadCmpBBCC =
+      static_cast<AArch64CC::CondCode>(Info.TargetData[HeadCCIdx]);
+  auto CmpBBTailCC =
+      static_cast<AArch64CC::CondCode>(Info.TargetData[TailCCIdx]);
+
+  // If the Head terminator was one of the cbz / cbnz branches with built-in
+  // compare, we need to insert an explicit compare instruction in its place.
+  if (HeadCond[0].getImm() == -1) {
+    ++NumCompBranches;
+    unsigned Opc = 0;
+    switch (HeadCond[1].getImm()) {
+    case AArch64::CBZW:
+    case AArch64::CBNZW:
+      Opc = AArch64::SUBSWri;
+      break;
+    case AArch64::CBZX:
+    case AArch64::CBNZX:
+      Opc = AArch64::SUBSXri;
+      break;
+    default:
+      llvm_unreachable("Cannot convert Head branch");
+    }
+    const MCInstrDesc &MCID = get(Opc);
+    // Create a dummy virtual register for the SUBS def.
+    Register DestReg = MRI.createVirtualRegister(getRegClass(MCID, 0));
+    // Insert a SUBS Rn, #0 instruction instead of the cbz / cbnz.
+    BuildMI(Head, SpliceLoc, HeadTermDL, MCID)
+        .addReg(DestReg, RegState::Define | RegState::Dead)
+        .add(HeadCond[2])
+        .addImm(0)
+        .addImm(0);
+    // SUBS uses the GPR*sp register classes.
+    MRI.constrainRegClass(HeadCond[2].getReg(), getRegClass(MCID, 1));
+  }
+
+  // Now replace CmpMI with a ccmp instruction that also considers the incoming
+  // flags.
+  unsigned Opc = 0;
+  unsigned FirstOp = 1;   // First CmpMI operand to copy.
+  bool isZBranch = false; // CmpMI is a cbz/cbnz instruction.
+  switch (CmpMI->getOpcode()) {
+  default:
+    llvm_unreachable("Unknown compare opcode");
+  case AArch64::SUBSWri:
+    Opc = AArch64::CCMPWi;
+    break;
+  case AArch64::SUBSWrr:
+    Opc = AArch64::CCMPWr;
+    break;
+  case AArch64::SUBSXri:
+    Opc = AArch64::CCMPXi;
+    break;
+  case AArch64::SUBSXrr:
+    Opc = AArch64::CCMPXr;
+    break;
+  case AArch64::ADDSWri:
+    Opc = AArch64::CCMNWi;
+    break;
+  case AArch64::ADDSWrr:
+    Opc = AArch64::CCMNWr;
+    break;
+  case AArch64::ADDSXri:
+    Opc = AArch64::CCMNXi;
+    break;
+  case AArch64::ADDSXrr:
+    Opc = AArch64::CCMNXr;
+    break;
+  case AArch64::FCMPSrr:
+    Opc = AArch64::FCCMPSrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPDrr:
+    Opc = AArch64::FCCMPDrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPESrr:
+    Opc = AArch64::FCCMPESrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPEDrr:
+    Opc = AArch64::FCCMPEDrr;
+    FirstOp = 0;
+    break;
+  case AArch64::CBZW:
+  case AArch64::CBNZW:
+    Opc = AArch64::CCMPWi;
+    FirstOp = 0;
+    isZBranch = true;
+    break;
+  case AArch64::CBZX:
+  case AArch64::CBNZX:
+    Opc = AArch64::CCMPXi;
+    FirstOp = 0;
+    isZBranch = true;
+    break;
+  }
+
+  // The ccmp instruction should set the flags according to the comparison when
+  // Head would have branched to CmpBB.
+  // The NZCV immediate operand should provide flags for the case where Head
+  // would have branched to Tail. These flags should cause the new Head
+  // terminator to branch to tail.
+  unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CmpBBTailCC);
+  const MCInstrDesc &MCID = get(Opc);
+  MRI.constrainRegClass(CmpMI->getOperand(FirstOp).getReg(),
+                        getRegClass(MCID, 0));
+  if (CmpMI->getOperand(FirstOp + 1).isReg())
+    MRI.constrainRegClass(CmpMI->getOperand(FirstOp + 1).getReg(),
+                          getRegClass(MCID, 1));
+  MachineInstrBuilder MIB = BuildMI(Head, CmpMI, CmpMI->getDebugLoc(), MCID)
+                                .add(CmpMI->getOperand(FirstOp)); // Register Rn
+  if (isZBranch)
+    MIB.addImm(0); // cbz/cbnz Rn -> ccmp Rn, #0
+  else
+    MIB.add(CmpMI->getOperand(FirstOp + 1)); // Register Rm / Immediate
+  MIB.addImm(NZCV).addImm(HeadCmpBBCC);
+
+  // If CmpMI was a terminator, we need a new conditional branch to replace it.
+  // This now becomes a Head terminator.
+  if (isZBranch) {
+    bool isNZ = CmpMI->getOpcode() == AArch64::CBNZW ||
+                CmpMI->getOpcode() == AArch64::CBNZX;
+    BuildMI(Head, CmpMI, CmpMI->getDebugLoc(), get(AArch64::Bcc))
+        .addImm(isNZ ? AArch64CC::NE : AArch64CC::EQ)
+        .add(CmpMI->getOperand(1)); // Branch target.
+  }
+  return MIB;
 }
 
 // Return true if Imm can be loaded into a register by a "cheap" sequence of
