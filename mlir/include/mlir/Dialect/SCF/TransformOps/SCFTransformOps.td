@@ -165,7 +165,7 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
                       TransformHandleTypeInterface:$call);
 
   let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
+    "$target `func_name` `=` $func_name attr-dict `:` functional-type(operands, results)";
 }
 
 def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
@@ -212,7 +212,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
                       TransformHandleTypeInterface:$remainder_loop);
 
   let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
+    "$target oilist(`peel_front` `=` $peel_front | `fail_if_already_divisible` `=` $fail_if_already_divisible) attr-dict `:` functional-type(operands, results)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -255,7 +255,7 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
+    "$target oilist(`iteration_interval` `=` $iteration_interval | `read_latency` `=` $read_latency) attr-dict `:` functional-type(operands, results)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -320,7 +320,7 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
   let arguments = (ins TransformHandleTypeInterface:$target,
                        ConfinedAttr<I64Attr, [IntPositive]>:$factor);
 
-  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let assemblyFormat = "$target `factor` `=` $factor attr-dict `:` type($target)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -384,7 +384,7 @@ def LoopUnrollAndJamOp : Op<Transform_Dialect, "loop.unroll_and_jam",
   let arguments = (ins TransformHandleTypeInterface:$target,
                        ConfinedAttr<I64Attr, [IntPositive]>:$factor);
 
-  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let assemblyFormat = "$target `factor` `=` $factor attr-dict `:` type($target)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -479,8 +479,7 @@ def TakeAssumedBranchOp : Op<Transform_Dialect, "scf.take_assumed_branch", [
 
   let assemblyFormat = [{
       $target
-      (`take_else_branch` $take_else_branch^)?
-      attr-dict
+      (`take_else_branch` $take_else_branch^)? attr-dict
        `:` functional-type(operands, results)
   }];
 

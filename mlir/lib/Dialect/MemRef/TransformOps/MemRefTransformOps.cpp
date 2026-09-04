@@ -31,6 +31,100 @@ using namespace mlir;
 #define DEBUG_TYPE "memref-transforms"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
+namespace mlir::transform {
+namespace {
+ParseResult parseLLVMTypeConverterOptions(OpAsmParser &parser,
+                                          BoolAttr &useAlignedAlloc,
+                                          IntegerAttr &indexBitwidth,
+                                          BoolAttr &useGenericFunctions,
+                                          BoolAttr &useBarePtrCallConv,
+                                          StringAttr &dataLayout) {
+  bool seenUseAlignedAlloc = false;
+  bool seenIndexBitwidth = false;
+  bool seenUseGenericFunctions = false;
+  bool seenUseBarePtrCallConv = false;
+  bool seenDataLayout = false;
+
+  auto parseDuplicate = [&](StringRef name, bool &seen) -> ParseResult {
+    if (seen)
+      return parser.emitError(parser.getCurrentLocation())
+             << "duplicate '" << name << "' option";
+    seen = true;
+    return ParseResult::success();
+  };
+
+  while (true) {
+    if (succeeded(parser.parseOptionalKeyword("use_aligned_alloc"))) {
+      if (failed(parseDuplicate("use_aligned_alloc", seenUseAlignedAlloc)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(useAlignedAlloc,
+                                parser.getBuilder().getI1Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("index_bitwidth"))) {
+      if (failed(parseDuplicate("index_bitwidth", seenIndexBitwidth)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(indexBitwidth,
+                                parser.getBuilder().getI64Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("use_generic_functions"))) {
+      if (failed(parseDuplicate("use_generic_functions",
+                                seenUseGenericFunctions)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(useGenericFunctions,
+                                parser.getBuilder().getI1Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("use_bare_ptr_call_conv"))) {
+      if (failed(parseDuplicate("use_bare_ptr_call_conv",
+                                seenUseBarePtrCallConv)) ||
+          parser.parseEqual() ||
+          parser.parseAttribute(useBarePtrCallConv,
+                                parser.getBuilder().getI1Type()))
+        return failure();
+      continue;
+    }
+    if (succeeded(parser.parseOptionalKeyword("data_layout"))) {
+      if (failed(parseDuplicate("data_layout", seenDataLayout)) ||
+          parser.parseEqual() || parser.parseAttribute(dataLayout))
+        return failure();
+      continue;
+    }
+    break;
+  }
+  return success();
+}
+
+void printLLVMTypeConverterOptions(OpAsmPrinter &printer, Operation *,
+                                   BoolAttr useAlignedAlloc,
+                                   IntegerAttr indexBitwidth,
+                                   BoolAttr useGenericFunctions,
+                                   BoolAttr useBarePtrCallConv,
+                                   StringAttr dataLayout) {
+  bool needsSpace = false;
+  auto printOption = [&](StringRef name, Attribute value) {
+    if (!value)
+      return;
+    if (needsSpace)
+      printer << ' ';
+    printer << name << " = ";
+    printer.printAttributeWithoutType(value);
+    needsSpace = true;
+  };
+
+  printOption("use_aligned_alloc", useAlignedAlloc);
+  printOption("index_bitwidth", indexBitwidth);
+  printOption("use_generic_functions", useGenericFunctions);
+  printOption("use_bare_ptr_call_conv", useBarePtrCallConv);
+  printOption("data_layout", dataLayout);
+}
+} // namespace
+} // namespace mlir::transform
+
 //===----------------------------------------------------------------------===//
 // Apply...ConversionPatternsOp
 //===----------------------------------------------------------------------===//

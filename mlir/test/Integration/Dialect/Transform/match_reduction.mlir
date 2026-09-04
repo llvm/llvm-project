@@ -7,9 +7,9 @@ module attributes { transform.with_named_sequence } {
 
     transform.match.structured %entry : !transform.any_op {
     ^bb0(%struct: !transform.any_op):
-      transform.match.structured.dim %struct[all] {parallel} : !transform.any_op
-      transform.match.structured.input %struct[all] {projected_permutation} : !transform.any_op
-      transform.match.structured.init %struct[all] {permutation} : !transform.any_op
+      transform.match.structured.dim %struct[all] parallel : !transform.any_op
+      transform.match.structured.input %struct[all] projected_permutation : !transform.any_op
+      transform.match.structured.init %struct[all] permutation : !transform.any_op
       %ni = transform.match.structured.num_inits %struct : (!transform.any_op) -> !transform.param<i64>
       transform.match.param.cmpi eq %ni, %c1 : !transform.param<i64>
     }
@@ -31,8 +31,8 @@ module attributes { transform.with_named_sequence } {
       transform.match.param.cmpi ge %rank, %c2 : !transform.param<i64>
       transform.match.param.cmpi le %rank, %c4 : !transform.param<i64>
 
-      transform.match.structured.dim %struct[-1] {reduction} : !transform.any_op
-      transform.match.structured.dim %struct[except(-1)] {parallel} : !transform.any_op
+      transform.match.structured.dim %struct[-1] reduction : !transform.any_op
+      transform.match.structured.dim %struct[except(-1)] parallel : !transform.any_op
       %dims = transform.match.structured.dim %struct[all] : (!transform.any_op) -> !transform.param<i64>
 
       %n_inputs = transform.match.structured.num_inputs %struct : (!transform.any_op) -> !transform.param<i64>
@@ -40,8 +40,8 @@ module attributes { transform.with_named_sequence } {
       transform.match.param.cmpi eq %n_inputs, %c1 : !transform.param<i64>
       transform.match.param.cmpi eq %n_outputs, %c1 : !transform.param<i64>
 
-      transform.match.structured.input %struct[0] {projected_permutation} : !transform.any_op
-      transform.match.structured.init %struct[0] {projected_permutation} : !transform.any_op
+      transform.match.structured.input %struct[0] projected_permutation : !transform.any_op
+      transform.match.structured.init %struct[0] projected_permutation : !transform.any_op
       %init = transform.match.structured.init %struct[0] : (!transform.any_op) -> !transform.any_value
 
       // This danse is necessary to create an empty handle if there is no single
@@ -50,7 +50,7 @@ module attributes { transform.with_named_sequence } {
       ^bb0(%struct_inner: !transform.any_op):
         %result = transform.match.structured failures(propagate) %struct_inner : (!transform.any_op) -> !transform.any_op {
         ^bb0(%struct_inner_inner: !transform.any_op):
-          %result_inner = transform.match.structured.result %struct_inner_inner[0] {single} : (!transform.any_op) -> !transform.any_op
+          %result_inner = transform.match.structured.result %struct_inner_inner[0] single : (!transform.any_op) -> !transform.any_op
           %trailing = transform.include @_reduce_leading_trailing failures(propagate) (%result_inner) : (!transform.any_op) -> !transform.any_op
           transform.match.structured.yield %trailing : !transform.any_op
         }
@@ -82,7 +82,7 @@ module attributes { transform.with_named_sequence } {
 
       %bitwidth = transform.match.structured.elemental_bitwidth %init : (!transform.any_value) -> !transform.param<i64>
 
-      transform.match.structured.body %struct { reduction_position = 0 } : !transform.any_op
+      transform.match.structured.body %struct reduction_position = 0 : !transform.any_op
       transform.match.structured.yield %rank, %dims, %bitwidth, %operand_optional, %init, %trailing_optional
         : !transform.param<i64>, !transform.param<i64>, !transform.param<i64>,
           !transform.any_op, !transform.any_value, !transform.any_op

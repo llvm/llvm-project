@@ -32,7 +32,7 @@ module attributes { transform.with_named_sequence } {
       %init = transform.match.structured.init %struct[0] : (!transform.any_op) -> !transform.any_op
       transform.match.operation_name %init ["linalg.fill"] : !transform.any_op
 
-      transform.match.structured.body %struct { contraction = ["arith.mulf", "arith.addf"] } : !transform.any_op
+      transform.match.structured.body %struct contraction = ["arith.mulf", "arith.addf"] : !transform.any_op
       %dim_kinds:4 = transform.match.structured.classify_contraction_dims %struct
         : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>)
 

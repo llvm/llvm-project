@@ -96,7 +96,7 @@ def OneShotBufferizeOp
   let hasVerifier = 1;
   let assemblyFormat = [{
     (`layout` `{` $function_boundary_type_conversion^ `}`)?
-    $target attr-dict `:` functional-type($target, results)
+    $target prop-dict attr-dict `:` functional-type($target, results)
   }];
 }
 

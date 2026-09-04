@@ -59,10 +59,10 @@ def testBufferizeToAllocationOpArgs(target):
     # CHECK-LABEL: TEST: testBufferizeToAllocationOpArgs
     # CHECK: transform.sequence
     # CHECK: transform.structured.bufferize_to_allocation
+    # CHECK-SAME: memory_space = 3 : i64
+    # CHECK-SAME: memcpy_op = "memref.copy"
     # CHECK-SAME: alloc_op = "memref.alloca"
     # CHECK-SAME: bufferize_destination_only
-    # CHECK-SAME: memcpy_op = "memref.copy"
-    # CHECK-SAME: memory_space = 3
 
 
 @run
@@ -110,7 +110,7 @@ def testFuseOpCompact(target):
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
     # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
-    # CHECK-SAME: interchange [0, 1] {apply_cleanup}
+    # CHECK-SAME: interchange [0, 1] apply_cleanup
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
 
@@ -126,7 +126,7 @@ def testFuseOpCompactForall(target):
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
     # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
-    # CHECK-SAME: {apply_cleanup, use_forall}
+    # CHECK-SAME: apply_cleanup use_forall
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
 
@@ -214,7 +214,7 @@ def testFuseOpPackedTileSizesForall(target):
     # CHECK: %[[T:.*]] = transform.structured.match
     # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
     # CHECK-SAME: tile_sizes *(%[[T]])
-    # CHECK-SAME: {use_forall}
+    # CHECK-SAME: use_forall
     # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
 
@@ -730,12 +730,12 @@ def testVectorizeChildrenAndApplyPatternsAllAttrs(target):
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsAllAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
+    # CHECK-SAME: fold_type_extensions_into_contract
+    # CHECK-SAME: vectorize_padding
+    # CHECK-SAME: vectorize_nd_extract
+    # CHECK-SAME: flatten_1d_depthwise_conv
     # CHECK-SAME: disable_multi_reduction_to_contract_patterns
     # CHECK-SAME: disable_transfer_permutation_map_lowering_patterns
-    # CHECK-SAME: flatten_1d_depthwise_conv
-    # CHECK-SAME: fold_type_extensions_into_contract
-    # CHECK-SAME: vectorize_nd_extract
-    # CHECK-SAME: vectorize_padding
 
 
 @run

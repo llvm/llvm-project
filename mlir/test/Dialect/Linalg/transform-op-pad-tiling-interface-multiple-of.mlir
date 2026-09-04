@@ -35,9 +35,7 @@ module attributes {transform.with_named_sequence} {
 
     // Tile to 5 then pad to 8 (supposedly to better hit vector ops).
     %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul tile_sizes [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %matmul_padded, %_ = transform.structured.pad_tiling_interface %matmul_l1 to padding_sizes [8] pad_to_multiple_of {
-      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_padded, %_ = transform.structured.pad_tiling_interface %matmul_l1 to padding_sizes [8] pad_to_multiple_of padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     transform.yield
   }
@@ -72,9 +70,7 @@ module {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [3, 0, 5] pad_to_multiple_of {
-        padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32]
-      } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [3, 0, 5] pad_to_multiple_of padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
     }
   }
@@ -126,9 +122,7 @@ module {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [3, 0, 5] pad_to_multiple_of {
-        padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32]
-      } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [3, 0, 5] pad_to_multiple_of padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
     }
   }
@@ -169,9 +163,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
 
     // Pad then tile should produce static shapes.
-    %matmul_padded, %_ = transform.structured.pad_tiling_interface %matmul to padding_sizes [8, 0, 16] pad_to_multiple_of {
-      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_padded, %_ = transform.structured.pad_tiling_interface %matmul to padding_sizes [8, 0, 16] pad_to_multiple_of padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     %m, %l0, %l1 = transform.structured.tile_using_for %matmul_padded tile_sizes [8, 0, 16]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
@@ -182,13 +174,13 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func2 {
       transform.apply_patterns.canonicalization
-    } {apply_cse} : !transform.any_op
+    } apply_cse : !transform.any_op
     %minmax = transform.structured.match ops{["affine.min", "affine.max"]} in %module_op
       : (!transform.any_op) -> !transform.any_op
     transform.affine.simplify_min_max_affine_ops %minmax : !transform.any_op
     transform.apply_patterns to %func2 {
       transform.apply_patterns.canonicalization
-    } {apply_cse} : !transform.any_op
+    } apply_cse : !transform.any_op
     transform.yield
   }
 }
@@ -230,9 +222,7 @@ module attributes {transform.with_named_sequence} {
     %m, %l0, %l1 = transform.structured.tile_using_for %matmul tile_sizes [8, 0, 16]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-    %matmul_padded, %_ = transform.structured.pad_tiling_interface %m to padding_sizes [8, 0, 16] pad_to_multiple_of {
-      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_padded, %_ = transform.structured.pad_tiling_interface %m to padding_sizes [8, 0, 16] pad_to_multiple_of padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     transform.yield
   }
@@ -264,9 +254,7 @@ module attributes {transform.with_named_sequence} {
     %m, %l0, %l1 = transform.structured.tile_using_for %matmul tile_sizes [8, 0, 16]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-    %matmul_padded, %_ = transform.structured.pad_tiling_interface %m to padding_sizes [8, 0, 16] pad_to_multiple_of {
-      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_padded, %_ = transform.structured.pad_tiling_interface %m to padding_sizes [8, 0, 16] pad_to_multiple_of padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     transform.yield
   }
@@ -296,9 +284,7 @@ func.func @pad_conv(%arg0: tensor<1x16x16x4xf32>, %arg1: tensor<16x3x3x4xf32>, %
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of {
-      padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -337,9 +323,7 @@ func.func @pad_conv_dynamic(%arg0: tensor<1x16x?x4xf32>, %arg1: tensor<16x3x3x4x
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of {
-      padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -368,9 +352,7 @@ func.func @pad_conv_strided(%arg0: tensor<1x42x42x4xf32>, %arg1: tensor<16x3x3x4
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of {
-      padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -399,9 +381,7 @@ func.func @pad_conv_dilated(%arg0: tensor<1x18x18x4xf32>, %arg1: tensor<16x3x3x4
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_fhwc"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of {
-      padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32]
-    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [0, 0, 16, 0, 0, 0, 16] pad_to_multiple_of padding_values = [0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32, 0.0 : f32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
