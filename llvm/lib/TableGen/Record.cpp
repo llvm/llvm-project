@@ -2696,8 +2696,14 @@ const Init *CondOpInit::Fold(const Record *CurRec) const {
   for (auto [Cond, Val] : getCondAndVals()) {
     if (const auto *CondI = dyn_cast_or_null<IntInit>(
             Cond->convertInitializerTo(IntRecTy::get(RK)))) {
-      if (CondI->getValue())
-        return Val->convertInitializerTo(getValType());
+      if (CondI->getValue()) {
+        // Mixed bits/int arms unify to int. A bits value with unresolved
+        // references cannot convert to int yet; returning null crashed later
+        // in BitsInit::resolveReferences. Leave the value for a later cast.
+        if (const Init *Converted = Val->convertInitializerTo(getValType()))
+          return Converted;
+        return Val;
+      }
     } else {
       return this;
     }
