@@ -10,6 +10,8 @@ def SGPRRegBank : RegisterBank<"SGPR",
   [SReg_LO16, SReg_32, SReg_64, SReg_96, SReg_128, SReg_160, SReg_192, SReg_224, SReg_256, SReg_288, SReg_320, SReg_352, SReg_384, SReg_512, SReg_1024]
 >;
 
+// VReg_1 is not covered by any these classes
+let ExtraPartMappings = [[1]] in
 def VGPRRegBank : RegisterBank<"VGPR",
   [VGPR_16_Lo128, VGPR_16, VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192, VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384, VReg_512, VReg_1024]
 >;
