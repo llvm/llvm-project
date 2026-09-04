@@ -1070,7 +1070,6 @@ entry:
 ; The unsigned operand of vdot4asu is a scalar splat, so this should select
 ; vdot4asu.vx directly.
 define <vscale x 4 x i32> @partial_reduce_vdot4asu_vx(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, i32 %x) {
-;
 ; NODOT-LABEL: partial_reduce_vdot4asu_vx:
 ; NODOT:       # %bb.0: # %entry
 ; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
@@ -1106,7 +1105,6 @@ entry:
 ; vdot4aus.vx (the operand-swapped counterpart) directly instead of
 ; materializing a vmv.v.x splat and using vdot4asu.vv.
 define <vscale x 4 x i32> @partial_reduce_vdot4aus_vx(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %b, i32 %x) {
-;
 ; NODOT-LABEL: partial_reduce_vdot4aus_vx:
 ; NODOT:       # %bb.0: # %entry
 ; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
