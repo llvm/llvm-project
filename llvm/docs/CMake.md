@@ -391,6 +391,13 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     *LLVM_COVERAGE_SOURCE_DIRS* for more information on configuring code
     coverage reports.
 
+**LLVM_BUILD_LIBXML2**:BOOL
+
+:   Download and build a static libxml2 for LLVM's Windows manifest support,
+    instead of finding an installed library. Defaults to OFF. Requires network
+    access during the build. The library is built without ICU or iconv.
+    Has no effect when `LLVM_ENABLE_LIBXML2` is OFF.
+
 **LLVM_BUILD_LLVM_DYLIB**:BOOL
 
 :   If enabled, the target for building the libLLVM shared library is added.

@@ -217,7 +217,11 @@ if(LLVM_ENABLE_ZSTD)
   endif()
 endif()
 
-if(LLVM_ENABLE_LIBXML2)
+if(LLVM_ENABLE_LIBXML2 AND LLVM_BUILD_LIBXML2)
+  include(LibXml2)
+  # The external project is built later, so it cannot be link-tested here.
+  set(LLVM_ENABLE_LIBXML2 1)
+elseif(LLVM_ENABLE_LIBXML2)
   if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON)
     find_package(LibXml2 REQUIRED)
   elseif(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
