@@ -15,8 +15,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/ImmutableSet.h"
-#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 using namespace clang::ast_matchers;
@@ -111,7 +109,7 @@ class PointerStateVisitor
   using VariablesSet = llvm::SmallPtrSet<const clang::VarDecl *, 32>;
   using FieldsSet = llvm::SmallPtrSet<const clang::FieldDecl *, 32>;
 
-  PointerState getState(const StateMap &M, const PointerLocation &Loc) {
+  static PointerState getState(const StateMap &M, const PointerLocation &Loc) {
     const auto It = M.find(Loc);
     return It == M.end() ? PS_Unknown : It->second;
   }
@@ -133,7 +131,7 @@ public:
   void VisitDeclStmt(const clang::DeclStmt *DS) {
     for (const clang::Decl *D : DS->decls()) {
       const auto *VD = llvm::dyn_cast<clang::VarDecl>(D);
-      if (!VD || !PtrVars.count(VD))
+      if (!VD || !PtrVars.contains(VD))
         continue;
       if (const clang::Expr *Init = VD->getInit()) {
         const PointerState NewState = classify(Init);
@@ -274,7 +272,7 @@ private:
 
     if (const auto *DRE = llvm::dyn_cast<clang::DeclRefExpr>(S)) {
       const auto *VD = llvm::dyn_cast<clang::VarDecl>(DRE->getDecl());
-      if (VD && PtrVars.count(VD)) {
+      if (VD && PtrVars.contains(VD)) {
         Out.Root = VD;
         Out.IsThis = false;
         Out.Path.clear();
@@ -285,7 +283,7 @@ private:
 
     if (const auto *ME = llvm::dyn_cast<clang::MemberExpr>(S)) {
       const auto *FD = llvm::dyn_cast<clang::FieldDecl>(ME->getMemberDecl());
-      if (!FD || !PtrFields.count(FD))
+      if (!FD || !PtrFields.contains(FD))
         return false;
       if (!resolveBase(ME->getBase(), Out))
         return false;
@@ -422,7 +420,7 @@ class TransitionsFinder {
   using VariablesSet = llvm::SmallPtrSet<const clang::VarDecl *, 32>;
   using FieldsSet = llvm::SmallPtrSet<const clang::FieldDecl *, 32>;
 
-  PointerState getState(const StateMap &M, const PointerLocation &Loc) {
+  static PointerState getState(const StateMap &M, const PointerLocation &Loc) {
     const auto It = M.find(Loc);
     return It == M.end() ? PS_Unknown : It->second;
   }
@@ -454,7 +452,7 @@ public:
 private:
   // Reverse post-order traversal of CFG blocks (iterative DFS without recursion
   // on the interpreter stack, to avoid dependence on the CFG depth).
-  std::vector<const clang::CFGBlock *>
+  static std::vector<const clang::CFGBlock *>
   computeReversePostOrder(const clang::CFG &Cfg) {
     std::vector<const clang::CFGBlock *> PostOrder;
     llvm::SmallPtrSet<const clang::CFGBlock *, 32> Visited;
@@ -482,7 +480,7 @@ private:
       }
       const clang::CFGBlock *Succ = *F.It;
       ++F.It;
-      if (!Succ || Visited.count(Succ))
+      if (!Succ || Visited.contains(Succ))
         continue;
       Visited.insert(Succ);
       Stack.push_back({Succ, Succ->succ_begin(), Succ->succ_end()});
@@ -551,7 +549,7 @@ private:
     for (const PointerLocation &Loc : Domain)
       Result[Loc]; // guarantee the presence of a key even without transitions
 
-    const auto InitialState = [&]() {
+    const auto InitialState = [&] {
       StateMap S;
       for (const PointerLocation &Loc : Domain)
         S[Loc] = PS_Unknown;
@@ -567,10 +565,9 @@ private:
       return R;
     };
     const auto StatesEqual = [&](const StateMap &A, const StateMap &B) {
-      for (const PointerLocation &Loc : Domain)
-        if (getState(A, Loc) != getState(B, Loc))
-          return false;
-      return true;
+      return llvm::all_of(Domain, [&](const PointerLocation &Loc) {
+        return getState(A, Loc) == getState(B, Loc);
+      });
     };
 
     std::map<const clang::CFGBlock *, StateMap> InState;
@@ -587,7 +584,7 @@ private:
       for (const clang::CFGBlock *Block : Order) {
         StateMap NewIn;
         bool HaveAny = false;
-        for (const clang::CFGBlock *Pred: Block->preds()) {
+        for (const clang::CFGBlock *Pred : Block->preds()) {
           if (!Pred)
             continue; // unreachable edge (AdjacentBlock == nullptr)
           const auto It = OutState.find(Pred);
@@ -711,9 +708,9 @@ public:
     const auto *ResetWithThisExpr =
         Result.Nodes.getNodeAs<CXXMemberCallExpr>("dangerous-reset");
     if (CtorWithThisExpr)
-      Check.emitDiagnostic(*Result.Context, CtorWithThisExpr);
+      Check.emitDiagnostic(CtorWithThisExpr);
     else if (ResetWithThisExpr)
-      Check.emitDiagnostic(*Result.Context, ResetWithThisExpr);
+      Check.emitDiagnostic(ResetWithThisExpr);
     else
       checkFlowSensitive(Result);
   }
@@ -772,7 +769,7 @@ private:
       for (const auto &T : TransList) {
         if (T.FromState == T.ToState && T.FromState == PS_SmartPtrWrapper) {
           if (const auto *E = dyn_cast<const Expr>(T.Stmt))
-            Check.emitDiagnostic(*Result.Context, E);
+            Check.emitDiagnostic(E);
         }
       }
     }
@@ -921,7 +918,7 @@ private:
                      const ConditionalOperator *Cond) {
     if (Cond && validateConditionalOperator(Context, Cond))
       return;
-    Check.emitDiagnostic(Context, ConstructorOrMember);
+    Check.emitDiagnostic(ConstructorOrMember);
   }
 
   bool validateConditionalOperator(ASTContext &Context,
@@ -993,7 +990,7 @@ void SmartPtrInitializationCheck::check(
 }
 
 void SmartPtrInitializationCheck::emitDiagnostic(
-    ASTContext &Context, const Expr *ConstructorOrMember) {
+    const Expr *ConstructorOrMember) {
   if (const auto *SmartPtrCtor =
           dyn_cast<const CXXConstructExpr>(ConstructorOrMember)) {
     const Expr *PointerArg = stripWrappers(SmartPtrCtor->getArg(0));

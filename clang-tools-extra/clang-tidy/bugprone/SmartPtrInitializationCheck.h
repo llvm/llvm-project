@@ -34,7 +34,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  void emitDiagnostic(ASTContext &Context, const Expr *ConstructorOrMember);
+  void emitDiagnostic(const Expr *ConstructorOrMember);
   const std::vector<StringRef> SharedPointers;
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;
