@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -x hip %s
+// RUN: not %clang_cc1 -fsyntax-only %s -DSLOC_CHECK 2>&1 | FileCheck %s --strict-whitespace
 
 template<typename T=int> struct S {};
 template<typename> void f();
@@ -32,4 +34,39 @@ void foo(void) {
 template<typename ...T>
 void bar(T... args) {
   S<S<V<void(T)...>>> s7;
+}
+
+template <typename T, typename T1> void operator<<(T, T1);
+
+struct S1 {};
+
+template <> void operator<<<>(S1, S1);
+
+class C {
+public:
+  template <typename T> void operator<<(T) {}
+};
+
+void foobar() {
+  C CC;
+  CC.operator<<<int>(1);
+  CC.template operator<<<int>(1);
+#ifdef SLOC_CHECK
+  // We split <<< into a << followed by a <, check that < has right source
+  // location.
+  CC.operator<<<int;
+  // CHECK: [[@LINE-1]]:20: error: expected '>'
+  // CHECK-NEXT: CC.operator<<<int;
+  // CHECK-NEXT:                  ^
+  // CHECK-NEXT: [[@LINE-4]]:16: note: to match this '<'
+  // CHECK-NEXT: CC.operator<<<int;
+  // CHECK-NEXT:              ^
+  CC.template operator<<<int;
+  // CHECK: [[@LINE-1]]:29: error: expected '>'
+  // CHECK-NEXT: CC.template operator<<<int;
+  // CHECK-NEXT:                           ^
+  // CHECK-NEXT: [[@LINE-4]]:25: note: to match this '<'
+  // CHECK-NEXT: CC.template operator<<<int;
+  // CHECK-NEXT:                       ^
+#endif
 }
