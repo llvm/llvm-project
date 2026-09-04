@@ -2923,6 +2923,7 @@ public:
   bool IsIntrinsicFunction(const std::string &) const;
   bool IsIntrinsicSubroutine(const std::string &) const;
   bool IsDualIntrinsic(const std::string &) const;
+  bool IsGenericIntrinsic(const std::string &) const;
 
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
   std::string GetGenericIntrinsicName(const std::string &) const;
@@ -2989,6 +2990,18 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
 bool IntrinsicProcTable::Implementation::IsIntrinsic(
     const std::string &name) const {
   return IsIntrinsicFunction(name) || IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::Implementation::IsGenericIntrinsic(
+    const std::string &name0) const {
+  const std::string &name{ResolveAlias(name0)};
+  // Intrinsic subroutines have no specific names, so a reference to one is
+  // always a reference to a generic procedure.
+  // Unlike IsIntrinsicFunction() and IsIntrinsicSubroutine(), the names that
+  // Probe() special-cases ahead of these tables are deliberately omitted here:
+  // each of them has a single interface, so nothing about such a reference can
+  // depend on which arguments it is given.
+  return genericFuncs_.find(name) != genericFuncs_.end() ||
+      subroutines_.find(name) != subroutines_.end();
 }
 bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
@@ -4177,6 +4190,9 @@ bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
 }
 bool IntrinsicProcTable::IsDualIntrinsic(const std::string &name) const {
   return DEREF(impl_.get()).IsDualIntrinsic(name);
+}
+bool IntrinsicProcTable::IsGenericIntrinsic(const std::string &name) const {
+  return DEREF(impl_.get()).IsGenericIntrinsic(name);
 }
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(

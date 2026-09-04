@@ -68,6 +68,51 @@ module m_conditional_arg
     end function
   end interface
 
+  ! Generic identifiers, used by the F2023 C1545 tests below.  C1545 applies
+  ! only to a reference to a generic procedure.
+  interface gen_plain
+    subroutine gen_plain_int(x)
+      integer, intent(in) :: x
+    end subroutine
+    subroutine gen_plain_real(x)
+      real, intent(in) :: x
+    end subroutine
+  end interface
+
+  interface gen_opt
+    subroutine gen_opt_int(x)
+      integer, intent(in), optional :: x
+    end subroutine
+    subroutine gen_opt_real(x)
+      real, intent(in), optional :: x
+    end subroutine
+  end interface
+
+  interface gen_func
+    pure integer function gen_func_int(x)
+      integer, intent(in) :: x
+    end function
+    pure real function gen_func_real(x)
+      real, intent(in) :: x
+    end function
+  end interface
+
+  interface
+    function func_ptr_result()
+      integer, pointer :: func_ptr_result
+    end function
+  end interface
+
+  type :: t_gen
+  contains
+    procedure, nopass :: tbp_gen_int
+    procedure, nopass :: tbp_gen_real
+    procedure, nopass :: tbp_fn_int
+    procedure, nopass :: tbp_fn_real
+    generic :: gen => tbp_gen_int, tbp_gen_real
+    generic :: gen_fn => tbp_fn_int, tbp_fn_real
+  end type
+
 contains
 
   ! =========================================================================
@@ -424,38 +469,220 @@ contains
   !              shall have the same corank, and if any consequent-arg has the
   !              ALLOCATABLE or POINTER attribute, each consequent-arg shall
   !              have that attribute.
+  !
+  !              The constraint is scoped to generic references, where these
+  !              attributes decide which specific procedures the actual
+  !              argument may associate with.  A reference to a specific
+  !              procedure has nothing to resolve and is not constrained.
   ! =========================================================================
 
-  subroutine test_f2023_c1545_allocatable_inconsistency
+  ! Bindings for the type-bound generic 'gen' of t_gen.
+  subroutine tbp_gen_int(x)
+    integer, intent(in) :: x
+  end subroutine
+
+  subroutine tbp_gen_real(x)
+    real, intent(in) :: x
+  end subroutine
+
+  pure integer function tbp_fn_int(x)
+    integer, intent(in) :: x
+    tbp_fn_int = x
+  end function
+
+  pure real function tbp_fn_real(x)
+    real, intent(in) :: x
+    tbp_fn_real = x
+  end function
+
+  subroutine test_f2023_c1545_generic_allocatable_inconsistency
     integer, allocatable :: a
     integer :: b
     logical :: flag
-    !ERROR: If any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    call gen_plain((flag ? a : b))
+  end subroutine
+
+  subroutine test_f2023_c1545_generic_pointer_inconsistency
+    integer, pointer :: p
+    integer :: b
+    logical :: flag
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the POINTER attribute, each must have it
+    call gen_plain((flag ? p : b))
+  end subroutine
+
+  subroutine test_f2023_c1545_generic_corank_inconsistency(c, d, flag)
+    integer, intent(in) :: c[*], d
+    logical, intent(in) :: flag
+    !ERROR: In a reference to a generic procedure, all consequent-args in a conditional argument must have the same corank
+    call gen_plain((flag ? c : d))
+  end subroutine
+
+  subroutine test_f2023_c1545_generic_corank_consistent(c, d, flag)
+    integer, intent(in) :: c[*], d[*]
+    logical, intent(in) :: flag
+    ! Both consequent-args have corank 1 -- no C1545 error
+    call gen_plain((flag ? c : d))
+  end subroutine
+
+  subroutine test_f2023_c1545_generic_three_way(f1, f2)
+    logical :: f1, f2
+    integer, allocatable :: c
+    integer :: a, b
+    ! The offending consequent-arg is in the tail of the chain
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    call gen_plain((f1 ? a : f2 ? b : c))
+  end subroutine
+
+  ! .NIL. is not an entity, so it neither seeds nor participates in the C1545
+  ! comparison; the mismatch between the remaining two is still reported.
+  subroutine test_f2023_c1545_generic_nil_ignored(f1, f2)
+    logical :: f1, f2
+    integer, allocatable :: a
+    integer :: b
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    call gen_opt((f1 ? .NIL. : f2 ? a : b))
+  end subroutine
+
+  subroutine test_f2023_c1545_generic_nil_consistent(f1, f2)
+    logical :: f1, f2
+    integer, allocatable :: a, b
+    ! Both non-.NIL. consequent-args are allocatable -- no C1545 error
+    call gen_opt((f1 ? .NIL. : f2 ? a : b))
+  end subroutine
+
+  ! A specific type-bound procedure is not a generic reference.
+  subroutine test_c1545_specific_type_bound
+    type(t_gen) :: obj
+    integer, allocatable :: a
+    integer :: b
+    logical :: flag
+    call obj%tbp_gen_int((flag ? a : b))
+  end subroutine
+
+  ! Constant implied-DO bounds make the array constructor body be analyzed a
+  ! second time; the diagnostic must survive that.
+  subroutine test_f2023_c1545_generic_in_array_constructor
+    integer, allocatable :: a
+    integer :: b, i
+    integer :: arr(3)
+    logical :: flag
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    arr = [(gen_func((flag ? a : b)), i=1,3)]
+  end subroutine
+
+  ! Same, for a type-bound generic: it is re-resolved on a different symbol.
+  subroutine test_f2023_c1545_type_bound_generic_in_array_constructor
+    type(t_gen) :: obj
+    integer, allocatable :: a
+    integer :: b, i
+    integer :: arr(3)
+    logical :: flag
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    arr = [(obj%gen_fn((flag ? a : b)), i=1,3)]
+  end subroutine
+
+  ! A pointer-valued function reference has the POINTER attribute here, as it
+  ! does in generic resolution, so mixing it with a non-pointer violates C1545.
+  subroutine test_c1545_pointer_function_result_differs
+    integer :: b, r
+    logical :: flag
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the POINTER attribute, each must have it
+    r = gen_func((flag ? func_ptr_result() : b))
+  end subroutine
+
+  ! gen_func(p) and gen_func(func_ptr_result()) resolve to the same specific,
+  ! so the conditional argument has nothing to make ambiguous.
+  subroutine test_c1545_pointer_function_result_agrees
+    integer, pointer :: p
+    integer :: r
+    logical :: flag
+    r = gen_func((flag ? p : func_ptr_result()))
+  end subroutine
+
+  ! Resolution is skipped once C1545 is violated, so the reference gets one
+  ! error rather than a cascade from a resolution that could not succeed.
+  subroutine test_c1545_generic_with_independent_error(flag)
+    logical :: flag
+    integer, allocatable :: a
+    integer :: b
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    call gen_plain((flag ? a : b), b)
+  end subroutine
+
+  ! A generic intrinsic procedure is a generic procedure, so C1545 applies.
+  subroutine test_f2023_c1545_generic_intrinsic
+    integer, allocatable :: a
+    integer :: b, c, r
+    logical :: flag
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    r = max((flag ? a : b), c)
+  end subroutine
+
+  ! DSIN is only a specific intrinsic name, so a reference to it is not a
+  ! reference to a generic procedure and C1545 does not apply.
+  subroutine test_c1545_specific_intrinsic
+    double precision, allocatable :: a
+    double precision :: b, r
+    logical :: flag
+    r = dsin((flag ? a : b))
+  end subroutine
+
+  subroutine test_f2023_c1545_type_bound_generic
+    type(t_gen) :: obj
+    integer, allocatable :: a
+    integer :: b
+    logical :: flag
+    !ERROR: In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it
+    call obj%gen((flag ? a : b))
+  end subroutine
+
+  subroutine test_f2023_c1545_generic_allocatable_consistent_valid
+    integer, allocatable :: a, b
+    logical :: flag
+    ! Both consequent-args are allocatable -- no C1545 error
+    call gen_plain((flag ? a : b))
+  end subroutine
+
+  subroutine test_f2023_c1545_generic_pointer_consistent_valid
+    integer, pointer :: p, q
+    logical :: flag
+    ! Both consequent-args are pointer -- no C1545 error
+    call gen_plain((flag ? p : q))
+  end subroutine
+
+  ! A reference to a specific procedure is not constrained by C1545, so mixing
+  ! ALLOCATABLE or POINTER consequent-args with plain ones is conforming.
+  subroutine test_c1545_specific_allocatable_mix
+    integer, allocatable :: a
+    integer :: b
+    logical :: flag
+    call sub_int((flag ? a : b))
+  end subroutine
+
+  subroutine test_c1545_specific_pointer_mix
+    integer, pointer :: p
+    integer :: b
+    logical :: flag
+    call sub_int((flag ? p : b))
+  end subroutine
+
+  ! The diagnostics below come from argument association (F2023 15.5.2), not
+  ! from C1545: the dummy argument itself is ALLOCATABLE or POINTER.
+  subroutine test_specific_allocatable_dummy_mismatch
+    integer, allocatable :: a
+    integer :: b
+    logical :: flag
     !ERROR: ALLOCATABLE dummy argument 'x=' must be associated with an ALLOCATABLE actual argument
     call sub_alloc((flag ? a : b))
   end subroutine
 
-  subroutine test_f2023_c1545_pointer_inconsistency
+  subroutine test_specific_pointer_dummy_mismatch
     integer, pointer :: p
     integer :: b
     logical :: flag
-    !ERROR: If any consequent-arg in a conditional argument has the POINTER attribute, each must have it
     !ERROR: Actual argument associated with POINTER dummy argument 'x=' must also be POINTER unless INTENT(IN)
     call sub_pointer((flag ? p : b))
-  end subroutine
-
-  subroutine test_f2023_c1545_allocatable_consistent_valid
-    integer, allocatable :: a, b
-    logical :: flag
-    ! Both consequent-args are allocatable -- no C1545 error
-    call sub_alloc((flag ? a : b))
-  end subroutine
-
-  subroutine test_f2023_c1545_pointer_consistent_valid
-    integer, pointer :: p, q
-    logical :: flag
-    ! Both consequent-args are pointer -- no C1545 error
-    call sub_pointer((flag ? p : q))
   end subroutine
 
   ! =========================================================================

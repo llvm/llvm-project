@@ -87,6 +87,11 @@ public:
   bool IsIntrinsicSubroutine(const std::string &) const;
   bool IsDualIntrinsic(const std::string &) const;
 
+  // True when a reference to this name is a reference to a generic procedure.
+  // A name that is only a specific intrinsic name, such as DSIN, is not; a
+  // name that is both, such as SIN, is.
+  bool IsGenericIntrinsic(const std::string &) const;
+
   // Inquiry intrinsics are defined in section 16.7, table 16.1
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
 

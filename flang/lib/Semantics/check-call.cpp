@@ -1437,8 +1437,9 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
   }
 }
 
-// F2023 C1540-C1543, C1545: Check conditional argument against dummy data
-// object
+// F2023 C1540-C1543: Check a conditional argument against a dummy data object.
+// C1544 is absent by design: it is a grammar disambiguation rule that the
+// parser satisfies automatically, see "consequent" in program-parsers.cpp.
 static void CheckConditionalArg(
     const evaluate::ActualArgument::ConditionalArg &condArg,
     const characteristics::DummyDataObject &object,
@@ -1479,54 +1480,69 @@ static void CheckConditionalArg(
           "Each consequent-arg in conditional argument associated with a coarray %s must be a coarray"_err_en_US,
           dummyName);
     }
-    // C1544: the requirement that each consequent-arg match the dummy's
-    // ALLOCATABLE/POINTER attribute is enforced by the standard
-    // explicit-interface check (checkOneExpr) run on each non-.NIL.
-    // consequent below.
   }};
   condArg.ForEachConsequent(checkOneConsequent);
-  // C1545: in a reference to a generic procedure, each consequent-arg shall
-  // have the same corank, and if any has the ALLOCATABLE or POINTER attribute,
-  // each shall have it.  Strictly, this requirement applies only to references
-  // to generic procedures, where it avoids ambiguity when resolving the generic
-  // to a specific procedure; for a specific procedure reference these
-  // combinations are otherwise allowed.  For now it is enforced unconditionally
-  // here.
-  // TODO: move this check into generic resolution (ResolveGeneric) and enforce
-  // it precisely, i.e. only for references to generic procedures, where the
-  // ambiguity it guards against can actually arise.
-  std::optional<int> firstCorank;
-  std::optional<bool> firstIsAllocatable;
-  std::optional<bool> firstIsPointer;
-  auto checkConsistency{[&](const evaluate::ActualArgument::ConditionalArg::
-                                Consequent &cons) {
-    if (!cons) {
-      return;
+}
+
+// F2023 C1545: in a reference to a generic procedure, each consequent-arg
+// shall have the same corank, and if any consequent-arg has the ALLOCATABLE
+// or POINTER attribute, each consequent-arg shall have that attribute.
+// These properties decide which specific procedures an actual argument may be
+// associated with, so letting them differ would make generic resolution depend
+// on a condition whose value is not known until run time.  A reference to a
+// specific procedure has nothing to resolve, and these combinations are
+// allowed there.
+bool CheckConditionalArgsInGenericReference(
+    const evaluate::ActualArguments &actuals,
+    parser::ContextualMessages &messages) {
+  bool anyReported{false};
+  for (const std::optional<evaluate::ActualArgument> &arg : actuals) {
+    const auto *condArg{arg ? arg->GetConditionalArg() : nullptr};
+    if (!condArg) {
+      continue;
     }
-    auto &consExpr{cons->value()};
-    int corank{evaluate::GetCorank(consExpr)};
-    bool isAlloc{evaluate::IsAllocatableDesignator(consExpr)};
-    bool isPtr{evaluate::IsObjectPointer(consExpr)};
-    if (!firstCorank) {
-      firstCorank = corank;
-      firstIsAllocatable = isAlloc;
-      firstIsPointer = isPtr;
-    } else {
-      if (corank != *firstCorank) {
-        messages.Say(
-            "All consequent-args in a conditional argument must have the same corank"_err_en_US);
-      }
-      if (isAlloc != *firstIsAllocatable) {
-        messages.Say(
-            "If any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it"_err_en_US);
-      }
-      if (isPtr != *firstIsPointer) {
-        messages.Say(
-            "If any consequent-arg in a conditional argument has the POINTER attribute, each must have it"_err_en_US);
-      }
+    const auto *first{condArg->FirstNonNilConsequent()};
+    if (!first) { // every consequent-arg is .NIL.
+      continue;
     }
-  }};
-  condArg.ForEachConsequent(checkConsistency);
+    const int firstCorank{evaluate::GetCorank(*first)};
+    const bool firstIsAllocatable{evaluate::IsAllocatableDesignator(*first)};
+    // Use the same POINTER test as generic resolution, which accepts a
+    // pointer-valued function reference.
+    const bool firstIsPointer{evaluate::IsObjectPointer(*first)};
+    bool corankDiffers{false};
+    bool allocatableDiffers{false};
+    bool pointerDiffers{false};
+    // Comparing the first consequent-arg against itself is a no-op, so it needs
+    // no special case here.
+    condArg->ForEachConsequent(
+        [&](const evaluate::ActualArgument::ConditionalArg::Consequent &cons) {
+          if (!cons) { // .NIL. has no corank or attributes to compare
+            return;
+          }
+          const auto &consExpr{cons->value()};
+          corankDiffers |= evaluate::GetCorank(consExpr) != firstCorank;
+          allocatableDiffers |=
+              evaluate::IsAllocatableDesignator(consExpr) != firstIsAllocatable;
+          pointerDiffers |=
+              evaluate::IsObjectPointer(consExpr) != firstIsPointer;
+        });
+    // Report each violated requirement once, however long the chain is.
+    if (corankDiffers) {
+      messages.Say(
+          "In a reference to a generic procedure, all consequent-args in a conditional argument must have the same corank"_err_en_US);
+    }
+    if (allocatableDiffers) {
+      messages.Say(
+          "In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it"_err_en_US);
+    }
+    if (pointerDiffers) {
+      messages.Say(
+          "In a reference to a generic procedure, if any consequent-arg in a conditional argument has the POINTER attribute, each must have it"_err_en_US);
+    }
+    anyReported |= corankDiffers || allocatableDiffers || pointerDiffers;
+  }
+  return anyReported;
 }
 
 // Allow BOZ literal actual arguments when they can be converted to a known
@@ -1648,8 +1664,9 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
               }};
               if (auto *condArg{arg.GetConditionalArg()}) {
                 CheckConditionalArg(*condArg, object, dummyName, messages);
-                // Also run standard explicit-interface checks on each
-                // non-.NIL. consequent expression (recursive).
+                // Each non-.NIL. consequent-arg is itself an actual argument,
+                // so these checks are what enforce the dummy's ALLOCATABLE and
+                // POINTER requirements (F2023 15.5.2.6, 15.5.2.7).
                 condArg->ForEachConsequent(
                     [&](evaluate::ActualArgument::ConditionalArg::Consequent
                             &cons) {
