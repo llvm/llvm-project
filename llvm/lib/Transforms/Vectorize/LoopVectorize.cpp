@@ -2991,25 +2991,24 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
   // we choose.
-  std::optional<unsigned> MaxPowerOf2RuntimeVF =
+  std::optional<uint64_t> MaxPowerOf2RuntimeVF =
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
-    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
-    if (MaxVScale) {
-      MaxPowerOf2RuntimeVF = std::max<unsigned>(
-          *MaxPowerOf2RuntimeVF,
-          *MaxVScale * MaxFactors.ScalableVF.getKnownMinValue());
-    } else
+    if (std::optional<uint64_t> MaxRuntimeScalableVF =
+            getMaxRuntimeElementCount(MaxFactors.ScalableVF, *TheFunction, TTI))
+      MaxPowerOf2RuntimeVF =
+          std::max(*MaxPowerOf2RuntimeVF, *MaxRuntimeScalableVF);
+    else
       MaxPowerOf2RuntimeVF = std::nullopt; // Stick with tail-folding for now.
   }
 
-  auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
+  auto NoScalarEpilogueNeeded = [this, &UserIC](uint64_t MaxRuntimeVF) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
-    unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;
+    uint64_t MaxVFtimesIC = MaxRuntimeVF * uint64_t(std::max(UserIC, 1u));
     ScalarEvolution *SE = PSE.getSE();
     // Calling getSymbolicMaxBackedgeTakenCount enables support for loops
     // with uncountable exits. For countable loops, the symbolic maximum must
@@ -3027,7 +3026,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   };
 
   if (MaxPowerOf2RuntimeVF > 0u) {
-    assert((UserVF.isNonZero() || isPowerOf2_32(*MaxPowerOf2RuntimeVF)) &&
+    assert((UserVF.isNonZero() || isPowerOf2_64(*MaxPowerOf2RuntimeVF)) &&
            "MaxFixedVF must be a power of 2");
     if (NoScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF)) {
       // Accept MaxFixedVF if we do not have a tail.
