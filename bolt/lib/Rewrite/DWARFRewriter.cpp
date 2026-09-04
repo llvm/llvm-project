@@ -516,6 +516,7 @@ static void emitDWOBuilder(const std::string &DWOName,
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
   DWODIEBuilder.generateAbbrevs();
   DWODIEBuilder.finish();
+  LocWriter.updateReferences(DWODIEBuilder);
 
   SmallVector<char, 20> OutBuffer;
   std::shared_ptr<raw_svector_ostream> ObjOS =
@@ -1061,6 +1062,8 @@ void DWARFRewriter::updateDebugInfo() {
     mergePerBucketRanges(*BucketDIEBlder, LocalWriters[Idx], SortedCUs);
     finalizeCompileUnits(*BucketDIEBlder, DIEBlder, *Streamer, OffsetMap,
                          BucketDIEBlder->getProcessedCUs(), *FinalAddrWriter);
+    for (DWARFUnit *CU : BucketDIEBlder->getProcessedCUs())
+      LocListWritersByCU.at(CU->getOffset())->updateReferences(*BucketDIEBlder);
 
     // Release memory for this bucket.
     BucketDIEBlders[Idx].reset();
@@ -1284,14 +1287,12 @@ void DWARFRewriter::updateUnitDebugInfo(
               std::move(OutputRanges), CachedRanges);
           OutputRanges.clear();
         } else if (OutputRanges.empty()) {
-          OutputRanges.push_back({0, RangesOrError.get().front().HighPC});
+          OutputRanges.push_back({0, 0});
         }
       } else if (!RangesOrError) {
         consumeError(RangesOrError.takeError());
       } else {
-        OutputRanges.push_back({0, !RangesOrError->empty()
-                                       ? RangesOrError.get().front().HighPC
-                                       : 0});
+        OutputRanges.push_back({0, 0});
       }
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
@@ -1447,7 +1448,7 @@ void DWARFRewriter::updateUnitDebugInfo(
               // information.
               OutputLL = InputLL;
             }
-            DebugLocWriter.addList(DIEBldr, *Die, LocAttrInfo, OutputLL);
+            DebugLocWriter.addList(DIEBldr, *Die, LocAttrInfo, OutputLL, Unit);
           }
         } else {
           assert((doesFormBelongToClass(LocAttrInfo.getForm(),
