@@ -3,6 +3,11 @@
 // RUN: %clang -target x86_64-apple-darwin11 -fsyntax-only \
 // RUN:   -include-pch %t -isysroot %S/Inputs/libroot %s -Xclang -verify
 // RUN: not %clang -target x86_64-apple-darwin11 -include-pch %t %s
+// RUN: llvm-bcanalyzer --dump --disable-histogram %t \
+// RUN:   | FileCheck %s
+// CHECK: <ORIGINAL_FILE {{.*}}/> blob data = 'usr{{[/\\]}}include{{[/\\]}}reloc.h'
+// CHECK: <INPUT_FILE {{.*}}/> blob data = 'usr{{[/\\]}}include{{[/\\]}}reloc.h'
+// CHECK: <INPUT_FILE {{.*}}/> blob data = 'usr{{[/\\]}}include{{[/\\]}}reloc2.h'
 // REQUIRES: x86-registered-target
 
 #include <reloc.h>

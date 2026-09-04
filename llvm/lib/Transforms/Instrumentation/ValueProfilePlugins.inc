@@ -21,7 +21,9 @@
 using namespace llvm;
 using CandidateInfo = ValueProfileCollector::CandidateInfo;
 
+namespace llvm {
 extern cl::opt<bool> MemOPOptMemcmpBcmp;
+} // end namespace llvm
 
 ///--------------------------- MemIntrinsicPlugin ------------------------------
 class MemIntrinsicPlugin : public InstVisitor<MemIntrinsicPlugin> {
@@ -56,9 +58,8 @@ public:
     auto *F = CI.getCalledFunction();
     if (!F)
       return;
-    LibFunc Func;
-    if (TLI.getLibFunc(CI, Func) &&
-        (Func == LibFunc_memcmp || Func == LibFunc_bcmp)) {
+    LibFunc Func = TLI.getLibFunc(CI);
+    if (Func == LibFunc_memcmp || Func == LibFunc_bcmp) {
       Value *Length = CI.getArgOperand(2);
       // Not instrument constant length calls.
       if (isa<ConstantInt>(Length))

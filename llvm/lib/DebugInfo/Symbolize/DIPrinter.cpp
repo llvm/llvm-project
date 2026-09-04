@@ -19,7 +19,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -84,7 +83,7 @@ public:
   void format(raw_ostream &OS) {
     if (!PrunedSource)
       return;
-    size_t MaxLineNumberWidth = std::ceil(std::log10(LastLine));
+    size_t MaxLineNumberWidth = NumDigitsBase10(LastLine);
     int64_t L = FirstLine;
     for (size_t Pos = 0; Pos < PrunedSource->size(); ++L) {
       size_t PosEnd = PrunedSource->find('\n', Pos);

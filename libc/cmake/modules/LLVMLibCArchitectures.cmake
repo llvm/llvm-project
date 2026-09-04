@@ -13,7 +13,7 @@ if(MSVC)
   set(LIBC_TARGET_ARCHITECTURE ${CMAKE_HOST_SYSTEM_PROCESSOR})
   if(LIBC_TARGET_TRIPLE)
     message(WARNING "libc build: Detected MSVC or equivalent compiler; "
-                    "LIBC_TARGET_TRIPLE is ignored and a host build is assumed.")
+      "LIBC_TARGET_TRIPLE is ignored and a host build is assumed.")
   endif()
   return()
 endif()
@@ -35,7 +35,7 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_arch "mips")
   elseif(target_arch MATCHES "^aarch64|^arm64")
     set(target_arch "aarch64")
-  elseif(target_arch MATCHES "^arm")
+  elseif(target_arch MATCHES "^arm|^thumb")
     set(target_arch "arm")
   elseif(target_arch MATCHES "(x86_64)|(AMD64|amd64)")
     set(target_arch "x86_64")
@@ -47,22 +47,26 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_arch "riscv32")
   elseif(target_arch MATCHES "^riscv64")
     set(target_arch "riscv64")
-  elseif(target_arch MATCHES "^amdgcn")
+  elseif(target_arch MATCHES "^amdgcn|^amdgpu")
     set(target_arch "amdgpu")
   elseif(target_arch MATCHES "^nvptx64")
     set(target_arch "nvptx")
-  elseif(target_arch MATCHES "^spirv64")
-    set(target_arch "spirv64")
+  elseif(target_arch MATCHES "^spirv")
+    set(target_arch "spirv")
   else()
     return()
   endif()
 
   set(${arch_var} ${target_arch} PARENT_SCOPE)
   list(GET triple_comps ${system_index} target_sys)
+  list(GET triple_comps 2 target_os)
 
   # Correcting OS name for Apple's systems.
   if(target_sys STREQUAL "apple")
     list(GET triple_comps 2 target_sys)
+  endif()
+  if(target_os MATCHES "^freebsd")
+    set(target_sys ${target_os})
   endif()
   # Strip version from `darwin###`
   if(target_sys MATCHES "^darwin")
@@ -70,70 +74,88 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   endif()
 
   # Setting OS name for GPU architectures.
-  list(GET triple_comps -1 gpu_target_sys)
-  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda")
+  list(GET triple_comps 2 gpu_target_sys)
+  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda" OR target_arch MATCHES "^spirv")
     set(target_sys "gpu")
   endif()
 
   set(${sys_var} ${target_sys} PARENT_SCOPE)
-endfunction(get_arch_and_system_from_triple)
+endfunction()
 
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version -v
-                RESULT_VARIABLE libc_compiler_info_result
-                OUTPUT_VARIABLE libc_compiler_info
-                ERROR_VARIABLE libc_compiler_info)
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -c -v
+  RESULT_VARIABLE libc_compiler_info_result
+  OUTPUT_VARIABLE libc_compiler_info
+  ERROR_VARIABLE libc_compiler_info)
 if(NOT (libc_compiler_info_result EQUAL "0"))
   message(FATAL_ERROR "libc build: error querying compiler info from the "
-                      "compiler: ${libc_compiler_info}")
+    "compiler: ${libc_compiler_info}")
 endif()
 string(REGEX MATCH "Target: [-_a-zA-Z0-9.]+[ \r\n]+"
-       libc_compiler_target_info ${libc_compiler_info})
+  libc_compiler_target_info ${libc_compiler_info})
 if(NOT libc_compiler_target_info)
   message(FATAL_ERROR "libc build: could not read compiler target info from:\n"
-                      "${libc_compiler_info}")
+    "${libc_compiler_info}")
 endif()
 string(STRIP ${libc_compiler_target_info} libc_compiler_target_info)
 string(SUBSTRING ${libc_compiler_target_info} 8 -1 libc_compiler_triple)
-get_arch_and_system_from_triple(${libc_compiler_triple}
-                                compiler_arch compiler_sys)
-if(NOT compiler_arch)
-  message(FATAL_ERROR
-          "libc build: Invalid or unknown libc compiler target triple: "
-          "${libc_compiler_triple}")
-endif()
-
-set(LIBC_TARGET_ARCHITECTURE ${compiler_arch})
-set(LIBC_TARGET_OS ${compiler_sys})
-set(LIBC_CROSSBUILD FALSE)
 
 # One should not set LLVM_RUNTIMES_TARGET and LIBC_TARGET_TRIPLE
 if(LLVM_RUNTIMES_TARGET AND LIBC_TARGET_TRIPLE)
   message(FATAL_ERROR
-          "libc build: Specify only LLVM_RUNTIMES_TARGET if you are doing a "
-          "runtimes/bootstrap build. If you are doing a standalone build, "
-          "specify only LIBC_TARGET_TRIPLE.")
+    "libc build: Specify only LLVM_DEFAULT_TARGET_TRIPLE if you are doing a "
+    "runtimes/bootstrap build. If you are doing a standalone build, "
+    "specify only LIBC_TARGET_TRIPLE.")
 endif()
 
 set(explicit_target_triple)
 if(LLVM_RUNTIMES_TARGET)
-  set(explicit_target_triple ${LLVM_RUNTIMES_TARGET})
+  # LLVM_RUNTIMES_TARGET may contain multilib flags, use the clean triple.
+  set(explicit_target_triple ${LLVM_DEFAULT_TARGET_TRIPLE})
 elseif(LIBC_TARGET_TRIPLE)
   set(explicit_target_triple ${LIBC_TARGET_TRIPLE})
 endif()
 
 # The libc's target architecture and OS are set to match the compiler's default
 # target triple above. However, one can explicitly set LIBC_TARGET_TRIPLE or
-# LLVM_RUNTIMES_TARGET (for runtimes/bootstrap build). If one of them is set,
+# LLVM_DEFAULT_TARGET_TRIPLE (for runtimes/bootstrap build). If one of them is set,
 # then we will use that target triple to deduce libc's target OS and
 # architecture.
 if(explicit_target_triple)
   get_arch_and_system_from_triple(${explicit_target_triple} libc_arch libc_sys)
-  if(NOT libc_arch)
+  if(NOT libc_arch OR NOT libc_sys)
     message(FATAL_ERROR
-            "libc build: Invalid or unknown triple: ${explicit_target_triple}")
+      "libc build: Invalid or unknown triple: ${explicit_target_triple}")
   endif()
   set(LIBC_TARGET_ARCHITECTURE ${libc_arch})
   set(LIBC_TARGET_OS ${libc_sys})
+  # If the compiler target triple is not the same as the triple specified by
+  # LIBC_TARGET_TRIPLE or LLVM_DEFAULT_TARGET_TRIPLE, we will add a --target option
+  # if the compiler is clang. If the compiler is GCC we just error out as there
+  # is no equivalent of an option like --target.
+  if(NOT libc_compiler_triple STREQUAL explicit_target_triple)
+    set(LIBC_CROSSBUILD TRUE)
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      message(FATAL_ERROR
+        "GCC target triple (${libc_compiler_triple}) and the explicity "
+        "specified target triple (${explicit_target_triple}) do not match.")
+    else()
+      list(APPEND
+        LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
+    endif()
+  else()
+    set(LIBC_CROSSBUILD FALSE)
+  endif()
+else()
+  get_arch_and_system_from_triple(${libc_compiler_triple}
+    compiler_arch compiler_sys)
+  if(NOT compiler_arch OR NOT compiler_sys)
+    message(FATAL_ERROR
+      "libc build: Unknown compiler default target triple: "
+      "${libc_compiler_triple}")
+  endif()
+  set(LIBC_TARGET_ARCHITECTURE ${compiler_arch})
+  set(LIBC_TARGET_OS ${compiler_sys})
+  set(LIBC_CROSSBUILD FALSE)
 endif()
 
 if((LIBC_TARGET_OS STREQUAL "unknown") OR (LIBC_TARGET_OS STREQUAL "none"))
@@ -164,11 +186,13 @@ elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "amdgpu")
   set(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU TRUE)
 elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "nvptx")
   set(LIBC_TARGET_ARCHITECTURE_IS_NVPTX TRUE)
-elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "spirv64")
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "spirv")
   set(LIBC_TARGET_ARCHITECTURE_IS_SPIRV TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "power")
+  set(LIBC_TARGET_ARCHITECTURE_IS_POWERPC TRUE)
 else()
   message(FATAL_ERROR
-          "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
+    "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
 endif()
 
 if(LIBC_TARGET_OS STREQUAL "baremetal")
@@ -176,7 +200,7 @@ if(LIBC_TARGET_OS STREQUAL "baremetal")
 elseif(LIBC_TARGET_OS STREQUAL "linux")
   set(LIBC_TARGET_OS_IS_LINUX TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "poky" OR LIBC_TARGET_OS STREQUAL "suse" OR
-       LIBC_TARGET_OS STREQUAL "redhat")
+    LIBC_TARGET_OS STREQUAL "redhat")
   # poky are custom Linux-base systems created by yocto. Since these are Linux
   # images, we change the LIBC_TARGET_OS to linux. This define is used to
   # include the right directories during compilation.
@@ -189,40 +213,54 @@ elseif(LIBC_TARGET_OS STREQUAL "darwin")
   set(LIBC_TARGET_OS_IS_DARWIN TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "windows")
   set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
+elseif(LIBC_TARGET_OS MATCHES "^freebsd.*")
+  set(LIBC_TARGET_OS_IS_FREEBSD TRUE)
+  set(LIBC_TARGET_OS "freebsd")
 elseif(LIBC_TARGET_OS STREQUAL "gpu")
   set(LIBC_TARGET_OS_IS_GPU TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "uefi")
   set(LIBC_TARGET_OS_IS_UEFI TRUE)
 else()
   message(FATAL_ERROR
-          "Unsupported libc target operating system ${LIBC_TARGET_OS}")
+    "Unsupported libc target operating system ${LIBC_TARGET_OS}")
 endif()
 
-
 # If the compiler target triple is not the same as the triple specified by
-# LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
+# LIBC_TARGET_TRIPLE or LLVM_DEFAULT_TARGET_TRIPLE, we will add a --target option
 # if the compiler is clang. If the compiler is GCC we just error out as there
 # is no equivalent of an option like --target.
 if(explicit_target_triple AND
-   (NOT (libc_compiler_triple STREQUAL explicit_target_triple)))
+  (NOT (libc_compiler_triple STREQUAL explicit_target_triple)))
   set(LIBC_CROSSBUILD TRUE)
   if(CMAKE_COMPILER_IS_GNUCXX)
     message(FATAL_ERROR
-            "GCC target triple (${libc_compiler_triple}) and the explicity "
-            "specified target triple (${explicit_target_triple}) do not match.")
+      "GCC target triple (${libc_compiler_triple}) and the explicity "
+      "specified target triple (${explicit_target_triple}) do not match.")
   else()
     list(APPEND
-         LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
+      LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
   endif()
 endif()
 
+if(LIBC_TARGET_OS_IS_DARWIN)
+  execute_process(
+    COMMAND xcrun --sdk macosx --show-sdk-path
+    OUTPUT_VARIABLE MACOSX_SDK_PATH
+    RESULT_VARIABLE MACOSX_SDK_PATH_RESULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if(MACOSX_SDK_PATH_RESULT EQUAL 0)
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-I" "${MACOSX_SDK_PATH}/usr/include")
+  else()
+    message(WARNING "Could not find macOS SDK path. `xcrun --sdk macosx --show-sdk-path` failed.")
+  endif()
+endif()
 
 # Windows does not support full mode build.
-if (LIBC_TARGET_OS_IS_WINDOWS AND LLVM_LIBC_FULL_BUILD)
+if(LIBC_TARGET_OS_IS_WINDOWS AND LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "Windows does not support full mode build.")
-endif ()
-
+endif()
 
 message(STATUS
-        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS} with
-        LIBC_COMPILE_OPTIONS_DEFAULT: ${LIBC_COMPILE_OPTIONS_DEFAULT}")
+  "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS} with "
+  "LIBC_COMPILE_OPTIONS_DEFAULT: ${LIBC_COMPILE_OPTIONS_DEFAULT}")

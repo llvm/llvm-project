@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly  -passes=polly-codegen -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK-NEXT:    %0 = sext i32 %N to i64
@@ -13,7 +13,7 @@
 ; CHECK-NEXT:    %polly.preload.tmp6.merge = phi ptr [ %polly.access.BPLoc.load, %polly.preload.exec ], [ null, %polly.preload.cond ]
 ;
 ; CHECK-LABEL: polly.stmt.bb5:
-; CHECK-NEXT:    %[[offset:.*]] = shl nuw nsw i64 %polly.indvar6, 2
+; CHECK-NEXT:    %[[offset:.*]] = shl nuw nsw i64 %polly.indvar16, 2
 ; CHECK-NEXT:    %{{.*}} = getelementptr i8, ptr %polly.preload.tmp6.merge, i64 %[[offset]]
 ;
 ;    void f(int **BPLoc, int *A, int N) {

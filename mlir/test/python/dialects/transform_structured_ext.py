@@ -109,9 +109,25 @@ def testFuseOpCompact(target):
     )
     # CHECK-LABEL: TEST: testFuseOpCompact
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
-    # CHECK-SAME: interchange [0, 1] apply_cleanup = true
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
+    # CHECK-SAME: interchange [0, 1] {apply_cleanup}
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpCompactForall(target):
+    structured.FuseOp(
+        target,
+        tile_sizes=[4, 8],
+        apply_cleanup=True,
+        use_forall=True,
+    )
+    # CHECK-LABEL: TEST: testFuseOpCompact
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
+    # CHECK-SAME: {apply_cleanup, use_forall}
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
 
 @run
@@ -126,15 +142,80 @@ def testFuseOpNoArg(target):
 
 @run
 @create_sequence
+def testFuseOpParams(target):
+    structured.FuseOp(
+        target,
+        tile_sizes=[constant_param(4), Attribute.parse("8")],
+        tile_interchange=[constant_param(0), Attribute.parse("1")],
+    )
+    # CHECK-LABEL: TEST: testFuseOpParams
+    # CHECK: transform.sequence
+    # CHECK-DAG: %[[P:.*]] = transform.param.constant 4
+    # CHECK-DAG: %[[I:.*]] = transform.param.constant 0
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse
+    # CHECK-SAME: tile_sizes [%[[P]], 8]
+    # CHECK-SAME: interchange [%[[I]], 1]
+    # CHECK-SAME: (!transform.any_op, !transform.param<i64>, !transform.param<i64>) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpHandles(target):
+    size1 = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    ichange1 = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(
+        target,
+        tile_sizes=[size1, 8],
+        tile_interchange=[ichange1, 1],
+    )
+    # CHECK-LABEL: TEST: testFuseOpHandles
+    # CHECK: transform.sequence
+    # CHECK: %[[H:.*]] = transform.structured.match
+    # CHECK: %[[I:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse
+    # CHECK-SAME: tile_sizes [%[[H]], 8]
+    # CHECK-SAME: interchange [%[[I]], 1]
+    # CHECK-SAME: (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testFuseOpAttributes(target):
     attr = DenseI64ArrayAttr.get([4, 8])
     ichange = DenseI64ArrayAttr.get([0, 1])
     structured.FuseOp(target, tile_sizes=attr, tile_interchange=ichange)
     # CHECK-LABEL: TEST: testFuseOpAttributes
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}} tile_sizes [4, 8]
     # CHECK-SAME: interchange [0, 1]
     # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpPackedTileSizes(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizes
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpPackedTileSizesForall(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles, use_forall=True)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizesForall
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: {use_forall}
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
 
 @run
@@ -432,6 +513,39 @@ def testTileAttributes(target):
 
 @run
 @create_sequence
+def testTileInterchangeMixed(target):
+    i0 = constant_param(0)
+    i1 = Attribute.parse("1")
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=[i0, i1])
+    # CHECK-LABEL: TEST: testTileInterchangeMixed
+    # CHECK-DAG: %[[I0:.*]] = transform.param.constant 0
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [%[[I0]], 1]
+
+
+@run
+@create_sequence
+def testTileInterchangeArrayAttr(target):
+    interchange = ArrayAttr.get(
+        [IntegerAttr.get(IndexType.get(), 0), IntegerAttr.get(IndexType.get(), 1)]
+    )
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=interchange)
+    # CHECK-LABEL: TEST: testTileInterchangeArrayAttr
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [0, 1]
+
+
+@run
+@create_sequence
+def testTileInterchangeTuple(target):
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=(0, 1))
+    # CHECK-LABEL: TEST: testTileInterchangeTuple
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = [0, 1]
+
+
+@run
+@create_sequence
 def testTileZero(target):
     structured.TileUsingForOp(target, sizes=[4, 0, 2, 0], interchange=[0, 1, 2, 3])
     # CHECK-LABEL: TEST: testTileZero
@@ -460,6 +574,43 @@ def testTileDynamic():
     # CHECK: %[[FIRST:.+]] = pdl_match
     # CHECK: %[[SECOND:.+]] = pdl_match
     # CHECK: %{{.+}}, %{{.+}}:3 = transform.structured.tile_using_for %{{.*}}[%[[FIRST]], 3, %[[SECOND]], 0]
+
+
+@run
+@create_sequence
+def testTilePackedSizes(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.TileUsingForOp(target, sizes=tiles)
+    # CHECK-LABEL: TEST: testTilePackedSizes
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.tile_using_for
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testTilePackedInterchange(target):
+    interchange = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=interchange)
+    # CHECK-LABEL: TEST: testTilePackedInterchange
+    # CHECK: %[[I:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for
+    # CHECK-SAME: [4, 8] interchange = *(%[[I]])
+
+
+@run
+@create_sequence
+def testTilePackedSizesAndInterchange(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    interchange = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.TileUsingForOp(target, sizes=tiles, interchange=interchange)
+    # CHECK-LABEL: TEST: testTilePackedSizesAndInterchange
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %[[I:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.tile_using_for
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: interchange = *(%[[I]])
 
 
 @run
@@ -573,12 +724,16 @@ def testVectorizeChildrenAndApplyPatternsAllAttrs(target):
         disable_transfer_permutation_map_lowering_patterns=True,
         vectorize_nd_extract=True,
         vectorize_padding=True,
+        flatten_1d_depthwise_conv=True,
+        fold_type_extensions_into_contract=True,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsAllAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-SAME: disable_multi_reduction_to_contract_patterns
     # CHECK-SAME: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-SAME: flatten_1d_depthwise_conv
+    # CHECK-SAME: fold_type_extensions_into_contract
     # CHECK-SAME: vectorize_nd_extract
     # CHECK-SAME: vectorize_padding
 
@@ -592,12 +747,16 @@ def testVectorizeChildrenAndApplyPatternsNoAttrs(target):
         disable_transfer_permutation_map_lowering_patterns=False,
         vectorize_nd_extract=False,
         vectorize_padding=False,
+        flatten_1d_depthwise_conv=False,
+        fold_type_extensions_into_contract=False,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsNoAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-NOT: disable_multi_reduction_to_contract_patterns
     # CHECK-NOT: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-NOT: flatten_1d_depthwise_conv
+    # CHECK-NOT: fold_type_extensions_into_contract
     # CHECK-NOT: vectorize_nd_extract
     # CHECK-NOT: vectorize_padding
 

@@ -1,0 +1,96 @@
+# REQUIRES: x86-registered-target
+# RUN: llvm-ir2vec triplets --mode=mir %s -o - | FileCheck %s
+
+# CHECK-LABEL: MAX_RELATION=4
+# CHECK-NEXT: [[COPY:[0-9]+]] [[VirtReg_GR32:[0-9]+]] 1
+# CHECK-NEXT: [[COPY]] [[PhyReg_GR32_BSI_and_GR32_SIDI:[0-9]+]] 2
+# CHECK-NEXT: [[COPY]] [[COPY]] 0
+# CHECK-NEXT: [[COPY]] [[VirtReg_GR32:[0-9]+]] 1
+# CHECK-NEXT: [[COPY]] [[PhyReg_GR32_DIBP_and_GR32_SIDI:[0-9]+]] 2
+# CHECK-NEXT: [[COPY]] [[ADD:[0-9]+]] 0
+# CHECK-NEXT: [[ADD]] [[VirtReg_GR32]] 1
+# CHECK-NEXT: [[ADD]] [[VirtReg_GR32]] 2
+# CHECK-NEXT: [[ADD]] [[VirtReg_GR32]] 3
+# CHECK-NEXT: [[ADD]] [[PhyReg_CCR:[0-9]+]] 4
+# CHECK-NEXT: [[ADD]] [[COPY]] 0
+# CHECK-NEXT: [[COPY]] [[PhyReg_GR32_AD:[0-9]+]] 1
+# CHECK-NEXT: [[COPY]] [[VirtReg_GR32]] 2
+# CHECK-NEXT: [[COPY]] [[RET:[0-9]+]] 0
+# CHECK-NEXT: [[RET]] [[Immediate:[0-9]+]] 1
+# CHECK-NEXT: [[RET]] [[PhyReg_GR32_AD]] 2
+# CHECK-NEXT: [[COPY]] [[VirtReg_GR32]] 1
+# CHECK-NEXT: [[COPY]] [[PhyReg_GR32_BSI_and_GR32_SIDI]] 2
+# CHECK-NEXT: [[COPY]] [[COPY]] 0
+# CHECK-NEXT: [[COPY]] [[VirtReg_GR32]] 1
+# CHECK-NEXT: [[COPY]] [[PhyReg_GR32_DIBP_and_GR32_SIDI]] 2
+# CHECK-NEXT: [[COPY]] [[IMUL:[0-9]+]] 0
+# CHECK-NEXT: [[IMUL]] [[VirtReg_GR32]] 1
+# CHECK-NEXT: [[IMUL]] [[VirtReg_GR32]] 2
+# CHECK-NEXT: [[IMUL]] [[VirtReg_GR32]] 3
+# CHECK-NEXT: [[IMUL]] [[PhyReg_CCR]] 4
+# CHECK-NEXT: [[IMUL]] [[COPY]] 0
+# CHECK-NEXT: [[COPY]] [[PhyReg_GR32_AD]] 1
+# CHECK-NEXT: [[COPY]] [[VirtReg_GR32]] 2
+# CHECK-NEXT: [[COPY]] [[RET]] 0
+# CHECK-NEXT: [[RET]] [[Immediate]] 1
+# CHECK-NEXT: [[RET]] [[PhyReg_GR32_AD]] 2
+
+
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local noundef i32 @add_function(i32 noundef %a, i32 noundef %b) {
+  entry:
+    %sum = add nsw i32 %a, %b
+    ret i32 %sum
+  }
+  
+  define dso_local noundef i32 @mul_function(i32 noundef %x, i32 noundef %y) {
+  entry:
+    %product = mul nsw i32 %x, %y
+    ret i32 %product
+  }
+...
+---
+name:            add_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %2:gr32 = nsw ADD32rr %0, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
+
+---
+name:            mul_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %2:gr32 = nsw IMUL32rr %0, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax

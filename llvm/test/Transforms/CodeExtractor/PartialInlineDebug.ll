@@ -24,7 +24,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-LABEL: @caller
 ; CHECK: codeRepl.i:
 ; CHECK-NOT: br label
-; CHECK: call void @callee.2.if.then(i32 %v, ptr %mul.loc.i), !dbg ![[DBG2:[0-9]+]]
+; CHECK: call i32 @callee.2.if.then(i32 %v), !dbg ![[DBG2:[0-9]+]]
 define i32 @caller(i32 %v) !dbg !8 {
 entry:
   %call = call i32 @callee(i32 %v), !dbg !14
@@ -55,17 +55,17 @@ if.end:
 ; CHECK-LABEL: @caller2
 ; CHECK: codeRepl.i:
 ; CHECK-NOT: br label
-; CHECK: call void @callee2.1.if.then(i32 %v, ptr %sub.loc.i), !dbg ![[DBG4:[0-9]+]]
+; CHECK: call i32 @callee2.1.if.then(i32 %v), !dbg ![[DBG4:[0-9]+]]
 define i32 @caller2(i32 %v) !dbg !21 {
 entry:
   %call = call i32 @callee2(i32 %v), !dbg !22
   ret i32 %call
 }
 
-; CHECK-LABEL: define internal void @callee2.1.if.then
+; CHECK-LABEL: define internal i32 @callee2.1.if.then
 ; CHECK: br label %if.then, !dbg ![[DBG5:[0-9]+]]
 
-; CHECK-LABEL: define internal void @callee.2.if.then
+; CHECK-LABEL: define internal i32 @callee.2.if.then
 ; CHECK: br label %if.then, !dbg ![[DBG6:[0-9]+]]
 
 ; CHECK: ![[DBG1]] = !DILocation(line: 10, column: 7,
@@ -96,11 +96,11 @@ entry:
 !13 = !DILocalVariable(name: "v", arg: 1, scope: !8, file: !1, line: 3, type: !11)
 !14 = !DILocation(line: 5, column: 10, scope: !8)
 !15 = distinct !DILexicalBlock(scope: !16, file: !1, line: 9, column: 7)
-!16 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!16 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !17 = !DILocation(line: 10, column: 7, scope: !15)
-!18 = distinct !DISubprogram(name: "callee2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!18 = distinct !DISubprogram(name: "callee2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !19 = distinct !DILexicalBlock(scope: !18, file: !1, line: 100, column: 1)
 !20 = !DILocation(line: 110, column: 17, scope: !19)
-!21 = distinct !DISubprogram(name: "caller2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!21 = distinct !DISubprogram(name: "caller2", scope: !1, file: !1, line: 8, type: !9, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !22 = !DILocation(line: 110, column: 17, scope: !21)
 !23 = !DILocation(line: 15, column: 7, scope: !15)

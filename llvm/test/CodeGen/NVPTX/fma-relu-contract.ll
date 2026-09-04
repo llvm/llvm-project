@@ -9,7 +9,7 @@
 ; SM < 80 or (which needs PTX version >= 70) should not emit fma{.ftz}.relu
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK-SM70
 
-define half @fma_f16_expanded_no_nans(half %a, half %b, half %c) #0 {
+define half @fma_f16_expanded_no_nans(half %a, half %b, half %c) {
 ; CHECK-LABEL: fma_f16_expanded_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -49,15 +49,15 @@ define half @fma_f16_expanded_no_nans(half %a, half %b, half %c) #0 {
 ; CHECK-SM70-NEXT:    selp.b16 %rs6, %rs4, 0x0000, %p1;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul half %a, %b
-  %2 = fadd half %1, %c
+  %1 = fmul contract nnan half %a, %b
+  %2 = fadd contract nnan half %1, %c
   %3 = fcmp ogt half %2, 0.0
-  %4 = select i1 %3, half %2, half 0.0
+  %4 = select nsz i1 %3, half %2, half 0.0
   ret half %4
 }
 
 ; FMA relu shouldn't be selected if the FMA operation has multiple uses
-define half @fma_f16_expanded_no_nans_multiple_uses_of_fma(half %a, half %b, half %c) #0 {
+define half @fma_f16_expanded_no_nans_multiple_uses_of_fma(half %a, half %b, half %c) {
 ; CHECK-LABEL: fma_f16_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<10>;
@@ -110,10 +110,10 @@ define half @fma_f16_expanded_no_nans_multiple_uses_of_fma(half %a, half %b, hal
 ; CHECK-SM70-NEXT:    add.f16 %rs9, %rs6, %rs8;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs9;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul half %a, %b
-  %2 = fadd half %1, %c
+  %1 = fmul contract nnan half %a, %b
+  %2 = fadd contract nnan half %1, %c
   %3 = fcmp ogt half %2, 0.0
-  %4 = select i1 %3, half %2, half 0.0
+  %4 = select nsz i1 %3, half %2, half 0.0
   %5 = fadd half %2, 7.0
   %6 = fadd half %4, %5
   ret half %6
@@ -122,6 +122,7 @@ define half @fma_f16_expanded_no_nans_multiple_uses_of_fma(half %a, half %b, hal
 define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
 ; CHECK-LABEL: fma_f16_expanded_unsafe_with_nans(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -130,12 +131,14 @@ define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
 ; CHECK-NEXT:    ld.param.b16 %rs3, [fma_f16_expanded_unsafe_with_nans_param_2];
 ; CHECK-NEXT:    fma.rn.f16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-NEXT:    max.f16 %rs6, %rs4, %rs5;
+; CHECK-NEXT:    setp.gt.f16 %p1, %rs4, %rs5;
+; CHECK-NEXT:    selp.b16 %rs6, %rs4, 0x0000, %p1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FTZ-LABEL: fma_f16_expanded_unsafe_with_nans(
 ; CHECK-FTZ:       {
+; CHECK-FTZ-NEXT:    .reg .pred %p<2>;
 ; CHECK-FTZ-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
@@ -144,7 +147,8 @@ define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs3, [fma_f16_expanded_unsafe_with_nans_param_2];
 ; CHECK-FTZ-NEXT:    fma.rn.ftz.f16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-FTZ-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-FTZ-NEXT:    max.ftz.f16 %rs6, %rs4, %rs5;
+; CHECK-FTZ-NEXT:    setp.gt.ftz.f16 %p1, %rs4, %rs5;
+; CHECK-FTZ-NEXT:    selp.b16 %rs6, %rs4, 0x0000, %p1;
 ; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -170,7 +174,7 @@ define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
   ret half %4
 }
 
-define half @fma_f16_expanded_maxnum_no_nans(half %a, half %b, half %c) #0 {
+define half @fma_f16_expanded_maxnum_no_nans(half %a, half %b, half %c) {
 ; CHECK-LABEL: fma_f16_expanded_maxnum_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -210,39 +214,47 @@ define half @fma_f16_expanded_maxnum_no_nans(half %a, half %b, half %c) #0 {
 ; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs5, %r2;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs5;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul half %a, %b
-  %2 = fadd half %1, %c
-  %3 = call half @llvm.maxnum.f16(half %2, half 0.0)
+  %1 = fmul contract nnan half %a, %b
+  %2 = fadd contract nnan half %1, %c
+  %3 = call nsz half @llvm.maxnum.f16(half %2, half 0.0)
   ret half %3
 }
 
 define bfloat @fma_bf16_expanded_unsafe_with_nans(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-LABEL: fma_bf16_expanded_unsafe_with_nans(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_unsafe_with_nans_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [fma_bf16_expanded_unsafe_with_nans_param_1];
 ; CHECK-NEXT:    ld.param.b16 %rs3, [fma_bf16_expanded_unsafe_with_nans_param_2];
 ; CHECK-NEXT:    fma.rn.bf16 %rs4, %rs1, %rs2, %rs3;
-; CHECK-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-NEXT:    max.bf16 %rs6, %rs4, %rs5;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r2, 0f00000000;
+; CHECK-NEXT:    selp.b16 %rs5, %rs4, 0x0000, %p1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FTZ-LABEL: fma_bf16_expanded_unsafe_with_nans(
 ; CHECK-FTZ:       {
-; CHECK-FTZ-NEXT:    .reg .b16 %rs<7>;
+; CHECK-FTZ-NEXT:    .reg .pred %p<2>;
+; CHECK-FTZ-NEXT:    .reg .b16 %rs<6>;
+; CHECK-FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_unsafe_with_nans_param_0];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs2, [fma_bf16_expanded_unsafe_with_nans_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs3, [fma_bf16_expanded_unsafe_with_nans_param_2];
 ; CHECK-FTZ-NEXT:    fma.rn.bf16 %rs4, %rs1, %rs2, %rs3;
-; CHECK-FTZ-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-FTZ-NEXT:    max.bf16 %rs6, %rs4, %rs5;
-; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs6;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r1, %rs4;
+; CHECK-FTZ-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-FTZ-NEXT:    setp.gt.ftz.f32 %p1, %r2, 0f00000000;
+; CHECK-FTZ-NEXT:    selp.b16 %rs5, %rs4, 0x0000, %p1;
+; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs5;
 ; CHECK-FTZ-NEXT:    ret;
 ;
 ; CHECK-SM70-LABEL: fma_bf16_expanded_unsafe_with_nans(
@@ -278,7 +290,7 @@ define bfloat @fma_bf16_expanded_unsafe_with_nans(bfloat %a, bfloat %b, bfloat %
   ret bfloat %4
 }
 
-define bfloat @fma_bf16_expanded_no_nans(bfloat %a, bfloat %b, bfloat %c) #0 {
+define bfloat @fma_bf16_expanded_no_nans(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-LABEL: fma_bf16_expanded_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -329,15 +341,15 @@ define bfloat @fma_bf16_expanded_no_nans(bfloat %a, bfloat %b, bfloat %c) #0 {
 ; CHECK-SM70-NEXT:    selp.b16 %rs2, %rs1, 0x0000, %p2;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs2;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul bfloat %a, %b
-  %2 = fadd bfloat %1, %c
+  %1 = fmul contract nnan bfloat %a, %b
+  %2 = fadd contract nnan bfloat %1, %c
   %3 = fcmp ogt bfloat %2, 0.0
-  %4 = select i1 %3, bfloat %2, bfloat 0.0
+  %4 = select nsz i1 %3, bfloat %2, bfloat 0.0
   ret bfloat %4
 }
 
 ; FMA relu shouldn't be selected if the FMA operation has multiple uses
-define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat %b, bfloat %c) #0 {
+define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-LABEL: fma_bf16_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<11>;
@@ -425,16 +437,16 @@ define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat 
 ; CHECK-SM70-NEXT:    shr.u32 %r29, %r28, 16;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %r29;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul bfloat %a, %b
-  %2 = fadd bfloat %1, %c
+  %1 = fmul contract nnan bfloat %a, %b
+  %2 = fadd contract nnan bfloat %1, %c
   %3 = fcmp ogt bfloat %2, 0.0
-  %4 = select i1 %3, bfloat %2, bfloat 0.0
+  %4 = select nsz i1 %3, bfloat %2, bfloat 0.0
   %5 = fadd bfloat %2, 7.0
   %6 = fadd bfloat %4, %5
   ret bfloat %6
 }
 
-define bfloat @fma_bf16_expanded_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c) #0 {
+define bfloat @fma_bf16_expanded_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-LABEL: fma_bf16_expanded_maxnum_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
@@ -489,13 +501,13 @@ define bfloat @fma_bf16_expanded_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)
 ; CHECK-SM70-NEXT:    shr.u32 %r20, %r19, 16;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %r20;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul bfloat %a, %b
-  %2 = fadd bfloat %1, %c
-  %3 = call bfloat @llvm.maxnum.bf16(bfloat %2, bfloat 0.0)
+  %1 = fmul contract nnan bfloat %a, %b
+  %2 = fadd contract nnan bfloat %1, %c
+  %3 = call nsz bfloat @llvm.maxnum.bf16(bfloat %2, bfloat 0.0)
   ret bfloat %3
 }
 
-define <2 x half> @fma_f16x2_expanded_no_nans(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+define <2 x half> @fma_f16x2_expanded_no_nans(<2 x half> %a, <2 x half> %b, <2 x half> %c) {
 ; CHECK-LABEL: fma_f16x2_expanded_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -538,15 +550,15 @@ define <2 x half> @fma_f16x2_expanded_no_nans(<2 x half> %a, <2 x half> %b, <2 x
 ; CHECK-SM70-NEXT:    selp.b16 %rs4, %rs1, 0x0000, %p1;
 ; CHECK-SM70-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs3};
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul <2 x half> %a, %b
-  %2 = fadd <2 x half> %1, %c
+  %1 = fmul contract nnan <2 x half> %a, %b
+  %2 = fadd contract nnan <2 x half> %1, %c
   %3 = fcmp ogt <2 x half> %2, <half 0.0, half 0.0>
-  %4 = select <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
   ret <2 x half> %4
 }
 
 ; FMA relu shouldn't be selected if the FMA operation has multiple uses
-define <2 x half> @fma_f16x2_expanded_no_nans_multiple_uses_of_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+define <2 x half> @fma_f16x2_expanded_no_nans_multiple_uses_of_fma(<2 x half> %a, <2 x half> %b, <2 x half> %c) {
 ; CHECK-LABEL: fma_f16x2_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<10>;
@@ -603,10 +615,10 @@ define <2 x half> @fma_f16x2_expanded_no_nans_multiple_uses_of_fma(<2 x half> %a
 ; CHECK-SM70-NEXT:    add.f16x2 %r9, %r6, %r8;
 ; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul <2 x half> %a, %b
-  %2 = fadd <2 x half> %1, %c
+  %1 = fmul contract nnan <2 x half> %a, %b
+  %2 = fadd contract nnan <2 x half> %1, %c
   %3 = fcmp ogt <2 x half> %2, <half 0.0, half 0.0>
-  %4 = select <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
   %5 = fadd <2 x half> %2, <half 7.0, half 7.0>
   %6 = fadd <2 x half> %4, %5
   ret <2 x half> %6
@@ -662,11 +674,11 @@ define <2 x half> @fma_f16x2_expanded_unsafe_with_nans(<2 x half> %a, <2 x half>
   %1 = fmul <2 x half> %a, %b
   %2 = fadd <2 x half> %1, %c
   %3 = fcmp ogt <2 x half> %2, <half 0.0, half 0.0>
-  %4 = select <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
   ret <2 x half> %4
 }
 
-define <2 x half> @fma_f16x2_expanded_maxnum_no_nans(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+define <2 x half> @fma_f16x2_expanded_maxnum_no_nans(<2 x half> %a, <2 x half> %b, <2 x half> %c) {
 ; CHECK-LABEL: fma_f16x2_expanded_maxnum_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -711,9 +723,9 @@ define <2 x half> @fma_f16x2_expanded_maxnum_no_nans(<2 x half> %a, <2 x half> %
 ; CHECK-SM70-NEXT:    mov.b32 %r9, {%rs4, %rs3};
 ; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul <2 x half> %a, %b
-  %2 = fadd <2 x half> %1, %c
-  %3 = call <2 x half> @llvm.maxnum.f16x2(<2 x half> %2, <2 x half> <half 0.0, half 0.0>)
+  %1 = fmul contract nnan <2 x half> %a, %b
+  %2 = fadd contract nnan <2 x half> %1, %c
+  %3 = call nsz <2 x half> @llvm.maxnum.f16x2(<2 x half> %2, <2 x half> <half 0.0, half 0.0>)
   ret <2 x half> %3
 }
 
@@ -795,11 +807,11 @@ define <2 x bfloat> @fma_bf16x2_expanded_unsafe_with_nans(<2 x bfloat> %a, <2 x 
   %1 = fmul <2 x bfloat> %a, %b
   %2 = fadd <2 x bfloat> %1, %c
   %3 = fcmp ogt <2 x bfloat> %2, <bfloat 0.0, bfloat 0.0>
-  %4 = select <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
   ret <2 x bfloat> %4
 }
 
-define <2 x bfloat> @fma_bf16x2_expanded_no_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) #0 {
+define <2 x bfloat> @fma_bf16x2_expanded_no_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) {
 ; CHECK-LABEL: fma_bf16x2_expanded_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -870,15 +882,15 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans(<2 x bfloat> %a, <2 x bfloat> %
 ; CHECK-SM70-NEXT:    selp.b16 %rs10, %rs7, 0x0000, %p3;
 ; CHECK-SM70-NEXT:    st.param.v2.b16 [func_retval0], {%rs10, %rs9};
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul <2 x bfloat> %a, %b
-  %2 = fadd <2 x bfloat> %1, %c
+  %1 = fmul contract nnan <2 x bfloat> %a, %b
+  %2 = fadd contract nnan <2 x bfloat> %1, %c
   %3 = fcmp ogt <2 x bfloat> %2, <bfloat 0.0, bfloat 0.0>
-  %4 = select <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
   ret <2 x bfloat> %4
 }
 
 ; FMA relu shouldn't be selected if the FMA operation has multiple uses
-define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) #0 {
+define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) {
 ; CHECK-LABEL: fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<11>;
@@ -1014,16 +1026,16 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
 ; CHECK-SM70-NEXT:    prmt.b32 %r57, %r56, %r47, 0x7632U;
 ; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r57;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul <2 x bfloat> %a, %b
-  %2 = fadd <2 x bfloat> %1, %c
+  %1 = fmul contract nnan <2 x bfloat> %a, %b
+  %2 = fadd contract nnan <2 x bfloat> %1, %c
   %3 = fcmp ogt <2 x bfloat> %2, <bfloat 0.0, bfloat 0.0>
-  %4 = select <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
   %5 = fadd <2 x bfloat> %2, <bfloat 7.0, bfloat 7.0>
   %6 = fadd <2 x bfloat> %4, %5
   ret <2 x bfloat> %6
 }
 
-define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) #0 {
+define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) {
 ; CHECK-LABEL: fma_bf16x2_expanded_maxnum_no_nans(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -1103,10 +1115,8 @@ define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bf
 ; CHECK-SM70-NEXT:    prmt.b32 %r39, %r38, %r31, 0x7632U;
 ; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r39;
 ; CHECK-SM70-NEXT:    ret;
-  %1 = fmul <2 x bfloat> %a, %b
-  %2 = fadd <2 x bfloat> %1, %c
-  %3 = call <2 x bfloat> @llvm.maxnum.bf16x2(<2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
+  %1 = fmul contract nnan <2 x bfloat> %a, %b
+  %2 = fadd contract nnan <2 x bfloat> %1, %c
+  %3 = call nsz <2 x bfloat> @llvm.maxnum.bf16x2(<2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
   ret <2 x bfloat> %3
 }
-
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

@@ -22,8 +22,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -137,8 +135,7 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT.value_or(std::cref(BT_ArgumentNull)),
           (PtrDescr + " pointer might be NULL.").str(), N);
-      if (PtrExpr)
-        bugreporter::trackExpressionValue(N, PtrExpr, *R);
+      bugreporter::trackExpressionValue(N, PtrExpr, *R);
       C.emitReport(std::move(R));
     }
     return nullptr;
@@ -481,11 +478,9 @@ bool UnixAPIPortabilityChecker::ReportZeroByteAllocation(
   if (!N)
     return false;
 
-  SmallString<256> S;
-  llvm::raw_svector_ostream os(S);
-  os << "Call to '" << fn_name << "' has an allocation size of 0 bytes";
-  auto report =
-      std::make_unique<PathSensitiveBugReport>(BT_mallocZero, os.str(), N);
+  auto report = std::make_unique<PathSensitiveBugReport>(
+      BT_mallocZero,
+      "Call to '" + Twine(fn_name) + "' has an allocation size of 0 bytes", N);
 
   report->addRange(arg->getSourceRange());
   bugreporter::trackExpressionValue(N, arg, *report);

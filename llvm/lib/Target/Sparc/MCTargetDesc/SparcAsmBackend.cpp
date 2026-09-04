@@ -64,8 +64,11 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case ELF::R_SPARC_HIX22:
     return (~Value >> 10) & 0x3fffff;
 
+  // In PIC mode the parser may map %hi to PC22/GOT22. An operand that folds to
+  // an absolute value emits no relocation and needs the %hi encoding.
   case ELF::R_SPARC_PC22:
   case ELF::R_SPARC_HI22:
+  case ELF::R_SPARC_GOT22:
   case ELF::R_SPARC_LM22:
     return (Value >> 10) & 0x3fffff;
 
@@ -80,6 +83,7 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
   case ELF::R_SPARC_PC10:
   case ELF::R_SPARC_LO10:
+  case ELF::R_SPARC_GOT10:
     return Value & 0x3ff;
 
   case ELF::R_SPARC_H44:
@@ -127,8 +131,7 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {
@@ -253,21 +256,19 @@ MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 }
 
 void SparcAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                 const MCValue &Target,
-                                 MutableArrayRef<char> Data, uint64_t Value,
-                                 bool IsResolved) {
+                                 const MCValue &Target, uint8_t *Data,
+                                 uint64_t Value, bool IsResolved) {
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (!IsResolved)
     return;
   Value = adjustFixupValue(Fixup.getKind(), Value);
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  unsigned Offset = Fixup.getOffset();
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
-    Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 

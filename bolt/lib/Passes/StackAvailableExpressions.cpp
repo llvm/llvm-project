@@ -103,8 +103,7 @@ bool StackAvailableExpressions::doesXKillsY(const MCInst *X, const MCInst *Y) {
   else
     RA.getInstClobberList(*Y, YClobbers);
 
-  XClobbers &= YClobbers;
-  return XClobbers.any();
+  return XClobbers.anyCommon(YClobbers);
 }
 
 BitVector StackAvailableExpressions::computeNext(const MCInst &Point,

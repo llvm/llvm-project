@@ -18,10 +18,12 @@
   "stp x24, x25, [sp, #-16]!\n"                                                \
   "stp x26, x27, [sp, #-16]!\n"                                                \
   "stp x28, x29, [sp, #-16]!\n"                                                \
-  "str x30, [sp,#-16]!\n"
+  "mrs x29, nzcv\n"                                                            \
+  "stp x29, x30, [sp, #-16]!\n"
 // Mirrors SAVE_ALL
 #define RESTORE_ALL                                                            \
-  "ldr x30, [sp], #16\n"                                                       \
+  "ldp x29, x30, [sp], #16\n"                                                  \
+  "msr nzcv, x29\n"                                                            \
   "ldp x28, x29, [sp], #16\n"                                                  \
   "ldp x26, x27, [sp], #16\n"                                                  \
   "ldp x24, x25, [sp], #16\n"                                                  \
@@ -41,7 +43,7 @@
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
-// Get the difference between runtime addrress of .text section and
+// Get the difference between runtime address of .text section and
 // static address in section header table. Can be extracted from arbitrary
 // pc value recorded at runtime to get the corresponding static address, which
 // in turn can be used to search for indirect call description. Needed because

@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class DataFormatterBoolRefPtr(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_boolrefptr_with_run_command(self):
         """Test the formatters we use for BOOL& and BOOL* in Objective-C."""
         self.build()

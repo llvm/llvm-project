@@ -10,8 +10,10 @@
 #define LLVM_LINKER_IRMOVER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Compiler.h"
 #include <functional>
 
@@ -19,6 +21,8 @@ namespace llvm {
 class Error;
 class GlobalValue;
 class Metadata;
+class MDNode;
+class NamedMDNode;
 class Module;
 class StructType;
 class TrackingMDRef;
@@ -34,8 +38,6 @@ class IRMover {
       LLVM_ABI bool operator==(const KeyTy &that) const;
       LLVM_ABI bool operator!=(const KeyTy &that) const;
     };
-    LLVM_ABI static StructType *getEmptyKey();
-    LLVM_ABI static StructType *getTombstoneKey();
     LLVM_ABI static unsigned getHashValue(const KeyTy &Key);
     LLVM_ABI static unsigned getHashValue(const StructType *ST);
     LLVM_ABI static bool isEqual(const KeyTy &LHS, const StructType *RHS);
@@ -67,6 +69,9 @@ public:
   using LazyCallback =
       llvm::unique_function<void(GlobalValue &GV, ValueAdder Add)>;
 
+  using NamedMDNodesT =
+      DenseMap<const NamedMDNode *, SmallPtrSet<const MDNode *, 8>>;
+
   /// Move in the provide values in \p ValuesToLink from \p Src.
   ///
   /// - \p AddLazyFor is a call back that the IRMover will call when a global
@@ -86,6 +91,7 @@ private:
   Module &Composite;
   IdentifiedStructTypeSet IdentifiedStructTypes;
   MDMapT SharedMDs; ///< A Metadata map to use for all calls to \a move().
+  NamedMDNodesT NamedMDNodes; ///< Cache for IRMover::linkNamedMDNodes().
 };
 
 } // End llvm namespace

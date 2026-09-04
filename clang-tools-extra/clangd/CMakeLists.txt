@@ -6,7 +6,7 @@ add_subdirectory(support)
 
 # Configure the Features.inc file.
 if (NOT DEFINED CLANGD_BUILD_XPC)
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(CLANGD_BUILD_XPC_DEFAULT ON)
   else ()
     set(CLANGD_BUILD_XPC_DEFAULT OFF)
@@ -96,18 +96,20 @@ add_clang_library(clangDaemon STATIC
   IncludeFixer.cpp
   InlayHints.cpp
   JSONTransport.cpp
+  LSPBinder.cpp
   ModulesBuilder.cpp
   PathMapping.cpp
+  ProjectModules.cpp
   Protocol.cpp
   Quality.cpp
   ParsedAST.cpp
   Preamble.cpp
   RIFF.cpp
-  ScanningProjectModules.cpp
   Selection.cpp
   SemanticHighlighting.cpp
   SemanticSelection.cpp
   SourceCode.cpp
+  SymbolDocumentation.cpp
   SystemIncludeExtractor.cpp
   TidyProvider.cpp
   TUScheduler.cpp
@@ -164,6 +166,8 @@ clang_target_link_libraries(clangDaemon
   clangBasic
   clangDependencyScanning
   clangDriver
+  clangEdit
+  clangOptions
   clangFormat
   clangFrontend
   clangIndex
@@ -175,6 +179,7 @@ clang_target_link_libraries(clangDaemon
   clangToolingInclusions
   clangToolingInclusionsStdlib
   clangToolingSyntax
+  clangUnifiedSymbolResolution
   )
 
 target_link_libraries(clangDaemon
@@ -192,12 +197,13 @@ if(CLANGD_TIDY_CHECKS)
 endif()
 
 add_subdirectory(refactor/tweaks)
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   # FIXME: Make fuzzer not use linux-specific APIs, build it everywhere.
   add_subdirectory(fuzzer)
 endif()
 add_subdirectory(tool)
 add_subdirectory(indexer)
+add_subdirectory(remap)
 
 if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
@@ -213,7 +219,7 @@ endif()
 option(CLANGD_BUILD_DEXP "Build the dexp tool as part of Clangd" ON)
 llvm_canonicalize_cmake_booleans(CLANGD_BUILD_DEXP)
 
-if(CLANG_INCLUDE_TESTS)
+if(CLANG_INCLUDE_TESTS AND CLANG_TOOLS_EXTRA_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
 endif()

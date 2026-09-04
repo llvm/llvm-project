@@ -10,6 +10,8 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
+#include <cstring>
+
 using olMemcpyTest = OffloadQueueTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemcpyTest);
 
@@ -20,7 +22,7 @@ struct olMemcpyGlobalTest : OffloadGlobalTest {
         olGetSymbol(Program, "read", OL_SYMBOL_KIND_KERNEL, &ReadKernel));
     ASSERT_SUCCESS(
         olGetSymbol(Program, "write", OL_SYMBOL_KIND_KERNEL, &WriteKernel));
-    ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+    ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
     ASSERT_SUCCESS(olGetSymbolInfo(
         Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS, sizeof(Addr), &Addr));
 
@@ -44,8 +46,7 @@ TEST_P(olMemcpyTest, SuccessHtoD) {
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
   std::vector<uint8_t> Input(Size, 42);
-  ASSERT_SUCCESS(
-      olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size, nullptr));
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size));
   olSyncQueue(Queue);
   olMemFree(Alloc);
 }
@@ -57,10 +58,8 @@ TEST_P(olMemcpyTest, SuccessDtoH) {
   std::vector<uint8_t> Output(Size, 0);
 
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
-  ASSERT_SUCCESS(
-      olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size, nullptr));
-  ASSERT_SUCCESS(
-      olMemcpy(Queue, Output.data(), Host, Alloc, Device, Size, nullptr));
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Output.data(), Host, Alloc, Device, Size));
   ASSERT_SUCCESS(olSyncQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
@@ -77,12 +76,9 @@ TEST_P(olMemcpyTest, SuccessDtoD) {
 
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocA));
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &AllocB));
-  ASSERT_SUCCESS(
-      olMemcpy(Queue, AllocA, Device, Input.data(), Host, Size, nullptr));
-  ASSERT_SUCCESS(
-      olMemcpy(Queue, AllocB, Device, AllocA, Device, Size, nullptr));
-  ASSERT_SUCCESS(
-      olMemcpy(Queue, Output.data(), Host, AllocB, Device, Size, nullptr));
+  ASSERT_SUCCESS(olMemcpy(Queue, AllocA, Device, Input.data(), Host, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, AllocB, Device, AllocA, Device, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Output.data(), Host, AllocB, Device, Size));
   ASSERT_SUCCESS(olSyncQueue(Queue));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
@@ -96,12 +92,72 @@ TEST_P(olMemcpyTest, SuccessHtoHSync) {
   std::vector<uint8_t> Input(Size, 42);
   std::vector<uint8_t> Output(Size, 0);
 
-  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Input.data(), Host,
-                          Size, nullptr));
+  ASSERT_SUCCESS(
+      olMemcpy(nullptr, Output.data(), Host, Input.data(), Host, Size));
 
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
+}
+
+TEST_P(olMemcpyTest, SuccessHtoHQueuedOrdering) {
+  constexpr size_t Size = 1024;
+  void *Alloc;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Intermediate(Size, 0);
+  std::vector<uint8_t> Copied(Size, 0);
+  std::vector<uint8_t> Output(Size, 0);
+
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, Intermediate.data(), Host, Alloc, Device, Size));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, Copied.data(), Host, Intermediate.data(), Host, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Copied.data(), Host, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Output.data(), Host, Alloc, Device, Size));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  for (uint8_t Val : Output)
+    ASSERT_EQ(Val, 42);
+
+  ASSERT_SUCCESS(olMemFree(Alloc));
+}
+
+TEST_P(olMemcpyTest, SuccessHtoHQueuedOrderingHostAlloc) {
+  constexpr size_t Size = 1024;
+  void *Alloc;
+  void *Input;
+  void *Intermediate;
+  void *Copied;
+  void *Output;
+
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAllocHost(Device, Size, &Input));
+  ASSERT_SUCCESS(olMemAllocHost(Device, Size, &Intermediate));
+  ASSERT_SUCCESS(olMemAllocHost(Device, Size, &Copied));
+  ASSERT_SUCCESS(olMemAllocHost(Device, Size, &Output));
+
+  std::memset(Input, 42, Size);
+  std::memset(Intermediate, 0, Size);
+  std::memset(Copied, 0, Size);
+  std::memset(Output, 0, Size);
+
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Input, Host, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Intermediate, Host, Alloc, Device, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Copied, Host, Intermediate, Host, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Alloc, Device, Copied, Host, Size));
+  ASSERT_SUCCESS(olMemcpy(Queue, Output, Host, Alloc, Device, Size));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  for (size_t I = 0; I < Size; ++I)
+    ASSERT_EQ(static_cast<uint8_t *>(Output)[I], 42);
+
+  ASSERT_SUCCESS(olMemFree(Output));
+  ASSERT_SUCCESS(olMemFree(Copied));
+  ASSERT_SUCCESS(olMemFree(Intermediate));
+  ASSERT_SUCCESS(olMemFree(Input));
+  ASSERT_SUCCESS(olMemFree(Alloc));
 }
 
 TEST_P(olMemcpyTest, SuccessDtoHSync) {
@@ -111,10 +167,8 @@ TEST_P(olMemcpyTest, SuccessDtoHSync) {
   std::vector<uint8_t> Output(Size, 0);
 
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
-  ASSERT_SUCCESS(
-      olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size, nullptr));
-  ASSERT_SUCCESS(
-      olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size, nullptr));
+  ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
+  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
@@ -128,8 +182,16 @@ TEST_P(olMemcpyTest, SuccessSizeZero) {
 
   // As with std::memcpy, size 0 is allowed. Keep all other arguments valid even
   // if they aren't used.
-  ASSERT_SUCCESS(
-      olMemcpy(nullptr, Output.data(), Host, Input.data(), Host, 0, nullptr));
+  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Input.data(), Host, 0));
+}
+
+TEST_P(olMemcpyTest, SuccessHtoHQueuedSizeZero) {
+  constexpr size_t Size = 1024;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+
+  ASSERT_SUCCESS(olMemcpy(Queue, Output.data(), Host, Input.data(), Host, 0));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
 }
 
 TEST_P(olMemcpyGlobalTest, SuccessRoundTrip) {
@@ -144,11 +206,11 @@ TEST_P(olMemcpyGlobalTest, SuccessRoundTrip) {
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             64 * sizeof(uint32_t), &DestMem));
 
-  ASSERT_SUCCESS(olMemcpy(Queue, Addr, Device, SourceMem, Host,
-                          64 * sizeof(uint32_t), nullptr));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, Addr, Device, SourceMem, Host, 64 * sizeof(uint32_t)));
   ASSERT_SUCCESS(olSyncQueue(Queue));
-  ASSERT_SUCCESS(olMemcpy(Queue, DestMem, Host, Addr, Device,
-                          64 * sizeof(uint32_t), nullptr));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, DestMem, Host, Addr, Device, 64 * sizeof(uint32_t)));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *DestData = (uint32_t *)DestMem;
@@ -172,15 +234,14 @@ TEST_P(olMemcpyGlobalTest, SuccessWrite) {
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t),
                             &DestMem));
-  struct {
-    void *Mem;
-  } Args{DestMem};
+  void *ArgPtrs[] = {&DestMem};
+  size_t ArgSizes[] = {sizeof(DestMem)};
 
-  ASSERT_SUCCESS(olMemcpy(Queue, Addr, Device, SourceMem, Host,
-                          64 * sizeof(uint32_t), nullptr));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, Addr, Device, SourceMem, Host, 64 * sizeof(uint32_t)));
   ASSERT_SUCCESS(olSyncQueue(Queue));
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, ReadKernel, &Args, sizeof(Args),
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, ReadKernel, &LaunchArgs, nullptr,
+                                1, ArgPtrs, ArgSizes));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *DestData = (uint32_t *)DestMem;
@@ -197,11 +258,11 @@ TEST_P(olMemcpyGlobalTest, SuccessRead) {
                             LaunchArgs.GroupSize.x * sizeof(uint32_t),
                             &DestMem));
 
-  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, WriteKernel, nullptr, 0,
-                                &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, WriteKernel, &LaunchArgs,
+                                nullptr, 0, nullptr, nullptr));
   ASSERT_SUCCESS(olSyncQueue(Queue));
-  ASSERT_SUCCESS(olMemcpy(Queue, DestMem, Host, Addr, Device,
-                          64 * sizeof(uint32_t), nullptr));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, DestMem, Host, Addr, Device, 64 * sizeof(uint32_t)));
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   uint32_t *DestData = (uint32_t *)DestMem;

@@ -32,4 +32,22 @@ void *MemmoveDeviceToDevice(void *dst, const void *src, std::size_t count) {
   return dst;
 }
 
+void *MemcpyHostToDevice(void *dst, const void *src, std::size_t count) {
+  // TODO: Use cudaMemcpyAsync when we have support for stream.
+  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyHostToDevice));
+  return dst;
+}
+
+void *MemcpyDeviceToHost(void *dst, const void *src, std::size_t count) {
+  // TODO: Use cudaMemcpyAsync when we have support for stream.
+  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToHost));
+  return dst;
+}
+
+void *MemcpyDeviceToDevice(void *dst, const void *src, std::size_t count) {
+  // TODO: Use cudaMemcpyAsync when we have support for stream.
+  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, count, cudaMemcpyDeviceToDevice));
+  return dst;
+}
+
 } // namespace Fortran::runtime::cuda

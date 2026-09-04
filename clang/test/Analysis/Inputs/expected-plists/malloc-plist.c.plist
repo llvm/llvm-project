@@ -1725,12 +1725,12 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Use of memory after it is freed</string>
+     <string>Use of memory after it is released</string>
      <key>message</key>
-     <string>Use of memory after it is freed</string>
+     <string>Use of memory after it is released</string>
     </dict>
    </array>
-   <key>description</key><string>Use of memory after it is freed</string>
+   <key>description</key><string>Use of memory after it is released</string>
    <key>category</key><string>Memory error</string>
    <key>type</key><string>Use-after-free</string>
    <key>check_name</key><string>unix.Malloc</string>
@@ -2985,12 +2985,12 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Use of memory after it is freed</string>
+     <string>Use of memory after it is released</string>
      <key>message</key>
-     <string>Use of memory after it is freed</string>
+     <string>Use of memory after it is released</string>
     </dict>
    </array>
-   <key>description</key><string>Use of memory after it is freed</string>
+   <key>description</key><string>Use of memory after it is released</string>
    <key>category</key><string>Memory error</string>
    <key>type</key><string>Use-after-free</string>
    <key>check_name</key><string>unix.Malloc</string>

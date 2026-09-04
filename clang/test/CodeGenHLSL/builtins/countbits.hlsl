@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s
 
 #ifdef __HLSL_ENABLE_16_BIT
@@ -68,6 +68,12 @@ uint3 test_countbits_uint3(uint3 p0)
 // CHECK: call <4 x i32> @llvm.ctpop.v4i32
 uint4 test_countbits_uint4(uint4 p0)
 {
+	return countbits(p0);
+}
+
+// CHECK-LABEL: test_countbits_uint5
+// CHECK: call <5 x i32> @llvm.ctpop.v5i32
+vector<uint, 5> test_countbits_uint5(vector<uint, 5> p0) {
 	return countbits(p0);
 }
 

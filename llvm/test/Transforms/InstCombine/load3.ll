@@ -23,7 +23,7 @@ define float @test2() {
   ret float %tmp
   
 ; CHECK-LABEL: @test2(
-; CHECK: ret float 0x3806965600000000
+; CHECK: ret float f0x005A5958
 }
 
 @rslts32 = global [36 x i32] zeroinitializer, align 4

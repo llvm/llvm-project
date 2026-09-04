@@ -227,9 +227,13 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::PS4:
   case llvm::Triple::PS5:
   case llvm::Triple::RTEMS:
+  case llvm::Triple::Serenity:
   case llvm::Triple::Solaris:
   case llvm::Triple::UEFI:
   case llvm::Triple::WASI:
+  case llvm::Triple::WASIp1:
+  case llvm::Triple::WASIp2:
+  case llvm::Triple::WASIp3:
   case llvm::Triple::Win32:
   case llvm::Triple::ZOS:
     return false;
@@ -244,6 +248,10 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   }
 
   if (triple.isOSDarwin())
+    return false;
+
+  // On hexagon, include paths are managed by the driver.
+  if (triple.getArch() == llvm::Triple::hexagon)
     return false;
 
   return true; // Everything else uses AddDefaultIncludePaths().

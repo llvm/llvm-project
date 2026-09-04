@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -24,7 +23,8 @@
 using namespace mlir;
 
 FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
-    OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producer) {
+    OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producer,
+    ArrayRef<InnerTileAlignment> innerTileAlignments) {
   auto producerOp = dyn_cast<TilingInterface>(producer.getOwner());
   if (!producerOp)
     return failure();
@@ -35,7 +35,7 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
 
   FailureOr<TilingResult> tiledResult = producerOp.generateResultTileValue(
       builder, producer.getResultNumber(), sliceOp.getMixedOffsets(),
-      sliceOp.getMixedSizes());
+      sliceOp.getMixedSizes(), innerTileAlignments);
   if (failed(tiledResult))
     return failure();
 
@@ -54,6 +54,7 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
         builder, sliceOp.getLoc(), sliceOp.getType(),
         tiledResult->tiledValues[0], offsets, sliceOp.getMixedSizes(), strides);
     tiledResult->tiledValues[0] = newSliceOp;
+    tiledResult->generatedSlices.push_back(newSliceOp);
   }
 
   return *tiledResult;
@@ -61,7 +62,8 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
 
 FailureOr<TilingResult> tensor::replaceInsertSlicesWithTiledConsumer(
     OpBuilder &builder, ArrayRef<tensor::InsertSliceOp> sliceOps,
-    ArrayRef<OpOperand *> consumerOperands) {
+    ArrayRef<OpOperand *> consumerOperands,
+    ArrayRef<InnerTileAlignment> innerTileAlignments) {
   if (sliceOps.empty()) {
     LLVM_DEBUG(
         { llvm::dbgs() << "expected candidate slices list to be non-empty"; });
@@ -78,7 +80,7 @@ FailureOr<TilingResult> tensor::replaceInsertSlicesWithTiledConsumer(
       dyn_cast<TilingInterface>(consumerOperands.front()->getOwner());
   if (!consumerOp)
     return failure();
-  for (auto opOperand : consumerOperands.drop_front()) {
+  for (auto *opOperand : consumerOperands.drop_front()) {
     if (opOperand->getOwner() != consumerOp) {
       LLVM_DEBUG({
         llvm::dbgs()
@@ -107,7 +109,8 @@ FailureOr<TilingResult> tensor::replaceInsertSlicesWithTiledConsumer(
   }
   FailureOr<TilingResult> tiledResult =
       consumerOp.getTiledImplementationFromOperandTiles(
-          builder, consumerOperandNums, allOffsets, allSizes);
+          builder, consumerOperandNums, allOffsets, allSizes,
+          innerTileAlignments);
   if (failed(tiledResult))
     return failure();
 

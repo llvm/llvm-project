@@ -567,31 +567,31 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, i64 %b) {
 ;
 ; AVX1-LABEL: 'splatvar_shift_v4i64'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <4 x i64> poison, i64 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:6 for: %shift = shl <4 x i64> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i64> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v4i64'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <4 x i64> poison, i64 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:2 for: %shift = shl <4 x i64> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i64> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v4i64'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <4 x i64> poison, i64 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:7 SizeLat:6 for: %shift = shl <4 x i64> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i64> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v4i64'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <4 x i64> poison, i64 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:2 for: %shift = shl <4 x i64> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i64> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v4i64'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <4 x i64> poison, i64 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <4 x i64> %insert, <4 x i64> poison, <4 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:2 for: %shift = shl <4 x i64> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <4 x i64> %shift
 ;
@@ -610,31 +610,31 @@ define <8 x i64> @splatvar_shift_v8i64(<8 x i64> %a, i64 %b) {
 ;
 ; AVX1-LABEL: 'splatvar_shift_v8i64'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i64> poison, i64 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:14 SizeLat:12 for: %shift = shl <8 x i64> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v8i64'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i64> poison, i64 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:8 SizeLat:4 for: %shift = shl <8 x i64> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v8i64'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i64> poison, i64 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:14 SizeLat:12 for: %shift = shl <8 x i64> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v8i64'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i64> poison, i64 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:8 SizeLat:4 for: %shift = shl <8 x i64> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v8i64'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i64> poison, i64 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <8 x i64> %insert, <8 x i64> poison, <8 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:2 for: %shift = shl <8 x i64> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i64> %shift
 ;
@@ -696,31 +696,31 @@ define <8 x i32> @splatvar_shift_v8i32(<8 x i32> %a, i32 %b) {
 ;
 ; AVX1-LABEL: 'splatvar_shift_v8i32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i32> poison, i32 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:7 SizeLat:7 for: %shift = shl <8 x i32> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v8i32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i32> poison, i32 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <8 x i32> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v8i32'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i32> poison, i32 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:7 SizeLat:7 for: %shift = shl <8 x i32> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v8i32'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i32> poison, i32 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <8 x i32> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v8i32'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i32> poison, i32 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <8 x i32> %insert, <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <8 x i32> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %shift
 ;
@@ -739,31 +739,31 @@ define <16 x i32> @splatvar_shift_v16i32(<16 x i32> %a, i32 %b) {
 ;
 ; AVX1-LABEL: 'splatvar_shift_v16i32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i32> poison, i32 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:14 SizeLat:14 for: %shift = shl <16 x i32> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v16i32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i32> poison, i32 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:8 SizeLat:6 for: %shift = shl <16 x i32> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v16i32'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i32> poison, i32 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:3 SizeLat:3 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:14 SizeLat:14 for: %shift = shl <16 x i32> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v16i32'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i32> poison, i32 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:8 SizeLat:6 for: %shift = shl <16 x i32> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v16i32'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i32> poison, i32 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <16 x i32> %insert, <16 x i32> poison, <16 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <16 x i32> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %shift
 ;
@@ -776,49 +776,49 @@ define <16 x i32> @splatvar_shift_v16i32(<16 x i32> %a, i32 %b) {
 define <8 x i16> @splatvar_shift_v8i16(<8 x i16> %a, i16 %b) {
 ; SSE2-LABEL: 'splatvar_shift_v8i16'
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; SSE2-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:2 SizeLat:2 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
 ; SSE42-LABEL: 'splatvar_shift_v8i16'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
 ; AVX1-LABEL: 'splatvar_shift_v8i16'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v8i16'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v8i16'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v8i16'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v8i16'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
 ; SLM-LABEL: 'splatvar_shift_v8i16'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <8 x i16> poison, i16 %b, i32 0
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <8 x i16> %insert, <8 x i16> poison, <8 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %shift = shl <8 x i16> %a, %splat
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %shift
 ;
@@ -831,49 +831,49 @@ define <8 x i16> @splatvar_shift_v8i16(<8 x i16> %a, i16 %b) {
 define <16 x i16> @splatvar_shift_v16i16(<16 x i16> %a, i16 %b) {
 ; SSE2-LABEL: 'splatvar_shift_v16i16'
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; SSE2-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:2 SizeLat:2 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %shift = shl <16 x i16> %a, %splat
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
 ; SSE42-LABEL: 'splatvar_shift_v16i16'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %shift = shl <16 x i16> %a, %splat
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
 ; AVX1-LABEL: 'splatvar_shift_v16i16'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 3 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:7 SizeLat:7 for: %shift = shl <16 x i16> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v16i16'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <16 x i16> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v16i16'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 3 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:7 SizeLat:7 for: %shift = shl <16 x i16> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v16i16'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <16 x i16> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v16i16'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <16 x i16> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
 ; SLM-LABEL: 'splatvar_shift_v16i16'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i16> poison, i16 %b, i32 0
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i16> %insert, <16 x i16> poison, <16 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %shift = shl <16 x i16> %a, %splat
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i16> %shift
 ;
@@ -886,73 +886,73 @@ define <16 x i16> @splatvar_shift_v16i16(<16 x i16> %a, i16 %b) {
 define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, i16 %b) {
 ; SSE2-LABEL: 'splatvar_shift_v32i16'
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; SSE2-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:2 SizeLat:2 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %shift = shl <32 x i16> %a, %splat
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; SSE42-LABEL: 'splatvar_shift_v32i16'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %shift = shl <32 x i16> %a, %splat
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; AVX1-LABEL: 'splatvar_shift_v32i16'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 3 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:14 SizeLat:14 for: %shift = shl <32 x i16> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v32i16'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:8 SizeLat:6 for: %shift = shl <32 x i16> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v32i16'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 3 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:14 SizeLat:14 for: %shift = shl <32 x i16> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v32i16'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:8 SizeLat:6 for: %shift = shl <32 x i16> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; AVX512F-LABEL: 'splatvar_shift_v32i16'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:10 SizeLat:7 for: %shift = shl <32 x i16> %a, %splat
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; AVX512BW-LABEL: 'splatvar_shift_v32i16'
 ; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <32 x i16> %a, %splat
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; AVX512VL-LABEL: 'splatvar_shift_v32i16'
 ; AVX512VL-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; AVX512VL-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; AVX512VL-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; AVX512VL-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:10 SizeLat:7 for: %shift = shl <32 x i16> %a, %splat
 ; AVX512VL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; AVX512BWVL-LABEL: 'splatvar_shift_v32i16'
 ; AVX512BWVL-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; AVX512BWVL-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; AVX512BWVL-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; AVX512BWVL-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <32 x i16> %a, %splat
 ; AVX512BWVL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; SLM-LABEL: 'splatvar_shift_v32i16'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %shift = shl <32 x i16> %a, %splat
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
 ; AVX512GFNI-LABEL: 'splatvar_shift_v32i16'
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i16> poison, i16 %b, i32 0
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <32 x i16> %insert, <32 x i16> poison, <32 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:3 for: %shift = shl <32 x i16> %a, %splat
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i16> %shift
 ;
@@ -965,49 +965,49 @@ define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, i16 %b) {
 define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, i8 %b) {
 ; SSE2-LABEL: 'splatvar_shift_v16i8'
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; SSE2-NEXT:  Cost Model: Found costs of 3 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:10 SizeLat:9 for: %shift = shl <16 x i8> %a, %splat
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
 ; SSE42-LABEL: 'splatvar_shift_v16i8'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:10 SizeLat:9 for: %shift = shl <16 x i8> %a, %splat
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
 ; AVX1-LABEL: 'splatvar_shift_v16i8'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:4 SizeLat:8 for: %shift = shl <16 x i8> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v16i8'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:5 SizeLat:7 for: %shift = shl <16 x i8> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v16i8'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %shift = shl <16 x i8> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v16i8'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:5 SizeLat:7 for: %shift = shl <16 x i8> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v16i8'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:5 SizeLat:7 for: %shift = shl <16 x i8> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
 ; SLM-LABEL: 'splatvar_shift_v16i8'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <16 x i8> poison, i8 %b, i32 0
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <16 x i8> %insert, <16 x i8> poison, <16 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:10 SizeLat:9 for: %shift = shl <16 x i8> %a, %splat
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %shift
 ;
@@ -1020,49 +1020,49 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, i8 %b) {
 define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, i8 %b) {
 ; SSE2-LABEL: 'splatvar_shift_v32i8'
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; SSE2-NEXT:  Cost Model: Found costs of 3 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:12 Lat:20 SizeLat:18 for: %shift = shl <32 x i8> %a, %splat
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
 ; SSE42-LABEL: 'splatvar_shift_v32i8'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:12 Lat:20 SizeLat:18 for: %shift = shl <32 x i8> %a, %splat
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
 ; AVX1-LABEL: 'splatvar_shift_v32i8'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:11 Lat:8 SizeLat:14 for: %shift = shl <32 x i8> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v32i8'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:7 SizeLat:8 for: %shift = shl <32 x i8> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v32i8'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:7 SizeLat:6 for: %shift = shl <32 x i8> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v32i8'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:7 SizeLat:8 for: %shift = shl <32 x i8> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v32i8'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:7 SizeLat:8 for: %shift = shl <32 x i8> %a, %splat
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
 ; SLM-LABEL: 'splatvar_shift_v32i8'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <32 x i8> poison, i8 %b, i32 0
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <32 x i8> %insert, <32 x i8> poison, <32 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:12 Lat:20 SizeLat:18 for: %shift = shl <32 x i8> %a, %splat
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <32 x i8> %shift
 ;
@@ -1075,73 +1075,73 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, i8 %b) {
 define <64 x i8> @splatvar_shift_v64i8(<64 x i8> %a, i8 %b) {
 ; SSE2-LABEL: 'splatvar_shift_v64i8'
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; SSE2-NEXT:  Cost Model: Found costs of 3 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; SSE2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:4 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:24 Lat:40 SizeLat:36 for: %shift = shl <64 x i8> %a, %splat
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; SSE42-LABEL: 'splatvar_shift_v64i8'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:24 Lat:40 SizeLat:36 for: %shift = shl <64 x i8> %a, %splat
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; AVX1-LABEL: 'splatvar_shift_v64i8'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; AVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:22 Lat:16 SizeLat:28 for: %shift = shl <64 x i8> %a, %splat
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; AVX2-LABEL: 'splatvar_shift_v64i8'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:14 SizeLat:16 for: %shift = shl <64 x i8> %a, %splat
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; XOPAVX1-LABEL: 'splatvar_shift_v64i8'
 ; XOPAVX1-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; XOPAVX1-NEXT:  Cost Model: Found costs of 2 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:6 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:14 SizeLat:12 for: %shift = shl <64 x i8> %a, %splat
 ; XOPAVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; XOPAVX2-LABEL: 'splatvar_shift_v64i8'
 ; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; XOPAVX2-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:14 SizeLat:16 for: %shift = shl <64 x i8> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; AVX512F-LABEL: 'splatvar_shift_v64i8'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:27 Lat:19 SizeLat:33 for: %shift = shl <64 x i8> %a, %splat
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; AVX512BW-LABEL: 'splatvar_shift_v64i8'
 ; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:7 SizeLat:8 for: %shift = shl <64 x i8> %a, %splat
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; AVX512VL-LABEL: 'splatvar_shift_v64i8'
 ; AVX512VL-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; AVX512VL-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; AVX512VL-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; AVX512VL-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:27 Lat:19 SizeLat:33 for: %shift = shl <64 x i8> %a, %splat
 ; AVX512VL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; AVX512BWVL-LABEL: 'splatvar_shift_v64i8'
 ; AVX512BWVL-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; AVX512BWVL-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; AVX512BWVL-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; AVX512BWVL-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:7 SizeLat:8 for: %shift = shl <64 x i8> %a, %splat
 ; AVX512BWVL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; SLM-LABEL: 'splatvar_shift_v64i8'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:3 SizeLat:2 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; SLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:24 Lat:40 SizeLat:36 for: %shift = shl <64 x i8> %a, %splat
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;
 ; AVX512GFNI-LABEL: 'splatvar_shift_v64i8'
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %insert = insertelement <64 x i8> poison, i8 %b, i32 0
-; AVX512GFNI-NEXT:  Cost Model: Found costs of 1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %splat = shufflevector <64 x i8> %insert, <64 x i8> poison, <64 x i32> zeroinitializer
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:7 SizeLat:8 for: %shift = shl <64 x i8> %a, %splat
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i8> %shift
 ;

@@ -52,7 +52,7 @@ no_tls:
   .size no_tls, 4
 
 // Older versions of LLVM did not use the "T" flag so we need to support
-// infering TLS from the name alone.
+// inferring TLS from the name alone.
 .section  .tdata.tls1,"",@
 .globl  tls1
 .p2align  2
@@ -98,7 +98,7 @@ tls3:
 # CHECK-NEXT:       Mutable:         true
 # CHECK-NEXT:       InitExpr:
 # CHECK-NEXT:         Opcode:          I32_CONST
-# CHECK-NEXT:         Value:           66592
+# CHECK-NEXT:         Value:           65536
 
 # __tls_base
 # CHECK-NEXT:     - Index:           1

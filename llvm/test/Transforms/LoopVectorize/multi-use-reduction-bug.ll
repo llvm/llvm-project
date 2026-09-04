@@ -22,8 +22,8 @@ entry:
   br label %for.body
 
 for.body:
-  %inc107 = phi i32 [ undef, %entry ], [ %inc10, %for.body ]
-  %inc6 = phi i32 [ %nf.promoted, %entry ], [ undef, %for.body ]
+  %inc107 = phi i32 [ 0, %entry ], [ %inc10, %for.body ]
+  %inc6 = phi i32 [ %nf.promoted, %entry ], [ 3, %for.body ]
   %add55 = phi i32 [ %n.promoted, %entry ], [ %add5, %for.body ]
   %.neg2 = sub i32 0, %inc6
   %add.neg = add i32 0, %add55

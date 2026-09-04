@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -x hip -fcuda-is-device -emit-llvm  %s \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -fcuda-is-device -emit-llvm  %s \
 // RUN:   -o - | FileCheck %s
 
 // CHECK: define dso_local amdgpu_kernel void @_Z13shufflekernelv()
@@ -20,7 +20,7 @@
 #define __maybe_undef __attribute__((maybe_undef))
 #define WARP_SIZE 64
 
-static constexpr int warpSize = __AMDGCN_WAVEFRONT_SIZE__;
+static constexpr int warpSize = WARP_SIZE;
 
 __device__ static inline unsigned int __lane_id() {
     return  __builtin_amdgcn_mbcnt_hi(

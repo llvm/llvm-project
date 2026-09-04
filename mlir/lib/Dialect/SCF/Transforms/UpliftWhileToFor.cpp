@@ -189,7 +189,7 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   // dummy builder instead.
   auto emptyBuilder = [](OpBuilder &, Location, Value, ValueRange) {};
   auto newLoop =
-      rewriter.create<scf::ForOp>(loc, lb, ub, step, newArgs, emptyBuilder);
+      scf::ForOp::create(rewriter, loc, lb, ub, step, newArgs, emptyBuilder);
 
   Block *newBody = newLoop.getBody();
 
@@ -236,18 +236,18 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   rewriter.setInsertionPointAfter(newLoop);
   Value one;
   if (isa<IndexType>(step.getType())) {
-    one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   } else {
-    one = rewriter.create<arith::ConstantIntOp>(loc, step.getType(), 1);
+    one = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 1);
   }
 
-  Value stepDec = rewriter.create<arith::SubIOp>(loc, step, one);
-  Value len = rewriter.create<arith::SubIOp>(loc, ub, lb);
-  len = rewriter.create<arith::AddIOp>(loc, len, stepDec);
-  len = rewriter.create<arith::DivSIOp>(loc, len, step);
-  len = rewriter.create<arith::SubIOp>(loc, len, one);
-  Value res = rewriter.create<arith::MulIOp>(loc, len, step);
-  res = rewriter.create<arith::AddIOp>(loc, lb, res);
+  Value stepDec = arith::SubIOp::create(rewriter, loc, step, one);
+  Value len = arith::SubIOp::create(rewriter, loc, ub, lb);
+  len = arith::AddIOp::create(rewriter, loc, len, stepDec);
+  len = arith::DivSIOp::create(rewriter, loc, len, step);
+  len = arith::SubIOp::create(rewriter, loc, len, one);
+  Value res = arith::MulIOp::create(rewriter, loc, len, step);
+  res = arith::AddIOp::create(rewriter, loc, lb, res);
 
   // Reconstruct `scf.while` results, inserting final induction var value
   // into proper place.

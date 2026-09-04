@@ -130,6 +130,45 @@ class Test(unittest.TestCase):
             ],
         )
 
+    def test_stop_at_sha_stops_early(self) -> None:
+        reverts = revert_checker.find_reverts(
+            git_dir=get_llvm_project_path(),
+            # This SHA is a direct child of the reverted SHA expected below.
+            across_ref="2d5f3b0a61fb171617012a2c3ba05fd31fb3bb1d",
+            # This SHA is a direct child of the revert SHA listed below.
+            root="2c01b278580212914ec037bb5dd9b73702dfe7f1",
+            max_pr_lookback=50,
+            # This SHA is the first revert that would be returned, if not for
+            # `stop_at_sha`.
+            stop_at_sha="50866e84d1da8462aeb96607bf6d9e5bbd5869c5",
+        )
+        self.assertEqual(reverts, [])
+
+    def test_stop_at_sha_still_catches_reverts_in_range(self) -> None:
+        reverts = revert_checker.find_reverts(
+            git_dir=get_llvm_project_path(),
+            # This SHA is a direct child of the reverted SHA expected below.
+            across_ref="2d5f3b0a61fb171617012a2c3ba05fd31fb3bb1d",
+            # This SHA is the direct child of the revert mentioned in
+            # `assertEqual` below.
+            root="2c01b278580212914ec037bb5dd9b73702dfe7f1",
+            max_pr_lookback=50,
+            # This SHA is the direct parent of the revert mentioned in
+            # `assertEqual` below.
+            stop_at_sha="b96ebee1fab2b281c97deb54f3d61c469fe07d01",
+        )
+        self.assertEqual(
+            reverts,
+            [
+                revert_checker.Revert(
+                    # This SHA is a `Reverts ${PR}` for #111004.
+                    sha="50866e84d1da8462aeb96607bf6d9e5bbd5869c5",
+                    # ...And this was the commit for #111004.
+                    reverted_sha="67160c5ab5f5b7fd5fa7851abcfde367c8a9f91b",
+                ),
+            ],
+        )
+
     def test_pr_based_revert_works(self) -> None:
         reverts = revert_checker.find_reverts(
             git_dir=get_llvm_project_path(),

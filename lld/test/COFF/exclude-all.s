@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -triple=i686-windows-gnu %s -filetype=obj -o %t.obj
 
-# RUN: lld-link -lldmingw -exclude-all-symbols -dll -out:%t.dll -entry:DllMainCRTStartup@12 %t.obj
+# RUN: lld-link -lldmingw -exclude-all-symbols -dll -out:%t.dll %t.obj
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s -check-prefix=NO-EXPORTS
 
 # NO-EXPORTS-NOT: Name:
@@ -25,7 +25,7 @@ _dataSym:
 
 # RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 #
-# RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -exclude-all-symbols -output-def:%t.def
+# RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -exclude-all-symbols -entry:_DllMainCRTStartup -output-def:%t.def
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=DLLEXPORT %s
 
 # DLLEXPORT: Name: exportfn3

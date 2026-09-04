@@ -57,13 +57,12 @@ static bool isZero(Use &Op) {
 
 static bool isZeroOrOneFP(Value *Op) {
   const APFloat *C;
-  return match(Op, m_APFloat(C)) &&
-         ((C->isZero() && !C->isNegative()) || C->isExactlyValue(1.0));
+  return match(Op, m_APFloat(C)) && (C->isPosZero() || C->isOne());
 }
 
 static bool shouldReduceOperand(Use &Op) {
   Type *Ty = Op->getType();
-  if (Ty->isLabelTy() || Ty->isMetadataTy())
+  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isX86_AMXTy())
     return false;
   // TODO: be more precise about which GEP operands we can reduce (e.g. array
   // indexes)
@@ -73,6 +72,9 @@ static bool shouldReduceOperand(Use &Op) {
     if (&CB->getCalledOperandUse() == &Op)
       return false;
   }
+  // lifetime intrinsic argument must be an alloca.
+  if (isa<LifetimeIntrinsic>(Op.getUser()))
+    return false;
   return true;
 }
 

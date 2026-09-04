@@ -8,7 +8,7 @@ use-after-free errors and suggests avoiding captures or ensuring the lambda
 closure object has a guaranteed lifetime.
 
 This check implements `CP.51
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rcoro-capture>`_
 from the C++ Core Guidelines.
 
 Using coroutine lambdas with non-empty capture lists can be risky, as capturing
@@ -17,9 +17,9 @@ This issue can occur even with refcounted smart pointers and copyable types.
 When a lambda expression creates a coroutine, it results in a closure object
 with storage, which is often on the stack and will eventually go out of scope.
 When the closure object goes out of scope, its captures also go out of scope.
-While normal lambdas finish executing before this happens, coroutine lambdas may
-resume from suspension after the closure object has been destructed, resulting
-in use-after-free memory access for all captures.
+While normal lambdas finish executing before this happens, coroutine lambdas
+may resume from suspension after the closure object has been destructed,
+resulting in use-after-free memory access for all captures.
 
 Consider the following example:
 
@@ -52,3 +52,32 @@ captures or ensuring the lambda closure object has a guaranteed lifetime.
 
 Following these guidelines can help ensure the safe and reliable use of
 coroutine lambdas in C++ code.
+
+Options
+-------
+
+.. option:: AllowExplicitObjectParameters
+
+  When set to `true`, lambda coroutines that use C++23 "deducing this"
+  (explicit object parameter, e.g. ``this auto``) are not flagged by this
+  check, because the captures are moved into the coroutine frame, decoupling
+  their lifetime from the lambda object.
+
+  Default is `false`.
+
+  The example from above can be made safe and will pass this check with the
+  following change:
+
+  .. code-block:: c++
+
+    int value = get_value();
+    std::shared_ptr<Foo> sharedFoo = get_foo();
+    {
+        // Pass "this auto" as the first argument to the lambda
+        const auto lambda = [value, sharedFoo](this auto) -> std::future<void>
+        {
+            co_await something();
+        };
+        lambda();
+    } // the lambda closure object has now gone out of scope, but captures are
+      // no longer coupled to its lifetime

@@ -1,6 +1,9 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -Wno-error=invalid-gnu-asm-cast %s > %t 2>&1
 // RUN: FileCheck --input-file=%t --check-prefix=CHECK %s
 
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c2y -Wno-error=invalid-gnu-asm-cast %s > %t 2>&1
+// RUN: FileCheck --input-file=%t --check-prefixes=CHECK,SINCE-C26 %s
+
 // This file is the C version of cfg.cpp.
 // Tests that are C-specific should go into this file.
 
@@ -118,3 +121,144 @@ void vla_type_indirect(int x) {
   // Do not evaluate x
   void (*fp_vla)(int[x]);
 }
+
+#if __STDC_VERSION__ >= 202400L // If C26 or above
+// SINCE-C26:      int labeled_break_and_continue(int x)
+// SINCE-C26-NEXT:  [B17 (ENTRY)]
+// SINCE-C26-NEXT:    Succs (1): B2
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B1]
+// SINCE-C26-NEXT:    1: 0
+// SINCE-C26-NEXT:    2: return [B1.1];
+// SINCE-C26-NEXT:    Preds (1): B9
+// SINCE-C26-NEXT:    Succs (1): B0
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B2]
+// SINCE-C26-NEXT:   a:
+// SINCE-C26-NEXT:    1: x
+// SINCE-C26-NEXT:    2: [B2.1] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    T: switch [B2.2]
+// SINCE-C26-NEXT:    Preds (1): B17
+// SINCE-C26-NEXT:    Succs (3): B9 B16 B8
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B3]
+// SINCE-C26-NEXT:    1: x
+// SINCE-C26-NEXT:    2: [B3.1] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    3: 2
+// SINCE-C26-NEXT:    4: [B3.2] + [B3.3]
+// SINCE-C26-NEXT:    5: return [B3.4];
+// SINCE-C26-NEXT:    Preds (3): B6 B7 B4
+// SINCE-C26-NEXT:    Succs (1): B0
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B4]
+// SINCE-C26-NEXT:   c:
+// SINCE-C26-NEXT:    1: x
+// SINCE-C26-NEXT:    2: [B4.1] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    T: switch [B4.2]
+// SINCE-C26-NEXT:    Preds (1): B8
+// SINCE-C26-NEXT:    Succs (3): B6 B7 B3
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B5]
+// SINCE-C26-NEXT:    1: x
+// SINCE-C26-NEXT:    2: [B5.1] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    3: 3
+// SINCE-C26-NEXT:    4: [B5.2] + [B5.3]
+// SINCE-C26-NEXT:    5: return [B5.4];
+// SINCE-C26-NEXT:    Succs (1): B0
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B6]
+// SINCE-C26-NEXT:   case 30:
+// SINCE-C26-NEXT:    T: break c;
+// SINCE-C26-NEXT:    Preds (1): B4
+// SINCE-C26-NEXT:    Succs (1): B3
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B7]
+// SINCE-C26-NEXT:   case 10:
+// SINCE-C26-NEXT:    T: break a;
+// SINCE-C26-NEXT:    Preds (1): B4
+// SINCE-C26-NEXT:    Succs (1): B3
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B8]
+// SINCE-C26-NEXT:   default:
+// SINCE-C26-NEXT:    Preds (1): B2
+// SINCE-C26-NEXT:    Succs (1): B4
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B9]
+// SINCE-C26-NEXT:   case 2:
+// SINCE-C26-NEXT:    T: break a;
+// SINCE-C26-NEXT:    Preds (2): B2 B11
+// SINCE-C26-NEXT:    Succs (1): B1
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B10]
+// SINCE-C26-NEXT:    1: 1
+// SINCE-C26-NEXT:    T: do ... while [B10.1]
+// SINCE-C26-NEXT:    Preds (1): B12
+// SINCE-C26-NEXT:    Succs (2): B14 NULL
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B11]
+// SINCE-C26-NEXT:    T: break b;
+// SINCE-C26-NEXT:    Preds (1): B13
+// SINCE-C26-NEXT:    Succs (1): B9
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B12]
+// SINCE-C26-NEXT:    1: x
+// SINCE-C26-NEXT:    2: ++[B12.1]
+// SINCE-C26-NEXT:    T: continue b;
+// SINCE-C26-NEXT:    Preds (1): B13
+// SINCE-C26-NEXT:    Succs (1): B10
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B13]
+// SINCE-C26-NEXT:    1: x
+// SINCE-C26-NEXT:    2: [B13.1] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    3: x
+// SINCE-C26-NEXT:    4: [B13.3] (ImplicitCastExpr, LValueToRValue, int)
+// SINCE-C26-NEXT:    5: [B13.2] * [B13.4]
+// SINCE-C26-NEXT:    6: 100
+// SINCE-C26-NEXT:    7: [B13.5] > [B13.6]
+// SINCE-C26-NEXT:    T: if [B13.7]
+// SINCE-C26-NEXT:    Preds (2): B14 B15
+// SINCE-C26-NEXT:    Succs (2): B12 B11
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B14]
+// SINCE-C26-NEXT:    Preds (1): B10
+// SINCE-C26-NEXT:    Succs (1): B13
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B15]
+// SINCE-C26-NEXT:   b:
+// SINCE-C26-NEXT:    Preds (1): B16
+// SINCE-C26-NEXT:    Succs (1): B13
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B16]
+// SINCE-C26-NEXT:   case 1:
+// SINCE-C26-NEXT:    Preds (1): B2
+// SINCE-C26-NEXT:    Succs (1): B15
+// SINCE-C26-EMPTY:
+// SINCE-C26-NEXT:  [B0 (EXIT)]
+// SINCE-C26-NEXT:    Preds (3): B1 B3 B5
+int labeled_break_and_continue(int x) {
+  a: switch (x) {
+    case 1:
+      b: do {
+        if (x * x > 100) {
+          ++x;
+          continue b;
+        }
+        break b;
+      } while (1);
+    case 2:
+      break a;
+    default:
+    c: switch (x) {
+      case 10:
+        break a;
+      case 30:
+        break c;
+      return x + 3; // dead code
+    }
+    return x + 2;
+  }
+
+  return 0;
+}
+
+#endif // __STDC_VERSION__ >= 202400L // If C26 or above

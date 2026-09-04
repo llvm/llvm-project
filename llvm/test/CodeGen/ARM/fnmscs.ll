@@ -13,11 +13,11 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 -regalloc=basic %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=A8
 
-; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --enable-unsafe-fp-math %s -o - \
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --denormal-fp-math=preserve-sign %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=A8U
 
 ; RUN: llc -mtriple=arm-darwin -mcpu=cortex-a8 %s -o - \
-; RUN:  | FileCheck %s -check-prefix=A8U
+; RUN:  | FileCheck %s -check-prefix=A8U-DARWIN
 
 define float @t1(float %acc, float %a, float %b) nounwind {
 entry:
@@ -31,15 +31,20 @@ entry:
 ; NEON: vnmla.f32
 
 ; A8U-LABEL: t1:
-; A8U: vnmul.f32 s{{[0-9]}}, s{{[0-9]}}, s{{[0-9]}}
-; A8U: vsub.f32 d{{[0-9]}}, d{{[0-9]}}, d{{[0-9]}}
+; A8U: vmov.i32	d{{[0-9]+}}, #0x80000000
+; A8U: vsub.f32	d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+; A8U: vsub.f32 d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+
+; A8U-DARWIN-LABEL: t1:
+; A8U-DARWIN: vnmul.f32 s{{[0-9]}}, s{{[0-9]}}, s{{[0-9]}}
+; A8U-DARWIN: vsub.f32 d{{[0-9]}}, d{{[0-9]}}, d{{[0-9]}}
 
 ; A8-LABEL: t1:
 ; A8: vnmul.f32 s{{[0-9]}}, s{{[0-9]}}, s{{[0-9]}}
 ; A8: vsub.f32 s{{[0-9]}}, s{{[0-9]}}, s{{[0-9]}}
 	%0 = fmul float %a, %b
 	%1 = fsub float -0.0, %0
-        %2 = fsub float %1, %acc
+	%2 = fsub float %1, %acc
 	ret float %2
 }
 
@@ -55,8 +60,13 @@ entry:
 ; NEON: vnmla.f32
 
 ; A8U-LABEL: t2:
-; A8U: vnmul.f32 s{{[01234]}}, s{{[01234]}}, s{{[01234]}}
-; A8U: vsub.f32 d{{[0-9]}}, d{{[0-9]}}, d{{[0-9]}}
+; A8U: vmov.i32	d{{[0-9]+}}, #0x80000000
+; A8U: vsub.f32	d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+; A8U: vsub.f32 d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+
+; A8U-DARWIN-LABEL: t2:
+; A8U-DARWIN: vnmul.f32 s{{[01234]}}, s{{[01234]}}, s{{[01234]}}
+; A8U-DARWIN: vsub.f32 d{{[0-9]}}, d{{[0-9]}}, d{{[0-9]}}
 
 ; A8-LABEL: t2:
 ; A8: vnmul.f32 s{{[01234]}}, s{{[01234]}}, s{{[01234]}}
@@ -79,8 +89,12 @@ entry:
 ; NEON: vnmla.f64
 
 ; A8U-LABEL: t3:
-; A8U: vnmul.f64 d
 ; A8U: vsub.f64 d
+; A8U: vsub.f64 d
+
+; A8U-DARWIN-LABEL: t3:
+; A8U-DARWIN: vnmul.f64 d
+; A8U-DARWIN: vsub.f64 d
 
 ; A8-LABEL: t3:
 ; A8: vnmul.f64 d
@@ -103,8 +117,12 @@ entry:
 ; NEON: vnmla.f64
 
 ; A8U-LABEL: t4:
-; A8U: vnmul.f64 d
 ; A8U: vsub.f64 d
+; A8U: vsub.f64 d
+
+; A8U-DARWIN-LABEL: t4:
+; A8U-DARWIN: vnmul.f64 d
+; A8U-DARWIN: vsub.f64 d
 
 ; A8-LABEL: t4:
 ; A8: vnmul.f64 d

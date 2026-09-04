@@ -1,5 +1,6 @@
-; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -mtriple=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -mcpu=v3 -filetype=obj -o %t1 %s
+; RUN: llvm-objcopy --dump-section='.BTF'=%t2 %t1
+; RUN: %python %p/print_btf.py %t2 | FileCheck -check-prefixes=CHECK-BTF %s
 ;
 ; Source code:
 ;   struct key_type {
@@ -13,36 +14,13 @@
 
 @hash_map = dso_local local_unnamed_addr constant %struct.key_type zeroinitializer, section ".maps", align 4, !dbg !0
 
-; CHECK:             .long   1                               # BTF_KIND_INT(id = 1)
-; CHECK-NEXT:        .long   16777216                        # 0x1000000
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   16777248                        # 0x1000020
-; CHECK-NEXT:        .long   0                               # BTF_KIND_CONST(id = 2)
-; CHECK-NEXT:        .long   167772160                       # 0xa000000
-; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   5                               # BTF_KIND_STRUCT(id = 3)
-; CHECK-NEXT:        .long   67108865                        # 0x4000001
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   14
-; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   0                               # 0x0
-; CHECK-NEXT:        .long   17                              # BTF_KIND_VAR(id = 4)
-; CHECK-NEXT:        .long   234881024                       # 0xe000000
-; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   26                              # BTF_KIND_DATASEC(id = 5)
-; CHECK-NEXT:        .long   251658241                       # 0xf000001
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   hash_map
-; CHECK-NEXT:        .long   4
-
-; CHECK:             .ascii  "int"                           # string offset=1
-; CHECK:             .ascii  "key_type"                      # string offset=5
-; CHECK:             .ascii  "a1"                            # string offset=14
-; CHECK:             .ascii  "hash_map"                      # string offset=17
-; CHECK:             .ascii  ".maps"                         # string offset=26
-
+; CHECK-BTF: [1] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+; CHECK-BTF-NEXT: [2] STRUCT 'key_type' size=4 vlen=1
+; CHECK-BTF-NEXT:         'a1' type_id=1 bits_offset=0
+; CHECK-BTF-NEXT: [3] CONST '(anon)' type_id=2
+; CHECK-BTF-NEXT: [4] VAR 'hash_map' type_id=3, linkage=global
+; CHECK-BTF-NEXT: [5] DATASEC '.maps' size=0 vlen=1
+; CHECK-BTF-NEXT:         type_id=4 offset=0 size=4
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!11, !12, !13}

@@ -256,3 +256,19 @@ func.func @constants(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "distinct_objects"
+// CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
+
+// CHECK-DAG: distinct#0 <-> distinct#1: NoAlias
+// CHECK-DAG: distinct#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: distinct#1 <-> func.region0#0: MayAlias
+// CHECK-DAG: distinct#0 <-> func.region0#1: MayAlias
+// CHECK-DAG: distinct#1 <-> func.region0#1: MustAlias
+
+func.func @distinct_objects(%arg: memref<?xf32>, %arg1: memref<?xf32>) attributes {test.ptr = "func"} {
+  %0, %1 = memref.distinct_objects %arg, %arg1 {test.ptr = "distinct"} : memref<?xf32>, memref<?xf32>
+  return
+}

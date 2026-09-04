@@ -143,8 +143,8 @@ private:
 };
 
 /// Erases `executeOp` and returns a clone with additional `results`.
-async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
-                                   ValueRange results) {
+static async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
+                                          ValueRange results) {
   // Add values to async.yield op.
   Operation *yieldOp = executeOp.getBody()->getTerminator();
   yieldOp->insertOperands(yieldOp->getNumOperands(), results);
@@ -243,7 +243,7 @@ private:
     SmallVector<Value, 1> tokens;
     tokens.reserve(asyncTokens.size());
     TypeSwitch<Operation *>(op)
-        .Case<async::AwaitOp>([&](auto awaitOp) {
+        .Case([&](async::AwaitOp awaitOp) {
           // Add async.await ops to wait for the !gpu.async.tokens.
           builder.setInsertionPointAfter(op);
           for (auto asyncToken : asyncTokens)
@@ -252,7 +252,7 @@ private:
           // Set `it` after the inserted async.await ops.
           it = builder.getInsertionPoint();
         })
-        .Case<async::ExecuteOp>([&](auto executeOp) {
+        .Case([&](async::ExecuteOp executeOp) {
           // Set `it` to the beginning of the region and add asyncTokens to the
           // async.execute operands.
           it = executeOp.getBody()->begin();

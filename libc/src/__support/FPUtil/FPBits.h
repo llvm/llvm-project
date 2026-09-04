@@ -15,18 +15,17 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_NATIVE_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
 #include "src/__support/sign.h"                    // Sign
 #include "src/__support/uint128.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -790,28 +789,35 @@ struct FPRep : public FPRepImpl<fp_type, FPRep<fp_type>> {
 // Returns the FPType corresponding to C++ type T on the host.
 template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   using UnqualT = cpp::remove_cv_t<T>;
-  if constexpr (cpp::is_same_v<UnqualT, float> && __FLT_MANT_DIG__ == 24)
+  if constexpr (cpp::is_same_v<UnqualT, float> && FLT_MANT_DIG == 24)
     return FPType::IEEE754_Binary32;
-  else if constexpr (cpp::is_same_v<UnqualT, double> && __DBL_MANT_DIG__ == 53)
+  else if constexpr (cpp::is_same_v<UnqualT, double> && DBL_MANT_DIG == 53)
     return FPType::IEEE754_Binary64;
   else if constexpr (cpp::is_same_v<UnqualT, long double>) {
-    if constexpr (__LDBL_MANT_DIG__ == 53)
-      return FPType::IEEE754_Binary64;
-    else if constexpr (__LDBL_MANT_DIG__ == 64)
-      return FPType::X86_Binary80;
-    else if constexpr (__LDBL_MANT_DIG__ == 113)
-      return FPType::IEEE754_Binary128;
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
+    return FPType::IEEE754_Binary64;
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+    return FPType::X86_Binary80;
+#else
+    // TODO: properly treat double-double type.
+    // #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
+    return FPType::IEEE754_Binary128;
+#endif
   }
 #if defined(LIBC_TYPES_HAS_FLOAT16)
   else if constexpr (cpp::is_same_v<UnqualT, float16>)
     return FPType::IEEE754_Binary16;
 #endif
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   else if constexpr (cpp::is_same_v<UnqualT, float128>)
     return FPType::IEEE754_Binary128;
 #endif
   else if constexpr (cpp::is_same_v<UnqualT, bfloat16>)
     return FPType::BFloat16;
+  else if constexpr (cpp::is_same_v<UnqualT, Float128>)
+    return FPType::IEEE754_Binary128;
+  else if constexpr (cpp::is_same_v<UnqualT, Float80>)
+    return FPType::X86_Binary80;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
@@ -834,21 +840,22 @@ struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
   // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
 
-  template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
-    using Unqual = typename cpp::remove_cv_t<XType>;
-    if constexpr (cpp::is_same_v<Unqual, T>) {
-      UP::bits = cpp::bit_cast<StorageType>(x);
-    } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
-      UP::bits = x;
-    } else {
-      // We don't want accidental type promotions/conversions, so we require
-      // exact type match.
-      static_assert(cpp::always_false<XType>);
-    }
+  template <
+      typename XType,
+      cpp::enable_if_t<cpp::is_same_v<cpp::remove_cv_t<XType>, T>, int> = 0>
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR explicit FPBits(XType x) {
+    UP::bits = cpp::bit_cast<StorageType>(x);
   }
 
+  template <typename XType,
+            cpp::enable_if_t<
+                cpp::is_same_v<cpp::remove_cv_t<XType>, StorageType>, int> = 0>
+  LIBC_INLINE constexpr explicit FPBits(XType x) : UP(x) {}
+
   // Floating-point conversions.
-  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(UP::bits); }
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR T get_val() const {
+    return cpp::bit_cast<T>(UP::bits);
+  }
 };
 
 } // namespace fputil

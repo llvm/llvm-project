@@ -1,4 +1,4 @@
-//===--- PreferStaticOverAnonymousNamespaceCheck.cpp - clang-tidy ---------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,9 +24,9 @@ AST_MATCHER(VarDecl, isLocalVariable) { return Node.isLocalVarDecl(); }
 AST_MATCHER(Decl, isLexicallyInAnonymousNamespace) {
   for (const DeclContext *DC = Node.getLexicalDeclContext(); DC != nullptr;
        DC = DC->getLexicalParent()) {
-    if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
-      if (ND->isAnonymousNamespace())
-        return true;
+    if (const auto *ND = dyn_cast<NamespaceDecl>(DC);
+        ND && ND->isAnonymousNamespace())
+      return true;
   }
 
   return false;
@@ -52,8 +52,7 @@ void PreferStaticOverAnonymousNamespaceCheck::storeOptions(
 void PreferStaticOverAnonymousNamespaceCheck::registerMatchers(
     MatchFinder *Finder) {
   const auto IsDefinitionInAnonymousNamespace = allOf(
-      unless(isExpansionInSystemHeader()), isLexicallyInAnonymousNamespace(),
-      unless(isInMacro()), isDefinition());
+      isLexicallyInAnonymousNamespace(), unless(isInMacro()), isDefinition());
 
   if (AllowMemberFunctionsInClass) {
     Finder->addMatcher(
@@ -77,7 +76,6 @@ void PreferStaticOverAnonymousNamespaceCheck::registerMatchers(
 
 void PreferStaticOverAnonymousNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   if (const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("function")) {
     if (Func->isCXXClassMember())
       diag(Func->getLocation(),

@@ -264,7 +264,7 @@ int includeFixerMain(int argc, const char **argv) {
   auto ExpectedParser =
       tooling::CommonOptionsParser::create(argc, argv, IncludeFixerCategory);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   tooling::CommonOptionsParser &options = ExpectedParser.get();
@@ -454,7 +454,7 @@ int includeFixerMain(int argc, const char **argv) {
 
   // Set up a new source manager for applying the resulting replacements.
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diagnostics(new DiagnosticIDs, DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
   TextDiagnosticPrinter DiagnosticPrinter(outs(), DiagOpts);
   SourceManager SM(Diagnostics, tool.getFiles());
   Diagnostics.setClient(&DiagnosticPrinter, false);

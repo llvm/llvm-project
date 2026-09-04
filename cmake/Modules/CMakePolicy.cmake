@@ -41,3 +41,15 @@ if(POLICY CMP0156)
     cmake_policy(SET CMP0179 NEW)
   endif()
 endif()
+
+# CMP0182: Create shared library archives by default on AIX.
+# New in CMake 4.0: https://cmake.org/cmake/help/latest/policy/CMP0182.html
+if(POLICY CMP0182)
+  cmake_policy(SET CMP0182 NEW)
+endif()
+
+# CMP0164: add_library(... SHARED ...) fails on platforms that do not support
+# shared libraries, instead of silently building a static library.
+if(POLICY CMP0164)
+  cmake_policy(SET CMP0164 NEW)
+endif()

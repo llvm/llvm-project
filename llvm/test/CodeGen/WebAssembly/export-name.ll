@@ -12,5 +12,5 @@ declare void @test2() #1
 attributes #0 = { "wasm-export-name"="foo" }
 attributes #1 = { "wasm-export-name"="bar" }
 
-; CHECK: .export_name test, foo
-; CHECK: .export_name test2, bar
+; CHECK: .export_name test, "foo"
+; CHECK: .export_name test2, "bar"

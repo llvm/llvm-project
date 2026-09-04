@@ -16,7 +16,7 @@ namespace llvm {
 /// This implementation is used for SystemZ ELF targets.
 class SystemZELFTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
-  SystemZELFTargetObjectFile() {}
+  SystemZELFTargetObjectFile() = default;
 
   /// Describe a TLS variable address within debug info.
   const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;

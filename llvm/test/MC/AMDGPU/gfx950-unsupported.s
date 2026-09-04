@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 %s 2>&1 | FileCheck -check-prefix=ERR %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck -check-prefix=W32-ERR %s
+// RUN: not llvm-mc -triple=amdgpu9.50 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgpu9.50 -mattr=+wavefrontsize32,-wavefrontsize64 %s -filetype=null 2>&1 | FileCheck -check-prefix=W32-ERR %s
 
 //===----------------------------------------------------------------------===//
 // v_mfma_f32_32x32x4_xf32
@@ -183,7 +183,7 @@ v_mfma_f32_16x16x8_xf32 v[0:3], a[0:3], a[0:3], v[4:7]
 // ds_read_b64_tr_b4
 //===----------------------------------------------------------------------===//
 ds_read_b64_tr_b4 v[1:2], v0
-// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_read_b64_tr_b4 v1, v0
@@ -202,7 +202,7 @@ ds_read_b64_tr_b4 v[2:3], v2 offset:-64
 //ds_read_b64_tr_b8
 //===----------------------------------------------------------------------===//
 ds_read_b64_tr_b8 v[1:2], v0
-// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_read_b64_tr_b8 v1, v0
@@ -221,7 +221,7 @@ ds_read_b64_tr_b8 v[2:3], v2 offset:-64
 // ds_read_b64_tr_b16
 //===----------------------------------------------------------------------===//
 ds_read_b64_tr_b16 v[1:2], v0
-// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_read_b64_tr_b16 v1, v0
@@ -249,4 +249,12 @@ ds_read_b96_tr_b6 v[0:3], s0
 
 ds_read_b96_tr_b6 v[2:4], v2 offset:-64
 // ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 16-bit unsigned offset
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+//===----------------------------------------------------------------------===//
+// v_cvt_sr_pk_bf16_f32 was only added for gfx1250, not gfx950.
+//===----------------------------------------------------------------------===//
+
+v_cvt_sr_pk_bf16_f32 v0, v1, v2, s3
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

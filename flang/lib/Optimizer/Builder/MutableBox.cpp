@@ -67,7 +67,7 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
       cleanedLengths.append(lengths.begin(), lengths.end());
   } else if (fir::isUnlimitedPolymorphicType(box.getBoxTy())) {
     if (auto charTy = mlir::dyn_cast<fir::CharacterType>(
-            fir::dyn_cast_ptrEleTy(addr.getType()))) {
+            fir::getFortranElementType(addr.getType()))) {
       if (charTy.getLen() == fir::CharacterType::unknownLen())
         cleanedLengths.append(lengths.begin(), lengths.end());
     }
@@ -603,21 +603,23 @@ void fir::factory::associateMutableBoxWithRemap(
     mlir::ValueRange lbounds, mlir::ValueRange ubounds) {
   // Compute new extents
   llvm::SmallVector<mlir::Value> extents;
-  auto idxTy = builder.getIndexType();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   if (!lbounds.empty()) {
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
     for (auto [lb, ub] : llvm::zip(lbounds, ubounds)) {
-      auto lbi = builder.createConvert(loc, idxTy, lb);
-      auto ubi = builder.createConvert(loc, idxTy, ub);
-      auto diff = mlir::arith::SubIOp::create(builder, loc, idxTy, ubi, lbi);
+
+      mlir::Value lbi = builder.createConvert(loc, idxTy, lb);
+      mlir::Value ubi = builder.createConvert(loc, idxTy, ub);
       extents.emplace_back(
-          mlir::arith::AddIOp::create(builder, loc, idxTy, diff, one));
+          fir::factory::computeExtent(builder, loc, lbi, ubi, zero, one));
     }
   } else {
     // lbounds are default. Upper bounds and extents are the same.
-    for (auto ub : ubounds) {
-      auto cast = builder.createConvert(loc, idxTy, ub);
-      extents.emplace_back(cast);
+    for (mlir::Value ub : ubounds) {
+      mlir::Value cast = builder.createConvert(loc, idxTy, ub);
+      extents.emplace_back(
+          fir::factory::genMaxWithZero(builder, loc, cast, zero));
     }
   }
   const auto newRank = extents.size();
@@ -751,6 +753,9 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
   auto lengths = getNewLengths(builder, loc, box, lenParams);
   auto newStorage = fir::AllocMemOp::create(builder, loc, box.getBaseTy(),
                                             allocName, lengths, extents);
+
+  if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
+    newStorage.setAlignment(fir::defaultArrayGlobalAlignment);
   if (mlir::isa<fir::RecordType>(box.getEleTy())) {
     // TODO: skip runtime initialization if this is not required. Currently,
     // there is no way to know here if a derived type needs it or not. But the
@@ -774,6 +779,9 @@ void fir::factory::genInlinedAllocation(
     safeExtents.push_back(fir::factory::genMaxWithZero(builder, loc, extent));
   auto heap = fir::AllocMemOp::create(builder, loc, box.getBaseTy(), allocName,
                                       lengths, safeExtents);
+
+  if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
+    heap.setAlignment(fir::defaultArrayGlobalAlignment);
   MutablePropertyWriter{builder, loc, box}.updateMutableBox(
       heap, lbounds, safeExtents, lengths);
   if (mlir::isa<fir::RecordType>(box.getEleTy())) {

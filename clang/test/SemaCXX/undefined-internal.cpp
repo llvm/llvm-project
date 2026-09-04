@@ -227,7 +227,7 @@ namespace test7 {
 
 namespace test8 {
   typedef struct {
-    void bar(); // expected-warning {{function 'test8::(anonymous struct)::bar' has internal linkage but is not defined}}
+    void bar(); // expected-warning {{function 'test8::(unnamed struct)::bar' has internal linkage but is not defined}}
     void foo() {
       bar(); // expected-note {{used here}}
     }

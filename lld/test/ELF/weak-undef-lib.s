@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
-# RUN: echo -e '.globl foo\nfoo: ret' | \
+# RUN: printf '.globl foo\nfoo: ret' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64-pc-linux - -o %t2.o
 
 # RUN: ld.lld -shared -o %t.so %t1.o --start-lib %t2.o
@@ -32,6 +32,12 @@
 # CHECK-U-SAME:          Global
 # CHECK-U:      Section:
 # CHECK-U-SAME:          .text
+
+## When the definition is not available, the error references the object file,
+## not <internal>.
+# RUN: not ld.lld -u foo %t1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-UERR
+# CHECK-UERR:      error: undefined symbol: foo
+# CHECK-UERR-NEXT: >>> referenced by {{.*}}1.o
 
 .weak foo
 call foo@PLT

@@ -25,15 +25,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _CharT, class _Traits>
 class istreambuf_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<input_iterator_tag, _CharT, typename _Traits::off_type, _CharT*, _CharT>
-#endif
-{
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-
+    : public __iterator_base<istreambuf_iterator<_CharT, _Traits>,
+                             input_iterator_tag,
+                             _CharT,
+                             typename _Traits::off_type,
+                             _CharT*,
+                             _CharT> {
 public:
   typedef input_iterator_tag iterator_category;
   typedef _CharT value_type;
@@ -74,14 +73,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(const __proxy& __p) _NOEXCEPT : __sbuf_(__p.__sbuf_) {}
 
-  _LIBCPP_HIDE_FROM_ABI char_type operator*() const { return static_cast<char_type>(__sbuf_->sgetc()); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type operator*() const {
+    return static_cast<char_type>(__sbuf_->sgetc());
+  }
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator& operator++() {
     __sbuf_->sbumpc();
     return *this;
   }
   _LIBCPP_HIDE_FROM_ABI __proxy operator++(int) { return __proxy(__sbuf_->sbumpc(), __sbuf_); }
 
-  _LIBCPP_HIDE_FROM_ABI bool equal(const istreambuf_iterator& __b) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool equal(const istreambuf_iterator& __b) const {
     return __test_for_eof() == __b.__test_for_eof();
   }
 

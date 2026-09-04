@@ -113,8 +113,7 @@ static Match tensorMatch(TensorId tid) { return Match(tid); }
 static Match synZeroMatch() { return Match(); }
 
 #define IMPL_BINOP_PATTERN(OP, KIND)                                           \
-  LLVM_ATTRIBUTE_UNUSED static Match OP##Match(const Match &e0,                \
-                                               const Match &e1) {              \
+  [[maybe_unused]] static Match OP##Match(const Match &e0, const Match &e1) {  \
     return Match(KIND, e0, e1);                                                \
   }
 FOREVERY_BINOP(IMPL_BINOP_PATTERN)
@@ -124,7 +123,7 @@ FOREVERY_BINOP(IMPL_BINOP_PATTERN)
 class MergerTestBase : public ::testing::TestWithParam<LevelFormat> {
 protected:
   MergerTestBase(unsigned numTensors, unsigned numLoops)
-      : merger(numTensors, numLoops, /*maxRank=*/numLoops) {
+      : merger(numTensors, numLoops, /*maxLvlRank=*/numLoops) {
     tensors.reserve(numTensors);
     for (unsigned t = 0; t < numTensors; t++)
       tensors.push_back(merger.addTensorExp(tid(t)));
@@ -142,7 +141,7 @@ protected:
   }
 
 #define IMPL_BINOP_EXPR(OP, KIND)                                              \
-  LLVM_ATTRIBUTE_UNUSED ExprId OP##Expr(ExprId e0, ExprId e1) {                \
+  [[maybe_unused]] ExprId OP##Expr(ExprId e0, ExprId e1) {                     \
     return merger.addExp(KIND, e0, e1);                                        \
   }
   FOREVERY_BINOP(IMPL_BINOP_EXPR)

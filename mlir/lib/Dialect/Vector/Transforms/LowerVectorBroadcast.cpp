@@ -28,10 +28,13 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
-/// Progressive lowering of BroadcastOp.
+
+/// Convert a vector.broadcast with a vector operand to a lower rank
+/// vector.broadcast. vector.broadcast with a scalar operand is expected to be
+/// convertible to the lower level target dialect (LLVM, SPIR-V, etc.) directly.
 class BroadcastOpLowering : public OpRewritePattern<vector::BroadcastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BroadcastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -40,20 +43,22 @@ public:
     VectorType srcType = dyn_cast<VectorType>(op.getSourceType());
     Type eltType = dstType.getElementType();
 
-    // Scalar to any vector can use splat.
-    if (!srcType) {
-      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, op.getSource());
-      return success();
-    }
+    // A broadcast from a scalar is considered to be in the lowered form.
+    if (!srcType)
+      return rewriter.notifyMatchFailure(
+          op, "broadcast from scalar already in lowered form");
 
     // Determine rank of source and destination.
     int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
 
-    // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
-    if (srcRank <= 1 && dstRank == 1) {
-      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource());
-      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);
+    // Single-element fixed-size source: extract the scalar and broadcast it.
+    if (srcType.getNumElements() == 1 && !srcType.isScalable()) {
+      SmallVector<int64_t> fullRankPosition(srcRank, 0);
+      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(),
+                                            fullRankPosition);
+      assert(!isa<VectorType>(ext.getType()) && "expected scalar");
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, dstType, ext);
       return success();
     }
 
@@ -68,6 +73,10 @@ public:
     //   %x = [%b,%b,%b,%b] : n-D
     if (srcRank < dstRank) {
       // Duplication.
+      if (dstType.getScalableDims()[0])
+        return rewriter.notifyMatchFailure(
+            op, "Vector broadcasting over a scalable dimension is not "
+                "currently supported");
       VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
           vector::BroadcastOp::create(rewriter, loc, resType, op.getSource());
@@ -111,6 +120,16 @@ public:
     VectorType resType =
         VectorType::get(dstType.getShape().drop_front(), eltType,
                         dstType.getScalableDims().drop_front());
+
+    // For "stretch not at start" with a scalable outer dimension we would need
+    // to emit an scf.for loop, which is not yet supported.  Check before
+    // creating any IR so that returning failure() does not violate the pattern
+    // API contract.
+    if (m != 0 && dstType.getScalableDims()[0]) {
+      // TODO: For scalable vectors we should emit an scf.for loop.
+      return failure();
+    }
+
     Value result = ub::PoisonOp::create(rewriter, loc, dstType);
     if (m == 0) {
       // Stetch at start.
@@ -120,10 +139,6 @@ public:
         result = vector::InsertOp::create(rewriter, loc, bcst, result, d);
     } else {
       // Stetch not at start.
-      if (dstType.getScalableDims()[0]) {
-        // TODO: For scalable vectors we should emit an scf.for loop.
-        return failure();
-      }
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d) {
         Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(), d);
         Value bcst = vector::BroadcastOp::create(rewriter, loc, resType, ext);

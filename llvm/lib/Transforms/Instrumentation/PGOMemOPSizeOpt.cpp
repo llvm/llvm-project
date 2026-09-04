@@ -54,6 +54,8 @@ using namespace llvm;
 STATISTIC(NumOfPGOMemOPOpt, "Number of memop intrinsics optimized.");
 STATISTIC(NumOfPGOMemOPAnnotate, "Number of memop intrinsics annotated.");
 
+namespace llvm {
+
 // The minimum call count to optimize memory intrinsic calls.
 static cl::opt<unsigned>
     MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::init(1000),
@@ -92,6 +94,8 @@ cl::opt<bool>
 static cl::opt<unsigned>
     MemOpMaxOptSize("memop-value-prof-max-opt-size", cl::Hidden, cl::init(128),
                     cl::desc("Optimize the memop size <= this value"));
+
+} // end namespace llvm
 
 namespace {
 
@@ -142,31 +146,19 @@ struct MemOp {
     return false;
   }
   bool isMemcmp(TargetLibraryInfo &TLI) {
-    LibFunc Func;
-    if (asMI() == nullptr && TLI.getLibFunc(*asCI(), Func) &&
-        Func == LibFunc_memcmp) {
-      return true;
-    }
-    return false;
+    return asMI() == nullptr && TLI.getLibFunc(*asCI()) == LibFunc_memcmp;
   }
   bool isBcmp(TargetLibraryInfo &TLI) {
-    LibFunc Func;
-    if (asMI() == nullptr && TLI.getLibFunc(*asCI(), Func) &&
-        Func == LibFunc_bcmp) {
-      return true;
-    }
-    return false;
+    return asMI() == nullptr && TLI.getLibFunc(*asCI()) == LibFunc_bcmp;
   }
   const char *getName(TargetLibraryInfo &TLI) {
     if (auto MI = asMI())
       return getMIName(MI);
-    LibFunc Func;
-    if (TLI.getLibFunc(*asCI(), Func)) {
-      if (Func == LibFunc_memcmp)
-        return "memcmp";
-      if (Func == LibFunc_bcmp)
-        return "bcmp";
-    }
+    LibFunc Func = TLI.getLibFunc(*asCI());
+    if (Func == LibFunc_memcmp)
+      return "memcmp";
+    if (Func == LibFunc_bcmp)
+      return "bcmp";
     llvm_unreachable("Must be MemIntrinsic or memcmp/bcmp CallInst");
     return nullptr;
   }
@@ -203,9 +195,8 @@ public:
   }
 
   void visitCallInst(CallInst &CI) {
-    LibFunc Func;
-    if (TLI.getLibFunc(CI, Func) &&
-        (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
+    LibFunc Func = TLI.getLibFunc(CI);
+    if ((Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
         !isa<ConstantInt>(CI.getArgOperand(2))) {
       WorkList.push_back(MemOp(&CI));
     }
@@ -286,7 +277,6 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   uint64_t SavedRemainCount = SavedTotalCount;
   SmallVector<uint64_t, 16> SizeIds;
   SmallVector<uint64_t, 16> CaseCounts;
-  SmallDenseSet<uint64_t, 16> SeenSizeId;
   uint64_t MaxCount = 0;
   unsigned Version = 0;
   // Default case is in the front -- save the slot here.
@@ -309,12 +299,6 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     if (!isProfitable(C, RemainCount)) {
       RemainingVDs.insert(RemainingVDs.end(), I, E);
       break;
-    }
-
-    if (!SeenSizeId.insert(V).second) {
-      errs() << "warning: Invalid Profile Data in Function " << Func.getName()
-             << ": Two identical values in MemOp value counts.\n";
-      return false;
     }
 
     SizeIds.push_back(V);
@@ -432,7 +416,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   Updates.clear();
 
   if (MaxCount)
-    setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
+    setProfMetadata(SI, CaseCounts, MaxCount);
 
   LLVM_DEBUG(dbgs() << *BB << "\n");
   LLVM_DEBUG(dbgs() << *DefaultBB << "\n");
@@ -456,7 +440,7 @@ static bool PGOMemOPSizeOptImpl(Function &F, BlockFrequencyInfo &BFI,
   if (DisableMemOPOPT)
     return false;
 
-  if (F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (F.hasOptSize())
     return false;
   MemOPSizeOpt MemOPSizeOpt(F, BFI, ORE, DT, TLI);
   MemOPSizeOpt.perform();

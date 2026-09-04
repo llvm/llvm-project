@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu x86-64 -o - |FileCheck %s --check-prefix SSE
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu x86-64 -o - | FileCheck %s --check-prefixes=CHECK,SSE
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu skylake -D AVX -o - | FileCheck %s --check-prefixes AVX,SSE
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu skylake-avx512 -D AVX512 -D AVX -o - | FileCheck %s --check-prefixes AVX512,AVX,SSE
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -target-cpu knl -D AVX -D AVX512 -o - | FileCheck %s --check-prefixes AVX512,AVX,SSE
@@ -54,12 +54,20 @@ __m512 testZMM0(void) {
   return zmm0;
 }
 
+// CHECK-LABEL: test_a_p(
+// CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(ptr %0)
+// CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(i32 %add)
+void test_a_p(int *ptr, int i) {
+  asm("lea %a0, %%eax" :: "p"(ptr) : "eax");
+  asm("lea %a0, %%eax" :: "p"(0x1480 + i * 8) : "eax");
+}
+
 extern int var, arr[4];
 struct Pair { int a, b; } pair;
 
 // CHECK-LABEL: test_Ws(
-// CHECK:         call void asm sideeffect "// ${0:p} ${1:p} ${2:p}", "^Ws,^Ws,^Ws,~{dirflag},~{fpsr},~{flags}"(ptr @var, ptr getelementptr inbounds ([4 x i32], ptr @arr, i64 0, i64 3), ptr @test_Ws)
-// CHECK:         call void asm sideeffect "// $0", "^Ws,~{dirflag},~{fpsr},~{flags}"(ptr getelementptr inbounds (%struct.Pair, ptr @pair, i32 0, i32 1))
+// CHECK:         call void asm sideeffect "// ${0:p} ${1:p} ${2:p}", "^Ws,^Ws,^Ws,~{dirflag},~{fpsr},~{flags}"(ptr @var, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 12), ptr @test_Ws)
+// CHECK:         call void asm sideeffect "// $0", "^Ws,~{dirflag},~{fpsr},~{flags}"(ptr getelementptr inbounds nuw (i8, ptr @pair, i64 4))
 void test_Ws(void) {
   asm("// %p0 %p1 %p2" :: "Ws"(&var), "Ws"(&arr[3]), "Ws"(test_Ws));
   asm("// %0" :: "Ws"(&pair.b));

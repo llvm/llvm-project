@@ -32,14 +32,14 @@ void test2(struct fam_struct *ptr, int idx) {
 }
 
 void test3(struct fam_struct *ptr, int idx) {
-  __builtin_counted_by_ref(&ptr->array[0]);                         // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(&ptr->array[idx]);                       // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(&ptr->array);                            // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(ptr->x);                                 // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(&ptr->x);                                // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(global_array);                           // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(global_int);                             // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  __builtin_counted_by_ref(&global_int);                            // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  __builtin_counted_by_ref(&ptr->array[0]);                         // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(&ptr->array[idx]);                       // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(&ptr->array);                            // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(ptr->x);                                 // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(&ptr->x);                                // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(global_array);                           // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(global_int);                             // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(&global_int);                            // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
 }
 
 void test4(struct fam_struct *ptr, int idx) {
@@ -78,10 +78,12 @@ struct non_fam_struct {
 };
 
 void *test7(struct non_fam_struct *ptr, int size) {
-  *__builtin_counted_by_ref(ptr->array) = size                      // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  *__builtin_counted_by_ref(&ptr->array[0]) = size;                 // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  *__builtin_counted_by_ref(ptr->pointer) = size;                   // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
-  *__builtin_counted_by_ref(&ptr->pointer[0]) = size;               // expected-error {{'__builtin_counted_by_ref' argument must reference a flexible array member}}
+  // Arrays and pointers without counted_by return void*
+  _Static_assert(_Generic(__builtin_counted_by_ref(ptr->array), void * : 1, default : 0) == 1, "should be void*");
+  _Static_assert(_Generic(__builtin_counted_by_ref(ptr->pointer), void * : 1, default : 0) == 1, "should be void*");
+  // These are not direct member accesses, so they error
+  __builtin_counted_by_ref(&ptr->array[0]);                         // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
+  __builtin_counted_by_ref(&ptr->pointer[0]);                       // expected-error {{'__builtin_counted_by_ref' argument must reference a member with the 'counted_by' attribute}}
 }
 
 struct char_count {
@@ -121,4 +123,65 @@ void test8(void) {
   _Static_assert(_Generic(__builtin_counted_by_ref(up->array), unsigned int * : 1, default : 0) == 1, "wrong return type");
   _Static_assert(_Generic(__builtin_counted_by_ref(lp->array), long * : 1, default : 0) == 1, "wrong return type");
   _Static_assert(_Generic(__builtin_counted_by_ref(ulp->array), unsigned long * : 1, default : 0) == 1, "wrong return type");
+}
+
+// Tests for pointer members with counted_by attribute
+struct ptr_char_count {
+  char count;
+  int *ptr __attribute__((counted_by(count)));
+} *pcp;
+
+struct ptr_short_count {
+  short count;
+  int *ptr __attribute__((counted_by(count)));
+} *psp;
+
+struct ptr_int_count {
+  int count;
+  int *ptr __attribute__((counted_by(count)));
+} *pip;
+
+struct ptr_unsigned_count {
+  unsigned count;
+  int *ptr __attribute__((counted_by(count)));
+} *pup;
+
+struct ptr_long_count {
+  long count;
+  int *ptr __attribute__((counted_by(count)));
+} *plp;
+
+struct ptr_unsigned_long_count {
+  unsigned long count;
+  int *ptr __attribute__((counted_by(count)));
+} *pulp;
+
+void test9(struct ptr_int_count *ptr, int size) {
+  size_t size_of = sizeof(__builtin_counted_by_ref(ptr->ptr));      // ok
+  int align_of = __alignof(__builtin_counted_by_ref(ptr->ptr));     // ok
+  size_t __ignored_assignment;
+
+  *__builtin_counted_by_ref(ptr->ptr) = size;                       // ok
+  *_Generic(__builtin_counted_by_ref(ptr->ptr),
+           void *: &__ignored_assignment,
+           default: __builtin_counted_by_ref(ptr->ptr)) = 42;       // ok
+}
+
+void test10(void) {
+  _Static_assert(_Generic(__builtin_counted_by_ref(pcp->ptr), char * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(psp->ptr), short * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(pip->ptr), int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(pup->ptr), unsigned int * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(plp->ptr), long * : 1, default : 0) == 1, "wrong return type");
+  _Static_assert(_Generic(__builtin_counted_by_ref(pulp->ptr), unsigned long * : 1, default : 0) == 1, "wrong return type");
+}
+
+// Pointer without counted_by returns void*
+struct ptr_no_attr {
+  int count;
+  int *ptr;  // No counted_by attribute
+};
+
+void test11(struct ptr_no_attr *p) {
+  _Static_assert(_Generic(__builtin_counted_by_ref(p->ptr), void * : 1, default : 0) == 1, "should be void*");
 }

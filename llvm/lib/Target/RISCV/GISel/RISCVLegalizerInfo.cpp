@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -26,11 +27,14 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
 using namespace LegalityPredicates;
 using namespace LegalizeMutations;
+using namespace MIPatternMatch;
 
 static LegalityPredicate
 typeIsLegalIntOrFPVec(unsigned TypeIdx,
@@ -147,12 +151,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(
-      {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO, G_READ_REGISTER, G_WRITE_REGISTER})
+      .lower();
 
-  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder({G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
+      .minScalar(0, sXLen)
+      .lower();
 
   // TODO: Use Vector Single-Width Saturating Instructions for vector types.
-  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
+  getActionDefinitionsBuilder(
+      {G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT, G_SSHLSAT, G_USHLSAT})
       .lower();
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
@@ -170,10 +178,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
 
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-      .customFor({sXLen})
-      .clampScalar(0, sXLen, sXLen)
-      .lower();
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
+
+  {
+    LegalityPredicate ValidSextInRegWidth = all(sizeIs(0, 64), immIs(0, 32));
+
+    if (STI.hasStdExtZbb())
+      ValidSextInRegWidth =
+          LegalityPredicates::any(ValidSextInRegWidth, immInSet(0, {8, 16}));
+
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .legalIf(all(typeIs(0, sXLen), ValidSextInRegWidth))
+        .clampScalar(0, sXLen, sXLen)
+        .lower();
+  }
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -198,7 +216,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                  {{s32, s32}})
       .lower();
 
-  getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder(G_BITREVERSE)
+      .customFor(ST.hasStdExtZbkb(), {s8})
+      .maxScalar(0, sXLen)
+      .lower();
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
@@ -212,9 +233,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   else
     BSWAPActions.maxScalar(0, sXLen).lower();
 
+  getActionDefinitionsBuilder(G_CLMUL)
+      .legalFor(ST.hasStdExtZbkc(), {sXLen})
+      .unsupported();
+
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
-  auto &CountZerosUndefActions =
-      getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
+  auto &CountZerosPoisonActions =
+      getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
   if (ST.hasStdExtZbb()) {
     CountZerosActions.legalFor({{sXLen, sXLen}})
         .customFor({{s32, s32}})
@@ -223,9 +248,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .scalarSameSizeAs(1, 0);
   } else {
     CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
-    CountZerosUndefActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    CountZerosPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
   }
-  CountZerosUndefActions.lower();
+  CountZerosPoisonActions.lower();
+
+  auto &CountSignActions = getActionDefinitionsBuilder(G_CTLS);
+  if (ST.hasStdExtP()) {
+    CountSignActions.legalFor({{sXLen, sXLen}})
+        .customFor({{s32, s32}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CountSignActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+  }
 
   auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
   if (ST.hasStdExtZbb()) {
@@ -233,7 +269,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .clampScalar(0, sXLen, sXLen)
         .scalarSameSizeAs(1, 0);
   } else {
-    CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+    CTPOPActions.widenScalarToNextPow2(0, /*Min*/ 8)
+        .clampScalar(0, s8, sXLen)
+        .scalarSameSizeAs(1, 0)
+        .lower();
   }
 
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -413,6 +452,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor({{p0, sXLen}})
       .clampScalar(1, sXLen, sXLen);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
+
   getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
 
   getActionDefinitionsBuilder(G_BRJT).customFor({{p0, sXLen}});
@@ -485,6 +526,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
       .lower();
 
+  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+      .minScalar(ST.hasStdExtZbb(), 0, sXLen)
+      .lower();
+
   getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN})
       .legalFor(ST.hasStdExtZbb(), {sXLen})
       .minScalar(ST.hasStdExtZbb(), 0, sXLen)
@@ -496,14 +541,24 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
+  getActionDefinitionsBuilder({G_MEMCPY_INLINE, G_MEMSET_INLINE}).lower();
+
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
+
+  // On RV64 the 64-bit counter CSRs (cycle/time) are read directly. On RV32
+  // they are custom-legally lowered to a re-read-the-high-half loop (see
+  // legalizeReadCounter).
+  getActionDefinitionsBuilder({G_READCYCLECOUNTER, G_READSTEADYCOUNTER})
+      .legalFor(ST.is64Bit(), {s64})
+      .customFor(!ST.is64Bit(), {s64});
 
   // FP Operations
 
   // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
-  getActionDefinitionsBuilder(
-      {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FSQRT,
+                               G_FMAXNUM, G_FMINNUM, G_FMAXIMUMNUM,
+                               G_FMINIMUMNUM})
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
@@ -556,13 +611,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.hasStdExtF(), {{s1, s32}})
       .customFor(ST.hasStdExtD(), {{s1, s64}})
       .customFor(ST.hasStdExtZfh(), {{s1, s16}})
-      .lowerFor({{s1, s32}, {s1, s64}});
+      .lower();
 
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfh(), {s16})
-      .lowerFor({s32, s64, s128});
+      .customFor(!ST.is64Bit(), {s32})
+      .customFor(ST.is64Bit(), {s32, s64})
+      .lowerFor({s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -576,6 +633,21 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
+
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
+      .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .libcallFor({{s32, s32},
+                   {s64, s32},
+                   {s32, s64},
+                   {s64, s64},
+                   {s32, s128},
+                   {s64, s128}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalFor(ST.hasStdExtF(), {{s32, sXLen}})
@@ -617,12 +689,17 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FTAN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FEXP, G_FEXP2, G_FEXP10, G_FACOS,
                                G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH,
-                               G_FTANH})
+                               G_FTANH, G_FMODF})
       .libcallFor({s32, s64})
       .libcallFor(ST.is64Bit(), {s128});
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
       .libcallFor({{s32, s32}, {s64, s32}})
       .libcallFor(ST.is64Bit(), {s128, s32});
+
+  getActionDefinitionsBuilder(G_FCANONICALIZE)
+      .legalFor(ST.hasStdExtF(), {s32})
+      .legalFor(ST.hasStdExtD(), {s64})
+      .legalFor(ST.hasStdExtZfh(), {s16});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
@@ -692,13 +769,79 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
                     typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST)));
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
+      .lowerIf(all(typeInSet(0, {s8, s16, s32, s64}), typeIs(2, p0)));
+
+  getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD,
+                               G_ATOMICRMW_XCHG, G_ATOMICRMW_AND,
+                               G_ATOMICRMW_OR, G_ATOMICRMW_XOR})
+      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .clampScalar(0, sXLen, sXLen);
+
+  getActionDefinitionsBuilder(G_ATOMICRMW_SUB)
+      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .clampScalar(0, sXLen, sXLen)
+      .lower();
+
+  getActionDefinitionsBuilder(
+      {G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
+      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .clampScalar(0, sXLen, sXLen)
+      .unsupported();
+
+  getActionDefinitionsBuilder(G_PREFETCH).legalIf(typeIs(0, p0));
+
+  LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
+    LLT VecTy = Query.Types[0];
+    LLT EltTy = Query.Types[1];
+    return VecTy.getElementType() == EltTy;
+  };
+
+  getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
+      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                   InsertVectorEltPred, typeIs(2, sXLen)))
+      .legalIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
+                   typeIs(2, sXLen)));
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   verify(*ST.getInstrInfo());
 }
 
 bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+  if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+          RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntrinsicID)) {
+    if (II->hasScalarOperand() && !II->IsFPIntrinsic) {
+      MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+      MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+      auto OldScalar = MI.getOperand(II->ScalarOperand + 2).getReg();
+      // Legalize integer vx form intrinsic.
+      if (MRI.getType(OldScalar).isScalar()) {
+        if (MRI.getType(OldScalar).getSizeInBits() < sXLen.getSizeInBits()) {
+          Helper.Observer.changingInstr(MI);
+          Helper.widenScalarSrc(MI, sXLen, II->ScalarOperand + 2,
+                                TargetOpcode::G_ANYEXT);
+          Helper.Observer.changedInstr(MI);
+        } else if (MRI.getType(OldScalar).getSizeInBits() >
+                   sXLen.getSizeInBits()) {
+          // TODO: i64 in riscv32.
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   switch (IntrinsicID) {
   default:
     return false;
@@ -729,6 +872,17 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::riscv_vsetvli:
+  case Intrinsic::riscv_vsetvlimax:
+  case Intrinsic::riscv_masked_atomicrmw_add:
+  case Intrinsic::riscv_masked_atomicrmw_sub:
+  case Intrinsic::riscv_masked_atomicrmw_xchg:
+  case Intrinsic::riscv_masked_atomicrmw_max:
+  case Intrinsic::riscv_masked_atomicrmw_min:
+  case Intrinsic::riscv_masked_atomicrmw_umax:
+  case Intrinsic::riscv_masked_atomicrmw_umin:
+  case Intrinsic::riscv_masked_cmpxchg:
+    return true;
   }
 }
 
@@ -745,6 +899,103 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
                         *MI.memoperands()[0]);
   MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeReadCounter(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+    GISelChangeObserver &Observer) const {
+  assert((MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER ||
+          MI.getOpcode() == TargetOpcode::G_READSTEADYCOUNTER) &&
+         "Unexpected opcode");
+  assert(!STI.is64Bit() && "READCYCLECOUNTER/READSTEADYCOUNTER only "
+                           "has custom type legalization on riscv32");
+
+  // On RV32 a 64-bit counter CSR must be read as two 32-bit halves. Because
+  // the count may wrap between the two reads, re-read the high half and loop
+  // until the two high reads agree.
+  int64_t LoCounter, HiCounter;
+  if (MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER) {
+    LoCounter = RISCVSysReg::cycle;
+    HiCounter = RISCVSysReg::cycleh;
+  } else {
+    LoCounter = RISCVSysReg::time;
+    HiCounter = RISCVSysReg::timeh;
+  }
+
+  MachineBasicBlock *BB = MI.getParent();
+  MachineFunction &MF = *BB->getParent();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  // Split BB into an entry that falls through into a loop block, and a done
+  // block that receives the remainder of BB and its original successors.
+  MachineFunction::iterator It = std::next(BB->getIterator());
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MF.insert(It, LoopMBB);
+  MF.insert(It, DoneMBB);
+
+  // Splice the instructions after the readcyclecounter into DoneMBB, notifying
+  // the observer about each moved instruction so CSEInfo stays consistent.
+  for (MachineBasicBlock::iterator I = std::next(MI.getIterator()),
+                                   E = BB->end();
+       I != E; ++I)
+    Observer.changingInstr(*I);
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  for (MachineInstr &MovedMI : DoneMBB->instrs())
+    Observer.changedInstr(MovedMI);
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+  BB->addSuccessor(LoopMBB);
+
+  LLT S32 = LLT::scalar(32);
+  // Generic vregs carry the s32 type for G_MERGE_VALUES below, but are also
+  // constrained to GPR so the target CSRRS/BNE instructions satisfy the
+  // verifier's register-class constraints.
+  auto CreateGPR = [&]() {
+    Register R = MRI.createGenericVirtualRegister(S32);
+    MRI.setRegClass(R, &RISCV::GPRRegClass);
+    return R;
+  };
+  Register LoReg = CreateGPR();
+  Register HiReg = CreateGPR();
+  Register ReadAgainReg = CreateGPR();
+
+  // read:
+  //   csrrs HiReg, counterh    # high word
+  //   csrrs LoReg, counter     # low word
+  //   csrrs ReadAgainReg, counterh
+  //   bne   HiReg, ReadAgainReg, read
+  // Emit the target instructions directly with BuildMI.
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), HiReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), LoReg)
+      .addImm(LoCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), ReadAgainReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
+
+  BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
+      .addReg(HiReg)
+      .addReg(ReadAgainReg)
+      .addMBB(LoopMBB);
+
+  LoopMBB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(DoneMBB);
+
+  // Re-pair the two halves into the 64-bit result.
+  Register DstReg = MI.getOperand(0).getReg();
+  Observer.erasingInstr(MI);
+  MI.eraseFromParent();
+
+  MIRBuilder.setInsertPt(*DoneMBB, DoneMBB->begin());
+  MIRBuilder.setDebugLoc(DL);
+  MIRBuilder.buildMergeValues(DstReg, {LoReg, HiReg});
   return true;
 }
 
@@ -840,7 +1091,6 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
 
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
                                         MachineIRBuilder &MIB) const {
-  const LLT XLenTy(STI.getXLenVT());
   Register Dst = MI.getOperand(0).getReg();
 
   // We define our scalable vector types for lmul=1 to use a 64 bit known
@@ -857,23 +1107,25 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
   if (isPowerOf2_64(Val)) {
     uint64_t Log2 = Log2_64(Val);
     if (Log2 < 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2));
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(sXLen, 3 - Log2),
+                    MachineInstr::IsExact);
     } else if (Log2 > 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildShl(Dst, VLENB, MIB.buildConstant(XLenTy, Log2 - 3));
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+      MIB.buildShl(Dst, VLENB, MIB.buildConstant(sXLen, Log2 - 3));
     } else {
       MIB.buildInstr(RISCV::G_READ_VLENB, {Dst}, {});
     }
   } else if ((Val % 8) == 0) {
     // If the multiplier is a multiple of 8, scale it down to avoid needing
     // to shift the VLENB value.
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    MIB.buildMul(Dst, VLENB, MIB.buildConstant(XLenTy, Val / 8));
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+    MIB.buildMul(Dst, VLENB, MIB.buildConstant(sXLen, Val / 8));
   } else {
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3));
-    MIB.buildMul(Dst, VScale, MIB.buildConstant(XLenTy, Val));
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+    auto VScale = MIB.buildLShr(sXLen, VLENB, MIB.buildConstant(sXLen, 3),
+                                MachineInstr::IsExact);
+    MIB.buildMul(Dst, VScale, MIB.buildConstant(sXLen, Val));
   }
   MI.eraseFromParent();
   return true;
@@ -1142,7 +1394,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   // to place the desired subvector starting at element 0.
   const LLT XLenTy(STI.getXLenVT());
   auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx);
-  auto [Mask, VL] = buildDefaultVLOps(LitTy, MIB, MRI);
+  auto [Mask, VL] = buildDefaultVLOps(InterLitTy, MIB, MRI);
   uint64_t Policy = RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC;
   auto Slidedown = MIB.buildInstr(
       RISCV::G_VSLIDEDOWN_VL, {InterLitTy},
@@ -1171,8 +1423,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   LLT BigTy = MRI.getType(BigVec);
   LLT LitTy = MRI.getType(LitVec);
 
-  if (Idx == 0 ||
-      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+  if (Idx == 0 && mi_match(BigVec, MRI, m_GImplicitDef()))
     return true;
 
   // We don't have the ability to slide mask vectors up indexed by their i1
@@ -1245,7 +1496,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   auto Insert = MIB.buildInsertSubvector(InterLitTy, MIB.buildUndef(InterLitTy),
                                          LitVec, 0);
 
-  auto [Mask, _] = buildDefaultVLOps(BigTy, MIB, MRI);
+  auto [Mask, _] = buildDefaultVLOps(InterLitTy, MIB, MRI);
   auto VL = MIB.buildVScale(XLenTy, LitTy.getElementCount().getKnownMinValue());
 
   // If we're inserting into the lowest elements, use a tail undisturbed
@@ -1284,6 +1535,29 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::legalizeBitreverse(MachineInstr &MI,
+                                            MachineIRBuilder &MIB) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BITREVERSE && "Unexpected opcode");
+
+  if (!STI.hasStdExtZbkb())
+    return false;
+
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  if (!MRI.getType(Dst).isScalar(8))
+    return false;
+
+  auto WideSrc = MIB.buildAnyExt(sXLen, Src);
+  auto Brev = MIB.buildInstr(RISCV::G_BREV8, {sXLen}, {WideSrc.getReg(0)});
+  MIB.buildTrunc(Dst, Brev.getReg(0));
+
+  MI.eraseFromParent();
+  return true;
+}
+
 static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -1308,6 +1582,8 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
     return RISCV::G_CLZW;
   case TargetOpcode::G_CTTZ:
     return RISCV::G_CTZW;
+  case TargetOpcode::G_CTLS:
+    return RISCV::G_CLSW;
   case TargetOpcode::G_FPTOSI:
     return RISCV::G_FCVT_W_RV64;
   case TargetOpcode::G_FPTOUI:
@@ -1327,7 +1603,16 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
-  // TODO: G_FCONSTANT
+  case TargetOpcode::G_FCONSTANT: {
+    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
+
+    // Convert G_FCONSTANT to G_CONSTANT.
+    Register DstReg = MI.getOperand(0).getReg();
+    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
+
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
@@ -1355,19 +1640,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
 
     Helper.Observer.changedInstr(MI);
     return true;
-  }
-  case TargetOpcode::G_SEXT_INREG: {
-    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    int64_t SizeInBits = MI.getOperand(2).getImm();
-    // Source size of 32 is sext.w.
-    if (DstTy.getSizeInBits() == 64 && SizeInBits == 32)
-      return true;
-
-    if (STI.hasStdExtZbb() && (SizeInBits == 8 || SizeInBits == 16))
-      return true;
-
-    return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
-           LegalizerHelper::Legalized;
   }
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -1411,7 +1683,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return true;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTTZ: {
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTLS: {
     Helper.Observer.changingInstr(MI);
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarDst(MI, sXLen);
@@ -1428,6 +1701,19 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_LROUND: {
+    // The (i32 any_lround) Pat is IsRV32-only; on RV64 lower to
+    // riscv_fcvt_w_rv64 with FRM_RMM.
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(RISCV::G_FCVT_W_RV64));
+    MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RMM));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_READCYCLECOUNTER:
+  case TargetOpcode::G_READSTEADYCOUNTER:
+    return legalizeReadCounter(MI, MIRBuilder, Helper.Observer);
   case TargetOpcode::G_IS_FPCLASS: {
     Register GISFPCLASS = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
@@ -1463,6 +1749,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return legalizeExtractSubvector(MI, MIRBuilder);
   case TargetOpcode::G_INSERT_SUBVECTOR:
     return legalizeInsertSubvector(MI, Helper, MIRBuilder);
+  case TargetOpcode::G_BITREVERSE:
+    return legalizeBitreverse(MI, MIRBuilder);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);

@@ -4,7 +4,7 @@
 typedef signed char v32i8 __attribute__((vector_size(32), aligned(32)));
 
 // CHECK-LABEL: @test_xr0(
-// CHECK:    tail call void asm sideeffect "", "{$xr0}"(<32 x i8> undef) #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK:    tail call void asm sideeffect "", "{$xr0}"(<32 x i8> undef) #[[ATTR1:[0-9]+]], !srcloc [[META6:![0-9]+]]
 //
 void test_xr0() {
     register v32i8 a asm ("$xr0");
@@ -12,7 +12,7 @@ void test_xr0() {
 }
 
 // CHECK-LABEL: @test_xr7(
-// CHECK:    tail call void asm sideeffect "", "{$xr7}"(<32 x i8> undef) #[[ATTR1]], !srcloc !3
+// CHECK:    tail call void asm sideeffect "", "{$xr7}"(<32 x i8> undef) #[[ATTR1]], !srcloc [[META7:![0-9]+]]
 //
 void test_xr7() {
     register v32i8 a asm ("$xr7");
@@ -20,7 +20,7 @@ void test_xr7() {
 }
 
 // CHECK-LABEL: @test_xr15(
-// CHECK:    tail call void asm sideeffect "", "{$xr15}"(<32 x i8> undef) #[[ATTR1]], !srcloc !4
+// CHECK:    tail call void asm sideeffect "", "{$xr15}"(<32 x i8> undef) #[[ATTR1]], !srcloc [[META8:![0-9]+]]
 //
 void test_xr15() {
     register v32i8 a asm ("$xr15");
@@ -28,7 +28,7 @@ void test_xr15() {
 }
 
 // CHECK-LABEL: @test_xr31(
-// CHECK:    tail call void asm sideeffect "", "{$xr31}"(<32 x i8> undef) #[[ATTR1]], !srcloc !5
+// CHECK:    tail call void asm sideeffect "", "{$xr31}"(<32 x i8> undef) #[[ATTR1]], !srcloc [[META9:![0-9]+]]
 //
 void test_xr31() {
     register v32i8 a asm ("$xr31");

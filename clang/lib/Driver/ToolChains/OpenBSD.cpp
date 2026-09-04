@@ -13,8 +13,8 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -119,6 +119,8 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool Pie = Args.hasArg(options::OPT_pie);
   const bool Nopie = Args.hasArg(options::OPT_no_pie, options::OPT_nopie);
   const bool Relocatable = Args.hasArg(options::OPT_r);
+  const bool StaticPie =
+      Static && !Shared && !Profiling && !Nopie && !Relocatable;
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -156,10 +158,12 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Pie)
+  // OpenBSD's system linker defaults to PIE, but cross-linkers may not.
+  // Explicitly pass -pie so that rcrt0.o's reference to _DYNAMIC is resolved.
+  if (Pie || StaticPie)
     CmdArgs.push_back("-pie");
   if (Nopie || Profiling)
-    CmdArgs.push_back("-nopie");
+    CmdArgs.push_back("-no-pie");
 
   if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
@@ -180,7 +184,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Shared) {
       if (Profiling)
         crt0 = "gcrt0.o";
-      else if (Static && !Nopie)
+      else if (StaticPie)
         crt0 = "rcrt0.o";
       else
         crt0 = "crt0.o";
@@ -199,9 +203,8 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addAllArgs(CmdArgs,
                   {options::OPT_T_Group, options::OPT_s, options::OPT_t});
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
@@ -287,10 +290,12 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-SanitizerMask OpenBSD::getSupportedSanitizers() const {
+SanitizerMask
+OpenBSD::getSupportedSanitizers(BoundArch BA,
+                                Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Vptr;
     Res |= SanitizerKind::Fuzzer;
@@ -315,7 +320,7 @@ void OpenBSD::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {

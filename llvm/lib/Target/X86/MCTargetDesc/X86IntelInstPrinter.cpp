@@ -369,7 +369,7 @@ void X86IntelInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     printRegName(O, Op.getReg());
   } else if (Op.isImm()) {
-    markup(O, Markup::Immediate) << formatImm((int64_t)Op.getImm());
+    markup(O, Markup::Immediate) << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     O << "offset ";

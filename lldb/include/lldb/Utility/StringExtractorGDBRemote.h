@@ -75,6 +75,7 @@ public:
     eServerPacketType_QSetSTDIN,
     eServerPacketType_QSetSTDOUT,
     eServerPacketType_QSetSTDERR,
+    eServerPacketType_QSetSTDIOWindowSize,
     eServerPacketType_QSetWorkingDir,
     eServerPacketType_QStartNoAckMode,
     eServerPacketType_qPathComplete,
@@ -107,6 +108,7 @@ public:
     eServerPacketType_QThreadSuffixSupported,
 
     eServerPacketType_jThreadsInfo,
+    eServerPacketType_jAddressSpacesInfo,
     eServerPacketType_qsThreadInfo,
     eServerPacketType_qfThreadInfo,
     eServerPacketType_qGetPid,
@@ -119,6 +121,7 @@ public:
     eServerPacketType_qRegisterInfo,
     eServerPacketType_qShlibInfoAddr,
     eServerPacketType_qStepPacketSupported,
+    eServerPacketType_qStructuredDataPlugins,
     eServerPacketType_qSupported,
     eServerPacketType_qSyncThreadStateSupported,
     eServerPacketType_qThreadExtraInfo,
@@ -171,6 +174,10 @@ public:
     eServerPacketType_jLLDBTraceStop,
     eServerPacketType_jLLDBTraceGetState,
     eServerPacketType_jLLDBTraceGetBinaryData,
+    eServerPacketType_jMultiBreakpoint,
+    eServerPacketType_jAcceleratorPluginInitialize,
+    eServerPacketType_jAcceleratorPluginBreakpointHit,
+    eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo,
 
     eServerPacketType_qMemTags, // read memory tags
     eServerPacketType_QMemTags, // write memory tags

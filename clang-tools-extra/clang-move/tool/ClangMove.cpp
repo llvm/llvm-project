@@ -99,7 +99,7 @@ int main(int argc, const char **argv) {
   auto ExpectedParser =
       tooling::CommonOptionsParser::create(argc, argv, ClangMoveCategory);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   tooling::CommonOptionsParser &OptionsParser = ExpectedParser.get();
@@ -178,9 +178,8 @@ int main(int argc, const char **argv) {
 
   DiagnosticOptions DiagOpts;
   clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
-      &DiagnosticPrinter, false);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
   auto &FileMgr = Tool.getFiles();
   SourceManager SM(Diagnostics, FileMgr);
   Rewriter Rewrite(SM, LangOptions());

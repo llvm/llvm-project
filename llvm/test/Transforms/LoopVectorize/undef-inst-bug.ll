@@ -14,7 +14,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-LABEL: @t(
 ; CHECK: <4 x i32>
 
-define void @t() {
+define void @t(ptr %p) {
 entry:
   br label %for.body
 
@@ -22,13 +22,13 @@ for.body:
   %indvars.iv17 = phi i64 [ %indvars.next, %for.body ], [ 128, %entry ]
 
   ; Loop invariant anchored in loop.
-  %idxprom21 = zext i32 undef to i64
+  %idxprom21 = zext i32 0 to i64
 
-  %arrayidx23 = getelementptr inbounds [100 x [100 x i32]], ptr undef, i64 0, i64 %idxprom21, i64 %indvars.iv17
-  store i32 undef, ptr %arrayidx23, align 4
+  %arrayidx23 = getelementptr inbounds [100 x [100 x i32]], ptr %p, i64 0, i64 %idxprom21, i64 %indvars.iv17
+  store i32 poison, ptr %arrayidx23, align 4
   %indvars.next= add i64 %indvars.iv17, -1
   %0 = trunc i64 %indvars.next to i32
-  %cmp15 = icmp ugt i32 %0, undef
+  %cmp15 = icmp ugt i32 %0, poison
   br i1 %cmp15, label %for.body, label %loopexit
 
 loopexit:

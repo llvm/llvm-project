@@ -14,8 +14,8 @@
 // complete DWARF index.
 
 // Test that if we don't have .debug_names, that we save a full DWARF index.
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=1 -c %s -o %t.main.o
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=0 -c %s -o %t.foo.o
+// RUN: %clangxx -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=1 -c %s -o %t.main.o
+// RUN: %clangxx -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=0 -c %s -o %t.foo.o
 // RUN: ld.lld %t.main.o %t.foo.o -o %t.nonames
 // RUN: llvm-dwp %t.main.dwo %t.foo.dwo -o %t.nonames.dwp
 // RUN: rm %t.main.dwo %t.foo.dwo
@@ -35,8 +35,8 @@
 
 // Test that if we have one .o file with .debug_names and one without, that we
 // save a partial DWARF index.
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=1 -c %s -o %t.main.o -gpubnames
-// RUN: %clang -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=0 -c %s -o %t.foo.o
+// RUN: %clangxx -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=1 -c %s -o %t.main.o -gpubnames
+// RUN: %clangxx -target x86_64-pc-linux -gsplit-dwarf -gdwarf-5 -DMAIN=0 -c %s -o %t.foo.o
 // RUN: ld.lld %t.main.o %t.foo.o -o %t.somenames
 // RUN: llvm-dwp %t.main.dwo %t.foo.dwo -o %t.somenames.dwp
 // RUN: rm %t.main.dwo %t.foo.dwo

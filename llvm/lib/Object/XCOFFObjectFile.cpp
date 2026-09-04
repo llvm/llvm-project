@@ -379,7 +379,7 @@ Expected<StringRef> XCOFFObjectFile::getSectionName(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->VirtualAddress;
@@ -397,7 +397,7 @@ uint64_t XCOFFObjectFile::getSectionIndex(DataRefImpl Sec) const {
 }
 
 uint64_t XCOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
-  // Avoid ternary due to failure to convert the ubig32_t value to a unit64_t
+  // Avoid ternary due to failure to convert the ubig32_t value to a uint64_t
   // with MSVC.
   if (is64Bit())
     return toSection64(Sec)->SectionSize;
@@ -1463,8 +1463,7 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
                                          Error &Err, bool Is64Bit)
     : TBPtr(Ptr), Is64BitObj(Is64Bit) {
   ErrorAsOutParameter EAO(Err);
-  DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false,
-                   /*AddressSize=*/0);
+  DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false);
   DataExtractor::Cursor Cur(/*Offset=*/0);
 
   // Skip 8 bytes of mandatory fields.
@@ -1568,7 +1567,7 @@ uint8_t XCOFFTracebackTable::getLanguageID() const {
 }
 
 bool XCOFFTracebackTable::isGlobalLinkage() const {
-  return GETBITWITHMASK(0, IsGlobaLinkageMask);
+  return GETBITWITHMASK(0, IsGlobalLinkageMask);
 }
 
 bool XCOFFTracebackTable::isOutOfLineEpilogOrPrologue() const {

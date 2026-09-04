@@ -34,7 +34,7 @@ TEST(LoopUnrollRuntime, Latch) {
 
   std::unique_ptr<Module> M = parseIR(
     C,
-    R"(define i32 @test(i32* %a, i32* %b, i32* %c, i64 %n) {
+    R"(define i32 @test(ptr %a, ptr %b, ptr %c, i64 %n) {
 entry:
   br label %while.cond
 
@@ -44,13 +44,13 @@ while.cond:                                       ; preds = %while.body, %entry
   br i1 %cmp, label %while.body, label %while.end
 
 while.body:                                       ; preds = %while.cond
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %i.0
-  %0 = load i32, i32* %arrayidx
-  %arrayidx1 = getelementptr inbounds i32, i32* %c, i64 %i.0
-  %1 = load i32, i32* %arrayidx1
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %i.0
+  %0 = load i32, ptr %arrayidx
+  %arrayidx1 = getelementptr inbounds i32, ptr %c, i64 %i.0
+  %1 = load i32, ptr %arrayidx1
   %mul = mul nsw i32 %0, %1
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 %i.0
-  store i32 %mul, i32* %arrayidx2
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i64 %i.0
+  store i32 %mul, ptr %arrayidx2
   %inc = add nsw i64 %i.0, 1
   br label %while.cond
 

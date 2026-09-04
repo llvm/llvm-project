@@ -1,0 +1,19 @@
+# The merge SHALL be order-invariant: permuting the input argv yields a
+# byte-equivalent output (modulo internal sort stabilization). Verifies
+# the deterministic sort in flattenFileChanges and the dedup-by-key
+# logic don't inadvertently depend on input order.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/non-overlapping-a.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/non-overlapping-b.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# Run the tool twice with different argv orders.
+# RUN: clang-ssaf-src-edit-merge -o %t.dir/merged-ab.yaml %t.dir/a.yaml %t.dir/b.yaml
+# RUN: clang-ssaf-src-edit-merge -o %t.dir/merged-ba.yaml %t.dir/b.yaml %t.dir/a.yaml
+
+# Outputs are byte-identical.
+# RUN: diff %t.dir/merged-ab.yaml %t.dir/merged-ba.yaml

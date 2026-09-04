@@ -67,6 +67,10 @@ public:
 
   void SetTrapExceptions(bool trap_exceptions = true);
 
+  bool GetStopOnFork() const;
+
+  void SetStopOnFork(bool stop_on_fork = false);
+
   void SetLanguage(lldb::LanguageType language);
   /// Set the language using a pair of language code and version as
   /// defined by the DWARF 6 specification.
@@ -106,6 +110,10 @@ public:
 
   // Sets whether we will JIT an expression if it cannot be interpreted
   void SetAllowJIT(bool allow);
+
+  bool GetBooleanLanguageOption(const char *option_name, SBError &error) const;
+
+  SBError SetBooleanLanguageOption(const char *option_name, bool value);
 
 protected:
   lldb_private::EvaluateExpressionOptions *get() const;

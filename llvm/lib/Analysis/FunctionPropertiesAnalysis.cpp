@@ -14,6 +14,7 @@
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -25,6 +26,18 @@
 #include <deque>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "func-properties-stats"
+
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  STATISTIC(Num##Name, Description);                                           \
+  STATISTIC(Num##Name##PreOptimization, Description " (before "                \
+                                                    "optimizations)");
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  STATISTIC(Num##Name, Description);                                           \
+  STATISTIC(Num##Name##PreOptimization, Description " (before "                \
+                                                    "optimizations)");
+#include "llvm/IR/FunctionProperties.def"
 
 namespace llvm {
 LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
@@ -50,9 +63,8 @@ static cl::opt<unsigned> CallWithManyArgumentsThreshold(
 namespace {
 int64_t getNumBlocksFromCond(const BasicBlock &BB) {
   int64_t Ret = 0;
-  if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
-    if (BI->isConditional())
-      Ret += BI->getNumSuccessors();
+  if (const auto *BI = dyn_cast<CondBrInst>(BB.getTerminator())) {
+    Ret += BI->getNumSuccessors();
   } else if (const auto *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
     Ret += (SI->getNumCases() + (nullptr != SI->getDefaultDest()));
   }
@@ -86,7 +98,7 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
       StoreInstCount += Direction;
     }
   }
-  TotalInstructionCount += Direction * BB.sizeWithoutDebug();
+  TotalInstructionCount += Direction * BB.size();
 
   if (EnableDetailedFunctionProperties) {
     unsigned SuccessorCount = succ_size(&BB);
@@ -97,12 +109,11 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     else if (SuccessorCount > 2)
       BasicBlocksWithMoreThanTwoSuccessors += Direction;
 
-    unsigned PredecessorCount = pred_size(&BB);
-    if (PredecessorCount == 1)
+    if (BB.hasNPredecessors(1))
       BasicBlocksWithSinglePredecessor += Direction;
-    else if (PredecessorCount == 2)
+    else if (BB.hasNPredecessors(2))
       BasicBlocksWithTwoPredecessors += Direction;
-    else if (PredecessorCount > 2)
+    else if (BB.hasNPredecessorsOrMore(3))
       BasicBlocksWithMoreThanTwoPredecessors += Direction;
 
     if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
@@ -117,19 +128,28 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     // predecessors, which represent critical edges.
     if (SuccessorCount > 1) {
       for (const auto *Successor : successors(&BB)) {
-        if (pred_size(Successor) > 1)
+        if (Successor->hasNPredecessorsOrMore(2))
           CriticalEdgeCount += Direction;
       }
     }
 
     ControlFlowEdgeCount += Direction * SuccessorCount;
 
-    if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
-      if (!BI->isConditional())
-        UnconditionalBranchCount += Direction;
+    const Instruction *TI = BB.getTerminator();
+    if (isa<UncondBrInst>(TI)) {
+      BranchInstructionCount += Direction;
+      BranchSuccessorCount += Direction;
+      UnconditionalBranchCount += Direction;
+    } else if (isa<CondBrInst>(TI)) {
+      BranchInstructionCount += Direction;
+      BranchSuccessorCount += Direction * 2;
+      ConditionalBranchCount += Direction;
+    } else if (const auto *SI = dyn_cast<SwitchInst>(TI)) {
+      SwitchInstructionCount += Direction;
+      SwitchSuccessorCount += Direction * SI->getNumSuccessors();
     }
 
-    for (const Instruction &I : BB.instructionsWithoutDebug()) {
+    for (const Instruction &I : BB) {
       if (I.isCast())
         CastInstructionCount += Direction;
 
@@ -142,6 +162,9 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
         ++IntrinsicCount;
 
       if (const auto *Call = dyn_cast<CallInst>(&I)) {
+        if (Call->doesNotReturn())
+          NoReturnCallCount += Direction;
+
         if (Call->isIndirectCall())
           IndirectCallCount += Direction;
         else
@@ -304,6 +327,7 @@ bool FunctionPropertiesInfo::operator==(
       ControlFlowEdgeCount != FPI.ControlFlowEdgeCount ||
       UnconditionalBranchCount != FPI.UnconditionalBranchCount ||
       IntrinsicCount != FPI.IntrinsicCount ||
+      NoReturnCallCount != FPI.NoReturnCallCount ||
       DirectCallCount != FPI.DirectCallCount ||
       IndirectCallCount != FPI.IndirectCallCount ||
       CallReturnsIntegerCount != FPI.CallReturnsIntegerCount ||
@@ -325,57 +349,17 @@ bool FunctionPropertiesInfo::operator==(
 }
 
 void FunctionPropertiesInfo::print(raw_ostream &OS) const {
-#define PRINT_PROPERTY(PROP_NAME) OS << #PROP_NAME ": " << PROP_NAME << "\n";
+#define FUNCTION_PROPERTY(Name, Description) OS << #Name ": " << Name << "\n";
 
-  PRINT_PROPERTY(BasicBlockCount)
-  PRINT_PROPERTY(BlocksReachedFromConditionalInstruction)
-  PRINT_PROPERTY(Uses)
-  PRINT_PROPERTY(DirectCallsToDefinedFunctions)
-  PRINT_PROPERTY(LoadInstCount)
-  PRINT_PROPERTY(StoreInstCount)
-  PRINT_PROPERTY(MaxLoopDepth)
-  PRINT_PROPERTY(TopLevelLoopCount)
-  PRINT_PROPERTY(TotalInstructionCount)
-
-  if (EnableDetailedFunctionProperties) {
-    PRINT_PROPERTY(BasicBlocksWithSingleSuccessor)
-    PRINT_PROPERTY(BasicBlocksWithTwoSuccessors)
-    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoSuccessors)
-    PRINT_PROPERTY(BasicBlocksWithSinglePredecessor)
-    PRINT_PROPERTY(BasicBlocksWithTwoPredecessors)
-    PRINT_PROPERTY(BasicBlocksWithMoreThanTwoPredecessors)
-    PRINT_PROPERTY(BigBasicBlocks)
-    PRINT_PROPERTY(MediumBasicBlocks)
-    PRINT_PROPERTY(SmallBasicBlocks)
-    PRINT_PROPERTY(CastInstructionCount)
-    PRINT_PROPERTY(FloatingPointInstructionCount)
-    PRINT_PROPERTY(IntegerInstructionCount)
-    PRINT_PROPERTY(ConstantIntOperandCount)
-    PRINT_PROPERTY(ConstantFPOperandCount)
-    PRINT_PROPERTY(ConstantOperandCount)
-    PRINT_PROPERTY(InstructionOperandCount)
-    PRINT_PROPERTY(BasicBlockOperandCount)
-    PRINT_PROPERTY(GlobalValueOperandCount)
-    PRINT_PROPERTY(InlineAsmOperandCount)
-    PRINT_PROPERTY(ArgumentOperandCount)
-    PRINT_PROPERTY(UnknownOperandCount)
-    PRINT_PROPERTY(CriticalEdgeCount)
-    PRINT_PROPERTY(ControlFlowEdgeCount)
-    PRINT_PROPERTY(UnconditionalBranchCount)
-    PRINT_PROPERTY(IntrinsicCount)
-    PRINT_PROPERTY(DirectCallCount)
-    PRINT_PROPERTY(IndirectCallCount)
-    PRINT_PROPERTY(CallReturnsIntegerCount)
-    PRINT_PROPERTY(CallReturnsFloatCount)
-    PRINT_PROPERTY(CallReturnsPointerCount)
-    PRINT_PROPERTY(CallReturnsVectorIntCount)
-    PRINT_PROPERTY(CallReturnsVectorFloatCount)
-    PRINT_PROPERTY(CallReturnsVectorPointerCount)
-    PRINT_PROPERTY(CallWithManyArgumentsCount)
-    PRINT_PROPERTY(CallWithPointerArgumentCount)
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  if (EnableDetailedFunctionProperties) {                                      \
+    OS << #Name ": " << Name << "\n";                                          \
   }
 
-#undef PRINT_PROPERTY
+#include "llvm/IR/FunctionProperties.def"
+
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
 
   OS << "\n";
 }
@@ -393,6 +377,31 @@ FunctionPropertiesPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
      << "'" << F.getName() << "':"
      << "\n";
   AM.getResult<FunctionPropertiesAnalysis>(F).print(OS);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+FunctionPropertiesStatisticsPass::run(Function &F,
+                                      FunctionAnalysisManager &FAM) {
+  LLVM_DEBUG(dbgs() << "STATSCOUNT: running on function " << F.getName()
+                    << "\n");
+  auto &AnalysisResults = FAM.getResult<FunctionPropertiesAnalysis>(F);
+  if (IsPreOptimization) {
+#define FUNCTION_PROPERTY(Name, Description)                                   \
+  Num##Name##PreOptimization += AnalysisResults.Name;
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  Num##Name##PreOptimization += AnalysisResults.Name;
+#include "llvm/IR/FunctionProperties.def"
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
+  } else {
+#define FUNCTION_PROPERTY(Name, Description) Num##Name += AnalysisResults.Name;
+#define DETAILED_FUNCTION_PROPERTY(Name, Description)                          \
+  Num##Name += AnalysisResults.Name;
+#include "llvm/IR/FunctionProperties.def"
+#undef FUNCTION_PROPERTY
+#undef DETAILED_FUNCTION_PROPERTY
+  }
   return PreservedAnalyses::all();
 }
 

@@ -18,6 +18,7 @@
 #include <__new/exceptions.h>
 #include <__new/placement_new_delete.h>
 #include <__utility/exception_guard.h>
+#include <__utility/piecewise_construct.h>
 #include <limits>
 #include <tuple>
 
@@ -172,11 +173,13 @@ public:
     __p->~_Tp();
   }
 
-  _LIBCPP_HIDE_FROM_ABI polymorphic_allocator select_on_container_copy_construction() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI polymorphic_allocator select_on_container_copy_construction() const noexcept {
     return polymorphic_allocator();
   }
 
-  [[__gnu__::__returns_nonnull__]] _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept { return __res_; }
+  [[nodiscard, __gnu__::__returns_nonnull__]] _LIBCPP_HIDE_FROM_ABI memory_resource* resource() const noexcept {
+    return __res_;
+  }
 
   _LIBCPP_HIDE_FROM_ABI friend bool
   operator==(const polymorphic_allocator& __lhs, const polymorphic_allocator& __rhs) noexcept {

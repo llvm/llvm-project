@@ -15,6 +15,7 @@
 #include "llvm/Object/BuildID.h"
 
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -24,6 +25,24 @@ using namespace llvm::object;
 namespace {
 
 template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
+  auto findBuildID = [&Obj](const auto &ShdrOrPhdr,
+                            uint64_t Alignment) -> std::optional<BuildIDRef> {
+    Error Err = Error::success();
+    for (auto N : Obj.notes(ShdrOrPhdr, Err))
+      if (N.getType() == ELF::NT_GNU_BUILD_ID &&
+          N.getName() == ELF::ELF_NOTE_GNU)
+        return N.getDesc(Alignment);
+    consumeError(std::move(Err));
+    return std::nullopt;
+  };
+
+  auto Sections = cantFail(Obj.sections());
+  for (const auto &S : Sections) {
+    if (S.sh_type != ELF::SHT_NOTE)
+      continue;
+    if (std::optional<BuildIDRef> ShdrRes = findBuildID(S, S.sh_addralign))
+      return ShdrRes.value();
+  }
   auto PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
     consumeError(PhdrsOrErr.takeError());
@@ -32,12 +51,8 @@ template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
   for (const auto &P : *PhdrsOrErr) {
     if (P.p_type != ELF::PT_NOTE)
       continue;
-    Error Err = Error::success();
-    for (auto N : Obj.notes(P, Err))
-      if (N.getType() == ELF::NT_GNU_BUILD_ID &&
-          N.getName() == ELF::ELF_NOTE_GNU)
-        return N.getDesc(P.p_align);
-    consumeError(std::move(Err));
+    if (std::optional<BuildIDRef> PhdrRes = findBuildID(P, P.p_align))
+      return PhdrRes.value();
   }
   return {};
 }
@@ -65,7 +80,7 @@ BuildIDRef llvm::object::getBuildID(const ObjectFile *Obj) {
   return {};
 }
 
-std::optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
+Expected<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
   auto GetDebugPath = [&](StringRef Directory) {
     SmallString<128> Path{Directory};
     sys::path::append(Path, ".build-id",
@@ -94,5 +109,8 @@ std::optional<std::string> BuildIDFetcher::fetch(BuildIDRef BuildID) const {
         return std::string(Path);
     }
   }
-  return std::nullopt;
+  return createStringError(
+      make_error_code(std::errc::no_such_file_or_directory),
+      "could not find debug file for build ID '" +
+          llvm::toHex(BuildID, /*LowerCase=*/true) + "'");
 }

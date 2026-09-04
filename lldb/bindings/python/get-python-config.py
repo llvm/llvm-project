@@ -18,6 +18,9 @@ def relpath_nodots(path, base):
 def main():
     parser = argparse.ArgumentParser(description="extract cmake variables from python")
     parser.add_argument("variable_name")
+    parser.add_argument(
+        "--stable-abi", action="store_true", help="Target the Stable C ABI"
+    )
     args = parser.parse_args()
     if args.variable_name == "LLDB_PYTHON_RELATIVE_PATH":
         # LLDB_PYTHON_RELATIVE_PATH is the relative path from lldb's prefix
@@ -68,7 +71,18 @@ def main():
                     print("sys.prefix:", sys.prefix, file=sys.stderr)
                     sys.exit(1)
     elif args.variable_name == "LLDB_PYTHON_EXT_SUFFIX":
-        print(sysconfig.get_config_var("EXT_SUFFIX"))
+        if args.stable_abi:
+            shlib_suffix = sysconfig.get_config_var("SHLIB_SUFFIX")
+            if shlib_suffix:
+                print(".abi3%s" % shlib_suffix)
+            else:
+                assert os.name == "nt"
+                if sysconfig.get_config_var("EXT_SUFFIX").startswith("_d"):
+                    print("_d.pyd")
+                else:
+                    print(".pyd")
+        else:
+            print(sysconfig.get_config_var("EXT_SUFFIX"))
     else:
         parser.error(f"unknown variable {args.variable_name}")
 

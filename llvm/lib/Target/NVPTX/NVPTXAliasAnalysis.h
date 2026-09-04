@@ -20,7 +20,7 @@ class MemoryLocation;
 
 class NVPTXAAResult : public AAResultBase {
 public:
-  NVPTXAAResult() {}
+  NVPTXAAResult() = default;
   NVPTXAAResult(NVPTXAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
 
   /// Handle invalidation events from the new pass manager.

@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy %s misc-include-cleaner %t -- -- -I%S/Inputs -isystem%S/Inputs/system
 #include "bar.h"
-// CHECK-FIXES: {{^}}#include "baz.h"{{$}}
+// CHECK-FIXES: #include "baz.h"
 #include "foo.h"
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: included header foo.h is not used directly [misc-include-cleaner]
 // CHECK-FIXES: {{^}}
-// CHECK-FIXES: {{^}}#include <string>{{$}}
+// CHECK-FIXES: #include <string>
 #include <vector.h>
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: included header vector.h is not used directly [misc-include-cleaner]
 // CHECK-FIXES: {{^}}

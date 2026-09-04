@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Format.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -132,6 +130,25 @@ static std::vector<Desc> getSubOpDescriptions() {
   std::vector<Desc> Descriptions;
   Descriptions.resize(LlvmUserDescriptionsSize);
   Descriptions[DW_OP_LLVM_nop] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_form_aspace_address] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_push_lane] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_offset_uconst] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_bit_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_call_frame_entry_reg] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_undefined] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_aspace_bregx] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_piece_end] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_extend] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_select_bit_piece] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_NVIDIA_mux] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::NvidiaMuxArg);
   return Descriptions;
 }
 
@@ -166,6 +183,8 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
         return false;
       assert(Desc.Op[Operand] == Operation::SizeSubOpLEB &&
              "SizeSubOpLEB Description must begin with SizeSubOpLEB operand");
+      Operands.resize(Desc.Op.size());
+      OperandEndOffsets.resize(Desc.Op.size());
       break;
     case Operation::Size1:
       Operands[Operand] = Data.getU8(&Offset);
@@ -203,6 +222,16 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
     case Operation::BaseTypeRef:
       Operands[Operand] = Data.getULEB128(&Offset);
       break;
+    case Operation::NvidiaMuxArg:
+      assert(Operand == 1);
+      Operands[Operand] = Data.getULEB128(&Offset);
+      // The selector names an NVIDIA specific operation, and the number and
+      // type of the operands that follow it are implied by that operation.
+      // No NVIDIA operation is known here, so where this operation ends is
+      // unknown and anything after it would be parsed from the wrong offset.
+      // Refuse to decode rather than mis-parse the rest of the expression.
+      // A build that knows a selector can decode its operands here.
+      return false;
     case Operation::WasmLocationArg:
       assert(Operand == 1);
       switch (Operands[0]) {

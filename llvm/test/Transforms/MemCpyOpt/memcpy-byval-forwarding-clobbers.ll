@@ -7,8 +7,8 @@ declare i1 @check(ptr readonly byval(i64) align 8) readonly argmemonly
 
 declare void @clobber(ptr) argmemonly
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 ; %a.2's lifetime ends before the call to @check. We must remove the call to
@@ -25,11 +25,11 @@ define i1 @alloca_forwarding_lifetime_end_clobber() {
 entry:
   %a.1 = alloca i64, align 8
   %a.2 = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %a.2)
+  call void @llvm.lifetime.start.p0(ptr %a.2)
   call void @init(ptr sret(i64) align 8 %a.2)
   store i8 0, ptr %a.2
   call void @llvm.memcpy.p0.p0.i64(ptr %a.1, ptr %a.2, i64 8, i1 false)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %a.2)
+  call void @llvm.lifetime.end.p0(ptr %a.2)
   ;call void @clobber(ptr %a.2)
   %call = call i1 @check(ptr byval(i64) align 8 %a.1)
   ret i1 %call
@@ -42,7 +42,7 @@ define i1 @alloca_forwarding_call_clobber() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_1:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[A_2:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
@@ -53,7 +53,7 @@ define i1 @alloca_forwarding_call_clobber() {
 entry:
   %a.1 = alloca i64, align 8
   %a.2 = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %a.2)
+  call void @llvm.lifetime.start.p0(ptr %a.2)
   call void @init(ptr sret(i64) align 8 %a.2)
   store i8 0, ptr %a.2
   call void @llvm.memcpy.p0.p0.i64(ptr %a.1, ptr %a.2, i64 8, i1 false)
@@ -67,7 +67,7 @@ define i1 @alloca_forwarding_call_clobber_after() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_1:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[A_2:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
@@ -78,7 +78,7 @@ define i1 @alloca_forwarding_call_clobber_after() {
 entry:
   %a.1 = alloca i64, align 8
   %a.2 = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %a.2)
+  call void @llvm.lifetime.start.p0(ptr %a.2)
   call void @init(ptr sret(i64) align 8 %a.2)
   store i8 0, ptr %a.2
   call void @llvm.memcpy.p0.p0.i64(ptr %a.1, ptr %a.2, i64 8, i1 false)
@@ -102,7 +102,7 @@ entry:
   %a.1 = alloca i64, align 8
   %a.2 = alloca i64, align 8
   %a.3 = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %a.2)
+  call void @llvm.lifetime.start.p0(ptr %a.2)
   call void @init(ptr sret(i64) align 8 %a.2)
   store i8 0, ptr %a.2
   call void @llvm.memcpy.p0.p0.i64(ptr %a.1, ptr %a.2, i64 8, i1 false)

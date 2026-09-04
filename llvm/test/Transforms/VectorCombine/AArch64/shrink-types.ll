@@ -45,11 +45,11 @@ define i32 @multiuse(<16 x i32> %u, <16 x i32> %v, ptr %b) {
 ; CHECK-NEXT:    [[U_MASKED:%.*]] = and <16 x i32> [[U:%.*]], splat (i32 255)
 ; CHECK-NEXT:    [[V_MASKED:%.*]] = and <16 x i32> [[V:%.*]], splat (i32 255)
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[TMP6]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <16 x i32> [[TMP7]], [[V_MASKED]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and <16 x i32> [[TMP0]], splat (i32 15)
+; CHECK-NEXT:    [[DOTINNER:%.*]] = and <16 x i8> [[WIDE_LOAD]], splat (i8 15)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[DOTINNER]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <16 x i32> [[TMP4]], [[U_MASKED]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i32> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP8]])
@@ -107,5 +107,19 @@ define <2 x i32> @pr108698(<2 x i64> %x, <2 x i32> %y) {
   %lshr = lshr <2 x i32> %ext, %y
   ret <2 x i32> %lshr
 }
+
+define void @stride_load_31(ptr %src, ptr %dst) {
+; CHECK-LABEL: @stride_load_31(
+; CHECK-NEXT:    [[V:%.*]] = load <32 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-NEXT:    [[STRIDED:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; CHECK-NEXT:    store <16 x i8> [[STRIDED]], ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  %v = load <32 x i8>, ptr %src, align 1
+  %strided = shufflevector <32 x i8> %v, <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+  store <16 x i8> %strided, ptr %dst, align 1
+  ret void
+}
+
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

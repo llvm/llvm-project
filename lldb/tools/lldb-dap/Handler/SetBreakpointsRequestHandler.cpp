@@ -9,7 +9,6 @@
 #include "DAP.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
-#include <vector>
 
 namespace lldb_dap {
 

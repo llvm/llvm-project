@@ -44,11 +44,10 @@ enum AssignFlags {
 
 #ifdef RT_DEVICE_COMPILATION
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags, MemmoveFct memmoveFct = &MemmoveWrapper);
+    Terminator &terminator, int flags, MemmoveFct = &MemmoveWrapper);
 #else
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags,
-    MemmoveFct memmoveFct = &Fortran::runtime::memmove);
+    Terminator &terminator, int flags, MemmoveFct = &runtime::memmove);
 #endif
 
 extern "C" {
@@ -79,6 +78,10 @@ void RTDECL(AssignExplicitLengthCharacter)(Descriptor &to,
     int sourceLine = 0);
 // This variant is assignments to whole polymorphic allocatables.
 void RTDECL(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+// Fast path for simple intrinsic type assignments (no derived types, no
+// finalization)
+void RTDECL(AssignSimple)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
 } // extern "C"
 } // namespace Fortran::runtime

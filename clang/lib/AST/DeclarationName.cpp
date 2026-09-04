@@ -113,13 +113,14 @@ static void printCXXConstructorDestructorName(QualType ClassType,
                                               PrintingPolicy Policy) {
   // We know we're printing C++ here. Ensure we print types properly.
   Policy.adjustForCPlusPlus();
+  Policy.SuppressScope = true;
 
-  if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
+  if (const RecordType *ClassRec = ClassType->getAsCanonical<RecordType>()) {
     ClassRec->getDecl()->printName(OS, Policy);
     return;
   }
   if (Policy.SuppressTemplateArgsInCXXConstructors) {
-    if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
+    if (auto *InjTy = ClassType->getAsCanonical<InjectedClassNameType>()) {
       InjTy->getDecl()->printName(OS, Policy);
       return;
     }
@@ -290,12 +291,12 @@ DeclarationNameTable::getCXXDeductionGuideName(TemplateDecl *Template) {
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Template);
 
-  void *InsertPos = nullptr;
-  if (auto *Name = CXXDeductionGuideNames.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken Token;
+  if (auto *Name = CXXDeductionGuideNames.lookup(ID, Token))
     return DeclarationName(Name);
 
   auto *Name = new (Ctx) detail::CXXDeductionGuideNameExtra(Template);
-  CXXDeductionGuideNames.InsertNode(Name, InsertPos);
+  CXXDeductionGuideNames.insert(Name, Token);
   return DeclarationName(Name);
 }
 
@@ -305,13 +306,13 @@ DeclarationName DeclarationNameTable::getCXXConstructorName(CanQualType Ty) {
   // Do we already have this C++ constructor name ?
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Ty.getAsOpaquePtr());
-  void *InsertPos = nullptr;
-  if (auto *Name = CXXConstructorNames.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken Token;
+  if (auto *Name = CXXConstructorNames.lookup(ID, Token))
     return {Name, DeclarationName::StoredCXXConstructorName};
 
   // We have to create it.
   auto *SpecialName = new (Ctx) detail::CXXSpecialNameExtra(Ty);
-  CXXConstructorNames.InsertNode(SpecialName, InsertPos);
+  CXXConstructorNames.insert(SpecialName, Token);
   return {SpecialName, DeclarationName::StoredCXXConstructorName};
 }
 
@@ -321,13 +322,13 @@ DeclarationName DeclarationNameTable::getCXXDestructorName(CanQualType Ty) {
   // Do we already have this C++ destructor name ?
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Ty.getAsOpaquePtr());
-  void *InsertPos = nullptr;
-  if (auto *Name = CXXDestructorNames.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken Token;
+  if (auto *Name = CXXDestructorNames.lookup(ID, Token))
     return {Name, DeclarationName::StoredCXXDestructorName};
 
   // We have to create it.
   auto *SpecialName = new (Ctx) detail::CXXSpecialNameExtra(Ty);
-  CXXDestructorNames.InsertNode(SpecialName, InsertPos);
+  CXXDestructorNames.insert(SpecialName, Token);
   return {SpecialName, DeclarationName::StoredCXXDestructorName};
 }
 
@@ -336,14 +337,13 @@ DeclarationNameTable::getCXXConversionFunctionName(CanQualType Ty) {
   // Do we already have this C++ conversion function name ?
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(Ty.getAsOpaquePtr());
-  void *InsertPos = nullptr;
-  if (auto *Name =
-          CXXConversionFunctionNames.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken Token;
+  if (auto *Name = CXXConversionFunctionNames.lookup(ID, Token))
     return {Name, DeclarationName::StoredCXXConversionFunctionName};
 
   // We have to create it.
   auto *SpecialName = new (Ctx) detail::CXXSpecialNameExtra(Ty);
-  CXXConversionFunctionNames.InsertNode(SpecialName, InsertPos);
+  CXXConversionFunctionNames.insert(SpecialName, Token);
   return {SpecialName, DeclarationName::StoredCXXConversionFunctionName};
 }
 
@@ -367,12 +367,12 @@ DeclarationNameTable::getCXXLiteralOperatorName(const IdentifierInfo *II) {
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(II);
 
-  void *InsertPos = nullptr;
-  if (auto *Name = CXXLiteralOperatorNames.FindNodeOrInsertPos(ID, InsertPos))
+  llvm::FoldingSetInsertToken Token;
+  if (auto *Name = CXXLiteralOperatorNames.lookup(ID, Token))
     return DeclarationName(Name);
 
   auto *LiteralName = new (Ctx) detail::CXXLiteralOperatorIdName(II);
-  CXXLiteralOperatorNames.InsertNode(LiteralName, InsertPos);
+  CXXLiteralOperatorNames.insert(LiteralName, Token);
   return DeclarationName(LiteralName);
 }
 

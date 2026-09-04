@@ -277,8 +277,11 @@ extern const short *_tolower_tab_;
       common_flags()->strict_string_checks ? (internal_strlen(s)) + 1 : (n) )
 
 #ifndef COMMON_INTERCEPTOR_DLOPEN
-#define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
-  ({ CheckNoDeepBind(filename, flag); REAL(dlopen)(filename, flag); })
+#  define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
+    ({                                              \
+      OnDlOpen(filename, flag);                     \
+      REAL(dlopen)(filename, flag);                 \
+    })
 #endif
 
 #ifndef COMMON_INTERCEPTOR_GET_TLS_RANGE
@@ -1023,6 +1026,25 @@ INTERCEPTOR(SSIZE_T, read, int fd, void *ptr, SIZE_T count) {
 #define INIT_READ
 #endif
 
+#if SANITIZER_INTERCEPT___READ_CHK
+INTERCEPTOR(SSIZE_T, __read_chk, int fd, void* ptr, SIZE_T count,
+            SIZE_T buflen) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __read_chk, fd, ptr, count, buflen);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  SSIZE_T res =
+      COMMON_INTERCEPTOR_BLOCK_REAL(__read_chk)(fd, ptr, count, buflen);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
+  if (res >= 0 && fd >= 0)
+    COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  return res;
+}
+#  define INIT___READ_CHK COMMON_INTERCEPT_FUNCTION(__read_chk)
+#else
+#  define INIT___READ_CHK
+#endif
+
 #if SANITIZER_INTERCEPT_FREAD
 INTERCEPTOR(SIZE_T, fread, void *ptr, SIZE_T size, SIZE_T nmemb, void *file) {
   // libc file streams can call user-supplied functions, see fopencookie.
@@ -1058,6 +1080,25 @@ INTERCEPTOR(SSIZE_T, pread, int fd, void *ptr, SIZE_T count, OFF_T offset) {
 #define INIT_PREAD
 #endif
 
+#if SANITIZER_INTERCEPT___PREAD_CHK
+INTERCEPTOR(SSIZE_T, __pread_chk, int fd, void* ptr, SIZE_T count, OFF_T offset,
+            SIZE_T buflen) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __pread_chk, fd, ptr, count, offset, buflen);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(__pread_chk)(fd, ptr, count,
+                                                           offset, buflen);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
+  if (res >= 0 && fd >= 0)
+    COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  return res;
+}
+#  define INIT___PREAD_CHK COMMON_INTERCEPT_FUNCTION(__pread_chk)
+#else
+#  define INIT___PREAD_CHK
+#endif
+
 #if SANITIZER_INTERCEPT_PREAD64
 INTERCEPTOR(SSIZE_T, pread64, int fd, void *ptr, SIZE_T count, OFF64_T offset) {
   void *ctx;
@@ -1074,6 +1115,25 @@ INTERCEPTOR(SSIZE_T, pread64, int fd, void *ptr, SIZE_T count, OFF64_T offset) {
 #define INIT_PREAD64 COMMON_INTERCEPT_FUNCTION(pread64)
 #else
 #define INIT_PREAD64
+#endif
+
+#if SANITIZER_INTERCEPT___PREAD64_CHK
+INTERCEPTOR(SSIZE_T, __pread64_chk, int fd, void* ptr, SIZE_T count,
+            OFF64_T offset, SIZE_T buflen) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __pread64_chk, fd, ptr, count, offset, buflen);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(__pread64_chk)(fd, ptr, count,
+                                                             offset, buflen);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
+  if (res >= 0 && fd >= 0)
+    COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  return res;
+}
+#  define INIT___PREAD64_CHK COMMON_INTERCEPT_FUNCTION(__pread64_chk)
+#else
+#  define INIT___PREAD64_CHK
 #endif
 
 #if SANITIZER_INTERCEPT_READV
@@ -1285,8 +1345,34 @@ INTERCEPTOR(int, puts, char *s) {
 #endif
 
 #if SANITIZER_INTERCEPT_PRCTL
-INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
-            unsigned long arg4, unsigned long arg5) {
+
+#  if defined(__aarch64__)
+// https://llvm.org/docs/PointerAuth.html
+// AArch64 is currently the only architecture with full PAC support.
+// Avoid adding PAC instructions to prevent crashes caused by
+// prctl(PR_PAC_RESET_KEYS, ...). Since PR_PAC_RESET_KEYS resets the
+// authentication key, using the old key afterward will lead to a crash.
+
+#    if defined(__ARM_FEATURE_BTI_DEFAULT)
+#      define BRANCH_PROTECTION_ATTRIBUTE \
+        __attribute__((target("branch-protection=bti")))
+#    else
+#      define BRANCH_PROTECTION_ATTRIBUTE \
+        __attribute__((target("branch-protection=none")))
+#    endif
+
+#    define PRCTL_INTERCEPTOR(ret_type, func, ...)                          \
+      DEFINE_REAL(ret_type, func, __VA_ARGS__)                              \
+      DECLARE_WRAPPER(ret_type, func, __VA_ARGS__)                          \
+      extern "C" INTERCEPTOR_ATTRIBUTE BRANCH_PROTECTION_ATTRIBUTE ret_type \
+      WRAP(func)(__VA_ARGS__)
+
+#  else
+#    define PRCTL_INTERCEPTOR INTERCEPTOR
+#  endif
+
+PRCTL_INTERCEPTOR(int, prctl, int option, unsigned long arg2,
+                  unsigned long arg3, unsigned long arg4, unsigned long arg5) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, prctl, option, arg2, arg3, arg4, arg5);
   static const int PR_SET_NAME = 15;
@@ -1300,7 +1386,7 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   static const int PR_SET_SECCOMP = 22;
   static const int SECCOMP_MODE_FILTER = 2;
 #  endif
-  if (option == PR_SET_VMA && arg2 == 0UL) {
+  if (option == PR_SET_VMA && arg2 == 0UL && arg5 != 0UL) {
     char *name = (char *)arg5;
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, internal_strlen(name) + 1);
   }
@@ -1326,7 +1412,7 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
   }
   return res;
 }
-#define INIT_PRCTL COMMON_INTERCEPT_FUNCTION(prctl)
+#  define INIT_PRCTL COMMON_INTERCEPT_FUNCTION(prctl)
 #else
 #define INIT_PRCTL
 #endif  // SANITIZER_INTERCEPT_PRCTL
@@ -6318,7 +6404,8 @@ INTERCEPTOR(int, flopenat, int dirfd, const char *path, int flags, ...) {
 INTERCEPTOR(__sanitizer_FILE *, fopen64, const char *path, const char *mode) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, fopen64, path, mode);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
+  if (path)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
   COMMON_INTERCEPTOR_READ_RANGE(ctx, mode, internal_strlen(mode) + 1);
   __sanitizer_FILE *res = REAL(fopen64)(path, mode);
   COMMON_INTERCEPTOR_FILE_OPEN(ctx, res, path);
@@ -10402,9 +10489,12 @@ static void InitializeCommonInterceptors() {
   INIT_MEMRCHR;
   INIT_MEMMEM;
   INIT_READ;
+  INIT___READ_CHK;
   INIT_FREAD;
   INIT_PREAD;
+  INIT___PREAD_CHK;
   INIT_PREAD64;
+  INIT___PREAD64_CHK;
   INIT_READV;
   INIT_PREADV;
   INIT_PREADV64;

@@ -36,19 +36,20 @@ public:
     std::unique_ptr<MachineFunction> MF;
 
   public:
-    Result(std::unique_ptr<MachineFunction> MF) : MF(std::move(MF)) {}
+    LLVM_ABI Result(std::unique_ptr<MachineFunction> MF);
     MachineFunction &getMF() { return *MF; };
     LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
                              FunctionAnalysisManager::Invalidator &);
   };
 
-  MachineFunctionAnalysis(const TargetMachine *TM) : TM(TM) {};
+  MachineFunctionAnalysis(const TargetMachine &TM) : TM(&TM) {};
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-class FreeMachineFunctionPass : public PassInfoMixin<FreeMachineFunctionPass> {
+class FreeMachineFunctionPass
+    : public RequiredPassInfoMixin<FreeMachineFunctionPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

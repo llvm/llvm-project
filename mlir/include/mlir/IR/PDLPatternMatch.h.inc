@@ -14,6 +14,7 @@
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 //===----------------------------------------------------------------------===//
@@ -53,7 +54,7 @@ public:
   /// value is not an instance of `T`.
   template <typename T,
             typename ResultT = std::conditional_t<
-                std::is_convertible<T, bool>::value, T, std::optional<T>>>
+                std::is_constructible_v<bool, T>, T, std::optional<T>>>
   ResultT dyn_cast() const {
     return isa<T>() ? castImpl<T>() : ResultT();
   }
@@ -152,9 +153,7 @@ public:
   void push_back(TypeRange value) {
     // The lifetime of a TypeRange can't be guaranteed, so we'll need to
     // allocate a storage for it.
-    llvm::OwningArrayRef<Type> storage(value.size());
-    llvm::copy(value, storage.begin());
-    allocatedTypeRanges.emplace_back(std::move(storage));
+    allocatedTypeRanges.emplace_back(value.begin(), value.end());
     typeRanges.push_back(allocatedTypeRanges.back());
     results.push_back(&typeRanges.back());
   }
@@ -174,9 +173,7 @@ public:
   void push_back(ValueRange value) {
     // The lifetime of a ValueRange can't be guaranteed, so we'll need to
     // allocate a storage for it.
-    llvm::OwningArrayRef<Value> storage(value.size());
-    llvm::copy(value, storage.begin());
-    allocatedValueRanges.emplace_back(std::move(storage));
+    allocatedValueRanges.emplace_back(value.begin(), value.end());
     valueRanges.push_back(allocatedValueRanges.back());
     results.push_back(&valueRanges.back());
   }
@@ -206,8 +203,8 @@ protected:
   SmallVector<ValueRange> valueRanges;
   /// Memory allocated to store ranges in the result list whose lifetime was
   /// generated in the native function.
-  SmallVector<llvm::OwningArrayRef<Type>> allocatedTypeRanges;
-  SmallVector<llvm::OwningArrayRef<Value>> allocatedValueRanges;
+  SmallVector<std::vector<Type>> allocatedTypeRanges;
+  SmallVector<std::vector<Value>> allocatedValueRanges;
 };
 
 //===----------------------------------------------------------------------===//
@@ -523,6 +520,7 @@ template <typename T>
 struct ProcessPDLValue<T, std::enable_if_t<std::is_base_of<OpState, T>::value>>
     : public ProcessDerivedPDLValue<T, Operation *> {
   static T processAsArg(Operation *value) { return cast<T>(value); }
+  using ProcessDerivedPDLValue<T, Operation *>::processAsArg;
 };
 
 //===----------------------------------------------------------------------===//
@@ -644,8 +642,8 @@ void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
 
 /// Store a single result within the result list.
 template <typename T>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results, T &&value) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             T &&value) {
   ProcessPDLValue<T>::processAsResult(rewriter, results,
                                       std::forward<T>(value));
   return success();
@@ -653,9 +651,8 @@ static LogicalResult processResults(PatternRewriter &rewriter,
 
 /// Store a std::pair<> as individual results within the result list.
 template <typename T1, typename T2>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results,
-                                    std::pair<T1, T2> &&pair) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             std::pair<T1, T2> &&pair) {
   if (failed(processResults(rewriter, results, std::move(pair.first))) ||
       failed(processResults(rewriter, results, std::move(pair.second))))
     return failure();
@@ -664,9 +661,8 @@ static LogicalResult processResults(PatternRewriter &rewriter,
 
 /// Store a std::tuple<> as individual results within the result list.
 template <typename... Ts>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results,
-                                    std::tuple<Ts...> &&tuple) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             std::tuple<Ts...> &&tuple) {
   auto applyFn = [&](auto &&...args) {
     return (succeeded(processResults(rewriter, results, std::move(args))) &&
             ...);
@@ -681,9 +677,8 @@ inline LogicalResult processResults(PatternRewriter &rewriter,
   return result;
 }
 template <typename T>
-static LogicalResult processResults(PatternRewriter &rewriter,
-                                    PDLResultList &results,
-                                    FailureOr<T> &&result) {
+LogicalResult processResults(PatternRewriter &rewriter, PDLResultList &results,
+                             FailureOr<T> &&result) {
   if (failed(result))
     return failure();
   return processResults(rewriter, results, std::move(*result));

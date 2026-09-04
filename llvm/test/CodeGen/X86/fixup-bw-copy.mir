@@ -1,4 +1,5 @@
 # RUN: llc -run-pass x86-fixup-bw-insts -mtriple=x86_64-- -o - %s | FileCheck %s
+# RUN: llc -passes="require<profile-summary>,function(machine-function(x86-fixup-bw-insts))" -mtriple=x86_64-- -o - %s | FileCheck %s
 
 # Verify that we correctly deal with the flag edge cases when replacing
 # copies by bigger copies, which is a pretty unusual transform.

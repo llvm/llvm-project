@@ -19,7 +19,7 @@ program OmpAtomic
         x = 2 * 4
     !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
     !$omp atomic update release, seq_cst
-    !ERROR: The atomic variable x should appear as an argument in the update operation
+    !ERROR: This is not a valid ATOMIC UPDATE operation
         x = 10
     !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
     !$omp atomic capture release, seq_cst

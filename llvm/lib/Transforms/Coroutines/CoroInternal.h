@@ -16,16 +16,12 @@
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Coroutines/CoroShape.h"
 
-namespace llvm {
-
-class CallGraph;
-
-namespace coro {
+namespace llvm::coro {
 
 bool isSuspendBlock(BasicBlock *BB);
 bool declaresAnyIntrinsic(const Module &M);
 bool declaresIntrinsics(const Module &M, ArrayRef<Intrinsic::ID> List);
-void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
+void elideCoroFree(Value *FramePtr);
 
 /// Replaces all @llvm.coro.alloc intrinsics calls associated with a given
 /// call @llvm.coro.id instruction with boolean value false.
@@ -61,7 +57,6 @@ void normalizeCoroutine(Function &F, coro::Shape &Shape,
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
                              TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
-} // End namespace coro.
-} // End namespace llvm
+} // End namespace llvm::coro
 
 #endif

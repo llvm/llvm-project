@@ -36,7 +36,7 @@ public:
   /// No need to allow copies.
   SeedBundle(const SeedBundle &) = delete;
   SeedBundle &operator=(const SeedBundle &) = delete;
-  virtual ~SeedBundle() {}
+  virtual ~SeedBundle() = default;
 
   using iterator = SmallVector<Instruction *>::iterator;
   using const_iterator = SmallVector<Instruction *>::const_iterator;
@@ -55,7 +55,7 @@ public:
     NumUnusedBits += Utils::getNumBits(I);
   }
 
-  virtual void insert(Instruction *I, ScalarEvolution &SE) = 0;
+  virtual bool tryInsert(Instruction *I, ScalarEvolution &SE) = 0;
 
   unsigned getFirstUnusedElementIdx() const {
     for (unsigned ElmIdx : seq<unsigned>(0, Seeds.size()))
@@ -143,8 +143,8 @@ public:
     assert(all_of(Seeds, [](auto *S) { return isa<LoadOrStoreT>(S); }) &&
            "Expected Load or Store instructions!");
     auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
-      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
-                                   cast<LoadOrStoreT>(I1), SE);
+      return *Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                    cast<LoadOrStoreT>(I1), SE);
     };
     std::sort(Seeds.begin(), Seeds.end(), Cmp);
   }
@@ -154,14 +154,21 @@ public:
                   "Expected LoadInst or StoreInst!");
     assert(isa<LoadOrStoreT>(MemI) && "Expected Load or Store!");
   }
-  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
+  bool tryInsert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
     assert(isa<LoadOrStoreT>(I) && "Expected a Store or a Load!");
+    // Early return if we can't determine the mem access ordering.
+    auto DiffOpt = Utils::getPointerDiffInBytes(
+        cast<LoadOrStoreT>(Seeds.back()), cast<LoadOrStoreT>(I), SE);
+    if (!DiffOpt)
+      return false;
+
     auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
-      return Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
-                                   cast<LoadOrStoreT>(I1), SE);
+      return *Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
+                                    cast<LoadOrStoreT>(I1), SE);
     };
     // Find the first element after I in mem. Then insert I before it.
     insertAt(llvm::upper_bound(*this, I, Cmp), I);
+    return true;
   }
 };
 
@@ -191,7 +198,8 @@ class SeedContainer {
 
   ScalarEvolution &SE;
 
-  template <typename LoadOrStoreT> KeyT getKey(LoadOrStoreT *LSI) const;
+  template <typename LoadOrStoreT>
+  KeyT getKey(LoadOrStoreT *LSI, bool AllowDiffTypes) const;
 
 public:
   SeedContainer(ScalarEvolution &SE) : SE(SE) {}
@@ -267,7 +275,8 @@ public:
     bool operator!=(const iterator &Other) const { return !(*this == Other); }
   };
   using const_iterator = BundleMapT::const_iterator;
-  template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);
+  template <typename LoadOrStoreT>
+  void insert(LoadOrStoreT *LSI, bool AllowDiffTypes);
   // To support constant-time erase, these just mark the element used, rather
   // than actually removing them from the bundle.
   LLVM_ABI bool erase(Instruction *I);
@@ -291,9 +300,9 @@ public:
 
 // Explicit instantiations
 extern template LLVM_TEMPLATE_ABI void
-SeedContainer::insert<LoadInst>(LoadInst *);
+SeedContainer::insert<LoadInst>(LoadInst *, bool);
 extern template LLVM_TEMPLATE_ABI void
-SeedContainer::insert<StoreInst>(StoreInst *);
+SeedContainer::insert<StoreInst>(StoreInst *, bool);
 
 class SeedCollector {
   SeedContainer StoreSeeds;
@@ -308,15 +317,12 @@ class SeedCollector {
 
 public:
   LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
-                         bool CollectStores, bool CollectLoads);
+                         bool CollectStores, bool CollectLoads,
+                         bool AllowDiffTypes = false);
   LLVM_ABI ~SeedCollector();
 
-  iterator_range<SeedContainer::iterator> getStoreSeeds() {
-    return {StoreSeeds.begin(), StoreSeeds.end()};
-  }
-  iterator_range<SeedContainer::iterator> getLoadSeeds() {
-    return {LoadSeeds.begin(), LoadSeeds.end()};
-  }
+  iterator_range<SeedContainer::iterator> getStoreSeeds() { return StoreSeeds; }
+  iterator_range<SeedContainer::iterator> getLoadSeeds() { return LoadSeeds; }
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

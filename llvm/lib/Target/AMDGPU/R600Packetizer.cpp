@@ -35,10 +35,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -129,7 +126,7 @@ private:
       if (OperandIdx < 0)
         continue;
       Register Src = MI.getOperand(OperandIdx).getReg();
-      const DenseMap<unsigned, unsigned>::const_iterator It = PVs.find(Src);
+      const auto It = PVs.find(Src);
       if (It != PVs.end())
         MI.getOperand(OperandIdx).setReg(It->second);
     }
@@ -318,6 +315,11 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
   const R600InstrInfo *TII = ST.getInstrInfo();
 
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+
+  const InstrItineraryData *II = ST.getInstrItineraryData();
+  // If there is no itineraries information, abandon.
+  if (II->Itineraries == nullptr)
+    return false;
 
   // Instantiate the packetizer.
   R600PacketizerList Packetizer(Fn, ST, MLI);

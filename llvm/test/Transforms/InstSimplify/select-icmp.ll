@@ -256,6 +256,17 @@ define ptr @icmp_ptr_eq_replace(ptr %a, ptr %b) {
   ret ptr %sel
 }
 
+define <2 x ptr> @icmp_vector_ptr_eq_replace(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: @icmp_vector_ptr_eq_replace(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[A:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = select <2 x i1> [[CMP]], <2 x ptr> [[A]], <2 x ptr> [[B1]]
+; CHECK-NEXT:    ret <2 x ptr> [[B]]
+;
+  %cmp = icmp eq <2 x ptr> %a, %b
+  %sel = select <2 x i1> %cmp, <2 x ptr> %a, <2 x ptr> %b
+  ret <2 x ptr> %sel
+}
+
 define ptr @icmp_ptr_eq_replace_null(ptr %a) {
 ; CHECK-LABEL: @icmp_ptr_eq_replace_null(
 ; CHECK-NEXT:    ret ptr [[A:%.*]]
@@ -275,4 +286,26 @@ define ptr @ptr_eq_replace_same_underlying_object(ptr %st, i64 %i, i64 %j) {
   %cmp = icmp eq ptr %a, %b
   %sel = select i1 %cmp, ptr %a, ptr %b
   ret ptr %sel
+}
+
+define ptr @ptr_eq_replace_constant(ptr %a) {
+; CHECK-LABEL: @ptr_eq_replace_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[A:%.*]], inttoptr (i64 42 to ptr)
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], ptr inttoptr (i64 42 to ptr), ptr [[A]]
+; CHECK-NEXT:    ret ptr [[SEL]]
+;
+  %cmp = icmp eq ptr %a, inttoptr (i64 42 to ptr)
+  %sel = select i1 %cmp, ptr inttoptr (i64 42 to ptr), ptr %a
+  ret ptr %sel
+}
+
+define <2 x ptr> @ptr_eq_replace_vector_constant(<2 x ptr> %a) {
+; CHECK-LABEL: @ptr_eq_replace_vector_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[A:%.*]], <ptr inttoptr (i64 42 to ptr), ptr inttoptr (i64 88 to ptr)>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x ptr> [[A]], <2 x ptr> <ptr inttoptr (i64 42 to ptr), ptr inttoptr (i64 88 to ptr)>
+; CHECK-NEXT:    ret <2 x ptr> [[SEL]]
+;
+  %cmp = icmp eq <2 x ptr> %a, <ptr inttoptr (i64 42 to ptr), ptr inttoptr (i64 88 to ptr)>
+  %sel = select <2 x i1> %cmp, <2 x ptr> %a, <2 x ptr> <ptr inttoptr (i64 42 to ptr), ptr inttoptr (i64 88 to ptr)>
+  ret <2 x ptr> %sel
 }

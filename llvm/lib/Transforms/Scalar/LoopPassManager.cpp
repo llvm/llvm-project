@@ -8,16 +8,12 @@
 
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 using namespace llvm;
-
-namespace llvm {
 
 /// Explicitly specialize the pass manager's run method to handle loop nest
 /// structure updates.
@@ -186,7 +182,6 @@ LoopPassManager::runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
   }
   return PA;
 }
-} // namespace llvm
 
 void FunctionToLoopPassAdaptor::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -194,15 +189,21 @@ void FunctionToLoopPassAdaptor::printPipeline(
   Pass->printPipeline(OS, MapClassName2PassName);
   OS << ')';
 }
+
 PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
+  PreservedAnalyses PA = PreservedAnalyses::all();
+  // If there are no loops, there's no need to run any loop passes or construct
+  // the required analyses.
+  if (AM.getResult<LoopAnalysis>(F).empty())
+    return PA;
+
   // Before we even compute any loop analyses, first run a miniature function
   // pass pipeline to put loops into their canonical form. Note that we can
   // directly build up function analyses after this as the function pass
   // manager handles all the invalidation at that layer.
   PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(F);
 
-  PreservedAnalyses PA = PreservedAnalyses::all();
   // Check the PassInstrumentation's BeforePass callbacks before running the
   // canonicalization pipeline.
   if (PI.runBeforePass<Function>(LoopCanonicalizationFPM, F)) {
@@ -213,20 +214,9 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   // Get the loop structure for this function
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
 
-  // If there are no loops, there is nothing to do here.
-  if (LI.empty())
-    return PA;
-
   // Get the analysis results needed by loop passes.
   MemorySSA *MSSA =
       UseMemorySSA ? (&AM.getResult<MemorySSAAnalysis>(F).getMSSA()) : nullptr;
-  BlockFrequencyInfo *BFI = UseBlockFrequencyInfo && F.hasProfileData()
-                                ? (&AM.getResult<BlockFrequencyAnalysis>(F))
-                                : nullptr;
-  BranchProbabilityInfo *BPI =
-      UseBranchProbabilityInfo && F.hasProfileData()
-          ? (&AM.getResult<BranchProbabilityAnalysis>(F))
-          : nullptr;
   LoopStandardAnalysisResults LAR = {AM.getResult<AAManager>(F),
                                      AM.getResult<AssumptionAnalysis>(F),
                                      AM.getResult<DominatorTreeAnalysis>(F),
@@ -234,8 +224,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                      AM.getResult<ScalarEvolutionAnalysis>(F),
                                      AM.getResult<TargetLibraryAnalysis>(F),
                                      AM.getResult<TargetIRAnalysis>(F),
-                                     BFI,
-                                     BPI,
                                      MSSA};
 
   // Setup the loop analysis manager from its proxy. It is important that
@@ -265,13 +253,11 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   }
 
 #ifndef NDEBUG
-  PI.pushBeforeNonSkippedPassCallback([&LAR, &LI](StringRef PassID, Any IR) {
+  PI.pushBeforeNonSkippedPassCallback([&LAR, &LI](StringRef PassID,
+                                                  IRUnitRef IR) {
     if (isSpecialPass(PassID, {"PassManager"}))
       return;
-    assert(llvm::any_cast<const Loop *>(&IR));
-    const Loop **LPtr = llvm::any_cast<const Loop *>(&IR);
-    const Loop *L = LPtr ? *LPtr : nullptr;
-    assert(L && "Loop should be valid for printing");
+    const Loop *L = cast<Loop>(IR);
 
     // Verify the loop structure and LCSSA form before visiting the loop.
     L->verifyLoop();
@@ -316,7 +302,7 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     if (VerifyDomInfo)
       LAR.DT.verify();
     if (VerifyLoopInfo)
-      LAR.LI.verify(LAR.DT);
+      LAR.LI.verify();
     if (VerifySCEV)
       LAR.SE.verify();
     if (LAR.MSSA && VerifyMemorySSA)
@@ -349,10 +335,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
   PA.preserve<ScalarEvolutionAnalysis>();
-  if (UseBlockFrequencyInfo && F.hasProfileData())
-    PA.preserve<BlockFrequencyAnalysis>();
-  if (UseBranchProbabilityInfo && F.hasProfileData())
-    PA.preserve<BranchProbabilityAnalysis>();
   if (UseMemorySSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;

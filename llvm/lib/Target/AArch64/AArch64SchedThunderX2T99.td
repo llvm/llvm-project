@@ -28,7 +28,7 @@ def ThunderX2T99Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC]);
+                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
 }
@@ -1865,4 +1865,3 @@ def : InstRW<[THX2T99Write_8Cyc_I012, WriteAtomic],
             (instrs STLLRB, STLLRH, STLLRW, STLLRX)>;
 
 } // SchedModel = ThunderX2T99Model
-

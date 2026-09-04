@@ -145,7 +145,7 @@ public:
   /// returns an error, which should be reported and treated as a 'Disconnect'.
   Expected<HandleMessageAction>
   handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
-                SimpleRemoteEPCArgBytesVector ArgBytes) override;
+                shared::WrapperFunctionBuffer ArgBytes) override;
 
   Error waitForDisconnect();
 
@@ -159,14 +159,14 @@ private:
                          StringMap<ExecutorAddr> BootstrapSymbols);
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
-                     SimpleRemoteEPCArgBytesVector ArgBytes);
+                     shared::WrapperFunctionBuffer ArgBytes);
   void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
-                         SimpleRemoteEPCArgBytesVector ArgBytes);
+                         shared::WrapperFunctionBuffer ArgBytes);
 
-  shared::WrapperFunctionResult
+  shared::WrapperFunctionBuffer
   doJITDispatch(const void *FnTag, const char *ArgData, size_t ArgSize);
 
-  static shared::CWrapperFunctionResult jitDispatchEntry(void *DispatchCtx,
+  static shared::CWrapperFunctionBuffer jitDispatchEntry(void *DispatchCtx,
                                                          const void *FnTag,
                                                          const char *ArgData,
                                                          size_t ArgSize);
@@ -175,11 +175,17 @@ private:
   void releaseSeqNo(uint64_t) {}
 
   using PendingJITDispatchResultsMap =
-      DenseMap<uint64_t, std::promise<shared::WrapperFunctionResult> *>;
+      DenseMap<uint64_t, std::promise<shared::WrapperFunctionBuffer> *>;
 
   std::mutex ServerStateMutex;
   std::condition_variable ShutdownCV;
   enum { ServerRunning, ServerShuttingDown, ServerShutDown } RunState;
+
+  // Whether the controller announced the end of the session. The server never
+  // initiates a disconnection, so a transport disconnection without this is the
+  // controller going away unexpectedly: see handleDisconnect.
+  bool RemoteHangup = false;
+
   Error ShutdownErr = Error::success();
   std::unique_ptr<SimpleRemoteEPCTransport> T;
   std::unique_ptr<Dispatcher> D;
@@ -188,7 +194,6 @@ private:
 
   uint64_t NextSeqNo = 0;
   PendingJITDispatchResultsMap PendingJITDispatchResults;
-  std::vector<sys::DynamicLibrary> Dylibs;
 };
 
 } // end namespace orc

@@ -1,0 +1,98 @@
+===========================
+Libc++ 24.0.0 Release Notes
+===========================
+
+.. contents::
+   :local:
+   :depth: 2
+
+Written by the `Libc++ Team <https://libcxx.llvm.org>`_
+
+.. warning::
+
+   These are in-progress notes for the upcoming libc++ 24.0.0 release.
+   Release notes for previous releases can be found on
+   `the Download Page <https://releases.llvm.org/download.html>`_.
+
+Introduction
+============
+
+This document contains the release notes for the libc++ C++ Standard Library,
+part of the LLVM Compiler Infrastructure, release 24.0.0. Here we describe the
+status of libc++ in some detail, including major improvements from the previous
+release and new feature work. For the general LLVM release notes, see `the LLVM
+documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
+be downloaded from the `LLVM releases web site <https://llvm.org/releases/>`_.
+
+For more information about libc++, please see the `Libc++ Web Site
+<https://libcxx.llvm.org>`_ or the `LLVM Web Site <https://llvm.org>`_.
+
+Note that if you are reading this file from a Git checkout or the
+main Libc++ web page, this document applies to the *next* release, not
+the current one. To see the release notes for a specific release, please
+see the `releases page <https://llvm.org/releases/>`_.
+
+What's New in Libc++ 24.0.0?
+==============================
+
+Implemented Papers
+------------------
+
+- P3052R2: ``view_interface::at()`` (`Github <https://llvm.org/PR204395>`__)
+- P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
+- P3059R2: Making user-defined constructors of view iterators/sentinels private (`Github <https://github.com/llvm/llvm-project/issues/189599>`__)
+- P0792R14: ``function_ref`` : a type-erased callable reference (`Github <https://llvm.org/PR105376>`__)
+- P3016R6: Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists
+  (`Github <https://llvm.org/PR171271>`__)
+- P3948R1: ``constant_wrapper`` is the only tool needed for passing constant expressions via function arguments (`Github <https://llvm.org/PR189604>`__)
+- P3961R1: Less double indirection in ``function_ref`` (RU-220) (`Github <https://llvm.org/PR189606>`__)
+- P1901R2: Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers (`Github <https://llvm.org/PR105372>`__)
+- P0528R3: The Curious Case of Padding Bits, Featuring Atomic Compare-and-Exchange (`Github <https://llvm.org/PR76180>`__)
+- P3798R1: The unexpected in ``std::expected`` (`Github <https://llvm.org/PR204394>`__)
+- P2830R10: Standardized Constexpr Type Ordering (`Github <https://llvm.org/PR216616>`__)
+- P3778R0: Fix for ``type_order`` template definition (`Github <https://llvm.org/PR216616>`__)
+- P4140R0: Proposed resolution for US70-126: allow incomplete types in type_order (`Github <https://llvm.org/PR216616>`__)
+
+Improvements and New Features
+-----------------------------
+
+- ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
+
+Deprecations and Removals
+-------------------------
+
+- The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
+  It will be removed in LLVM 25.
+
+Potentially breaking changes
+----------------------------
+
+- In LLVM 23, libc++ dropped a lot of transitive includes in all language modes. This improves compile time significantly,
+  but causes programs which rely on these includes to not compile anymore. The ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23``
+  macro that was provided in LLVM 23 to ease the transition has been removed in this release.
+
+- Unused objects of containers are now diagnosed. To ease the transition ``_LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS`` can
+  be defined as an escape hatch. This escape hatch will be removed in LLVM 24.
+
+- libc++ no longer depends on msvcprt/libcpmt in the MSVC mode.
+
+Announcements About Future Releases
+-----------------------------------
+
+- ``std::allocator`` is trivially default constructible since LLVM 22. In LLVM 23 and LLVM 24, the
+  ``_LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR`` macro was provided as an escape hatch to revert that change.
+  This escape hatch will be removed in LLVM 25 if there is no evidence of it being useful.
+
+- ``bitset::operator[]`` returns ``bool`` since LLVM 22, fixing a conformance bug. In LLVM 23 and LLVM 24, the
+  ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF`` macro was provided as an escape hatch to revert
+  that change. This escape hatch will be removed in LLVM 25 if there is no evidence of it being useful.
+
+ABI Affecting Changes
+---------------------
+
+- ``std::set_new_handler`` and ``std::get_new_handler`` are now implemented by libc++ on Windows using ``VCRuntime``
+  directly instead of implicitly relying on ``msvcprt`` to implement them, therefore the global state of the handler
+  is no longer shared with ``msvcprt`` since libc++ now maintains its own internal state of the handler.
+
+Build System Changes
+--------------------

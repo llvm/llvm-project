@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -fopenacc -verify
 
-struct Incomplete;
+struct Incomplete; // #INCOMPLETE
 enum SomeE{};
 typedef struct IsComplete {
   struct S { int A; } CompositeMember;
@@ -157,4 +157,41 @@ void Inst() {
   Complete C;
   TemplUses(i, Arr, C); // #TEMPL_USES_INST
   NTTP<5, NTTP_REFed>(); // #NTTP_INST
+}
+
+template<typename T>
+void ThisCrashed(unsigned A, unsigned B) {
+  T ***ThreePtr;
+  // expected-error@+1 2{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
+#pragma acc parallel private(ThreePtr[A:B][B][B])
+  ;
+}
+
+void inst_crash() {
+  // expected-note@+1{{in instantiation}}
+  ThisCrashed<int>(1, 2);
+}
+
+void incomplete_use(Incomplete &i) {
+  // expected-error@+2{{incomplete type 'Incomplete' where a complete type is required}}
+  // expected-note@#INCOMPLETE{{forward declaration}}
+#pragma acc parallel private(i)
+  while (1);
+}
+
+namespace gh192783 {
+  constexpr char getChar() { return 3; }
+  constexpr unsigned long long getULL() { return 3; }
+
+void use() {
+  int array[5];
+#pragma acc parallel private(array[getChar():1])
+  while(1);
+#pragma acc parallel private(array[1:getChar()])
+  while(1);
+#pragma acc parallel private(array[getULL():1])
+  while(1);
+#pragma acc parallel private(array[1:getULL()])
+  while(1);
+}
 }

@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/issignaling.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/issignaling.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, issignaling, (double x)) {
-  return fputil::issignaling_impl(x);
+  return math::issignaling(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -1,4 +1,4 @@
-; RUN: llc < %s -O=3 -mtriple=arm64-apple-ios -mcpu=cyclone -mattr=+fullfp16 -enable-unsafe-fp-math -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -O=3 -mtriple=arm64-apple-ios -mcpu=cyclone -mattr=+fullfp16 -verify-machineinstrs | FileCheck %s
 
 define void @foo_2d(ptr %src) {
 ; CHECK-LABEL: %entry

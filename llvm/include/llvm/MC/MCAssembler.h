@@ -17,17 +17,15 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
@@ -62,6 +60,13 @@ private:
   bool HasLayout = false;
   bool HasFinalLayout = false;
   bool RelaxAll = false;
+
+  // Cumulative upstream size change during `relaxOnce`. Used to compensate
+  // forward-reference displacements in `evaluateFixup`.
+  int64_t Stretch = 0;
+
+  /// Non-empty when aligned instruction bundling is enabled.
+  MaybeAlign BundleAlign;
 
   SectionListType Sections;
 
@@ -99,8 +104,7 @@ private:
   /// \param RecordReloc Record relocation if needed.
   /// relocation.
   bool evaluateFixup(const MCFragment &F, MCFixup &Fixup, MCValue &Target,
-                     uint64_t &Value, bool RecordReloc,
-                     MutableArrayRef<char> Contents) const;
+                     uint64_t &Value, bool RecordReloc, uint8_t *Data) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
@@ -112,15 +116,15 @@ private:
   unsigned relaxOnce(unsigned FirstStable);
 
   /// Perform relaxation on a single fragment.
-  bool relaxFragment(MCFragment &F);
-  bool relaxInstruction(MCFragment &F);
-  bool relaxLEB(MCFragment &F);
-  bool relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
-  bool relaxDwarfLineAddr(MCFragment &F);
-  bool relaxDwarfCallFrameFragment(MCFragment &F);
-  bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
-  bool relaxCVDefRange(MCCVDefRangeFragment &DF);
-  bool relaxFill(MCFillFragment &F);
+  void relaxFragment(MCFragment &F);
+  void relaxAlign(MCFragment &F);
+  void relaxPrefAlign(MCFragment &F);
+  void relaxInstruction(MCFragment &F);
+  void relaxLEB(MCFragment &F);
+  void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
+  void relaxDwarfLineAddr(MCFragment &F);
+  void relaxDwarfCallFrameFragment(MCFragment &F);
+  void relaxSFrameFragment(MCFragment &DF);
 
 public:
   /// Construct a new assembler instance.
@@ -196,20 +200,28 @@ public:
   bool hasFinalLayout() const { return HasFinalLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
+  int64_t getStretch() const { return Stretch; }
+
+  bool isBundlingEnabled() const { return bool(BundleAlign); }
+  Align getBundleAlign() const {
+    assert(BundleAlign && "bundling is not enabled");
+    return *BundleAlign;
+  }
+  void setBundleAlign(Align Value) { BundleAlign = Value; }
 
   const_iterator begin() const { return Sections.begin(); }
   const_iterator end() const { return Sections.end(); }
 
   SmallVectorImpl<const MCSymbol *> &getSymbols() { return Symbols; }
-  iterator_range<pointee_iterator<
-      typename SmallVector<const MCSymbol *, 0>::const_iterator>>
+  iterator_range<
+      pointee_iterator<SmallVector<const MCSymbol *, 0>::const_iterator>>
   symbols() const {
     return make_pointee_range(Symbols);
   }
 
   LLVM_ABI bool registerSection(MCSection &Section);
   LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
-  void addRelocDirective(RelocDirective RD);
+  LLVM_ABI void addRelocDirective(RelocDirective RD);
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the

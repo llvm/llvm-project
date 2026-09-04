@@ -532,7 +532,7 @@ void cxx_only(int sel) {
   auto auto_int8 = local_int8;
   auto auto_int16 = local_int16;
 #if __cplusplus >= 201703L
-  auto [auto_int8_a] = local_int8; // expected-error {{cannot decompose non-class, non-array type 'svint8_t' (aka '__SVInt8_t')}}
+  auto [auto_int8_a] = local_int8; // expected-error {{cannot bind non-class, non-array type 'svint8_t' (aka '__SVInt8_t')}}
 #endif
 #endif
 

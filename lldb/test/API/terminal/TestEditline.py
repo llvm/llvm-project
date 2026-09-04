@@ -42,7 +42,6 @@ class EditlineTest(PExpectTest):
                 substrs=["Syntax: print"],
             )
 
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
@@ -94,7 +93,7 @@ class EditlineTest(PExpectTest):
         # after the prompt.
         self.child.send("foo")
         # Check that there are no escape codes.
-        self.child.expect(re.escape("\n(lldb) foo"))
+        self.child.expect(re.escape("\n\r\x1b[K(lldb) foo"))
 
     @skipIfAsan
     @skipIfEditlineSupportMissing

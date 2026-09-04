@@ -4,11 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare <vscale x 1 x half> @llvm.vp.fma.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x half> @llvm.vp.fneg.nxv1f16(<vscale x 1 x half>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x half> @llvm.vp.merge.nxv1f16(<vscale x 1 x i1>, <vscale x 1 x half>, <vscale x 1 x half>, i32)
-declare <vscale x 1 x half> @llvm.vp.select.nxv1f16(<vscale x 1 x i1>, <vscale x 1 x half>, <vscale x 1 x half>, i32)
-
 define <vscale x 1 x half> @vfnmacc_vv_nxv1f16(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x half> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f16:
 ; CHECK:       # %bb.0:
@@ -88,7 +83,7 @@ define <vscale x 1 x half> @vfnmacc_vf_nxv1f16_unmasked(<vscale x 1 x half> %a, 
 define <vscale x 1 x half> @vfnmacc_vv_nxv1f16_ta(<vscale x 1 x half> %a, <vscale x 1 x half> %b, <vscale x 1 x half> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -102,7 +97,7 @@ define <vscale x 1 x half> @vfnmacc_vv_nxv1f16_ta(<vscale x 1 x half> %a, <vscal
 define <vscale x 1 x half> @vfnmacc_vf_nxv1f16_ta(<vscale x 1 x half> %a, half %b, <vscale x 1 x half> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv1f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -118,7 +113,7 @@ define <vscale x 1 x half> @vfnmacc_vf_nxv1f16_ta(<vscale x 1 x half> %a, half %
 define <vscale x 1 x half> @vfnmacc_vf_nxv1f16_commute_ta(<vscale x 1 x half> %a, half %b, <vscale x 1 x half> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv1f16_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -130,11 +125,6 @@ define <vscale x 1 x half> @vfnmacc_vf_nxv1f16_commute_ta(<vscale x 1 x half> %a
   %u = call <vscale x 1 x half> @llvm.vp.select.nxv1f16(<vscale x 1 x i1> %m, <vscale x 1 x half> %v, <vscale x 1 x half> %c, i32 %evl)
   ret <vscale x 1 x half> %u
 }
-
-declare <vscale x 2 x half> @llvm.vp.fma.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x half> @llvm.vp.fneg.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x half> @llvm.vp.merge.nxv2f16(<vscale x 2 x i1>, <vscale x 2 x half>, <vscale x 2 x half>, i32)
-declare <vscale x 2 x half> @llvm.vp.select.nxv2f16(<vscale x 2 x i1>, <vscale x 2 x half>, <vscale x 2 x half>, i32)
 
 define <vscale x 2 x half> @vfnmacc_vv_nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b, <vscale x 2 x half> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f16:
@@ -215,7 +205,7 @@ define <vscale x 2 x half> @vfnmacc_vf_nxv2f16_unmasked(<vscale x 2 x half> %a, 
 define <vscale x 2 x half> @vfnmacc_vv_nxv2f16_ta(<vscale x 2 x half> %a, <vscale x 2 x half> %b, <vscale x 2 x half> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -229,7 +219,7 @@ define <vscale x 2 x half> @vfnmacc_vv_nxv2f16_ta(<vscale x 2 x half> %a, <vscal
 define <vscale x 2 x half> @vfnmacc_vf_nxv2f16_ta(<vscale x 2 x half> %a, half %b, <vscale x 2 x half> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv2f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -245,7 +235,7 @@ define <vscale x 2 x half> @vfnmacc_vf_nxv2f16_ta(<vscale x 2 x half> %a, half %
 define <vscale x 2 x half> @vfnmacc_vf_nxv2f16_commute_ta(<vscale x 2 x half> %a, half %b, <vscale x 2 x half> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv2f16_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -257,11 +247,6 @@ define <vscale x 2 x half> @vfnmacc_vf_nxv2f16_commute_ta(<vscale x 2 x half> %a
   %u = call <vscale x 2 x half> @llvm.vp.select.nxv2f16(<vscale x 2 x i1> %m, <vscale x 2 x half> %v, <vscale x 2 x half> %c, i32 %evl)
   ret <vscale x 2 x half> %u
 }
-
-declare <vscale x 4 x half> @llvm.vp.fma.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x half> @llvm.vp.fneg.nxv4f16(<vscale x 4 x half>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x half> @llvm.vp.merge.nxv4f16(<vscale x 4 x i1>, <vscale x 4 x half>, <vscale x 4 x half>, i32)
-declare <vscale x 4 x half> @llvm.vp.select.nxv4f16(<vscale x 4 x i1>, <vscale x 4 x half>, <vscale x 4 x half>, i32)
 
 define <vscale x 4 x half> @vfnmacc_vv_nxv4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b, <vscale x 4 x half> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f16:
@@ -342,7 +327,7 @@ define <vscale x 4 x half> @vfnmacc_vf_nxv4f16_unmasked(<vscale x 4 x half> %a, 
 define <vscale x 4 x half> @vfnmacc_vv_nxv4f16_ta(<vscale x 4 x half> %a, <vscale x 4 x half> %b, <vscale x 4 x half> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -356,7 +341,7 @@ define <vscale x 4 x half> @vfnmacc_vv_nxv4f16_ta(<vscale x 4 x half> %a, <vscal
 define <vscale x 4 x half> @vfnmacc_vf_nxv4f16_ta(<vscale x 4 x half> %a, half %b, <vscale x 4 x half> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv4f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -372,7 +357,7 @@ define <vscale x 4 x half> @vfnmacc_vf_nxv4f16_ta(<vscale x 4 x half> %a, half %
 define <vscale x 4 x half> @vfnmacc_vf_nxv4f16_commute_ta(<vscale x 4 x half> %a, half %b, <vscale x 4 x half> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv4f16_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -384,11 +369,6 @@ define <vscale x 4 x half> @vfnmacc_vf_nxv4f16_commute_ta(<vscale x 4 x half> %a
   %u = call <vscale x 4 x half> @llvm.vp.select.nxv4f16(<vscale x 4 x i1> %m, <vscale x 4 x half> %v, <vscale x 4 x half> %c, i32 %evl)
   ret <vscale x 4 x half> %u
 }
-
-declare <vscale x 8 x half> @llvm.vp.fma.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x half> @llvm.vp.fneg.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x half> @llvm.vp.merge.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>, i32)
-declare <vscale x 8 x half> @llvm.vp.select.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>, i32)
 
 define <vscale x 8 x half> @vfnmacc_vv_nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv8f16:
@@ -469,7 +449,7 @@ define <vscale x 8 x half> @vfnmacc_vf_nxv8f16_unmasked(<vscale x 8 x half> %a, 
 define <vscale x 8 x half> @vfnmacc_vv_nxv8f16_ta(<vscale x 8 x half> %a, <vscale x 8 x half> %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv8f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v12, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -483,7 +463,7 @@ define <vscale x 8 x half> @vfnmacc_vv_nxv8f16_ta(<vscale x 8 x half> %a, <vscal
 define <vscale x 8 x half> @vfnmacc_vf_nxv8f16_ta(<vscale x 8 x half> %a, half %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv8f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -499,7 +479,7 @@ define <vscale x 8 x half> @vfnmacc_vf_nxv8f16_ta(<vscale x 8 x half> %a, half %
 define <vscale x 8 x half> @vfnmacc_vf_nxv8f16_commute_ta(<vscale x 8 x half> %a, half %b, <vscale x 8 x half> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv8f16_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -511,11 +491,6 @@ define <vscale x 8 x half> @vfnmacc_vf_nxv8f16_commute_ta(<vscale x 8 x half> %a
   %u = call <vscale x 8 x half> @llvm.vp.select.nxv8f16(<vscale x 8 x i1> %m, <vscale x 8 x half> %v, <vscale x 8 x half> %c, i32 %evl)
   ret <vscale x 8 x half> %u
 }
-
-declare <vscale x 16 x half> @llvm.vp.fma.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x half> @llvm.vp.fneg.nxv16f16(<vscale x 16 x half>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x half> @llvm.vp.merge.nxv16f16(<vscale x 16 x i1>, <vscale x 16 x half>, <vscale x 16 x half>, i32)
-declare <vscale x 16 x half> @llvm.vp.select.nxv16f16(<vscale x 16 x i1>, <vscale x 16 x half>, <vscale x 16 x half>, i32)
 
 define <vscale x 16 x half> @vfnmacc_vv_nxv16f16(<vscale x 16 x half> %a, <vscale x 16 x half> %b, <vscale x 16 x half> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv16f16:
@@ -596,7 +571,7 @@ define <vscale x 16 x half> @vfnmacc_vf_nxv16f16_unmasked(<vscale x 16 x half> %
 define <vscale x 16 x half> @vfnmacc_vv_nxv16f16_ta(<vscale x 16 x half> %a, <vscale x 16 x half> %b, <vscale x 16 x half> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv16f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -610,7 +585,7 @@ define <vscale x 16 x half> @vfnmacc_vv_nxv16f16_ta(<vscale x 16 x half> %a, <vs
 define <vscale x 16 x half> @vfnmacc_vf_nxv16f16_ta(<vscale x 16 x half> %a, half %b, <vscale x 16 x half> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv16f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -626,7 +601,7 @@ define <vscale x 16 x half> @vfnmacc_vf_nxv16f16_ta(<vscale x 16 x half> %a, hal
 define <vscale x 16 x half> @vfnmacc_vf_nxv16f16_commute_ta(<vscale x 16 x half> %a, half %b, <vscale x 16 x half> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv16f16_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -638,11 +613,6 @@ define <vscale x 16 x half> @vfnmacc_vf_nxv16f16_commute_ta(<vscale x 16 x half>
   %u = call <vscale x 16 x half> @llvm.vp.select.nxv16f16(<vscale x 16 x i1> %m, <vscale x 16 x half> %v, <vscale x 16 x half> %c, i32 %evl)
   ret <vscale x 16 x half> %u
 }
-
-declare <vscale x 32 x half> @llvm.vp.fma.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>, <vscale x 32 x half>, <vscale x 32 x i1>, i32)
-declare <vscale x 32 x half> @llvm.vp.fneg.nxv32f16(<vscale x 32 x half>, <vscale x 32 x i1>, i32)
-declare <vscale x 32 x half> @llvm.vp.merge.nxv32f16(<vscale x 32 x i1>, <vscale x 32 x half>, <vscale x 32 x half>, i32)
-declare <vscale x 32 x half> @llvm.vp.select.nxv32f16(<vscale x 32 x i1>, <vscale x 32 x half>, <vscale x 32 x half>, i32)
 
 define <vscale x 32 x half> @vfnmacc_vv_nxv32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv32f16:
@@ -726,7 +696,7 @@ define <vscale x 32 x half> @vfnmacc_vv_nxv32f16_ta(<vscale x 32 x half> %a, <vs
 ; CHECK-LABEL: vfnmacc_vv_nxv32f16_ta:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
@@ -740,7 +710,7 @@ define <vscale x 32 x half> @vfnmacc_vv_nxv32f16_ta(<vscale x 32 x half> %a, <vs
 define <vscale x 32 x half> @vfnmacc_vf_nxv32f16_ta(<vscale x 32 x half> %a, half %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv32f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v16, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -756,7 +726,7 @@ define <vscale x 32 x half> @vfnmacc_vf_nxv32f16_ta(<vscale x 32 x half> %a, hal
 define <vscale x 32 x half> @vfnmacc_vf_nxv32f16_commute_ta(<vscale x 32 x half> %a, half %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv32f16_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v16, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -768,11 +738,6 @@ define <vscale x 32 x half> @vfnmacc_vf_nxv32f16_commute_ta(<vscale x 32 x half>
   %u = call <vscale x 32 x half> @llvm.vp.select.nxv32f16(<vscale x 32 x i1> %m, <vscale x 32 x half> %v, <vscale x 32 x half> %c, i32 %evl)
   ret <vscale x 32 x half> %u
 }
-
-declare <vscale x 1 x float> @llvm.vp.fma.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x float> @llvm.vp.fneg.nxv1f32(<vscale x 1 x float>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x float> @llvm.vp.merge.nxv1f32(<vscale x 1 x i1>, <vscale x 1 x float>, <vscale x 1 x float>, i32)
-declare <vscale x 1 x float> @llvm.vp.select.nxv1f32(<vscale x 1 x i1>, <vscale x 1 x float>, <vscale x 1 x float>, i32)
 
 define <vscale x 1 x float> @vfnmacc_vv_nxv1f32(<vscale x 1 x float> %a, <vscale x 1 x float> %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f32:
@@ -853,7 +818,7 @@ define <vscale x 1 x float> @vfnmacc_vf_nxv1f32_unmasked(<vscale x 1 x float> %a
 define <vscale x 1 x float> @vfnmacc_vv_nxv1f32_ta(<vscale x 1 x float> %a, <vscale x 1 x float> %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -867,7 +832,7 @@ define <vscale x 1 x float> @vfnmacc_vv_nxv1f32_ta(<vscale x 1 x float> %a, <vsc
 define <vscale x 1 x float> @vfnmacc_vf_nxv1f32_ta(<vscale x 1 x float> %a, float %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv1f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -883,7 +848,7 @@ define <vscale x 1 x float> @vfnmacc_vf_nxv1f32_ta(<vscale x 1 x float> %a, floa
 define <vscale x 1 x float> @vfnmacc_vf_nxv1f32_commute_ta(<vscale x 1 x float> %a, float %b, <vscale x 1 x float> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv1f32_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -895,11 +860,6 @@ define <vscale x 1 x float> @vfnmacc_vf_nxv1f32_commute_ta(<vscale x 1 x float> 
   %u = call <vscale x 1 x float> @llvm.vp.select.nxv1f32(<vscale x 1 x i1> %m, <vscale x 1 x float> %v, <vscale x 1 x float> %c, i32 %evl)
   ret <vscale x 1 x float> %u
 }
-
-declare <vscale x 2 x float> @llvm.vp.fma.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x float> @llvm.vp.fneg.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>, <vscale x 2 x float>, i32)
-declare <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>, <vscale x 2 x float>, i32)
 
 define <vscale x 2 x float> @vfnmacc_vv_nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b, <vscale x 2 x float> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f32:
@@ -980,7 +940,7 @@ define <vscale x 2 x float> @vfnmacc_vf_nxv2f32_unmasked(<vscale x 2 x float> %a
 define <vscale x 2 x float> @vfnmacc_vv_nxv2f32_ta(<vscale x 2 x float> %a, <vscale x 2 x float> %b, <vscale x 2 x float> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -994,7 +954,7 @@ define <vscale x 2 x float> @vfnmacc_vv_nxv2f32_ta(<vscale x 2 x float> %a, <vsc
 define <vscale x 2 x float> @vfnmacc_vf_nxv2f32_ta(<vscale x 2 x float> %a, float %b, <vscale x 2 x float> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv2f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1010,7 +970,7 @@ define <vscale x 2 x float> @vfnmacc_vf_nxv2f32_ta(<vscale x 2 x float> %a, floa
 define <vscale x 2 x float> @vfnmacc_vf_nxv2f32_commute_ta(<vscale x 2 x float> %a, float %b, <vscale x 2 x float> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv2f32_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1022,11 +982,6 @@ define <vscale x 2 x float> @vfnmacc_vf_nxv2f32_commute_ta(<vscale x 2 x float> 
   %u = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %v, <vscale x 2 x float> %c, i32 %evl)
   ret <vscale x 2 x float> %u
 }
-
-declare <vscale x 4 x float> @llvm.vp.fma.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x float> @llvm.vp.fneg.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x float> @llvm.vp.merge.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>, i32)
-declare <vscale x 4 x float> @llvm.vp.select.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>, i32)
 
 define <vscale x 4 x float> @vfnmacc_vv_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f32:
@@ -1107,7 +1062,7 @@ define <vscale x 4 x float> @vfnmacc_vf_nxv4f32_unmasked(<vscale x 4 x float> %a
 define <vscale x 4 x float> @vfnmacc_vv_nxv4f32_ta(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v12, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1121,7 +1076,7 @@ define <vscale x 4 x float> @vfnmacc_vv_nxv4f32_ta(<vscale x 4 x float> %a, <vsc
 define <vscale x 4 x float> @vfnmacc_vf_nxv4f32_ta(<vscale x 4 x float> %a, float %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv4f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1137,7 +1092,7 @@ define <vscale x 4 x float> @vfnmacc_vf_nxv4f32_ta(<vscale x 4 x float> %a, floa
 define <vscale x 4 x float> @vfnmacc_vf_nxv4f32_commute_ta(<vscale x 4 x float> %a, float %b, <vscale x 4 x float> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv4f32_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1149,11 +1104,6 @@ define <vscale x 4 x float> @vfnmacc_vf_nxv4f32_commute_ta(<vscale x 4 x float> 
   %u = call <vscale x 4 x float> @llvm.vp.select.nxv4f32(<vscale x 4 x i1> %m, <vscale x 4 x float> %v, <vscale x 4 x float> %c, i32 %evl)
   ret <vscale x 4 x float> %u
 }
-
-declare <vscale x 8 x float> @llvm.vp.fma.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x float> @llvm.vp.fneg.nxv8f32(<vscale x 8 x float>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x float> @llvm.vp.merge.nxv8f32(<vscale x 8 x i1>, <vscale x 8 x float>, <vscale x 8 x float>, i32)
-declare <vscale x 8 x float> @llvm.vp.select.nxv8f32(<vscale x 8 x i1>, <vscale x 8 x float>, <vscale x 8 x float>, i32)
 
 define <vscale x 8 x float> @vfnmacc_vv_nxv8f32(<vscale x 8 x float> %a, <vscale x 8 x float> %b, <vscale x 8 x float> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv8f32:
@@ -1234,7 +1184,7 @@ define <vscale x 8 x float> @vfnmacc_vf_nxv8f32_unmasked(<vscale x 8 x float> %a
 define <vscale x 8 x float> @vfnmacc_vv_nxv8f32_ta(<vscale x 8 x float> %a, <vscale x 8 x float> %b, <vscale x 8 x float> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv8f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1248,7 +1198,7 @@ define <vscale x 8 x float> @vfnmacc_vv_nxv8f32_ta(<vscale x 8 x float> %a, <vsc
 define <vscale x 8 x float> @vfnmacc_vf_nxv8f32_ta(<vscale x 8 x float> %a, float %b, <vscale x 8 x float> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv8f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1264,7 +1214,7 @@ define <vscale x 8 x float> @vfnmacc_vf_nxv8f32_ta(<vscale x 8 x float> %a, floa
 define <vscale x 8 x float> @vfnmacc_vf_nxv8f32_commute_ta(<vscale x 8 x float> %a, float %b, <vscale x 8 x float> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv8f32_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1276,11 +1226,6 @@ define <vscale x 8 x float> @vfnmacc_vf_nxv8f32_commute_ta(<vscale x 8 x float> 
   %u = call <vscale x 8 x float> @llvm.vp.select.nxv8f32(<vscale x 8 x i1> %m, <vscale x 8 x float> %v, <vscale x 8 x float> %c, i32 %evl)
   ret <vscale x 8 x float> %u
 }
-
-declare <vscale x 16 x float> @llvm.vp.fma.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x float> @llvm.vp.fneg.nxv16f32(<vscale x 16 x float>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x float> @llvm.vp.merge.nxv16f32(<vscale x 16 x i1>, <vscale x 16 x float>, <vscale x 16 x float>, i32)
-declare <vscale x 16 x float> @llvm.vp.select.nxv16f32(<vscale x 16 x i1>, <vscale x 16 x float>, <vscale x 16 x float>, i32)
 
 define <vscale x 16 x float> @vfnmacc_vv_nxv16f32(<vscale x 16 x float> %a, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv16f32:
@@ -1364,7 +1309,7 @@ define <vscale x 16 x float> @vfnmacc_vv_nxv16f32_ta(<vscale x 16 x float> %a, <
 ; CHECK-LABEL: vfnmacc_vv_nxv16f32_ta:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
@@ -1378,7 +1323,7 @@ define <vscale x 16 x float> @vfnmacc_vv_nxv16f32_ta(<vscale x 16 x float> %a, <
 define <vscale x 16 x float> @vfnmacc_vf_nxv16f32_ta(<vscale x 16 x float> %a, float %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv16f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v16, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1394,7 +1339,7 @@ define <vscale x 16 x float> @vfnmacc_vf_nxv16f32_ta(<vscale x 16 x float> %a, f
 define <vscale x 16 x float> @vfnmacc_vf_nxv16f32_commute_ta(<vscale x 16 x float> %a, float %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv16f32_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v16, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1406,11 +1351,6 @@ define <vscale x 16 x float> @vfnmacc_vf_nxv16f32_commute_ta(<vscale x 16 x floa
   %u = call <vscale x 16 x float> @llvm.vp.select.nxv16f32(<vscale x 16 x i1> %m, <vscale x 16 x float> %v, <vscale x 16 x float> %c, i32 %evl)
   ret <vscale x 16 x float> %u
 }
-
-declare <vscale x 1 x double> @llvm.vp.fma.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x double> @llvm.vp.fneg.nxv1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x double> @llvm.vp.merge.nxv1f64(<vscale x 1 x i1>, <vscale x 1 x double>, <vscale x 1 x double>, i32)
-declare <vscale x 1 x double> @llvm.vp.select.nxv1f64(<vscale x 1 x i1>, <vscale x 1 x double>, <vscale x 1 x double>, i32)
 
 define <vscale x 1 x double> @vfnmacc_vv_nxv1f64(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f64:
@@ -1491,7 +1431,7 @@ define <vscale x 1 x double> @vfnmacc_vf_nxv1f64_unmasked(<vscale x 1 x double> 
 define <vscale x 1 x double> @vfnmacc_vv_nxv1f64_ta(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv1f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1505,7 +1445,7 @@ define <vscale x 1 x double> @vfnmacc_vv_nxv1f64_ta(<vscale x 1 x double> %a, <v
 define <vscale x 1 x double> @vfnmacc_vf_nxv1f64_ta(<vscale x 1 x double> %a, double %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv1f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1521,7 +1461,7 @@ define <vscale x 1 x double> @vfnmacc_vf_nxv1f64_ta(<vscale x 1 x double> %a, do
 define <vscale x 1 x double> @vfnmacc_vf_nxv1f64_commute_ta(<vscale x 1 x double> %a, double %b, <vscale x 1 x double> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv1f64_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1533,11 +1473,6 @@ define <vscale x 1 x double> @vfnmacc_vf_nxv1f64_commute_ta(<vscale x 1 x double
   %u = call <vscale x 1 x double> @llvm.vp.select.nxv1f64(<vscale x 1 x i1> %m, <vscale x 1 x double> %v, <vscale x 1 x double> %c, i32 %evl)
   ret <vscale x 1 x double> %u
 }
-
-declare <vscale x 2 x double> @llvm.vp.fma.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x double> @llvm.vp.fneg.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x double> @llvm.vp.merge.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>, i32)
-declare <vscale x 2 x double> @llvm.vp.select.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>, i32)
 
 define <vscale x 2 x double> @vfnmacc_vv_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f64:
@@ -1618,7 +1553,7 @@ define <vscale x 2 x double> @vfnmacc_vf_nxv2f64_unmasked(<vscale x 2 x double> 
 define <vscale x 2 x double> @vfnmacc_vv_nxv2f64_ta(<vscale x 2 x double> %a, <vscale x 2 x double> %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv2f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v12, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1632,7 +1567,7 @@ define <vscale x 2 x double> @vfnmacc_vv_nxv2f64_ta(<vscale x 2 x double> %a, <v
 define <vscale x 2 x double> @vfnmacc_vf_nxv2f64_ta(<vscale x 2 x double> %a, double %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv2f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1648,7 +1583,7 @@ define <vscale x 2 x double> @vfnmacc_vf_nxv2f64_ta(<vscale x 2 x double> %a, do
 define <vscale x 2 x double> @vfnmacc_vf_nxv2f64_commute_ta(<vscale x 2 x double> %a, double %b, <vscale x 2 x double> %c, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv2f64_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1660,11 +1595,6 @@ define <vscale x 2 x double> @vfnmacc_vf_nxv2f64_commute_ta(<vscale x 2 x double
   %u = call <vscale x 2 x double> @llvm.vp.select.nxv2f64(<vscale x 2 x i1> %m, <vscale x 2 x double> %v, <vscale x 2 x double> %c, i32 %evl)
   ret <vscale x 2 x double> %u
 }
-
-declare <vscale x 4 x double> @llvm.vp.fma.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.fneg.nxv4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
-declare <vscale x 4 x double> @llvm.vp.merge.nxv4f64(<vscale x 4 x i1>, <vscale x 4 x double>, <vscale x 4 x double>, i32)
-declare <vscale x 4 x double> @llvm.vp.select.nxv4f64(<vscale x 4 x i1>, <vscale x 4 x double>, <vscale x 4 x double>, i32)
 
 define <vscale x 4 x double> @vfnmacc_vv_nxv4f64(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f64:
@@ -1745,7 +1675,7 @@ define <vscale x 4 x double> @vfnmacc_vf_nxv4f64_unmasked(<vscale x 4 x double> 
 define <vscale x 4 x double> @vfnmacc_vv_nxv4f64_ta(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv4f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1759,7 +1689,7 @@ define <vscale x 4 x double> @vfnmacc_vv_nxv4f64_ta(<vscale x 4 x double> %a, <v
 define <vscale x 4 x double> @vfnmacc_vf_nxv4f64_ta(<vscale x 4 x double> %a, double %b, <vscale x 4 x double> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv4f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1775,7 +1705,7 @@ define <vscale x 4 x double> @vfnmacc_vf_nxv4f64_ta(<vscale x 4 x double> %a, do
 define <vscale x 4 x double> @vfnmacc_vf_nxv4f64_commute_ta(<vscale x 4 x double> %a, double %b, <vscale x 4 x double> %c, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv4f64_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1787,11 +1717,6 @@ define <vscale x 4 x double> @vfnmacc_vf_nxv4f64_commute_ta(<vscale x 4 x double
   %u = call <vscale x 4 x double> @llvm.vp.select.nxv4f64(<vscale x 4 x i1> %m, <vscale x 4 x double> %v, <vscale x 4 x double> %c, i32 %evl)
   ret <vscale x 4 x double> %u
 }
-
-declare <vscale x 8 x double> @llvm.vp.fma.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x double> @llvm.vp.fneg.nxv8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
-declare <vscale x 8 x double> @llvm.vp.merge.nxv8f64(<vscale x 8 x i1>, <vscale x 8 x double>, <vscale x 8 x double>, i32)
-declare <vscale x 8 x double> @llvm.vp.select.nxv8f64(<vscale x 8 x i1>, <vscale x 8 x double>, <vscale x 8 x double>, i32)
 
 define <vscale x 8 x double> @vfnmacc_vv_nxv8f64(<vscale x 8 x double> %a, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_nxv8f64:
@@ -1875,7 +1800,7 @@ define <vscale x 8 x double> @vfnmacc_vv_nxv8f64_ta(<vscale x 8 x double> %a, <v
 ; CHECK-LABEL: vfnmacc_vv_nxv8f64_ta:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
@@ -1889,7 +1814,7 @@ define <vscale x 8 x double> @vfnmacc_vv_nxv8f64_ta(<vscale x 8 x double> %a, <v
 define <vscale x 8 x double> @vfnmacc_vf_nxv8f64_ta(<vscale x 8 x double> %a, double %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv8f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v16, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1905,7 +1830,7 @@ define <vscale x 8 x double> @vfnmacc_vf_nxv8f64_ta(<vscale x 8 x double> %a, do
 define <vscale x 8 x double> @vfnmacc_vf_nxv8f64_commute_ta(<vscale x 8 x double> %a, double %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_nxv8f64_commute_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfnmacc.vf v16, fa0, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret

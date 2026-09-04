@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 
 // template<class F, class... Args>
 // explicit jthread(F&& f, Args&&... args);
@@ -155,6 +154,31 @@ int main(int, char**) {
   // or the system-imposed limit on the number of threads in a process would be exceeded.
   //
   // Unfortunately, this is extremely hard to test portably so we don't have a test for this error condition right now.
+
+  {
+    class CopyOnly {
+    public:
+      CopyOnly() {}
+      CopyOnly(const CopyOnly&) = default;
+      CopyOnly(CopyOnly&&)      = delete;
+
+      void operator()(const CopyOnly&) const {}
+    };
+    CopyOnly c;
+    std::jthread t(c, c);
+  }
+
+  {
+    class MoveOnly {
+    public:
+      MoveOnly() {}
+      MoveOnly(const MoveOnly&) = delete;
+      MoveOnly(MoveOnly&&)      = default;
+
+      void operator()(MoveOnly&&) const {}
+    };
+    std::jthread t(MoveOnly{}, MoveOnly{});
+  }
 
   return 0;
 }

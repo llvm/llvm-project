@@ -13,18 +13,18 @@
 // class multiset
 
 // template <class... Args>
-//   iterator emplace(Args&&... args);
+//   iterator emplace(Args&&... args); // constexpr since C++26
 
-#include <set>
 #include <cassert>
+#include <set>
 
-#include "test_macros.h"
 #include "../../Emplaceable.h"
 #include "DefaultOnly.h"
+#include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
+TEST_CONSTEXPR_CXX26 bool test() {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef std::multiset<DefaultOnly> M;
     typedef M::iterator R;
     M m;
@@ -41,7 +41,9 @@ int main(int, char**) {
     assert(*m.begin() == DefaultOnly());
     assert(DefaultOnly::count == 2);
   }
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(DefaultOnly::count == 0);
+  }
   {
     typedef std::multiset<Emplaceable> M;
     typedef M::iterator R;
@@ -77,6 +79,20 @@ int main(int, char**) {
     assert(m.size() == 1);
     assert(*r == 2);
   }
+  { // We're unwrapping pairs for `{,multi}map`. Make sure we're not trying to do that for multiset.
+    using Set = std::multiset<std::pair<MoveOnly, MoveOnly>>;
+    Set set;
+    auto iter = set.emplace(std::pair<MoveOnly, MoveOnly>(2, 4));
+    assert(set.begin() == iter);
+  }
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

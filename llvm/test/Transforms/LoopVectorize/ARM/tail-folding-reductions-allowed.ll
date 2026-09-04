@@ -12,7 +12,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 ; Check that this reduction is allowed, except when reductions are disable on
 ; the command line.
 ;
-define dso_local i32 @i32_add_reduction(ptr noalias nocapture readonly %B, i32 %N) local_unnamed_addr #0 {
+define i32 @i32_add_reduction(ptr noalias nocapture readonly %B, i32 %N) #0 {
 ; COMMON-LABEL: i32_add_reduction(
 ; COMMON:       entry:
 ; CHECK:        @llvm.get.active.lane.mask

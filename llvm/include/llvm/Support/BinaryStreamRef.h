@@ -209,7 +209,7 @@ struct BinarySubstreamRef {
   BinarySubstreamRef keep_front(uint64_t N) const { return slice(0, N); }
 
   std::pair<BinarySubstreamRef, BinarySubstreamRef> split(uint64_t Off) const {
-    return std::make_pair(keep_front(Off), drop_front(Off));
+    return {keep_front(Off), drop_front(Off)};
   }
 
   uint64_t size() const { return StreamData.getLength(); }

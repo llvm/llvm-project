@@ -45,8 +45,8 @@ namespace clang::CIRGen {
 /// represented by one !u16i value, and the array provides padding to align the
 /// struct to a 4-byte alignment.
 ///
-///   !rec_S = !cir.record<struct "S" padded {!s8i, !s8i, !s8i, !u16i,
-///   !cir.array<!u8i x 3>}>
+///   !rec_S = !cir.struct<"S" packed {!s8i, !s8i, !s8i, !u16i,
+///                                   pad !cir.array<!u8i x 3>}>
 ///
 /// When generating code to access more_bits, we'll generate something
 /// essentially like this:
@@ -57,7 +57,7 @@ namespace clang::CIRGen {
 ///   cir.func @store_field() {
 ///     %0 = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"] {alignment = 4 : i64}
 ///     %1 = cir.const #cir.int<2> : !s32i
-///     %2 = cir.cast(integral, %1 : !s32i), !u32i
+///     %2 = cir.cast integral %1 : !s32i -> !u32i
 ///     %3 = cir.get_member %0[3] {name = "more_bits"} : !cir.ptr<!rec_S> ->
 ///     !cir.ptr<!u16i>
 ///     %4 = cir.set_bitfield(#bfi_more_bits, %3 :
@@ -141,6 +141,10 @@ private:
   // for both virtual and non-virtual bases.
   llvm::DenseMap<const clang::CXXRecordDecl *, unsigned> nonVirtualBases;
 
+  /// Map from virtual bases to their field index in the complete object.
+  llvm::DenseMap<const clang::CXXRecordDecl *, unsigned>
+      completeObjectVirtualBases;
+
   /// Map from (bit-field) record field to the corresponding CIR record type
   /// field no. This info is populated by record builder.
   llvm::DenseMap<const clang::FieldDecl *, CIRGenBitFieldInfo> bitFields;
@@ -178,6 +182,20 @@ public:
     fd = fd->getCanonicalDecl();
     assert(fieldIdxMap.count(fd) && "Invalid field for record!");
     return fieldIdxMap.lookup(fd);
+  }
+
+  bool hasCIRField(const clang::FieldDecl *fd) const {
+    fd = fd->getCanonicalDecl();
+    return fieldIdxMap.contains(fd);
+  }
+
+  unsigned getNonVirtualBaseCIRFieldNo(const CXXRecordDecl *rd) const {
+    assert(nonVirtualBases.count(rd) && "Invalid non-virtual base!");
+    return nonVirtualBases.lookup(rd);
+  }
+
+  bool hasNonVirtualBaseCIRField(const CXXRecordDecl *rd) const {
+    return nonVirtualBases.contains(rd);
   }
 
   /// Check whether this struct can be C++ zero-initialized

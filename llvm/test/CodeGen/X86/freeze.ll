@@ -141,3 +141,48 @@ entry:
   %z = urem i32 %y, 10
   ret i32 %z
 }
+
+; Make sure we don't crash when replacing all uses of N with an existing freeze N.
+
+define i64 @pr155345(ptr %p1, i1 %cond, ptr %p2, ptr %p3) {
+; X86ASM-LABEL: pr155345:
+; X86ASM:       # %bb.0: # %entry
+; X86ASM-NEXT:    movzbl (%rdi), %edi
+; X86ASM-NEXT:    xorl %eax, %eax
+; X86ASM-NEXT:    orb $1, %dil
+; X86ASM-NEXT:    movb %dil, (%rdx)
+; X86ASM-NEXT:    movzbl %dil, %edx
+; X86ASM-NEXT:    cmovel %edx, %eax
+; X86ASM-NEXT:    sete %dil
+; X86ASM-NEXT:    testb $1, %sil
+; X86ASM-NEXT:    cmovnel %edx, %eax
+; X86ASM-NEXT:    movb %dl, (%rcx)
+; X86ASM-NEXT:    movl $1, %edx
+; X86ASM-NEXT:    movl %eax, %ecx
+; X86ASM-NEXT:    shlq %cl, %rdx
+; X86ASM-NEXT:    orb %sil, %dil
+; X86ASM-NEXT:    movzbl %dil, %eax
+; X86ASM-NEXT:    andl %edx, %eax
+; X86ASM-NEXT:    andl $1, %eax
+; X86ASM-NEXT:    retq
+entry:
+  %load1 = load i8, ptr %p1, align 1
+  %v1 = or i8 %load1, 1
+  %v2 = zext i8 %v1 to i32
+  store i8 %v1, ptr %p2, align 1
+  %v3 = load i8, ptr %p2, align 1
+  %ext1 = sext i8 %v3 to i64
+  %ext2 = zext i32 %v2 to i64
+  %cmp1 = icmp ult i64 0, %ext1
+  %v4 = select i1 %cond, i1 false, i1 %cmp1
+  %sel1 = select i1 %v4, i64 0, i64 %ext2
+  %shl = shl i64 1, %sel1
+  store i8 %v1, ptr %p3, align 1
+  %v5 = load i8, ptr %p3, align 1
+  %ext3 = sext i8 %v5 to i64
+  %cmp2 = icmp ult i64 0, %ext3
+  %v6 = select i1 %cond, i1 false, i1 %cmp2
+  %sel2 = select i1 %v6, i64 0, i64 1
+  %and = and i64 %sel2, %shl
+  ret i64 %and
+}

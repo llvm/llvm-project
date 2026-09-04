@@ -392,9 +392,9 @@ MemInfoBlock makePartialMIB() {
 }
 
 IndexedMemProfRecord
-makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
-             std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
-             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
+makeRecord(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
+           std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
+           const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
   IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
@@ -436,16 +436,16 @@ MATCHER_P(EqualsRecord, Want, "") {
   return true;
 }
 
-TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
+TEST_F(InstrProfTest, test_memprof_v4_full_schema) {
   const MemInfoBlock MIB = makeFullMIB();
 
-  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfVersionRequested(memprof::Version4);
   Writer.setMemProfFullSchema(true);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
   IndexedMemProfData MemProfData = getMemProfDataForTest();
@@ -470,16 +470,16 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
-TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
+TEST_F(InstrProfTest, test_memprof_v4_partial_schema) {
   const MemInfoBlock MIB = makePartialMIB();
 
-  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfVersionRequested(memprof::Version4);
   Writer.setMemProfFullSchema(false);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
   IndexedMemProfData MemProfData = getMemProfDataForTest();
@@ -525,7 +525,7 @@ TEST_F(InstrProfTest, test_caller_callee_pairs) {
   //       Line: 7, Column: 8
   //         new(...)
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
 
@@ -584,7 +584,7 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, makePartialMIB(), memprof::getHotColdSchema());
 
@@ -914,7 +914,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_THAT(ValueData, SizeIs(0));
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
   ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
@@ -932,7 +932,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(2U, ValueData[4].Count);
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate with 4 records.
   InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
                               {5000, 2}, {6000, 1}};
@@ -1310,6 +1310,48 @@ static void addValueProfData(InstrProfRecord &Record) {
     Record.addValueData(IPVK_VTableTarget, 2, VD2, nullptr);
     Record.addValueData(IPVK_VTableTarget, 3, VD3, nullptr);
   }
+}
+
+TEST(InstrProfRecordTest, CopyAssignmentCopiesUniformCounts) {
+  InstrProfRecord Src({10, 20});
+  Src.UniformCounts = {9, 18};
+
+  InstrProfRecord Dst;
+  Dst = Src;
+
+  EXPECT_THAT(Dst.UniformCounts, ElementsAre(9, 18));
+}
+
+TEST(InstrProfRecordTest, ClearClearsUniformProfileData) {
+  InstrProfRecord Record({10, 20});
+  Record.UniformCounts = {9, 18};
+  Record.UniformityBits = {0x03};
+  Record.OffloadDeviceWaveSize = 32;
+
+  Record.Clear();
+
+  EXPECT_TRUE(Record.Counts.empty());
+  EXPECT_TRUE(Record.UniformCounts.empty());
+  EXPECT_TRUE(Record.UniformityBits.empty());
+  EXPECT_EQ(Record.OffloadDeviceWaveSize, 0);
+}
+
+TEST(InstrProfRecordTest, MergeUniformCountsRecomputesUniformity) {
+  InstrProfRecord Record({100, 100});
+  Record.UniformCounts = {100, 89};
+  Record.computeBlockUniformity();
+  EXPECT_TRUE(Record.isBlockUniform(0));
+  EXPECT_FALSE(Record.isBlockUniform(1));
+
+  InstrProfRecord Other({100, 100});
+  Other.UniformCounts = {100, 100};
+  auto Warn = [](instrprof_error) { ADD_FAILURE(); };
+  Record.merge(Other, /*Weight=*/1, Warn);
+
+  EXPECT_THAT(Record.Counts, ElementsAre(200, 200));
+  EXPECT_THAT(Record.UniformCounts, ElementsAre(200, 189));
+  EXPECT_TRUE(Record.isBlockUniform(0));
+  EXPECT_TRUE(Record.isBlockUniform(1));
 }
 
 TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {

@@ -1,7 +1,9 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG:      [[uint:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG:     [[uint2:%[0-9]+]] = OpTypeVector [[uint]] 2
+; CHECK-DAG:    [[uint_0:%[0-9]+]] = OpConstant [[uint]] 0
 ; CHECK-DAG:    [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG:  [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
 ; CHECK-DAG: [[ptr_uint2:%[0-9]+]] = OpTypePointer Function [[uint2]]
@@ -12,7 +14,9 @@ entry:
 ; CHECK: [[var:%[0-9]+]] = OpVariable [[ptr_uint2]] Function
 
   %1 = getelementptr <2 x i32>, ptr %0, i32 0, i32 1
-; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[var]] [[uint_1]]
+; CHECK: [[gep:%[0-9]+]] = OpAccessChain [[ptr_uint]] [[var]] [[uint_1]]
+  store i32 0, ptr %1
+; CHECK: OpStore [[gep]] [[uint_0]]
 
   ret void
 }

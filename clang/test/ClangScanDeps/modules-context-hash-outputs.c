@@ -1,5 +1,5 @@
 // If secondary output files such as .d are enabled, ensure it affects the
-// module context hash since it may impact the resulting module build commands.
+// context hash since it may impact the resulting module build commands.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
@@ -7,7 +7,9 @@
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full > %t/deps.json
-// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-module-deps,command-line,context-hash,input-file,name \
+// RUN:   | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [

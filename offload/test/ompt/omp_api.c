@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomptarget-compile-run-and-check-generic
 // REQUIRES: ompt
 // REQUIRES: gpu
+// clang-format on
 
 #include "omp.h"
 #include <stdlib.h>
@@ -32,8 +34,8 @@ int main(int argc, char **argv) {
 
 // clang-format off
 /// CHECK: Callback Init:
-/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=1
-/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=5
-/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=6
-/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=4
+/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=ompt_target_data_alloc
+/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=ompt_target_data_associate
+/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=ompt_target_data_disassociate
+/// CHECK: Callback DataOp: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] optype=ompt_target_data_delete
 /// CHECK: Callback Fini:

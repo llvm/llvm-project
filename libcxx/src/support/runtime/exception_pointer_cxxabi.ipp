@@ -7,22 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef HAVE_DEPENDENT_EH_ABI
-#  error this header may only be used with libc++abi or libcxxrt
-#endif
+#include <cxxabi.h>
+#include <exception>
 
 namespace std {
 
-exception_ptr::~exception_ptr() noexcept { __cxa_decrement_exception_refcount(__ptr_); }
+exception_ptr::~exception_ptr() noexcept { abi::__cxa_decrement_exception_refcount(__ptr_); }
 
 exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
-  __cxa_increment_exception_refcount(__ptr_);
+  abi::__cxa_increment_exception_refcount(__ptr_);
 }
 
 exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
   if (__ptr_ != other.__ptr_) {
-    __cxa_increment_exception_refcount(other.__ptr_);
-    __cxa_decrement_exception_refcount(__ptr_);
+    abi::__cxa_increment_exception_refcount(other.__ptr_);
+    abi::__cxa_decrement_exception_refcount(__ptr_);
     __ptr_ = other.__ptr_;
   }
   return *this;
@@ -31,7 +30,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
 exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {
   exception_ptr ptr;
   ptr.__ptr_ = __e;
-  __cxa_increment_exception_refcount(ptr.__ptr_);
+  abi::__cxa_increment_exception_refcount(ptr.__ptr_);
 
   return ptr;
 }
@@ -51,12 +50,12 @@ exception_ptr current_exception() noexcept {
   // this whole function would be just:
   //    return exception_ptr(__cxa_current_primary_exception());
   exception_ptr ptr;
-  ptr.__ptr_ = __cxa_current_primary_exception();
+  ptr.__ptr_ = abi::__cxa_current_primary_exception();
   return ptr;
 }
 
 void rethrow_exception(exception_ptr p) {
-  __cxa_rethrow_primary_exception(p.__ptr_);
+  abi::__cxa_rethrow_primary_exception(p.__ptr_);
   // if p.__ptr_ is NULL, above returns so we terminate
   terminate();
 }

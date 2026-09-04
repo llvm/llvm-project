@@ -3,7 +3,8 @@
 
 target triple = "aarch64-linux"
 
-; CHECK-LABEL: .LCPI0_0:
+; CHECK-LABEL: .type .LCPI0_0,@object
+; CHECK-NEXT: .LCPI0_0:
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
@@ -20,6 +21,9 @@ target triple = "aarch64-linux"
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    7
+; CHECK-NEXT:  .size .LCPI0_0, 16
+
+; CHECK-LABEL:  .type .LCPI0_1,@object
 ; CHECK-NEXT:  .LCPI0_1:
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
@@ -37,6 +41,7 @@ target triple = "aarch64-linux"
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    255
 ; CHECK-NEXT:  .byte    3
+; CHECK-NEXT:  .size .LCPI0_1, 16
 
 define void @sitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: sitofp_v8i8_to_v8f32:
@@ -57,7 +62,7 @@ define void @sitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    scvtf v3.4s, v3.4s, #24
 ; CHECK-NEXT:    scvtf v2.4s, v2.4s, #24
 ; CHECK-NEXT:    stp q2, q3, [x9]
-; CHECK-NEXT:    b.eq .LBB0_1
+; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -72,13 +77,14 @@ loop:
   store <8 x float> %conv, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
 }
 
-; CHECK-LABEL: .LCPI1_0:
+; CHECK-LABEL: .type .LCPI1_0,@object
+; CHECK-NEXT: .LCPI1_0:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -95,6 +101,9 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    15
+; CHECK-NEXT: .size .LCPI1_0, 16
+
+; CHECK-LABEL: .type .LCPI1_1,@object
 ; CHECK-NEXT: .LCPI1_1:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -112,6 +121,9 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    11
+; CHECK-NEXT: .size .LCPI1_1, 16
+
+; CHECK-LABEL: .type .LCPI1_2,@object
 ; CHECK-NEXT: .LCPI1_2:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -129,6 +141,9 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    7
+; CHECK-NEXT: .size .LCPI1_2, 16
+
+; CHECK-LABEL: .type .LCPI1_3,@object
 ; CHECK-NEXT: .LCPI1_3:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
@@ -146,6 +161,7 @@ exit:
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    255
 ; CHECK-NEXT: .byte    3
+; CHECK-NEXT: .size .LCPI1_3, 16
 
 define void @sitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: sitofp_v16i8_to_v16f32:
@@ -175,7 +191,7 @@ define void @sitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    scvtf v4.4s, v4.4s, #24
 ; CHECK-NEXT:    stp q6, q5, [x9, #32]
 ; CHECK-NEXT:    stp q4, q7, [x9]
-; CHECK-NEXT:    b.eq .LBB1_1
+; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -190,7 +206,7 @@ loop:
   store <16 x float> %conv, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -215,7 +231,7 @@ define void @sitofp_v8i8_to_v8f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq .LBB2_1
+; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -230,7 +246,7 @@ loop:
   store <8 x half> %conv, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -244,17 +260,15 @@ define void @sitofp_v2i8_to_v2f64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB3_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #1
-; CHECK-NEXT:    ldrsb w10, [x9]
-; CHECK-NEXT:    ldrsb w9, [x9, #1]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    ldr h0, [x0, x8, lsl #1]
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq .LBB3_1
+; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -269,7 +283,7 @@ loop:
   store <2 x double> %conv, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void

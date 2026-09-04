@@ -350,7 +350,5 @@ ParallelSnippetGenerator::generateCodeTemplates(
   return Result;
 }
 
-constexpr const size_t ParallelSnippetGenerator::kMinNumDifferentAddresses;
-
 } // namespace exegesis
 } // namespace llvm

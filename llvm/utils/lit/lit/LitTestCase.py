@@ -46,7 +46,7 @@ def load_test_suite(inputs):
     lit_config = lit.LitConfig.LitConfig(
         progname="lit",
         path=[],
-        quiet=False,
+        diagnostic_level="note",
         useValgrind=False,
         valgrindLeakCheck=False,
         valgrindArgs=[],

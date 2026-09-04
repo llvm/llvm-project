@@ -70,12 +70,12 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
         *getFunctionBoundaryTypeConversion());
   if (getMemcpyOp() == "memref.copy") {
     options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
-      b.create<memref::CopyOp>(loc, from, to);
+      memref::CopyOp::create(b, loc, from, to);
       return success();
     };
   } else if (getMemcpyOp() == "linalg.copy") {
     options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
-      b.create<linalg::CopyOp>(loc, from, to);
+      linalg::CopyOp::create(b, loc, from, to);
       return success();
     };
   } else {

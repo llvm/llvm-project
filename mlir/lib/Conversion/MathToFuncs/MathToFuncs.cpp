@@ -17,13 +17,12 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOFUNCS
@@ -33,7 +32,6 @@ namespace mlir {
 using namespace mlir;
 
 #define DEBUG_TYPE "math-to-funcs"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 namespace {
 // Pattern to convert vector operations to scalar operations.
@@ -199,7 +197,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -426,7 +424,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -654,10 +652,8 @@ FPowIOpLowering::matchAndRewrite(math::FPowIOp op,
 /// }
 static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   if (!isa<IntegerType>(elementType)) {
-    LLVM_DEBUG({
-      DBGS() << "non-integer element type for CtlzFunc; type was: ";
-      elementType.print(llvm::dbgs());
-    });
+    LDBG() << "non-integer element type for CtlzFunc; type was: "
+           << elementType;
     llvm_unreachable("non-integer element type");
   }
   int64_t bitWidth = elementType.getIntOrFloatBitWidth();
@@ -678,7 +674,7 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   // set the insertion point to the start of the function
@@ -699,7 +695,8 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   scf::IfOp ifOp =
       scf::IfOp::create(builder, elementType, inputEqZero,
                         /*addThenBlock=*/true, /*addElseBlock=*/true);
-  ifOp.getThenBodyBuilder().create<scf::YieldOp>(loc, bitWidthValue);
+  auto thenBuilder = ifOp.getThenBodyBuilder();
+  scf::YieldOp::create(thenBuilder, loc, bitWidthValue);
 
   auto elseBuilder =
       ImplicitLocOpBuilder::atBlockEnd(loc, &ifOp.getElseRegion().front());
@@ -815,7 +812,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
 
   module.walk([&](Operation *op) {
     TypeSwitch<Operation *>(op)
-        .Case<math::CountLeadingZerosOp>([&](math::CountLeadingZerosOp op) {
+        .Case([&](math::CountLeadingZerosOp op) {
           if (!convertCtlz || !isConvertible(op))
             return;
           Type resultType = getElementTypeOrSelf(op.getResult().getType());
@@ -827,7 +824,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           if (entry.second)
             entry.first->second = createCtlzFunc(&module, resultType);
         })
-        .Case<math::IPowIOp>([&](math::IPowIOp op) {
+        .Case([&](math::IPowIOp op) {
           if (!isConvertible(op))
             return;
 
@@ -840,7 +837,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           if (entry.second)
             entry.first->second = createElementIPowIFunc(&module, resultType);
         })
-        .Case<math::FPowIOp>([&](math::FPowIOp op) {
+        .Case([&](math::FPowIOp op) {
           if (!isFPowIConvertible(op))
             return;
 

@@ -222,7 +222,7 @@ TEST(LoopNestTest, ImperfectLoopNest) {
 TEST(LoopNestTest, InterveningInstrLoopNest) {
   const char *ModuleStr =
       "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
-      "define void @foo(i64 signext %nx, i64 signext %ny, i32* noalias %A, i32 "
+      "define void @foo(i64 signext %nx, i64 signext %ny, ptr noalias %A, i32 "
       "%op0, i32 %op1){\n"
       "entry:\n"
       "  br label %for.outer\n"
@@ -232,8 +232,8 @@ TEST(LoopNestTest, InterveningInstrLoopNest) {
       "  call void @outerheader()\n"
       "  br i1 %cmp21, label %for.inner.preheader, label %for.outer.latch\n"
       "for.inner.preheader:\n"
-      "  %varr = getelementptr inbounds i32, i32* %A, i64 5\n"
-      "  store i32 5, i32* %varr, align 4\n"
+      "  %varr = getelementptr inbounds i32, ptr %A, i64 5\n"
+      "  store i32 5, ptr %varr, align 4\n"
       "  call void @innerpreheader()\n"
       "  br label %for.inner\n"
       "for.inner:\n"
@@ -244,7 +244,7 @@ TEST(LoopNestTest, InterveningInstrLoopNest) {
       "  %cmp2 = icmp slt i64 %inc, %ny\n"
       "  br i1 %cmp2, label %for.inner, label %for.inner.exit\n"
       "for.inner.exit:\n"
-      "  %varr1 = getelementptr inbounds i32, i32* %A, i64 5\n"
+      "  %varr1 = getelementptr inbounds i32, ptr %A, i64 5\n"
       "  call void @innerexit()\n"
       "  br label %for.outer.latch\n"
       "for.outer.latch:\n"

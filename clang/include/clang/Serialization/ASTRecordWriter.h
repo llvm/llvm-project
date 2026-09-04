@@ -247,8 +247,7 @@ public:
   void AddTypeLoc(TypeLoc TL);
 
   /// Emits a template argument location info.
-  void AddTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind,
-                                  const TemplateArgumentLocInfo &Arg);
+  void AddTemplateArgumentLocInfo(const TemplateArgumentLoc &Arg);
 
   /// Emits a template argument location.
   void AddTemplateArgumentLoc(const TemplateArgumentLoc &Arg);
@@ -280,7 +279,7 @@ public:
   void AddQualifierInfo(const QualifierInfo &Info);
 
   /// Emit a nested name specifier.
-  void AddNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  void AddNestedNameSpecifier(NestedNameSpecifier NNS) {
     writeNestedNameSpecifier(NNS);
   }
 

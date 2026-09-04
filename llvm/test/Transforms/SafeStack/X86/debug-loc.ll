@@ -1,5 +1,5 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; Test debug location for the local variables moved onto the unsafe stack.
 
@@ -23,7 +23,7 @@ entry:
 ; CHECK-NOT: #dbg_declare
 ; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_ARG:.*]], !DIExpression(DW_OP_constu, 104, DW_OP_minus),
 ; CHECK-NOT: #dbg_declare
-; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_constu, 208, DW_OP_minus),
+; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_constu, 204, DW_OP_minus),
 ; CHECK-NOT: #dbg_declare
 
   call void @Capture(ptr %zzz), !dbg !23
@@ -37,18 +37,16 @@ entry:
 }
 
 ; CHECK-DAG: ![[VAR_ARG]] = !DILocalVariable(name: "zzz"
-; 100 aligned up to 8
 
 ; CHECK-DAG: ![[VAR_LOCAL]] = !DILocalVariable(name: "xxx"
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @Capture(ptr) #2
+declare void @Capture(ptr)
 
-attributes #0 = { safestack uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { safestack uwtable }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!15, !16}

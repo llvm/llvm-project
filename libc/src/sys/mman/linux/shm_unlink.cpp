@@ -7,20 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/shm_unlink.h"
+
+#include "src/__support/OSUtil/linux/syscall_wrappers/unlink.h"
+#include "src/__support/libc_errno.h" // For internal errno.
 #include "src/__support/macros/config.h"
 #include "src/sys/mman/linux/shm_common.h"
-#include "src/unistd/unlink.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-// TODO: stop calling the public unlink function. It should be calling an
-// internal shared utility.
-
 LLVM_LIBC_FUNCTION(int, shm_unlink, (const char *name)) {
-  if (cpp::optional<shm_common::SHMPath> buffer =
-          shm_common::translate_name(name))
-    return LIBC_NAMESPACE::unlink(buffer->data());
-  return -1;
+  auto path_result = shm_common::translate_name(name);
+  if (!path_result.has_value()) {
+    libc_errno = path_result.error();
+    return -1;
+  }
+
+  auto result = linux_syscalls::unlink(path_result->data());
+  if (!result) {
+    libc_errno = result.error();
+    return -1;
+  }
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -16,7 +16,7 @@ Note that defining a function with ``= delete`` is considered to be a
 definition.
 
 This check implements `C.21
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-five>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rc-five>`_
 from the C++ Core Guidelines.
 
 Options

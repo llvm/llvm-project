@@ -17,6 +17,8 @@ spirv::StorageClass addressSpaceToStorageClass(gpu::AddressSpace addressSpace) {
     return spirv::StorageClass::Workgroup;
   case gpu::AddressSpace::Private:
     return spirv::StorageClass::Private;
+  case gpu::AddressSpace::Constant:
+    return spirv::StorageClass::UniformConstant;
   }
   llvm_unreachable("Unhandled storage class");
 }

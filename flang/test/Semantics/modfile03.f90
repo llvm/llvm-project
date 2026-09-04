@@ -219,7 +219,7 @@ end
 !contains
 !subroutine foo(x,a)
 !type(t),intent(in)::x
-!real(4)::a(1_8:int(m8a$foo(10_4),kind=8))
+!real(4)::a(1_8:__builtin_int(m8a$foo(10_4),kind=8))
 !end
 !end
 
@@ -268,6 +268,6 @@ end
 !contains
 !subroutine s(x,y)
 !class(t),intent(in)::x
-!real(4)::y(1_8:int(x%f(x%n),kind=8))
+!real(4)::y(1_8:__builtin_int(x%f(x%n),kind=8))
 !end
 !end

@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -S '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s -check-prefix=SCOPS
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen -polly-invariant-load-hoisting=true %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s -check-prefix=SCOPS
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true %s | FileCheck %s
 ;
 ; Check we generate valid code.
 
@@ -39,7 +39,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @enc_picture = external global ptr, align 8
 
 ; Function Attrs: nounwind uwtable
-define void @compute_colocated(ptr %listX, ptr %A, ptr %B) #0 {
+define void @compute_colocated(ptr %listX, ptr %A, ptr %B) {
 entry:
   br label %for.body2414
 
@@ -81,8 +81,6 @@ for.inc2621:                                      ; preds = %if.else2493, %cond.
 if.end2624:                                       ; preds = %for.inc2621
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

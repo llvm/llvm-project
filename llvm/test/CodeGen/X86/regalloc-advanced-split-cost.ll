@@ -14,7 +14,7 @@
 ; The new code choses %ebp as the split candidate as it has lower spill cost.
 
 ; Make sure the split behaves as expected
-; CHECK: RS_Split Cascade 1
+; CHECK: RS_Split Cascade 0
 ; CHECK-NOT: $eax	static = 
 ; CHECK: $eax	no positive bundles
 ; CHECK-NEXT: $ecx	no positive bundles
@@ -72,7 +72,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 %add
 }
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+x87" "use-soft-float"="false" }
 attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!0, !1}

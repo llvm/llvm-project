@@ -1,5 +1,5 @@
-; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine                         '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
-; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine -polly-prevect-width=16 '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s -check-prefix=VEC16
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadNPMPolly -aa-pipeline=basic-aa -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine -polly-prevect-width=16 '-passes=polly-custom<opt-isl;ast>' -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=VEC16
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @B = common global [1536 x [1536 x float]] zeroinitializer, align 16
 
 ; Function Attrs: nounwind uwtable
-define void @foo() #0 {
+define void @foo() {
 entry:
   br label %entry.split
 
@@ -53,8 +53,6 @@ for.end30:                                        ; preds = %for.inc28
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
 ; CHECK: #pragma known-parallel
 ; CHECK: for (int c0 = 0; c0 <= 47; c0 += 1)
 ; CHECK:   for (int c1 = 0; c1 <= 47; c1 += 1)
@@ -94,7 +92,6 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"=
 ; VEC16:               for (int c6 = 0; c6 <= 15; c6 += 1)
 ; VEC16:                 Stmt_for_body8(32 * c0 + c3, 32 * c1 + 16 * c4 + c6, 32 * c2 + c5);
 ; VEC16: }
-
 
 !llvm.ident = !{!0}
 

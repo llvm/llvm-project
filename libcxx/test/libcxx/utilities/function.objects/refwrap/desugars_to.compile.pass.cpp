@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 // This test requires variable templates
-// UNSUPPORTED: gcc && c++11
+// ADDITIONAL_COMPILE_FLAGS: -Wno-c++14-extensions
 
 // <functional>
 

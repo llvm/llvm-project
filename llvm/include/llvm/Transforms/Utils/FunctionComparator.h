@@ -226,9 +226,6 @@ protected:
   /// return whether the numbers are equal. Numbers are assigned in the order
   /// visited.
   /// Comparison order:
-  /// Stage 0: Value that is function itself is always greater then others.
-  ///          If left and right values are references to their functions, then
-  ///          they are equal.
   /// Stage 1: Constants are greater than non-constants.
   ///          If both left and right are constants, then the result of
   ///          cmpConstants is used as cmpValues result.
@@ -241,6 +238,11 @@ protected:
   ///          In another words, we compare serial numbers, for more details
   ///          see comments for sn_mapL and sn_mapR.
   LLVM_ABI int cmpValues(const Value *L, const Value *R) const;
+
+  /// References to the functions being compared are equal. Used for
+  /// corresponding call targets and blockaddress functions, which stay
+  /// valid if MergeFunc replaces one body with a forwarding thunk.
+  int cmpValuesAllowingSelfRef(const Value *L, const Value *R) const;
 
   /// Compare two Instructions for equivalence, similar to
   /// Instruction::isSameOperationAs.
@@ -263,7 +265,7 @@ protected:
   /// 6.1.Load: volatile (as boolean flag)
   /// 6.2.Load: alignment (as integer numbers)
   /// 6.3.Load: ordering (as underlying enum class value)
-  /// 6.4.Load: synch-scope (as integer numbers)
+  /// 6.4.Load: sync-scope (as integer numbers)
   /// 6.5.Load: range metadata (as integer ranges)
   /// On this stage its better to see the code, since its not more than 10-15
   /// strings for particular instruction, and could change sometimes.

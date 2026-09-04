@@ -7,13 +7,13 @@ process launch
 # CHECK: Process {{[0-9]+}} stopped
 
 watchpoint set variable -w write g_8w
-# CHECK: Watchpoint created: Watchpoint 1: addr = 0x{{[0-9a-f]*}} size = 1 state = enabled type = w
+# CHECK: Watchpoint created: Watchpoint 1: addr = 0x{{[0-9a-f]*}}, size = 1, state = enabled, type = w
 watchpoint set variable -w read_write g_16rw
-# CHECK: Watchpoint created: Watchpoint 2: addr = 0x{{[0-9a-f]*}} size = 2 state = enabled type = rw
+# CHECK: Watchpoint created: Watchpoint 2: addr = 0x{{[0-9a-f]*}}, size = 2, state = enabled, type = rw
 watchpoint set variable -w write g_32w
-# CHECK: Watchpoint created: Watchpoint 3: addr = 0x{{[0-9a-f]*}} size = 4 state = enabled type = w
+# CHECK: Watchpoint created: Watchpoint 3: addr = 0x{{[0-9a-f]*}}, size = 4, state = enabled, type = w
 watchpoint set variable -w read_write g_32rw
-# CHECK: Watchpoint created: Watchpoint 4: addr = 0x{{[0-9a-f]*}} size = 4 state = enabled type = rw
+# CHECK: Watchpoint created: Watchpoint 4: addr = 0x{{[0-9a-f]*}}, size = 4, state = enabled, type = rw
 
 expression &g_8w
 # CHECK: (uint8_t *) $0 = [[VAR8W:0x[0-9a-f]*]]

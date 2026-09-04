@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 
 #include "MoveOnly.h"
 #include "test_macros.h"

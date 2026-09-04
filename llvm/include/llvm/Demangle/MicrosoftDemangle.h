@@ -10,6 +10,7 @@
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLE_H
 
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
 
 #include <cassert>
@@ -151,14 +152,14 @@ public:
 
   // You are supposed to call parse() first and then check if error is true.  If
   // it is false, call output() to write the formatted name to the given stream.
-  SymbolNode *parse(std::string_view &MangledName);
+  DEMANGLE_ABI SymbolNode *parse(std::string_view &MangledName);
 
-  TagTypeNode *parseTagUniqueName(std::string_view &MangledName);
+  DEMANGLE_ABI TagTypeNode *parseTagUniqueName(std::string_view &MangledName);
 
   // True if an error occurred.
   bool Error = false;
 
-  void dumpBackReferences();
+  DEMANGLE_ABI void dumpBackReferences();
 
 private:
   SymbolNode *demangleEncodedSymbol(std::string_view &MangledName,

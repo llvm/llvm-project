@@ -10,7 +10,6 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
@@ -420,40 +419,38 @@ size_t detail::PassOptions::getOptionWidth() const {
 // OpPassManager: OptionValue
 //===----------------------------------------------------------------------===//
 
-llvm::cl::OptionValue<OpPassManager>::OptionValue() = default;
-llvm::cl::OptionValue<OpPassManager>::OptionValue(
-    const mlir::OpPassManager &value) {
+namespace llvm::cl {
+
+OptionValue<OpPassManager>::OptionValue() = default;
+OptionValue<OpPassManager>::OptionValue(const mlir::OpPassManager &value) {
   setValue(value);
 }
-llvm::cl::OptionValue<OpPassManager>::OptionValue(
-    const llvm::cl::OptionValue<mlir::OpPassManager> &rhs) {
+OptionValue<OpPassManager>::OptionValue(
+    const OptionValue<mlir::OpPassManager> &rhs) {
   if (rhs.hasValue())
     setValue(rhs.getValue());
 }
-llvm::cl::OptionValue<OpPassManager> &
-llvm::cl::OptionValue<OpPassManager>::operator=(
-    const mlir::OpPassManager &rhs) {
+OptionValue<OpPassManager> &
+OptionValue<OpPassManager>::operator=(const mlir::OpPassManager &rhs) {
   setValue(rhs);
   return *this;
 }
 
-llvm::cl::OptionValue<OpPassManager>::~OptionValue<OpPassManager>() = default;
+OptionValue<OpPassManager>::~OptionValue() = default;
 
-void llvm::cl::OptionValue<OpPassManager>::setValue(
-    const OpPassManager &newValue) {
+void OptionValue<OpPassManager>::setValue(const OpPassManager &newValue) {
   if (hasValue())
     *value = newValue;
   else
     value = std::make_unique<mlir::OpPassManager>(newValue);
 }
-void llvm::cl::OptionValue<OpPassManager>::setValue(StringRef pipelineStr) {
+void OptionValue<OpPassManager>::setValue(StringRef pipelineStr) {
   FailureOr<OpPassManager> pipeline = parsePassPipeline(pipelineStr);
   assert(succeeded(pipeline) && "invalid pass pipeline");
   setValue(*pipeline);
 }
 
-bool llvm::cl::OptionValue<OpPassManager>::compare(
-    const mlir::OpPassManager &rhs) const {
+bool OptionValue<OpPassManager>::compare(const mlir::OpPassManager &rhs) const {
   std::string lhsStr, rhsStr;
   {
     raw_string_ostream lhsStream(lhsStr);
@@ -467,17 +464,17 @@ bool llvm::cl::OptionValue<OpPassManager>::compare(
   return lhsStr == rhsStr;
 }
 
-void llvm::cl::OptionValue<OpPassManager>::anchor() {}
+void OptionValue<OpPassManager>::anchor() {}
+
+} // namespace llvm::cl
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: Parser
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-namespace cl {
+namespace llvm::cl {
 template class basic_parser<OpPassManager>;
-} // namespace cl
-} // namespace llvm
+} // namespace llvm::cl
 
 bool llvm::cl::parser<OpPassManager>::parse(Option &, StringRef, StringRef arg,
                                             ParsedPassManager &value) {
@@ -615,7 +612,7 @@ LogicalResult TextualPipeline::addToPipeline(
   // it's preferrable to just error out if implicit nesting would be required.
   OpPassManager::Nesting nesting = pm.getNesting();
   pm.setNesting(OpPassManager::Nesting::Explicit);
-  auto restore = llvm::make_scope_exit([&]() { pm.setNesting(nesting); });
+  llvm::scope_exit restore([&]() { pm.setNesting(nesting); });
 
   return addToPipeline(pipeline, pm, errorHandler);
 }
@@ -1023,7 +1020,9 @@ LogicalResult PassPipelineCLParser::addToPipeline(
   for (auto &passIt : impl->passList) {
     if (failed(passIt.registryEntry->addToPipeline(pm, passIt.options,
                                                    errorHandler)))
-      return failure();
+      return errorHandler("failed to add `" +
+                          passIt.registryEntry->getPassArgument() +
+                          "` with options `" + passIt.options + "`");
   }
   return success();
 }

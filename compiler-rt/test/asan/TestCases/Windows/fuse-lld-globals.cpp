@@ -1,3 +1,5 @@
+// REQUIRES: lld-available
+
 // RUN: %clangxx_asan -fuse-ld=lld -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 #include <string.h>

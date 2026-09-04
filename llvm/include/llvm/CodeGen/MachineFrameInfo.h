@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
@@ -75,6 +76,9 @@ public:
   void setRestored(bool R)                       { Restored = R; }
   bool isSpilledToReg()                    const { return SpilledToReg; }
 };
+
+using SaveRestorePoints =
+    DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>>;
 
 /// The MachineFrameInfo class represents an abstract stack frame until
 /// prolog/epilog code is inserted.  This class is key to allowing stack frame
@@ -149,6 +153,10 @@ private:
     /// Slot, but is created by statepoint lowering is SelectionDAG, not the
     /// register allocator.
     bool isStatepointSpillSlot = false;
+
+    /// If true, this stack slot is used for spilling a callee saved register
+    /// in the calling convention of the containing function.
+    bool isCalleeSaved = false;
 
     /// Identifier for stack memory type analagous to address space. If this is
     /// non-0, the meaning is target defined. Offsets cannot be directly
@@ -272,6 +280,10 @@ private:
   /// Set to true if this function has any function calls.
   bool HasCalls = false;
 
+  /// Frame-pointer policy for this function to avoid repeated attribute
+  /// lookups in hot paths.
+  FramePointerKind FramePointerPolicy = FramePointerKind::None;
+
   /// The frame index for the stack protector.
   int StackProtectorIdx = -1;
 
@@ -332,10 +344,10 @@ private:
   /// stack objects like arguments so we can't treat them as immutable.
   bool HasTailCall = false;
 
-  /// Not null, if shrink-wrapping found a better place for the prologue.
-  MachineBasicBlock *Save = nullptr;
-  /// Not null, if shrink-wrapping found a better place for the epilogue.
-  MachineBasicBlock *Restore = nullptr;
+  /// Not empty, if shrink-wrapping found a better place for the prologue.
+  SaveRestorePoints SavePoints;
+  /// Not empty, if shrink-wrapping found a better place for the epilogue.
+  SaveRestorePoints RestorePoints;
 
   /// Size of the UnsafeStack Frame
   uint64_t UnsafeStackSize = 0;
@@ -494,7 +506,18 @@ public:
   /// Should this stack ID be considered in MaxAlignment.
   bool contributesToMaxAlignment(uint8_t StackID) {
     return StackID == TargetStackID::Default ||
-           StackID == TargetStackID::ScalableVector;
+           StackID == TargetStackID::ScalableVector ||
+           StackID == TargetStackID::ScalablePredicateVector;
+  }
+
+  bool hasScalableStackID(int ObjectIdx) const {
+    uint8_t StackID = getStackID(ObjectIdx);
+    return isScalableStackID(StackID);
+  }
+
+  bool isScalableStackID(uint8_t StackID) const {
+    return StackID == TargetStackID::ScalableVector ||
+           StackID == TargetStackID::ScalablePredicateVector;
   }
 
   /// setObjectAlignment - Change the alignment of the specified stack object.
@@ -600,11 +623,13 @@ public:
   /// Set the correction for frame offsets.
   void setOffsetAdjustment(int64_t Adj) { OffsetAdjustment = Adj; }
 
-  /// Return the alignment in bytes that this function must be aligned to,
-  /// which is greater than the default stack alignment provided by the target.
+  /// Return alignment of this function's frame.
   Align getMaxAlign() const { return MaxAlignment; }
 
-  /// Make sure the function is at least Align bytes aligned.
+  /// Overwrite alignment of this function's frame.
+  void setMaxAlign(Align Alignment) { MaxAlignment = Alignment; }
+
+  /// Make sure the function's frame is at least Align bytes aligned.
   LLVM_ABI void ensureMaxAlignment(Align Alignment);
 
   /// Return true if stack realignment is forced by function attributes or if
@@ -622,6 +647,11 @@ public:
   /// Return true if the current function has any function calls.
   bool hasCalls() const { return HasCalls; }
   void setHasCalls(bool V) { HasCalls = V; }
+
+  FramePointerKind getFramePointerPolicy() const { return FramePointerPolicy; }
+  void setFramePointerPolicy(FramePointerKind Kind) {
+    FramePointerPolicy = Kind;
+  }
 
   /// Returns true if the function contains opaque dynamic stack adjustments.
   bool hasOpaqueSPAdjustment() const { return HasOpaqueSPAdjustment; }
@@ -748,6 +778,18 @@ public:
     return Objects[ObjectIdx+NumFixedObjects].isStatepointSpillSlot;
   }
 
+  bool isCalleeSavedObjectIndex(int ObjectIdx) const {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    return Objects[ObjectIdx + NumFixedObjects].isCalleeSaved;
+  }
+
+  void setIsCalleeSavedObjectIndex(int ObjectIdx, bool IsCalleeSaved) {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx + NumFixedObjects].isCalleeSaved = IsCalleeSaved;
+  }
+
   /// \see StackID
   uint8_t getStackID(int ObjectIdx) const {
     return Objects[ObjectIdx+NumFixedObjects].StackID;
@@ -793,7 +835,9 @@ public:
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
-  LLVM_ABI int CreateSpillStackObject(uint64_t Size, Align Alignment);
+  LLVM_ABI int
+  CreateSpillStackObject(uint64_t Size, Align Alignment,
+                         TargetStackID::Value StackID = TargetStackID::Default);
 
   /// Remove or mark dead a statically sized stack object.
   void RemoveStackObject(int ObjectIdx) {
@@ -825,10 +869,20 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  MachineBasicBlock *getSavePoint() const { return Save; }
-  void setSavePoint(MachineBasicBlock *NewSave) { Save = NewSave; }
-  MachineBasicBlock *getRestorePoint() const { return Restore; }
-  void setRestorePoint(MachineBasicBlock *NewRestore) { Restore = NewRestore; }
+  const SaveRestorePoints &getRestorePoints() const { return RestorePoints; }
+
+  const SaveRestorePoints &getSavePoints() const { return SavePoints; }
+
+  void setSavePoints(SaveRestorePoints NewSavePoints) {
+    SavePoints = std::move(NewSavePoints);
+  }
+
+  void setRestorePoints(SaveRestorePoints NewRestorePoints) {
+    RestorePoints = std::move(NewRestorePoints);
+  }
+
+  void clearSavePoints() { SavePoints.clear(); }
+  void clearRestorePoints() { RestorePoints.clear(); }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }

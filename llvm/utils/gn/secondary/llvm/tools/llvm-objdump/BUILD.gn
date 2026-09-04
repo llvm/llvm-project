@@ -50,6 +50,7 @@ driver_executable("llvm-objdump") {
     "//llvm/lib/DebugInfo/Symbolize",
     "//llvm/lib/Debuginfod",
     "//llvm/lib/Demangle",
+    "//llvm/lib/HTTP",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Object",
@@ -63,6 +64,7 @@ driver_executable("llvm-objdump") {
   ]
   sources = [
     "COFFDump.cpp",
+    "DXContainerDump.cpp",
     "ELFDump.cpp",
     "MachODump.cpp",
     "OffloadDump.cpp",

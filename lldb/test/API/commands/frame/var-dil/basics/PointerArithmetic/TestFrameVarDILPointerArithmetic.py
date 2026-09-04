@@ -42,5 +42,5 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect(
             "frame var '&*p_void'",
             error=True,
-            substrs=["dereference failed: (void *) p_void"],
+            substrs=["dereference failed: cannot dereference void *: (void *) p_void"],
         )

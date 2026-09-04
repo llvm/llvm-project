@@ -3,6 +3,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace {
 
@@ -59,15 +60,13 @@ TEST_F(AArch64GISelMITest, TestInstructionSelectErase) {
     GTEST_SKIP();
 
   legacy::PassManager PM;
-  std::unique_ptr<TargetPassConfig> TPC(TM->createPassConfig(PM));
 
   EraseMockInstructionSelector ISel;
-  ISel.TPC = TPC.get();
   for (auto &MI : *EntryMBB) {
     ISel.MIs.push_back(&MI);
   }
 
-  InstructionSelect ISelPass;
+  InstructionSelectImpl ISelPass(CodeGenOptLevel::Default);
   ISelPass.setInstructionSelector(&ISel);
   ISelPass.selectMachineFunction(*MF);
   EXPECT_EQ(ISel.NumSelected, 3);

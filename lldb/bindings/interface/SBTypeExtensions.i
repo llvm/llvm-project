@@ -58,7 +58,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
         size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
         is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
         is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
-        is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
+        is_function = property(IsFunctionType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
         num_fields = property(GetNumberOfFields, None, doc='''A read only property that returns number of fields in this type as an integer.''')
         num_bases = property(GetNumberOfDirectBaseClasses, None, doc='''A read only property that returns number of direct base classes in this type as an integer.''')
         num_vbases = property(GetNumberOfVirtualBaseClasses, None, doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
@@ -153,11 +153,22 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
 
     def __iter__(self):
         '''Iterate over all types in a lldb.SBTypeList object.'''
-        return lldb_iter(self, 'GetSize', 'GetTypeAtIndex')
+        for i in range(self.GetSize()):
+            yield self.GetTypeAtIndex(i)
 
     def __len__(self):
         '''Return the number of types in a lldb.SBTypeList object.'''
         return self.GetSize()
+
+    def __getitem__(self, idx):
+        '''Get the type at a given index in an lldb.SBTypeList object.'''
+        if not isinstance(idx, int):
+            raise TypeError("unsupported index type: %s" % type(idx))
+        count = len(self)
+        if not (-count <= idx < count):
+            raise IndexError("list index out of range")
+        idx %= count
+        return self.GetTypeAtIndex(idx)
     %}
 #endif
 }

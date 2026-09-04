@@ -15,7 +15,10 @@
 #ifndef LLVM_CLANG_BASIC_ADDRESSSPACES_H
 #define LLVM_CLANG_BASIC_ADDRESSSPACES_H
 
+#include <array>
 #include <cassert>
+#include <initializer_list>
+#include <utility>
 
 namespace clang {
 
@@ -62,9 +65,14 @@ enum class LangAS : unsigned {
   hlsl_private,
   hlsl_device,
   hlsl_input,
+  hlsl_output,
+  hlsl_push_constant,
 
   // Wasm specific address spaces.
   wasm_funcref,
+
+  // AMDGPU address spaces
+  amdgpu_barrier,
 
   // This denotes the count of language-specific address spaces and also
   // the offset added to the target-specific address spaces, which are usually
@@ -74,7 +82,20 @@ enum class LangAS : unsigned {
 
 /// The type of a lookup table which maps from language-specific address spaces
 /// to target-specific ones.
-using LangASMap = unsigned[(unsigned)LangAS::FirstTargetAddressSpace];
+class LangASMap {
+  std::array<unsigned, (unsigned)LangAS::FirstTargetAddressSpace> Map{};
+
+public:
+  constexpr LangASMap() = default;
+
+  constexpr LangASMap(
+      std::initializer_list<std::pair<LangAS, unsigned>> Mappings) {
+    for (auto [LanguageAS, TargetAS] : Mappings)
+      Map[(unsigned)LanguageAS] = TargetAS;
+  }
+
+  constexpr unsigned operator[](LangAS AS) const { return Map[(unsigned)AS]; }
+};
 
 /// \return whether \p AS is a target-specific address space rather than a
 /// clang AST address space

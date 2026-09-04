@@ -18,8 +18,6 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -126,8 +124,7 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
   (void)toType;
   assert(fromType.getShape() == toType.getShape());
   assert(fromType.getRank() != 0);
-  assert(llvm::hasSingleElement(region) &&
-         "unstructured control flow not supported");
+  assert(region.hasOneBlock() && "unstructured control flow not supported");
 
   auto b = ImplicitLocOpBuilder::atBlockBegin(loc, &region.front());
   insertCopyLoops(b, from, to);

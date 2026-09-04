@@ -7,5 +7,5 @@ def HLSLSV_FAKE: HLSLAnnotationAttr {
   let Spellings = [HLSLAnnotation<"SV_Fake">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupThreadIDDocs];
+  let Documentation = [];
 }

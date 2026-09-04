@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@requireThreadSupport
 class TestBreakOnLambdaCapture(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

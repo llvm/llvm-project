@@ -9,6 +9,7 @@
 #include "Compiler.h"
 #include "support/Logger.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -48,7 +49,7 @@ void disableUnsupportedOptions(CompilerInvocation &CI) {
   // our compiler invocation set-up doesn't seem to work with it (leading
   // assertions in VerifyDiagnosticConsumer).
   CI.getDiagnosticOpts().VerifyDiagnostics = false;
-  CI.getDiagnosticOpts().ShowColors = false;
+  CI.getDiagnosticOpts().setShowColors(ShowColorsKind::Off);
 
   // Disable any dependency outputting, we don't want to generate files or write
   // to stdout/stderr.
@@ -147,13 +148,9 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
   }
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(CI));
-  Clang->createDiagnostics(*VFS, &DiagsClient, false);
-
-  if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics(), VFS))
-    VFS = VFSWithRemapping;
-  Clang->createFileManager(VFS);
-
+  Clang->createVirtualFileSystem(VFS, &DiagsClient);
+  Clang->createDiagnostics(&DiagsClient, false);
+  Clang->createFileManager();
   if (!Clang->createTarget())
     return nullptr;
 

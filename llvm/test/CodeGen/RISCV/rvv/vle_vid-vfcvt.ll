@@ -22,8 +22,8 @@ define void @foo_2(ptr nocapture noundef writeonly %t) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vsll.vi v8, v8, 7
+; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    addi a1, a1, -512
 ; CHECK-NEXT:    vadd.vx v8, v8, a1
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8

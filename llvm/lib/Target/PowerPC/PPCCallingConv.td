@@ -21,11 +21,9 @@ class CCIfNotSubtarget<string F, CCAction A>
                      F),
           A>;
 class CCIfOrigArgWasNotPPCF128<CCAction A>
-    : CCIf<"!static_cast<PPCCCState *>(&State)->WasOriginalArgPPCF128(ValNo)",
-           A>;
+    : CCIf<"!OrigTy->isPPC_FP128Ty()", A>;
 class CCIfOrigArgWasPPCF128<CCAction A>
-    : CCIf<"static_cast<PPCCCState *>(&State)->WasOriginalArgPPCF128(ValNo)",
-           A>;
+    : CCIf<"OrigTy->isPPC_FP128Ty()", A>;
 
 //===----------------------------------------------------------------------===//
 // Return Value Calling Convention

@@ -14,7 +14,7 @@
 define ptr @foo(i64 %size, i64 %v1, i64 %v2) {
 entry:
   %a = alloca i8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %a) nounwind
+  call void @llvm.lifetime.start.p0(ptr %a) nounwind
   %cmp1 = icmp ult i64 %size, 1025
   br i1 %cmp1, label %if.end, label %case1
 
@@ -42,12 +42,12 @@ exit1:
 
 exit2:
   %retval2 = phi ptr [ %ret1, %case1 ], [ %retval1, %exit1 ]
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %a) nounwind
+  call void @llvm.lifetime.end.p0(ptr %a) nounwind
   ret ptr %retval2
 }
 
 declare void @llvm.assume(i1)
 declare ptr @qux()
 declare ptr @bar()
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind

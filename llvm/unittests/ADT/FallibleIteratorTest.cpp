@@ -19,8 +19,8 @@ using namespace llvm;
 
 namespace {
 
-using ItemValid = enum { ValidItem, InvalidItem };
-using LinkValid = enum { ValidLink, InvalidLink };
+enum ItemValid { ValidItem, InvalidItem };
+enum LinkValid { ValidLink, InvalidLink };
 
 class Item {
 public:

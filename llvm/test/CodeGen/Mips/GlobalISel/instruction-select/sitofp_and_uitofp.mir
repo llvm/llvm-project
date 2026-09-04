@@ -20,16 +20,19 @@ body:             |
 
     ; FP32-LABEL: name: i32tof32
     ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP32: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = PseudoCVT_S_W [[COPY]]
-    ; FP32: $f0 = COPY [[PseudoCVT_S_W]]
-    ; FP32: RetRA implicit $f0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+    ; FP32-NEXT: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = PseudoCVT_S_W [[COPY]]
+    ; FP32-NEXT: $f0 = COPY [[PseudoCVT_S_W]]
+    ; FP32-NEXT: RetRA implicit $f0
+    ;
     ; FP64-LABEL: name: i32tof32
     ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP64: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = PseudoCVT_S_W [[COPY]]
-    ; FP64: $f0 = COPY [[PseudoCVT_S_W]]
-    ; FP64: RetRA implicit $f0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+    ; FP64-NEXT: [[PseudoCVT_S_W:%[0-9]+]]:fgr32 = PseudoCVT_S_W [[COPY]]
+    ; FP64-NEXT: $f0 = COPY [[PseudoCVT_S_W]]
+    ; FP64-NEXT: RetRA implicit $f0
     %0:gprb(s32) = COPY $a0
     %1:fprb(s32) = G_SITOFP %0(s32)
     $f0 = COPY %1(s32)
@@ -48,16 +51,19 @@ body:             |
 
     ; FP32-LABEL: name: i32tof64
     ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP32: [[PseudoCVT_D32_W:%[0-9]+]]:afgr64 = PseudoCVT_D32_W [[COPY]]
-    ; FP32: $d0 = COPY [[PseudoCVT_D32_W]]
-    ; FP32: RetRA implicit $d0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+    ; FP32-NEXT: [[PseudoCVT_D32_W:%[0-9]+]]:afgr64 = PseudoCVT_D32_W [[COPY]]
+    ; FP32-NEXT: $d0 = COPY [[PseudoCVT_D32_W]]
+    ; FP32-NEXT: RetRA implicit $d0
+    ;
     ; FP64-LABEL: name: i32tof64
     ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP64: [[PseudoCVT_D64_W:%[0-9]+]]:fgr64 = PseudoCVT_D64_W [[COPY]]
-    ; FP64: $d0 = COPY [[PseudoCVT_D64_W]]
-    ; FP64: RetRA implicit $d0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+    ; FP64-NEXT: [[PseudoCVT_D64_W:%[0-9]+]]:fgr64 = PseudoCVT_D64_W [[COPY]]
+    ; FP64-NEXT: $d0 = COPY [[PseudoCVT_D64_W]]
+    ; FP64-NEXT: RetRA implicit $d0
     %0:gprb(s32) = COPY $a0
     %1:fprb(s64) = G_SITOFP %0(s32)
     $d0 = COPY %1(s64)
@@ -76,26 +82,29 @@ body:             |
 
     ; FP32-LABEL: name: u32tof64
     ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP32: [[LUi:%[0-9]+]]:gpr32 = LUi 17200
-    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64 = BuildPairF64 [[COPY]], [[LUi]]
-    ; FP32: [[LUi1:%[0-9]+]]:gpr32 = LUi 17200
-    ; FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
-    ; FP32: [[BuildPairF64_1:%[0-9]+]]:afgr64 = BuildPairF64 [[ORi]], [[LUi1]]
-    ; FP32: [[FSUB_D32_:%[0-9]+]]:afgr64 = FSUB_D32 [[BuildPairF64_]], [[BuildPairF64_1]]
-    ; FP32: $d0 = COPY [[FSUB_D32_]]
-    ; FP32: RetRA implicit $d0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+    ; FP32-NEXT: [[LUi:%[0-9]+]]:gpr32 = LUi 17200
+    ; FP32-NEXT: [[BuildPairF64_:%[0-9]+]]:afgr64 = BuildPairF64 [[COPY]], [[LUi]]
+    ; FP32-NEXT: [[LUi1:%[0-9]+]]:gpr32 = LUi 17200
+    ; FP32-NEXT: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
+    ; FP32-NEXT: [[BuildPairF64_1:%[0-9]+]]:afgr64 = BuildPairF64 [[ORi]], [[LUi1]]
+    ; FP32-NEXT: [[FSUB_D32_:%[0-9]+]]:afgr64 = nofpexcept FSUB_D32 [[BuildPairF64_]], [[BuildPairF64_1]], implicit $fcr31
+    ; FP32-NEXT: $d0 = COPY [[FSUB_D32_]]
+    ; FP32-NEXT: RetRA implicit $d0
+    ;
     ; FP64-LABEL: name: u32tof64
     ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; FP64: [[LUi:%[0-9]+]]:gpr32 = LUi 17200
-    ; FP64: [[BuildPairF64_64_:%[0-9]+]]:fgr64 = BuildPairF64_64 [[COPY]], [[LUi]]
-    ; FP64: [[LUi1:%[0-9]+]]:gpr32 = LUi 17200
-    ; FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
-    ; FP64: [[BuildPairF64_64_1:%[0-9]+]]:fgr64 = BuildPairF64_64 [[ORi]], [[LUi1]]
-    ; FP64: [[FSUB_D64_:%[0-9]+]]:fgr64 = FSUB_D64 [[BuildPairF64_64_]], [[BuildPairF64_64_1]]
-    ; FP64: $d0 = COPY [[FSUB_D64_]]
-    ; FP64: RetRA implicit $d0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+    ; FP64-NEXT: [[LUi:%[0-9]+]]:gpr32 = LUi 17200
+    ; FP64-NEXT: [[BuildPairF64_64_:%[0-9]+]]:fgr64 = BuildPairF64_64 [[COPY]], [[LUi]]
+    ; FP64-NEXT: [[LUi1:%[0-9]+]]:gpr32 = LUi 17200
+    ; FP64-NEXT: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
+    ; FP64-NEXT: [[BuildPairF64_64_1:%[0-9]+]]:fgr64 = BuildPairF64_64 [[ORi]], [[LUi1]]
+    ; FP64-NEXT: [[FSUB_D64_:%[0-9]+]]:fgr64 = nofpexcept FSUB_D64 [[BuildPairF64_64_]], [[BuildPairF64_64_1]], implicit $fcr31
+    ; FP64-NEXT: $d0 = COPY [[FSUB_D64_]]
+    ; FP64-NEXT: RetRA implicit $d0
     %0:gprb(s32) = COPY $a0
     %2:gprb(s32) = G_CONSTANT i32 1127219200
     %3:fprb(s64) = G_MERGE_VALUES %0(s32), %2(s32)

@@ -221,8 +221,151 @@ loop_exit3:
   ret i32 0
 }
 
+; Test for a switch statement with the optional "expected" tag in its
+; branch-weight metadata.
+define i32 @test5_expected(ptr %var, i32 %cond1, i32 %cond2) {
+; CHECK-LABEL: @test5_expected(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND2:%.*]], label [[ENTRY_SPLIT:%.*]] [
+; CHECK-NEXT:    i32 2, label [[LOOP_EXIT2:%.*]]
+; CHECK-NEXT:    ], !prof ![[MD0]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
+; CHECK:       loop_begin:
+; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, ptr [[VAR:%.*]]
+; CHECK-NEXT:    switch i32 [[COND2]], label [[LOOP2:%.*]] [
+; CHECK-NEXT:    i32 0, label [[LOOP0:%.*]]
+; CHECK-NEXT:    i32 1, label [[LOOP1:%.*]]
+; CHECK-NEXT:    ], !prof ![[MD1]]
+; CHECK:       loop0:
+; CHECK-NEXT:    call void @some_func()
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    call void @some_func()
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop2:
+; CHECK-NEXT:    call void @some_func()
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop_latch:
+; CHECK-NEXT:    br label [[LOOP_BEGIN]]
+; CHECK:       loop_exit1:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       loop_exit2:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       loop_exit3:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop_begin
+
+loop_begin:
+  %var_val = load i32, ptr %var
+  switch i32 %cond2, label %loop2 [
+  i32 0, label %loop0
+  i32 1, label %loop1
+  i32 2, label %loop_exit2
+  ], !prof !{!"branch_weights", !"expected", i32 99, i32 100, i32 101, i32 102}
+
+loop0:
+  call void @some_func()
+  br label %loop_latch
+
+loop1:
+  call void @some_func()
+  br label %loop_latch
+
+loop2:
+  call void @some_func()
+  br label %loop_latch
+
+loop_latch:
+  br label %loop_begin
+
+loop_exit1:
+  ret i32 0
+
+loop_exit2:
+  ret i32 0
+
+loop_exit3:
+  ret i32 0
+}
+
+; Default destination is the loop exit and the "expected" origin tag is present.
+; Before the fix the default weight (300) was lost and replaced with 0.
+define i32 @test6_expected_default_exit(ptr %var, i32 %cond1, i32 %cond2) {
+; CHECK-LABEL: @test6_expected_default_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND2:%.*]], label [[LOOP_EXIT2:%.*]] [
+; CHECK-NEXT:    i32 0, label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    i32 1, label [[ENTRY_SPLIT]]
+; CHECK-NEXT:    i32 2, label [[ENTRY_SPLIT]]
+; CHECK-NEXT:    ], !prof ![[MD5:[0-9]+]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
+; CHECK:       loop_begin:
+; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, ptr [[VAR:%.*]]
+; CHECK-NEXT:    switch i32 [[COND2]], label [[LOOP2:%.*]] [
+; CHECK-NEXT:    i32 0, label [[LOOP0:%.*]]
+; CHECK-NEXT:    i32 1, label [[LOOP1:%.*]]
+; CHECK-NEXT:    ], !prof ![[MD3]]
+; CHECK:       loop0:
+; CHECK-NEXT:    call void @some_func()
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    call void @some_func()
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop2:
+; CHECK-NEXT:    call void @some_func()
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop_latch:
+; CHECK-NEXT:    br label [[LOOP_BEGIN]]
+; CHECK:       loop_exit1:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       loop_exit2:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       loop_exit3:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop_begin
+
+loop_begin:
+  %var_val = load i32, ptr %var
+  switch i32 %cond2, label %loop_exit2 [
+  i32 0, label %loop0
+  i32 1, label %loop1
+  i32 2, label %loop2
+  ], !prof !{!"branch_weights", !"expected", i32 300, i32 100, i32 101, i32 102}
+
+loop0:
+  call void @some_func()
+  br label %loop_latch
+
+loop1:
+  call void @some_func()
+  br label %loop_latch
+
+loop2:
+  call void @some_func()
+  br label %loop_latch
+
+loop_latch:
+  br label %loop_begin
+
+loop_exit1:
+  ret i32 0
+
+loop_exit2:
+  ret i32 0
+
+loop_exit3:
+  ret i32 0
+}
+
 ; CHECK: ![[MD0]] = !{!"branch_weights", i32 300, i32 102}
 ; CHECK: ![[MD1]] = !{!"branch_weights", i32 99, i32 100, i32 101}
 ; CHECK: ![[MD2]] = !{!"branch_weights", i32 99, i32 100, i32 101, i32 102}
 ; CHECK: ![[MD3]] = !{!"branch_weights", i32 102, i32 100, i32 101}
 ; CHECK: ![[MD4]] = !{!"branch_weights", i32 99, i32 113, i32 142, i32 100, i32 101, i32 102}
+; CHECK: ![[MD5]] = !{!"branch_weights", i32 300, i32 100, i32 101, i32 102}

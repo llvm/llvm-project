@@ -99,8 +99,8 @@ static Value flattenVecToBits(ConversionPatternRewriter &rewriter, Location loc,
       vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
   Type allBitsType = rewriter.getIntegerType(bitwidth);
   auto allBitsVecType = VectorType::get({1}, allBitsType);
-  Value bitcast = rewriter.create<vector::BitCastOp>(loc, allBitsVecType, val);
-  Value scalar = rewriter.create<vector::ExtractOp>(loc, bitcast, 0);
+  Value bitcast = vector::BitCastOp::create(rewriter, loc, allBitsVecType, val);
+  Value scalar = vector::ExtractOp::create(rewriter, loc, bitcast, 0);
   return scalar;
 }
 
@@ -110,7 +110,10 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
     ConversionPatternRewriter &rewriter) const {
   Location loc = atomicOp.getLoc();
 
-  ArrayRef<NamedAttribute> origAttrs = atomicOp->getAttrs();
+  NamedAttrList origAttrs(atomicOp->getDiscardableAttrDictionary());
+  atomicOp->getName().walkInherentAttrs(
+      atomicOp,
+      [&](StringRef name, Attribute &attr) { origAttrs.append(name, attr); });
   ValueRange operands = adaptor.getOperands();
   Value data = operands.take_front()[0];
   ValueRange invariantArgs = operands.drop_front();
@@ -118,27 +121,28 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
 
   SmallVector<NamedAttribute> loadAttrs;
   patchOperandSegmentSizes(origAttrs, loadAttrs, DataArgAction::Drop);
-  Value initialLoad =
-      rewriter.create<RawBufferLoadOp>(loc, dataType, invariantArgs, loadAttrs);
+  Value initialLoad = RawBufferLoadOp::create(rewriter, loc, dataType,
+                                              invariantArgs, loadAttrs);
   Block *currentBlock = rewriter.getInsertionBlock();
   Block *afterAtomic =
       rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+  afterAtomic->addArgument(dataType, loc);
   Block *loopBlock = rewriter.createBlock(afterAtomic, {dataType}, {loc});
 
   rewriter.setInsertionPointToEnd(currentBlock);
-  rewriter.create<cf::BranchOp>(loc, loopBlock, initialLoad);
+  cf::BranchOp::create(rewriter, loc, loopBlock, initialLoad);
 
   rewriter.setInsertionPointToEnd(loopBlock);
   Value prevLoad = loopBlock->getArgument(0);
-  Value operated = rewriter.create<ArithOp>(loc, data, prevLoad);
+  Value operated = ArithOp::create(rewriter, loc, data, prevLoad);
   dataType = operated.getType();
 
   SmallVector<NamedAttribute> cmpswapAttrs;
   patchOperandSegmentSizes(origAttrs, cmpswapAttrs, DataArgAction::Duplicate);
   SmallVector<Value> cmpswapArgs = {operated, prevLoad};
   cmpswapArgs.append(invariantArgs.begin(), invariantArgs.end());
-  Value atomicRes = rewriter.create<RawBufferAtomicCmpswapOp>(
-      loc, dataType, cmpswapArgs, cmpswapAttrs);
+  Value atomicRes = RawBufferAtomicCmpswapOp::create(rewriter, loc, dataType,
+                                                     cmpswapArgs, cmpswapAttrs);
 
   // We care about exact bitwise equality here, so do some bitcasts.
   // These will fold away during lowering to the ROCDL dialect, where
@@ -150,15 +154,16 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
   if (auto floatDataTy = dyn_cast<FloatType>(dataType)) {
     Type equivInt = rewriter.getIntegerType(floatDataTy.getWidth());
     prevLoadForCompare =
-        rewriter.create<arith::BitcastOp>(loc, equivInt, prevLoad);
+        arith::BitcastOp::create(rewriter, loc, equivInt, prevLoad);
     atomicResForCompare =
-        rewriter.create<arith::BitcastOp>(loc, equivInt, atomicRes);
+        arith::BitcastOp::create(rewriter, loc, equivInt, atomicRes);
   }
-  Value canLeave = rewriter.create<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::eq, atomicResForCompare, prevLoadForCompare);
-  rewriter.create<cf::CondBranchOp>(loc, canLeave, afterAtomic, ValueRange{},
-                                    loopBlock, atomicRes);
-  rewriter.eraseOp(atomicOp);
+  Value canLeave =
+      arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                            atomicResForCompare, prevLoadForCompare);
+  cf::CondBranchOp::create(rewriter, loc, canLeave, afterAtomic,
+                           ValueRange{prevLoad}, loopBlock, atomicRes);
+  rewriter.replaceOp(atomicOp, ValueRange{afterAtomic->getArgument(0)});
   return success();
 }
 

@@ -10,16 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SarifDiagnostics.h"
+#include "HTMLDiagnostics.h"
+#include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include <memory>
 
 using namespace llvm;
@@ -30,12 +37,13 @@ namespace {
 class SarifDiagnostics : public PathDiagnosticConsumer {
   std::string OutputFile;
   const LangOptions &LO;
+  const SourceManager &SM;
   SarifDocumentWriter SarifWriter;
 
 public:
   SarifDiagnostics(const std::string &Output, const LangOptions &LO,
                    const SourceManager &SM)
-      : OutputFile(Output), LO(LO), SarifWriter(SM) {}
+      : OutputFile(Output), LO(LO), SM(SM), SarifWriter(SM) {}
   ~SarifDiagnostics() override = default;
 
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
@@ -45,6 +53,11 @@ public:
   PathGenerationScheme getGenerationScheme() const override { return Minimal; }
   bool supportsLogicalOpControlFlow() const override { return true; }
   bool supportsCrossFileDiagnostics() const override { return true; }
+
+private:
+  SarifResult createResult(const PathDiagnostic *Diag,
+                           const StringMap<uint32_t> &RuleMapping,
+                           const LangOptions &LO, FilesMade *FM);
 };
 } // end anonymous namespace
 
@@ -54,14 +67,24 @@ void ento::createSarifDiagnosticConsumer(
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
 
+  createSarifDiagnosticConsumerImpl(DiagOpts, C, Output, PP);
+
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
+                                          CTU, MacroExpansions);
+}
+
+/// Creates and registers a SARIF diagnostic consumer, without any additional
+/// text consumer.
+void ento::createSarifDiagnosticConsumerImpl(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &Output, const Preprocessor &PP) {
+
   // TODO: Emit an error here.
   if (Output.empty())
     return;
 
   C.push_back(std::make_unique<SarifDiagnostics>(Output, PP.getLangOpts(),
                                                  PP.getSourceManager()));
-  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
-                                          CTU, MacroExpansions);
 }
 
 static StringRef getRuleDescription(StringRef CheckName) {
@@ -105,23 +128,25 @@ calculateImportance(const PathDiagnosticPiece &Piece) {
   return ThreadFlowImportance::Unimportant;
 }
 
-/// Accepts a SourceRange corresponding to a pair of the first and last tokens
-/// and converts to a Character granular CharSourceRange.
-static CharSourceRange convertTokenRangeToCharRange(const SourceRange &R,
-                                                    const SourceManager &SM,
-                                                    const LangOptions &LO) {
-  // Caret diagnostics have the first and last locations pointed at the same
-  // location, return these as-is.
-  if (R.getBegin() == R.getEnd())
-    return CharSourceRange::getCharRange(R);
+/// Returns the character range to report for \p Loc.
+///
+/// A thread flow needs a location for every piece, so an unusable range falls
+/// back to a caret rather than being dropped, which would truncate the path.
+static CharSourceRange getDisplayCharRange(const PathDiagnosticLocation &Loc,
+                                           const LangOptions &LO) {
+  const SourceManager &SM = Loc.getManager();
+  FullSourceLoc Caret = Loc.asLocation().getExpansionLoc();
+  SourceRange Range = Loc.asRange();
 
-  SourceLocation BeginCharLoc = R.getBegin();
-  // For token ranges, the raw end SLoc points at the first character of the
-  // last token in the range. This must be moved to one past the end of the
-  // last character using the lexer.
-  SourceLocation EndCharLoc =
-      Lexer::getLocForEndOfToken(R.getEnd(), /* Offset = */ 0, SM, LO);
-  return CharSourceRange::getCharRange(BeginCharLoc, EndCharLoc);
+  // FIXME: A single-token range is reported as a zero-width region. Widening it
+  // would churn every expected-sarif file, so it is left alone for now.
+  if (Range.getBegin() != Range.getEnd()) {
+    if (std::optional<CharSourceRange> FileRange = getExpansionRangeInFile(
+            CharSourceRange::getTokenRange(Range), Caret.getFileID(), SM))
+      return Lexer::getAsCharRange(*FileRange, SM, LO);
+  }
+
+  return CharSourceRange::getCharRange(Caret, Caret);
 }
 
 static SmallVector<ThreadFlow, 8> createThreadFlows(const PathDiagnostic *Diag,
@@ -129,11 +154,9 @@ static SmallVector<ThreadFlow, 8> createThreadFlows(const PathDiagnostic *Diag,
   SmallVector<ThreadFlow, 8> Flows;
   const PathPieces &Pieces = Diag->path.flatten(false);
   for (const auto &Piece : Pieces) {
-    auto Range = convertTokenRangeToCharRange(
-        Piece->getLocation().asRange(), Piece->getLocation().getManager(), LO);
     auto Flow = ThreadFlow::create()
                     .setImportance(calculateImportance(*Piece))
-                    .setRange(Range)
+                    .setRange(getDisplayCharRange(Piece->getLocation(), LO))
                     .setMessage(Piece->getString());
     Flows.push_back(Flow);
   }
@@ -162,27 +185,51 @@ createRuleMapping(const std::vector<const PathDiagnostic *> &Diags,
   return RuleMapping;
 }
 
-static SarifResult createResult(const PathDiagnostic *Diag,
-                                const StringMap<uint32_t> &RuleMapping,
-                                const LangOptions &LO) {
+static const llvm::StringRef IssueHashKey = "clang/issueHash/v1";
+
+SarifResult
+SarifDiagnostics::createResult(const PathDiagnostic *Diag,
+                               const StringMap<uint32_t> &RuleMapping,
+                               const LangOptions &LO, FilesMade *FM) {
 
   StringRef CheckName = Diag->getCheckerName();
   uint32_t RuleIdx = RuleMapping.lookup(CheckName);
-  auto Range = convertTokenRangeToCharRange(
-      Diag->getLocation().asRange(), Diag->getLocation().getManager(), LO);
+  CharSourceRange Range = getDisplayCharRange(Diag->getLocation(), LO);
 
   SmallVector<ThreadFlow, 8> Flows = createThreadFlows(Diag, LO);
+
+  auto IssueHash = Diag->getIssueHash(SM, LO);
+
+  std::string HtmlReportURL;
+  if (FM && !FM->empty()) {
+    // Find the HTML report that was generated for this issue, if one exists.
+    PDFileEntry::ConsumerFiles *Files = FM->getFiles(*Diag);
+    if (Files) {
+      auto HtmlFile = llvm::find_if(*Files, [](const auto &File) {
+        return File.first == HTML_DIAGNOSTICS_NAME;
+      });
+      if (HtmlFile != Files->end()) {
+        SmallString<128> HtmlReportPath =
+            llvm::sys::path::parent_path(OutputFile);
+        llvm::sys::path::append(HtmlReportPath, HtmlFile->second);
+        HtmlReportURL = SarifDocumentWriter::fileNameToURI(HtmlReportPath);
+      }
+    }
+  }
+
   auto Result = SarifResult::create(RuleIdx)
                     .setRuleId(CheckName)
                     .setDiagnosticMessage(Diag->getVerboseDescription())
                     .setDiagnosticLevel(SarifResultLevel::Warning)
-                    .setLocations({Range})
+                    .addLocations({Range})
+                    .addPartialFingerprint(IssueHashKey, IssueHash)
+                    .setHostedViewerURI(HtmlReportURL)
                     .setThreadFlows(Flows);
   return Result;
 }
 
 void SarifDiagnostics::FlushDiagnosticsImpl(
-    std::vector<const PathDiagnostic *> &Diags, FilesMade *) {
+    std::vector<const PathDiagnostic *> &Diags, FilesMade *FM) {
   // We currently overwrite the file if it already exists. However, it may be
   // useful to add a feature someday that allows the user to append a run to an
   // existing SARIF file. One danger from that approach is that the size of the
@@ -199,7 +246,7 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
   SarifWriter.createRun("clang", "clang static analyzer", ToolVersion);
   StringMap<uint32_t> RuleMapping = createRuleMapping(Diags, SarifWriter);
   for (const PathDiagnostic *D : Diags) {
-    SarifResult Result = createResult(D, RuleMapping, LO);
+    SarifResult Result = createResult(D, RuleMapping, LO, FM);
     SarifWriter.appendResult(Result);
   }
   auto Document = SarifWriter.createDocument();

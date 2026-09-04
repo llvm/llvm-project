@@ -13,10 +13,12 @@
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -182,13 +184,16 @@ static bool isLegalToInline(InlinerInterface &interface, Region *src,
                             IRMapping &valueMapping) {
   for (auto &block : *src) {
     for (auto &op : block) {
+      // UnrealizedConversionCastOp is inlineable but cannot implement the
+      // inliner interface due to layering constraints.
+      if (isa<UnrealizedConversionCastOp>(op))
+        continue;
+
       // Check this operation.
       if (!interface.isLegalToInline(&op, insertRegion,
                                      shouldCloneInlinedRegion, valueMapping)) {
-        LLVM_DEBUG({
-          llvm::dbgs() << "* Illegal to inline because of op: ";
-          op.dump();
-        });
+        LDBG() << "* Illegal to inline because of op: "
+               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
         return false;
       }
       // Check any nested regions.
@@ -482,10 +487,16 @@ LogicalResult mlir::inlineCall(
   auto *entryBlock = &src->front();
   ArrayRef<Type> callableResultTypes = callable.getResultTypes();
 
+  // Inlining replaces the call with the body of the callee, so the call must
+  // not have any results that are produced by the call operation itself: there
+  // would be nothing left to compute them.
+  if (call.getForwardedResults().size() != call->getNumResults())
+    return failure();
+
   // Make sure that the number of arguments and results matchup between the call
   // and the region.
   SmallVector<Value, 8> callOperands(call.getArgOperands());
-  SmallVector<Value, 8> callResults(call->getResults());
+  SmallVector<Value, 8> callResults(call.getForwardedResults());
   if (callOperands.size() != entryBlock->getNumArguments() ||
       callResults.size() != callableResultTypes.size())
     return failure();

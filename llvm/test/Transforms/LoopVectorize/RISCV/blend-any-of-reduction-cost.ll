@@ -62,50 +62,10 @@ define i32 @any_of_reduction_used_in_blend_with_multiple_phis(ptr %src, i64 %N, 
 ; CHECK-LABEL: define i32 @any_of_reduction_used_in_blend_with_multiple_phis(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]], i1 [[C_0:%.*]], i1 [[C_1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C_1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C_0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <vscale x 2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <vscale x 2 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[SRC]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x ptr> @llvm.masked.gather.nxv2p0.nxv2p0(<vscale x 2 x ptr> [[BROADCAST_SPLAT4]], i32 8, <vscale x 2 x i1> [[TMP8]], <vscale x 2 x ptr> poison)
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <vscale x 2 x ptr> [[WIDE_MASKED_GATHER]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = or <vscale x 2 x i1> [[VEC_PHI]], [[TMP9]]
-; CHECK-NEXT:    [[PREDPHI]] = select <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i1> [[TMP10]], <vscale x 2 x i1> [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[PREDPHI]])
-; CHECK-NEXT:    [[TMP13:%.*]] = freeze i1 [[TMP12]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP13]], i32 0, i32 0
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[ANY_OF_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ANY_OF_RED_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[ANY_OF_RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ANY_OF_RED_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    br i1 [[C_0]], label %[[X_1:.*]], label %[[ELSE_1:.*]]
 ; CHECK:       [[ELSE_1]]:
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[X_1]], label %[[ELSE_2:.*]]
@@ -121,9 +81,9 @@ define i32 @any_of_reduction_used_in_blend_with_multiple_phis(ptr %src, i64 %N, 
 ; CHECK-NEXT:    [[ANY_OF_RED_NEXT]] = phi i32 [ [[P]], %[[X_1]] ], [ [[SEL]], %[[ELSE_2]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[ANY_OF_RED_NEXT]], %[[LOOP_LATCH]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[ANY_OF_RED_NEXT]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -159,9 +119,3 @@ exit:
 }
 
 attributes #0 = { "target-cpu"="sifive-p670" }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-;.

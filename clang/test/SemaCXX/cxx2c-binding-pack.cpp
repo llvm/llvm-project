@@ -82,7 +82,7 @@ void decompose_array() {
   static_assert(sizeof...(b) == 0);
   auto [...c] = arr1;
   static_assert(sizeof...(c) == 1);
-  auto [a1, ...b1, c1] = arr1; // expected-error{{decomposes into 1 element, but 3 names were provided}}
+  auto [a1, ...b1, c1] = arr1; // expected-error{{binds to 1 element, but 3 names were provided}}
 }
 
 // Test case by Younan Zhang.
@@ -160,7 +160,7 @@ void now_i_know_my() {
   static_assert(sizeof...(e) == 2);
   auto [h, i, j, ...k] = C(); // OK, the pack k is empty
   static_assert(sizeof...(e) == 0);
-  auto [l, m, n, o, ...p] = C(); // expected-error{{{decomposes into 3 elements, but 5 names were provided}}}
+  auto [l, m, n, o, ...p] = C(); // expected-error{{{binds to 3 elements, but 5 names were provided}}}
 }
 }  // namespace
 
@@ -225,7 +225,7 @@ namespace GH125165 {
 template <typename = void>
 auto f(auto t) {
     const auto& [...pack] = t;
-    // expected-error@-1 {{cannot decompose non-class, non-array type 'char const'}}
+    // expected-error@-1 {{cannot bind non-class, non-array type 'char const'}}
     (pack, ...);
 };
 
@@ -259,3 +259,45 @@ static_assert(copy_obj(Arr{}) == 0);
 static_assert(copy_obj(fake_tuple{}) == 12);
 static_assert(copy_obj(Triple{}) == 3);
 }
+
+namespace GH214160 {
+struct S {
+  int x, y;
+};
+
+template <typename = void>
+void f() {
+    ([&]{ auto [...tmp] = S{}; tmp; }(), ...);
+  // expected-error@-1 {{expression contains unexpanded parameter pack 'tmp'}}
+  // expected-error@-2 {{pack expansion does not contain any unexpanded parameter packs}}
+}
+
+template void f<void>();
+
+template <typename = void>
+void g() {
+  ([&]{ auto [...tmp] = S{}; ((void)tmp, ...); }(), ...);
+  // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
+}
+
+template void g<void>();
+
+template <typename = void>
+void h() {
+  auto [...tmp] = S{};
+  ([&]{ (void)tmp; }(), ...);
+}
+
+template void h<void>();
+
+template <typename = void>
+void i() {
+  [] {
+    auto [...tmp] = S{};
+    ([&]{ (void)tmp; }(), ...);
+  }();
+}
+
+template void i<void>();
+
+} // namespace GH214160

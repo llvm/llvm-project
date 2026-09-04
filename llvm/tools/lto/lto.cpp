@@ -24,6 +24,7 @@
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -43,6 +44,29 @@ static cl::opt<char>
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding", cl::init(false),
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"));
+
+static cl::opt<std::string> ThinLTOCacheDir(
+    "legacy-thinlto-cache-dir",
+    cl::desc("Experimental option, enable ThinLTO caching. Note: the cache "
+             "currently does not take the mcmodel setting into account, so you "
+             "might get false hits if different mcmodels are used in different "
+             "builds using the same cache directory."));
+
+static cl::opt<int> ThinLTOCachePruningInterval(
+    "legacy-thinlto-cache-pruning-interval", cl::init(1200),
+    cl::desc("Set ThinLTO cache pruning interval (seconds)."));
+
+static cl::opt<uint64_t> ThinLTOCacheMaxSizeBytes(
+    "legacy-thinlto-cache-max-size-bytes",
+    cl::desc("Set ThinLTO cache pruning directory maximum size in bytes."));
+
+static cl::opt<int> ThinLTOCacheMaxSizeFiles(
+    "legacy-thinlto-cache-max-size-files", cl::init(1000000),
+    cl::desc("Set ThinLTO cache pruning directory maximum number of files."));
+
+static cl::opt<unsigned> ThinLTOCacheEntryExpiration(
+    "legacy-thinlto-cache-entry-expiration", cl::init(604800) /* 1w */,
+    cl::desc("Set ThinLTO cache entry expiration time (seconds)."));
 
 #ifdef NDEBUG
 static bool VerifyByDefault = false;
@@ -70,6 +94,9 @@ static enum class OptParsingState {
 } optionParsingState = OptParsingState::NotParsed;
 
 static LLVMContext *LTOContext = nullptr;
+
+// Records -mllvm arguments parsed through the legacy debug-option APIs.
+static std::vector<std::string> ThinLTOMllvmArgs;
 
 struct LTOToolDiagnosticHandler : public DiagnosticHandler {
   bool handleDiagnostics(const DiagnosticInfo &DI) override {
@@ -530,6 +557,7 @@ lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod) {
 thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
   ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
+  CodeGen->setMllvmArgs(ThinLTOMllvmArgs);
   CodeGen->setTargetOptions(
       codegen::InitTargetOptionsFromCodeGenFlags(Triple()));
   CodeGen->setFreestanding(EnableFreestanding);
@@ -543,6 +571,25 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
     assert(CGOptLevelOrNone);
     CodeGen->setCodeGenOptLevel(*CGOptLevelOrNone);
   }
+  if (!ThinLTOCacheDir.empty()) {
+    auto Err = llvm::sys::fs::create_directories(ThinLTOCacheDir);
+    if (Err)
+      report_fatal_error(Twine("Unable to create thinLTO cache directory: ") +
+                         Err.message());
+    bool result;
+    Err = llvm::sys::fs::is_directory(ThinLTOCacheDir, result);
+    if (Err || !result)
+      report_fatal_error(Twine("Unable to get status of thinLTO cache path or "
+                               "path is not a directory: ") +
+                         Err.message());
+    CodeGen->setCacheDir(ThinLTOCacheDir);
+
+    CodeGen->setCachePruningInterval(ThinLTOCachePruningInterval);
+    CodeGen->setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
+    CodeGen->setCacheMaxSizeFiles(ThinLTOCacheMaxSizeFiles);
+    CodeGen->setCacheMaxSizeBytes(ThinLTOCacheMaxSizeBytes);
+  }
+
   return wrap(CodeGen);
 }
 
@@ -587,11 +634,12 @@ void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
 }
 
 void thinlto_debug_options(const char *const *options, int number) {
-  // if options were requested, set them
+  // If options were requested, parse and retain them.
   if (number && options) {
     std::vector<const char *> CodegenArgv(1, "libLTO");
     append_range(CodegenArgv, ArrayRef<const char *>(options, number));
     cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
+    ThinLTOMllvmArgs.assign(options, options + number);
   }
 }
 

@@ -31,6 +31,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <bitset>
 #include <memory>
@@ -186,6 +187,12 @@ protected:
   /// IsLittle - The target is Little Endian
   bool IsLittle;
 
+  /// DM - Denormal mode
+  /// NEON and VFP RunFast mode are not IEEE 754 compliant,
+  /// use this field to determine whether to generate NEON/VFP
+  /// instructions in related function.
+  DenormalMode DM;
+
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -200,13 +207,20 @@ protected:
 
   const ARMBaseTargetMachine &TM;
 
+  /// The floating-point ABI in effect for this subtarget.
+  FloatABI::ABIType FloatABIType;
+
+  /// The ABI in effect.
+  const ARM::ARMABI ABI;
+
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const ARMBaseTargetMachine &TM, bool IsLittle,
-               bool MinSize = false);
+               FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
+               bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
@@ -252,6 +266,7 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
 private:
   ARMSelectionDAGInfo TSInfo;
@@ -337,6 +352,7 @@ public:
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
   bool isTargetWatchABI() const { return TargetTriple.isWatchABI(); }
   bool isTargetDriverKit() const { return TargetTriple.isDriverKit(); }
+  bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetNetBSD() const { return TargetTriple.isOSNetBSD(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
@@ -357,6 +373,18 @@ public:
     return TargetTriple.isTargetEHABICompatible();
   }
   /// @}
+
+  /// Returns the floating-point ABI in effect for this subtarget.
+  FloatABI::ABIType getFloatABI() const { return FloatABIType; }
+
+  /// Returns true if the subtarget uses the hard floating-point ABI.
+  bool isTargetHardFloat() const { return FloatABIType == FloatABI::Hard; }
+
+  bool isAPCS_ABI() const { return ABI == ARM::ARM_ABI_APCS; }
+  bool isAAPCS_ABI() const {
+    return ABI == ARM::ARM_ABI_AAPCS || ABI == ARM::ARM_ABI_AAPCS16;
+  }
+  bool isAAPCS16_ABI() const { return ABI == ARM::ARM_ABI_AAPCS16; }
 
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());
@@ -405,8 +433,6 @@ public:
   const std::string & getCPUString() const { return CPUString; }
 
   bool isLittle() const { return IsLittle; }
-
-  unsigned getMispredictionPenalty() const;
 
   /// Returns true if machine scheduler should be enabled.
   bool enableMachineScheduler() const override;
@@ -494,8 +520,8 @@ public:
     return MVEVectorCostFactor;
   }
 
-  bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   MCRegister PhysReg) const override;
+  void getCSRAllocationOrderMask(const MachineFunction &MF,
+                                 BitVector &Mask) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

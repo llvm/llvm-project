@@ -22,7 +22,7 @@ using ns::Bar;
 using ns::Foo;
 using ns::Unused; // Unused
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: using decl 'Unused' is unused
-// CHECK-FIXES: {{^}}// Unused
+// CHECK-FIXES: // Unused
 
 void f() {
   Foo(123);

@@ -1,0 +1,312 @@
+# This test case has been reduced from one of the files from nullstone benchmark.
+# It verifies that no stalls are being missed when compiling with '-g'.
+
+# REQUIRES: asserts
+# RUN: llc -march=hexagon -mcpu=hexagonv73 -run-pass=global-sched -debug-only=global_sched %s -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: bb.3:
+# CHECK: Could not move packetized instr.
+# CHECK-NEXT: Not a single candidate fit.
+# CHECK: Home iterator moved to new BB(2)
+# CHECH-NOT: Want to move dependent op:   S4_storeirif_io
+
+--- |
+
+  %struct._Dnk_filet = type { i16, i8, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, [2 x i32], ptr, ptr, ptr, %struct._Mbstatet, ptr, [8 x i8], i8 }
+  %struct._Mbstatet = type { i32, i16, i16 }
+
+  @datafileptr = external dso_local local_unnamed_addr global ptr, align 4
+  @_Stderr = external dso_local global %struct._Dnk_filet, align 4
+  @.str = private unnamed_addr constant [49 x i8] c"ERROR: File=%s, Line=%d, Data file is not open.\0A\00", align 1, !dbg !0
+  @.str.1 = private unnamed_addr constant [6 x i8] c"fem.c\00", align 1, !dbg !7
+  @.str.2 = private unnamed_addr constant [28 x i8] c"%s=\09\09File=%s, Line=%d, %s.\0A\00", align 1, !dbg !12
+  @.str.3 = private unnamed_addr constant [6 x i8] c"error\00", align 1, !dbg !17
+  @.str.4 = private unnamed_addr constant [56 x i8] c"ERROR: File=%s, Line=%d, Unable to write to data file.\0A\00", align 1, !dbg !19
+
+  ; Function Attrs: noreturn nounwind
+  define dso_local void @fatal_error_message(ptr noundef %filename, i32 noundef %line, ptr noundef %message) local_unnamed_addr #0 !dbg !31 {
+  entry:
+    call void @llvm.dbg.value(metadata ptr %filename, metadata !37, metadata !DIExpression()), !dbg !41
+    call void @llvm.dbg.value(metadata i32 %line, metadata !38, metadata !DIExpression()), !dbg !41
+    call void @llvm.dbg.value(metadata ptr %message, metadata !39, metadata !DIExpression()), !dbg !41
+    call void @llvm.dbg.value(metadata i32 0, metadata !40, metadata !DIExpression()), !dbg !41
+    %0 = load ptr, ptr @datafileptr, align 4, !dbg !42, !tbaa !44
+    %cmp = icmp eq ptr %0, null, !dbg !48
+    br i1 %cmp, label %if.end5.sink.split, label %if.end, !dbg !49
+
+  if.end:                                           ; preds = %entry
+    %call1 = tail call i32 (ptr, ptr, ...) @fprintf(ptr noundef nonnull %0, ptr noundef nonnull @.str.2, ptr noundef nonnull @.str.3, ptr noundef %filename, i32 noundef %line, ptr noundef %message) #4, !dbg !50
+    call void @llvm.dbg.value(metadata i32 %call1, metadata !40, metadata !DIExpression()), !dbg !41
+    %cmp2 = icmp eq i32 %call1, -1, !dbg !51
+    br i1 %cmp2, label %if.end5.sink.split, label %if.end5, !dbg !53
+
+  if.end5.sink.split:                               ; preds = %if.end, %entry
+    %.sink = phi i32 [ 30, %entry ], [ 37, %if.end ]
+    %.str.sink = phi ptr [ @.str, %entry ], [ @.str.4, %if.end ]
+    %call = tail call i32 (ptr, ptr, ...) @fprintf(ptr noundef nonnull @_Stderr, ptr noundef nonnull %.str.sink, ptr noundef nonnull @.str.1, i32 noundef %.sink) #4, !dbg !41
+    br label %if.end5, !dbg !54
+
+  if.end5:                                          ; preds = %if.end5.sink.split, %if.end
+    tail call void @exit(i32 noundef 1) #5, !dbg !54
+    unreachable, !dbg !54
+  }
+
+  ; Function Attrs: nofree nounwind
+  declare !dbg !55 dso_local noundef i32 @fprintf(ptr nocapture noundef, ptr nocapture noundef readonly, ...) local_unnamed_addr #1
+
+  ; Function Attrs: noreturn
+  declare !dbg !104 dso_local void @exit(i32 noundef) local_unnamed_addr #2
+
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #3
+
+  attributes #0 = { noreturn nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv73" "target-features"="+v73,-long-calls" }
+  attributes #1 = { nofree nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv73" "target-features"="+v73,-long-calls" }
+  attributes #2 = { noreturn "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv73" "target-features"="+v73,-long-calls" }
+  attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+  attributes #4 = { nounwind }
+  attributes #5 = { noreturn nounwind }
+
+  !llvm.dbg.cu = !{!24}
+  !llvm.module.flags = !{!26, !27, !28, !29}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(scope: null, file: !2, line: 29, type: !3, isLocal: true, isDefinition: true)
+  !2 = !DIFile(filename: "fem.c", directory: "/tmp/build/v66/benchmark/nullstone/nullstone")
+  !3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 392, elements: !5)
+  !4 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_unsigned_char)
+  !5 = !{!6}
+  !6 = !DISubrange(count: 49)
+  !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
+  !8 = distinct !DIGlobalVariable(scope: null, file: !2, line: 30, type: !9, isLocal: true, isDefinition: true)
+  !9 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 48, elements: !10)
+  !10 = !{!11}
+  !11 = !DISubrange(count: 6)
+  !12 = !DIGlobalVariableExpression(var: !13, expr: !DIExpression())
+  !13 = distinct !DIGlobalVariable(scope: null, file: !2, line: 33, type: !14, isLocal: true, isDefinition: true)
+  !14 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 224, elements: !15)
+  !15 = !{!16}
+  !16 = !DISubrange(count: 28)
+  !17 = !DIGlobalVariableExpression(var: !18, expr: !DIExpression())
+  !18 = distinct !DIGlobalVariable(scope: null, file: !2, line: 34, type: !9, isLocal: true, isDefinition: true)
+  !19 = !DIGlobalVariableExpression(var: !20, expr: !DIExpression())
+  !20 = distinct !DIGlobalVariable(scope: null, file: !2, line: 36, type: !21, isLocal: true, isDefinition: true)
+  !21 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 448, elements: !22)
+  !22 = !{!23}
+  !23 = !DISubrange(count: 56)
+  !24 = distinct !DICompileUnit(language: DW_LANG_C11, file: !2, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !25, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
+  !25 = !{!0, !7, !12, !17, !19}
+  !26 = !{i32 7, !"Dwarf Version", i32 4}
+  !27 = !{i32 2, !"Debug Info Version", i32 3}
+  !28 = !{i32 1, !"wchar_size", i32 4}
+  !29 = !{i32 7, !"frame-pointer", i32 2}
+  !31 = distinct !DISubprogram(name: "fatal_error_message", scope: !2, file: !2, line: 24, type: !32, scopeLine: 25, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !24, retainedNodes: !36)
+  !32 = !DISubroutineType(types: !33)
+  !33 = !{null, !34, !35, !34}
+  !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 32)
+  !35 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !36 = !{!37, !38, !39, !40}
+  !37 = !DILocalVariable(name: "filename", arg: 1, scope: !31, file: !2, line: 24, type: !34)
+  !38 = !DILocalVariable(name: "line", arg: 2, scope: !31, file: !2, line: 24, type: !35)
+  !39 = !DILocalVariable(name: "message", arg: 3, scope: !31, file: !2, line: 24, type: !34)
+  !40 = !DILocalVariable(name: "status", scope: !31, file: !2, line: 26, type: !35)
+  !41 = !DILocation(line: 0, scope: !31)
+  !42 = !DILocation(line: 28, column: 7, scope: !43)
+  !43 = distinct !DILexicalBlock(scope: !31, file: !2, line: 28, column: 7)
+  !44 = !{!45, !45, i64 0}
+  !45 = !{!"any pointer", !46, i64 0}
+  !46 = !{!"omnipotent char", !47, i64 0}
+  !47 = !{!"Simple C/C++ TBAA"}
+  !48 = !DILocation(line: 28, column: 19, scope: !43)
+  !49 = !DILocation(line: 28, column: 7, scope: !31)
+  !50 = !DILocation(line: 32, column: 14, scope: !43)
+  !51 = !DILocation(line: 35, column: 14, scope: !52)
+  !52 = distinct !DILexicalBlock(scope: !31, file: !2, line: 35, column: 7)
+  !53 = !DILocation(line: 35, column: 7, scope: !31)
+  !54 = !DILocation(line: 38, column: 3, scope: !31)
+  !55 = !DISubprogram(name: "fprintf", scope: !56, file: !56, line: 129, type: !57, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !103)
+  !56 = !DIFile(filename: "stdio.h", directory: "/test")
+  !57 = !DISubroutineType(types: !58)
+  !58 = !{!35, !59, !101, null}
+  !59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !60, size: 32)
+  !60 = !DIDerivedType(tag: DW_TAG_typedef, name: "FILE", file: !56, line: 107, baseType: !61)
+  !61 = !DIDerivedType(tag: DW_TAG_typedef, name: "_Filet", file: !56, line: 104, baseType: !62)
+  !62 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_Dnk_filet", file: !56, line: 85, size: 640, elements: !63)
+  !63 = !{!64, !66, !68, !69, !71, !72, !73, !74, !75, !76, !80, !84, !85, !86, !87, !95, !96, !100}
+  !64 = !DIDerivedType(tag: DW_TAG_member, name: "_Mode", scope: !62, file: !56, line: 87, baseType: !65, size: 16)
+  !65 = !DIBasicType(name: "unsigned short", size: 16, encoding: DW_ATE_unsigned)
+  !66 = !DIDerivedType(tag: DW_TAG_member, name: "_Idx", scope: !62, file: !56, line: 88, baseType: !67, size: 8, offset: 16)
+  !67 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
+  !68 = !DIDerivedType(tag: DW_TAG_member, name: "_Handle", scope: !62, file: !56, line: 89, baseType: !35, size: 32, offset: 32)
+  !69 = !DIDerivedType(tag: DW_TAG_member, name: "_Buf", scope: !62, file: !56, line: 91, baseType: !70, size: 32, offset: 64)
+  !70 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !67, size: 32)
+  !71 = !DIDerivedType(tag: DW_TAG_member, name: "_Bend", scope: !62, file: !56, line: 91, baseType: !70, size: 32, offset: 96)
+  !72 = !DIDerivedType(tag: DW_TAG_member, name: "_Next", scope: !62, file: !56, line: 91, baseType: !70, size: 32, offset: 128)
+  !73 = !DIDerivedType(tag: DW_TAG_member, name: "_Rend", scope: !62, file: !56, line: 92, baseType: !70, size: 32, offset: 160)
+  !74 = !DIDerivedType(tag: DW_TAG_member, name: "_Wend", scope: !62, file: !56, line: 92, baseType: !70, size: 32, offset: 192)
+  !75 = !DIDerivedType(tag: DW_TAG_member, name: "_Rback", scope: !62, file: !56, line: 92, baseType: !70, size: 32, offset: 224)
+  !76 = !DIDerivedType(tag: DW_TAG_member, name: "_WRback", scope: !62, file: !56, line: 94, baseType: !77, size: 32, offset: 256)
+  !77 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !78, size: 32)
+  !78 = !DIDerivedType(tag: DW_TAG_typedef, name: "_Wchart", file: !79, line: 851, baseType: !35)
+  !79 = !DIFile(filename: "yvals.h", directory: "/test")
+  !80 = !DIDerivedType(tag: DW_TAG_member, name: "_WBack", scope: !62, file: !56, line: 94, baseType: !81, size: 64, offset: 288)
+  !81 = !DICompositeType(tag: DW_TAG_array_type, baseType: !78, size: 64, elements: !82)
+  !82 = !{!83}
+  !83 = !DISubrange(count: 2)
+  !84 = !DIDerivedType(tag: DW_TAG_member, name: "_Rsave", scope: !62, file: !56, line: 95, baseType: !70, size: 32, offset: 352)
+  !85 = !DIDerivedType(tag: DW_TAG_member, name: "_WRend", scope: !62, file: !56, line: 95, baseType: !70, size: 32, offset: 384)
+  !86 = !DIDerivedType(tag: DW_TAG_member, name: "_WWend", scope: !62, file: !56, line: 95, baseType: !70, size: 32, offset: 416)
+  !87 = !DIDerivedType(tag: DW_TAG_member, name: "_Wstate", scope: !62, file: !56, line: 97, baseType: !88, size: 64, offset: 448)
+  !88 = !DIDerivedType(tag: DW_TAG_typedef, name: "_Mbstatet", file: !56, line: 64, baseType: !89)
+  !89 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "_Mbstatet", file: !56, line: 60, size: 64, elements: !90)
+  !90 = !{!91, !93, !94}
+  !91 = !DIDerivedType(tag: DW_TAG_member, name: "_Wchar", scope: !89, file: !56, line: 62, baseType: !92, size: 32)
+  !92 = !DIBasicType(name: "unsigned long", size: 32, encoding: DW_ATE_unsigned)
+  !93 = !DIDerivedType(tag: DW_TAG_member, name: "_Byte", scope: !89, file: !56, line: 63, baseType: !65, size: 16, offset: 32)
+  !94 = !DIDerivedType(tag: DW_TAG_member, name: "_State", scope: !89, file: !56, line: 63, baseType: !65, size: 16, offset: 48)
+  !95 = !DIDerivedType(tag: DW_TAG_member, name: "_Tmpnam", scope: !62, file: !56, line: 98, baseType: !34, size: 32, offset: 512)
+  !96 = !DIDerivedType(tag: DW_TAG_member, name: "_Back", scope: !62, file: !56, line: 99, baseType: !97, size: 64, offset: 544)
+  !97 = !DICompositeType(tag: DW_TAG_array_type, baseType: !67, size: 64, elements: !98)
+  !98 = !{!99}
+  !99 = !DISubrange(count: 8)
+  !100 = !DIDerivedType(tag: DW_TAG_member, name: "_Cbuf", scope: !62, file: !56, line: 99, baseType: !67, size: 8, offset: 608)
+  !101 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !102, size: 32)
+  !102 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !4)
+  !103 = !{}
+  !104 = !DISubprogram(name: "exit", scope: !105, file: !105, line: 82, type: !106, flags: DIFlagPrototyped | DIFlagNoReturn, spFlags: DISPFlagOptimized, retainedNodes: !103)
+  !105 = !DIFile(filename: "stdlib.h", directory: "/test")
+  !106 = !DISubroutineType(types: !107)
+  !107 = !{null, !35}
+
+...
+---
+name:            fatal_error_message
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: true
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 16
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       []
+  restorePoint:    []
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1, $r2
+
+    DBG_VALUE $r0, $noreg, !37, !DIExpression(), debug-location !41
+    DBG_VALUE $r1, $noreg, !38, !DIExpression(), debug-location !41
+    DBG_VALUE $r2, $noreg, !39, !DIExpression(), debug-location !41
+    BUNDLE implicit-def $r3, implicit-def $r29, implicit-def $r30, implicit killed $gp, implicit killed $r29, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31, debug-location !42 {
+      renamable $r3 = L2_loadrigp @datafileptr, implicit killed $gp, debug-location !42 :: (dereferenceable load (s32) from @datafileptr, !tbaa !44)
+      $r29 = frame-setup S2_allocframe killed $r29, 16, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit $r30, implicit killed $r31, debug-location !42 :: (store (s32) into stack)
+    }
+    DBG_VALUE 0, $noreg, !40, !DIExpression(), debug-location !41
+    DBG_VALUE $r0, $noreg, !37, !DIExpression(), debug-location !41
+    BUNDLE implicit-def dead $p0, implicit-def $pc, implicit $r3, debug-location !48 {
+      renamable $p0 = C2_cmpeqi renamable $r3, 0, debug-location !48
+      J2_jumpfnewpt internal killed renamable $p0, %bb.2, implicit-def $pc, debug-location !49
+    }
+
+  bb.1:
+    successors: %bb.4(0x80000000)
+
+    BUNDLE implicit-def $r1, implicit-def $r2, implicit-def $pc {
+      renamable $r1 = A2_tfrsi @.str
+      renamable $r2 = A2_tfrsi 30
+      J2_jump %bb.4, implicit-def $pc
+    }
+
+  bb.2.if.end:
+    successors: %bb.3(0x40000000), %bb.5(0x40000000)
+    liveins: $r0, $r1, $r2, $r3
+
+    DBG_VALUE $r4, $noreg, !37, !DIExpression(), debug-location !41
+    BUNDLE implicit-def $r4, implicit-def $d0, implicit-def $r0, implicit-def $r1, implicit killed $r0, implicit $r29, implicit killed $r1, implicit killed $r3, debug-location !41 {
+      $r4 = A2_tfr killed $r0
+      S2_storeri_io $r29, 8, killed renamable $r1, debug-location !50 :: (store (s32) into stack + 8)
+      $d0 = A4_combineir @.str.2, killed $r3, debug-location !50
+    }
+    BUNDLE implicit $r29, implicit killed $r2, implicit killed $r4, debug-location !50 {
+      S2_storeri_io $r29, 12, killed renamable $r2, debug-location !50 :: (store (s32) into stack + 12)
+      S2_storeri_io $r29, 4, killed renamable $r4, debug-location !50 :: (store (s32) into stack + 4)
+    }
+    DBG_VALUE $r0, $noreg, !40, !DIExpression(), debug-location !41
+    BUNDLE implicit-def $pc, implicit-def $r31, implicit-def $r29, implicit-def $r0, implicit $r29, implicit $r0, implicit $r1, debug-location !50 {
+      S4_storeiri_io $r29, 0, @.str.3, debug-location !50 :: (store (s32) into stack)
+      J2_call @fprintf, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit $r29, implicit $r0, implicit $r1, implicit-def $r29, implicit-def $r0, debug-location !50
+    }
+    BUNDLE implicit-def dead $p0, implicit-def $pc, implicit killed $r0, debug-location !51 {
+      renamable $p0 = C2_cmpeqi killed renamable $r0, -1, debug-location !51
+      J2_jumpfnewpt internal killed renamable $p0, %bb.5, implicit-def $pc, debug-location !53
+    }
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+
+    BUNDLE implicit-def $r1, implicit-def $r2 {
+      renamable $r1 = A2_tfrsi @.str.4
+      renamable $r2 = A2_tfrsi 37
+    }
+
+  bb.4.if.end5.sink.split:
+    successors: %bb.5(0x80000000)
+    liveins: $r1, $r2
+
+    BUNDLE implicit-def $r0, implicit $r29, implicit killed $r2, debug-location !41 {
+      $r0 = A2_tfrsi @_Stderr, debug-location !41
+      S2_storeri_io $r29, 4, killed renamable $r2, debug-location !41 :: (store (s32) into stack + 4)
+    }
+    BUNDLE implicit-def $pc, implicit-def $r31, implicit-def $r29, implicit-def $r0, implicit $r29, implicit $r0, implicit $r1, debug-location !41 {
+      S4_storeiri_io $r29, 0, @.str.1, debug-location !41 :: (store (s32) into stack)
+      J2_call @fprintf, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit $r29, implicit $r0, implicit $r1, implicit-def $r29, implicit-def $r0, debug-location !41
+    }
+
+  bb.5.if.end5:
+    BUNDLE implicit-def $r0, implicit-def $r29, debug-location !54 {
+      $r0 = A2_tfrsi 1, debug-location !54
+      PS_call_nr @exit, hexagoncsr, implicit internal $r0, implicit-def $r29, debug-location !54
+    }
+
+...

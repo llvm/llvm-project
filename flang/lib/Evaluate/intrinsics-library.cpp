@@ -18,7 +18,6 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Evaluate/expression.h"
-#include <cfloat>
 #include <cmath>
 #include <complex>
 #include <functional>
@@ -28,6 +27,9 @@
 #include "flang/Common/float128.h"
 #include "flang/Common/float80.h"
 #include <type_traits>
+#ifndef _WIN32
+#include <unistd.h> // _POSIX_VERSION, _XOPEN_VERSION
+#endif
 
 namespace Fortran::evaluate {
 
@@ -440,7 +442,7 @@ struct HostRuntimeLibrary<std::complex<double>, LibraryVersion::Libm> {
 //    clang libc++ (ok in GNU libstdc++). Instead, the Posix libm
 //    extensions are used when available below.
 
-#if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
+#if _POSIX_VERSION >= 200112L || _XOPEN_VERSION >= 600
 /// Define libm extensions
 /// Bessel functions are defined in POSIX.1-2001.
 
@@ -460,7 +462,58 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif
+#endif // !_AIX && !__APPLE__
+
+template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<double, double>;
+  using FN = FuncPointer<double, int, double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jn}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::yn}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+
+#if defined(__GLIBC__) && (HAS_FLOAT80 || HAS_LDBL128)
+template <>
+struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<long double, long double>;
+  using FN = FuncPointer<long double, int, long double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::j0l}>::Create("bessel_j0"),
+      FolderFactory<F, F{::j1l}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::jnl}>::Create("bessel_jn"),
+      FolderFactory<F, F{::y0l}>::Create("bessel_y0"),
+      FolderFactory<F, F{::y1l}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::ynl}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif // __GLIBC__ && (HAS_FLOAT80 || HAS_LDBL128)
+#endif // _POSIX_VERSION >= 200112L || _XOPEN_VERSION >= 600
+
+#ifdef _WIN32
+template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
+  using F = FuncPointer<double, double>;
+  using FN = FuncPointer<double, int, double>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::_j0}>::Create("bessel_j0"),
+      FolderFactory<F, F{::_j1}>::Create("bessel_j1"),
+      FolderFactory<FN, FN{::_jn}>::Create("bessel_jn"),
+      FolderFactory<F, F{::_y0}>::Create("bessel_y0"),
+      FolderFactory<F, F{::_y1}>::Create("bessel_y1"),
+      FolderFactory<FN, FN{::_yn}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif // _WIN32
 
 #if HAS_QUADMATHLIB
 template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
@@ -523,58 +576,7 @@ template <> struct HostRuntimeLibrary<__complex128, LibraryVersion::Libm> {
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
-#endif
-
-template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
-  using F = FuncPointer<double, double>;
-  using FN = FuncPointer<double, int, double>;
-  static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{::j0}>::Create("bessel_j0"),
-      FolderFactory<F, F{::j1}>::Create("bessel_j1"),
-      FolderFactory<FN, FN{::jn}>::Create("bessel_jn"),
-      FolderFactory<F, F{::y0}>::Create("bessel_y0"),
-      FolderFactory<F, F{::y1}>::Create("bessel_y1"),
-      FolderFactory<FN, FN{::yn}>::Create("bessel_yn"),
-  };
-  static constexpr HostRuntimeMap map{table};
-  static_assert(map.Verify(), "map must be sorted");
-};
-
-#if defined(__GLIBC__) && (HAS_FLOAT80 || HAS_LDBL128)
-template <>
-struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
-  using F = FuncPointer<long double, long double>;
-  using FN = FuncPointer<long double, int, long double>;
-  static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{::j0l}>::Create("bessel_j0"),
-      FolderFactory<F, F{::j1l}>::Create("bessel_j1"),
-      FolderFactory<FN, FN{::jnl}>::Create("bessel_jn"),
-      FolderFactory<F, F{::y0l}>::Create("bessel_y0"),
-      FolderFactory<F, F{::y1l}>::Create("bessel_y1"),
-      FolderFactory<FN, FN{::ynl}>::Create("bessel_yn"),
-  };
-  static constexpr HostRuntimeMap map{table};
-  static_assert(map.Verify(), "map must be sorted");
-};
-#endif // HAS_FLOAT80 || HAS_LDBL128
-#endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
-
-#ifdef _WIN32
-template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
-  using F = FuncPointer<double, double>;
-  using FN = FuncPointer<double, int, double>;
-  static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{::_j0}>::Create("bessel_j0"),
-      FolderFactory<F, F{::_j1}>::Create("bessel_j1"),
-      FolderFactory<FN, FN{::_jn}>::Create("bessel_jn"),
-      FolderFactory<F, F{::_y0}>::Create("bessel_y0"),
-      FolderFactory<F, F{::_y1}>::Create("bessel_y1"),
-      FolderFactory<FN, FN{::_yn}>::Create("bessel_yn"),
-  };
-  static constexpr HostRuntimeMap map{table};
-  static_assert(map.Verify(), "map must be sorted");
-};
-#endif
+#endif // HAS_QUADMATHLIB
 
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
@@ -1043,7 +1045,7 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
   if (const auto *hostFunction{
           SearchHostRuntime(name, biggerResultType, biggerArgTypes)}) {
     auto hostFolderWithChecks{AddArgumentVerifierIfAny(name, *hostFunction)};
-    return [hostFunction, resultType, hostFolderWithChecks](
+    return [hostFunction, resultType, hostFolderWithChecks, name](
                FoldingContext &context, std::vector<Expr<SomeType>> &&args) {
       auto nArgs{args.size()};
       for (size_t i{0}; i < nArgs; ++i) {
@@ -1051,6 +1053,8 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
             ConvertToType(hostFunction->argumentTypes[i], std::move(args[i]))
                 .value());
       }
+      auto restorer{context.SetRealFlagWarningContext(
+          "compilation-time evaluation of a call to '"s + name + "'"s)};
       return Fold(context,
           ConvertToType(
               resultType, hostFolderWithChecks(context, std::move(args)))

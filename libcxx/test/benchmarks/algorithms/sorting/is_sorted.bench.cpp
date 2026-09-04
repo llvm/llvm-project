@@ -17,23 +17,13 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   auto std_is_sorted      = [](auto first, auto last) { return std::is_sorted(first, last); };
   auto std_is_sorted_pred = [](auto first, auto last) {
-    return std::is_sorted(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
-  };
-  auto ranges_is_sorted_pred = [](auto first, auto last) {
-    return std::ranges::is_sorted(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
+    return std::is_sorted(first, last, [](auto x, auto y) { return x < y; });
   };
 
   // Benchmark {std,ranges}::is_sorted on a sorted sequence (the worst case).
@@ -41,7 +31,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto is_sorted) {
       benchmark::RegisterBenchmark(
           name,
-          [is_sorted](auto& st) {
+          [is_sorted](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             std::vector<ValueType> data;
@@ -63,16 +53,10 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::is_sorted(vector<int>)", std_is_sorted);
     bm.operator()<std::deque<int>>("std::is_sorted(deque<int>)", std_is_sorted);
     bm.operator()<std::list<int>>("std::is_sorted(list<int>)", std_is_sorted);
-    bm.operator()<std::vector<int>>("rng::is_sorted(vector<int>)", std::ranges::is_sorted);
-    bm.operator()<std::deque<int>>("rng::is_sorted(deque<int>)", std::ranges::is_sorted);
-    bm.operator()<std::list<int>>("rng::is_sorted(list<int>)", std::ranges::is_sorted);
 
     bm.operator()<std::vector<int>>("std::is_sorted(vector<int>, pred)", std_is_sorted_pred);
     bm.operator()<std::deque<int>>("std::is_sorted(deque<int>, pred)", std_is_sorted_pred);
     bm.operator()<std::list<int>>("std::is_sorted(list<int>, pred)", std_is_sorted_pred);
-    bm.operator()<std::vector<int>>("rng::is_sorted(vector<int>, pred)", ranges_is_sorted_pred);
-    bm.operator()<std::deque<int>>("rng::is_sorted(deque<int>, pred)", ranges_is_sorted_pred);
-    bm.operator()<std::list<int>>("rng::is_sorted(list<int>, pred)", ranges_is_sorted_pred);
   }
 
   benchmark::Initialize(&argc, argv);

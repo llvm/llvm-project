@@ -131,7 +131,9 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 def Tensor_ConcatOp : Tensor_Op<"concat",
     [Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>,
+     ]> {
   let summary = "tensor concatenation operation";
   let description = [{
     The "concat" operation constructs a tensor out of a variadic list of input
@@ -261,7 +263,8 @@ def Tensor_DimOp : Tensor_Op<"dim", [
 
 def Tensor_EmptyOp : Tensor_Op<"empty",
     [Pure,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+       "reifyResultShapes"]>]> {
   let summary = "empty tensor operation";
 
   let description = [{
@@ -358,7 +361,8 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
 
 def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     Pure,
     OffsetSizeAndStrideOpInterface
@@ -398,8 +402,8 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
-    To disambiguate, the inference helpers `inferCanonicalRankReducedResultType`
-    only drop the first unit dimensions, in order:
+    To disambiguate, canonical rank-reduction inference drops only the first
+    unit dimensions, in order:
       e.g. 1x6x1 rank-reduced to 2-D will infer the 6x1 2-D shape, but not 1x6.
 
     Verification however has access to result type and does not need to infer.
@@ -467,6 +471,11 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     // a Range vector.
     OpBuilder<(ins "Value":$source, "ArrayRef<Range>":$ranges,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractSliceOp with mixed static and dynamic sizes, inferred
+    // result type, offsets set to 0 and strides set to 1.
+    OpBuilder<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$sizes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -486,38 +495,13 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
 
     /// An extract_slice result type can be inferred, when it is not
     /// rank-reduced, from the source type and the static representation of
-    /// offsets, sizes and strides. Special sentinels encode the dynamic case.
+    /// sizes. Special sentinels encode the dynamic case.
     static RankedTensorType inferResultType(
       RankedTensorType sourceTensorType,
-      ArrayRef<int64_t> staticOffsets,
-      ArrayRef<int64_t> staticSizes,
-      ArrayRef<int64_t> staticStrides);
+      ArrayRef<int64_t> staticSizes);
     static RankedTensorType inferResultType(
       RankedTensorType sourceTensorType,
-      ArrayRef<OpFoldResult> staticOffsets,
-      ArrayRef<OpFoldResult> staticSizes,
-      ArrayRef<OpFoldResult> staticStrides);
-
-    /// If the rank is reduced (i.e. the desiredResultRank is smaller than the
-    /// number of sizes), drop as many size 1 as needed to produce an inferred type
-    /// with the desired rank.
-    ///
-    /// Note that there may be multiple ways to compute this rank-reduced type:
-    ///   e.g. 1x6x1 can rank-reduce to either 1x6 or 6x1 2-D tensors.
-    ///
-    /// To disambiguate, this function always drops the first 1 sizes occurrences.
-    static RankedTensorType inferCanonicalRankReducedResultType(
-      unsigned resultRank,
-      RankedTensorType sourceRankedTensorType,
-      ArrayRef<int64_t> staticOffsets,
-      ArrayRef<int64_t> staticSizes,
-      ArrayRef<int64_t> staticStrides);
-    static RankedTensorType inferCanonicalRankReducedResultType(
-      unsigned resultRank,
-      RankedTensorType sourceRankedTensorType,
-      ArrayRef<OpFoldResult> staticOffsets,
-      ArrayRef<OpFoldResult> staticSizes,
-      ArrayRef<OpFoldResult> staticStrides);
+      ArrayRef<OpFoldResult> staticSizes);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
@@ -740,7 +724,8 @@ def Tensor_GatherOp : Tensor_Op<"gather", [
 def Tensor_GenerateOp : Tensor_Op<"generate", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     RecursiveMemoryEffects,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   let summary = "Creates a dynamically sized tensor from elements";
   let description = [{
@@ -835,7 +820,8 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
 
 def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     DestinationStyleOpInterface,
     Pure,
@@ -932,7 +918,12 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     // a Range vector and inferred result type.
     OpBuilder<(ins "Value":$source, "Value":$dest,
       "ArrayRef<Range>":$ranges,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an InsertSliceOp with mixed static and dynamic sizes, offsets set
+    // to 0, strides set to 1 and inferred result type.
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ArrayRef<OpFoldResult>":$sizes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -1069,7 +1060,7 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     Tensor_Op<mnemonic, !listconcat(traits, [
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
       Pure])>,
-    Results<(outs AnyTensor:$result)> {
+    Results<(outs AnyRankedTensor:$result)> {
 
   code commonExtraClassDeclaration = [{
     static StringRef getReassociationAttrStrName() { return "reassociation"; }
@@ -1105,16 +1096,17 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     `src`.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of DenseI64ArrayAttr attribute.  The reassociation
+    represented with an array of DenseI64ArrayAttr attribute. The reassociation
     maps applied to the result tensor with the higher rank must result in the
     operand tensor with the smaller rank.
 
     The representation for the output shape supports a partially-static
     specification via attributes specified through the `static_output_shape`
-    argument.  A special sentinel value `ShapedType::kDynamic` encodes that the
-    corresponding entry has a dynamic value.  There must be exactly as many SSA
-    inputs in `output_shape` as there are `ShapedType::kDynamic` entries in
-    `static_output_shape`.
+    argument. A special sentinel value `ShapedType::kDynamic` encodes that the
+    corresponding entry has a dynamic value. Both the number of SSA inputs in
+    `output_shape` and the number of `ShapedType::kDynamic` entries in
+    `static_output_shape` match the number of dynamic dimensions in the result
+    type.
 
     Example:
 
@@ -1125,7 +1117,7 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     ```
   }];
 
-  let arguments = (ins AnyTensor:$src, IndexListArrayAttr:$reassociation,
+  let arguments = (ins AnyRankedTensor:$src, IndexListArrayAttr:$reassociation,
                        Variadic<Index>:$output_shape,
                        DenseI64ArrayAttr:$static_output_shape);
 
@@ -1183,7 +1175,7 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
 
 def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
   let summary = "operation to produce a tensor with a smaller rank";
-  let arguments = (ins AnyTensor:$src, IndexListArrayAttr:$reassociation);
+  let arguments = (ins AnyRankedTensor:$src, IndexListArrayAttr:$reassociation);
   let description = [{
     The `tensor.collapse_shape` op produces a new tensor of lower (or equal)
     rank whose dimension sizes are a reassociation of the original `src` dimensions.
@@ -1245,7 +1237,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     inferCollapsedType(RankedTensorType type, ArrayRef<AffineMap> reassociation);
     static RankedTensorType
     inferCollapsedType(RankedTensorType type,
-                       SmallVector<ReassociationIndices> reassociation);
+                       ArrayRef<ReassociationIndices> reassociation);
   }];
   let hasVerifier = 1;
 }
@@ -1256,7 +1248,8 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
 
 def Tensor_PadOp : Tensor_Op<"pad", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
+      "reifyResultShapes"]>,
     AttrSizedOperandSegments,
     Pure,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
@@ -1470,24 +1463,25 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
 
-// TODO: Implement InParallelOpInterface.
 def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,
+       DeclareOpInterfaceMethods<ParallelCombiningOpInterface,
+          ["getUpdatedDestinations", "getIteratingParent"]>,
        // TODO: Cannot use an interface here atm, verify this manually for now.
-       // HasParent<"ParallelCombiningOpInterface">
+       // HasParent<"InParallelOpInterface">
   ]> {
   let summary = [{
     Specify the tensor slice update of a single thread of a parent
-    ParallelCombiningOpInterface op.
+    InParallelOpInterface op.
   }];
   let description = [{
     The `parallel_insert_slice` yields a subset tensor value to its parent
-    ParallelCombiningOpInterface. These subset tensor values are aggregated to
+    InParallelOpInterface. These subset tensor values are aggregated to
     in some unspecified order into a full tensor value returned by the parent
     parallel iterating op.
     The `parallel_insert_slice` is one such op allowed in the
-    ParallelCombiningOpInterface op.
+    InParallelOpInterface op.
 
     Conflicting writes result in undefined semantics, in that the indices written
     to by multiple parallel updates might contain data from any of the updates,
@@ -1569,8 +1563,8 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
       return ::llvm::cast<RankedTensorType>(getDest().getType());
     }
 
-    ParallelCombiningOpInterface getParallelCombiningParent() {
-      return dyn_cast<ParallelCombiningOpInterface>(
+    InParallelOpInterface getParallelCombiningParent() {
+      return dyn_cast<InParallelOpInterface>(
         getOperation()->getParentOp());
     }
 
@@ -1763,7 +1757,8 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
 
 def Tensor_SplatOp : Tensor_Op<"splat", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+      ["reifyResultShapes"]>,
     Pure,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",

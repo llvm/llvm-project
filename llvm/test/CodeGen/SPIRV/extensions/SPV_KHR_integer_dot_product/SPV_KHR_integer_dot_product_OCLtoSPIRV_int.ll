@@ -2,6 +2,9 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_integer_dot_product %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_integer_dot_product %s -o - -filetype=obj | spirv-val %}
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
+; CHECK-ERROR: LLVM ERROR: {{.*}}: the builtin requires the following SPIR-V extension: SPV_KHR_integer_dot_product
 
 ; CHECK: Capability DotProduct
 ; CHECK: Capability DotProductInput4x8BitPacked
@@ -13,15 +16,15 @@
 ; CHECK: Name %[[#SignedB:]] "ib"
 ; CHECK: Name %[[#UnsignedB:]] "ub"
 
-; CHECK: SDot %[[#]] %[[#SignedA]] %[[#SignedB]] 0
-; CHECK: SUDot %[[#]] %[[#SignedA]] %[[#UnsignedB]] 0
-; CHECK: SUDot %[[#]] %[[#SignedB]] %[[#UnsignedA]] 0
-; CHECK: UDot %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] 0
+; CHECK: SDot %[[#]] %[[#SignedA]] %[[#SignedB]] PackedVectorFormat4x8Bit
+; CHECK: SUDot %[[#]] %[[#SignedA]] %[[#UnsignedB]] PackedVectorFormat4x8Bit
+; CHECK: SUDot %[[#]] %[[#SignedB]] %[[#UnsignedA]] PackedVectorFormat4x8Bit
+; CHECK: UDot %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] PackedVectorFormat4x8Bit
 
-; CHECK: SDotAccSat %[[#]] %[[#SignedA]] %[[#SignedB]] %[[#]] 0
-; CHECK: SUDotAccSat %[[#]] %[[#SignedA]] %[[#UnsignedB]] %[[#]] 0
-; CHECK: SUDotAccSat %[[#]] %[[#SignedB]] %[[#UnsignedA]] %[[#]] 0
-; CHECK: UDotAccSat %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] %[[#]] 0
+; CHECK: SDotAccSat %[[#]] %[[#SignedA]] %[[#SignedB]] %[[#]] PackedVectorFormat4x8Bit
+; CHECK: SUDotAccSat %[[#]] %[[#SignedA]] %[[#UnsignedB]] %[[#]] PackedVectorFormat4x8Bit
+; CHECK: SUDotAccSat %[[#]] %[[#SignedB]] %[[#UnsignedA]] %[[#]] PackedVectorFormat4x8Bit
+; CHECK: UDotAccSat %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] %[[#]] PackedVectorFormat4x8Bit
 
 define spir_kernel void @test(i32 %ia, i32 %ua, i32 %ib, i32 %ub, i32 %ires, i32 %ures) {
 entry:

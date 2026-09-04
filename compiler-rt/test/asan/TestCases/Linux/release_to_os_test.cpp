@@ -6,6 +6,7 @@
 // RUN: %env_asan_opts=allocator_release_to_os_interval_ms=-1 %run %t force 2>&1 | FileCheck %s --check-prefix=FORCE_RELEASE
 
 // REQUIRES: x86_64-target-arch
+// REQUIRES: page-size-4096
 
 #include <algorithm>
 #include <assert.h>

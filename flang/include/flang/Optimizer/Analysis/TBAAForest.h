@@ -46,6 +46,12 @@ struct TBAATree {
 
     mlir::LLVM::TBAATypeDescriptorAttr getRoot() const { return parent; }
 
+    /// For the given name, get or create a subtree in the current
+    /// subtree. For example, this is used for creating subtrees
+    /// inside the "global data" subtree for the COMMON block variables
+    /// belonging to the same COMMON block.
+    SubtreeState &getOrCreateNamedSubtree(mlir::StringAttr name);
+
   private:
     SubtreeState(mlir::MLIRContext *ctx, std::string name,
                  mlir::LLVM::TBAANodeAttr grandParent)
@@ -57,6 +63,9 @@ struct TBAATree {
     const std::string parentId;
     mlir::MLIRContext *const context;
     mlir::LLVM::TBAATypeDescriptorAttr parent;
+    // A map of named sub-trees, e.g. sub-trees of the COMMON blocks
+    // placed under the "global data" root.
+    llvm::DenseMap<mlir::StringAttr, SubtreeState> namedSubtrees;
   };
 
   /// A subtree for POINTER/TARGET variables data.
@@ -90,11 +99,25 @@ struct TBAATree {
   //   |- "any data access"
   //      |
   //      |- "dummy arg data"
-  //      |- "target data"
-  //         |
-  //         |- "allocated data"
-  //         |- "direct data"
-  //         |- "global data"
+  //        |
+  //        |- <dummy arg name 1>
+  //        |- <dummy arg name 2>
+  //      |- "target data" <-- Any POINTER variable or TARGET dummy arg
+  //        |
+  //        |- <target name 1> <--- any TARGET variable which isn't a dummy arg
+  //        |- <target name 2>
+  //      |- "allocated data"
+  //        |
+  //        |- <allocated name 1>
+  //        |- <allocated name 2>
+  //      |- "direct data"
+  //        |
+  //        |- <direct name 1>
+  //        |- <direct name 2>
+  //      |- "global data"
+  //        |
+  //        |- <global name 1>
+  //        |- <global name 2>
   static TBAATree buildTree(mlir::StringAttr functionName);
 
 private:
@@ -114,16 +137,10 @@ public:
       : separatePerFunction{separatePerFunction} {}
 
   inline const TBAATree &operator[](mlir::func::FuncOp func) {
-    return getFuncTree(func.getSymNameAttr());
+    return getFuncTree(getInternalOrSymbolName(func));
   }
   inline const TBAATree &operator[](mlir::LLVM::LLVMFuncOp func) {
-    // the external name conversion pass may rename some functions. Their old
-    // name must be used so that we add to the tbaa tree added in the FIR pass
-    mlir::Attribute attr = func->getAttr(getInternalFuncNameAttrName());
-    if (attr) {
-      return getFuncTree(mlir::cast<mlir::StringAttr>(attr));
-    }
-    return getFuncTree(func.getSymNameAttr());
+    return getFuncTree(getInternalOrSymbolName(func));
   }
   // Returns the TBAA tree associated with the scope enclosed
   // within the given function. With MLIR inlining, there may
@@ -131,22 +148,40 @@ public:
   // responsibility to provide unique name for the scope.
   // If the scope string is empty, returns the TBAA tree for the
   // "root" scope of the given function.
-  inline const TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
-                                              llvm::StringRef scope) {
-    mlir::StringAttr name = func.getSymNameAttr();
+  inline TBAATree &getMutableFuncTreeWithScope(mlir::func::FuncOp func,
+                                               llvm::StringRef scope) {
+    mlir::StringAttr name = getInternalOrSymbolName(func);
     if (!scope.empty())
       name = mlir::StringAttr::get(name.getContext(),
                                    llvm::Twine(name) + " - " + scope);
     return getFuncTree(name);
   }
 
+  inline const TBAATree &getFuncTreeWithScope(mlir::func::FuncOp func,
+                                              llvm::StringRef scope) {
+    return getMutableFuncTreeWithScope(func, scope);
+  }
+
 private:
-  const TBAATree &getFuncTree(mlir::StringAttr symName) {
+  template <typename FuncOp>
+  static mlir::StringAttr getInternalOrSymbolName(FuncOp func) {
+    // External name conversion may rename a function before TBAA construction.
+    // Use its original name consistently so tags created at different pipeline
+    // stages belong to the same tree.
+    if (auto name = func->template getAttrOfType<mlir::StringAttr>(
+            getInternalFuncNameAttrName()))
+      return name;
+    return func.getSymNameAttr();
+  }
+
+  TBAATree &getFuncTree(mlir::StringAttr symName) {
     if (!separatePerFunction)
       symName = mlir::StringAttr::get(symName.getContext(), "");
     if (!trees.contains(symName))
       trees.insert({symName, TBAATree::buildTree(symName)});
-    return trees.at(symName);
+    auto it = trees.find(symName);
+    assert(it != trees.end());
+    return it->second;
   }
 
   // Should each function use a different tree?

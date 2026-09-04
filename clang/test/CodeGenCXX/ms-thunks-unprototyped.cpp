@@ -30,10 +30,10 @@ struct B2 { virtual DoNotInstantiate<void> f() = 0; };
 struct S : B1, B2 { DoNotInstantiate<void> f() override; };
 S s;
 
-// CHECK: @"??_7S@@6BB2@@@" = linkonce_odr unnamed_addr constant
+// CHECK: @"??_7S@@6BB2@@@" = linkonce_odr constant
 // CHECK-SAME: ptr @"?f@S@@W7EAA?AU?$DoNotInstantiate@X@@XZ"
 
-// CHECK: @"??_7C@@6B@" = linkonce_odr unnamed_addr constant
+// CHECK: @"??_7C@@6B@" = linkonce_odr constant
 // CHECK-SAME: ptr @"?foo@B@@W7EAAXUIncomplete@@@Z"
 // CHECK-SAME: ptr @"?bar@B@@W7EAAXU?$DoNotInstantiate@H@@@Z"
 // CHECK-SAME: ptr @"?baz@B@@W7EAAHU?$InstantiateLater@H@@@Z"

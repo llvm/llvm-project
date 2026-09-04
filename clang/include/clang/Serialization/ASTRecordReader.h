@@ -223,7 +223,7 @@ public:
   void readQualifierInfo(QualifierInfo &Info);
 
   /// Return a nested name specifier, advancing Idx.
-  // NestedNameSpecifier *readNestedNameSpecifier(); (inherited)
+  // NestedNameSpecifier readNestedNameSpecifier(); (inherited)
 
   NestedNameSpecifierLoc readNestedNameSpecifierLoc();
 

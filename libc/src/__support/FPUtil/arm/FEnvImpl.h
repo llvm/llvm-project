@@ -10,11 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_FENVIMPL_H
 
 #include "hdr/fenv_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {

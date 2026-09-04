@@ -321,10 +321,10 @@ for.inc:                                          ; preds = %sw.bb, %sw.bb1, %fo
 ; CHECK-UNROLL-NOT: dls
 ; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
 ; CHECK-UNROLL:     le lr, [[LOOP]]
-; CHECK-UNROLL:     wls lr, r12, [[EXIT:.LBB[0-9_]+]]
+; CHECK-UNROLL:     dls lr, r12
 ; CHECK-UNROLL:     [[EPIL:.LBB[0-9_]+]]:
 ; CHECK-UNROLL:     le lr, [[EPIL]]
-; CHECK-UNROLL-NEXT: [[EXIT]]
+; CHECK-UNROLL-NEXT: {{\.LBB[0-9_]+}}: @ %for.cond.cleanup
 
 define void @unroll_inc_int(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 entry:
@@ -357,10 +357,10 @@ for.body:
 ; CHECK-UNROLL-NOT: dls
 ; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
 ; CHECK-UNROLL:     le lr, [[LOOP]]
-; CHECK-UNROLL:     wls lr, r12, [[EPIL_EXIT:.LBB[0-9_]+]]
+; CHECK-UNROLL:     dls lr, r12
 ; CHECK-UNROLL: [[EPIL:.LBB[0-9_]+]]:
 ; CHECK-UNROLL:     le lr, [[EPIL]]
-; CHECK-UNROLL: [[EPIL_EXIT]]:
+; CHECK-UNROLL:     {{\.LBB[0-9_]+}}: @ %for.cond.cleanup
 ; CHECK-UNROLL:     pop
 define void @unroll_inc_unsigned(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
 entry:

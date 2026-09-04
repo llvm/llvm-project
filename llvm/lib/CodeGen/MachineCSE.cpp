@@ -136,20 +136,15 @@ class MachineCSELegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  MachineCSELegacy() : MachineFunctionPass(ID) {
-    initializeMachineCSELegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineCSELegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addPreservedID(MachineLoopInfoID);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -261,7 +256,8 @@ bool MachineCSEImpl::isPhysDefTriviallyDead(
 }
 
 static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
-                                            const MachineOperand &MO,
+                                            const MachineInstr &MI,
+                                            unsigned OpIdx,
                                             const MachineFunction &MF,
                                             const TargetRegisterInfo &TRI,
                                             const TargetInstrInfo &TII) {
@@ -273,7 +269,8 @@ static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
   // It does cause issues mid-GlobalISel, however, hence the additional
   // reservedRegsFrozen check.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  return TRI.isCallerPreservedPhysReg(Reg, MF) || TII.isIgnorableUse(MO) ||
+  return TRI.isCallerPreservedPhysReg(Reg, MF) ||
+         TII.isIgnorableUse(MI, OpIdx) ||
          (MRI.reservedRegsFrozen() && MRI.isConstantPhysReg(Reg));
 }
 
@@ -294,8 +291,9 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
     if (Reg.isVirtual())
       continue;
     // Reading either caller preserved or constant physregs is ok.
-    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), MO, *MI->getMF(), *TRI,
-                                         *TII))
+    if (!isCallerPreservedOrConstPhysReg(Reg.asMCReg(), *MI,
+                                         MI->getOperandNo(&MO), *MI->getMF(),
+                                         *TRI, *TII))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
   }
@@ -519,7 +517,7 @@ void MachineCSEImpl::EnterScope(MachineBasicBlock *MBB) {
 
 void MachineCSEImpl::ExitScope(MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Exiting: " << MBB->getName() << '\n');
-  DenseMap<MachineBasicBlock*, ScopeType*>::iterator SI = ScopeMap.find(MBB);
+  auto SI = ScopeMap.find(MBB);
   assert(SI != ScopeMap.end());
   delete SI->second;
   ScopeMap.erase(SI);
@@ -777,8 +775,9 @@ bool MachineCSEImpl::PerformCSE(MachineDomTreeNode *Node) {
   do {
     Node = WorkList.pop_back_val();
     Scopes.push_back(Node);
-    OpenChildren[Node] = Node->getNumChildren();
+    size_t WorkListSize = WorkList.size();
     append_range(WorkList, Node->children());
+    OpenChildren[Node] = WorkList.size() - WorkListSize; // Number of children.
   } while (!WorkList.empty());
 
   // Now perform CSE.
@@ -960,9 +959,6 @@ PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

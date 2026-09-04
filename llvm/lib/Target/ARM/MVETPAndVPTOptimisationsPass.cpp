@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
@@ -60,6 +61,7 @@ public:
     AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -534,7 +536,7 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
     Register LR = LoopPhi->getOperand(0).getReg();
     for (MachineInstr *MI : MVEInstrs) {
       int Idx = findFirstVPTPredOperandIdx(*MI);
-      MI->getOperand(Idx + 2).setReg(LR);
+      MI->getOperand(Idx + ARM::SUBOP_vpred_n_tp_reg).setReg(LR);
     }
   }
 
@@ -858,7 +860,7 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
       if (MachineOperand *MO =
               Instr.findRegisterUseOperand(PrevVCMP->getOperand(0).getReg(),
                                            /*TRI=*/nullptr, /*isKill*/ true)) {
-        // If we come accross the instr that kills PrevVCMP's result, record it
+        // If we come across the instr that kills PrevVCMP's result, record it
         // so we can remove the kill flag later if we need to.
         PrevVCMPResultKiller = MO;
       }
@@ -922,7 +924,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
   // the function.
   unsigned LastVPTImm = 0;
   Register LastVPTReg = 0;
-  SmallSet<MachineInstr *, 4> DeadInstructions;
+  SmallPtrSet<MachineInstr *, 4> DeadInstructions;
 
   for (MachineInstr &Instr : MBB.instrs()) {
     // Look for predicated MVE instructions.

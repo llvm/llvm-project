@@ -13,15 +13,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfoGOFF.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
-void MCAsmInfoGOFF::anchor() {}
-
-MCAsmInfoGOFF::MCAsmInfoGOFF() {
+MCAsmInfoGOFF::MCAsmInfoGOFF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   Data64bitsDirective = "\t.quad\t";
-  HasDotTypeDotSizeDirective = false;
-  PrivateGlobalPrefix = "L#";
-  PrivateLabelPrefix = "L#";
+  WeakRefDirective = "WXTRN";
+  InternalSymbolPrefix = "L#";
   ZeroDirective = "\t.space\t";
+}
+
+void MCAsmInfoGOFF::printSwitchToSection(const MCSection &, uint32_t,
+                                         const Triple &, raw_ostream &) const {
+  llvm_unreachable("GOFF section switching is handled by the HLASM streamer");
 }

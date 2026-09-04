@@ -18,7 +18,15 @@ from lit.llvm.subst import ToolSubst
 config.name = "LLVM"
 
 # testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+extra_substitutions = extra_substitutions = (
+    [
+        (r"not FileCheck .*", "cat > /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
+    ]
+    if config.enable_profcheck
+    else []
+)
+config.test_format = lit.formats.ShTest(extra_substitutions=extra_substitutions)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -28,6 +36,50 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
+
+if config.enable_profcheck:
+    config.available_features.add("profcheck")
+    # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
+    # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
+    # commands of the form llvm-reduce --test FileCheck, which explode if we
+    # substitute FileCheck because llvm-reduce expects FileCheck in these tests.
+    # It's not really possible to exclude these tests from the command substitution,
+    # so we just exclude llvm-reduce tests from this config altogether. This should
+    # be fine though as profcheck config tests are mostly concerned with opt.
+    config.excludes.append("llvm-reduce")
+    # Exclude llvm-objcopy tests - not the target of this effort, and some use
+    # cat in ways that conflict with how profcheck uses it.
+    config.excludes.append("llvm-objcopy")
+    # (Issue #161235) Temporarily exclude LoopVectorize.
+    config.excludes.append("LoopVectorize")
+    # Exclude suites that fail due to inserted profile annotations.
+    config.excludes.extend(["UpdateTestChecks", "Bitcode"])
+    # TODO(#166655): Reenable Instrumentation tests
+    config.excludes.append("Instrumentation")
+    # profiling doesn't work quite well on GPU, excluding
+    config.excludes.append("AMDGPU")
+    # TODO targets where profiling may make sense but will be addressed later
+    config.excludes.extend(
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "SPIRV", "WebAssembly"]
+    )
+    # these passes aren't hooked up to the pass pipeline:
+    config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
+    # Not on by default in any standard CPU pipeline.
+    config.excludes.extend(
+        [
+            "Attributor",
+            "BlockExtractor",
+            "CodeExtractor",
+            "HotColdSplit",
+            "LowerGlobalDestructors",
+            "LowerSwitch",
+            "StructurizeCFG",
+            "UnifyLoopExits",
+        ]
+    )
+    # Not aimed at being used for peak-optimized binaries. These will be
+    # addressed later. PhaseOrdering has a couple of merge function tests.
+    config.excludes.extend(["GCOVProfiling", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -107,7 +159,12 @@ lli_args = []
 # we don't support COFF in MCJIT well enough for the tests, force ELF format on
 # Windows.  FIXME: the process target triple should be used here, but this is
 # difficult to obtain on Windows.
-if re.search(r"cygwin|windows-gnu|windows-msvc", config.host_triple):
+# Cygwin is excluded from this workaround, even though it is COFF, because this
+# breaks remote tests due to not having a __register_frame function.  The only
+# test that succeeds with cygwin-elf but fails with cygwin is
+# test/ExecutionEngine/MCJIT/stubs-sm-pic.ll so this test is marked as XFAIL
+# for cygwin targets.
+if re.search(r"windows-gnu|windows-msvc", config.host_triple):
     lli_args = ["-mtriple=" + config.host_triple + "-elf"]
 
 llc_args = []
@@ -122,9 +179,14 @@ if re.search(r"windows-msvc", config.target_triple):
 ld64_cmd = config.ld64_executable
 asan_rtlib = get_asan_rtlib()
 if asan_rtlib:
-    ld64_cmd = "DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
+    ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
+elif config.osx_xcrun:
+    osx_sysroot = subprocess.check_output(
+        [config.osx_xcrun, "--show-sdk-path"], text=True
+    )
+    ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, osx_sysroot)
 
 ocamlc_command = "%s ocamlc -cclib -L%s %s" % (
     config.ocamlfind_executable,
@@ -166,6 +228,7 @@ tools = [
     ToolSubst("%lli", FindTool("lli"), post=".", extra_args=lli_args),
     ToolSubst("%llc_dwarf", FindTool("llc"), extra_args=llc_args),
     ToolSubst("%gold", config.gold_executable, unresolved="ignore"),
+    ToolSubst("%ld_bfd", config.ld_bfd_executable, unresolved="ignore"),
     ToolSubst("%ld64", ld64_cmd, unresolved="ignore"),
     ToolSubst("%ocamlc", ocamlc_command, unresolved="ignore"),
     ToolSubst("%ocamlopt", ocamlopt_command, unresolved="ignore"),
@@ -174,6 +237,7 @@ tools = [
     ToolSubst("%llvm-strip", FindTool("llvm-strip")),
     ToolSubst("%llvm-install-name-tool", FindTool("llvm-install-name-tool")),
     ToolSubst("%llvm-bitcode-strip", FindTool("llvm-bitcode-strip")),
+    ToolSubst("%llvm-extract-bundle-entry", FindTool("llvm-extract-bundle-entry")),
     ToolSubst("%split-file", FindTool("split-file")),
 ]
 
@@ -183,11 +247,13 @@ tools.extend(
         "dsymutil",
         "lli",
         "lli-child-target",
+        "llubi",
         "llvm-ar",
         "llvm-as",
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-cas",
         "llvm-cgdata",
         "llvm-config",
         "llvm-cov",
@@ -204,6 +270,7 @@ tools.extend(
         "llvm-dlltool",
         "llvm-exegesis",
         "llvm-extract",
+        "llvm-extract-bundle-entry",
         "llvm-ir2vec",
         "llvm-isel-fuzzer",
         "llvm-ifs",
@@ -229,7 +296,6 @@ tools.extend(
         "llvm-readelf",
         "llvm-readobj",
         "llvm-rtdyld",
-        "llvm-sim",
         "llvm-size",
         "llvm-split",
         "llvm-stress",
@@ -246,7 +312,6 @@ tools.extend(
         "obj2yaml",
         "yaml-bench",
         "verify-uselistorder",
-        "bugpoint",
         "llc",
         "llvm-symbolizer",
         "opt",
@@ -275,82 +340,143 @@ tools.extend(
         ToolSubst("OrcV2CBindingsLazy", unresolved="ignore"),
         ToolSubst("OrcV2CBindingsVeryLazy", unresolved="ignore"),
         ToolSubst("dxil-dis", unresolved="ignore"),
+        ToolSubst("llvm-calc-occupancy", unresolved="ignore"),
     ]
 )
 
-# Find (major, minor) version of ptxas
+
 def ptxas_version(ptxas):
-    ptxas_cmd = subprocess.Popen([ptxas, "--version"], stdout=subprocess.PIPE)
-    ptxas_out = ptxas_cmd.stdout.read().decode("ascii")
-    ptxas_cmd.wait()
-    match = re.search(r"release (\d+)\.(\d+)", ptxas_out)
-    if match:
-        return (int(match.group(1)), int(match.group(2)))
-    print("couldn't determine ptxas version")
-    return None
+    output = subprocess.check_output([ptxas, "--version"], text=True)
+    match = re.search(r"release (\d+)\.(\d+)", output)
+    if not match:
+        raise RuntimeError("Couldn't determine ptxas version")
+    return int(match.group(1)), int(match.group(2))
 
 
-# Enable %ptxas and %ptxas-verify tools.
-# %ptxas-verify defaults to sm_60 architecture. It can be overriden
-# by specifying required one, for instance: %ptxas-verify -arch=sm_80.
+def ptxas_isa_versions(ptxas):
+    result = subprocess.run(
+        [ptxas, "--list-version"],
+        capture_output=True,
+        text=True,
+    )
+    versions = []
+    for line in result.stdout.splitlines():
+        match = re.match(r"(\d+)\.(\d+)", line)
+        if match:
+            versions.append((int(match.group(1)), int(match.group(2))))
+    return versions
+
+
+def ptxas_supported_isa_versions(ptxas, major_version, minor_version):
+    supported_isa_versions = ptxas_isa_versions(ptxas)
+    if supported_isa_versions:
+        return supported_isa_versions
+    if major_version >= 13:
+        raise RuntimeError(f"ptxas {ptxas} does not support ISA version listing")
+
+    cuda_version_to_isa_version = {
+        (12, 9): [(8, 8)],
+        (12, 8): [(8, 7)],
+        (12, 7): [(8, 6)],
+        (12, 6): [(8, 5)],
+        (12, 5): [(8, 5)],
+        (12, 4): [(8, 4)],
+        (12, 3): [(8, 3)],
+        (12, 2): [(8, 2)],
+        (12, 1): [(8, 1)],
+        (12, 0): [(8, 0)],
+        (11, 8): [(7, 8)],
+        (11, 7): [(7, 7)],
+        (11, 6): [(7, 6)],
+        (11, 5): [(7, 5)],
+        (11, 4): [(7, 4)],
+        (11, 3): [(7, 3)],
+        (11, 2): [(7, 2)],
+        (11, 1): [(7, 1)],
+        (11, 0): [(7, 0)],
+        (10, 2): [(6, 5)],
+        (10, 1): [(6, 4)],
+        (10, 0): [(6, 3)],
+        (9, 2): [(6, 2)],
+        (9, 1): [(6, 1)],
+        (9, 0): [(6, 0)],
+        (8, 0): [(5, 0)],
+        (7, 5): [(4, 3)],
+        (7, 0): [(4, 2)],
+        (6, 5): [(4, 1)],
+        (6, 0): [(4, 0)],
+        (5, 5): [(3, 2)],
+        (5, 0): [(3, 1)],
+        (4, 1): [(3, 0)],
+        (4, 0): [(2, 3)],
+        (3, 2): [(2, 2)],
+        (3, 1): [(2, 1)],
+        (3, 0): [(2, 0), (1, 5)],
+        (2, 2): [(1, 4)],
+        (2, 1): [(1, 3)],
+        (2, 0): [(1, 2)],
+        (1, 1): [(1, 1)],
+        (1, 0): [(1, 0)],
+    }
+
+    supported_isa_versions = []
+    for (major, minor), isa_versions in cuda_version_to_isa_version.items():
+        if (major, minor) <= (major_version, minor_version):
+            for isa_version in isa_versions:
+                supported_isa_versions.append(isa_version)
+    return supported_isa_versions
+
+
+def ptxas_supported_sms(ptxas_executable):
+    output = subprocess.check_output([ptxas_executable, "--help"], text=True)
+
+    gpu_arch_section = re.search(r"--gpu-name(.*?)--", output, re.DOTALL)
+    allowed_values = gpu_arch_section.group(1)
+    supported_sms = re.findall(r"'sm_(\d+(?:[af]?))'", allowed_values)
+
+    if not supported_sms:
+        raise RuntimeError("No SM architecture values found in ptxas help output")
+    return supported_sms
+
+
+def ptxas_supports_address_size_32(ptxas_executable):
+    # Linux outputs the error message to stderr, while Windows outputs to stdout.
+    # Pipe both to stdout to make sure we get the error message.
+    result = subprocess.run(
+        [ptxas_executable, "-m 32"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if "is not defined for option 'machine'" in result.stdout:
+        return False
+    if "Missing .version directive at start of file" in result.stdout:
+        return True
+    raise RuntimeError(f"Unexpected ptxas output: {result.stdout}")
+
+
 def enable_ptxas(ptxas_executable):
-    version = ptxas_version(ptxas_executable)
-    if version:
-        # ptxas is supposed to be backward compatible with previous
-        # versions, so add a feature for every known version prior to
-        # the current one.
-        ptxas_known_versions = [
-            (9, 0),
-            (9, 1),
-            (9, 2),
-            (10, 0),
-            (10, 1),
-            (10, 2),
-            (11, 0),
-            (11, 1),
-            (11, 2),
-            (11, 3),
-            (11, 4),
-            (11, 5),
-            (11, 6),
-            (11, 7),
-            (11, 8),
-            (12, 0),
-            (12, 1),
-            (12, 2),
-            (12, 3),
-            (12, 4),
-            (12, 5),
-            (12, 6),
-            (12, 8),
-        ]
-
-        def version_int(ver):
-            return ver[0] * 100 + ver[1]
-
-        # ignore ptxas if its version is below the minimum supported
-        # version
-        min_version = ptxas_known_versions[0]
-        if version_int(version) < version_int(min_version):
-            print(
-                "Warning: ptxas version {}.{} is not supported".format(
-                    version[0], version[1]
-                )
-            )
-            return
-
-        for known_version in ptxas_known_versions:
-            if version_int(known_version) <= version_int(version):
-                major, minor = known_version
-                config.available_features.add("ptxas-{}.{}".format(major, minor))
-
     config.available_features.add("ptxas")
     tools.extend(
         [
             ToolSubst("%ptxas", ptxas_executable),
-            ToolSubst("%ptxas-verify", "{} -arch=sm_60 -c -".format(ptxas_executable)),
+            ToolSubst("%ptxas-verify", f"{ptxas_executable} -c -"),
         ]
     )
+
+    major_version, minor_version = ptxas_version(ptxas_executable)
+    config.available_features.add(f"ptxas-{major_version}.{minor_version}")
+
+    for major, minor in ptxas_supported_isa_versions(
+        ptxas_executable, major_version, minor_version
+    ):
+        config.available_features.add(f"ptxas-isa-{major}.{minor}")
+
+    for sm in ptxas_supported_sms(ptxas_executable):
+        config.available_features.add(f"ptxas-sm_{sm}")
+
+    if ptxas_supports_address_size_32(ptxas_executable):
+        config.available_features.add("ptxas-ptr32")
 
 
 ptxas_executable = (
@@ -378,17 +504,18 @@ if config.host_ldflags.find("-m32") < 0 and any(
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 if config.target_triple:
     if re.match(
-        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|s390x|s390|tce|thumbeb)-.*",
+        r"(aarch64_be|arc|armeb|bpfeb|lanai|m68k|mips|mips64|powerpc|powerpc64|sparc|sparcv9|sparc64|s390x|s390|tce|thumbeb)-.*",
         config.target_triple,
     ):
         config.available_features.add("target-byteorder-big-endian")
     else:
         config.available_features.add("target-byteorder-little-endian")
 
-if sys.platform in ["win32"]:
+if sys.platform in ["win32", "cygwin"]:
     # ExecutionEngine, no weak symbols in COFF.
     config.available_features.add("uses_COFF")
-else:
+
+if sys.platform not in ["win32"]:
     # Others/can-execute.txt
     config.available_features.add("can-execute")
 
@@ -403,7 +530,7 @@ elif uname_r.endswith("microsoft-standard-WSL2"):
 if config.has_plugins:
     config.available_features.add("plugins")
 
-if config.build_examples:
+if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
@@ -451,12 +578,18 @@ if config.link_llvm_dylib:
             "%llvmdylib",
             "{}/libLLVM{}.{}".format(
                 config.llvm_shlib_dir, config.llvm_shlib_ext, config.llvm_dylib_version
-            )
+            ),
         )
     )
 
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
+
+if getattr(config, "have_mlir_lowering", False):
+    config.available_features.add("have_mlir_lowering")
+
+if getattr(config, "have_opencsd", False):
+    config.available_features.add("opencsd")
 
 if config.have_tflite:
     config.available_features.add("have_tflite")
@@ -482,7 +615,7 @@ def have_cxx_shared_library():
         print("could not exec llvm-readobj")
         return False
 
-    readobj_out = readobj_cmd.stdout.read().decode("ascii")
+    readobj_out = readobj_cmd.stdout.read().decode("utf-8")
     readobj_cmd.wait()
 
     regex = re.compile(r"(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)")
@@ -517,14 +650,18 @@ if config.have_llvm_driver:
 import subprocess
 
 
-def have_ld_plugin_support():
+def have_ld_plugin_support(ld_executable, name):
     if not os.path.exists(
         os.path.join(config.llvm_shlib_dir, "LLVMgold" + config.llvm_shlib_ext)
     ):
         return False
 
+    # CMake was not able to find the linker executable.
+    if ld_executable.endswith("NOTFOUND"):
+        return False
+
     ld_cmd = subprocess.Popen(
-        [config.gold_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
     ld_out = ld_cmd.stdout.read().decode()
     ld_cmd.wait()
@@ -547,18 +684,20 @@ def have_ld_plugin_support():
         config.available_features.add("ld_emu_elf32ppc")
 
     ld_version = subprocess.Popen(
-        [config.gold_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
-    if not "GNU gold" in ld_version.stdout.read().decode():
+    if not name in ld_version.stdout.read().decode():
         return False
     ld_version.wait()
 
     return True
 
 
-if have_ld_plugin_support():
+if have_ld_plugin_support(config.ld_bfd_executable, "GNU ld"):
     config.available_features.add("ld_plugin")
 
+if have_ld_plugin_support(config.gold_executable, "GNU gold"):
+    config.available_features.add("gold_linker")
 
 def have_ld64_plugin_support():
     if not os.path.exists(
@@ -569,18 +708,12 @@ def have_ld64_plugin_support():
     if config.ld64_executable == "":
         return False
 
-    ld_cmd = subprocess.Popen([config.ld64_executable, "-v"], stderr=subprocess.PIPE)
-    ld_out = ld_cmd.stderr.read().decode()
-    ld_cmd.wait()
-
-    if "ld64" not in ld_out or "LTO" not in ld_out:
-        return False
-
     return True
 
 
 if have_ld64_plugin_support():
     config.available_features.add("ld64_plugin")
+
 
 def host_unwind_supports_jit():
     # Do we expect the host machine to support JIT registration of clang's
@@ -589,7 +722,7 @@ def host_unwind_supports_jit():
 
     # Linux and the BSDs use DWARF eh-frames and all known unwinders support
     # register_frame at minimum.
-    if platform.system() in [ "Linux", "FreeBSD", "NetBSD" ]:
+    if platform.system() in ["Linux", "FreeBSD", "NetBSD"]:
         return True
 
     # Windows does not support frame info without the ORC runtime.
@@ -601,11 +734,7 @@ def host_unwind_supports_jit():
     # compact-unwind only, and JIT'd registration is not available before
     # macOS 14.0.
     if platform.system() == "Darwin":
-
-        assert (
-            "arm64" in config.host_triple
-            or "x86_64" in config.host_triple
-        )
+        assert "arm64" in config.host_triple or "x86_64" in config.host_triple
 
         if "x86_64" in config.host_triple:
             return True
@@ -627,8 +756,28 @@ def host_unwind_supports_jit():
 
     return False
 
+
 if host_unwind_supports_jit():
     config.available_features.add("host-unwind-supports-jit")
+
+
+# The triple that lli's JIT will target. This can be more specific than either
+# the host or the default target triple: e.g. an arm64e build of lli reports
+# arm64e-apple-darwin, while both CMake triples describe the machine as arm64.
+def host_jit_triple():
+    lli = lit.util.which("lli", config.llvm_tools_dir)
+    if not lli:
+        return None
+    try:
+        return subprocess.check_output([lli, "-host-jit-triple"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        lit_config.warning("could not determine host JIT triple from lli")
+        return None
+
+
+config.host_jit_triple = host_jit_triple()
+if config.host_jit_triple:
+    config.available_features.add("host-jit-triple=" + config.host_jit_triple)
 
 # Ask llvm-config about asserts
 llvm_config.feature_config(
@@ -658,10 +807,17 @@ if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 170
     config.available_features.add("unix-sockets")
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
-if not re.match(
-    r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-gnu|windows-msvc|aix)",
-    config.target_triple,
-) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
+if (
+    not re.match(
+        r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
+        config.target_triple,
+    )
+    and not re.match(
+        r"^arm64(e)?-apple-(macos|darwin)",
+        config.target_triple,
+    )
+    and not re.match(r".*-zos.*", config.target_triple)
+):
     config.available_features.add("debug_frame")
 
 if config.enable_backtrace:
@@ -685,9 +841,20 @@ if config.have_opt_viewer_modules:
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 
+if config.have_ondisk_cas:
+    config.available_features.add("ondisk_cas")
+
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+if "Undefined" in config.llvm_use_sanitizer:
+    config.available_features.add("ubsan")
+
+# Restrict the size of the on-disk CAS for tests. This allows testing in
+# constrained environments (e.g. small TMPDIR). It also prevents leaving
+# behind large files on file systems that do not support sparse files if a test
+# crashes before resizing the file.
+config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)
 
 # Some tools support an environment variable "OBJECT_MODE" on AIX OS, which
 # controls the kind of objects they will support. If there is no "OBJECT_MODE"
@@ -700,3 +867,106 @@ if "system-aix" in config.available_features:
 
 if config.has_logf128:
     config.available_features.add("has_logf128")
+
+# ANSI escape sequences.
+#
+# For example:
+#
+#   REQUIRES: ansi-escapes
+#   RUN: some-cmd -color 2>&1 | %{reveal-ansi-escapes} | FileCheck %s
+#   CHECK: Once in a <blue>blue moon<reset>, I'm <green>green with envy<reset>.
+if platform.system() not in ["Windows"]:
+    config.available_features.add("ansi-escapes")
+    # It is not clear that the escape sequence \x1b is portable across sed
+    # implementations, but that is ok because python substitutes the raw
+    # character here.
+    config.substitutions.append(
+        (
+            "%{reveal-ansi-escapes}",
+            "sed "
+            # Foreground colors.
+            "-e 's/\x1b\\[0;30m/<black>/g' "
+            "-e 's/\x1b\\[0;31m/<red>/g' "
+            "-e 's/\x1b\\[0;32m/<green>/g' "
+            "-e 's/\x1b\\[0;33m/<yellow>/g' "
+            "-e 's/\x1b\\[0;34m/<blue>/g' "
+            "-e 's/\x1b\\[0;35m/<magenta>/g' "
+            "-e 's/\x1b\\[0;36m/<cyan>/g' "
+            "-e 's/\x1b\\[0;37m/<white>/g' "
+            "-e 's/\x1b\\[0;90m/<bright-black>/g' "
+            "-e 's/\x1b\\[0;91m/<bright-red>/g' "
+            "-e 's/\x1b\\[0;92m/<bright-green>/g' "
+            "-e 's/\x1b\\[0;93m/<bright-yellow>/g' "
+            "-e 's/\x1b\\[0;94m/<bright-blue>/g' "
+            "-e 's/\x1b\\[0;95m/<bright-magenta>/g' "
+            "-e 's/\x1b\\[0;96m/<bright-cyan>/g' "
+            "-e 's/\x1b\\[0;97m/<bright-white>/g' "
+            # Bold foreground colors.
+            "-e 's/\x1b\\[0;1;30m/<bold-black>/g' "
+            "-e 's/\x1b\\[0;1;31m/<bold-red>/g' "
+            "-e 's/\x1b\\[0;1;32m/<bold-green>/g' "
+            "-e 's/\x1b\\[0;1;33m/<bold-yellow>/g' "
+            "-e 's/\x1b\\[0;1;34m/<bold-blue>/g' "
+            "-e 's/\x1b\\[0;1;35m/<bold-magenta>/g' "
+            "-e 's/\x1b\\[0;1;36m/<bold-cyan>/g' "
+            "-e 's/\x1b\\[0;1;37m/<bold-white>/g' "
+            "-e 's/\x1b\\[0;1;90m/<bold-bright-black>/g' "
+            "-e 's/\x1b\\[0;1;91m/<bold-bright-red>/g' "
+            "-e 's/\x1b\\[0;1;92m/<bold-bright-green>/g' "
+            "-e 's/\x1b\\[0;1;93m/<bold-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;1;94m/<bold-bright-blue>/g' "
+            "-e 's/\x1b\\[0;1;95m/<bold-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;1;96m/<bold-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;1;97m/<bold-bright-white>/g' "
+            # Background colors.
+            "-e 's/\x1b\\[0;40m/<bg-black>/g' "
+            "-e 's/\x1b\\[0;41m/<bg-red>/g' "
+            "-e 's/\x1b\\[0;42m/<bg-green>/g' "
+            "-e 's/\x1b\\[0;43m/<bg-yellow>/g' "
+            "-e 's/\x1b\\[0;44m/<bg-blue>/g' "
+            "-e 's/\x1b\\[0;45m/<bg-magenta>/g' "
+            "-e 's/\x1b\\[0;46m/<bg-cyan>/g' "
+            "-e 's/\x1b\\[0;47m/<bg-white>/g' "
+            "-e 's/\x1b\\[0;100m/<bg-bright-black>/g' "
+            "-e 's/\x1b\\[0;101m/<bg-bright-red>/g' "
+            "-e 's/\x1b\\[0;102m/<bg-bright-green>/g' "
+            "-e 's/\x1b\\[0;103m/<bg-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;104m/<bg-bright-blue>/g' "
+            "-e 's/\x1b\\[0;105m/<bg-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;106m/<bg-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;107m/<bg-bright-white>/g' "
+            # Bold background colors.
+            "-e 's/\x1b\\[0;1;40m/<bg-bold-black>/g' "
+            "-e 's/\x1b\\[0;1;41m/<bg-bold-red>/g' "
+            "-e 's/\x1b\\[0;1;42m/<bg-bold-green>/g' "
+            "-e 's/\x1b\\[0;1;43m/<bg-bold-yellow>/g' "
+            "-e 's/\x1b\\[0;1;44m/<bg-bold-blue>/g' "
+            "-e 's/\x1b\\[0;1;45m/<bg-bold-magenta>/g' "
+            "-e 's/\x1b\\[0;1;46m/<bg-bold-cyan>/g' "
+            "-e 's/\x1b\\[0;1;47m/<bg-bold-white>/g' "
+            "-e 's/\x1b\\[0;1;100m/<bg-bold-bright-black>/g' "
+            "-e 's/\x1b\\[0;1;101m/<bg-bold-bright-red>/g' "
+            "-e 's/\x1b\\[0;1;102m/<bg-bold-bright-green>/g' "
+            "-e 's/\x1b\\[0;1;103m/<bg-bold-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;1;104m/<bg-bold-bright-blue>/g' "
+            "-e 's/\x1b\\[0;1;105m/<bg-bold-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;1;106m/<bg-bold-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;1;107m/<bg-bold-bright-white>/g' "
+            # Misc.
+            "-e 's/\x1b\\[1m/<bold>/g' "
+            "-e 's/\x1b\\[7m/<reverse>/g' "
+            "-e 's/\x1b\\[0m/<reset>/g' "
+            # Reveal any sequence we missed above.
+            "-e 's/\x1b/<esc>/g' ",
+        )
+    )
+
+if lit_config.update_tests:
+    import sys
+    import os
+
+    utilspath = os.path.join(config.llvm_src_root, "utils")
+    sys.path.append(utilspath)
+    from update_any_test_checks import utc_lit_plugin
+
+    lit_config.test_updaters.append(utc_lit_plugin)

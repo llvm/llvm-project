@@ -39,7 +39,7 @@ A *f14(void);
 
 int * _Null_unspecified f15(void);
 A * _Null_unspecified f16(void);
-void f17(CFErrorRef *error); // expected-note{{no known conversion from 'A * _Nonnull' to 'CFErrorRef  _Nullable * _Nullable' (aka '__CFError **') for 1st argument}}
+void f17(CFErrorRef *error); // expected-note{{no known conversion from 'A * _Nonnull' to 'CFErrorRef  _Nullable * _Nullable' (aka 'struct __CFError **') for 1st argument}}
 void f18(A **); // expected-warning 2{{pointer is missing a nullability type specifier}}
 // expected-note@-1 2 {{insert '_Nullable' if the pointer may be null}}
 // expected-note@-2 2 {{insert '_Nonnull' if the pointer should never be null}}

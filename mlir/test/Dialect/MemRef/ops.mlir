@@ -57,8 +57,8 @@ func.func @alloca() {
   %3 = memref.alloca(%c1)[%c0] : memref<2x?xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>, 1>
 
   // Alloca with no mappings, but with alignment.
-  // CHECK: %{{.*}} = memref.alloca() {alignment = 64 : i64} : memref<2xi32>
-  %4 = memref.alloca() {alignment = 64} : memref<2 x i32>
+  // CHECK: %{{.*}} = memref.alloca() alignment = 64 : memref<2xi32>
+  %4 = memref.alloca() alignment = 64 : memref<2 x i32>
 
   return
 }
@@ -211,7 +211,7 @@ func.func @memref_alloca_scope() {
 }
 
 // CHECK-LABEL: func @memref_cast(%arg0
-func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>) {
+func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>, %arg3 : memref<4x1x8xf32, strided<[32, 16, 1]>>, %arg4 : memref<4x?x8xf32, strided<[32, 8, 1]>>) {
   // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
   %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
 
@@ -229,6 +229,15 @@ func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memr
 
   // CHECK: memref.cast %{{.*}} : memref<*xf32> to memref<4xf32>
   %5 = memref.cast %4 : memref<*xf32> to memref<4xf32>
+
+  // CHECK: memref.cast %{{.*}} : memref<4x1x8xf32, strided<[32, 16, 1]>> to memref<4x?x8xf32, strided<[32, 8, 1]>>
+  %6 = memref.cast %arg3 : memref<4x1x8xf32, strided<[32, 16, 1]>> to memref<4x?x8xf32, strided<[32, 8, 1]>>
+
+  // CHECK: memref.cast %{{.*}} : memref<4x?x8xf32, strided<[32, 8, 1]>> to memref<4x1x8xf32, strided<[32, 16, 1]>>
+  %7 = memref.cast %arg4 : memref<4x?x8xf32, strided<[32, 8, 1]>> to memref<4x1x8xf32, strided<[32, 16, 1]>>
+
+  // CHECK: memref.cast %{{.*}} : memref<*xf32> to memref<*xf32>
+  %8 = memref.cast %4 : memref<*xf32> to memref<*xf32>
   return
 }
 
@@ -269,10 +278,18 @@ func.func @zero_dim_no_idx(%arg0 : memref<i32>, %arg1 : memref<i32>, %arg2 : mem
 // CHECK-LABEL: func @load_store_alignment
 func.func @load_store_alignment(%memref: memref<4xi32>) {
   %c0 = arith.constant 0 : index
-  // CHECK: memref.load {{.*}} {alignment = 16 : i64}
-  %val = memref.load %memref[%c0] { alignment = 16 } : memref<4xi32>
-  // CHECK: memref.store {{.*}} {alignment = 16 : i64}
-  memref.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>
+  // CHECK: memref.load {{.*}} alignment(16) nontemporal(true) invariant(true)
+  %val = memref.load %memref[%c0] invariant(true) alignment(16) nontemporal(true) : memref<4xi32>
+  // CHECK: memref.store {{.*}} alignment(16) nontemporal(true)
+  memref.store %val, %memref[%c0] nontemporal(true) alignment(16) : memref<4xi32>
+  return
+}
+
+// CHECK-LABEL: func @load_invariant
+func.func @load_invariant(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.load {{.*}} invariant(true)
+  %val = memref.load %memref[%c0] invariant(true) : memref<4xi32>
   return
 }
 
@@ -300,6 +317,15 @@ func.func @assume_alignment(%0: memref<4x4xf16>) {
   // CHECK: %{{.*}} = memref.assume_alignment %[[MEMREF]], 16 : memref<4x4xf16>
   %1 = memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
+}
+
+// CHECK-LABEL: func @distinct_objects
+// CHECK-SAME: (%[[ARG0:.*]]: memref<?xf16>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf64>)
+func.func @distinct_objects(%arg0: memref<?xf16>, %arg1: memref<?xf32>, %arg2: memref<?xf64>) -> (memref<?xf16>, memref<?xf32>, memref<?xf64>) {
+  // CHECK:  %[[RES:.*]]:3 = memref.distinct_objects %[[ARG0]], %[[ARG1]], %[[ARG2]] : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  %1, %2, %3 = memref.distinct_objects %arg0, %arg1, %arg2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  // CHECK:  return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  return %1, %2, %3 : memref<?xf16>, memref<?xf32>, memref<?xf64>
 }
 
 // CHECK-LABEL: func @expand_collapse_shape_static
@@ -431,7 +457,10 @@ func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
          %arg4: index,
          %arg5: index,
          %arg6: index,
-         %arg7: memref<4x?x4xf32>) {
+         %arg7: memref<4x?x4xf32>,
+         %arg8: memref<1x1x18x?xf32, strided<[?, ?, ?, 1], offset: ?>>,
+         %arg9: memref<3x3x1x96xf32, strided<[288, 96, 96, 1], offset: 864>>) {
+
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32> into memref<?x?xf32>
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]] :
@@ -480,6 +509,16 @@ func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
 //       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
   %4 = memref.expand_shape %arg7 [[0, 1], [2], [3, 4]] output_shape [2, 2, %arg4, 2, 2]
         : memref<4x?x4xf32> into memref<2x2x?x2x2xf32>
+
+//       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2], [3]]
+//  CHECK-SAME:     memref<1x1x18x?xf32, strided<[?, ?, ?, 1], offset: ?>> into memref<1x18x?xf32, strided<[?, ?, 1], offset: ?>>
+  %5 = memref.collapse_shape %arg8 [[0, 1], [2], [3]] : memref<1x1x18x?xf32, strided<[?, ?, ?, 1], offset: ?>> into memref<1x18x?xf32, strided<[?, ?, 1], offset: ?>>
+
+//       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0], [1, 2, 3]]
+//  CHECK-SAME:     memref<3x3x1x96xf32, strided<[288, 96, 96, 1], offset: 864>> into memref<3x288xf32, strided<[288, 1], offset: 864>>
+  %6 = memref.collapse_shape %arg9 [[0], [1, 2, 3]] :
+    memref<3x3x1x96xf32, strided<[288, 96, 96, 1], offset: 864>> into
+    memref<3x288xf32, strided<[288, 1], offset: 864>>
   return
 }
 
@@ -623,4 +662,10 @@ func.func @memref_memory_space_cast(%src : memref<?xf32>) -> memref<?xf32, 1> {
 func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>> {
   %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
   return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+}
+
+// CHECK-LABEL: func @memref_transpose_map_with_memory_space
+func.func @memref_transpose_map_with_memory_space(%src : memref<?x?xf32, 1>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1> {
+  %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32, 1> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
+  return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
 }

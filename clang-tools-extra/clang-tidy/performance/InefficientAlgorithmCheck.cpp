@@ -1,4 +1,4 @@
-//===--- InefficientAlgorithmCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,7 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto Matcher =
       callExpr(
-          callee(functionDecl(Algorithms)),
+          callee(functionDecl(Algorithms)), argumentCountAtLeast(3),
           hasArgument(
               0, cxxMemberCallExpr(
                      callee(cxxMethodDecl(hasName("begin"))),
@@ -48,8 +48,7 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
           hasArgument(
               1, cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))),
                                    on(declRefExpr(hasDeclaration(
-                                       equalsBoundNode("IneffContObj")))))),
-          hasArgument(2, expr().bind("AlgParam")))
+                                       equalsBoundNode("IneffContObj")))))))
           .bind("IneffAlg");
 
   Finder->addMatcher(Matcher, this);
@@ -65,14 +64,14 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
         Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("IneffContPtr");
     PtrToContainer = true;
   }
-  const llvm::StringRef IneffContName = IneffCont->getName();
+  const StringRef IneffContName = IneffCont->getName();
   const bool Unordered = IneffContName.contains("unordered");
   const bool Maplike = IneffContName.contains("map");
 
   // Store if the key type of the container is compatible with the value
   // that is searched for.
-  QualType ValueType = AlgCall->getArg(2)->getType();
-  QualType KeyType =
+  const QualType ValueType = AlgCall->getArg(2)->getType();
+  const QualType KeyType =
       IneffCont->getTemplateArgs()[0].getAsType().getCanonicalType();
   const bool CompatibleTypes = areTypesCompatible(KeyType, ValueType);
 
@@ -100,12 +99,11 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   if (Unordered && AlgDecl->getName().contains("bound"))
     return;
 
-  const auto *AlgParam = Result.Nodes.getNodeAs<Expr>("AlgParam");
   const auto *IneffContExpr = Result.Nodes.getNodeAs<Expr>("IneffContExpr");
   FixItHint Hint;
 
-  SourceManager &SM = *Result.SourceManager;
-  LangOptions LangOpts = getLangOpts();
+  const SourceManager &SM = *Result.SourceManager;
+  const LangOptions LangOpts = getLangOpts();
 
   CharSourceRange CallRange =
       CharSourceRange::getTokenRange(AlgCall->getSourceRange());
@@ -128,17 +126,22 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (!CallRange.getBegin().isMacroID() && !Maplike && CompatibleTypes) {
-    StringRef ContainerText = Lexer::getSourceText(
+    const StringRef ContainerText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(IneffContExpr->getSourceRange()), SM,
         LangOpts);
-    StringRef ParamText = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(AlgParam->getSourceRange()), SM,
-        LangOpts);
-    std::string ReplacementText =
-        (llvm::Twine(ContainerText) + (PtrToContainer ? "->" : ".") +
-         AlgDecl->getName() + "(" + ParamText + ")")
-            .str();
-    Hint = FixItHint::CreateReplacement(CallRange, ReplacementText);
+    const StringRef ParamText = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(AlgCall->getArg(2)->getSourceRange()),
+        SM, LangOpts);
+    // There is no source text for an expression that covers only part of a
+    // macro expansion. Building the replacement from an empty string would
+    // incorrectly drop the container or the value.
+    if (!ContainerText.empty() && !ParamText.empty()) {
+      const std::string ReplacementText =
+          (llvm::Twine(ContainerText) + (PtrToContainer ? "->" : ".") +
+           AlgDecl->getName() + "(" + ParamText + ")")
+              .str();
+      Hint = FixItHint::CreateReplacement(CallRange, ReplacementText);
+    }
   }
 
   diag(AlgCall->getBeginLoc(),

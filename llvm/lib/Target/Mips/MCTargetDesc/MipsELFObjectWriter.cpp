@@ -17,7 +17,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -27,7 +26,6 @@
 #include <cstdint>
 #include <iterator>
 #include <list>
-#include <utility>
 
 #define DEBUG_TYPE "mips-elf-object-writer"
 
@@ -55,62 +53,7 @@ public:
   void sortRelocs(std::vector<ELFRelocationEntry> &Relocs) override;
 };
 
-/// The possible results of the Predicate function used by find_best.
-enum FindBestPredicateResult {
-  FindBest_NoMatch = 0,  ///< The current element is not a match.
-  FindBest_Match,        ///< The current element is a match but better ones are
-                         ///  possible.
-  FindBest_PerfectMatch, ///< The current element is an unbeatable match.
-};
-
 } // end anonymous namespace
-
-/// Copy elements in the range [First, Last) to d1 when the predicate is true or
-/// d2 when the predicate is false. This is essentially both std::copy_if and
-/// std::remove_copy_if combined into a single pass.
-template <class InputIt, class OutputIt1, class OutputIt2, class UnaryPredicate>
-static std::pair<OutputIt1, OutputIt2> copy_if_else(InputIt First, InputIt Last,
-                                                    OutputIt1 d1, OutputIt2 d2,
-                                                    UnaryPredicate Predicate) {
-  for (InputIt I = First; I != Last; ++I) {
-    if (Predicate(*I)) {
-      *d1 = *I;
-      d1++;
-    } else {
-      *d2 = *I;
-      d2++;
-    }
-  }
-
-  return std::make_pair(d1, d2);
-}
-
-/// Find the best match in the range [First, Last).
-///
-/// An element matches when Predicate(X) returns FindBest_Match or
-/// FindBest_PerfectMatch. A value of FindBest_PerfectMatch also terminates
-/// the search. BetterThan(A, B) is a comparator that returns true when A is a
-/// better match than B. The return value is the position of the best match.
-///
-/// This is similar to std::find_if but finds the best of multiple possible
-/// matches.
-template <class InputIt, class UnaryPredicate, class Comparator>
-static InputIt find_best(InputIt First, InputIt Last, UnaryPredicate Predicate,
-                         Comparator BetterThan) {
-  InputIt Best = Last;
-
-  for (InputIt I = First; I != Last; ++I) {
-    unsigned Matched = Predicate(*I);
-    if (Matched != FindBest_NoMatch) {
-      if (Best == Last || BetterThan(*I, *Best))
-        Best = I;
-    }
-    if (Matched == FindBest_PerfectMatch)
-      break;
-  }
-
-  return Best;
-}
 
 /// Determine the low relocation that matches the given relocation.
 /// If the relocation does not need a low relocation then the return value
@@ -166,8 +109,8 @@ unsigned MipsELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case Mips::S_GOTTPREL:
   case Mips::S_TPREL_HI:
   case Mips::S_TPREL_LO:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -450,6 +393,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
            needsRelocateWithSymbol(V, (Type >> 8) & 0xff) ||
            needsRelocateWithSymbol(V, (Type >> 16) & 0xff);
 
+  auto *Sym = static_cast<const MCSymbolELF *>(V.getAddSym());
   switch (Type) {
   default:
     errs() << Type << "\n";
@@ -481,7 +425,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
     // FIXME: It should be safe to return false for the STO_MIPS_MICROMIPS but
     //        we neglect to handle the adjustment to the LSB of the addend that
     //        it causes in applyFixup() and similar.
-    if (cast<MCSymbolELF>(V.getAddSym())->getOther() & ELF::STO_MIPS_MICROMIPS)
+    if (Sym->getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;
     return false;
 
@@ -492,7 +436,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
   case ELF::R_MIPS_16:
   case ELF::R_MIPS_32:
   case ELF::R_MIPS_GPREL32:
-    if (cast<MCSymbolELF>(V.getAddSym())->getOther() & ELF::STO_MIPS_MICROMIPS)
+    if (Sym->getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;
     [[fallthrough]];
   case ELF::R_MIPS_26:

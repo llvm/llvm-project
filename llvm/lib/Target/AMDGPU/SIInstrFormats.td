@@ -218,9 +218,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{43} = maybeAtomic;
 
-  // Reserved, must be 0.
-  let TSFlags{44} = 0;
-
   let TSFlags{45} = FPClamp;
   let TSFlags{46} = IntClamp;
   let TSFlags{47} = ClampLo;
@@ -321,7 +318,7 @@ def CPolBit {
   int SCAL = 11;
 }
 
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
+class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
 
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
@@ -473,6 +470,7 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   let Inst{4} = r128;
   let Inst{5} = d16;
   let Inst{6} = a16;
+  let Inst{7} = cpol{5}; // nv
   let Inst{21-14} = op;
   let Inst{25-22} = dmask;
   let Inst{39-32} = vdata;

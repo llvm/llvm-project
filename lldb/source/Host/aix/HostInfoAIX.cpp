@@ -12,9 +12,7 @@
 
 using namespace lldb_private;
 
-void HostInfoAIX::Initialize(SharedLibraryDirectoryHelper *helper) {
-  HostInfoPosix::Initialize(helper);
-}
+void HostInfoAIX::Initialize() { HostInfoPosix::Initialize(); }
 
 void HostInfoAIX::Terminate() { HostInfoBase::Terminate(); }
 

@@ -1,13 +1,13 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
-! C743 No component-attr-spec shall appear more than once in a 
+! C743 No component-attr-spec shall appear more than once in a
 ! given component-def-stmt.
 !
 ! R737 data-component-def-stmt ->
 !        declaration-type-spec [[, component-attr-spec-list] ::]
 !        component-decl-list
 !  component-attr-spec values are:
-!    PUBLIC, PRIVATE, ALLOCATABLE, CODIMENSION [*], CONTIGUOUS, DIMENSION(5), 
+!    PUBLIC, PRIVATE, ALLOCATABLE, CODIMENSION [*], CONTIGUOUS, DIMENSION(5),
 !      POINTER
 
   type :: derived

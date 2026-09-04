@@ -617,14 +617,11 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
-  const Triple &TT = ES.getTargetTriple();
-  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
-    if (InitializedDylib.contains(&JD)) {
-      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
-      dlupdate = true;
-    } else
-      InitializedDylib.insert(&JD);
-  }
+  if (InitializedDylib.contains(&JD)) {
+    WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
+    dlupdate = true;
+  } else
+    InitializedDylib.insert(&JD);
 
   if (auto WrapperAddr =
           ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
@@ -780,7 +777,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       D = std::make_unique<InPlaceTaskDispatcher>();
 #endif // LLVM_ENABLE_THREADS
     if (auto EPCOrErr =
-            SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
+            SelfExecutorProcessControl::Create(nullptr, std::move(D)))
       EPC = std::move(*EPCOrErr);
     else
       return EPCOrErr.takeError();
@@ -824,6 +821,9 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::ppc64le:
       UseJITLink = TT.isOSBinFormatELF();
       break;
+    case Triple::systemz:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }
@@ -831,9 +831,10 @@ Error LLJITBuilderState::prepareForConstruction() {
       if (!JTMB->getCodeModel())
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      CreateObjectLinkingLayer =
-          [](ExecutionSession &ES) -> Expected<std::unique_ptr<ObjectLayer>> {
-        return std::make_unique<ObjectLinkingLayer>(ES);
+      CreateObjectLinkingLayer = [](ExecutionSession &ES,
+                                    jitlink::JITLinkMemoryManager &MemMgr)
+          -> Expected<std::unique_ptr<ObjectLayer>> {
+        return std::make_unique<ObjectLinkingLayer>(ES, MemMgr);
       };
     }
   }
@@ -846,7 +847,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       auto &JD =
           J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          J.getExecutionSession());
+          J.getExecutionSession(), J.getDylibMgr());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));
@@ -876,7 +877,7 @@ Expected<JITDylib &> LLJIT::createJITDylib(std::string Name) {
 }
 
 Expected<JITDylib &> LLJIT::loadPlatformDynamicLibrary(const char *Path) {
-  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, Path);
+  auto G = EPCDynamicLibrarySearchGenerator::Load(*ES, *DylibMgr, Path);
   if (!G)
     return G.takeError();
 
@@ -914,7 +915,7 @@ Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
-          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
+          TSM.withModuleDo([&](Module &M) { return applyTargetConfig(M); }))
     return Err;
 
   return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
@@ -945,12 +946,20 @@ Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
     return Sym.takeError();
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+LLJIT::createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES) {
+  if (S.CreateMemoryManager)
+    return S.CreateMemoryManager(ES);
+  return ES.getExecutorProcessControl().createDefaultMemoryManager();
+}
+
 Expected<std::unique_ptr<ObjectLayer>>
-LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
+LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                                jitlink::JITLinkMemoryManager &MemMgr) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES);
+    return S.CreateObjectLinkingLayer(ES, MemMgr);
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
@@ -1015,7 +1024,21 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
-  auto ObjLayer = createObjectLinkingLayer(S, *ES);
+  if (auto MM = createMemoryManager(S, *ES))
+    MemMgr = std::move(*MM);
+  else {
+    Err = MM.takeError();
+    return;
+  }
+
+  if (auto DM = ES->getExecutorProcessControl().createDefaultDylibMgr())
+    DylibMgr = std::move(*DM);
+  else {
+    Err = DM.takeError();
+    return;
+  }
+
+  auto ObjLayer = createObjectLinkingLayer(S, *ES, *MemMgr);
   if (!ObjLayer) {
     Err = ObjLayer.takeError();
     return;
@@ -1087,7 +1110,10 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   return MangledName;
 }
 
-Error LLJIT::applyDataLayout(Module &M) {
+Error LLJIT::applyTargetConfig(Module &M) {
+  if (M.getTargetTriple().empty())
+    M.setTargetTriple(TT);
+
   if (M.getDataLayout().isDefault())
     M.setDataLayout(DL);
 
@@ -1286,10 +1312,18 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err = TSM.withModuleDo(
-          [&](Module &M) -> Error { return applyDataLayout(M); }))
+          [&](Module &M) -> Error { return applyTargetConfig(M); }))
     return Err;
 
   return CODLayer->add(JD, std::move(TSM));
+}
+
+// End the session before this class's members (CODLayer, IPLayer, LCTMgr) are
+// destroyed: endSession joins the compile threads, and those threads may still
+// be operating on the CompileOnDemandLayer's per-dylib IndirectStubsManagers.
+LLLazyJIT::~LLLazyJIT() {
+  if (auto Err = ES->endSession())
+    ES->reportError(std::move(Err));
 }
 
 LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {

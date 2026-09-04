@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +amx-avx512 -target-feature +avx10.2-512 \
+// RUN: -target-feature +amx-avx512 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Werror -pedantic | FileCheck %s --check-prefixes=CHECK
 
 #include <immintrin.h>

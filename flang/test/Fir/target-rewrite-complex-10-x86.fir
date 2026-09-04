@@ -1,6 +1,6 @@
 // Test COMPLEX(10) passing and returning on X86
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=AMD64
-// RUN: tco -target="x86_64-unknown-linux-gnu" --force-no-alias %s | FileCheck %s --check-prefix=AMD64_LLVM
+// RUN: tco -target="x86_64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=AMD64_LLVM
 
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 

@@ -1,0 +1,142 @@
+// ---- /cetcompat (image is CET compatible)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetcompat %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKCETCOMPAT %s
+
+CHECKCETCOMPAT:  DebugEntry {
+CHECKCETCOMPAT:    Characteristics: 0x0
+CHECKCETCOMPAT:    Type: ExtendedDLLCharacteristics (0x14)
+CHECKCETCOMPAT:    ExtendedCharacteristics [ (0x1)
+CHECKCETCOMPAT:      IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT (0x1)
+CHECKCETCOMPAT:    ]
+CHECKCETCOMPAT:    RawData (
+CHECKCETCOMPAT:      0000: 01000000                             |....|
+CHECKCETCOMPAT:    )
+CHECKCETCOMPAT:  }
+
+// ---- /cetcompat:no (image is not CET compatible)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetcompat:no %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKNOCETCOMPAT %s
+
+CHECKNOCETCOMPAT-NOT: Type: ExtendedDLLCharacteristics (0x14)
+CHECKNOCETCOMPAT-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT (0x1)
+
+// ---- /cetcompatstrict (CET in strict mode)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetcompatstrict %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKCETCOMPATSTRICT %s
+
+CHECKCETCOMPATSTRICT:  DebugEntry {
+CHECKCETCOMPATSTRICT:    Characteristics: 0x0
+CHECKCETCOMPATSTRICT:    Type: ExtendedDLLCharacteristics (0x14)
+CHECKCETCOMPATSTRICT:    ExtendedCharacteristics [ (0x2)
+CHECKCETCOMPATSTRICT:      IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE (0x2)
+CHECKCETCOMPATSTRICT:    ]
+CHECKCETCOMPATSTRICT:    RawData (
+CHECKCETCOMPATSTRICT:      0000: 02000000                             |....|
+CHECKCETCOMPATSTRICT:    )
+CHECKCETCOMPATSTRICT:  }
+
+// ---- /cetcompatstrict:no (image is not CET strict mode)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetcompatstrict:no %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKNOCETSTRICT %s
+
+CHECKNOCETSTRICT-NOT: Type: ExtendedDLLCharacteristics (0x14)
+CHECKNOCETSTRICT-NOT: IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE (0x2)
+
+// ---- /cetdynamicapisinproc
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetdynamicapisinproc %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKCETDYNAPI %s
+
+CHECKCETDYNAPI:  DebugEntry {
+CHECKCETDYNAPI:    Characteristics: 0x0
+CHECKCETDYNAPI:    Type: ExtendedDLLCharacteristics (0x14)
+CHECKCETDYNAPI:    ExtendedCharacteristics [ (0x8)
+CHECKCETDYNAPI:      IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY (0x8)
+CHECKCETDYNAPI:    ]
+CHECKCETDYNAPI:    RawData (
+CHECKCETDYNAPI:      0000: 08000000                             |....|
+CHECKCETDYNAPI:    )
+CHECKCETDYNAPI:  }
+
+// ---- /cetdynamicapisinproc:no (image is not CET dynamic apis allowed in proc)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetdynamicapisinproc:no %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKNOCETDYNAPI %s
+
+CHECKNOCETDYNAPI-NOT: Type: ExtendedDLLCharacteristics (0x14)
+CHECKNOCETDYNAPI-NOT: Type: IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY (0x8)
+
+// ---- /cetipvalidationrelaxed (image is not CET in context ip validation relaxed mode)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetipvalidationrelaxed %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKCETIPRELAXED %s
+
+CHECKCETIPRELAXED:  DebugEntry {
+CHECKCETIPRELAXED:    Characteristics: 0x0
+CHECKCETIPRELAXED:    Type: ExtendedDLLCharacteristics (0x14)
+CHECKCETIPRELAXED:    ExtendedCharacteristics [ (0x4)
+CHECKCETIPRELAXED:      IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE (0x4)
+CHECKCETIPRELAXED:    ]
+CHECKCETIPRELAXED:    RawData (
+CHECKCETIPRELAXED:      0000: 04000000                             |....|
+CHECKCETIPRELAXED:    )
+CHECKCETIPRELAXED:  }
+
+// ---- /cetipvalidationrelaxed:no (image is not CET in IP validation relaxed mode)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /cetipvalidationrelaxed:no %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKNOCETIPRELAXED %s
+
+CHECKNOCETIPRELAXED-NOT: Type: ExtendedDLLCharacteristics (0x14)
+CHECKNOCETIPRELAXED-NOT: Type: IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE (0x4)
+
+// ---- /hotpatchcompatible requires /functionpadmin:6
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible /functionpadmin:6 %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKHOTPATCHABLE %s
+
+CHECKHOTPATCHABLE:  DebugEntry {
+CHECKHOTPATCHABLE:    Characteristics: 0x0
+CHECKHOTPATCHABLE:    Type: ExtendedDLLCharacteristics (0x14)
+CHECKHOTPATCHABLE:    ExtendedCharacteristics [ (0x80)
+CHECKHOTPATCHABLE:      IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE (0x80)
+CHECKHOTPATCHABLE:    ]
+CHECKHOTPATCHABLE:    RawData (
+CHECKHOTPATCHABLE:      0000: 80000000                             |....|
+CHECKHOTPATCHABLE:    )
+CHECKHOTPATCHABLE:  }
+
+// ---- /hotpatchcompatible:no (image is not hotpatch compatible)
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
+RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible:no %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKNOHOTPATCHABLE %s
+
+CHECKNOHOTPATCHABLE-NOT: Type: ExtendedDLLCharacteristics (0x14)
+CHECKNOHOTPATCHABLE-NOT: Type: IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE (0x80)
+
+// ---- /hotpatchcompatible more than 6 bytes is accepted
+RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible /functionpadmin:10 %t.obj
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck -check-prefix=CHECKHOTPATCHABLE2 %s
+
+CHECKHOTPATCHABLE2:  DebugEntry {
+CHECKHOTPATCHABLE2:    Characteristics: 0x0
+CHECKHOTPATCHABLE2:    Type: ExtendedDLLCharacteristics (0x14)
+CHECKHOTPATCHABLE2:    ExtendedCharacteristics [ (0x80)
+CHECKHOTPATCHABLE2:      IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE (0x80)
+CHECKHOTPATCHABLE2:    ]
+CHECKHOTPATCHABLE2:    RawData (
+CHECKHOTPATCHABLE2:      0000: 80000000                             |....|
+CHECKHOTPATCHABLE2:    )
+CHECKHOTPATCHABLE2:  }
+
+// ---- /hotpatchcompatible requires at least 6 bytes function padding
+RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /hotpatchcompatible /functionpadmin:5 %t.obj 2>&1 | FileCheck -check-prefix=CHECKHOTPATCHNOT %s
+CHECKHOTPATCHNOT: lld-link: error: /hotpatchcompatible: requires at least 6 bytes of /functionpadmin
+
+// ---- /hotpatchcompatible requires at least 6 bytes function padding -- without /functionpadmin should raise an error
+RUN: env LLD_IN_TEST=1 not lld-link /out:%t.exe /entry:main /hotpatchcompatible %t.obj 2>&1 | FileCheck -check-prefix=CHECKHOTPATCHNOT2 %s
+CHECKHOTPATCHNOT2: lld-link: error: /hotpatchcompatible: requires at least 6 bytes of /functionpadmin

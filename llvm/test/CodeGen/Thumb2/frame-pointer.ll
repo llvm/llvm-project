@@ -93,6 +93,14 @@ define void @call_nononleaffpelim() "frame-pointer"="non-leaf" {
   ret void
 }
 
+define void @call_nononleaffpelim_tailcall() "frame-pointer"="non-leaf" {
+; CHECK-LABEL: call_nononleaffpelim_tailcall:
+; CHECK-NOT: push
+; CHECK: b foo
+  tail call void @foo()
+  ret void
+}
+
 ; Has a high register clobbered, no need for a frame pointer.
 define void @highreg() {
 ; CHECK-LABEL: highreg:

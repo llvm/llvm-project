@@ -18,9 +18,15 @@
 include "mlir/IR/OpBase.td"
 
 
-/// Interface for operations with arguments attributes (both call-like
-/// and callable operations).
-def ArgumentAttributesMethods {
+/// Interface for operations with result and argument attributes.
+def ArgAndResultAttrsOpInterface : OpInterface<"ArgAndResultAttrsOpInterface"> {
+  let description = [{
+    An operation that has argument and result attributes. This interface
+    provides functions to access and modify the argument and result
+    attributes of the operation.
+  }];
+  let cppNamespace = "::mlir";
+
   list<InterfaceMethod> methods = [
     InterfaceMethod<[{
         Get the array of argument attribute dictionaries. The method should
@@ -64,12 +70,25 @@ def ArgumentAttributesMethods {
 // a call-like operation. This represents the destination of the call.
 
 /// Interface for call-like operations.
-def CallOpInterface : OpInterface<"CallOpInterface"> {
+def CallOpInterface : OpInterface<"CallOpInterface",
+                                  [ArgAndResultAttrsOpInterface]> {
   let description = [{
     A call-like operation is one that transfers control from one sub-routine to
     another. These operations may be traditional direct calls `call @foo`, or
     indirect calls to other operations `call_indirect %foo`. An operation that
     uses this interface, must *not* also provide the `CallableOpInterface`.
+
+    This interface distinguishes between forwarded operands/results, and
+    consumed/produced operands/results. Forwarded operands/results are in a
+    1:1 relationship with the arguments/results of the callee: the i-th
+    forwarded operand is passed as the i-th argument of the callee and the i-th
+    forwarded result receives the i-th value returned by the callee.
+    Corresponding types are not required to be equal; it is up to the operation
+    to verify them as needed.
+
+    Note: This interface does not model variadic operands ("argument pack").
+    Neither does the CallableOpInterface. Variadic operands should be modeled
+    as consumed operands.
   }];
   let cppNamespace = "::mlir";
 
@@ -92,16 +111,40 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
       "void", "setCalleeFromCallable", (ins "::mlir::CallInterfaceCallable":$callee)
     >,
     InterfaceMethod<[{
-        Returns the operands within this call that are used as arguments to the
-        callee.
+        Returns the operands of this call that are used as arguments to the
+        callee ("forwarded operands").
+
+        The returned range must be a contiguous sub-range of the operation's
+        operands. The i-th forwarded operand is passed as the i-th argument of
+        the callee. Operands that are not part of the returned range are
+        consumed by the operation itself and are not passed to the callee as
+        arguments.
       }],
       "::mlir::Operation::operand_range", "getArgOperands"
     >,
     InterfaceMethod<[{
-        Returns the operands within this call that are used as arguments to the
-        callee as a mutable range.
+        Returns the operands of this call that are used as arguments to the
+        callee ("forwarded operands") as a mutable range.
+
+        This must be the same range of operands as returned by `getArgOperands`.
       }],
       "::mlir::MutableOperandRange", "getArgOperandsMutable"
+    >,
+    InterfaceMethod<[{
+        Returns the results of this call that receive the values returned by the
+        callee ("forwarded results").
+
+        The returned range must be a contiguous sub-range of the operation's
+        results. The i-th forwarded result receives the i-th value returned by
+        the callee. Results that are not part of the returned range are produced
+        by the operation itself and do not originate from the callee.
+
+        By default, all results of the operation are forwarded results.
+      }],
+      "::mlir::Operation::result_range", "getForwardedResults", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{
+        return $_op->getResults();
+      }]
     >,
     InterfaceMethod<[{
         Resolve the callable operation for given callee to a
@@ -123,11 +166,12 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
         return ::mlir::call_interface_impl::resolveCallable($_op);
       }]
     >
-  ] # ArgumentAttributesMethods.methods;
+  ];
 }
 
 /// Interface for callable operations.
-def CallableOpInterface : OpInterface<"CallableOpInterface"> {
+def CallableOpInterface : OpInterface<"CallableOpInterface",
+                                      [ArgAndResultAttrsOpInterface]> {
   let description = [{
     A callable operation is one who represents a potential sub-routine, and may
     be a target for a call-like operation (those providing the CallOpInterface
@@ -140,11 +184,11 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
 
   let methods = [
     InterfaceMethod<[{
-        Returns the region on the current operation that is callable. This may
-        return null in the case of an external callable object, e.g. an external
-        function.
-      }],
-      "::mlir::Region *", "getCallableRegion">,
+      Returns the region on the current operation that is callable. This may
+      return null in the case of an external callable object, e.g. an external
+      function.
+    }],
+    "::mlir::Region *", "getCallableRegion">,
     InterfaceMethod<[{
       Returns the callable's argument types based exclusively on the type (to
       allow for this method may be called on function declarations).
@@ -155,7 +199,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
       allow for this method may be called on function declarations).
     }],
     "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
-  ] # ArgumentAttributesMethods.methods;
+  ];
 }
 
 #endif // MLIR_INTERFACES_CALLINTERFACES

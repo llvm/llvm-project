@@ -72,7 +72,7 @@ struct StackFrameLayoutAnalysis {
         : Slot(Idx), Size(MFI.getObjectSize(Idx)),
           Align(MFI.getObjectAlign(Idx).value()), Offset(Offset),
           SlotTy(Invalid), Scalable(false) {
-      Scalable = MFI.getStackID(Idx) == TargetStackID::ScalableVector;
+      Scalable = MFI.hasScalableStackID(Idx);
       if (MFI.isSpillSlotObjectIndex(Idx))
         SlotTy = SlotType::Spill;
       else if (MFI.isFixedObjectIndex(Idx))
@@ -306,10 +306,7 @@ char &llvm::StackFrameLayoutAnalysisPassID = StackFrameLayoutAnalysisLegacy::ID;
 INITIALIZE_PASS(StackFrameLayoutAnalysisLegacy, "stack-frame-layout",
                 "Stack Frame Layout", false, false)
 
-namespace llvm {
 /// Returns a newly-created StackFrameLayout pass.
-MachineFunctionPass *createStackFrameLayoutAnalysisPass() {
+MachineFunctionPass *llvm::createStackFrameLayoutAnalysisPass() {
   return new StackFrameLayoutAnalysisLegacy();
 }
-
-} // namespace llvm

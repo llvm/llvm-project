@@ -19,8 +19,8 @@ struct smart_ptr {
     return (x || 0) ? nullptr : s; // expected-note{{Field 'x' is 0}}
                                    // expected-note@-1{{Left side of '||' is false}}
                                    // expected-note@-2{{'?' condition is false}}
-                                   // expected-warning@-3{{Use of memory after it is freed}}
-                                   // expected-note@-4{{Use of memory after it is freed}}
+                                   // expected-warning@-3{{Use of memory after it is released}}
+                                   // expected-note@-4{{Use of memory after it is released}}
   }
 };
 

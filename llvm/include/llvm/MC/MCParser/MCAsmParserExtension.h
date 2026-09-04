@@ -17,6 +17,7 @@
 
 namespace llvm {
 
+class MCLFIRewriter;
 class Twine;
 
 /// Generic interface for extending the MCAsmParser,
@@ -119,6 +120,15 @@ public:
 
   /// @}
 };
+
+LLVM_ABI MCAsmParserExtension *createDarwinAsmParser();
+LLVM_ABI MCAsmParserExtension *createELFAsmParser();
+LLVM_ABI MCAsmParserExtension *createCOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createCOFFMasmParser();
+LLVM_ABI MCAsmParserExtension *createGOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createXCOFFAsmParser();
+LLVM_ABI MCAsmParserExtension *createWasmAsmParser();
+LLVM_ABI MCAsmParserExtension *createLFIAsmParser(MCLFIRewriter *Exp);
 
 } // end namespace llvm
 

@@ -1,4 +1,4 @@
-// Ensure the path to the modulemap input is included in the module context hash
+// Ensure the path to the modulemap input is included in the context hash
 // irrespective of other TU command-line arguments, as it effects the canonical
 // module build command. In this test we use the difference in spelling between
 // module.modulemap and module.map, but it also applies to situations such as

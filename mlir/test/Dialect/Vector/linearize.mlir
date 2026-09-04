@@ -140,7 +140,7 @@ func.func @test_extract_strided_slice_2D(%arg0 : vector<4x8xf32>) -> vector<2x2x
   // CHECK-SAME: [4, 5, 12, 13] : vector<32xf32>, vector<32xf32>
   // CHECK: %[[RES:.*]] = vector.shape_cast %[[SHUFFLE]] : vector<4xf32> to vector<2x2xf32>
   // CHECK: return %[[RES]] : vector<2x2xf32
-  %0 = vector.extract_strided_slice %arg0 { sizes = [2, 2], strides = [1, 1], offsets = [0, 4]}
+  %0 = vector.extract_strided_slice %arg0 offsets = [0, 4], sizes = [2, 2], strides = [1, 1]
      : vector<4x8xf32> to vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
@@ -154,7 +154,7 @@ func.func @test_extract_strided_slice_2D_scalable(%arg0: vector<4x[8]xf32>) -> v
   // CHECK-NOT: vector.shuffle
   // CHECK-NOT: vector.shape_cast
   // CHECK: %[[RES:.*]] = vector.extract_strided_slice %[[VAL_0]]
-  %0 = vector.extract_strided_slice %arg0 { sizes = [2, 8], strides = [1, 1], offsets = [1, 0] } : vector<4x[8]xf32> to vector<2x[8]xf32>
+  %0 = vector.extract_strided_slice %arg0 offsets = [1, 0], sizes = [2, 8], strides = [1, 1] : vector<4x[8]xf32> to vector<2x[8]xf32>
 
   // CHECK: return %[[RES]] : vector<2x[8]xf32>
   return %0 : vector<2x[8]xf32>
@@ -171,7 +171,7 @@ func.func @test_extract_strided_slice_3D(%arg0 : vector<2x8x2xf32>) -> vector<1x
   // CHECK-SAME: [20, 21, 22, 23, 24, 25, 26, 27] : vector<32xf32>, vector<32xf32>
   // CHECK: %[[RES:.*]] = vector.shape_cast %[[SHUFFLE]] : vector<8xf32> to vector<1x4x2xf32>
   // CHECK: return %[[RES]] : vector<1x4x2xf32>
-  %0 = vector.extract_strided_slice %arg0 { offsets = [1, 2], strides = [1, 1], sizes = [1, 4] }
+  %0 = vector.extract_strided_slice %arg0 offsets = [1, 2], sizes = [1, 4], strides = [1, 1]
     : vector<2x8x2xf32> to vector<1x4x2xf32>
   return %0 : vector<1x4x2xf32>
 }
@@ -187,7 +187,7 @@ func.func @insert_strided_slice_2D_into_4D(%arg0 : vector<2x2xi8>, %arg1 : vecto
 //   CHECK-DAG:    %[[ARG1:.*]] = vector.shape_cast {{.*}}  to vector<12xi8>
 //       CHECK:    vector.shuffle %[[ARG1]], %[[ARG0]]
 //  CHECK-SAME:      [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 10, 11] : vector<12xi8>, vector<4xi8>
-  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [1, 0, 0, 0], strides = [1, 1]} : vector<2x2xi8> into vector<2x1x3x2xi8>
+  %0 = vector.insert_strided_slice %arg0, %arg1 offsets = [1, 0, 0, 0], strides = [1, 1] : vector<2x2xi8> into vector<2x1x3x2xi8>
 
 //       CHECK:    %[[RES:.*]] = vector.shape_cast {{.*}} to vector<2x1x3x2xi8>
 //       CHECK:    return %[[RES]] : vector<2x1x3x2xi8>
@@ -208,7 +208,7 @@ func.func @insert_strided_slice_3D(%arg0 : vector<1x2x1xi8>, %arg1 : vector<3x3x
 //   CHECK-DAG:     %[[ARG1:.*]] = vector.shape_cast {{.*}}  to vector<18xi8>
 //       CHECK:     vector.shuffle %[[ARG1]], %[[ARG0]]
 //  CHECK-SAME:       [0, 1, 2, 3, 4, 5, 6, 7, 8, 18, 10, 19, 12, 13, 14, 15, 16, 17] : vector<18xi8>, vector<2xi8>
-  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [1, 1, 1], sizes = [1, 2, 1], strides = [1, 1, 1]} : vector<1x2x1xi8> into vector<3x3x2xi8>
+  %0 = vector.insert_strided_slice %arg0, %arg1 offsets = [1, 1, 1], strides = [1, 1, 1] {sizes = [1, 2, 1]} : vector<1x2x1xi8> into vector<3x3x2xi8>
 
 //       CHECK:     %[[RES:.*]] = vector.shape_cast {{.*}} to vector<3x3x2xi8>
 //       CHECK:     return %[[RES]] : vector<3x3x2xi8>
@@ -223,15 +223,15 @@ func.func @insert_strided_slice_2D_higher_offsets(%arg0 : vector<2x1xi8>, %arg1 
   // CHECK: [0, 1, 2, 3, 10, 11, 12, 13, 8, 9]
   //                     ^^^ ^^^ ^^^ ^^^
   //                    insertion indices
-  %0 = vector.insert_strided_slice %arg1, %arg2 {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<2x2xi8> into vector<5x2xi8>
+  %0 = vector.insert_strided_slice %arg1, %arg2 offsets = [2, 0], strides = [1, 1] {sizes = [2, 2]} : vector<2x2xi8> into vector<5x2xi8>
 
   // CHECK: [0, 1, 2, 3, 10, 5, 11, 7, 8, 9]
   //                     ^^^    ^^^
-  %1 = vector.insert_strided_slice %arg0, %0 {offsets = [2, 0], sizes = [2, 1], strides = [1, 1]} : vector<2x1xi8> into vector<5x2xi8>
+  %1 = vector.insert_strided_slice %arg0, %0 offsets = [2, 0], strides = [1, 1] {sizes = [2, 1]} : vector<2x1xi8> into vector<5x2xi8>
 
   // CHECK: [0, 1, 2, 3, 4, 5, 6, 10, 8, 11]
   //                              ^^^    ^^^
-  %2 = vector.insert_strided_slice %arg0, %1 {offsets = [3, 1], sizes = [2, 1], strides = [1, 1]} : vector<2x1xi8> into vector<5x2xi8>
+  %2 = vector.insert_strided_slice %arg0, %1 offsets = [3, 1], strides = [1, 1] {sizes = [2, 1]} : vector<2x1xi8> into vector<5x2xi8>
 
   return %2 : vector<5x2xi8>
 }
@@ -242,7 +242,7 @@ func.func @insert_strided_slice_2D_higher_offsets(%arg0 : vector<2x1xi8>, %arg1 
 // CHECK-NOT:   vector.shuffle
 // CHECK:       return
 func.func @negative_insert_strided_slice_scalable(%arg0 : vector<1x[2]xi8>, %arg1 : vector<2x[2]xi8>) -> vector<2x[2]xi8> {
-  %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [0, 0], strides = [1,1]} : vector<1x[2]xi8> into vector<2x[2]xi8>
+  %0 = vector.insert_strided_slice %arg0, %arg1 offsets = [0, 0], strides = [1,1] : vector<1x[2]xi8> into vector<2x[2]xi8>
   return %0 : vector<2x[2]xi8>
 }
 
@@ -428,27 +428,41 @@ func.func @test_linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
 
 // -----
 
-// CHECK-LABEL: linearize_vector_splat
+// CHECK-LABEL: linearize_vector_broadcast_scalar_source
 // CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x2xi32>
-func.func @linearize_vector_splat(%arg0: i32) -> vector<4x2xi32> {
+func.func @linearize_vector_broadcast_scalar_source(%arg0: i32) -> vector<4x2xi32> {
 
-  // CHECK: %[[SPLAT:.*]] = vector.splat %[[ARG]] : vector<8xi32>
-  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[SPLAT]] : vector<8xi32> to vector<4x2xi32>
+  // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[ARG]] : i32 to vector<8xi32>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[BROADCAST]] : vector<8xi32> to vector<4x2xi32>
   // CHECK: return %[[CAST]] : vector<4x2xi32>
-  %0 = vector.splat %arg0 : vector<4x2xi32>
+  %0 = vector.broadcast %arg0 : i32 to vector<4x2xi32>
   return %0 : vector<4x2xi32>
 }
 
 // -----
 
-// CHECK-LABEL: linearize_scalable_vector_splat
-// CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x[2]xi32>
-func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
+// CHECK-LABEL: linearize_vector_broadcast_rank_two_source
+// CHECK-SAME: (%[[ARG:.*]]: vector<1x1xi32>) -> vector<4x2xi32>
+func.func @linearize_vector_broadcast_rank_two_source(%arg0: vector<1x1xi32>) -> vector<4x2xi32> {
 
-  // CHECK: %[[SPLAT:.*]] = vector.splat %[[ARG]] : vector<[8]xi32>
-  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[SPLAT]] : vector<[8]xi32> to vector<4x[2]xi32>
+  // CHECK: %[[CAST0:.*]] = vector.shape_cast %[[ARG]] : vector<1x1xi32> to vector<1xi32>
+  // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[CAST0]] : vector<1xi32> to vector<8xi32>
+  // CHECK: %[[CAST1:.*]] = vector.shape_cast %[[BROADCAST]] : vector<8xi32> to vector<4x2xi32>
+  // CHECK: return %[[CAST1]] : vector<4x2xi32>
+  %0 = vector.broadcast %arg0 : vector<1x1xi32> to vector<4x2xi32>
+  return %0 : vector<4x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: linearize_scalable_vector_broadcast
+// CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x[2]xi32>
+func.func @linearize_scalable_vector_broadcast(%arg0: i32) -> vector<4x[2]xi32> {
+
+  // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[ARG]] : i32 to vector<[8]xi32>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[BROADCAST]] : vector<[8]xi32> to vector<4x[2]xi32>
   // CHECK: return %[[CAST]] : vector<4x[2]xi32>
-  %0 = vector.splat %arg0 : vector<4x[2]xi32>
+  %0 = vector.broadcast %arg0 : i32 to vector<4x[2]xi32>
   return %0 : vector<4x[2]xi32>
 
 }
@@ -523,4 +537,69 @@ func.func @linearize_vector_store_scalable(%arg0: memref<2x8xf32>, %arg1: vector
   %c0 = arith.constant 0 : index
   vector.store %arg1, %arg0[%c0, %c0] : memref<2x8xf32>, vector<1x[4]xf32>
   return
+}
+
+// -----
+
+// Test pattern LinearizeVectorFromElements.
+
+// CHECK-LABEL: test_vector_from_elements
+// CHECK-SAME: %[[ARG_0:.*]]: f32, %[[ARG_1:.*]]: f32, %[[ARG_2:.*]]: f32, %[[ARG_3:.*]]: f32
+func.func @test_vector_from_elements(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32) -> vector<2x2xf32> {
+  // CHECK: %[[FROM_ELEMENTS:.*]] = vector.from_elements %[[ARG_0]], %[[ARG_1]], %[[ARG_2]], %[[ARG_3]] : vector<4xf32>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[FROM_ELEMENTS]] : vector<4xf32> to vector<2x2xf32>
+  // CHECK: return %[[CAST]] : vector<2x2xf32>
+  %1 = vector.from_elements %arg0, %arg1, %arg2, %arg3 : vector<2x2xf32>
+  return %1 : vector<2x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @to_elements_1d(
+// CHECK-SAME:    %[[ARG0:.+]]: vector<2xf32>
+// CHECK:         %[[RES:.+]]:2 = vector.to_elements %[[ARG0]] : vector<2xf32>
+// CHECK:         return %[[RES]]#0, %[[RES]]#1
+func.func @to_elements_1d(%arg0: vector<2xf32>) -> (f32, f32) {
+  %0:2 = vector.to_elements %arg0 : vector<2xf32>
+  return %0#0, %0#1 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @to_elements_2d(
+// CHECK-SAME:    %[[ARG0:.+]]: vector<2x2xf32>
+// CHECK:         %[[CAST:.+]] = vector.shape_cast %[[ARG0]]
+// CHECK:         %[[RES:.+]]:4 = vector.to_elements %[[CAST]] : vector<4xf32>
+// CHECK:         return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2, %[[RES]]#3
+func.func @to_elements_2d(%arg0: vector<2x2xf32>) -> (f32, f32, f32, f32) {
+  %0:4 = vector.to_elements %arg0 : vector<2x2xf32>
+  return %0#0, %0#1, %0#2, %0#3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: linearize_vector_interleave
+// CHECK-SAME: (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<2x4xf32>) -> vector<2x8xf32>
+func.func @linearize_vector_interleave(%arg0: vector<2x4xf32>, %arg1: vector<2x4xf32>) -> vector<2x8xf32> {
+  // CHECK-DAG: %[[LHS:.*]] = vector.shape_cast %[[ARG0]] : vector<2x4xf32> to vector<8xf32>
+  // CHECK-DAG: %[[RHS:.*]] = vector.shape_cast %[[ARG1]] : vector<2x4xf32> to vector<8xf32>
+  // CHECK: %[[INTERLEAVE:.*]] = vector.interleave %[[LHS]], %[[RHS]] : vector<8xf32> -> vector<16xf32>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[INTERLEAVE]] : vector<16xf32> to vector<2x8xf32>
+  // CHECK: return %[[CAST]] : vector<2x8xf32>
+  %0 = vector.interleave %arg0, %arg1 : vector<2x4xf32> -> vector<2x8xf32>
+  return %0 : vector<2x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: linearize_vector_deinterleave
+// CHECK-SAME: (%[[ARG0:.*]]: vector<2x8xf32>) -> (vector<2x4xf32>, vector<2x4xf32>)
+func.func @linearize_vector_deinterleave(%arg0: vector<2x8xf32>) -> (vector<2x4xf32>, vector<2x4xf32>) {
+  // CHECK: %[[SRC:.*]] = vector.shape_cast %[[ARG0]] : vector<2x8xf32> to vector<16xf32>
+  // CHECK: %[[EVEN:.*]], %[[ODD:.*]] = vector.deinterleave %[[SRC]] : vector<16xf32> -> vector<8xf32>
+  // CHECK: %[[ODD_CAST:.*]] = vector.shape_cast %[[ODD]] : vector<8xf32> to vector<2x4xf32>
+  // CHECK: %[[EVEN_CAST:.*]] = vector.shape_cast %[[EVEN]] : vector<8xf32> to vector<2x4xf32>
+  // CHECK: return %[[EVEN_CAST]], %[[ODD_CAST]] : vector<2x4xf32>, vector<2x4xf32>
+  %even, %odd = vector.deinterleave %arg0 : vector<2x8xf32> -> vector<2x4xf32>
+  return %even, %odd : vector<2x4xf32>, vector<2x4xf32>
 }

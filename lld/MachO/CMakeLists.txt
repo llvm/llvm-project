@@ -29,6 +29,7 @@ add_lld_library(lldMachO
   BPSectionOrderer.cpp
   SectionPriorities.cpp
   Sections.cpp
+  StripSwiftForceLoad.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp
@@ -59,6 +60,7 @@ add_lld_library(lldMachO
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${LLVM_ATOMIC_LIB}
 
   DEPENDS
   MachOOptionsTableGen

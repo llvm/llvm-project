@@ -11,29 +11,38 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "WebAssemblySelectionDAGInfo.h"
 #include "WebAssemblyTargetMachine.h"
+
+#define GET_SDNODE_DESC
+#include "WebAssemblyGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-selectiondag-info"
 
+WebAssemblySelectionDAGInfo::WebAssemblySelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(WebAssemblyGenSDNodeInfo) {}
+
 WebAssemblySelectionDAGInfo::~WebAssemblySelectionDAGInfo() = default; // anchor
 
-bool WebAssemblySelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+const char *
+WebAssemblySelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
-  default:
-    return false;
-  case WebAssemblyISD::GLOBAL_GET:
-  case WebAssemblyISD::GLOBAL_SET:
-  case WebAssemblyISD::TABLE_GET:
-  case WebAssemblyISD::TABLE_SET:
-    return true;
+  case WebAssemblyISD::CALL:
+    return "WebAssemblyISD::CALL";
+  case WebAssemblyISD::RET_CALL:
+    return "WebAssemblyISD::RET_CALL";
   }
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
 }
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool IsVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
   auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
   if (!ST.hasBulkMemoryOpt())
     return SDValue();
@@ -51,11 +60,11 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1, SDValue Op2,
-    SDValue Op3, Align Alignment, bool IsVolatile,
+    SDValue Op3, Align DstAlign, Align SrcAlign, bool IsVolatile,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
-  return EmitTargetCodeForMemcpy(DAG, DL, Chain, Op1, Op2, Op3,
-                                 Alignment, IsVolatile, false,
-                                 DstPtrInfo, SrcPtrInfo);
+  return EmitTargetCodeForMemcpy(DAG, DL, Chain, Op1, Op2, Op3, DstAlign,
+                                 SrcAlign, IsVolatile, false, DstPtrInfo,
+                                 SrcPtrInfo);
 }
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemset(

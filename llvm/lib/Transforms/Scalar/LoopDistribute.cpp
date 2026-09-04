@@ -65,7 +65,6 @@
 #include <cassert>
 #include <list>
 #include <tuple>
-#include <utility>
 
 using namespace llvm;
 
@@ -112,6 +111,8 @@ static cl::opt<bool> EnableLoopDistribute(
     "enable-loop-distribute", cl::Hidden,
     cl::desc("Enable the new, experimental LoopDistribution Pass"),
     cl::init(false));
+
+static const char *DistributedMetaData = "llvm.loop.isdistributed";
 
 STATISTIC(NumLoopsDistributed, "Number of loops distributed");
 
@@ -217,7 +218,7 @@ public:
           if (!VMap.empty())
             NewInst = cast<Instruction>(VMap[NewInst]);
 
-          assert(!isa<BranchInst>(NewInst) &&
+          assert((!isa<UncondBrInst, CondBrInst>(NewInst)) &&
                  "Branches are marked used early on");
           Unused.push_back(NewInst);
         }
@@ -502,8 +503,10 @@ public:
     SmallVector<int, 8> PtrToPartitions(N);
     for (unsigned I = 0; I < N; ++I) {
       Value *Ptr = RtPtrCheck->Pointers[I].PointerValue;
-      auto Instructions =
-          LAI.getInstructionsForAccess(Ptr, RtPtrCheck->Pointers[I].IsWritePtr);
+      auto Instructions = LAI.getInstructionsForAccess(Ptr, /* IsWrite */ true);
+      auto ReadInstructions =
+          LAI.getInstructionsForAccess(Ptr, /* IsWrite */ false);
+      Instructions.append(ReadInstructions.begin(), ReadInstructions.end());
 
       int &Partition = PtrToPartitions[I];
       // First set it to uninitialized.
@@ -517,7 +520,7 @@ public:
         // -1 means belonging to multiple partitions.
         else if (Partition == -1)
           break;
-        else if (Partition != (int)ThisPartition)
+        else if (Partition != ThisPartition)
           Partition = -1;
       }
       assert(Partition != -2 && "Pointer not belonging to any partition");
@@ -812,6 +815,9 @@ public:
 
       LLVM_DEBUG(dbgs() << "LDist: Pointers:\n");
       LLVM_DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, SE);
       LoopVersioning LVer(*LAI, Checks, L, LI, DT, SE);
       LVer.versionLoop(DefsUsedOutside);
       LVer.annotateLoopWithNoAlias();
@@ -824,6 +830,8 @@ public:
           {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
           "llvm.loop.distribute.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
+      addStringMetadataToLoop(LVer.getNonVersionedLoop(), DistributedMetaData,
+                              true);
     }
 
     // Create identical copies of the original loop for each partition and hook
@@ -837,7 +845,7 @@ public:
     LLVM_DEBUG(Partitions.printBlocks(dbgs()));
 
     if (LDistVerify) {
-      LI->verify(*DT);
+      LI->verify();
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
     }
 
@@ -933,14 +941,10 @@ private:
   /// Check whether the loop metadata is forcing distribution to be
   /// enabled/disabled.
   void setForced() {
-    std::optional<const MDOperand *> Value =
-        findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
-    if (!Value)
-      return;
-
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    IsForced = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+    if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
+      IsForced = true;
+    else if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+      IsForced = false;
   }
 
   Loop *L;
@@ -983,6 +987,13 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
   bool Changed = false;
   for (Loop *L : Worklist) {
     LoopDistributeForLoop LDL(L, &F, LI, DT, SE, LAIs, ORE);
+
+    // Do not reprocess loops we already distributed
+    if (getOptionalBoolLoopAttribute(L, DistributedMetaData).value_or(false)) {
+      LLVM_DEBUG(
+          dbgs() << "LDist: Distributed loop guarded for reprocessing\n");
+      continue;
+    }
 
     // If distribution was forced for the specific loop to be
     // enabled/disabled, follow that.  Otherwise use the global flag.

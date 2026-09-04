@@ -8,8 +8,10 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
+  LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS
+  CIRLowering
   MLIRCIREnumsGen
   MLIRCIROpsIncGen
   MLIRCIROpInterfacesIncGen
@@ -18,7 +20,16 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   clangCIRLoweringCommon
   ${dialect_libs}
   MLIRCIR
+  MLIRCIRTargetLowering
+  MLIRCIRTransforms
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
+  MLIROpenMPToLLVM
+  MLIROpenMPToLLVMIRTranslation
+  MLIROpenMPTransforms
   MLIRIR
+  )
+
+target_include_directories(clangCIRLoweringDirectToLLVM PRIVATE
+  ${CLANG_SOURCE_DIR}/lib/CIR/Dialect/Transforms/TargetLowering
   )

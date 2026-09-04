@@ -57,12 +57,10 @@ protected:
   void createSanitizerSections();
 
   struct SanitizerSection {
-    SanitizerSection(SanitizerMask SM, SectionEntries &E, unsigned idx)
-        : Mask(SM), Entries(E), FileIdx(idx) {};
+    SanitizerSection(SanitizerMask SM, const Section &S) : Mask(SM), S(S) {};
 
     SanitizerMask Mask;
-    SectionEntries &Entries;
-    unsigned FileIdx;
+    const Section &S;
   };
 
   std::vector<SanitizerSection> SanitizerSections;

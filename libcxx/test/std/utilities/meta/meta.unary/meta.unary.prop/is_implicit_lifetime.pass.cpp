@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-
-// These compilers don't support __builtin_is_implicit_lifetime yet.
-// UNSUPPORTED: clang-19, gcc-14, gcc-15, apple-clang-16, apple-clang-17
+// REQUIRES: std-at-least-c++23
 
 // <type_traits>
 
@@ -17,9 +14,12 @@
 
 #include <cassert>
 #include <cstddef>
+#include <expected>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "test_macros.h"
 #include "type_algorithms.h"
@@ -35,10 +35,10 @@ enum class UnsignedEnumClass : unsigned int {};
 struct EmptyStruct {};
 struct IncompleteStruct;
 
-struct NoEligibleTrivialContructor {
-  NoEligibleTrivialContructor() {};
-  NoEligibleTrivialContructor(const NoEligibleTrivialContructor&) {}
-  NoEligibleTrivialContructor(NoEligibleTrivialContructor&&) {}
+struct NoEligibleTrivialConstructor {
+  NoEligibleTrivialConstructor() {};
+  NoEligibleTrivialConstructor(const NoEligibleTrivialConstructor&) {}
+  NoEligibleTrivialConstructor(NoEligibleTrivialConstructor&&) {}
 };
 
 struct OnlyDefaultConstructorIsTrivial {
@@ -47,22 +47,22 @@ struct OnlyDefaultConstructorIsTrivial {
   OnlyDefaultConstructorIsTrivial(OnlyDefaultConstructorIsTrivial&&) {}
 };
 
-struct AllContstructorsAreTrivial {
-  AllContstructorsAreTrivial()                                  = default;
-  AllContstructorsAreTrivial(const AllContstructorsAreTrivial&) = default;
-  AllContstructorsAreTrivial(AllContstructorsAreTrivial&&)      = default;
+struct AllConstructorsAreTrivial {
+  AllConstructorsAreTrivial()                                 = default;
+  AllConstructorsAreTrivial(const AllConstructorsAreTrivial&) = default;
+  AllConstructorsAreTrivial(AllConstructorsAreTrivial&&)      = default;
 };
 
-struct InheritedNoEligibleTrivialConstructor : NoEligibleTrivialContructor {
-  using NoEligibleTrivialContructor::NoEligibleTrivialContructor;
+struct InheritedNoEligibleTrivialConstructor : NoEligibleTrivialConstructor {
+  using NoEligibleTrivialConstructor::NoEligibleTrivialConstructor;
 };
 
 struct InheritedOnlyDefaultConstructorIsTrivial : OnlyDefaultConstructorIsTrivial {
   using OnlyDefaultConstructorIsTrivial::OnlyDefaultConstructorIsTrivial;
 };
 
-struct InheritedAllContstructorsAreTrivial : AllContstructorsAreTrivial {
-  using AllContstructorsAreTrivial::AllContstructorsAreTrivial;
+struct InheritedAllConstructorsAreTrivial : AllConstructorsAreTrivial {
+  using AllConstructorsAreTrivial::AllConstructorsAreTrivial;
 };
 
 struct UserDeclaredDestructor {
@@ -136,13 +136,6 @@ constexpr void test_is_implicit_lifetime() {
   test_is_implicit_lifetime<T[94], true>();
 }
 
-struct AritmeticTypesTest {
-  template <class T>
-  constexpr void operator()() {
-    test_is_implicit_lifetime<T>();
-  }
-};
-
 constexpr bool test() {
   // Standard fundamental C++ types
 
@@ -152,7 +145,7 @@ constexpr bool test() {
   test_is_implicit_lifetime<const void, false>();
   test_is_implicit_lifetime<volatile void, false>();
 
-  types::for_each(types::arithmetic_types(), AritmeticTypesTest{});
+  types::for_each(types::arithmetic_types(), []<typename T> { test_is_implicit_lifetime<T>(); });
 
   test_is_implicit_lifetime<Enum>();
   test_is_implicit_lifetime<SignedEnum>();
@@ -184,17 +177,17 @@ constexpr bool test() {
 
   test_is_implicit_lifetime<UserProvidedDestructor, false>();
 
-  test_is_implicit_lifetime<NoEligibleTrivialContructor, false>();
+  test_is_implicit_lifetime<NoEligibleTrivialConstructor, false>();
 
   test_is_implicit_lifetime<OnlyDefaultConstructorIsTrivial, true>();
 
-  test_is_implicit_lifetime<AllContstructorsAreTrivial, true>();
+  test_is_implicit_lifetime<AllConstructorsAreTrivial, true>();
 
   test_is_implicit_lifetime<InheritedNoEligibleTrivialConstructor, false>();
 
   test_is_implicit_lifetime<InheritedOnlyDefaultConstructorIsTrivial, true>();
 
-  test_is_implicit_lifetime<InheritedAllContstructorsAreTrivial, true>();
+  test_is_implicit_lifetime<InheritedAllConstructorsAreTrivial, true>();
 
   test_is_implicit_lifetime<UserDeletedDestructorInAggregate, true>();
 
@@ -205,7 +198,9 @@ constexpr bool test() {
   test_is_implicit_lifetime<DeletedDestructorViaBaseInNonAggregate, false>();
 
   test_is_implicit_lifetime<ConstrainedUserDeclaredDefaultConstructor<true>, true>();
+#if !defined(TEST_COMPILER_GCC) || TEST_GCC_VER >= 160200 // This is https://gcc.gnu.org/bugzilla/show_bug.cgi?id=126007
   test_is_implicit_lifetime<ConstrainedUserDeclaredDefaultConstructor<false>, false>();
+#endif
 
   test_is_implicit_lifetime<ConstrainedUserProvidedDestructor<true>, false>();
   test_is_implicit_lifetime<ConstrainedUserProvidedDestructor<false>, true>();
@@ -216,8 +211,18 @@ constexpr bool test() {
 
   // C++ standard library types
 
+  // These types are guaranteed to be implicit-lifetime.
+  test_is_implicit_lifetime<std::expected<int, float>>();
+  test_is_implicit_lifetime<std::optional<float>>();
+  test_is_implicit_lifetime<std::variant<float, int>>();
+
+#ifdef _LIBCPP_VERSION
+  // These types should be implicit-lifetime, but they are not guaranteed to be so.
+#  ifndef _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
   test_is_implicit_lifetime<std::pair<int, float>>();
+#  endif
   test_is_implicit_lifetime<std::tuple<int, float>>();
+#endif
 
   // Standard C23 types
 

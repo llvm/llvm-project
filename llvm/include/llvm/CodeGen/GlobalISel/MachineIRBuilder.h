@@ -34,7 +34,8 @@ class ConstantInt;
 class DataLayout;
 class GISelCSEInfo;
 class GlobalValue;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class MachineFunction;
 class MachineInstr;
 class TargetInstrInfo;
@@ -56,6 +57,7 @@ struct MachineIRBuilderState {
   MDNode *PCSections = nullptr;
   /// MMRA Metadata to be set on any instruction we create.
   MDNode *MMRA = nullptr;
+  Value *DS = nullptr;
 
   /// \name Fields describing the insertion point.
   /// @{
@@ -369,6 +371,7 @@ public:
     State.II = MI.getIterator();
     setPCSections(MI.getPCSections());
     setMMRAMetadata(MI.getMMRAMetadata());
+    setDeactivationSymbol(MI.getDeactivationSymbol());
   }
   /// @}
 
@@ -404,6 +407,9 @@ public:
 
   /// Set the PC sections metadata to \p MD for all the next build instructions.
   void setMMRAMetadata(MDNode *MMRA) { State.MMRA = MMRA; }
+
+  Value *getDeactivationSymbol() { return State.DS; }
+  void setDeactivationSymbol(Value *DS) { State.DS = DS; }
 
   /// Get the current instruction's MMRA metadata.
   MDNode *getMMRAMetadata() { return State.MMRA; }
@@ -518,6 +524,21 @@ public:
                                   const SrcOp &Op1,
                                   std::optional<unsigned> Flags = std::nullopt);
 
+  /// Build and insert an instruction with appropriate flags for addressing some
+  /// offset of an object, i.e.: \p Res = nuw inbounds G_PTR_ADD \p Op0, \p Op1
+  /// The value of \p Op0 must be a pointer into or just after an object, adding
+  /// the value of \p Op1 to it must yield to a pointer into or just after the
+  /// same object.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res and \p Op0 must be generic virtual registers with pointer
+  ///      type.
+  /// \pre \p Op1 must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildObjectPtrOffset(const DstOp &Res, const SrcOp &Op0,
+                                           const SrcOp &Op1);
+
   /// Materialize and insert \p Res = G_PTR_ADD \p Op0, (G_CONSTANT \p Value)
   ///
   /// G_PTR_ADD adds \p Value bytes to the pointer specified by \p Op0,
@@ -534,10 +555,29 @@ public:
   ///       type as \p Op0 or \p Op0 itself.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  std::optional<MachineInstrBuilder> materializePtrAdd(Register &Res,
-                                                       Register Op0,
-                                                       const LLT ValueTy,
-                                                       uint64_t Value);
+  std::optional<MachineInstrBuilder>
+  materializePtrAdd(Register &Res, Register Op0, const LLT ValueTy,
+                    uint64_t Value,
+                    std::optional<unsigned> Flags = std::nullopt);
+
+  /// Materialize and insert an instruction with appropriate flags for
+  /// addressing some offset of an object, i.e.:
+  ///   \p Res = nuw inbounds G_PTR_ADD \p Op0, (G_CONSTANT \p Value)
+  /// The value of \p Op0 must be a pointer into or just after an object, adding
+  /// \p Value to it must yield to a pointer into or just after the same object.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Op0 must be a generic virtual register with pointer type.
+  /// \pre \p ValueTy must be a scalar type.
+  /// \pre \p Res must be 0. This is to detect confusion between
+  ///      materializeObjectPtrOffset() and buildObjectPtrOffset().
+  /// \post \p Res will either be a new generic virtual register of the same
+  ///       type as \p Op0 or \p Op0 itself.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  std::optional<MachineInstrBuilder>
+  materializeObjectPtrOffset(Register &Res, Register Op0, const LLT ValueTy,
+                             uint64_t Value);
 
   /// Build and insert \p Res = G_PTRMASK \p Op0, \p Op1
   MachineInstrBuilder buildPtrMask(const DstOp &Res, const SrcOp &Op0,
@@ -1043,6 +1083,19 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildStore(const SrcOp &Val, const SrcOp &Addr,
                                  MachineMemOperand &MMO);
+
+  /// Build and insert `<opcode> Val, Addr, MMO`.
+  ///
+  /// Stores the value \p Val to \p Addr.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Val must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildStoreInstr(unsigned Opcode, const SrcOp &Val,
+                                      const SrcOp &Addr,
+                                      MachineMemOperand &MMO);
 
   /// Build and insert a G_STORE instruction, while constructing the
   /// MachineMemOperand.
@@ -1742,41 +1795,6 @@ public:
                                              const SrcOp &Val,
                                              MachineMemOperand &MMO);
 
-  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_COND Addr, Val, MMO`.
-  ///
-  /// Atomically replace the value at \p Addr with the original value minus \p
-  /// Val if the original value is greater than or equal to \p Val, or leaves it
-  /// unchanged otherwise. Puts the original value from \p Addr in \p OldValRes.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p OldValRes must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
-  ///      same type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUSubCond(const DstOp &OldValRes,
-                                             const SrcOp &Addr,
-                                             const SrcOp &Val,
-                                             MachineMemOperand &MMO);
-
-  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_SAT Addr, Val, MMO`.
-  ///
-  /// Atomically replace the value at \p Addr with the original value minus \p
-  /// Val, with clamping to zero if the unsigned subtraction would overflow.
-  /// Puts the original value from \p Addr in \p OldValRes.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p OldValRes must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
-  ///      same type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUSubSat(const DstOp &OldValRes,
-                                            const SrcOp &Addr, const SrcOp &Val,
-                                            MachineMemOperand &MMO);
-
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);
 
@@ -2009,9 +2027,10 @@ public:
     return buildInstr(TargetOpcode::G_CTLZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTLZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTLZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTLZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {Dst}, {Src0});
   }
 
   /// Build and insert \p Res = G_CTTZ \p Op0, \p Src0
@@ -2019,9 +2038,15 @@ public:
     return buildInstr(TargetOpcode::G_CTTZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTTZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTTZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTTZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Res = G_CTLS \p Op0, \p Src0
+  MachineInstrBuilder buildCTLS(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLS, {Dst}, {Src0});
   }
 
   /// Build and insert \p Dst = G_BSWAP \p Src0
@@ -2150,10 +2175,18 @@ public:
     return buildInstr(TargetOpcode::G_FSINCOS, {Sin, Cos}, {Src}, Flags);
   }
 
+  /// Build and insert \p Fract, \p Int = G_FMODF \p Src
+  MachineInstrBuilder buildModf(const DstOp &Fract, const DstOp &Int,
+                                const SrcOp &Src,
+                                std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FMODF, {Fract, Int}, {Src}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
-  MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
-                                     const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1});
+  MachineInstrBuilder
+  buildFCopysign(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_UITOFP \p Src0
@@ -2184,6 +2217,12 @@ public:
   /// Build and insert \p Res = G_FPTOSI_SAT \p Src0
   MachineInstrBuilder buildFPTOSI_SAT(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_FPTOSI_SAT, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Dst = G_FRINT \p Src0
+  MachineInstrBuilder buildFRint(const DstOp &Dst, const SrcOp &Src0,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FRINT, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_INTRINSIC_ROUNDEVEN \p Src0, \p Src1
@@ -2427,6 +2466,11 @@ public:
   /// Build and insert \p Dst = G_GET_ROUNDING
   MachineInstrBuilder buildGetRounding(const DstOp &Dst) {
     return buildInstr(TargetOpcode::G_GET_ROUNDING, {Dst}, {});
+  }
+
+  /// Build and insert G_SET_ROUNDING
+  MachineInstrBuilder buildSetRounding(const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_SET_ROUNDING, {}, {Src});
   }
 
   virtual MachineInstrBuilder

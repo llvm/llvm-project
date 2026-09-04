@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // test <float.h>
+//
+// Even though <float.h> is not provided by libc++, we still test that using it
+// with libc++ on the search path will work, and that it provides the necessary
+// content.
 
 #include <float.h>
 
@@ -16,8 +20,10 @@
 #error FLT_ROUNDS not defined
 #endif
 
+#if TEST_STD_VER >= 11
 #ifndef FLT_EVAL_METHOD
 #error FLT_EVAL_METHOD not defined
+#endif
 #endif
 
 #ifndef FLT_RADIX
@@ -50,8 +56,10 @@
 #error LDBL_MANT_DIG not defined
 #endif
 
+#if TEST_STD_VER >= 11
 #ifndef DECIMAL_DIG
 #error DECIMAL_DIG not defined
+#endif
 #endif
 
 #if TEST_STD_VER > 14

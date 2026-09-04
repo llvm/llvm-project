@@ -7,7 +7,7 @@ void test_extensions(bool a, char b, short c) {}
 
 struct Empty {};
 void test_empty(Empty e) {}
-// CHECK: define{{.*}} void @_Z10test_empty5Empty(i8
+// CHECK: define{{.*}} void @_Z10test_empty5Empty(i64 %e.coerce)
 // CHECK-DARWIN: define{{.*}} void @_Z10test_empty5Empty()
 
 struct HFA {

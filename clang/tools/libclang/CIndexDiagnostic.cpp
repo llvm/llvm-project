@@ -27,6 +27,9 @@ using namespace clang::cxloc;
 using namespace clang::cxdiag;
 using namespace llvm;
 
+CXDiagnosticSetImpl::CXDiagnosticSetImpl(bool isManaged)
+    : IsExternallyManaged(isManaged) {}
+
 CXDiagnosticSetImpl::~CXDiagnosticSetImpl() {}
 
 void

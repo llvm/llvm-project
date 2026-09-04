@@ -63,7 +63,7 @@ template <class CharT>
 static void test() {
   // Note std::atto can't be tested since the ratio conversion from std::atto
   // std::chrono::seconds to std::chrono::hours overflows when intmax_t is a
-  // 64-bit type. This is a limitiation in the constructor of
+  // 64-bit type. This is a limitation in the constructor of
   // std::chrono::hh_mm_ss.
 
   // C locale - integral power of 10 ratios

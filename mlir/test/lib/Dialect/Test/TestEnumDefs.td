@@ -27,9 +27,10 @@ def SomeI32Enum : I32EnumAttr<"SomeI32Enum", "",
 
 def I64Case5:  I64EnumAttrCase<"case5", 5>;
 def I64Case10: I64EnumAttrCase<"case10", 10>;
+def I64Case1p32 : I64EnumAttrCase<"caseLarse", 4294967296>;
 
 def SomeI64Enum: I64EnumAttr<
-  "SomeI64Enum", "", [I64Case5, I64Case10]>;
+  "SomeI64Enum", "", [I64Case5, I64Case10, I64Case1p32]>;
 
 //===----------------------------------------------------------------------===//
 // Test Enum
@@ -46,9 +47,61 @@ def TestEnum
   let cppNamespace = "test";
 }
 
+def TestStructEnum
+    : I32EnumAttr<"TestStructEnum", "an enum nested in a struct parameter", [
+        I32EnumAttrCase<"First", 0, "first">,
+        I32EnumAttrCase<"Second", 1, "second">,
+        I32EnumAttrCase<"Third", 2, "third">,
+      ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "test";
+}
+
+def TestOtherEnum
+    : I32Enum<"TestOtherEnum", "another test enum", [
+        I32EnumCase<"Dog", 0, "dog">,
+        I32EnumCase<"Cat", 1, "cat">,
+        I32EnumCase<"Fish", 2, "fish">,
+      ]> {
+  let cppNamespace = "test";
+}
+
+def TestPrettyEnum
+    : I32Enum<"TestPrettyEnum", "an enum with bracketed attribute syntax", [
+        I32EnumCase<"First", 0, "first">,
+        I32EnumCase<"Second", 1, "second">,
+        I32EnumCase<"Third", 2, "third">,
+        I32EnumCase<"NonKeyword", 3, "non-keyword">,
+      ]> {
+  let cppNamespace = "test";
+}
+
 def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
     I32EnumCase<"a", 0>,
-    I32EnumCase<"b", 1>
+    I32EnumCase<"b", 1>,
+    I32EnumCase<"Plus", 2, "+">,
+    I32EnumCase<"LongString", 3, "dash-separated-sentence">,
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum8: I8Enum<"SimpleEnum8", "", [
+    I8EnumCase<"a", 254>,
+    I8EnumCase<"b", 255>,
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum16: I16Enum<"SimpleEnum16", "", [
+    I16EnumCase<"a", 65534>,
+    I16EnumCase<"b", 65535>,
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum64 : I64Enum<"SimpleEnum64", "", [
+    I64EnumCase<"a", 4294967296>,
+    I64EnumCase<"b", 4294967297>
   ]> {
   let cppNamespace = "::test";
 }
@@ -58,8 +111,10 @@ def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
 //===----------------------------------------------------------------------===//
 
 // Define the C++ enum.
+def TestBitEnumNone : I32BitEnumCaseNone<"None", "none">;
 def TestBitEnum
     : I32BitEnum<"TestBitEnum", "a test bit enum", [
+        TestBitEnumNone,
         I32BitEnumCaseBit<"Read", 0, "read">,
         I32BitEnumCaseBit<"Write", 1, "write">,
         I32BitEnumCaseBit<"Execute", 2, "execute">,
@@ -71,12 +126,23 @@ def TestBitEnum
 // Define an enum with a different separator
 def TestBitEnumVerticalBar
     : I32BitEnum<"TestBitEnumVerticalBar", "another test bit enum", [
+        TestBitEnumNone,
         I32BitEnumCaseBit<"User", 0, "user">,
         I32BitEnumCaseBit<"Group", 1, "group">,
         I32BitEnumCaseBit<"Other", 2, "other">,
       ]> {
   let cppNamespace = "test";
   let separator = " | ";
+}
+
+def TestStructBitEnum
+    : I32BitEnum<"TestStructBitEnum", "a bit enum nested in a struct", [
+        TestBitEnumNone,
+        I32BitEnumCaseBit<"Read", 0, "read">,
+        I32BitEnumCaseBit<"Write", 1, "write">,
+      ]> {
+  let cppNamespace = "test";
+  let separator = ", ";
 }
 
 //===----------------------------------------------------------------------===//

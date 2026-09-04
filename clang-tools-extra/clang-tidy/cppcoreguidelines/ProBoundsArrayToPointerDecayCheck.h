@@ -1,4 +1,4 @@
-//===--- ProBoundsArrayToPointerDecayCheck.h - clang-tidy--------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_ARRAY_TO_POINTER_DECAY_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_ARRAY_TO_POINTER_DECAY_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSARRAYTOPOINTERDECAYCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSARRAYTOPOINTERDECAYCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// This check flags all array to pointer decays
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay.html
 class ProBoundsArrayToPointerDecayCheck : public ClangTidyCheck {
 public:
   ProBoundsArrayToPointerDecayCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::cppcoreguidelines
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_ARRAY_TO_POINTER_DECAY_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PROBOUNDSARRAYTOPOINTERDECAYCHECK_H

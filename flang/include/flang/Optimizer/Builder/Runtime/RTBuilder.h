@@ -19,7 +19,6 @@
 
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
@@ -29,7 +28,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstdint>
-#include <functional>
 
 #ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
@@ -244,7 +242,46 @@ constexpr TypeBuilderFunc getModel<void *>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<const void *>() {
+  return getModel<void *>();
+}
+template <>
 constexpr TypeBuilderFunc getModel<void (*)(int)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::LLVMPointerType::get(
+        context,
+        mlir::FunctionType::get(context, /*inputs=*/{}, /*results*/ {}));
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<void *(*)(void *, const void *, unsigned long)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto voidPtrTy =
+        fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
+    auto unsignedLongTy =
+        mlir::IntegerType::get(context, 8 * sizeof(unsigned long));
+    auto funcTy = mlir::FunctionType::get(
+        context, {voidPtrTy, voidPtrTy, unsignedLongTy}, {voidPtrTy});
+    return fir::LLVMPointerType::get(context, funcTy);
+  };
+}
+#ifdef _MSC_VER
+template <>
+constexpr TypeBuilderFunc
+getModel<void *(*)(void *, const void *, unsigned __int64)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    auto voidPtrTy =
+        fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
+    auto uint64Ty = mlir::IntegerType::get(context, 64);
+    auto funcTy = mlir::FunctionType::get(
+        context, {voidPtrTy, voidPtrTy, uint64Ty}, {voidPtrTy});
+    return fir::LLVMPointerType::get(context, funcTy);
+  };
+}
+#endif
+template <>
+constexpr TypeBuilderFunc getModel<void (*)(void)>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return fir::LLVMPointerType::get(
         context,

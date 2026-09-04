@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 -mattr=+vfp2 -enable-unsafe-fp-math %s -o - \
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 -mattr=+vfp2 %s -o - \
 ; RUN:  | FileCheck %s
 
 ; rdar://7461510
@@ -42,7 +42,7 @@ entry:
 ; CHECK-NOT: vmrs
 ; CHECK: bne
   %0 = load double, ptr %a
-  %1 = fcmp oeq double %0, 0.000000e+00
+  %1 = fcmp nnan oeq double %0, 0.000000e+00
   br i1 %1, label %bb1, label %bb2
 
 bb1:
@@ -65,7 +65,7 @@ entry:
 ; CHECK-NOT: vmrs
 ; CHECK: bne
   %0 = load float, ptr %a
-  %1 = fcmp oeq float %0, 0.000000e+00
+  %1 = fcmp nnan oeq float %0, 0.000000e+00
   br i1 %1, label %bb1, label %bb2
 
 bb1:

@@ -13,10 +13,7 @@
 
 #include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCAssembler.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
@@ -88,7 +85,6 @@ uint16_t Sparc::parseSpecifier(StringRef name) {
       .Case("got22", ELF::R_SPARC_GOT22)
       .Case("got10", ELF::R_SPARC_GOT10)
       .Case("got13", ELF::R_SPARC_GOT13)
-      .Case("r_disp32", ELF::R_SPARC_DISP32)
       .Case("tgd_hi22", ELF::R_SPARC_TLS_GD_HI22)
       .Case("tgd_lo10", ELF::R_SPARC_TLS_GD_LO10)
       .Case("tgd_add", ELF::R_SPARC_TLS_GD_ADD)
@@ -112,5 +108,11 @@ uint16_t Sparc::parseSpecifier(StringRef name) {
       .Case("gdop_hix22", ELF::R_SPARC_GOTDATA_OP_HIX22)
       .Case("gdop_lox10", ELF::R_SPARC_GOTDATA_OP_LOX10)
       .Case("gdop", ELF::R_SPARC_GOTDATA_OP)
+      .Default(0);
+}
+
+uint16_t Sparc::parseDataSpecifier(StringRef name) {
+  return StringSwitch<uint16_t>(name)
+      .Case("r_disp32", ELF::R_SPARC_DISP32)
       .Default(0);
 }

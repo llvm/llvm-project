@@ -45,6 +45,22 @@ define void @set_f64_global(double %v) {
   ret void
 }
 
+declare i32 @get_i32()
+define i32 @stackifyAcrossGlobalSet() {
+; https://github.com/llvm/llvm-project/issues/156055
+; CHECK-LABEL: stackifyAcrossGlobalSet:
+; CHECK-NEXT: .functype
+; CHECK-NEXT: .local
+; CHECK-NEXT: call get_i32
+; CHECK-NEXT: local.tee
+; CHECK-NEXT: global.set i32_global
+; CHECK-NEXT: local.get
+; CHECK-NEXT: end_function
+  %1 = call i32 @get_i32()
+  store i32 %1, ptr addrspace(1) @i32_global
+  ret i32 %1
+}
+
 ; CHECK: .globaltype i32_global, i32
 ; CHECK: .globl i32_global
 ; CHECK-LABEL: i32_global:

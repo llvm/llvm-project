@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// Missing WEOF, towctrans, wctrans_t
+// XFAIL: LLVM-LIBC-FIXME
+
 // towctrans and wctrans were added in Android API 26.
 // TODO: Switch from UNSUPPORTED to XFAIL once the Android CI Docker sysroot is
 // updated.

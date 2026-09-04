@@ -35,7 +35,7 @@ end module
 
 subroutine baz(x)
     real, intent(inout) :: x
-    real :: res 
+    real :: res
     stmtfunc(x) = 4.0 * (x**3)
     !ERROR: The procedure 'stmtfunc' in DECLARE TARGET construct cannot be a statement function.
     !$omp declare target (stmtfunc)

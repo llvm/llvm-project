@@ -14,7 +14,7 @@ define half @test_rmw_xchg_f16(ptr %dst, half %new) {
 ; NOLSE-NEXT:    cbnz w10, .LBB0_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    fmov s0, w8
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_rmw_xchg_f16:
@@ -23,7 +23,7 @@ define half @test_rmw_xchg_f16(ptr %dst, half %new) {
 ; LSE-NEXT:    fmov w8, s0
 ; LSE-NEXT:    swpalh w8, w8, [x0]
 ; LSE-NEXT:    fmov s0, w8
-; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; LSE-NEXT:    ret
   %res = atomicrmw xchg ptr %dst, half %new seq_cst
   ret half %res

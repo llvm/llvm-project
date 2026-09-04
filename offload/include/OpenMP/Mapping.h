@@ -33,6 +33,10 @@ class MappingConfig {
   MappingConfig() {
     BoolEnvar ForceAtomic = BoolEnvar("LIBOMPTARGET_MAP_FORCE_ATOMIC", true);
     UseEventsForAtomicTransfers = ForceAtomic;
+
+    BoolEnvar TreatAttachAutoAsAlwaysEnvar(
+        "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS", false);
+    TreatAttachAutoAsAlways = TreatAttachAutoAsAlwaysEnvar;
   }
 
 public:
@@ -44,14 +48,58 @@ public:
   /// Flag to indicate if we use events to ensure the atomicity of
   /// map clauses or not. Can be modified with an environment variable.
   bool UseEventsForAtomicTransfers = true;
+
+  /// Flag to indicate if attach(auto) should be treated as attach(always).
+  /// This forces pointer attachments to occur between a pointer an a pointee,
+  /// for something like `map(p[:])` even when both were already present on the
+  /// device before encountering the construct. Can be modified with
+  /// an environment variable.
+  bool TreatAttachAutoAsAlways = false;
 };
 
 /// Information about shadow pointers.
 struct ShadowPtrInfoTy {
   void **HstPtrAddr = nullptr;
-  void *HstPtrVal = nullptr;
   void **TgtPtrAddr = nullptr;
-  void *TgtPtrVal = nullptr;
+  int64_t PtrSize = sizeof(void *); // Size of the pointer/descriptor
+
+  // Store the complete contents for both host and target pointers/descriptors.
+  // 96 bytes is chosen as the "Small" size to cover simple Fortran
+  // descriptors of up to 3 dimensions.
+  llvm::SmallVector<char, 96> HstPtrContent;
+  llvm::SmallVector<char, 96> TgtPtrContent;
+
+  ShadowPtrInfoTy(void **HstPtrAddr, void **TgtPtrAddr, void *TgtPteeBase,
+                  int64_t PtrSize)
+      : HstPtrAddr(HstPtrAddr), TgtPtrAddr(TgtPtrAddr), PtrSize(PtrSize),
+        HstPtrContent(PtrSize), TgtPtrContent(PtrSize) {
+    constexpr int64_t VoidPtrSize = sizeof(void *);
+    assert(HstPtrAddr != nullptr && "HstPtrAddr is nullptr");
+    assert(TgtPtrAddr != nullptr && "TgtPtrAddr is nullptr");
+    assert(PtrSize >= VoidPtrSize && "PtrSize is less than sizeof(void *)");
+
+    void *HstPteeBase = *HstPtrAddr;
+    // The first VoidPtrSize bytes for HstPtrContent/TgtPtrContent are from
+    // HstPteeBase/TgtPteeBase.
+    std::memcpy(HstPtrContent.data(), &HstPteeBase, VoidPtrSize);
+    std::memcpy(TgtPtrContent.data(), &TgtPteeBase, VoidPtrSize);
+
+    // If we are not dealing with Fortran descriptors (pointers larger than
+    // VoidPtrSize), then that's that.
+    if (PtrSize <= VoidPtrSize)
+      return;
+
+    // For larger pointers, i.e. Fortran descriptors, the remaining contents of
+    // the descriptor come from the host descriptor, i.e. HstPtrAddr.
+    std::memcpy(HstPtrContent.data() + VoidPtrSize,
+                reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize,
+                PtrSize - VoidPtrSize);
+    std::memcpy(TgtPtrContent.data() + VoidPtrSize,
+                reinterpret_cast<char *>(HstPtrAddr) + VoidPtrSize,
+                PtrSize - VoidPtrSize);
+  }
+
+  ShadowPtrInfoTy() = delete;
 
   bool operator==(const ShadowPtrInfoTy &Other) const {
     return HstPtrAddr == Other.HstPtrAddr;
@@ -243,9 +291,25 @@ public:
     auto Pair = States->ShadowPtrInfos.insert(ShadowPtrInfo);
     if (Pair.second)
       return true;
+
     // Check for a stale entry, if found, replace the old one.
-    if ((*Pair.first).TgtPtrVal == ShadowPtrInfo.TgtPtrVal)
+
+    // For Fortran descriptors, we need to compare their full contents,
+    // as the starting address may be the same while other fields have
+    // been updated. e.g.
+    //
+    //   !$omp target enter data map(x(1:100)) !             (1)
+    //   p => x(10: 19)
+    //   !$omp target enter data map(p, p(:)) !              (2)
+    //   p => x(5: 9)
+    //   !$omp target enter data map(attach(always): p(:)) ! (3)
+    //
+    // While &desc_p and &p(1) (TgtPtrAddr and first "sizeof(void*)" bytes of
+    // TgtPtrContent) are same for (2) and (3), the pointer attachment for (3)
+    // needs to update the bounds information in the descriptor of p on device.
+    if ((*Pair.first).TgtPtrContent == ShadowPtrInfo.TgtPtrContent)
       return false;
+
     States->ShadowPtrInfos.erase(ShadowPtrInfo);
     return addShadowPointer(ShadowPtrInfo);
   }
@@ -417,12 +481,132 @@ struct MapperComponentsTy {
 typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
                                 void *);
 
+/// Structure to store information about a single ATTACH map entry.
+struct AttachMapInfo {
+  void *PointerBase;
+  void *PointeeBegin;
+  int64_t PointerSize;
+  int64_t MapType;
+  map_var_info_t Pointername;
+
+  AttachMapInfo(void *PointerBase, void *PointeeBegin, int64_t Size,
+                int64_t Type, map_var_info_t Name)
+      : PointerBase(PointerBase), PointeeBegin(PointeeBegin), PointerSize(Size),
+        MapType(Type), Pointername(Name) {}
+};
+
+/// Structure to track new allocations, ATTACH entries, DELETE entries and
+/// skipped FROM data transfer information for a given construct, across
+/// recursive calls (for handling mappers) to targetDataBegin/targetDataEnd.
+struct StateInfoTy {
+  /// ATTACH map entries for deferred processing until all other maps are done.
+  llvm::SmallVector<AttachMapInfo> AttachEntries;
+
+  /// Host pointers for which new memory was allocated.
+  /// Key: host pointer, Value: allocation size.
+  llvm::DenseMap<void *, int64_t> NewAllocations;
+
+  /// Host pointers that had a FROM entry, but for which a data transfer was
+  /// skipped due to the ref-count not being zero.
+  /// Key: host pointer, Value: data size.
+  llvm::DenseMap<void *, int64_t> SkippedFromEntries;
+
+  /// Host pointers for which we have triggered a FROM transfer at some point
+  /// during targetDataEnd. It's used to avoid duplicate transfers.
+  /// Key: host pointer, Value: transferred size.
+  llvm::DenseMap<void *, int64_t> TransferredFromEntries;
+
+  /// Starting host address and size of entries whose ref-count went to zero.
+  /// This includes entries released through explicit DELETE, or normal
+  /// ref-count decrements. It's used to ensure transfers are performed for FROM
+  /// entries whose ref-count is already zero when the entry is encountered.
+  /// Key: host pointer, Value: size.
+  llvm::DenseMap<void *, int64_t> ReleasedEntries;
+
+  StateInfoTy() = default;
+
+  // Delete copy constructor and copy assignment operator to prevent copying
+  StateInfoTy(const StateInfoTy &) = delete;
+  StateInfoTy &operator=(const StateInfoTy &) = delete;
+
+private:
+  /// Helper to find an entry in \p EntryMap that contains the pointer.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  findEntryForPtr(void *Ptr,
+                  const llvm::DenseMap<void *, int64_t> &EntryMap) const {
+    for (const auto &Entry : EntryMap) {
+      void *EntryBegin = Entry.first;
+      int64_t EntrySize = Entry.second;
+      if (Ptr >= EntryBegin &&
+          Ptr < static_cast<void *>(static_cast<char *>(EntryBegin) +
+                                    EntrySize)) {
+        return Entry;
+      }
+    }
+    return std::nullopt;
+  }
+
+public:
+  /// Check if a pointer falls within any of the newly allocated ranges.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>> wasNewlyAllocated(void *Ptr) const {
+    return findEntryForPtr(Ptr, NewAllocations);
+  }
+
+  /// Check if a pointer range [Ptr, Ptr+Size) is fully contained within any
+  /// previously completed FROM transfer.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  wasTransferredFrom(void *Ptr, int64_t Size) const {
+    uintptr_t CheckBegin = reinterpret_cast<uintptr_t>(Ptr);
+    uintptr_t CheckEnd = CheckBegin + Size;
+
+    for (const auto &Entry : TransferredFromEntries) {
+      void *RangePtr = Entry.first;
+      int64_t RangeSize = Entry.second;
+      uintptr_t RangeBegin = reinterpret_cast<uintptr_t>(RangePtr);
+      uintptr_t RangeEnd = RangeBegin + RangeSize;
+
+      if (CheckBegin >= RangeBegin && CheckEnd <= RangeEnd) {
+        return Entry;
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Check if a pointer falls within any released entry's range.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  wasPreviouslyReleased(void *Ptr) const {
+    return findEntryForPtr(Ptr, ReleasedEntries);
+  }
+
+  /// Add a skipped FROM entry. Only updates the entry if this is a new pointer
+  /// or if the new size is larger than the existing entry.
+  void addSkippedFromEntry(void *Ptr, int64_t Size) {
+    auto It = SkippedFromEntries.find(Ptr);
+    if (It == SkippedFromEntries.end() || Size > It->second) {
+      SkippedFromEntries[Ptr] = Size;
+    }
+  }
+
+  /// Add a transferred FROM entry. Only updates the entry if this is a new
+  /// pointer or if the new size is larger than the existing entry.
+  void addTransferredFromEntry(void *Ptr, int64_t Size) {
+    auto It = TransferredFromEntries.find(Ptr);
+    if (It == TransferredFromEntries.end() || Size > It->second) {
+      TransferredFromEntries[Ptr] = Size;
+    }
+  }
+};
+
 // Function pointer type for targetData* functions (targetDataBegin,
 // targetDataEnd and targetDataUpdate).
 typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    void **, int64_t *, int64_t *,
                                    map_var_info_t *, void **, AsyncInfoTy &,
-                                   bool);
+                                   StateInfoTy *, bool);
 
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
                                bool toStdOut = false);
@@ -431,19 +615,23 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                    bool FromMapper = false);
+                    StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                  bool FromMapper = false);
+                  StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                      void **ArgsBase, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
                      void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                     bool FromMapper = false);
+                     StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
+
+// Process deferred ATTACH map entries collected during targetDataBegin.
+int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
+                         AsyncInfoTy &AsyncInfo);
 
 struct MappingInfoTy {
   MappingInfoTy(DeviceTy &Device) : Device(Device) {}
@@ -483,7 +671,7 @@ struct MappingInfoTy {
       bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
       bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
       AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
-      bool ReleaseHDTTMap = true);
+      bool ReleaseHDTTMap = true, StateInfoTy *StateInfo = nullptr);
 
   /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
   /// ensures exclusive access to the HDTT map.

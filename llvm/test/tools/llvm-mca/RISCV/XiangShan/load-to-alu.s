@@ -70,4 +70,4 @@ addi a2, a1, 1
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld	a1, 0(a0)
 # CHECK-NEXT: 1.     1     5.0    0.0    0.0       addi	a2, a1, 1
-# CHECK-NEXT:        1     3.0    0.5    0.0       <total>
+# CHECK-NEXT:        2     3.0    0.5    0.0       <total>

@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class SBTypeMemberFunctionsTest(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -19,7 +21,7 @@ class SBTypeMemberFunctionsTest(TestBase):
         self.source = "main.mm"
         self.line = line_number(self.source, "// set breakpoint here")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         """Test SBType APIs to fetch member function types."""
         d = {"EXE": self.exe_name}

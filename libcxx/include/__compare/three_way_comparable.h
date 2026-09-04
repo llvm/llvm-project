@@ -12,6 +12,7 @@
 #include <__compare/common_comparison_category.h>
 #include <__compare/ordering.h>
 #include <__concepts/common_reference_with.h>
+#include <__concepts/comparison_common_type.h>
 #include <__concepts/equality_comparable.h>
 #include <__concepts/same_as.h>
 #include <__concepts/totally_ordered.h>
@@ -23,9 +24,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Cat>
 concept __compares_as = same_as<common_comparison_category_t<_Tp, _Cat>, _Cat>;
@@ -39,8 +40,7 @@ concept three_way_comparable =
 
 template <class _Tp, class _Up, class _Cat = partial_ordering>
 concept three_way_comparable_with =
-    three_way_comparable<_Tp, _Cat> && three_way_comparable<_Up, _Cat> &&
-    common_reference_with<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>> &&
+    three_way_comparable<_Tp, _Cat> && three_way_comparable<_Up, _Cat> && __comparison_common_type_with<_Tp, _Up> &&
     three_way_comparable<common_reference_t<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>>, _Cat> &&
     __weakly_equality_comparable_with<_Tp, _Up> && __partially_ordered_with<_Tp, _Up> &&
     requires(__make_const_lvalue_ref<_Tp> __t, __make_const_lvalue_ref<_Up> __u) {
@@ -48,8 +48,8 @@ concept three_way_comparable_with =
       { __u <=> __t } -> __compares_as<_Cat>;
     };
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_THREE_WAY_COMPARABLE_H

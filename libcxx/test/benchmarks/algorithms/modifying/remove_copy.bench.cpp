@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
@@ -29,12 +30,6 @@ int main(int argc, char** argv) {
       return element == value;
     });
   };
-  auto ranges_remove_copy_if = [](auto first, auto last, auto out, auto const& value) {
-    return std::ranges::remove_copy_if(first, last, out, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
-  };
 
   // Benchmark {std,ranges}::{remove_copy,remove_copy_if} on a sequence of the form xxxxxxxxxxyyyyyyyyyy
   // where we remove the prefix of x's from the sequence.
@@ -42,7 +37,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto remove_copy) {
       benchmark::RegisterBenchmark(
           name,
-          [remove_copy](auto& st) {
+          [remove_copy](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -70,17 +65,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::remove_copy(vector<int>) (prefix)", std_remove_copy);
     bm.operator()<std::deque<int>>("std::remove_copy(deque<int>) (prefix)", std_remove_copy);
     bm.operator()<std::list<int>>("std::remove_copy(list<int>) (prefix)", std_remove_copy);
-    bm.operator()<std::vector<int>>("rng::remove_copy(vector<int>) (prefix)", std::ranges::remove_copy);
-    bm.operator()<std::deque<int>>("rng::remove_copy(deque<int>) (prefix)", std::ranges::remove_copy);
-    bm.operator()<std::list<int>>("rng::remove_copy(list<int>) (prefix)", std::ranges::remove_copy);
 
     // {std,ranges}::remove_copy_if
     bm.operator()<std::vector<int>>("std::remove_copy_if(vector<int>) (prefix)", std_remove_copy_if);
     bm.operator()<std::deque<int>>("std::remove_copy_if(deque<int>) (prefix)", std_remove_copy_if);
     bm.operator()<std::list<int>>("std::remove_copy_if(list<int>) (prefix)", std_remove_copy_if);
-    bm.operator()<std::vector<int>>("rng::remove_copy_if(vector<int>) (prefix)", ranges_remove_copy_if);
-    bm.operator()<std::deque<int>>("rng::remove_copy_if(deque<int>) (prefix)", ranges_remove_copy_if);
-    bm.operator()<std::list<int>>("rng::remove_copy_if(list<int>) (prefix)", ranges_remove_copy_if);
   }
 
   // Benchmark {std,ranges}::{remove_copy,remove_copy_if} on a sequence of the form xyxyxyxyxyxyxyxyxyxy
@@ -89,7 +78,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto remove_copy) {
       benchmark::RegisterBenchmark(
           name,
-          [remove_copy](auto& st) {
+          [remove_copy](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -118,17 +107,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::remove_copy(vector<int>) (sprinkled)", std_remove_copy);
     bm.operator()<std::deque<int>>("std::remove_copy(deque<int>) (sprinkled)", std_remove_copy);
     bm.operator()<std::list<int>>("std::remove_copy(list<int>) (sprinkled)", std_remove_copy);
-    bm.operator()<std::vector<int>>("rng::remove_copy(vector<int>) (sprinkled)", std::ranges::remove_copy);
-    bm.operator()<std::deque<int>>("rng::remove_copy(deque<int>) (sprinkled)", std::ranges::remove_copy);
-    bm.operator()<std::list<int>>("rng::remove_copy(list<int>) (sprinkled)", std::ranges::remove_copy);
 
     // {std,ranges}::remove_copy_if
     bm.operator()<std::vector<int>>("std::remove_copy_if(vector<int>) (sprinkled)", std_remove_copy_if);
     bm.operator()<std::deque<int>>("std::remove_copy_if(deque<int>) (sprinkled)", std_remove_copy_if);
     bm.operator()<std::list<int>>("std::remove_copy_if(list<int>) (sprinkled)", std_remove_copy_if);
-    bm.operator()<std::vector<int>>("rng::remove_copy_if(vector<int>) (sprinkled)", ranges_remove_copy_if);
-    bm.operator()<std::deque<int>>("rng::remove_copy_if(deque<int>) (sprinkled)", ranges_remove_copy_if);
-    bm.operator()<std::list<int>>("rng::remove_copy_if(list<int>) (sprinkled)", ranges_remove_copy_if);
   }
 
   benchmark::Initialize(&argc, argv);

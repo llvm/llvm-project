@@ -28,6 +28,8 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -35,6 +37,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -46,38 +49,55 @@ static cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
+static std::optional<bool> getWasmGlobalMutable(const GlobalValue *Global,
+                                                const Function &CurrentFunc,
+                                                const DiagnosticLocation &DL) {
+  const auto *BaseObject = Global->getAliaseeObject();
+  const auto *GV = dyn_cast_or_null<GlobalVariable>(BaseObject);
+  if (!GV) {
+    CurrentFunc.getContext().diagnose(DiagnosticInfoUnsupported(
+        CurrentFunc,
+        "wasm_var address space symbol must resolve to a "
+        "GlobalVariable",
+        DL));
+    return std::nullopt;
+  }
+  return !GV->isConstant();
+}
+
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
 MCSymbol *
-WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
-  const GlobalValue *Global = MO.getGlobal();
+WebAssemblyMCInstLower::GetGlobalAddressSymbol(const GlobalValue &Global,
+                                               const DebugLoc &DL) const {
+  const TargetMachine &TM = Printer.TM;
+  const Function &CurrentFunc = Printer.MF->getFunction();
   if (!isa<Function>(Global)) {
-    auto *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+    auto *WasmSym = static_cast<MCSymbolWasm *>(Printer.getSymbol(&Global));
     // If the symbol doesn't have an explicit WasmSymbolType yet and the
     // GlobalValue is actually a WebAssembly global, then ensure the symbol is a
     // WASM_SYMBOL_TYPE_GLOBAL.
-    if (WebAssembly::isWasmVarAddressSpace(Global->getAddressSpace()) &&
+    if (WebAssembly::isWasmVarAddressSpace(Global.getAddressSpace()) &&
         !WasmSym->getType()) {
-      const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
-      const TargetMachine &TM = MF.getTarget();
-      const Function &CurrentFunc = MF.getFunction();
-      Type *GlobalVT = Global->getValueType();
+      std::optional<bool> Mutable =
+          getWasmGlobalMutable(&Global, CurrentFunc, DL);
+      if (!Mutable.has_value())
+        return WasmSym;
+
+      Type *GlobalVT = Global.getValueType();
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
 
-      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs);
+      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs, *Mutable);
     }
     return WasmSym;
   }
 
-  const auto *FuncTy = cast<FunctionType>(Global->getValueType());
-  const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
-  const TargetMachine &TM = MF.getTarget();
-  const Function &CurrentFunc = MF.getFunction();
+  const auto *FuncTy = cast<FunctionType>(Global.getValueType());
 
   SmallVector<MVT, 1> ResultMVTs;
   SmallVector<MVT, 4> ParamMVTs;
-  const auto *const F = dyn_cast<Function>(Global);
+  const auto *const F = dyn_cast<Function>(&Global);
   computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
   auto Signature = signatureFromMVTs(Ctx, ResultMVTs, ParamMVTs);
 
@@ -123,7 +143,7 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
 
   if (MO.getOffset() != 0) {
-    const auto *WasmSym = cast<MCSymbolWasm>(Sym);
+    const auto *WasmSym = static_cast<const MCSymbolWasm *>(Sym);
     if (TargetFlags == WebAssemblyII::MO_GOT)
       report_fatal_error("GOT symbol references do not support offsets");
     if (WasmSym->isFunction())
@@ -148,12 +168,12 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   auto Signature = Ctx.createWasmSignature();
   Signature->Returns = std::move(Returns);
   Signature->Params = std::move(Params);
-  MCSymbol *Sym = Printer.createTempSymbol("typeindex");
-  auto *WasmSym = cast<MCSymbolWasm>(Sym);
-  WasmSym->setSignature(Signature);
-  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+  auto *Sym =
+      static_cast<MCSymbolWasm *>(Printer.createTempSymbol("typeindex"));
+  Sym->setSignature(Signature);
+  Sym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   const MCExpr *Expr =
-      MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
+      MCSymbolRefExpr::create(Sym, WebAssembly::S_TYPEINDEX, Ctx);
   return MCOperand::createExpr(Expr);
 }
 
@@ -322,7 +342,8 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_GlobalAddress:
-      MCOp = lowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
+      MCOp = lowerSymbolOperand(
+          MO, GetGlobalAddressSymbol(*MO.getGlobal(), MI->getDebugLoc()));
       break;
     case MachineOperand::MO_ExternalSymbol:
       MCOp = lowerSymbolOperand(MO, GetExternalSymbolSymbol(MO));
@@ -345,7 +366,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
   // Remove all uses of stackified registers to bring the instruction format
-  // into its final stack form used thruout MC, and transition opcodes to
+  // into its final stack form used throughout MC, and transition opcodes to
   // their _S variant.
   // We do this separate from the above code that still may need these
   // registers for e.g. call_indirect signatures.

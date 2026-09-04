@@ -1,13 +1,54 @@
 add_entrypoint_object(
+  getpriority
+  SRCS
+    getpriority.cpp
+  HDRS
+    ../getpriority.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpriority
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   getrlimit
   SRCS
     getrlimit.cpp
   HDRS
     ../getrlimit.h
   DEPENDS
-    libc.include.sys_resource
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getrusage
+  SRCS
+    getrusage.cpp
+  HDRS
+    ../getrusage.h
+  DEPENDS
+    libc.hdr.types.struct_rusage
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrusage
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  setpriority
+  SRCS
+    setpriority.cpp
+  HDRS
+    ../setpriority.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setpriority
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -18,8 +59,7 @@ add_entrypoint_object(
   HDRS
     ../setrlimit.h
   DEPENDS
-    libc.include.sys_resource
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
     libc.src.errno.errno
 )

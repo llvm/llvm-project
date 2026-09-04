@@ -1,4 +1,4 @@
-//===--- UnusedRaiiCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,8 +37,8 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 template <typename T>
-static void reportDiagnostic(DiagnosticBuilder D, const T *Node, SourceRange SR,
-                             bool DefaultConstruction) {
+static void reportDiagnostic(const DiagnosticBuilder &D, const T *Node,
+                             SourceRange SR, bool DefaultConstruction) {
   const char *Replacement = " give_me_a_name";
 
   // If this is a default ctor we have to remove the parens or we'll introduce a
@@ -72,8 +72,9 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Emit a warning.
-  auto D = diag(E->getBeginLoc(), "object destroyed immediately after "
-                                  "creation; did you mean to name the object?");
+  const auto D =
+      diag(E->getBeginLoc(), "object destroyed immediately after "
+                             "creation; did you mean to name the object?");
 
   if (const auto *Node = dyn_cast<CXXConstructExpr>(E))
     reportDiagnostic(D, Node, Node->getParenOrBraceRange(),

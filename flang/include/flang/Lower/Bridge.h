@@ -76,6 +76,7 @@ public:
                           loweringOptions, envDefaults, languageFeatures,
                           targetMachine, targetOptions, codeGenOptions);
   }
+  ~LoweringBridge();
 
   //===--------------------------------------------------------------------===//
   // Getters
@@ -126,6 +127,10 @@ public:
 
   Fortran::lower::StatementContext &fctCtx() { return functionContext; }
 
+  Fortran::lower::StatementContext &cudaCleanupCtx() {
+    return cudaCleanupContext;
+  }
+
   Fortran::lower::StatementContext &openAccCtx() { return openAccContext; }
 
   bool validModule() { return getModule(); }
@@ -162,6 +167,7 @@ private:
 
   Fortran::semantics::SemanticsContext &semanticsContext;
   Fortran::lower::StatementContext functionContext;
+  Fortran::lower::StatementContext cudaCleanupContext;
   Fortran::lower::StatementContext openAccContext;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
@@ -174,6 +180,7 @@ private:
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
   std::set<std::string> tempNames;
+  std::optional<mlir::DiagnosticEngine::HandlerID> diagHandlerID;
 };
 
 } // namespace lower

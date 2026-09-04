@@ -65,10 +65,18 @@ define void @preallocated_one_call() {
     ret void
 }
 
-; CHECK: must be a constant
+; CHECK: immarg operand has non-immediate parameter
 define void @preallocated_setup_constant() {
     %ac = call i32 @blackbox()
     %cs = call token @llvm.call.preallocated.setup(i32 %ac)
+    ret void
+}
+
+; CHECK: llvm.call.preallocated.alloc arg index must be a constant
+define void @preallocated_arg_constant() {
+    %ac = call i32 @blackbox()
+    %cs = call token @llvm.call.preallocated.setup(i32 3)
+    call token @llvm.call.preallocated.arg(token %cs, i32 %ac)
     ret void
 }
 

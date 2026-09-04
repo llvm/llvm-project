@@ -1,9 +1,12 @@
 add_clang_unittest(ClangAnalysisTests
+  AnyCallTest.cpp
+  CFGBackEdgesTest.cpp
   CFGDominatorTree.cpp
   CFGTest.cpp
   CloneDetectionTest.cpp
   ExprMutationAnalyzerTest.cpp
   IntervalPartitionTest.cpp
+  IssueHashTest.cpp
   LifetimeSafetyTest.cpp
   MacroExpansionContextTest.cpp
   UnsafeBufferUsageTest.cpp
@@ -11,6 +14,7 @@ add_clang_unittest(ClangAnalysisTests
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangFrontend
   clangLex

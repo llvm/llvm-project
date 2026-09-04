@@ -1,4 +1,4 @@
-//===--- DurationFactoryScaleCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,8 +20,7 @@ namespace clang::tidy::abseil {
 // Given the name of a duration factory function, return the appropriate
 // `DurationScale` for that factory.  If no factory can be found for
 // `FactoryName`, return `std::nullopt`.
-static std::optional<DurationScale>
-getScaleForFactory(llvm::StringRef FactoryName) {
+static std::optional<DurationScale> getScaleForFactory(StringRef FactoryName) {
   return llvm::StringSwitch<std::optional<DurationScale>>(FactoryName)
       .Case("Nanoseconds", DurationScale::Nanoseconds)
       .Case("Microseconds", DurationScale::Microseconds)
@@ -51,40 +50,40 @@ getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
   switch (OldScale) {
   case DurationScale::Hours:
     if (Multiplier <= 1.0 / 60.0)
-      return std::make_tuple(DurationScale::Minutes, Multiplier * 60.0);
+      return {{DurationScale::Minutes, Multiplier * 60.0}};
     break;
 
   case DurationScale::Minutes:
     if (Multiplier >= 60.0)
-      return std::make_tuple(DurationScale::Hours, Multiplier / 60.0);
+      return {{DurationScale::Hours, Multiplier / 60.0}};
     if (Multiplier <= 1.0 / 60.0)
-      return std::make_tuple(DurationScale::Seconds, Multiplier * 60.0);
+      return {{DurationScale::Seconds, Multiplier * 60.0}};
     break;
 
   case DurationScale::Seconds:
     if (Multiplier >= 60.0)
-      return std::make_tuple(DurationScale::Minutes, Multiplier / 60.0);
+      return {{DurationScale::Minutes, Multiplier / 60.0}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Milliseconds, Multiplier * 1e3);
+      return {{DurationScale::Milliseconds, Multiplier * 1e3}};
     break;
 
   case DurationScale::Milliseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Seconds, Multiplier / 1e3);
+      return {{DurationScale::Seconds, Multiplier / 1e3}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Microseconds, Multiplier * 1e3);
+      return {{DurationScale::Microseconds, Multiplier * 1e3}};
     break;
 
   case DurationScale::Microseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Milliseconds, Multiplier / 1e3);
+      return {{DurationScale::Milliseconds, Multiplier / 1e3}};
     if (Multiplier <= 1e-3)
-      return std::make_tuple(DurationScale::Nanoseconds, Multiplier * 1e-3);
+      return {{DurationScale::Nanoseconds, Multiplier * 1e-3}};
     break;
 
   case DurationScale::Nanoseconds:
     if (Multiplier >= 1e3)
-      return std::make_tuple(DurationScale::Microseconds, Multiplier / 1e3);
+      return {{DurationScale::Microseconds, Multiplier / 1e3}};
     break;
   }
 
@@ -112,7 +111,7 @@ static std::optional<DurationScale> getNewScale(DurationScale OldScale,
 void DurationFactoryScaleCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          callee(functionDecl(DurationFactoryFunction()).bind("call_decl")),
+          callee(functionDecl(durationFactoryFunction()).bind("call_decl")),
           hasArgument(
               0,
               ignoringImpCasts(anyOf(
@@ -158,7 +157,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MaybeScale)
     return;
 
-  DurationScale Scale = *MaybeScale;
+  const DurationScale Scale = *MaybeScale;
   const Expr *Remainder = nullptr;
   std::optional<DurationScale> NewScale;
 
@@ -169,8 +168,8 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     // cases where a user is multiplying by something such as 1e-3.
 
     // First check the LHS
-    const auto *IntLit = llvm::dyn_cast<IntegerLiteral>(MultBinOp->getLHS());
-    const auto *FloatLit = llvm::dyn_cast<FloatingLiteral>(MultBinOp->getLHS());
+    const auto *IntLit = dyn_cast<IntegerLiteral>(MultBinOp->getLHS());
+    const auto *FloatLit = dyn_cast<FloatingLiteral>(MultBinOp->getLHS());
     if (IntLit || FloatLit) {
       NewScale = getNewScale(Scale, getValue(IntLit, FloatLit));
       if (NewScale)
@@ -179,8 +178,8 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
 
     // If we weren't able to scale based on the LHS, check the RHS
     if (!NewScale) {
-      IntLit = llvm::dyn_cast<IntegerLiteral>(MultBinOp->getRHS());
-      FloatLit = llvm::dyn_cast<FloatingLiteral>(MultBinOp->getRHS());
+      IntLit = dyn_cast<IntegerLiteral>(MultBinOp->getRHS());
+      FloatLit = dyn_cast<FloatingLiteral>(MultBinOp->getRHS());
       if (IntLit || FloatLit) {
         NewScale = getNewScale(Scale, getValue(IntLit, FloatLit));
         if (NewScale)
@@ -191,7 +190,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<BinaryOperator>("div_binop")) {
     // We next handle division.
     // For division, we only check the RHS.
-    const auto *FloatLit = llvm::cast<FloatingLiteral>(DivBinOp->getRHS());
+    const auto *FloatLit = cast<FloatingLiteral>(DivBinOp->getRHS());
 
     std::optional<DurationScale> NewScale =
         getNewScale(Scale, 1.0 / FloatLit->getValueAsApproximateDouble());

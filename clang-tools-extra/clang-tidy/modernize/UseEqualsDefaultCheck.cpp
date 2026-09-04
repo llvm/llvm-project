@@ -1,4 +1,4 @@
-//===--- UseEqualsDefaultCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,12 +18,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-static const char SpecialFunction[] = "SpecialFunction";
+static constexpr char SpecialFunction[] = "SpecialFunction";
 
 /// Finds all the named non-static fields of \p Record.
-static std::set<const FieldDecl *>
+static llvm::SmallPtrSet<const FieldDecl *, 0>
 getAllNamedFields(const CXXRecordDecl *Record) {
-  std::set<const FieldDecl *> Result;
+  llvm::SmallPtrSet<const FieldDecl *, 0> Result;
   for (const auto *Field : Record->fields()) {
     // Static data members are not in this range.
     if (Field->isUnnamedBitField())
@@ -35,9 +35,10 @@ getAllNamedFields(const CXXRecordDecl *Record) {
 
 /// Returns the names of the direct bases of \p Record, both virtual and
 /// non-virtual.
-static std::set<const Type *> getAllDirectBases(const CXXRecordDecl *Record) {
-  std::set<const Type *> Result;
-  for (auto Base : Record->bases()) {
+static llvm::SmallPtrSet<const Type *, 0>
+getAllDirectBases(const CXXRecordDecl *Record) {
+  llvm::SmallPtrSet<const Type *, 0> Result;
+  for (const auto Base : Record->bases()) {
     // CXXBaseSpecifier.
     const auto *BaseType = Base.getTypeSourceInfo()->getType().getTypePtr();
     Result.insert(BaseType);
@@ -67,8 +68,8 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
   const auto *Param = Ctor->getParamDecl(0);
 
   // Base classes and members that have to be copied.
-  auto BasesToInit = getAllDirectBases(Record);
-  auto FieldsToInit = getAllNamedFields(Record);
+  const auto BasesToInit = getAllDirectBases(Record);
+  const auto FieldsToInit = getAllNamedFields(Record);
 
   // Ensure that all the bases are copied.
   for (const auto *Base : BasesToInit) {
@@ -127,8 +128,8 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
   const auto *Param = Operator->getParamDecl(0);
 
   // Base classes and members that have to be copied.
-  auto BasesToInit = getAllDirectBases(Record);
-  auto FieldsToInit = getAllNamedFields(Record);
+  const auto BasesToInit = getAllDirectBases(Record);
+  const auto FieldsToInit = getAllNamedFields(Record);
 
   const auto *Compound = cast<CompoundStmt>(Operator->getBody());
 
@@ -182,9 +183,9 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
     //   Field = Other.Field;
     // Is a BinaryOperator in non-class types, and a CXXOperatorCallExpr
     // otherwise.
-    auto LHS = memberExpr(hasObjectExpression(cxxThisExpr()),
-                          member(fieldDecl(equalsNode(Field))));
-    auto RHS = accessToFieldInVar(Field, Param);
+    const auto LHS = memberExpr(hasObjectExpression(cxxThisExpr()),
+                                member(fieldDecl(equalsNode(Field))));
+    const auto RHS = accessToFieldInVar(Field, Param);
     if (match(traverse(TK_AsIs,
                        compoundStmt(has(ignoringParenImpCasts(binaryOperation(
                            hasOperatorName("="), hasLHS(LHS), hasRHS(RHS)))))),
@@ -200,17 +201,17 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
 /// Returns false if the body has any non-whitespace character.
 static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
   bool Invalid = false;
-  StringRef Text = Lexer::getSourceText(
+  const StringRef Text = Lexer::getSourceText(
       CharSourceRange::getCharRange(Body->getLBracLoc().getLocWithOffset(1),
                                     Body->getRBracLoc()),
       Context->getSourceManager(), Context->getLangOpts(), &Invalid);
-  return !Invalid && std::strspn(Text.data(), " \t\r\n") == Text.size();
+  return !Invalid && Text.ltrim(" \t\r\n").empty();
 }
 
 UseEqualsDefaultCheck::UseEqualsDefaultCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -223,7 +224,7 @@ AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
 void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
   // Skip unions/union-like classes since their constructors behave differently
   // when defaulted vs. empty.
-  auto IsUnionLikeClass = recordDecl(
+  const auto IsUnionLikeClass = recordDecl(
       anyOf(isUnion(),
             has(fieldDecl(isImplicit(), hasType(cxxRecordDecl(isUnion()))))));
 
@@ -306,8 +307,8 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // If there are comments inside the body, don't do the change.
-  bool ApplyFix = SpecialFunctionDecl->isCopyAssignmentOperator() ||
-                  bodyEmpty(Result.Context, Body);
+  const bool ApplyFix = SpecialFunctionDecl->isCopyAssignmentOperator() ||
+                        bodyEmpty(Result.Context, Body);
 
   std::vector<FixItHint> RemoveInitializers;
   unsigned MemberType = 0;
@@ -338,21 +339,21 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   if (Location.isMacroID())
     Location = Body->getBeginLoc();
 
-  auto Diag = diag(
+  const auto Diag = diag(
       Location,
       "use '= default' to define a trivial %select{default constructor|copy "
       "constructor|destructor|copy-assignment operator}0");
   Diag << MemberType;
 
   if (ApplyFix) {
-    SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
+    const SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
         *Body, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
     // Skipping comments, check for a semicolon after Body->getSourceRange()
     std::optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
         UnifiedEnd, Result.Context->getSourceManager(),
         Result.Context->getLangOpts());
-    StringRef Replacement =
+    const StringRef Replacement =
         Token && Token->is(tok::semi) ? "= default" : "= default;";
     Diag << FixItHint::CreateReplacement(Body->getSourceRange(), Replacement)
          << RemoveInitializers;

@@ -13,7 +13,6 @@
 
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/DataAccessProf.h"
@@ -27,7 +26,6 @@
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <ctime>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -52,6 +50,7 @@ public:
   llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
   InstrProfSummaryBuilder *SummaryBuilder;
   InstrProfSummaryBuilder *CSSummaryBuilder;
+  bool WritePrevVersion = false;
 
   InstrProfRecordWriterTrait() = default;
 
@@ -59,7 +58,7 @@ public:
     return IndexedInstrProf::ComputeHash(K);
   }
 
-  static std::pair<offset_type, offset_type>
+  std::pair<offset_type, offset_type>
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
@@ -75,7 +74,16 @@ public:
       M += sizeof(uint64_t); // The size of the Counts vector
       M += ProfRecord.Counts.size() * sizeof(uint64_t);
       M += sizeof(uint64_t); // The size of the Bitmap vector
-      M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
+      if (WritePrevVersion) {
+        // Compatibility mode: each bitmap byte is stored as a uint64_t.
+        M += ProfRecord.BitmapBytes.size() * sizeof(uint64_t);
+      } else {
+        // Version 14+: bitmap bytes as uint8_t with padding, plus
+        // uniformity bits.
+        M += alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t));
+        M += sizeof(uint64_t); // The size of the UniformityBits vector
+        M += alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
+      }
 
       // Value data
       M += ValueProfData::getSize(ProfileData.second);
@@ -89,7 +97,8 @@ public:
     Out.write(K.data(), N);
   }
 
-  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
+  void EmitData(raw_ostream &Out, key_type_ref K, data_type_ref V,
+                offset_type) {
     using namespace support;
 
     endian::Writer LE(Out, llvm::endianness::little);
@@ -106,8 +115,27 @@ public:
         LE.write<uint64_t>(I);
 
       LE.write<uint64_t>(ProfRecord.BitmapBytes.size());
-      for (uint64_t I : ProfRecord.BitmapBytes)
-        LE.write<uint64_t>(I);
+      if (WritePrevVersion) {
+        // Compatibility mode: each bitmap byte is stored as a uint64_t.
+        for (uint8_t I : ProfRecord.BitmapBytes)
+          LE.write<uint64_t>(I);
+      } else {
+        // Version 14+: bitmap bytes as uint8_t with padding.
+        for (uint8_t I : ProfRecord.BitmapBytes)
+          LE.write<uint8_t>(I);
+        for (size_t I = ProfRecord.BitmapBytes.size();
+             I < alignTo(ProfRecord.BitmapBytes.size(), sizeof(uint64_t)); ++I)
+          LE.write<uint8_t>(0);
+
+        // Write uniformity bits (AMDGPU offload profiling).
+        LE.write<uint64_t>(ProfRecord.UniformityBits.size());
+        for (uint8_t I : ProfRecord.UniformityBits)
+          LE.write<uint8_t>(I);
+        for (size_t I = ProfRecord.UniformityBits.size();
+             I < alignTo(ProfRecord.UniformityBits.size(), sizeof(uint64_t));
+             ++I)
+          LE.write<uint8_t>(0);
+      }
 
       // Write value data
       std::unique_ptr<ValueProfData> VDataPtr =
@@ -125,8 +153,7 @@ InstrProfWriter::InstrProfWriter(
     bool Sparse, uint64_t TemporalProfTraceReservoirSize,
     uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
-    bool MemprofGenerateRandomHotness,
-    unsigned MemprofGenerateRandomHotnessSeed)
+    bool MemprofGenerateRandomHotness, unsigned RandomSeed)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
       InfoObj(new InstrProfRecordWriterTrait()),
@@ -134,14 +161,8 @@ InstrProfWriter::InstrProfWriter(
       MemProfVersionRequested(MemProfVersionRequested),
       MemProfFullSchema(MemProfFullSchema),
       MemprofGenerateRandomHotness(MemprofGenerateRandomHotness) {
-  // Set up the random number seed if requested.
-  if (MemprofGenerateRandomHotness) {
-    unsigned seed = MemprofGenerateRandomHotnessSeed
-                        ? MemprofGenerateRandomHotnessSeed
-                        : std::time(nullptr);
-    errs() << "random hotness seed = " << seed << "\n";
-    std::srand(seed);
-  }
+  if (RandomSeed)
+    RNG.seed(RandomSeed);
 }
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
@@ -194,6 +215,8 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
+  I.computeBlockUniformity();
+
   auto &ProfileDataMap = FunctionData[Name];
 
   auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
@@ -228,8 +251,8 @@ void InstrProfWriter::addMemProfRecord(
       // maximum value and the lifetime to 0.
       uint64_t NewTLAD = std::numeric_limits<uint64_t>::max();
       uint64_t NewTL = 0;
-      bool IsCold = std::rand() % 2;
-      if (IsCold) {
+      std::bernoulli_distribution IsCold;
+      if (IsCold(RNG)) {
         // To get a cold context, set the lifetime access density to 0 and the
         // lifetime to the maximum value.
         NewTLAD = 0;
@@ -331,61 +354,34 @@ void InstrProfWriter::addDataAccessProfData(
   DataAccessProfileData = std::move(DataAccessProfDataIn);
 }
 
-void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
-  assert(Trace.FunctionNameRefs.size() <= MaxTemporalProfTraceLength);
-  assert(!Trace.FunctionNameRefs.empty());
-  if (TemporalProfTraceStreamSize < TemporalProfTraceReservoirSize) {
-    // Simply append the trace if we have not yet hit our reservoir size limit.
-    TemporalProfTraces.push_back(std::move(Trace));
-  } else {
-    // Otherwise, replace a random trace in the stream.
-    std::uniform_int_distribution<uint64_t> Distribution(
-        0, TemporalProfTraceStreamSize);
-    uint64_t RandomIndex = Distribution(RNG);
-    if (RandomIndex < TemporalProfTraces.size())
-      TemporalProfTraces[RandomIndex] = std::move(Trace);
-  }
-  ++TemporalProfTraceStreamSize;
-}
-
 void InstrProfWriter::addTemporalProfileTraces(
     SmallVectorImpl<TemporalProfTraceTy> &SrcTraces, uint64_t SrcStreamSize) {
+  if (TemporalProfTraces.size() > TemporalProfTraceReservoirSize)
+    TemporalProfTraces.truncate(TemporalProfTraceReservoirSize);
   for (auto &Trace : SrcTraces)
     if (Trace.FunctionNameRefs.size() > MaxTemporalProfTraceLength)
       Trace.FunctionNameRefs.resize(MaxTemporalProfTraceLength);
   llvm::erase_if(SrcTraces, [](auto &T) { return T.FunctionNameRefs.empty(); });
-  // Assume that the source has the same reservoir size as the destination to
-  // avoid needing to record it in the indexed profile format.
-  bool IsDestSampled =
-      (TemporalProfTraceStreamSize > TemporalProfTraceReservoirSize);
-  bool IsSrcSampled = (SrcStreamSize > TemporalProfTraceReservoirSize);
-  if (!IsDestSampled && IsSrcSampled) {
-    // If one of the traces are sampled, ensure that it belongs to Dest.
-    std::swap(TemporalProfTraces, SrcTraces);
-    std::swap(TemporalProfTraceStreamSize, SrcStreamSize);
-    std::swap(IsDestSampled, IsSrcSampled);
-  }
-  if (!IsSrcSampled) {
-    // If the source stream is not sampled, we add each source trace normally.
-    for (auto &Trace : SrcTraces)
-      addTemporalProfileTrace(std::move(Trace));
+  // If there are no source traces, it is probably because
+  // --temporal-profile-max-trace-length=0 was set to deliberately remove all
+  // traces. In that case, we do not want to increase the stream size
+  if (SrcTraces.empty())
     return;
-  }
-  // Otherwise, we find the traces that would have been removed if we added
-  // the whole source stream.
-  SmallSetVector<uint64_t, 8> IndicesToReplace;
-  for (uint64_t I = 0; I < SrcStreamSize; I++) {
-    std::uniform_int_distribution<uint64_t> Distribution(
-        0, TemporalProfTraceStreamSize);
+  // Add traces until our reservoir is full or we run out of source traces
+  auto SrcTraceIt = SrcTraces.begin();
+  while (TemporalProfTraces.size() < TemporalProfTraceReservoirSize &&
+         SrcTraceIt < SrcTraces.end())
+    TemporalProfTraces.push_back(*SrcTraceIt++);
+  // Our reservoir is full, we need to sample the source stream
+  llvm::shuffle(SrcTraceIt, SrcTraces.end(), RNG);
+  for (uint64_t I = TemporalProfTraces.size();
+       I < SrcStreamSize && SrcTraceIt < SrcTraces.end(); I++) {
+    std::uniform_int_distribution<uint64_t> Distribution(0, I);
     uint64_t RandomIndex = Distribution(RNG);
     if (RandomIndex < TemporalProfTraces.size())
-      IndicesToReplace.insert(RandomIndex);
-    ++TemporalProfTraceStreamSize;
+      TemporalProfTraces[RandomIndex] = *SrcTraceIt++;
   }
-  // Then we insert a random sample of the source traces.
-  llvm::shuffle(SrcTraces.begin(), SrcTraces.end(), RNG);
-  for (const auto &[Index, Trace] : llvm::zip(IndicesToReplace, SrcTraces))
-    TemporalProfTraces[Index] = std::move(Trace);
+  TemporalProfTraceStreamSize += SrcStreamSize;
 }
 
 void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
@@ -552,6 +548,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->SummaryBuilder = &ISB;
   InstrProfSummaryBuilder CSISB(ProfileSummaryBuilder::DefaultCutoffs);
   InfoObj->CSSummaryBuilder = &CSISB;
+  InfoObj->WritePrevVersion = WritePrevVersion;
 
   // Populate the hash table generator.
   SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
@@ -570,7 +567,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
   static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-                IndexedInstrProf::ProfVersion::Version12);
+                IndexedInstrProf::ProfVersion::Version14);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))

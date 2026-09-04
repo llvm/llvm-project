@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Mangler.h"
-#include "flang/Common/reference.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -224,8 +223,18 @@ std::string Fortran::lower::mangle::mangleName(
       assert(paramExpr && "derived type kind param not explicit");
       std::optional<int64_t> init =
           Fortran::evaluate::ToInt64(paramValue->GetExplicit());
-      assert(init && "derived type kind param is not constant");
-      kinds.emplace_back(*init);
+      // TODO: put the assertion check back when parametrized derived types
+      // are supported:
+      // assert(init && "derived type kind param is not constant");
+      //
+      // The init parameter above will require a FoldingContext for proper
+      // expression evaluation to an integer constant, otherwise the
+      // compiler may crash here (see example in issue #127424).
+      if (!init) {
+        TODO_NOLOC("parameterized derived types");
+      } else {
+        kinds.emplace_back(*init);
+      }
     }
   }
   return fir::NameUniquer::doType(modules, procs, blockId, symbolName, kinds);

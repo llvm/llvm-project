@@ -11,14 +11,14 @@ static int staticFunction(void); // expected-note + {{'staticFunction' declared 
 static struct { int x; } staticStruct; // expected-note + {{'staticStruct' declared here}}
 
 inline int useStatic (void) { // expected-note 3 {{use 'static' to give inline function 'useStatic' internal linkage}}
-  staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
-  (void)staticStruct.x; // expected-warning{{static variable 'staticStruct' is used in an inline function with external linkage}}
-  return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
+  staticFunction(); // expected-warning{{using static function 'staticFunction' in an inline function with external linkage is a C2y extension}}
+  (void)staticStruct.x; // expected-warning{{using static variable 'staticStruct' in an inline function with external linkage is a C2y extension}}
+  return staticVar; // expected-warning{{using static variable 'staticVar' in an inline function with external linkage is a C2y extension}}
 }
 
 extern inline int useStaticFromExtern (void) { // no suggestions
-  staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
-  return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
+  staticFunction(); // expected-warning{{using static function 'staticFunction' in an inline function with external linkage is a C2y extension}}
+  return staticVar; // expected-warning{{using static variable 'staticVar' in an inline function with external linkage is a C2y extension}}
 }
 
 static inline int useStaticFromStatic (void) {
@@ -67,8 +67,8 @@ inline int useStaticMainFile (void) {
 #pragma clang diagnostic warning "-Wstatic-in-inline"
 
 inline int useStaticAgain (void) { // expected-note 2 {{use 'static' to give inline function 'useStaticAgain' internal linkage}}
-  staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
-  return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
+  staticFunction(); // expected-warning{{using static function 'staticFunction' in an inline function with external linkage is a C2y extension}}
+  return staticVar; // expected-warning{{using static variable 'staticVar' in an inline function with external linkage is a C2y extension}}
 }
 
 #pragma clang diagnostic pop
@@ -86,8 +86,8 @@ extern inline void defineStaticVarInExtern(void) {
 // Check behavior of line markers.
 # 1 "XXX.h" 1
 inline int useStaticMainFileInLineMarker(void) { // expected-note 2 {{use 'static' to give inline function 'useStaticMainFileInLineMarker' internal linkage}}
-  staticFunction(); // expected-warning{{static function 'staticFunction' is used in an inline function with external linkage}}
-  return staticVar; // expected-warning{{static variable 'staticVar' is used in an inline function with external linkage}}
+  staticFunction(); // expected-warning{{using static function 'staticFunction' in an inline function with external linkage is a C2y extension}}
+  return staticVar; // expected-warning{{using static variable 'staticVar' in an inline function with external linkage is a C2y extension}}
 }
 # 100 "inline.c" 2
 

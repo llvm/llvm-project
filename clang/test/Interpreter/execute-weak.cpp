@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-aix, system-windows
+// UNSUPPORTED: system-windows
 // RUN: cat %s | clang-repl | FileCheck %s
 
 extern "C" int printf(const char *, ...);

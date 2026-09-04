@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
+#include "llvm/ADT/BitmaskEnum.h"
 
 namespace mlir {
 namespace ROCDL {
@@ -42,6 +43,17 @@ enum class AMDGCNLibraries : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(LastLib),
   All = (LastLib << 1) - 1
 };
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+/// Assembles ISA to an object code.
+FailureOr<SmallVector<char, 0>>
+assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
+            StringRef features, function_ref<InFlightDiagnostic()> emitError);
+
+FailureOr<SmallVector<char, 0>>
+linkObjectCode(ArrayRef<char> objectCode, StringRef lldPath,
+               function_ref<InFlightDiagnostic()> emitError);
 
 /// Base class for all ROCDL serializations from GPU modules into binary
 /// strings. By default this class serializes into LLVM bitcode.
@@ -90,16 +102,13 @@ protected:
                            StringRef abiVer);
 
   /// Compiles assembly to a binary.
-  virtual std::optional<SmallVector<char, 0>>
-  compileToBinary(const std::string &serializedISA);
+  virtual FailureOr<SmallVector<char, 0>>
+  compileToBinary(StringRef serializedISA);
 
   /// Default implementation of `ModuleToObject::moduleToObject`.
-  std::optional<SmallVector<char, 0>>
+  FailureOr<SmallVector<char, 0>>
   moduleToObjectImpl(const gpu::TargetOptions &targetOptions,
                      llvm::Module &llvmModule);
-
-  /// Returns the assembled ISA.
-  std::optional<SmallVector<char, 0>> assembleIsa(StringRef isa);
 
   /// ROCDL target attribute.
   ROCDLTargetAttr target;

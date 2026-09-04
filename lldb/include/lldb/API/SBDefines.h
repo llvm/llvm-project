@@ -45,6 +45,7 @@ namespace lldb {
 class LLDB_API SBAddress;
 class LLDB_API SBAddressRange;
 class LLDB_API SBAddressRangeList;
+class LLDB_API SBProcessAddress;
 class LLDB_API SBAttachInfo;
 class LLDB_API SBBlock;
 class LLDB_API SBBreakpoint;
@@ -76,6 +77,7 @@ class LLDB_API SBFileSpec;
 class LLDB_API SBFileSpecList;
 class LLDB_API SBFormat;
 class LLDB_API SBFrame;
+class LLDB_API SBFrameList;
 class LLDB_API SBFunction;
 class LLDB_API SBHostOS;
 class LLDB_API SBInstruction;
@@ -97,6 +99,7 @@ class LLDB_API SBProcess;
 class LLDB_API SBProcessInfo;
 class LLDB_API SBProcessInfoList;
 class LLDB_API SBProgress;
+class LLDB_API SBProtocolServer;
 class LLDB_API SBQueue;
 class LLDB_API SBQueueItem;
 class LLDB_API SBReplayOptions;
@@ -151,6 +154,6 @@ typedef lldb::CommandReturnObjectCallbackResult (*SBCommandPrintCallback)(
 typedef lldb::SBError (*SBPlatformLocateModuleCallback)(
     void *baton, const lldb::SBModuleSpec &module_spec,
     lldb::SBFileSpec &module_file_spec, lldb::SBFileSpec &symbol_file_spec);
-}
+} // namespace lldb
 
 #endif // LLDB_API_SBDEFINES_H

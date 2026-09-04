@@ -37,6 +37,16 @@
 //    memory that ends up in one of the runtime equivalents, since this can
 //    happen if e.g. a library that was compiled without interposition returns
 //    an allocation that can be validly passed to `free`.
+//
+// 3. MathFixup (required): Some accelerators might have an incomplete
+//    implementation for the intrinsics used to implement some of the math
+//    functions in <cmath> / their corresponding libcall lowerings. Since this
+//    can vary quite significantly between accelerators, we replace calls to a
+//    set of intrinsics / lib functions known to be problematic with calls to a
+//    HIPSTDPAR specific forwarding layer, which gives an uniform interface for
+//    accelerators to implement in their own runtime components. This pass
+//    should run before AcceleratorCodeSelection so as to prevent the spurious
+//    removal of the HIPSTDPAR specific forwarding functions.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
@@ -49,6 +59,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -516,6 +527,113 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
       eraseFromModule(*F);
     }
   }
+
+  return PreservedAnalyses::none();
+}
+
+static constexpr std::pair<StringLiteral, StringLiteral> MathLibToHipStdPar[]{
+    {"acosh", "__hipstdpar_acosh_f64"},
+    {"acoshf", "__hipstdpar_acosh_f32"},
+    {"asinh", "__hipstdpar_asinh_f64"},
+    {"asinhf", "__hipstdpar_asinh_f32"},
+    {"atanh", "__hipstdpar_atanh_f64"},
+    {"atanhf", "__hipstdpar_atanh_f32"},
+    {"cbrt", "__hipstdpar_cbrt_f64"},
+    {"cbrtf", "__hipstdpar_cbrt_f32"},
+    {"erf", "__hipstdpar_erf_f64"},
+    {"erff", "__hipstdpar_erf_f32"},
+    {"erfc", "__hipstdpar_erfc_f64"},
+    {"erfcf", "__hipstdpar_erfc_f32"},
+    {"fdim", "__hipstdpar_fdim_f64"},
+    {"fdimf", "__hipstdpar_fdim_f32"},
+    {"expm1", "__hipstdpar_expm1_f64"},
+    {"expm1f", "__hipstdpar_expm1_f32"},
+    {"hypot", "__hipstdpar_hypot_f64"},
+    {"hypotf", "__hipstdpar_hypot_f32"},
+    {"ilogb", "__hipstdpar_ilogb_f64"},
+    {"ilogbf", "__hipstdpar_ilogb_f32"},
+    {"lgamma", "__hipstdpar_lgamma_f64"},
+    {"lgammaf", "__hipstdpar_lgamma_f32"},
+    {"log1p", "__hipstdpar_log1p_f64"},
+    {"log1pf", "__hipstdpar_log1p_f32"},
+    {"logb", "__hipstdpar_logb_f64"},
+    {"logbf", "__hipstdpar_logb_f32"},
+    {"nextafter", "__hipstdpar_nextafter_f64"},
+    {"nextafterf", "__hipstdpar_nextafter_f32"},
+    {"nexttoward", "__hipstdpar_nexttoward_f64"},
+    {"nexttowardf", "__hipstdpar_nexttoward_f32"},
+    {"remainder", "__hipstdpar_remainder_f64"},
+    {"remainderf", "__hipstdpar_remainder_f32"},
+    {"remquo", "__hipstdpar_remquo_f64"},
+    {"remquof", "__hipstdpar_remquo_f32"},
+    {"scalbln", "__hipstdpar_scalbln_f64"},
+    {"scalblnf", "__hipstdpar_scalbln_f32"},
+    {"scalbn", "__hipstdpar_scalbn_f64"},
+    {"scalbnf", "__hipstdpar_scalbn_f32"},
+    {"tgamma", "__hipstdpar_tgamma_f64"},
+    {"tgammaf", "__hipstdpar_tgamma_f32"}};
+
+PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
+                                              ModuleAnalysisManager &) {
+  if (M.empty())
+    return PreservedAnalyses::all();
+
+  SmallVector<std::pair<Function *, std::string>> ToReplace;
+  for (auto &&F : M) {
+    if (!F.hasName())
+      continue;
+
+    StringRef N = F.getName();
+    Intrinsic::ID ID = F.getIntrinsicID();
+
+    switch (ID) {
+    case Intrinsic::not_intrinsic: {
+      auto It =
+          find_if(MathLibToHipStdPar, [&](auto &&M) { return M.first == N; });
+      if (It == std::cend(MathLibToHipStdPar))
+        continue;
+      ToReplace.emplace_back(&F, It->second);
+      break;
+    }
+    case Intrinsic::acos:
+    case Intrinsic::asin:
+    case Intrinsic::atan:
+    case Intrinsic::atan2:
+    case Intrinsic::cosh:
+    case Intrinsic::modf:
+    case Intrinsic::sinh:
+    case Intrinsic::tan:
+    case Intrinsic::tanh:
+      break;
+    default: {
+      if (F.getReturnType()->isDoubleTy()) {
+        switch (ID) {
+        case Intrinsic::cos:
+        case Intrinsic::exp:
+        case Intrinsic::exp2:
+        case Intrinsic::log:
+        case Intrinsic::log10:
+        case Intrinsic::log2:
+        case Intrinsic::pow:
+        case Intrinsic::sin:
+          break;
+        default:
+          continue;
+        }
+        break;
+      }
+      continue;
+    }
+    }
+
+    ToReplace.emplace_back(&F, N);
+    llvm::replace(ToReplace.back().second, '.', '_');
+    StringRef Prefix = "llvm";
+    ToReplace.back().second.replace(0, Prefix.size(), "__hipstdpar");
+  }
+  for (auto &&[F, NewF] : ToReplace)
+    F->replaceAllUsesWith(
+        M.getOrInsertFunction(NewF, F->getFunctionType()).getCallee());
 
   return PreservedAnalyses::none();
 }

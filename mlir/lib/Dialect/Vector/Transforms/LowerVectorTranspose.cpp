@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -301,7 +300,7 @@ namespace {
 ///   %x = vector.insert .., .. [.., ..]
 class TransposeOpLowering : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   TransposeOpLowering(vector::VectorTransposeLowering vectorTransposeLowering,
                       MLIRContext *context, PatternBenefit benefit = 1)
@@ -396,7 +395,7 @@ private:
 class Transpose2DWithUnitDimToShapeCast
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   Transpose2DWithUnitDimToShapeCast(MLIRContext *context,
                                     PatternBenefit benefit = 1)
@@ -434,7 +433,7 @@ public:
 class TransposeOp2DToShuffleLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   TransposeOp2DToShuffleLowering(
       vector::VectorTransposeLowering vectorTransposeLowering,

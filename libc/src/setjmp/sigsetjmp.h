@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SETJMP_SIGSETJMP_H
 #define LLVM_LIBC_SRC_SETJMP_SIGSETJMP_H
 
-#include "hdr/types/jmp_buf.h"
+#include "hdr/types/sigjmp_buf.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/compiler.h"
 

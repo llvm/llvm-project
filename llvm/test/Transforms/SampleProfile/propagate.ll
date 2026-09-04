@@ -123,7 +123,6 @@ for.cond8:                                        ; preds = %for.inc, %if.else7
 ; CHECK: edge %for.cond8 -> %for.body10 probability is 0x7e941a89 / 0x80000000 = 98.89% [HOT edge]
 ; CHECK: edge %for.cond8 -> %for.end probability is 0x016be577 / 0x80000000 = 1.11%
 
-
 for.body10:                                       ; preds = %for.cond8
   %14 = load i64, ptr %j, align 8, !dbg !69
   %15 = load i32, ptr %x.addr, align 4, !dbg !71
@@ -171,7 +170,7 @@ return:                                           ; preds = %if.end20, %if.then
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: norecurse uwtable
 define i32 @main() #2 !dbg !86 {
@@ -198,12 +197,10 @@ entry:
   ret i32 0, !dbg !104
 }
 
-declare i32 @printf(ptr, ...) #3
+declare i32 @printf(ptr, ...)
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { norecurse uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
-attributes #3 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "use-sample-profile" }
+attributes #2 = { norecurse uwtable "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

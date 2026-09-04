@@ -25,14 +25,14 @@ define void @fold_strlen_no_nul(ptr %plen, i32 %i) {
 ; CHECK-NEXT:    [[PNS5_P6:%.*]] = getelementptr i8, ptr [[PLEN]], i64 16
 ; CHECK-NEXT:    store i64 0, ptr [[PNS5_P6]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[PA5_PI:%.*]] = getelementptr [5 x i8], ptr @a5, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[PA5_PI:%.*]] = getelementptr i8, ptr @a5, i64 [[TMP1]]
 ; CHECK-NEXT:    [[NA5_PI:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA5_PI]])
 ; CHECK-NEXT:    [[PNA5_PI:%.*]] = getelementptr i8, ptr [[PLEN]], i64 24
 ; CHECK-NEXT:    store i64 [[NA5_PI]], ptr [[PNA5_PI]], align 4
 ; CHECK-NEXT:    [[PNZ0_P0:%.*]] = getelementptr i8, ptr [[PLEN]], i64 32
 ; CHECK-NEXT:    store i64 0, ptr [[PNZ0_P0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[PZ0_PI:%.*]] = getelementptr [0 x i8], ptr @z0, i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[PZ0_PI:%.*]] = getelementptr i8, ptr @z0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[NZ0_PI:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PZ0_PI]])
 ; CHECK-NEXT:    [[PNZ0_PI:%.*]] = getelementptr i8, ptr [[PLEN]], i64 40
 ; CHECK-NEXT:    store i64 [[NZ0_PI]], ptr [[PNZ0_PI]], align 4

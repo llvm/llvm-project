@@ -21,6 +21,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include <limits>
+
 using namespace mlir;
 
 namespace {
@@ -42,6 +44,20 @@ struct TestSCFForUtilsPass
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
+    // Annotate every loop-like operation with the static trip count.
+    func.walk([&](LoopLikeOpInterface loopOp) {
+      std::optional<APInt> tripCount = loopOp.getStaticTripCount();
+      if (tripCount.has_value())
+        loopOp->setDiscardableAttr(
+            "test.trip-count",
+            IntegerAttr::get(IntegerType::get(&getContext(),
+                                              tripCount.value().getBitWidth()),
+                             tripCount.value().getZExtValue()));
+      else
+        loopOp->setDiscardableAttr("test.trip-count",
+                                   StringAttr::get(&getContext(), "none"));
+    });
+
     if (testReplaceWithNewYields) {
       func.walk([&](scf::ForOp forOp) {
         if (forOp.getNumResults() == 0)
@@ -56,7 +72,7 @@ struct TestSCFForUtilsPass
           SmallVector<Value> newYieldValues;
           for (auto yieldVal : oldYieldValues) {
             newYieldValues.push_back(
-                b.create<arith::AddFOp>(loc, yieldVal, yieldVal));
+                arith::AddFOp::create(b, loc, yieldVal, yieldVal));
           }
           return newYieldValues;
         };
@@ -140,18 +156,36 @@ struct TestSCFPipeliningPass
       return;
 
     schedule.resize(forOp.getBody()->getOperations().size() - 1);
-    forOp.walk([&schedule](Operation *op) {
+    WalkResult result = forOp.walk([&schedule](Operation *op) {
       auto attrStage =
           op->getAttrOfType<IntegerAttr>(kTestPipeliningStageMarker);
       auto attrCycle =
           op->getAttrOfType<IntegerAttr>(kTestPipeliningOpOrderMarker);
       if (attrCycle && attrStage) {
-        // TODO: Index can be out-of-bounds if ops of the loop body disappear
-        // due to folding.
-        schedule[attrCycle.getInt()] =
-            std::make_pair(op, unsigned(attrStage.getInt()));
+        const APInt &stage = attrStage.getValue();
+        if (stage.isNegative() ||
+            stage.getActiveBits() > std::numeric_limits<unsigned>::digits) {
+          op->emitOpError("invalid pipeline stage");
+          return WalkResult::interrupt();
+        }
+        const APInt &order = attrCycle.getValue();
+        if (order.isNegative() || order.getActiveBits() > 64 ||
+            order.getZExtValue() >= schedule.size()) {
+          op->emitOpError("invalid pipeline op order");
+          return WalkResult::interrupt();
+        }
+        size_t orderIndex = static_cast<size_t>(order.getZExtValue());
+        if (schedule[orderIndex].first) {
+          op->emitOpError("duplicate pipeline op order");
+          return WalkResult::interrupt();
+        }
+        schedule[orderIndex] =
+            std::make_pair(op, static_cast<unsigned>(stage.getZExtValue()));
       }
+      return WalkResult::advance();
     });
+    if (result.wasInterrupted())
+      schedule.clear();
   }
 
   /// Helper to generate "predicated" version of `op`. For simplicity we just
@@ -160,13 +194,13 @@ struct TestSCFPipeliningPass
                                 Value pred) {
     Location loc = op->getLoc();
     auto ifOp =
-        rewriter.create<scf::IfOp>(loc, op->getResultTypes(), pred, true);
+        scf::IfOp::create(rewriter, loc, op->getResultTypes(), pred, true);
     // True branch.
     rewriter.moveOpBefore(op, &ifOp.getThenRegion().front(),
                           ifOp.getThenRegion().front().begin());
     rewriter.setInsertionPointAfter(op);
     if (op->getNumResults() > 0)
-      rewriter.create<scf::YieldOp>(loc, op->getResults());
+      scf::YieldOp::create(rewriter, loc, op->getResults());
     // False branch.
     rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
     SmallVector<Value> elseYieldOperands;
@@ -181,12 +215,12 @@ struct TestSCFPipeliningPass
     } else {
       // Default to assuming constant numeric values.
       for (Type type : op->getResultTypes()) {
-        elseYieldOperands.push_back(rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getZeroAttr(type)));
+        elseYieldOperands.push_back(arith::ConstantOp::create(
+            rewriter, loc, rewriter.getZeroAttr(type)));
       }
     }
     if (op->getNumResults() > 0)
-      rewriter.create<scf::YieldOp>(loc, elseYieldOperands);
+      scf::YieldOp::create(rewriter, loc, elseYieldOperands);
     return ifOp.getOperation();
   }
 
@@ -233,6 +267,64 @@ struct TestSCFPipeliningPass
     });
   }
 };
+
+static constexpr StringLiteral kSplitAtAttr = "test.split_at";
+static constexpr StringLiteral kSplitArgAttr = "test.split_arg";
+
+struct TestSplitForOpAtPointPass
+    : public PassWrapper<TestSplitForOpAtPointPass,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSplitForOpAtPointPass)
+
+  StringRef getArgument() const final { return "test-split-for-op-at-point"; }
+
+  StringRef getDescription() const final { return "test splitForOpAtPoint"; }
+
+  TestSplitForOpAtPointPass() = default;
+  TestSplitForOpAtPointPass(const TestSplitForOpAtPointPass &) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+  }
+
+  void runOnOperation() override {
+    func::FuncOp func = getOperation();
+    SmallVector<scf::ForOp> loopsToSplit;
+    func.walk([&](scf::ForOp forOp) {
+      if (forOp->hasAttr(kSplitAtAttr) || forOp->hasAttr(kSplitArgAttr))
+        loopsToSplit.push_back(forOp);
+    });
+
+    IRRewriter rewriter(func.getContext());
+    for (scf::ForOp forOp : loopsToSplit) {
+      Value splitPoint;
+      if (auto splitAttr = forOp->getAttrOfType<IntegerAttr>(kSplitAtAttr)) {
+        rewriter.setInsertionPoint(forOp);
+        splitPoint =
+            arith::ConstantOp::create(rewriter, forOp.getLoc(), splitAttr);
+        rewriter.modifyOpInPlace(forOp,
+                                 [&] { forOp->removeAttr(kSplitAtAttr); });
+      } else if (auto argAttr =
+                     forOp->getAttrOfType<IntegerAttr>(kSplitArgAttr)) {
+        int64_t argNo = argAttr.getInt();
+        if (argNo < 0 ||
+            static_cast<unsigned>(argNo) >= func.getNumArguments()) {
+          emitError(forOp.getLoc(), "test.split_arg is out of range");
+          return signalPassFailure();
+        }
+        splitPoint = func.getArgument(argNo);
+        rewriter.modifyOpInPlace(forOp,
+                                 [&] { forOp->removeAttr(kSplitArgAttr); });
+      } else {
+        continue;
+      }
+      if (failed(splitForOpAtPoint(rewriter, forOp, splitPoint))) {
+        emitError(forOp.getLoc(), "failed to split scf.for");
+        return signalPassFailure();
+      }
+    }
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -241,6 +333,7 @@ void registerTestSCFUtilsPass() {
   PassRegistration<TestSCFForUtilsPass>();
   PassRegistration<TestSCFIfUtilsPass>();
   PassRegistration<TestSCFPipeliningPass>();
+  PassRegistration<TestSplitForOpAtPointPass>();
 }
 } // namespace test
 } // namespace mlir

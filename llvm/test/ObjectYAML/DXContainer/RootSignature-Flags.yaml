@@ -17,7 +17,7 @@ Parts:
       NumRootParameters: 0
       RootParametersOffset: 24
       NumStaticSamplers: 0
-      StaticSamplersOffset: 60
+      StaticSamplersOffset: 24
       Parameters: []
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
@@ -29,7 +29,7 @@ Parts:
 # CHECK-NEXT:      NumRootParameters: 0
 # CHECK-NEXT:      RootParametersOffset: 24
 # CHECK-NEXT:      NumStaticSamplers: 0
-# CHECK-NEXT:      StaticSamplersOffset: 60
+# CHECK-NEXT:      StaticSamplersOffset: 24
 # CHECK-NEXT:      Parameters: []
 # CHECK-NEXT:      AllowInputAssemblerInputLayout: true
 # CHECK-NEXT:      DenyGeometryShaderRootAccess: true

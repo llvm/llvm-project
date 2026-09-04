@@ -67,11 +67,11 @@ int maini1() {
   return 0;
 }
 
-// DEVICE-DAG: define weak{{.*}} void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](ptr {{[^,]*}}, ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
+// DEVICE-DAG: define weak{{.*}} void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}, ptr {{[^)]*}})
 // DEVICE-DAG: [[C:%.+]] = load i32, ptr [[C_ADDR]],
 // DEVICE-DAG: store i32 [[C]], ptr %
 
-// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-11]](ptr noundef nonnull align {{[0-9]+}} dereferenceable{{.*}})
+// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-11]](ptr noundef nonnull align {{[0-9]+}} dereferenceable{{.*}}, ptr {{[^)]*}})
 // HOST: [[C:%.*]] = load i32, ptr @[[C_ADDR]],
 // HOST: store i32 [[C]], ptr %
 

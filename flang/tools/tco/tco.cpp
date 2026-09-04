@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -50,6 +51,12 @@ static cl::opt<std::string> outputFilename("o",
 static cl::opt<bool> emitFir("emit-fir",
                              cl::desc("Parse and pretty-print the input"),
                              cl::init(false));
+
+static cl::opt<unsigned>
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init(2));
 
 static cl::opt<std::string> targetTriple("target",
                                          cl::desc("specify a target triple"),
@@ -89,11 +96,43 @@ static cl::opt<bool> testGeneratorMode(
     "test-gen", cl::desc("-emit-final-mlir -simplify-mlir -enable-aa=false"),
     cl::init(false));
 
+static cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
+    "ffp-maxmin-behavior",
+    cl::desc("Control max/min and [max|min][loc|val] behavior "
+             "[legacy|portable|extremum|extremenum] (for future pass use)"),
+    cl::values(clEnumValN(Fortran::common::FPMaxminBehavior::Legacy, "legacy",
+                          "cmp+select"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
+                          "portable",
+                          "cmp+select and arith.max/minnumf when nnan and nsz "
+                          "fast math flags are enabled"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
+                          "extremum", "arith.max/minimum"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                          "extremenum", "arith.max/minnum")),
+    cl::init(Fortran::common::FPMaxminBehavior::Legacy));
+
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
 
 static void printModule(mlir::ModuleOp mod, raw_ostream &output) {
   output << mod << '\n';
+}
+
+static std::optional<llvm::OptimizationLevel>
+getOptimizationLevel(unsigned level) {
+  switch (level) {
+  default:
+    return std::nullopt;
+  case 0:
+    return llvm::OptimizationLevel::O0;
+  case 1:
+    return llvm::OptimizationLevel::O1;
+  case 2:
+    return llvm::OptimizationLevel::O2;
+  case 3:
+    return llvm::OptimizationLevel::O3;
+  }
 }
 
 // compile a .fir file
@@ -157,9 +196,18 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
       return mlir::failure();
   } else {
-    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    std::optional<llvm::OptimizationLevel> level =
+        getOptimizationLevel(OptLevel);
+    if (!level) {
+      errs() << "Error invalid optimization level\n";
+      return mlir::failure();
+    }
+    MLIRToLLVMPassPipelineConfig config(*level);
+    config.fpMaxminBehavior = fpMaxminBehavior.getValue();
+    // TODO: config.StackArrays should be set here?
     config.EnableOpenMP = true;  // assume the input contains OpenMP
     config.AliasAnalysis = enableAliasAnalysis && !testGeneratorMode;
+    config.LoopVersioning = OptLevel > 2;
     if (codeGenLLVM) {
       // Run only CodeGen passes.
       fir::createDefaultFIRCodeGenPassPipeline(pm, config);

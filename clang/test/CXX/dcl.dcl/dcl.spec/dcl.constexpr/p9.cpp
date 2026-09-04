@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s -fexperimental-new-constant-interpreter
+
 // A constexpr specifier used in an object declaration declares the object as
 // const.
 constexpr int a = 0;

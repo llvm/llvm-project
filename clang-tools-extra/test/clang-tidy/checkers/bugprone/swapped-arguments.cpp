@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s bugprone-swapped-arguments %t
+// RUN: %check_clang_tidy %s bugprone-swapped-arguments %t
 
 void F(int, double);
 
@@ -9,7 +9,7 @@ void G(T a, U b) {
   F(a, b); // no-warning
   F(2.0, 4);
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: argument with implicit conversion from 'double' to 'int' followed by argument converted from 'int' to 'double', potentially swapped arguments.
-// CHECK-FIXES: F(4, 2.0)
+// CHECK-FIXES: F(4, 2.0);
 }
 
 void funShortFloat(short, float);
@@ -20,7 +20,7 @@ void funBoolFloat(bool, float);
 void foo() {
   F(1.0, 3);
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: argument with implicit conversion from 'double' to 'int' followed by argument converted from 'int' to 'double', potentially swapped arguments.
-// CHECK-FIXES: F(3, 1.0)
+// CHECK-FIXES: F(3, 1.0);
 
 #define M(x, y) x##y()
 

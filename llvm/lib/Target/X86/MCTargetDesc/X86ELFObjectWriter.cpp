@@ -217,7 +217,7 @@ unsigned X86ELFObjectWriter::getRelocType64(SMLoc Loc, X86::Specifier Specifier,
     // Older versions of ld.bfd/ld.gold/lld
     // do not support GOTPCRELX/REX_GOTPCRELX/CODE_4_GOTPCRELX,
     // and we want to keep back-compatibility.
-    if (!getContext().getTargetOptions()->X86RelaxRelocations)
+    if (!getContext().getTargetOptions().X86RelaxRelocations)
       return ELF::R_X86_64_GOTPCREL;
     switch (unsigned(Kind)) {
     default:
@@ -269,7 +269,7 @@ unsigned X86ELFObjectWriter::getRelocType32(SMLoc Loc, X86::Specifier Specifier,
       return ELF::R_386_GOTPC;
     // Older versions of ld.bfd/ld.gold/lld do not support R_386_GOT32X and we
     // want to maintain compatibility.
-    if (!getContext().getTargetOptions()->X86RelaxRelocations)
+    if (!getContext().getTargetOptions().X86RelaxRelocations)
       return ELF::R_386_GOT32;
 
     return Kind == X86::reloc_signed_4byte_relax ? ELF::R_386_GOT32X
@@ -349,8 +349,8 @@ unsigned X86ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case X86::S_TLSLDM:
   case X86::S_TPOFF:
   case X86::S_DTPOFF:
-    if (auto *S = Target.getAddSym())
-      cast<MCSymbolELF>(S)->setType(ELF::STT_TLS);
+    if (auto *S = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(S)->setType(ELF::STT_TLS);
     break;
   default:
     break;

@@ -9,11 +9,18 @@
 import os.path
 import sys
 
-from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
+from libcxx.header_information import (
+    module_c_headers,
+    module_headers,
+    headers_not_available,
+    libcxx_root,
+)
 
 
 def write_file(module):
-    with open(libcxx_root / "modules" / f"{module}.cppm.in", "w") as module_cpp_in:
+    with open(
+        libcxx_root / "modules" / f"{module}.cppm.in", "w", encoding="utf-8"
+    ) as module_cpp_in:
         module_cpp_in.write(
             """\
 // -*- C++ -*-
@@ -38,16 +45,7 @@ module;
 """
         )
         for header in sorted(module_headers if module == "std" else module_c_headers):
-            if header in header_restrictions:
-                module_cpp_in.write(
-                    f"""\
-#if {header_restrictions[header]}
-#  include <{header}>
-#endif
-"""
-                )
-            else:
-                module_cpp_in.write(f"#include <{header}>\n")
+            module_cpp_in.write(f"#include <{header}>\n")
 
         module_cpp_in.write(
             """

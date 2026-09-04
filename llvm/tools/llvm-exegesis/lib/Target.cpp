@@ -23,7 +23,7 @@ cl::OptionCategory Options("llvm-exegesis options");
 cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
 cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
 
-ExegesisTarget::~ExegesisTarget() {} // anchor.
+ExegesisTarget::~ExegesisTarget() = default; // anchor.
 
 static ExegesisTarget *FirstTarget = nullptr;
 
@@ -179,11 +179,15 @@ std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
 static_assert(std::is_trivial_v<PfmCountersInfo>,
               "We shouldn't have dynamic initialization here");
 
-const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
-                                                  0u,      nullptr, 0u};
+const PfmCountersInfo PfmCountersInfo::Default = {
+    nullptr, -1, 0, nullptr, -1, 0, nullptr, 0u, nullptr, 0u};
 const PfmCountersInfo PfmCountersInfo::Dummy = {
     pfm::PerfEvent::DummyEventString,
+    -1,
+    0,
     pfm::PerfEvent::DummyEventString,
+    -1,
+    0,
     nullptr,
     0u,
     nullptr,
@@ -215,7 +219,7 @@ const PfmCountersInfo &ExegesisTarget::getDummyPfmCounters() const {
   return PfmCountersInfo::Dummy;
 }
 
-ExegesisTarget::SavedState::~SavedState() {} // anchor.
+ExegesisTarget::SavedState::~SavedState() = default; // anchor.
 
 namespace {
 

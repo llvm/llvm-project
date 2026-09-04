@@ -10,9 +10,22 @@
 #include "llvm/DWARFLinker/Classic/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+
+static std::optional<std::string>
+makeSimpleTemplateNameWithParams(StringRef Name, const DWARFDie &DIE) {
+  std::string Result = Name.str();
+  raw_string_ostream OS(Result);
+  DWARFTypePrinter<DWARFDie> Printer(OS);
+  Printer.appendAndTerminateTemplateParameters(DIE);
+  if (Result == Name)
+    return std::nullopt;
+  return Result;
+}
 
 using namespace dwarf_linker;
 using namespace dwarf_linker::classic;
@@ -84,24 +97,71 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     break;
   }
 
-  StringRef NameRef;
+  StringRef Name = DIE.getShortName();
+  StringRef NameForUniquing;
   StringRef FileRef;
 
-  if (const char *LinkageName = DIE.getLinkageName())
-    NameRef = StringPool.internString(LinkageName);
-  else if (const char *ShortName = DIE.getShortName())
-    NameRef = StringPool.internString(ShortName);
+  if (const char *LinkageName = DIE.getLinkageName()) {
+    NameForUniquing = StringPool.internString(LinkageName);
+  } else if (!Name.empty()) {
+    // With -gsimple-template-names, DW_AT_name omits template parameters
+    // ("vector" instead of "vector<int>"). Reconstruct them from child
+    // DW_TAG_template_*_parameter DIEs so different specializations get
+    // distinct uniquing names.
+    bool HasTemplateParamsInName =
+        Name.ends_with(">") && !Name.ends_with("<=>") && Name.contains('<');
+    std::optional<std::string> FullName;
+    if (!HasTemplateParamsInName)
+      FullName = makeSimpleTemplateNameWithParams(Name, DIE);
+    NameForUniquing = StringPool.internString(FullName ? *FullName : Name);
+  }
 
-  bool IsAnonymousNamespace = NameRef.empty() && Tag == dwarf::DW_TAG_namespace;
+  // For typedefs, include the referenced type chain in the uniquing key. Two
+  // typedefs with the same name (e.g. from preferred_name) but different
+  // DW_AT_type targets must get different DeclContexts, otherwise ODR
+  // deduplication can create self-referencing typedef cycles in the output
+  // DWARF. Walk through unnamed wrapper types (pointers, references, const,
+  // etc.) to find a named type for disambiguation. This mirrors the parallel
+  // linker's behavior in SyntheticTypeNameBuilder::addTypeName.
+  if (Tag == dwarf::DW_TAG_typedef && !NameForUniquing.empty()) {
+    SmallString<128> Combined(NameForUniquing);
+    DWARFDie CurDie = DIE;
+    // Guard against malformed input DWARF with cycles in DW_AT_type references;
+    // the parallel linker uses a similar guard in addReferencedODRDies.
+    for (unsigned Depth = 0; Depth < 256; ++Depth) {
+      auto TypeAttr = CurDie.find(dwarf::DW_AT_type);
+      if (!TypeAttr)
+        break;
+      auto RefDie = CurDie.getAttributeValueAsReferencedDie(*TypeAttr);
+      if (!RefDie)
+        break;
+      // Use null bytes as separators since they cannot appear in type names
+      // or tag strings, preventing accidental collisions.
+      Combined.push_back('\0');
+      Combined.append(dwarf::TagString(RefDie.getTag()));
+      StringRef RefName = RefDie.getShortName();
+      if (!RefName.empty()) {
+        Combined.push_back('\0');
+        Combined.append(RefName);
+        break;
+      }
+      CurDie = RefDie;
+    }
+    if (Combined.size() != NameForUniquing.size())
+      NameForUniquing = StringPool.internString(Combined);
+  }
+
+  bool IsAnonymousNamespace =
+      NameForUniquing.empty() && Tag == dwarf::DW_TAG_namespace;
   if (IsAnonymousNamespace) {
     // FIXME: For dsymutil-classic compatibility. I think uniquing within
     // anonymous namespaces is wrong. There is no ODR guarantee there.
-    NameRef = "(anonymous namespace)";
+    NameForUniquing = "(anonymous namespace)";
   }
 
   if (Tag != dwarf::DW_TAG_class_type && Tag != dwarf::DW_TAG_structure_type &&
       Tag != dwarf::DW_TAG_union_type &&
-      Tag != dwarf::DW_TAG_enumeration_type && NameRef.empty())
+      Tag != dwarf::DW_TAG_enumeration_type && NameForUniquing.empty())
     return PointerIntPair<DeclContext *, 1>(nullptr);
 
   unsigned Line = 0;
@@ -140,10 +200,10 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     }
   }
 
-  if (!Line && NameRef.empty())
+  if (!Line && NameForUniquing.empty())
     return PointerIntPair<DeclContext *, 1>(nullptr);
 
-  // We hash NameRef, which is the mangled name, in order to get most
+  // We hash NameForUniquing, which is the mangled name, in order to get most
   // overloaded functions resolve correctly.
   //
   // Strictly speaking, hashing the Tag is only necessary for a
@@ -153,7 +213,8 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
   // FIXME: dsymutil-classic won't unique the same type presented
   // once as a struct and once as a class. Using the Tag in the fully
   // qualified name hash to get the same effect.
-  unsigned Hash = hash_combine(Context.getQualifiedNameHash(), Tag, NameRef);
+  unsigned Hash =
+      hash_combine(Context.getQualifiedNameHash(), Tag, NameForUniquing);
 
   // FIXME: dsymutil-classic compatibility: when we don't have a name,
   // use the filename.
@@ -161,15 +222,16 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     Hash = hash_combine(Hash, FileRef);
 
   // Now look if this context already exists.
-  DeclContext Key(Hash, Line, ByteSize, Tag, NameRef, FileRef, Context);
+  DeclContext Key(Hash, Line, ByteSize, Tag, Name, NameForUniquing, FileRef,
+                  Context);
   auto ContextIter = Contexts.find(&Key);
 
   if (ContextIter == Contexts.end()) {
     // The context wasn't found.
     bool Inserted;
-    DeclContext *NewContext =
-        new (Allocator) DeclContext(Hash, Line, ByteSize, Tag, NameRef, FileRef,
-                                    Context, DIE, U.getUniqueID());
+    DeclContext *NewContext = new (Allocator)
+        DeclContext(Hash, Line, ByteSize, Tag, Name, NameForUniquing, FileRef,
+                    Context, DIE, U.getUniqueID());
     std::tie(ContextIter, Inserted) = Contexts.insert(NewContext);
     assert(Inserted && "Failed to insert DeclContext");
     (void)Inserted;

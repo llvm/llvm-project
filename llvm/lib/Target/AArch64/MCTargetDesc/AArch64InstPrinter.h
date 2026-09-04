@@ -52,6 +52,8 @@ public:
 protected:
   bool printSysAlias(const MCInst *MI, const MCSubtargetInfo &STI,
                      raw_ostream &O);
+  bool printSyslAlias(const MCInst *MI, const MCSubtargetInfo &STI,
+                      raw_ostream &O);
   bool printSyspAlias(const MCInst *MI, const MCSubtargetInfo &STI,
                       raw_ostream &O);
   bool printRangePrefetchAlias(const MCInst *MI, const MCSubtargetInfo &STI,
@@ -145,11 +147,8 @@ protected:
   void printRPRFMOperand(const MCInst *MI, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 
-  void printPSBHintOp(const MCInst *MI, unsigned OpNum,
-                      const MCSubtargetInfo &STI, raw_ostream &O);
-
-  void printBTIHintOp(const MCInst *MI, unsigned OpNum,
-                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printTIndexHintOp(const MCInst *MI, unsigned OpNum,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printFPImmOperand(const MCInst *MI, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
@@ -237,8 +236,6 @@ protected:
   template <unsigned ImmIs0, unsigned ImmIs1>
   void printExactFPImm(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
-  void printPHintOp(const MCInst *MI, unsigned OpNum,
-                    const MCSubtargetInfo &STI, raw_ostream &O);
 };
 
 class AArch64AppleInstPrinter : public AArch64InstPrinter {

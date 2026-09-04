@@ -11,7 +11,7 @@
 // XFAIL: availability-fp_to_chars-missing
 
 // The sample code is based on the bug report
-// https://github.com/llvm/llvm-project/issues/81590
+// https://llvm.org/PR81590
 //
 // Tests whether this formatter does not fail to compile due to nested concept
 // evaluation.

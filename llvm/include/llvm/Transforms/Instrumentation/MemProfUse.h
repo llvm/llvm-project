@@ -14,10 +14,9 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Compiler.h"
-
-#include <unordered_map>
 
 namespace llvm {
 class IndexedInstrProfReader;
@@ -28,7 +27,7 @@ namespace vfs {
 class FileSystem;
 } // namespace vfs
 
-class MemProfUsePass : public PassInfoMixin<MemProfUsePass> {
+class MemProfUsePass : public OptionalPassInfoMixin<MemProfUsePass> {
 public:
   LLVM_ABI explicit MemProfUsePass(
       std::string MemoryProfileFile,
@@ -36,6 +35,11 @@ public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
+  // Annotate global variables' section prefix based on data access profile,
+  // return true if any global variable is annotated and false otherwise.
+  bool
+  annotateGlobalVariables(Module &M,
+                          const memprof::DataAccessProfData *DataAccessProf);
   std::string MemoryProfileFileName;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
@@ -50,14 +54,7 @@ LLVM_ABI DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> extractCallsFromIR(
       return true;
     });
 
-struct LineLocationHash {
-  uint64_t operator()(const LineLocation &Loc) const {
-    return Loc.getHashCode();
-  }
-};
-
-using LocToLocMap =
-    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 // Compute an undrifting map.  The result is a map from caller GUIDs to an inner
 // map that maps source locations in the profile to those in the current IR.

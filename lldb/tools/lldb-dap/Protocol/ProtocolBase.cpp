@@ -57,7 +57,25 @@ bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
   return true;
 }
 
+json::Value toJSON(const String &S) {
+  if (LLVM_LIKELY(llvm::json::isUTF8(std::string(S))))
+    return std::string(S);
+  return llvm::json::fixUTF8(std::string(S));
+}
+
+bool fromJSON(const llvm::json::Value &Param, String &Str,
+              llvm::json::Path Path) {
+  if (auto s = Param.getAsString()) {
+    Str = *std::move(s);
+    return true;
+  }
+  Path.report("expected string");
+  return false;
+}
+
 json::Value toJSON(const Request &R) {
+  assert(R.seq != kCalculateSeq && "invalid seq");
+
   json::Object Result{
       {"type", "request"},
       {"seq", R.seq},
@@ -98,9 +116,15 @@ bool fromJSON(json::Value const &Params, Request &R, json::Path P) {
   return mapRaw(Params, "arguments", R.arguments, P);
 }
 
+bool operator==(const Request &a, const Request &b) {
+  return a.seq == b.seq && a.command == b.command && a.arguments == b.arguments;
+}
+
 json::Value toJSON(const Response &R) {
+  assert(R.seq != kCalculateSeq && "invalid seq");
+
   json::Object Result{{"type", "response"},
-                      {"seq", 0},
+                      {"seq", R.seq},
                       {"command", R.command},
                       {"request_seq", R.request_seq},
                       {"success", R.success}};
@@ -116,8 +140,7 @@ json::Value toJSON(const Response &R) {
         Result.insert({"message", "notStopped"});
         break;
       }
-    } else if (const auto *messageString =
-                   std::get_if<std::string>(&*R.message)) {
+    } else if (const auto *messageString = std::get_if<String>(&*R.message)) {
       Result.insert({"message", *messageString});
     }
   }
@@ -128,8 +151,8 @@ json::Value toJSON(const Response &R) {
   return std::move(Result);
 }
 
-bool fromJSON(json::Value const &Params,
-              std::variant<ResponseMessage, std::string> &M, json::Path P) {
+static bool fromJSON(json::Value const &Params,
+                     std::variant<ResponseMessage, String> &M, json::Path P) {
   auto rawMessage = Params.getAsString();
   if (!rawMessage) {
     P.report("expected a string");
@@ -153,8 +176,7 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
 
   MessageType type;
-  int64_t seq;
-  if (!O.map("type", type) || !O.map("seq", seq) ||
+  if (!O.map("type", type) || !O.map("seq", R.seq) ||
       !O.map("command", R.command) || !O.map("request_seq", R.request_seq))
     return false;
 
@@ -164,12 +186,7 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
   }
 
   if (R.command.empty()) {
-    P.field("command").report("expected to not be ''");
-    return false;
-  }
-
-  if (R.request_seq == 0) {
-    P.field("request_seq").report("expected to not be '0'");
+    P.field("command").report("expected to not be empty");
     return false;
   }
 
@@ -177,40 +194,62 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
          mapRaw(Params, "body", R.body, P);
 }
 
+bool operator==(const Response &a, const Response &b) {
+  return a.request_seq == b.request_seq && a.command == b.command &&
+         a.success == b.success && a.message == b.message && a.body == b.body;
+}
+
 json::Value toJSON(const ErrorMessage &EM) {
   json::Object Result{{"id", EM.id}, {"format", EM.format}};
 
-  if (EM.variables) {
+  if (!EM.variables.empty()) {
     json::Object variables;
-    for (auto &var : *EM.variables)
-      variables[var.first] = var.second;
+    for (auto &var : EM.variables)
+      variables[var.first.str()] = var.second;
     Result.insert({"variables", std::move(variables)});
   }
   if (EM.sendTelemetry)
     Result.insert({"sendTelemetry", EM.sendTelemetry});
   if (EM.showUser)
     Result.insert({"showUser", EM.showUser});
-  if (EM.url)
+  if (!EM.url.empty())
     Result.insert({"url", EM.url});
-  if (EM.urlLabel)
+  if (!EM.urlLabel.empty())
     Result.insert({"urlLabel", EM.urlLabel});
 
   return std::move(Result);
 }
 
+bool fromJSON(json::Value const &Params, std::map<String, String> &M,
+              json::Path P) {
+  const auto *const O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+  for (auto [k, v] : *O) {
+    auto str = v.getAsString();
+    if (str)
+      M[k.str()] = *std::move(str);
+  }
+  return true;
+}
+
 bool fromJSON(json::Value const &Params, ErrorMessage &EM, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("id", EM.id) && O.map("format", EM.format) &&
-         O.map("variables", EM.variables) &&
-         O.map("sendTelemetry", EM.sendTelemetry) &&
-         O.map("showUser", EM.showUser) && O.map("url", EM.url) &&
-         O.map("urlLabel", EM.urlLabel);
+         O.mapOptional("variables", EM.variables) &&
+         O.mapOptional("sendTelemetry", EM.sendTelemetry) &&
+         O.mapOptional("showUser", EM.showUser) &&
+         O.mapOptional("url", EM.url) && O.mapOptional("urlLabel", EM.urlLabel);
 }
 
 json::Value toJSON(const Event &E) {
+  assert(E.seq != kCalculateSeq && "invalid seq");
+
   json::Object Result{
       {"type", "event"},
-      {"seq", 0},
+      {"seq", E.seq},
       {"event", E.event},
   };
 
@@ -226,8 +265,7 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
     return false;
 
   MessageType type;
-  int64_t seq;
-  if (!O.map("type", type) || !O.map("seq", seq) || !O.map("event", E.event))
+  if (!O.map("type", type) || !O.map("seq", E.seq) || !O.map("event", E.event))
     return false;
 
   if (type != eMessageTypeEvent) {
@@ -235,17 +273,16 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
     return false;
   }
 
-  if (seq != 0) {
-    P.field("seq").report("expected to be '0'");
-    return false;
-  }
-
   if (E.event.empty()) {
-    P.field("event").report("expected to not be ''");
+    P.field("event").report("expected to not be empty");
     return false;
   }
 
   return mapRaw(Params, "body", E.body, P);
+}
+
+bool operator==(const Event &a, const Event &b) {
+  return a.event == b.event && a.body == b.body;
 }
 
 bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {

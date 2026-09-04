@@ -38,6 +38,11 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
+  /// Compute the first available callee-saved register to use as the
+  /// aligned-stack base register when this function needs dynamic stack
+  /// realignment. This does not update the machine function info.
+  Register computeStackAlignBaseRegister(const MachineFunction &MF) const;
+
   bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
         unsigned FIOperandNum, RegScavenger *RS = nullptr) const override;
 
@@ -72,10 +77,25 @@ public:
         const TargetRegisterClass *RC) const;
 
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
+
+  /// Returns true if the given reserved physical register is live across
+  /// function calls/returns.
+  bool isGlobalReg(MCPhysReg Reg) const;
+
+  /// Returns true if the given reserved physical register Reg is live
+  /// across function calls/returns. This function should not be used for
+  /// non-reserved registers, instead register liveness information should be
+  /// checked
+  bool isFakeReg(MCPhysReg Reg) const;
 
   bool isEHReturnCalleeSaveReg(Register Reg) const;
+
+private:
+  BitVector getBaseReservedRegs(const MachineFunction &MF) const;
+  Register
+  computeStackAlignBaseRegister(const MachineFunction &MF,
+                                const BitVector &BaseReservedRegs) const;
 };
 
 } // end namespace llvm

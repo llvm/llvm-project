@@ -905,7 +905,7 @@ def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_3SLOTS_1C],
     SLBIEG,
     STMW,
     STSWI,
-    TLBIE
+    TLBIE, TLBIEP9, TLBIE8P9
 )>;
 
 // Vector Store Instruction
@@ -938,7 +938,8 @@ def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_EVEN_1C],
     (instregex "MF(SPR|CTR|LR)(8)?$"),
     (instregex "M(T|F)MSR(D)?$"),
     (instregex "M(T|F)(U)?DSCR$"),
-    (instregex "MTSPR(8)?$")
+    (instregex "MTSPR(8)?$"),
+    (instregex "MSGSNDP(8)?$")
 )>;
 
 // 16 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
@@ -1294,6 +1295,15 @@ def : InstRW<[P9_CY_6C, IP_EXECO_1C, IP_EXECE_1C, DISP_1C],
 )>;
 
 // Branch Instructions
+
+// Pseduo instruction that encapsulates a branch and a toc load.
+def : InstRW<[P9_BR_2C, DISP_BR_1C, P9_LS_4C, IP_AGEN_1C, DISP_1C],
+      (instrs
+  BL_LWZinto_toc,
+  BL_LWZinto_toc_RM,
+  BL8_LDinto_toc,
+  BL8_LDinto_toc_RM
+)>;
 
 // Two Cycle Branch
 def : InstRW<[P9_BR_2C, DISP_BR_1C],

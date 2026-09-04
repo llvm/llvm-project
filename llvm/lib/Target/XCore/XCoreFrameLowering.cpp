@@ -161,12 +161,13 @@ static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
                            const TargetLowering *TL) {
   assert(XFI->hasEHSpillSlot() && "There are no EH register spill slots");
   const int *EHSlot = XFI->getEHSpillSlot();
+  ExceptionHandling EH = TL->getTargetMachine().getExceptionModel();
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[0]),
-                    TL->getExceptionPointerRegister(PersonalityFn)));
+                    TL->getExceptionPointerRegister(EH, PersonalityFn)));
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[1]),
-                    TL->getExceptionSelectorRegister(PersonalityFn)));
+                    TL->getExceptionSelectorRegister(EH, PersonalityFn)));
   llvm::sort(SpillList, CompareSSIOffset);
 }
 
@@ -432,7 +433,7 @@ bool XCoreFrameLowering::spillCalleeSavedRegisters(
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI,
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC,
                             Register());
     if (emitFrameMoves) {
       auto Store = MI;
@@ -458,8 +459,7 @@ bool XCoreFrameLowering::restoreCalleeSavedRegisters(
            "LR & FP are always handled in emitEpilogue");
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, CSR.getFrameIdx(), RC, TRI,
-                             Register());
+    TII.loadRegFromStackSlot(MBB, MI, Reg, CSR.getFrameIdx(), RC, Register());
     assert(MI != MBB.begin() &&
            "loadRegFromStackSlot didn't insert any code!");
     // Insert in reverse order.  loadRegFromStackSlot can insert multiple

@@ -306,8 +306,10 @@ BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
     // In Verilog, all strings are quoted by double quotes, joined by commas,
     // and wrapped in braces.  The comma is always before the newline.
     assert(QuoteStyle == DoubleQuotes);
-    LeftBraceQuote = Style.Cpp11BracedListStyle ? "{\"" : "{ \"";
-    RightBraceQuote = Style.Cpp11BracedListStyle ? "\"}" : "\" }";
+    LeftBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "{\"" : "{ \"";
+    RightBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "\"}" : "\" }";
     Postfix = "\",";
     Prefix = "\"";
   } else {
@@ -776,6 +778,50 @@ void BreakableBlockComment::reflow(unsigned LineIndex,
 void BreakableBlockComment::adaptStartOfLine(
     unsigned LineIndex, WhitespaceManager &Whitespaces) const {
   if (LineIndex == 0) {
+    StringRef Text = tokenAt(LineIndex).TokenText;
+    if (Style.SpacesInBlockComments != FormatStyle::SIBCS_Leave &&
+        Text.size() >= 4) {
+      const bool IsDocComment =
+          Text.starts_with("/**") || Text.starts_with("/*!");
+      const bool IsParamComment = Text.drop_back(2).trim(Blanks).ends_with("=");
+      if (!IsDocComment && !IsParamComment) {
+        if (StringRef AfterOpening = Text.drop_front(2);
+            !AfterOpening.empty()) {
+          const bool HasSpace = isWhitespace(AfterOpening.front());
+          if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Always &&
+              !HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), /*Offset=*/2, /*ReplaceChars=*/0,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/1);
+          } else if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Never &&
+                     HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), /*Offset=*/2, /*ReplaceChars=*/1,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/0);
+          }
+        }
+
+        if (StringRef BeforeClosing = Text.drop_back(2);
+            !BeforeClosing.empty()) {
+          const bool HasSpace = isWhitespace(BeforeClosing.back());
+          if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Always &&
+              !HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), Text.size() - 2, /*ReplaceChars=*/0,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/1);
+          } else if (Style.SpacesInBlockComments == FormatStyle::SIBCS_Never &&
+                     HasSpace) {
+            Whitespaces.replaceWhitespaceInToken(
+                tokenAt(LineIndex), Text.size() - 3, /*ReplaceChars=*/1,
+                /*PreviousPostfix=*/"", /*CurrentPrefix=*/"", InPPDirective,
+                /*Newlines=*/0, /*Spaces=*/0);
+          }
+        }
+      }
+    }
     if (DelimitersOnNewline) {
       // Since we're breaking at index 1 below, the break position and the
       // break length are the same.
@@ -1040,38 +1086,40 @@ BreakableComment::Split BreakableLineCommentSection::getReflowSplit(
 
 void BreakableLineCommentSection::reflow(unsigned LineIndex,
                                          WhitespaceManager &Whitespaces) const {
-  if (LineIndex > 0 && Tokens[LineIndex] != Tokens[LineIndex - 1]) {
-    // Reflow happens between tokens. Replace the whitespace between the
-    // tokens by the empty string.
-    Whitespaces.replaceWhitespace(
-        *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
-        /*StartOfTokenColumn=*/StartColumn, /*IsAligned=*/true,
-        /*InPPDirective=*/false);
-  } else if (LineIndex > 0) {
-    // In case we're reflowing after the '\' in:
-    //
-    //   // line comment \
-    //   // line 2
-    //
-    // the reflow happens inside the single comment token (it is a single line
-    // comment with an unescaped newline).
-    // Replace the whitespace between the '\' and '//' with the empty string.
-    //
-    // Offset points to after the '\' relative to start of the token.
-    unsigned Offset = Lines[LineIndex - 1].data() +
-                      Lines[LineIndex - 1].size() -
-                      tokenAt(LineIndex - 1).TokenText.data();
-    // WhitespaceLength is the number of chars between the '\' and the '//' on
-    // the next line.
-    unsigned WhitespaceLength =
-        Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data() - Offset;
-    Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
-                                         /*ReplaceChars=*/WhitespaceLength,
-                                         /*PreviousPostfix=*/"",
-                                         /*CurrentPrefix=*/"",
-                                         /*InPPDirective=*/false,
-                                         /*Newlines=*/0,
-                                         /*Spaces=*/0);
+  if (LineIndex > 0) {
+    if (Tokens[LineIndex] != Tokens[LineIndex - 1]) {
+      // Reflow happens between tokens. Replace the whitespace between the
+      // tokens by the empty string.
+      Whitespaces.replaceWhitespace(
+          *Tokens[LineIndex], /*Newlines=*/0, /*Spaces=*/0,
+          /*StartOfTokenColumn=*/StartColumn, /*AlignedTo=*/nullptr,
+          /*InPPDirective=*/false);
+    } else {
+      // In case we're reflowing after the '\' in:
+      //
+      //   // line comment \
+      //   // line 2
+      //
+      // the reflow happens inside the single comment token (it is a single line
+      // comment with an unescaped newline).
+      // Replace the whitespace between the '\' and '//' with the empty string.
+      //
+      // Offset points to after the '\' relative to start of the token.
+      unsigned Offset = Lines[LineIndex - 1].data() +
+                        Lines[LineIndex - 1].size() -
+                        tokenAt(LineIndex - 1).TokenText.data();
+      // WhitespaceLength is the number of chars between the '\' and the '//' on
+      // the next line.
+      unsigned WhitespaceLength = Lines[LineIndex].data() -
+                                  tokenAt(LineIndex).TokenText.data() - Offset;
+      Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
+                                           /*ReplaceChars=*/WhitespaceLength,
+                                           /*PreviousPostfix=*/"",
+                                           /*CurrentPrefix=*/"",
+                                           /*InPPDirective=*/false,
+                                           /*Newlines=*/0,
+                                           /*Spaces=*/0);
+    }
   }
   // Replace the indent and prefix of the token with the reflow prefix.
   unsigned Offset =
@@ -1110,12 +1158,13 @@ void BreakableLineCommentSection::adaptStartOfLine(
     // token, even if LineColumn is the same as the original column of the
     // token. This is because WhitespaceManager doesn't align trailing
     // comments if they are untouchable.
-    Whitespaces.replaceWhitespace(*Tokens[LineIndex],
-                                  /*Newlines=*/1,
-                                  /*Spaces=*/LineColumn,
-                                  /*StartOfTokenColumn=*/LineColumn,
-                                  /*IsAligned=*/true,
-                                  /*InPPDirective=*/false);
+    Whitespaces.replaceWhitespace(
+        *Tokens[LineIndex],
+        /*Newlines=*/1,
+        /*Spaces=*/LineColumn,
+        /*StartOfTokenColumn=*/LineColumn,
+        /*AlignedTo=*/tokenAt(0).NewlinesBefore == 0 ? &tokenAt(0) : nullptr,
+        /*InPPDirective=*/false, /*IndentedFromColumn=*/StartColumn);
   }
   if (OriginalPrefix[LineIndex] != Prefix[LineIndex]) {
     // Adjust the prefix if necessary.

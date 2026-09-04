@@ -61,7 +61,7 @@ LogicalResult loopUnrollUpToFactor(AffineForOp forOp, uint64_t unrollFactor);
 
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
-bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops);
+[[maybe_unused]] bool isPerfectlyNested(ArrayRef<AffineForOp> loops);
 
 /// Get perfectly nested sequence of loops starting at root of loop nest
 /// (the first op being another AffineFor, and the second op - a terminator).
@@ -85,10 +85,6 @@ LogicalResult loopUnrollJamUpToFactor(AffineForOp forOp,
 /// Promotes the loop body of a AffineForOp to its containing block if the loop
 /// was known to have a single iteration.
 LogicalResult promoteIfSingleIteration(AffineForOp forOp);
-
-/// Promotes all single iteration AffineForOp's in the Function, i.e., moves
-/// their body into the containing Block.
-void promoteSingleIterationLoops(func::FuncOp f);
 
 /// Skew the operations in an affine.for's body with the specified
 /// operation-wise shifts. The shifts are with respect to the original execution

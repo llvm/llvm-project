@@ -162,7 +162,7 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto R = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtr(R))
+    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtrOrOSPtr(R))
       return;
 
     for (auto *Member : RD->fields()) {
@@ -212,8 +212,7 @@ public:
     if (auto *F = CE->getDirectCallee()) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
+      unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(F);
 
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx)
@@ -227,12 +226,8 @@ public:
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
-    if (auto *F = CE->getConstructor()) {
-      // Skip the first argument for overloaded member operators (e. g. lambda
-      // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
-
+    if (const CXXMethodDecl *F = CE->getConstructor()) {
+      unsigned ArgIdx = 0;
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx)
         visitCallArg(CE->getArg(ArgIdx), *P, DeclWithIssue);
@@ -248,7 +243,7 @@ public:
     if (auto *Receiver = E->getInstanceReceiver()) {
       Receiver = Receiver->IgnoreParenCasts();
       if (isUnknownType(E->getReceiverType()))
-        reportUnknownRecieverType(Receiver, DeclWithIssue);
+        reportUnknownReceiverType(Receiver, DeclWithIssue);
     }
 
     auto *MethodDecl = E->getMethodDecl();
@@ -263,18 +258,43 @@ public:
   void visitCallArg(const Expr *Arg, const ParmVarDecl *Param,
                     const Decl *DeclWithIssue) const {
     auto *ArgExpr = Arg->IgnoreParenCasts();
-    if (auto *InnerCE = dyn_cast<CallExpr>(Arg)) {
-      auto *InnerCallee = InnerCE->getDirectCallee();
-      if (InnerCallee && InnerCallee->isInStdNamespace() &&
-          safeGetName(InnerCallee) == "move" && InnerCE->getNumArgs() == 1) {
-        ArgExpr = InnerCE->getArg(0);
-        if (ArgExpr)
-          ArgExpr = ArgExpr->IgnoreParenCasts();
+    while (ArgExpr) {
+      ArgExpr = ArgExpr->IgnoreParenCasts();
+      if (auto *InnerCE = dyn_cast<CallExpr>(ArgExpr)) {
+        if (auto *InnerCallee = InnerCE->getDirectCallee()) {
+          if (isStdOrWTFMove(InnerCallee) && InnerCE->getNumArgs() == 1) {
+            ArgExpr = InnerCE->getArg(0);
+            continue;
+          }
+        }
+      }
+      if (auto *UO = dyn_cast<UnaryOperator>(ArgExpr)) {
+        auto OpCode = UO->getOpcode();
+        if (OpCode == UO_Deref || OpCode == UO_AddrOf) {
+          ArgExpr = UO->getSubExpr();
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(ArgExpr)) {
+      if (isOwnerPtrType(MemberCallExpr->getObjectType()))
+        return;
+    }
+
+    if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(ArgExpr)) {
+      auto *Method = dyn_cast_or_null<CXXMethodDecl>(OpCE->getDirectCallee());
+      if (Method && isOwnerPtr(safeGetName(Method->getParent()))) {
+        if (OpCE->getOperator() == OO_Star && OpCE->getNumArgs() == 1)
+          return;
       }
     }
-    if (isa<CXXNullPtrLiteralExpr>(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
+
+    if (isNullPtr(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
+
     if (auto *DRE = dyn_cast<DeclRefExpr>(ArgExpr)) {
       if (auto *ValDecl = DRE->getDecl()) {
         if (isa<ParmVarDecl>(ValDecl))
@@ -307,7 +327,7 @@ public:
               Param->getType());
   }
 
-  void reportUnknownRecieverType(const Expr *Receiver,
+  void reportUnknownReceiverType(const Expr *Receiver,
                                  const Decl *DeclWithIssue) const {
     assert(Receiver);
     reportBug(Receiver->getExprLoc(), Receiver->getSourceRange(), DeclWithIssue,

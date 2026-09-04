@@ -2,6 +2,10 @@ set(LLVM_TARGET_DEFINITIONS LLGSOptions.td)
 tablegen(LLVM LLGSOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLGSOptionsTableGen)
 
+set(LLVM_TARGET_DEFINITIONS PlatformOptions.td)
+tablegen(LLVM PlatformOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(PlatformOptionsTableGen)
+
 set(LLDB_PLUGINS)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
@@ -28,6 +32,19 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "AIX")
   list(APPEND LLDB_PLUGINS lldbPluginObjectFileXCOFF)
 else()
   list(APPEND LLDB_PLUGINS lldbPluginObjectFileELF)
+endif()
+
+option(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN
+  "Enable the mock accelerator plugin in lldb-server. This compiles the plugin \
+into the lldb-server binary and enables the associated tests. When enabled, \
+lldb-server will advertise accelerator-plugins+ in qSupported." OFF)
+
+add_subdirectory(Plugins)
+
+set(LLDB_SERVER_PLUGINS)
+
+if(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
+  list(APPEND LLDB_SERVER_PLUGINS lldbServerPluginMockAccelerator)
 endif()
 
 if(APPLE_EMBEDDED)
@@ -57,6 +74,7 @@ add_lldb_tool(lldb-server
       lldbInitialization
       lldbVersion
       ${LLDB_PLUGINS}
+      ${LLDB_SERVER_PLUGINS}
       lldbPluginInstructionARM
       lldbPluginInstructionLoongArch
       lldbPluginInstructionMIPS
@@ -67,7 +85,13 @@ add_lldb_tool(lldb-server
 
 add_dependencies(lldb-server
   LLGSOptionsTableGen
+  PlatformOptionsTableGen
   ${tablegen_deps}
 )
 target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
+
+if(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
+  target_compile_definitions(lldb-server
+    PRIVATE LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
+endif()

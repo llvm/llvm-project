@@ -4,11 +4,14 @@
 non_recursive function f01(n) result(res)
   integer, value :: n
   integer :: res
+  entry f01b(n) result(res)
   if (n <= 0) then
     res = n
   else
     !ERROR: NON_RECURSIVE procedure 'f01' cannot call itself
     res = n * f01(n-1) ! 15.6.2.1(3)
+    !ERROR: NON_RECURSIVE procedure 'f01b' cannot call itself
+    res = n * f01b(n-1) ! 15.6.2.1(3)
   end if
 end function
 

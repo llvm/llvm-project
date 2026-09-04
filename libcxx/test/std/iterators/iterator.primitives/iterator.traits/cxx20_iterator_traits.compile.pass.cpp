@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test uses iterator types from std::filesystem
-// XFAIL: availability-filesystem-missing
-
 // template<class T>
 // struct iterator_traits;
 
@@ -28,6 +25,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

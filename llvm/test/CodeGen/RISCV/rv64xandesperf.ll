@@ -277,6 +277,44 @@ define signext i32 @sexti1_i32_2(i1 %a) {
   ret i32 %1
 }
 
+; Make sure we don't use not+nds.bfos
+define zeroext i8 @sexti1_i32_setcc(i32 signext %a) {
+; CHECK-LABEL: sexti1_i32_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    ret
+  %icmp = icmp sgt i32 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
+}
+
+; Make sure we don't use seqz+nds.bfos instead of snez+addi
+define signext i32 @sexti1_i32_setcc_2(i32 signext %a, i32 signext %b) {
+; CHECK-LABEL: sexti1_i32_setcc_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
+  %icmp = icmp eq i32 %a, %b
+  %sext = sext i1 %icmp to i32
+  ret i32 %sext
+}
+
+; Make sure we don't use nds.bfos instead of neg.
+define signext i32 @sexti1_i32_setcc_3(i32 signext %a, i32 signext %b) {
+; CHECK-LABEL: sexti1_i32_setcc_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt a0, a0, a1
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %icmp = icmp slt i32 %a, %b
+  %sext = sext i1 %icmp to i32
+  ret i32 %sext
+}
+
 define signext i32 @sexti8_i32(i32 signext %a) {
 ; CHECK-LABEL: sexti8_i32:
 ; CHECK:       # %bb.0:
@@ -334,6 +372,44 @@ define i64 @sexti1_i64_2(i1 %a) {
   ret i64 %1
 }
 
+; Make sure we don't use not+nds.bfos
+define zeroext i8 @sexti1_i64_setcc(i64 %a) {
+; CHECK-LABEL: sexti1_i64_setcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 63
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    ret
+  %icmp = icmp sgt i64 %a, -1
+  %sext = sext i1 %icmp to i8
+  ret i8 %sext
+}
+
+; Make sure we don't use seqz+nds.bfos instead of snez+addi
+define i64 @sexti1_i64_setcc_2(i64 %a, i64 %b) {
+; CHECK-LABEL: sexti1_i64_setcc_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    ret
+  %icmp = icmp eq i64 %a, %b
+  %sext = sext i1 %icmp to i64
+  ret i64 %sext
+}
+
+; Make sure we don't use nds.bfos instead of neg.
+define i64 @sexti1_i64_setcc_3(i64 %a, i64 %b) {
+; CHECK-LABEL: sexti1_i64_setcc_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slt a0, a0, a1
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %icmp = icmp slt i64 %a, %b
+  %sext = sext i1 %icmp to i64
+  ret i64 %sext
+}
+
 define i64 @sexti8_i64(i64 %a) {
 ; CHECK-LABEL: sexti8_i64:
 ; CHECK:       # %bb.0:
@@ -388,4 +464,51 @@ define i64 @sexti32_i64_2(i32 signext %a) {
 ; CHECK-NEXT:    ret
   %1 = sext i32 %a to i64
   ret i64 %1
+}
+
+; NDS.FFB/NDS.FFZMISM/NDS.FFMISM/NDS.FLMISM
+
+declare i64 @llvm.riscv.nds.ffb.i64(i64, i64)
+declare i64 @llvm.riscv.nds.ffzmism.i64(i64, i64)
+declare i64 @llvm.riscv.nds.ffmism.i64(i64, i64)
+declare i64 @llvm.riscv.nds.flmism.i64(i64, i64)
+
+define i64 @ffb(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: ffb:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffb a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.ffb.i64(i64 %a, i64 %b)
+  ret i64 %0
+}
+
+define i64 @ffzmism(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: ffzmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffzmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.ffzmism.i64(i64 %a, i64 %b)
+  ret i64 %0
+}
+
+define i64 @ffmism(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: ffmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.ffmism.i64(i64 %a, i64 %b)
+  ret i64 %0
+}
+
+define i64 @flmism(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: flmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.flmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.flmism.i64(i64 %a, i64 %b)
+  ret i64 %0
 }

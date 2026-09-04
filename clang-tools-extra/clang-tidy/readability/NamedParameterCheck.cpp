@@ -1,4 +1,4 @@
-//===--- NamedParameterCheck.cpp - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NamedParameterCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -15,15 +16,47 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+// Types whose parameters do not need a name (tag dispatch types, category
+// tags, etc.).
+static constexpr StringRef DefaultIgnoredTypes =
+    "std::adopt_lock_t;"
+    "std::allocator_arg_t;"
+    "std::bidirectional_iterator_tag;"
+    "std::contiguous_iterator_tag;"
+    "std::default_sentinel_t;"
+    "std::defer_lock_t;"
+    "std::destroying_delete_t;"
+    "std::forward_iterator_tag;"
+    "std::from_range_t;"
+    "std::in_place_index_t;"
+    "std::in_place_t;"
+    "std::in_place_type_t;"
+    "std::input_iterator_tag;"
+    "std::nothrow_t;"
+    "std::nostopstate_t;"
+    "std::nullopt_t;"
+    "std::output_iterator_tag;"
+    "std::piecewise_construct_t;"
+    "std::random_access_iterator_tag;"
+    "std::sorted_equivalent_t;"
+    "std::sorted_unique_t;"
+    "std::try_to_lock_t;"
+    "std::unexpect_t;"
+    "std::unreachable_sentinel_t";
+
 NamedParameterCheck::NamedParameterCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       InsertPlainNamesInForwardDecls(
-          Options.get("InsertPlainNamesInForwardDecls", false)) {}
+          Options.get("InsertPlainNamesInForwardDecls", false)),
+      IgnoredTypes(utils::options::parseStringList(
+          Options.get("IgnoredTypes", DefaultIgnoredTypes))) {}
 
 void NamedParameterCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "InsertPlainNamesInForwardDecls",
                 InsertPlainNamesInForwardDecls);
+  Options.store(Opts, "IgnoredTypes",
+                utils::options::serializeStringList(IgnoredTypes));
 }
 
 void NamedParameterCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
@@ -67,33 +100,43 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
 
     // Skip gmock testing::Unused parameters.
-    if (const auto *Typedef = Parm->getType()->getAs<clang::TypedefType>())
-      if (Typedef->getDecl()->getQualifiedNameAsString() == "testing::Unused")
-        continue;
+    if (const auto *Typedef = Parm->getType()->getAs<TypedefType>();
+        Typedef &&
+        Typedef->getDecl()->getQualifiedNameAsString() == "testing::Unused")
+      continue;
 
     // Skip std::nullptr_t.
     if (Parm->getType().getCanonicalType()->isNullPtrType())
       continue;
 
+    // Skip the types configured by the IgnoredTypes option (e.g. standard
+    // tag dispatch types).
+    if (const auto *Record =
+            Parm->getType().getCanonicalType()->getAsCXXRecordDecl()) {
+      const std::string QName = Record->getQualifiedNameAsString();
+      if (llvm::is_contained(IgnoredTypes, QName))
+        continue;
+    }
+
     // Look for comments. We explicitly want to allow idioms like
     // void foo(int /*unused*/)
     const char *Begin = SM.getCharacterData(Parm->getBeginLoc());
     const char *End = SM.getCharacterData(Parm->getLocation());
-    StringRef Data(Begin, End - Begin);
+    const StringRef Data(Begin, End - Begin);
     if (Data.contains("/*"))
       continue;
 
-    UnnamedParams.push_back(std::make_pair(Function, I));
+    UnnamedParams.emplace_back(Function, I);
   }
 
   // Emit only one warning per function but fixits for all unnamed parameters.
   if (!UnnamedParams.empty()) {
     const ParmVarDecl *FirstParm =
         UnnamedParams.front().first->getParamDecl(UnnamedParams.front().second);
-    auto D = diag(FirstParm->getLocation(),
-                  "all parameters should be named in a function");
+    const auto D = diag(FirstParm->getLocation(),
+                        "all parameters should be named in a function");
 
-    for (auto P : UnnamedParams) {
+    for (const auto P : UnnamedParams) {
       // Fallback to an unused marker.
       static constexpr StringRef FallbackName = "unused";
       StringRef NewName = FallbackName;
@@ -104,7 +147,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       if (M && M->size_overridden_methods() > 0) {
         const ParmVarDecl *OtherParm =
             (*M->begin_overridden_methods())->getParamDecl(P.second);
-        StringRef Name = OtherParm->getName();
+        const StringRef Name = OtherParm->getName();
         if (!Name.empty())
           NewName = Name;
       }
@@ -112,7 +155,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       // If the definition has a named parameter use that name.
       if (Definition) {
         const ParmVarDecl *DefParm = Definition->getParamDecl(P.second);
-        StringRef Name = DefParm->getName();
+        const StringRef Name = DefParm->getName();
         if (!Name.empty())
           NewName = Name;
       }

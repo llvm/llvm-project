@@ -1,7 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -55,8 +55,7 @@ define i32 @ByValUnsafeAligned(ptr byval(%struct.S) nocapture readonly align 64 
 entry:
   ; CHECK-LABEL: @ByValUnsafeAligned
   ; CHECK: %[[A:.*]] = load {{.*}} @__safestack_unsafe_stack_ptr
-  ; CHECK: %[[B:.*]] = ptrtoint ptr %[[A]] to i64
-  ; CHECK: and i64 %[[B]], -64
+  ; CHECK: call ptr @llvm.ptrmask.p0.i64(ptr %[[A]], i64 -64)
   ; CHECK: ret i32
   %0 = load i32, ptr %zzz, align 64
   %arrayidx2 = getelementptr inbounds %struct.S, ptr %zzz, i64 0, i32 0, i64 %idx

@@ -264,7 +264,7 @@ END_COMPILERRT_OUTLINE_FUNCTION(NAME(LDNM))
 
 NO_EXEC_STACK_DIRECTIVE
 
-// GNU property note for BTI and PAC
-GNU_PROPERTY_BTI_PAC
+// GNU property note for BTI, PAC, and GCS
+GNU_PROPERTY_BTI_PAC_GCS
 
 #endif // defined(__aarch64__) || defined(__arm64ec__)

@@ -19,23 +19,33 @@
 # }
 # ```
 #
-# FIXME: Currently the following dependencies are missed.
-# Loop carried edges from SU(16)
-#   Order
-#     SU(6)
-#     SU(8)
-#     SU(10)
-#     SU(11)
-# Loop carried edges from SU(17)
-#   Order
-#     SU(10)
-#     SU(11)
-# Loop carried edges from SU(19)
-#   Order
-#     SU(10)
-#     SU(11)
+# SU(6): Load
+# SU(8): Store
+# SU(10): Store
+# SU(11): Barrier
+# SU(16): Barrier
+# SU(17): Load
+# SU(19): Load
+#
+# As the order between load/store and barrier must be preserved, the following
+# loop-carried dependnecies need to be added:
+#   - SU(16) -> SU(6), SU(8), SU(10)
+#   - SU(17), SU(19) -> SU(11)
+#   - SU(16) -> SU(11) (barrier to barrier)
 
 # CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT: Loop carried edges from SU(16)
+# CHECK-NEXT:   Order
+# CHECK-NEXT:     SU(6)
+# CHECK-NEXT:     SU(8)
+# CHECK-NEXT:     SU(10)
+# CHECK-NEXT:     SU(11)
+# CHECK-NEXT: Loop carried edges from SU(17)
+# CHECK-NEXT:   Order
+# CHECK-NEXT:     SU(11)
+# CHECK-NEXT: Loop carried edges from SU(19)
+# CHECK-NEXT:   Order
+# CHECK-NEXT:     SU(11)
 # CHECK-NEXT: ===== Loop Carried Edges End =====
 
 --- |

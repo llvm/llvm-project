@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/attr.h"
@@ -26,6 +27,10 @@ struct AllocateCheckerInfo {
   std::optional<evaluate::DynamicType> sourceExprType;
   std::optional<parser::CharBlock> sourceExprLoc;
   std::optional<parser::CharBlock> typeSpecLoc;
+  std::optional<parser::CharBlock> statSource;
+  std::optional<parser::CharBlock> msgSource;
+  const SomeExpr *statVar{nullptr};
+  const SomeExpr *msgVar{nullptr};
   int sourceExprRank{0}; // only valid if gotMold || gotSource
   bool gotStat{false};
   bool gotMsg{false};
@@ -141,22 +146,30 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
             [&](const parser::StatOrErrmsg &statOrErr) {
               common::visit(
                   common::visitors{
-                      [&](const parser::StatVariable &) {
+                      [&](const parser::StatVariable &var) {
                         if (info.gotStat) { // C943
                           context.Say(
                               "STAT may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
                         info.gotStat = true;
+                        info.statVar = GetExpr(context, var);
+                        info.statSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
                             GetExpr(context, var),
-                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                            parser::UnwrapRef<parser::Variable>(var)
+                                .GetSource(),
+                            "ERRMSG=");
                         if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
                         info.gotMsg = true;
+                        info.msgVar = GetExpr(context, var);
+                        info.msgSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                   },
                   statOrErr.u);
@@ -226,6 +239,12 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
       info.sourceExprLoc = parserSourceExpr->source;
       if (const DerivedTypeSpec *
           derived{evaluate::GetDerivedTypeSpec(info.sourceExprType)}) {
+        if (derived->IsVectorType()) {
+          context.Say(at,
+              "SOURCE or MOLD expression must not be a vector type '%s'"_err_en_US,
+              info.sourceExprType.value().AsFortran());
+          return std::nullopt;
+        }
         // C949
         if (auto it{FindCoarrayUltimateComponent(*derived)}) {
           context
@@ -439,7 +458,7 @@ static bool HaveCompatibleLengths(
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{
         evaluate::ToInt64(type2.characterTypeSpec().length().GetExplicit())};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
   }
@@ -452,9 +471,19 @@ static bool HaveCompatibleLengths(
     auto v1{
         evaluate::ToInt64(type1.characterTypeSpec().length().GetExplicit())};
     auto v2{type2.knownLength()};
-    return !v1 || !v2 || *v1 == *v2;
+    return !v1 || !v2 || (*v1 >= 0 ? *v1 : 0) == (*v2 >= 0 ? *v2 : 0);
   } else {
     return true;
+  }
+}
+
+bool AreSameAllocation(const SomeExpr *root, const SomeExpr *path) {
+  if (root && path) {
+    // For now we just use equality of expressions. If we implement a more
+    // sophisticated alias analysis we should use it here.
+    return *root == *path;
+  } else {
+    return false;
   }
 }
 
@@ -544,11 +573,10 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             *type_, allocateInfo_.sourceExprType.value())) { // F'2023 C950
       context.Warn(common::LanguageFeature::AllocateToOtherLength, name_.source,
           "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
-      return false;
     }
   }
   // Shape related checks
-  if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
+  if (ultimate_ && IsAssumedRank(*ultimate_)) {
     context.Say(name_.source,
         "An assumed-rank dummy argument may not appear in an ALLOCATE statement"_err_en_US);
     return false;
@@ -598,7 +626,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           std::optional<evaluate::ConstantSubscript> lbound;
           if (const auto &lb{std::get<0>(shapeSpec.t)}) {
             lbound.reset();
-            const auto &lbExpr{lb->thing.thing.value()};
+            const auto &lbExpr{parser::UnwrapRef<parser::Expr>(lb)};
             if (const auto *expr{GetExpr(context, lbExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
@@ -609,7 +637,8 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             lbound = 1;
           }
           if (lbound) {
-            const auto &ubExpr{std::get<1>(shapeSpec.t).thing.thing.value()};
+            const auto &ubExpr{
+                parser::UnwrapRef<parser::Expr>(std::get<1>(shapeSpec.t))};
             if (const auto *expr{GetExpr(context, ubExpr)}) {
               auto folded{
                   evaluate::Fold(context.foldingContext(), SomeExpr(*expr))};
@@ -685,6 +714,43 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Device) {
       context.Say(name_.source,
           "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
+    }
+  }
+  if (const auto *component{
+          std::get_if<parser::StructureComponent>(&allocateObject_.u)}) {
+    // The descriptors of a DEVICE object live in device global memory, so a
+    // component of one can only be allocated where they are addressable.
+    const auto *details{ultimate_->detailsIf<ObjectEntityDetails>()};
+    std::optional<common::CUDADataAttr> attr{
+        details ? details->cudaDataAttr() : std::nullopt};
+    const parser::Name &base{parser::GetFirstName(*component)};
+    if (attr && base.symbol && IsCUDADevice(*base.symbol)) {
+      if (*attr == common::CUDADataAttr::Pinned ||
+          *attr == common::CUDADataAttr::Managed ||
+          *attr == common::CUDADataAttr::Unified) {
+        // These allocatables are placed in host-accessible memory, so their
+        // descriptors have to be host accessible too.
+        context.Say(name_.source,
+            "%s allocatable component '%s' must not be allocated in DEVICE object '%s'"_err_en_US,
+            parser::ToUpperCaseLetters(common::EnumToString(*attr)),
+            name_.source, base.source);
+      } else if (*attr == common::CUDADataAttr::Device &&
+          !FindCUDADeviceContext(&context.FindScope(name_.source))) {
+        context.Say(name_.source,
+            "DEVICE allocatable component '%s' of DEVICE object '%s' may only be allocated in a device subprogram"_err_en_US,
+            name_.source, base.source);
+      }
+    }
+  }
+
+  if (const SomeExpr *allocObj{GetExpr(context, allocateObject_)}) {
+    if (AreSameAllocation(allocObj, allocateInfo_.statVar)) {
+      context.Say(allocateInfo_.statSource.value_or(name_.source),
+          "STAT variable in ALLOCATE must not be the variable being allocated"_err_en_US);
+    }
+    if (AreSameAllocation(allocObj, allocateInfo_.msgVar)) {
+      context.Say(allocateInfo_.msgSource.value_or(name_.source),
+          "ERRMSG variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
   }
   return RunCoarrayRelatedChecks(context);

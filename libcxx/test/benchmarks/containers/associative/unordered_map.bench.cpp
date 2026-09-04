@@ -8,12 +8,27 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+#include <string>
 #include <unordered_map>
 #include <utility>
 
 #include "associative_container_benchmarks.h"
 #include "../../GenerateInput.h"
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
+
+static TEST_ALIGN_BENCHMARK void BM_map_find_string_literal(benchmark::State& state) {
+  std::unordered_map<std::string, int> map;
+  map.emplace("Something very very long to show a long string situation", 1);
+  map.emplace("Something Else", 2);
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    benchmark::DoNotOptimize(map.find("Something very very long to show a long string situation"));
+  }
+}
+
+BENCHMARK(BM_map_find_string_literal)->Name("std::unordered_map<std::string, int>::find(const char*)");
 
 template <class K, class V>
 struct support::adapt_operations<std::unordered_map<K, V>> {
@@ -24,6 +39,9 @@ struct support::adapt_operations<std::unordered_map<K, V>> {
 
   using InsertionResult = std::pair<typename std::unordered_map<K, V>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }
+
+  template <class Allocator>
+  using rebind_alloc = std::unordered_map<K, V, std::hash<K>, std::equal_to<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

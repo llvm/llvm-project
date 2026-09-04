@@ -32,10 +32,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "time-passes"
 
-namespace llvm {
+using namespace llvm;
 
-bool TimePassesIsEnabled = false;
-bool TimePassesPerRun = false;
+bool llvm::TimePassesIsEnabled = false;
+bool llvm::TimePassesPerRun = false;
 
 static cl::opt<bool, true> EnableTiming(
     "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
@@ -139,7 +139,7 @@ PassTimingInfo *PassTimingInfo::TheTimeInfo;
 } // namespace legacy
 } // namespace
 
-Timer *getPassTimer(Pass *P) {
+Timer *llvm::getPassTimer(Pass *P) {
   legacy::PassTimingInfo::init();
   if (legacy::PassTimingInfo::TheTimeInfo)
     return legacy::PassTimingInfo::TheTimeInfo->getPassTimer(P, P);
@@ -148,7 +148,7 @@ Timer *getPassTimer(Pass *P) {
 
 /// If timing is enabled, report the times collected up to now and then reset
 /// them.
-void reportAndResetTimings(raw_ostream *OutStream) {
+void llvm::reportAndResetTimings(raw_ostream *OutStream) {
   if (legacy::PassTimingInfo::TheTimeInfo)
     legacy::PassTimingInfo::TheTimeInfo->print(OutStream);
 }
@@ -301,9 +301,9 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this](StringRef P, Any) { this->startPassTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->startPassTimer(P); });
   PIC.registerAfterPassCallback(
-      [this](StringRef P, Any, const PreservedAnalyses &) {
+      [this](StringRef P, IRUnitRef, const PreservedAnalyses &) {
         this->stopPassTimer(P);
       });
   PIC.registerAfterPassInvalidatedCallback(
@@ -311,9 +311,7 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
         this->stopPassTimer(P);
       });
   PIC.registerBeforeAnalysisCallback(
-      [this](StringRef P, Any) { this->startAnalysisTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->startAnalysisTimer(P); });
   PIC.registerAfterAnalysisCallback(
-      [this](StringRef P, Any) { this->stopAnalysisTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->stopAnalysisTimer(P); });
 }
-
-} // namespace llvm

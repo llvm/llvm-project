@@ -82,35 +82,41 @@ class RuntimeDyldChecker {
 public:
   class MemoryRegionInfo {
   public:
-    MemoryRegionInfo() = default;
+    MemoryRegionInfo() : Size(0), Initialized(false) {}
 
     /// Constructor for symbols/sections with content and TargetFlag.
     MemoryRegionInfo(ArrayRef<char> Content, JITTargetAddress TargetAddress,
                      TargetFlagsType TargetFlags)
         : ContentPtr(Content.data()), Size(Content.size()),
-          TargetAddress(TargetAddress), TargetFlags(TargetFlags) {}
+          TargetAddress(TargetAddress), TargetFlags(TargetFlags) {
+      Initialized = true;
+    }
 
     /// Constructor for zero-fill symbols/sections.
     MemoryRegionInfo(uint64_t Size, JITTargetAddress TargetAddress)
-        : Size(Size), TargetAddress(TargetAddress) {}
+        : Size(Size), TargetAddress(TargetAddress) {
+      Initialized = true;
+    }
 
     /// Returns true if this is a zero-fill symbol/section.
     bool isZeroFill() const {
-      assert(Size && "setContent/setZeroFill must be called first");
+      assert(Initialized && "setZeroFill / setContent not called");
       return !ContentPtr;
     }
 
     /// Set the content for this memory region.
     void setContent(ArrayRef<char> Content) {
-      assert(!ContentPtr && !Size && "Content/zero-fill already set");
+      assert(!Initialized && "Content/zero-fill already set");
       ContentPtr = Content.data();
       Size = Content.size();
+      Initialized = true;
     }
 
     /// Set a zero-fill length for this memory region.
     void setZeroFill(uint64_t Size) {
-      assert(!ContentPtr && !this->Size && "Content/zero-fill already set");
+      assert(!Initialized && "Content/zero-fill already set");
       this->Size = Size;
+      Initialized = true;
     }
 
     /// Returns the content for this section if there is any.
@@ -145,7 +151,8 @@ public:
 
   private:
     const char *ContentPtr = nullptr;
-    uint64_t Size = 0;
+    uint64_t Size : 63;
+    uint64_t Initialized : 1;
     JITTargetAddress TargetAddress = 0;
     TargetFlagsType TargetFlags = 0;
   };

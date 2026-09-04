@@ -22,7 +22,6 @@
 #include "GCNVOPDUtils.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -135,8 +134,6 @@ public:
 
     const SIInstrInfo *SII = ST->getInstrInfo();
     bool Changed = false;
-    unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(*ST);
-    bool HasVOPD3 = ST->hasVOPD3();
 
     SmallVector<VOPDCombineInfo> ReplaceCandidates;
 
@@ -150,30 +147,10 @@ public:
         if (FirstMI->isDebugInstr())
           continue;
         auto *SecondMI = &*MII;
-        unsigned Opc = FirstMI->getOpcode();
-        unsigned Opc2 = SecondMI->getOpcode();
-        VOPDCombineInfo CI;
 
-        const auto checkVOPD = [&](bool VOPD3) -> bool {
-          llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD =
-              AMDGPU::getCanBeVOPD(Opc, EncodingFamily, VOPD3);
-          llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD =
-              AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
-
-          if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y)
-            CI = VOPDCombineInfo(FirstMI, SecondMI, VOPD3);
-          else if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)
-            CI = VOPDCombineInfo(SecondMI, FirstMI, VOPD3);
-          else
-            return false;
-          // checkVOPDRegConstraints cares about program order, but doReplace
-          // cares about X-Y order in the constituted VOPD
-          return llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI,
-                                               VOPD3);
-        };
-
-        if (checkVOPD(false) || (HasVOPD3 && checkVOPD(true))) {
-          ReplaceCandidates.push_back(CI);
+        if (auto Match = tryMatchVOPDPair(*SII, *FirstMI, *SecondMI)) {
+          ReplaceCandidates.push_back(
+              VOPDCombineInfo(Match->MIX, Match->MIY, Match->IsVOPD3));
           ++MII;
         }
       }

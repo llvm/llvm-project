@@ -18,9 +18,9 @@ define void @helper() {
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @use(ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    ret void
 ;
   call void @helper()

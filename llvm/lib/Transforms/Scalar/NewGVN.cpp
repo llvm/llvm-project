@@ -57,7 +57,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -101,7 +100,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/GVNExpression.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
@@ -160,9 +158,6 @@ static cl::opt<bool> EnablePhiOfOps("enable-phi-of-ops", cl::init(true),
 //===----------------------------------------------------------------------===//
 
 // Anchor methods.
-namespace llvm {
-namespace GVNExpression {
-
 Expression::~Expression() = default;
 BasicExpression::~BasicExpression() = default;
 CallExpression::~CallExpression() = default;
@@ -170,9 +165,6 @@ LoadExpression::~LoadExpression() = default;
 StoreExpression::~StoreExpression() = default;
 AggregateValueExpression::~AggregateValueExpression() = default;
 PHIExpression::~PHIExpression() = default;
-
-} // end namespace GVNExpression
-} // end namespace llvm
 
 namespace {
 
@@ -315,7 +307,7 @@ public:
   // Leader functions
   Value *getLeader() const { return RepLeader.first; }
   void setLeader(std::pair<Value *, unsigned int> Leader) {
-    RepLeader = Leader;
+    RepLeader = std::move(Leader);
   }
   const std::pair<Value *, unsigned int> &getNextLeader() const {
     return NextLeader;
@@ -324,10 +316,10 @@ public:
   bool addPossibleLeader(std::pair<Value *, unsigned int> LeaderPair) {
     if (LeaderPair.second < RepLeader.second) {
       NextLeader = RepLeader;
-      RepLeader = LeaderPair;
+      RepLeader = std::move(LeaderPair);
       return true;
     } else if (LeaderPair.second < NextLeader.second) {
-      NextLeader = LeaderPair;
+      NextLeader = std::move(LeaderPair);
     }
     return false;
   }
@@ -434,10 +426,6 @@ private:
   int StoreCount = 0;
 };
 
-} // end anonymous namespace
-
-namespace llvm {
-
 struct ExactEqualsExpression {
   const Expression &E;
 
@@ -449,20 +437,9 @@ struct ExactEqualsExpression {
     return E.exactlyEquals(Other);
   }
 };
+} // end anonymous namespace
 
-template <> struct DenseMapInfo<const Expression *> {
-  static const Expression *getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
-  static const Expression *getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(~1U);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
+template <> struct llvm::DenseMapInfo<const Expression *> {
   static unsigned getHashValue(const Expression *E) {
     return E->getComputedHash();
   }
@@ -472,17 +449,12 @@ template <> struct DenseMapInfo<const Expression *> {
   }
 
   static bool isEqual(const ExactEqualsExpression &LHS, const Expression *RHS) {
-    if (RHS == getTombstoneKey() || RHS == getEmptyKey())
-      return false;
     return LHS == *RHS;
   }
 
   static bool isEqual(const Expression *LHS, const Expression *RHS) {
     if (LHS == RHS)
       return true;
-    if (LHS == getTombstoneKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || RHS == getEmptyKey())
-      return false;
     // Compare hashes before equality.  This is *not* what the hashtable does,
     // since it is computing it modulo the number of buckets, whereas we are
     // using the full hash keyspace.  Since the hashes are precomputed, this
@@ -492,8 +464,6 @@ template <> struct DenseMapInfo<const Expression *> {
     return *LHS == *RHS;
   }
 };
-
-} // end namespace llvm
 
 namespace {
 
@@ -651,7 +621,7 @@ class NewGVN {
   BitVector TouchedInstructions;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
-  mutable DenseMap<const IntrinsicInst *, const Value *> IntrinsicInstPred;
+  mutable DenseMap<const BitCastInst *, const Value *> PredicateSwapChoice;
 
 #ifndef NDEBUG
   // Debugging for how many times each block and instruction got processed.
@@ -819,7 +789,7 @@ private:
                                                  BasicBlock *PHIBlock) const;
   const Expression *performSymbolicAggrValueEvaluation(Instruction *) const;
   ExprResult performSymbolicCmpEvaluation(Instruction *) const;
-  ExprResult performSymbolicPredicateInfoEvaluation(IntrinsicInst *) const;
+  ExprResult performSymbolicPredicateInfoEvaluation(BitCastInst *) const;
 
   // Congruence finding.
   bool someEquivalentDominates(const Instruction *, const Instruction *) const;
@@ -840,8 +810,8 @@ private:
   // Ranking
   unsigned int getRank(const Value *) const;
   bool shouldSwapOperands(const Value *, const Value *) const;
-  bool shouldSwapOperandsForIntrinsic(const Value *, const Value *,
-                                      const IntrinsicInst *I) const;
+  bool shouldSwapOperandsForPredicate(const Value *, const Value *,
+                                      const BitCastInst *I) const;
 
   // Reachability handling.
   void updateReachableEdge(BasicBlock *, BasicBlock *);
@@ -1013,9 +983,9 @@ void NewGVN::deleteExpression(const Expression *E) const {
 
 // If V is a predicateinfo copy, get the thing it is a copy of.
 static Value *getCopyOf(const Value *V) {
-  if (auto *II = dyn_cast<IntrinsicInst>(V))
-    if (II->getIntrinsicID() == Intrinsic::ssa_copy)
-      return II->getOperand(0);
+  if (auto *BC = dyn_cast<BitCastInst>(V))
+    if (BC->getType() == BC->getOperand(0)->getType())
+      return BC->getOperand(0);
   return nullptr;
 }
 
@@ -1224,7 +1194,7 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
       assert(E->getOperand(1)->getType() == I->getOperand(1)->getType() &&
              E->getOperand(2)->getType() == I->getOperand(2)->getType());
       Value *V = simplifySelectInst(E->getOperand(0), E->getOperand(1),
-                                    E->getOperand(2), Q);
+                                    E->getOperand(2), FastMathFlags(), Q);
       if (auto Simplified = checkExprResults(E, I, V))
         return Simplified;
     }
@@ -1535,7 +1505,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
 
   if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      auto *LifetimePtr = II->getOperand(1);
+      auto *LifetimePtr = II->getOperand(0);
       if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
           AA->isMustAlias(LoadPtr, LifetimePtr))
         return createConstantExpression(UndefValue::get(LoadType));
@@ -1604,7 +1574,7 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) const {
 }
 
 NewGVN::ExprResult
-NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
+NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
   auto *PI = PredInfo->getPredicateInfoFor(I);
   if (!PI)
     return ExprResult::none();
@@ -1624,7 +1594,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
   Value *AdditionallyUsedValue = CmpOp0;
 
   // Sort the ops.
-  if (shouldSwapOperandsForIntrinsic(FirstOp, SecondOp, I)) {
+  if (shouldSwapOperandsForPredicate(FirstOp, SecondOp, I)) {
     std::swap(FirstOp, SecondOp);
     Predicate = CmpInst::getSwappedPredicate(Predicate);
     AdditionallyUsedValue = CmpOp1;
@@ -1646,15 +1616,6 @@ NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
 // Evaluate read only and pure calls, and create an expression result.
 NewGVN::ExprResult NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
   auto *CI = cast<CallInst>(I);
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    // Intrinsics with the returned attribute are copies of arguments.
-    if (auto *ReturnedValue = II->getReturnedArgOperand()) {
-      if (II->getIntrinsicID() == Intrinsic::ssa_copy)
-        if (auto Res = performSymbolicPredicateInfoEvaluation(II))
-          return Res;
-      return ExprResult::some(createVariableOrConstant(ReturnedValue));
-    }
-  }
 
   // FIXME: Currently the calls which may access the thread id may
   // be considered as not accessing the memory. But this is
@@ -1824,7 +1785,7 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
   Value *AllSameValue = *(Filtered.begin());
   ++Filtered.begin();
   // Can't use std::equal here, sadly, because filter.begin moves.
-  if (llvm::all_of(Filtered, [&](Value *Arg) { return Arg == AllSameValue; })) {
+  if (llvm::all_of(Filtered, equal_to(AllSameValue))) {
     // Can't fold phi(undef, X) -> X unless X can't be poison (thus X is undef
     // in the worst case).
     if (HasUndef && !isGuaranteedNotToBePoison(AllSameValue, AC, nullptr, DT))
@@ -2032,6 +1993,12 @@ NewGVN::performSymbolicEvaluation(Instruction *I,
     E = performSymbolicLoadEvaluation(I);
     break;
   case Instruction::BitCast:
+    // Intrinsics with the returned attribute are copies of arguments.
+    if (I->getType() == I->getOperand(0)->getType())
+      if (auto Res =
+              performSymbolicPredicateInfoEvaluation(cast<BitCastInst>(I)))
+        return Res;
+    [[fallthrough]];
   case Instruction::AddrSpaceCast:
   case Instruction::Freeze:
     return createExpression(I);
@@ -2069,6 +2036,7 @@ NewGVN::performSymbolicEvaluation(Instruction *I,
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::Select:
   case Instruction::ExtractElement:
@@ -2111,7 +2079,8 @@ void NewGVN::addAdditionalUsers(ExprResult &Res, Instruction *User) const {
   if (Res.PredDep) {
     if (const auto *PBranch = dyn_cast<PredicateBranch>(Res.PredDep))
       PredicateToUsers[PBranch->Condition].insert(User);
-    else if (const auto *PAssume = dyn_cast<PredicateAssume>(Res.PredDep))
+    else if (const auto *PAssume =
+                 dyn_cast<PredicateConditionAssume>(Res.PredDep))
       PredicateToUsers[PAssume->Condition].insert(User);
   }
   Res.PredDep = nullptr;
@@ -3024,7 +2993,7 @@ void NewGVN::cleanupTables() {
   PredicateToUsers.clear();
   MemoryToUsers.clear();
   RevisitOnReachabilityChange.clear();
-  IntrinsicInstPred.clear();
+  PredicateSwapChoice.clear();
 }
 
 // Assign local DFS number mapping to instructions, and leave space for Value
@@ -3470,33 +3439,15 @@ bool NewGVN::runGVN() {
   unsigned ICount = 1;
   // Add an empty instruction to account for the fact that we start at 1
   DFSToInstr.emplace_back(nullptr);
-  // Note: We want ideal RPO traversal of the blocks, which is not quite the
-  // same as dominator tree order, particularly with regard whether backedges
-  // get visited first or second, given a block with multiple successors.
-  // If we visit in the wrong order, we will end up performing N times as many
+  // Note: Number the blocks in RPO to put every definition before its uses,
+  // except for a PHI operand arriving along a back edge. A wrong order costs
   // iterations.
-  // The dominator tree does guarantee that, for a given dom tree node, it's
-  // parent must occur before it in the RPO ordering. Thus, we only need to sort
-  // the siblings.
   ReversePostOrderTraversal<Function *> RPOT(&F);
   unsigned Counter = 0;
-  for (auto &B : RPOT) {
+  for (BasicBlock *B : RPOT) {
     auto *Node = DT->getNode(B);
     assert(Node && "RPO and Dominator tree should have same reachability");
     RPOOrdering[Node] = ++Counter;
-  }
-  // Sort dominator tree children arrays into RPO.
-  for (auto &B : RPOT) {
-    auto *Node = DT->getNode(B);
-    if (Node->getNumChildren() > 1)
-      llvm::sort(*Node, [&](const DomTreeNode *A, const DomTreeNode *B) {
-        return RPOOrdering[A] < RPOOrdering[B];
-      });
-  }
-
-  // Now a standard depth first ordering of the domtree is equivalent to RPO.
-  for (auto *DTN : depth_first(DT->getRootNode())) {
-    BasicBlock *B = DTN->getBlock();
     const auto &BlockRange = assignDFSNumbers(B, ICount);
     BlockInstRange.insert({B, BlockRange});
     ICount += BlockRange.second - BlockRange.first;
@@ -4075,8 +4026,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
               if (DominatingLeader != Def) {
                 // Even if the instruction is removed, we still need to update
                 // flags/metadata due to downstreams users of the leader.
-                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
-                  patchReplacementInstruction(DefI, DominatingLeader);
+                patchReplacementInstruction(DefI, DominatingLeader);
 
                 SmallVector<DbgVariableRecord *> DVRUsers;
                 findDbgUsers(DefI, DVRUsers);
@@ -4116,10 +4066,14 @@ bool NewGVN::eliminateInstructions(Function &F) {
 
           Value *DominatingLeader = EliminationStack.back();
 
-          auto *II = dyn_cast<IntrinsicInst>(DominatingLeader);
-          bool isSSACopy = II && II->getIntrinsicID() == Intrinsic::ssa_copy;
-          if (isSSACopy)
-            DominatingLeader = II->getOperand(0);
+          Instruction *SSACopy = nullptr;
+          if (auto *BC = dyn_cast<BitCastInst>(DominatingLeader)) {
+            if (BC->getType() == BC->getOperand(0)->getType() &&
+                PredInfo->getPredicateInfoFor(DominatingLeader)) {
+              SSACopy = BC;
+              DominatingLeader = BC->getOperand(0);
+            }
+          }
 
           // Don't replace our existing users with ourselves.
           if (U->get() == DominatingLeader)
@@ -4145,12 +4099,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
             ProbablyDead.erase(cast<Instruction>(DominatingLeader));
           // For copy instructions, we use their operand as a leader,
           // which means we remove a user of the copy and it may become dead.
-          if (isSSACopy) {
-            auto It = UseCounts.find(II);
+          if (SSACopy) {
+            auto It = UseCounts.find(SSACopy);
             if (It != UseCounts.end()) {
               unsigned &IIUseCount = It->second;
               if (--IIUseCount == 0)
-                ProbablyDead.insert(II);
+                ProbablyDead.insert(SSACopy);
             }
           }
           ++LeaderUseCount;
@@ -4250,20 +4204,18 @@ bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
   return std::make_pair(getRank(A), A) > std::make_pair(getRank(B), B);
 }
 
-bool NewGVN::shouldSwapOperandsForIntrinsic(const Value *A, const Value *B,
-                                            const IntrinsicInst *I) const {
-  auto LookupResult = IntrinsicInstPred.find(I);
+bool NewGVN::shouldSwapOperandsForPredicate(const Value *A, const Value *B,
+                                            const BitCastInst *I) const {
   if (shouldSwapOperands(A, B)) {
-    if (LookupResult == IntrinsicInstPred.end())
-      IntrinsicInstPred.insert({I, B});
-    else
-      LookupResult->second = B;
+    PredicateSwapChoice[I] = B;
     return true;
   }
 
-  if (LookupResult != IntrinsicInstPred.end()) {
+  auto LookupResult = PredicateSwapChoice.find(I);
+  if (LookupResult != PredicateSwapChoice.end()) {
     auto *SeenPredicate = LookupResult->second;
     if (SeenPredicate) {
+      // We previously decided to swap B to the left. Keep that choice.
       if (SeenPredicate == B)
         return true;
       else

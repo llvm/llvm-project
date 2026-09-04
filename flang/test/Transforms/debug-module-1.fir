@@ -2,6 +2,10 @@
 
 
 module {
+  // Marks `helper` as defined in this compilation unit, as lowering does for
+  // every module it compiles.
+  fir.module_debug_imports "helper" {
+  } loc(#loc0)
   fir.global @_QMhelperEgli : i32 {
     %0 = fir.zero_bits i32
     fir.has_value %0 : i32
@@ -20,12 +24,13 @@ module {
     return
   } loc(#loc3)
 }
+#loc0 = loc("test.f90":10:1)
 #loc1 = loc("test.f90":12:11)
 #loc2 = loc("test.f90":15:8)
 #loc3 = loc("test.f90":20:5)
 
-// CHECK-DAG: #[[I4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
-// CHECK-DAG: #[[R4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
+// CHECK-DAG: #[[I4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=4)", sizeInBits = 32, encoding = DW_ATE_signed>
+// CHECK-DAG: #[[R4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=4)", sizeInBits = 32, encoding = DW_ATE_float>
 // CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<{{.*}}>
 // CHECK-DAG: #[[MOD:.*]] = #llvm.di_module<{{.*}}scope = #[[CU]], name = "helper"{{.*}}>
 // CHECK-DAG: #[[LOC1:.*]] = loc("{{.*}}test.f90":12{{.*}})

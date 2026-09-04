@@ -2,21 +2,21 @@
 ; RUN: opt -passes=inline -S < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 
 define void @helper_both_markers() {
 ; CHECK-LABEL: define void @helper_both_markers() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i8
   ; Size in llvm.lifetime.start / llvm.lifetime.end differs from
   ; allocation size. We should use the former.
-  call void @llvm.lifetime.start.p0(i64 2, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 2, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -24,10 +24,10 @@ define void @test_both_markers() {
 ; CHECK-LABEL: define void @test_both_markers() {
 ; CHECK-NEXT:    [[A_I1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[A_I1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[A_I1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @helper_both_markers()
@@ -54,12 +54,12 @@ define void @test_no_marker() {
 ; CHECK-LABEL: define void @test_no_marker() {
 ; CHECK-NEXT:    [[A_I1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @use(ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[A_I1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I1]])
 ; CHECK-NEXT:    call void @use(ptr [[A_I1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[A_I1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @helper_no_markers()
@@ -70,13 +70,13 @@ define void @test_no_marker() {
 define void @helper_two_casts() {
 ; CHECK-LABEL: define void @helper_two_casts() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -84,10 +84,10 @@ define void @test_two_casts() {
 ; CHECK-LABEL: define void @test_two_casts() {
 ; CHECK-NEXT:    [[A_I1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @helper_two_casts()
@@ -109,9 +109,9 @@ define void @helper_arrays_alloca() {
 define void @test_arrays_alloca() {
 ; CHECK-LABEL: define void @test_arrays_alloca() {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca [10 x i32], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @use(ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    ret void
 ;
   call void @helper_arrays_alloca()

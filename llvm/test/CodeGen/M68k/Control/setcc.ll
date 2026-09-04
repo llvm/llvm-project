@@ -6,11 +6,10 @@
 define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.w (6,%sp), %d0
-; CHECK-NEXT:    and.l #65535, %d0
-; CHECK-NEXT:    sub.l #26, %d0
+; CHECK-NEXT:    cmpi.w #26, (6,%sp)
 ; CHECK-NEXT:    shi %d0
 ; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    lsl.l #5, %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -22,11 +21,10 @@ entry:
 define zeroext i16 @t2(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.w (6,%sp), %d0
-; CHECK-NEXT:    and.l #65535, %d0
-; CHECK-NEXT:    sub.l #26, %d0
+; CHECK-NEXT:    cmpi.w #26, (6,%sp)
 ; CHECK-NEXT:    scs %d0
 ; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    lsl.l #5, %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -44,8 +42,9 @@ define fastcc i64 @t3(i64 %x) nounwind readnone ssp {
 ; CHECK-NEXT:    sub.l #18, %d1
 ; CHECK-NEXT:    subx.l %d2, %d0
 ; CHECK-NEXT:    scs %d0
-; CHECK-NEXT:    move.l %d0, %d1
-; CHECK-NEXT:    and.l #255, %d1
+; CHECK-NEXT:    moveq #0, %d1
+; CHECK-NEXT:    move.b %d0, %d1
+; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    lsl.l #6, %d1
 ; CHECK-NEXT:    move.l %d2, %d0
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
@@ -90,8 +89,8 @@ define zeroext i1 @t6(i32 %a) {
 ; CHECK-NEXT:    move.l (4,%sp), %d1
 ; CHECK-NEXT:    lsr.l %d0, %d1
 ; CHECK-NEXT:    eori.b #1, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
 entry:
   %.lobit = lshr i32 %a, 31

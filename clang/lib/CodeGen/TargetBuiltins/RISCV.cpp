@@ -20,6 +20,949 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+// The 0th bit simulates the `vta` of RVV
+// The 1st bit simulates the `vma` of RVV
+static constexpr unsigned RVV_VTA = 0x1;
+static constexpr unsigned RVV_VMA = 0x2;
+
+// RISC-V Vector builtin helper functions are marked NOINLINE to prevent
+// excessive inlining in CodeGenFunction::EmitRISCVBuiltinExpr's large switch
+// statement, which would significantly increase compilation time.
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVVLEFFBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                    ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                    Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                    int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  if (IsMasked) {
+    // Move mask to right before vl.
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    IntrinsicTypes = {ResultType, Ops[4]->getType(), Ops[2]->getType()};
+  } else {
+    if (PolicyAttrs & RVV_VTA)
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+    IntrinsicTypes = {ResultType, Ops[3]->getType(), Ops[1]->getType()};
+  }
+  Value *NewVL = Ops[2];
+  Ops.erase(Ops.begin() + 2);
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
+  llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
+  // Store new_vl.
+  clang::CharUnits Align;
+  if (IsMasked)
+    Align = CGM.getNaturalPointeeTypeAlignment(
+        E->getArg(E->getNumArgs() - 2)->getType());
+  else
+    Align = CGM.getNaturalPointeeTypeAlignment(E->getArg(1)->getType());
+  llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {1});
+  Builder.CreateStore(Val, Address(NewVL, Val->getType(), Align));
+  return V;
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVVSSEBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                   ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                   Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                   int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  if (IsMasked) {
+    // Builtin: (mask, ptr, stride, value, vl). Intrinsic: (value, ptr, stride,
+    // mask, vl)
+    std::swap(Ops[0], Ops[3]);
+  } else {
+    // Builtin: (ptr, stride, value, vl). Intrinsic: (value, ptr, stride, vl)
+    std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
+  }
+  if (IsMasked)
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[4]->getType()};
+  else
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[3]->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVIndexedStoreBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                           ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                           Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                           int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  if (IsMasked) {
+    // Builtin: (mask, ptr, index, value, vl).
+    // Intrinsic: (value, ptr, index, mask, vl)
+    std::swap(Ops[0], Ops[3]);
+  } else {
+    // Builtin: (ptr, index, value, vl).
+    // Intrinsic: (value, ptr, index, vl)
+    std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
+  }
+  if (IsMasked)
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(),
+                      Ops[4]->getType()};
+  else
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(),
+                      Ops[3]->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVPseudoUnaryBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                          ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                          Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                          int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  if (IsMasked) {
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  } else {
+    if (PolicyAttrs & RVV_VTA)
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  }
+  auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+  Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+  if (IsMasked) {
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    // maskedoff, op1, op2, mask, vl, policy
+    IntrinsicTypes = {ResultType, ElemTy, Ops[4]->getType()};
+  } else {
+    // passthru, op1, op2, vl
+    IntrinsicTypes = {ResultType, ElemTy, Ops[3]->getType()};
+  }
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVPseudoVNotBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                         ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                         Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                         int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  if (IsMasked) {
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  } else {
+    if (PolicyAttrs & RVV_VTA)
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  }
+  auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+  Ops.insert(Ops.begin() + 2, llvm::Constant::getAllOnesValue(ElemTy));
+  if (IsMasked) {
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    // maskedoff, op1, po2, mask, vl, policy
+    IntrinsicTypes = {ResultType, ElemTy, Ops[4]->getType()};
+  } else {
+    // passthru, op1, op2, vl
+    IntrinsicTypes = {ResultType, ElemTy, Ops[3]->getType()};
+  }
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVPseudoMaskBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                         ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                         Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                         int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  // op1, vl
+  IntrinsicTypes = {ResultType, Ops[1]->getType()};
+  Ops.insert(Ops.begin() + 1, Ops[0]);
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVPseudoVFUnaryBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                            ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                            Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                            int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  if (IsMasked) {
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+    Ops.insert(Ops.begin() + 2, Ops[1]);
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    // maskedoff, op1, op2, mask, vl
+    IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
+  } else {
+    if (PolicyAttrs & RVV_VTA)
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+    // op1, po2, vl
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
+    Ops.insert(Ops.begin() + 2, Ops[1]);
+  }
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVPseudoVWCVTBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                          ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                          Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                          int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  if (IsMasked) {
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  } else {
+    if (PolicyAttrs & RVV_VTA)
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  }
+  auto ElemTy = cast<llvm::VectorType>(Ops[1]->getType())->getElementType();
+  Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+  if (IsMasked) {
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    // maskedoff, op1, op2, mask, vl, policy
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), ElemTy, Ops[4]->getType()};
+  } else {
+    // passtru, op1, op2, vl
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), ElemTy, Ops[3]->getType()};
+  }
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVPseudoVNCVTBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                          ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                          Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                          int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  if (IsMasked) {
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+    if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  } else {
+    if (PolicyAttrs & RVV_VTA)
+      Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  }
+  Ops.insert(Ops.begin() + 2,
+             llvm::Constant::getNullValue(Ops.back()->getType()));
+  if (IsMasked) {
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+    // maskedoff, op1, xlen, mask, vl
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[4]->getType(),
+                      Ops[4]->getType()};
+  } else {
+    // passthru, op1, xlen, vl
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType(),
+                      Ops[3]->getType()};
+  }
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVVlenbBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                    ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                    Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                    int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  LLVMContext &Context = CGM.getLLVMContext();
+  llvm::MDBuilder MDHelper(Context);
+  llvm::Metadata *OpsMD[] = {llvm::MDString::get(Context, "vlenb")};
+  llvm::MDNode *RegName = llvm::MDNode::get(Context, OpsMD);
+  llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+  llvm::Function *F =
+      CGM.getIntrinsic(llvm::Intrinsic::read_register, {CGF->SizeTy});
+  return Builder.CreateCall(F, Metadata);
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVVsetvliBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                      ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                      Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                      int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::Function *F = CGM.getIntrinsic(ID, {ResultType});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVVSEMaskBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                      ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                      Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                      int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  if (IsMasked) {
+    // Builtin: (mask, ptr, value, vl).
+    // Intrinsic: (value, ptr, mask, vl)
+    std::swap(Ops[0], Ops[2]);
+  } else {
+    // Builtin: (ptr, value, vl).
+    // Intrinsic: (value, ptr, vl)
+    std::swap(Ops[0], Ops[1]);
+  }
+  if (IsMasked)
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[3]->getType()};
+  else
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVUnitStridedSegLoadTupleBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  bool NoPassthru =
+      (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
+      (!IsMasked && (PolicyAttrs & RVV_VTA));
+  unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
+  if (IsMasked)
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[0]->getType(),
+                      Ops.back()->getType()};
+  else
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Ops.back()->getType()};
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+  if (NoPassthru)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
+  if (ReturnValue.isNull())
+    return LoadValue;
+  return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVUnitStridedSegStoreTupleBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  // Masked
+  // Builtin: (mask, ptr, v_tuple, vl)
+  // Intrinsic: (tuple, ptr, mask, vl, SegInstSEW)
+  // Unmasked
+  // Builtin: (ptr, v_tuple, vl)
+  // Intrinsic: (tuple, ptr, vl, SegInstSEW)
+  if (IsMasked)
+    std::swap(Ops[0], Ops[2]);
+  else
+    std::swap(Ops[0], Ops[1]);
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+  if (IsMasked)
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(),
+                      Ops[3]->getType()};
+  else
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVUnitStridedSegLoadFFTupleBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  bool NoPassthru =
+      (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
+      (!IsMasked && (PolicyAttrs & RVV_VTA));
+  unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
+  if (IsMasked)
+    IntrinsicTypes = {ResultType, Ops.back()->getType(), Ops[Offset]->getType(),
+                      Ops[0]->getType()};
+  else
+    IntrinsicTypes = {ResultType, Ops.back()->getType(),
+                      Ops[Offset]->getType()};
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+  if (NoPassthru)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+  Value *NewVL = Ops[2];
+  Ops.erase(Ops.begin() + 2);
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
+  // Get alignment from the new vl operand
+  clang::CharUnits Align =
+      CGM.getNaturalPointeeTypeAlignment(E->getArg(Offset + 1)->getType());
+  llvm::Value *ReturnTuple = Builder.CreateExtractValue(LoadValue, 0);
+  // Store new_vl
+  llvm::Value *V = Builder.CreateExtractValue(LoadValue, 1);
+  Builder.CreateStore(V, Address(NewVL, V->getType(), Align));
+  if (ReturnValue.isNull())
+    return ReturnTuple;
+  return Builder.CreateStore(ReturnTuple, ReturnValue.getValue());
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVStridedSegLoadTupleBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  bool NoPassthru =
+      (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
+      (!IsMasked && (PolicyAttrs & RVV_VTA));
+  unsigned Offset = IsMasked ? NoPassthru ? 1 : 2 : NoPassthru ? 0 : 1;
+  if (IsMasked)
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops.back()->getType(),
+                      Ops[0]->getType()};
+  else
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Ops.back()->getType()};
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+  if (NoPassthru)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
+  if (ReturnValue.isNull())
+    return LoadValue;
+  return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVStridedSegStoreTupleBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 4> IntrinsicTypes;
+  // Masked
+  // Builtin: (mask, ptr, stride, v_tuple, vl)
+  // Intrinsic: (tuple, ptr, stride, mask, vl, SegInstSEW)
+  // Unmasked
+  // Builtin: (ptr, stride, v_tuple, vl)
+  // Intrinsic: (tuple, ptr, stride, vl, SegInstSEW)
+  if (IsMasked)
+    std::swap(Ops[0], Ops[3]);
+  else
+    std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+  if (IsMasked)
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[4]->getType(),
+                      Ops[3]->getType()};
+  else
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[3]->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVAveragingBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                        ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                        Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                        int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (passthru, op0, op1, round_mode, vl)
+  // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl,
+  // policy)
+
+  bool HasMaskedOff =
+      !((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  if (!HasMaskedOff)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  llvm::Function *F = CGM.getIntrinsic(
+      ID, {ResultType, Ops[2]->getType(), Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVNarrowingClipBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                            ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                            Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                            int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (passthru, op0, op1, round_mode, vl)
+  // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, vxrm, vl,
+  // policy)
+
+  bool HasMaskedOff =
+      !((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  if (!HasMaskedOff)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  llvm::Function *F =
+      CGM.getIntrinsic(ID, {ResultType, Ops[1]->getType(), Ops[2]->getType(),
+                            Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVFloatingPointBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                            ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                            Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                            int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (passthru, op0, op1, round_mode, vl)
+  // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+  bool HasMaskedOff =
+      !((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+  bool HasRoundModeOp =
+      IsMasked ? (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5)
+               : (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+  if (!HasRoundModeOp)
+    Ops.insert(Ops.end() - 1,
+               ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  if (!HasMaskedOff)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  llvm::Function *F = CGM.getIntrinsic(
+      ID, {ResultType, Ops[2]->getType(), Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVWideningFloatingPointBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (passthru, op0, op1, round_mode, vl)
+  // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+  bool HasMaskedOff =
+      !((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+  bool HasRoundModeOp =
+      IsMasked ? (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5)
+               : (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+  if (!HasRoundModeOp)
+    Ops.insert(Ops.end() - 1,
+               ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  if (!HasMaskedOff)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  llvm::Function *F =
+      CGM.getIntrinsic(ID, {ResultType, Ops[1]->getType(), Ops[2]->getType(),
+                            Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVIndexedSegLoadTupleBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 5> IntrinsicTypes;
+
+  bool NoPassthru =
+      (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) |
+      (!IsMasked && (PolicyAttrs & RVV_VTA));
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+  if (NoPassthru)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+
+  if (IsMasked)
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType(),
+                      Ops[3]->getType(), Ops[4]->getType()};
+  else
+    IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType(),
+                      Ops[3]->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
+
+  if (ReturnValue.isNull())
+    return LoadValue;
+  return Builder.CreateStore(LoadValue, ReturnValue.getValue());
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVIndexedSegStoreTupleBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked, unsigned SegInstSEW) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 5> IntrinsicTypes;
+  // Masked
+  // Builtin: (mask, ptr, index, v_tuple, vl)
+  // Intrinsic: (tuple, ptr, index, mask, vl, SegInstSEW)
+  // Unmasked
+  // Builtin: (ptr, index, v_tuple, vl)
+  // Intrinsic: (tuple, ptr, index, vl, SegInstSEW)
+
+  if (IsMasked)
+    std::swap(Ops[0], Ops[3]);
+  else
+    std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
+
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), SegInstSEW));
+
+  if (IsMasked)
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(),
+                      Ops[3]->getType(), Ops[4]->getType()};
+  else
+    IntrinsicTypes = {Ops[0]->getType(), Ops[1]->getType(), Ops[2]->getType(),
+                      Ops[3]->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVFMABuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                  ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                  Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                  int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (vector_in, vector_in/scalar_in, vector_in, round_mode,
+  //            vl, policy)
+  // Masked:   (vector_in, vector_in/scalar_in, vector_in, mask, frm,
+  //            vl, policy)
+
+  bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+  if (!HasRoundModeOp)
+    Ops.insert(Ops.end() - 1,
+               ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  llvm::Function *F = CGM.getIntrinsic(
+      ID, {ResultType, Ops[1]->getType(), Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVWideningFMABuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                          ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                          Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                          int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (vector_in, vector_in/scalar_in, vector_in, round_mode, vl,
+  // policy) Masked:   (vector_in, vector_in/scalar_in, vector_in, mask, frm,
+  // vl, policy)
+
+  bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+  if (!HasRoundModeOp)
+    Ops.insert(Ops.end() - 1,
+               ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 4);
+
+  Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  llvm::Function *F =
+      CGM.getIntrinsic(ID, {ResultType, Ops[1]->getType(), Ops[2]->getType(),
+                            Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVFloatingUnaryBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                            ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                            Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                            int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  llvm::SmallVector<llvm::Type *, 3> IntrinsicTypes;
+  // LLVM intrinsic
+  // Unmasked: (passthru, op0, round_mode, vl)
+  // Masked:   (passthru, op0, mask, frm, vl, policy)
+
+  bool HasMaskedOff =
+      !((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+  bool HasRoundModeOp =
+      IsMasked ? (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4)
+               : (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
+
+  if (!HasRoundModeOp)
+    Ops.insert(Ops.end() - 1,
+               ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  if (!HasMaskedOff)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  IntrinsicTypes = {ResultType, Ops.back()->getType()};
+  llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVFloatingConvBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                           ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                           Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                           int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (passthru, op0, frm, vl)
+  // Masked:   (passthru, op0, mask, frm, vl, policy)
+  bool HasMaskedOff =
+      !((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+  bool HasRoundModeOp =
+      IsMasked ? (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4)
+               : (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
+
+  if (!HasRoundModeOp)
+    Ops.insert(Ops.end() - 1,
+               ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  if (!HasMaskedOff)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  if (IsMasked)
+    Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+  llvm::Function *F = CGM.getIntrinsic(
+      ID, {ResultType, Ops[1]->getType(), Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *emitRVVFloatingReductionBuiltin(
+    CodeGenFunction *CGF, const CallExpr *E, ReturnValueSlot ReturnValue,
+    llvm::Type *ResultType, Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+    int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+  // LLVM intrinsic
+  // Unmasked: (passthru, op0, op1, round_mode, vl)
+  // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+  bool HasMaskedOff =
+      !((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+  bool HasRoundModeOp =
+      IsMasked ? (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5)
+               : (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+  if (!HasRoundModeOp)
+    Ops.insert(Ops.end() - 1,
+               ConstantInt::get(Ops.back()->getType(), 7)); // frm
+
+  if (IsMasked)
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 2);
+
+  if (!HasMaskedOff)
+    Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+
+  llvm::Function *F = CGM.getIntrinsic(
+      ID, {ResultType, Ops[1]->getType(), Ops.back()->getType()});
+  return Builder.CreateCall(F, Ops, "");
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVReinterpretBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                          ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                          Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                          int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+
+  if (ResultType->isIntOrIntVectorTy(1) ||
+      Ops[0]->getType()->isIntOrIntVectorTy(1)) {
+    assert(isa<ScalableVectorType>(ResultType) &&
+           isa<ScalableVectorType>(Ops[0]->getType()));
+
+    LLVMContext &Context = CGM.getLLVMContext();
+    ScalableVectorType *Boolean64Ty =
+        ScalableVectorType::get(llvm::Type::getInt1Ty(Context), 64);
+
+    if (ResultType->isIntOrIntVectorTy(1)) {
+      // Casting from m1 vector integer -> vector boolean
+      // Ex: <vscale x 8 x i8>
+      //     --(bitcast)--------> <vscale x 64 x i1>
+      //     --(vector_extract)-> <vscale x  8 x i1>
+      llvm::Value *BitCast = Builder.CreateBitCast(Ops[0], Boolean64Ty);
+      return Builder.CreateExtractVector(ResultType, BitCast,
+                                         ConstantInt::get(CGF->Int64Ty, 0));
+    } else {
+      // Casting from vector boolean -> m1 vector integer
+      // Ex: <vscale x  1 x i1>
+      //       --(vector_insert)-> <vscale x 64 x i1>
+      //       --(bitcast)-------> <vscale x  8 x i8>
+      llvm::Value *Boolean64Val = Builder.CreateInsertVector(
+          Boolean64Ty, llvm::PoisonValue::get(Boolean64Ty), Ops[0],
+          ConstantInt::get(CGF->Int64Ty, 0));
+      return Builder.CreateBitCast(Boolean64Val, ResultType);
+    }
+  }
+  return Builder.CreateBitCast(Ops[0], ResultType);
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVGetBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                  ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                  Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                  int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto *VecTy = cast<ScalableVectorType>(ResultType);
+  if (auto *OpVecTy = dyn_cast<ScalableVectorType>(Ops[0]->getType())) {
+    unsigned MaxIndex =
+        OpVecTy->getMinNumElements() / VecTy->getMinNumElements();
+    assert(isPowerOf2_32(MaxIndex));
+    // Mask to only valid indices.
+    Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
+    Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
+    Ops[1] =
+        Builder.CreateMul(Ops[1], ConstantInt::get(Ops[1]->getType(),
+                                                   VecTy->getMinNumElements()));
+    return Builder.CreateExtractVector(ResultType, Ops[0], Ops[1]);
+  }
+
+  return Builder.CreateIntrinsic(
+      Intrinsic::riscv_tuple_extract, {ResultType, Ops[0]->getType()},
+      {Ops[0], Builder.CreateTrunc(Ops[1], Builder.getInt32Ty())});
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVSetBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                  ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                  Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                  int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  if (auto *ResVecTy = dyn_cast<ScalableVectorType>(ResultType)) {
+    auto *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
+    unsigned MaxIndex =
+        ResVecTy->getMinNumElements() / VecTy->getMinNumElements();
+    assert(isPowerOf2_32(MaxIndex));
+    // Mask to only valid indices.
+    Ops[1] = Builder.CreateZExt(Ops[1], Builder.getInt64Ty());
+    Ops[1] = Builder.CreateAnd(Ops[1], MaxIndex - 1);
+    Ops[1] =
+        Builder.CreateMul(Ops[1], ConstantInt::get(Ops[1]->getType(),
+                                                   VecTy->getMinNumElements()));
+    return Builder.CreateInsertVector(ResultType, Ops[0], Ops[2], Ops[1]);
+  }
+
+  return Builder.CreateIntrinsic(
+      Intrinsic::riscv_tuple_insert, {ResultType, Ops[2]->getType()},
+      {Ops[0], Ops[2], Builder.CreateTrunc(Ops[1], Builder.getInt32Ty())});
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVCreateBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                     ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                     Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                     int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
+  auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
+  for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
+    if (isa<ScalableVectorType>(ResultType)) {
+      llvm::Value *Idx = ConstantInt::get(Builder.getInt64Ty(),
+                                          VecTy->getMinNumElements() * I);
+      ReturnVector =
+          Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
+    } else {
+      llvm::Value *Idx = ConstantInt::get(Builder.getInt32Ty(), I);
+      ReturnVector = Builder.CreateIntrinsic(Intrinsic::riscv_tuple_insert,
+                                             {ResultType, Ops[I]->getType()},
+                                             {ReturnVector, Ops[I], Idx});
+    }
+  }
+  return ReturnVector;
+}
+
 Value *CodeGenFunction::EmitRISCVCpuInit() {
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {VoidPtrTy}, false);
   llvm::FunctionCallee Func =
@@ -180,14 +1123,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   }
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
-  // The 0th bit simulates the `vta` of RVV
-  // The 1st bit simulates the `vma` of RVV
-  constexpr unsigned RVV_VTA = 0x1;
-  constexpr unsigned RVV_VMA = 0x2;
   int PolicyAttrs = 0;
   bool IsMasked = false;
   // This is used by segment load/store to determine it's llvm type.
   unsigned SegInstSEW = 8;
+  // This is used by XSfmm.
+  unsigned TWiden = 0;
 
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
@@ -220,7 +1161,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     // Zbc
     case RISCV::BI__builtin_riscv_clmul_32:
     case RISCV::BI__builtin_riscv_clmul_64:
-      ID = Intrinsic::riscv_clmul;
+      ID = Intrinsic::clmul;
       break;
     case RISCV::BI__builtin_riscv_clmulh_32:
     case RISCV::BI__builtin_riscv_clmulh_64:
@@ -255,6 +1196,745 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     }
 
     IntrinsicTypes = {ResultType};
+    break;
+  }
+
+  // Packed Averaging Addition and Subtraction
+  case RISCV::BI__builtin_riscv_paadd_i8x4:
+  case RISCV::BI__builtin_riscv_paadd_i16x2:
+  case RISCV::BI__builtin_riscv_paadd_i8x8:
+  case RISCV::BI__builtin_riscv_paadd_i16x4:
+  case RISCV::BI__builtin_riscv_paadd_i32x2:
+  case RISCV::BI__builtin_riscv_paaddu_u8x4:
+  case RISCV::BI__builtin_riscv_paaddu_u16x2:
+  case RISCV::BI__builtin_riscv_paaddu_u8x8:
+  case RISCV::BI__builtin_riscv_paaddu_u16x4:
+  case RISCV::BI__builtin_riscv_paaddu_u32x2:
+  case RISCV::BI__builtin_riscv_pasub_i8x4:
+  case RISCV::BI__builtin_riscv_pasub_i16x2:
+  case RISCV::BI__builtin_riscv_pasub_i8x8:
+  case RISCV::BI__builtin_riscv_pasub_i16x4:
+  case RISCV::BI__builtin_riscv_pasub_i32x2:
+  case RISCV::BI__builtin_riscv_pasubu_u8x4:
+  case RISCV::BI__builtin_riscv_pasubu_u16x2:
+  case RISCV::BI__builtin_riscv_pasubu_u8x8:
+  case RISCV::BI__builtin_riscv_pasubu_u16x4:
+  case RISCV::BI__builtin_riscv_pasubu_u32x2:
+  // Packed Exchanged Addition and Subtraction
+  case RISCV::BI__builtin_riscv_pas_x_i16x2:
+  case RISCV::BI__builtin_riscv_pas_x_i16x4:
+  case RISCV::BI__builtin_riscv_pas_x_i32x2:
+  case RISCV::BI__builtin_riscv_psa_x_i16x2:
+  case RISCV::BI__builtin_riscv_psa_x_i16x4:
+  case RISCV::BI__builtin_riscv_psa_x_i32x2:
+  case RISCV::BI__builtin_riscv_psas_x_i16x2:
+  case RISCV::BI__builtin_riscv_psas_x_i16x4:
+  case RISCV::BI__builtin_riscv_psas_x_i32x2:
+  case RISCV::BI__builtin_riscv_pssa_x_i16x2:
+  case RISCV::BI__builtin_riscv_pssa_x_i16x4:
+  case RISCV::BI__builtin_riscv_pssa_x_i32x2:
+  case RISCV::BI__builtin_riscv_paas_x_i16x2:
+  case RISCV::BI__builtin_riscv_paas_x_i16x4:
+  case RISCV::BI__builtin_riscv_paas_x_i32x2:
+  case RISCV::BI__builtin_riscv_pasa_x_i16x2:
+  case RISCV::BI__builtin_riscv_pasa_x_i16x4:
+  case RISCV::BI__builtin_riscv_pasa_x_i32x2:
+  // Packed Absolute Value and Absolute Difference
+  case RISCV::BI__builtin_riscv_pabd_i8x4:
+  case RISCV::BI__builtin_riscv_pabd_i16x2:
+  case RISCV::BI__builtin_riscv_pabd_i8x8:
+  case RISCV::BI__builtin_riscv_pabd_i16x4:
+  case RISCV::BI__builtin_riscv_pabdu_u8x4:
+  case RISCV::BI__builtin_riscv_pabdu_u16x2:
+  case RISCV::BI__builtin_riscv_pabdu_u8x8:
+  case RISCV::BI__builtin_riscv_pabdu_u16x4:
+  // Packed Merge
+  case RISCV::BI__builtin_riscv_pmerge_u8x4:
+  case RISCV::BI__builtin_riscv_pmerge_i8x4:
+  case RISCV::BI__builtin_riscv_pmerge_u16x2:
+  case RISCV::BI__builtin_riscv_pmerge_i16x2:
+  case RISCV::BI__builtin_riscv_pmerge_u8x8:
+  case RISCV::BI__builtin_riscv_pmerge_i8x8:
+  case RISCV::BI__builtin_riscv_pmerge_u16x4:
+  case RISCV::BI__builtin_riscv_pmerge_i16x4:
+  case RISCV::BI__builtin_riscv_pmerge_u32x2:
+  case RISCV::BI__builtin_riscv_pmerge_i32x2:
+  // Packed Multiply High
+  case RISCV::BI__builtin_riscv_pmulh_i16x2:
+  case RISCV::BI__builtin_riscv_pmulh_i16x4:
+  case RISCV::BI__builtin_riscv_pmulh_i32x2:
+  case RISCV::BI__builtin_riscv_pmulhr_i16x2:
+  case RISCV::BI__builtin_riscv_pmulhr_i16x4:
+  case RISCV::BI__builtin_riscv_pmulhr_i32x2:
+  case RISCV::BI__builtin_riscv_pmulhu_u16x2:
+  case RISCV::BI__builtin_riscv_pmulhu_u16x4:
+  case RISCV::BI__builtin_riscv_pmulhu_u32x2:
+  case RISCV::BI__builtin_riscv_pmulhru_u16x2:
+  case RISCV::BI__builtin_riscv_pmulhru_u16x4:
+  case RISCV::BI__builtin_riscv_pmulhru_u32x2:
+  case RISCV::BI__builtin_riscv_pmulhsu_i16x2:
+  case RISCV::BI__builtin_riscv_pmulhsu_i16x4:
+  case RISCV::BI__builtin_riscv_pmulhsu_i32x2:
+  case RISCV::BI__builtin_riscv_pmulhrsu_i16x2:
+  case RISCV::BI__builtin_riscv_pmulhrsu_i16x4:
+  case RISCV::BI__builtin_riscv_pmulhrsu_i32x2:
+  // Packed Multiply High Accumulate
+  case RISCV::BI__builtin_riscv_pmhacc_i16x2:
+  case RISCV::BI__builtin_riscv_pmhacc_i16x4:
+  case RISCV::BI__builtin_riscv_pmhacc_i32x2:
+  case RISCV::BI__builtin_riscv_pmhracc_i16x2:
+  case RISCV::BI__builtin_riscv_pmhracc_i16x4:
+  case RISCV::BI__builtin_riscv_pmhracc_i32x2:
+  case RISCV::BI__builtin_riscv_pmhaccu_u16x2:
+  case RISCV::BI__builtin_riscv_pmhaccu_u16x4:
+  case RISCV::BI__builtin_riscv_pmhaccu_u32x2:
+  case RISCV::BI__builtin_riscv_pmhraccu_u16x2:
+  case RISCV::BI__builtin_riscv_pmhraccu_u16x4:
+  case RISCV::BI__builtin_riscv_pmhraccu_u32x2:
+  case RISCV::BI__builtin_riscv_pmhaccsu_i16x2:
+  case RISCV::BI__builtin_riscv_pmhaccsu_i16x4:
+  case RISCV::BI__builtin_riscv_pmhaccsu_i32x2:
+  case RISCV::BI__builtin_riscv_pmhraccsu_i16x2:
+  case RISCV::BI__builtin_riscv_pmhraccsu_i16x4:
+  case RISCV::BI__builtin_riscv_pmhraccsu_i32x2:
+  // Packed Saturating Absolute Value
+  case RISCV::BI__builtin_riscv_psabs_i8x4:
+  case RISCV::BI__builtin_riscv_psabs_i16x2:
+  case RISCV::BI__builtin_riscv_psabs_i8x8:
+  case RISCV::BI__builtin_riscv_psabs_i16x4:
+  // Packed "Q-format" Multiplication
+  case RISCV::BI__builtin_riscv_pmulq_i16x2:
+  case RISCV::BI__builtin_riscv_pmulqr_i16x2:
+  case RISCV::BI__builtin_riscv_pmulq_i16x4:
+  case RISCV::BI__builtin_riscv_pmulqr_i16x4:
+  case RISCV::BI__builtin_riscv_pmulq_i32x2:
+  case RISCV::BI__builtin_riscv_pmulqr_i32x2:
+  case RISCV::BI__builtin_riscv_psext_b_i16x2:
+  case RISCV::BI__builtin_riscv_pzext_b_u16x2:
+  case RISCV::BI__builtin_riscv_psext_b_i16x4:
+  case RISCV::BI__builtin_riscv_psext_b_i32x2:
+  case RISCV::BI__builtin_riscv_psext_h_i32x2:
+  case RISCV::BI__builtin_riscv_pzext_b_u16x4:
+  case RISCV::BI__builtin_riscv_pzext_h_u32x2:
+  // Packed Saturating and Rounding Shifts
+  case RISCV::BI__builtin_riscv_pssha_s_i16x2:
+  case RISCV::BI__builtin_riscv_psshar_s_i16x2:
+  case RISCV::BI__builtin_riscv_psshl_s_u16x2:
+  case RISCV::BI__builtin_riscv_psshlr_s_u16x2:
+  case RISCV::BI__builtin_riscv_pssha_s_i16x4:
+  case RISCV::BI__builtin_riscv_pssha_s_i32x2:
+  case RISCV::BI__builtin_riscv_psshar_s_i16x4:
+  case RISCV::BI__builtin_riscv_psshar_s_i32x2:
+  case RISCV::BI__builtin_riscv_psshl_s_u16x4:
+  case RISCV::BI__builtin_riscv_psshl_s_u32x2:
+  case RISCV::BI__builtin_riscv_psshlr_s_u16x4:
+  case RISCV::BI__builtin_riscv_psshlr_s_u32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_paadd_i8x4:
+    case RISCV::BI__builtin_riscv_paadd_i16x2:
+    case RISCV::BI__builtin_riscv_paadd_i8x8:
+    case RISCV::BI__builtin_riscv_paadd_i16x4:
+    case RISCV::BI__builtin_riscv_paadd_i32x2:
+      ID = Intrinsic::riscv_paadd;
+      break;
+    case RISCV::BI__builtin_riscv_paaddu_u8x4:
+    case RISCV::BI__builtin_riscv_paaddu_u16x2:
+    case RISCV::BI__builtin_riscv_paaddu_u8x8:
+    case RISCV::BI__builtin_riscv_paaddu_u16x4:
+    case RISCV::BI__builtin_riscv_paaddu_u32x2:
+      ID = Intrinsic::riscv_paaddu;
+      break;
+    case RISCV::BI__builtin_riscv_pasub_i8x4:
+    case RISCV::BI__builtin_riscv_pasub_i16x2:
+    case RISCV::BI__builtin_riscv_pasub_i8x8:
+    case RISCV::BI__builtin_riscv_pasub_i16x4:
+    case RISCV::BI__builtin_riscv_pasub_i32x2:
+      ID = Intrinsic::riscv_pasub;
+      break;
+    case RISCV::BI__builtin_riscv_pasubu_u8x4:
+    case RISCV::BI__builtin_riscv_pasubu_u16x2:
+    case RISCV::BI__builtin_riscv_pasubu_u8x8:
+    case RISCV::BI__builtin_riscv_pasubu_u16x4:
+    case RISCV::BI__builtin_riscv_pasubu_u32x2:
+      ID = Intrinsic::riscv_pasubu;
+      break;
+    case RISCV::BI__builtin_riscv_pas_x_i16x2:
+    case RISCV::BI__builtin_riscv_pas_x_i16x4:
+    case RISCV::BI__builtin_riscv_pas_x_i32x2:
+      ID = Intrinsic::riscv_pas;
+      break;
+    case RISCV::BI__builtin_riscv_psa_x_i16x2:
+    case RISCV::BI__builtin_riscv_psa_x_i16x4:
+    case RISCV::BI__builtin_riscv_psa_x_i32x2:
+      ID = Intrinsic::riscv_psa;
+      break;
+    case RISCV::BI__builtin_riscv_psas_x_i16x2:
+    case RISCV::BI__builtin_riscv_psas_x_i16x4:
+    case RISCV::BI__builtin_riscv_psas_x_i32x2:
+      ID = Intrinsic::riscv_psas;
+      break;
+    case RISCV::BI__builtin_riscv_pssa_x_i16x2:
+    case RISCV::BI__builtin_riscv_pssa_x_i16x4:
+    case RISCV::BI__builtin_riscv_pssa_x_i32x2:
+      ID = Intrinsic::riscv_pssa;
+      break;
+    case RISCV::BI__builtin_riscv_paas_x_i16x2:
+    case RISCV::BI__builtin_riscv_paas_x_i16x4:
+    case RISCV::BI__builtin_riscv_paas_x_i32x2:
+      ID = Intrinsic::riscv_paas;
+      break;
+    case RISCV::BI__builtin_riscv_pasa_x_i16x2:
+    case RISCV::BI__builtin_riscv_pasa_x_i16x4:
+    case RISCV::BI__builtin_riscv_pasa_x_i32x2:
+      ID = Intrinsic::riscv_pasa;
+      break;
+    case RISCV::BI__builtin_riscv_pabd_i8x4:
+    case RISCV::BI__builtin_riscv_pabd_i16x2:
+    case RISCV::BI__builtin_riscv_pabd_i8x8:
+    case RISCV::BI__builtin_riscv_pabd_i16x4:
+      ID = Intrinsic::riscv_pabd;
+      break;
+    case RISCV::BI__builtin_riscv_pabdu_u8x4:
+    case RISCV::BI__builtin_riscv_pabdu_u16x2:
+    case RISCV::BI__builtin_riscv_pabdu_u8x8:
+    case RISCV::BI__builtin_riscv_pabdu_u16x4:
+      ID = Intrinsic::riscv_pabdu;
+      break;
+    case RISCV::BI__builtin_riscv_pmerge_u8x4:
+    case RISCV::BI__builtin_riscv_pmerge_i8x4:
+    case RISCV::BI__builtin_riscv_pmerge_u16x2:
+    case RISCV::BI__builtin_riscv_pmerge_i16x2:
+    case RISCV::BI__builtin_riscv_pmerge_u8x8:
+    case RISCV::BI__builtin_riscv_pmerge_i8x8:
+    case RISCV::BI__builtin_riscv_pmerge_u16x4:
+    case RISCV::BI__builtin_riscv_pmerge_i16x4:
+    case RISCV::BI__builtin_riscv_pmerge_u32x2:
+    case RISCV::BI__builtin_riscv_pmerge_i32x2:
+      ID = Intrinsic::riscv_pmerge;
+      break;
+    case RISCV::BI__builtin_riscv_pmulh_i16x2:
+    case RISCV::BI__builtin_riscv_pmulh_i16x4:
+    case RISCV::BI__builtin_riscv_pmulh_i32x2:
+      ID = Intrinsic::riscv_pmulh;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhr_i16x2:
+    case RISCV::BI__builtin_riscv_pmulhr_i16x4:
+    case RISCV::BI__builtin_riscv_pmulhr_i32x2:
+      ID = Intrinsic::riscv_pmulhr;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhu_u16x2:
+    case RISCV::BI__builtin_riscv_pmulhu_u16x4:
+    case RISCV::BI__builtin_riscv_pmulhu_u32x2:
+      ID = Intrinsic::riscv_pmulhu;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhru_u16x2:
+    case RISCV::BI__builtin_riscv_pmulhru_u16x4:
+    case RISCV::BI__builtin_riscv_pmulhru_u32x2:
+      ID = Intrinsic::riscv_pmulhru;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhsu_i16x2:
+    case RISCV::BI__builtin_riscv_pmulhsu_i16x4:
+    case RISCV::BI__builtin_riscv_pmulhsu_i32x2:
+      ID = Intrinsic::riscv_pmulhsu;
+      break;
+    case RISCV::BI__builtin_riscv_pmulhrsu_i16x2:
+    case RISCV::BI__builtin_riscv_pmulhrsu_i16x4:
+    case RISCV::BI__builtin_riscv_pmulhrsu_i32x2:
+      ID = Intrinsic::riscv_pmulhrsu;
+      break;
+    case RISCV::BI__builtin_riscv_pmhacc_i16x2:
+    case RISCV::BI__builtin_riscv_pmhacc_i16x4:
+    case RISCV::BI__builtin_riscv_pmhacc_i32x2:
+      ID = Intrinsic::riscv_pmhacc;
+      break;
+    case RISCV::BI__builtin_riscv_pmhracc_i16x2:
+    case RISCV::BI__builtin_riscv_pmhracc_i16x4:
+    case RISCV::BI__builtin_riscv_pmhracc_i32x2:
+      ID = Intrinsic::riscv_pmhracc;
+      break;
+    case RISCV::BI__builtin_riscv_pmhaccu_u16x2:
+    case RISCV::BI__builtin_riscv_pmhaccu_u16x4:
+    case RISCV::BI__builtin_riscv_pmhaccu_u32x2:
+      ID = Intrinsic::riscv_pmhaccu;
+      break;
+    case RISCV::BI__builtin_riscv_pmhraccu_u16x2:
+    case RISCV::BI__builtin_riscv_pmhraccu_u16x4:
+    case RISCV::BI__builtin_riscv_pmhraccu_u32x2:
+      ID = Intrinsic::riscv_pmhraccu;
+      break;
+    case RISCV::BI__builtin_riscv_pmhaccsu_i16x2:
+    case RISCV::BI__builtin_riscv_pmhaccsu_i16x4:
+    case RISCV::BI__builtin_riscv_pmhaccsu_i32x2:
+      ID = Intrinsic::riscv_pmhaccsu;
+      break;
+    case RISCV::BI__builtin_riscv_pmhraccsu_i16x2:
+    case RISCV::BI__builtin_riscv_pmhraccsu_i16x4:
+    case RISCV::BI__builtin_riscv_pmhraccsu_i32x2:
+      ID = Intrinsic::riscv_pmhraccsu;
+      break;
+    case RISCV::BI__builtin_riscv_psabs_i8x4:
+    case RISCV::BI__builtin_riscv_psabs_i16x2:
+    case RISCV::BI__builtin_riscv_psabs_i8x8:
+    case RISCV::BI__builtin_riscv_psabs_i16x4:
+      ID = Intrinsic::riscv_psabs;
+      break;
+    case RISCV::BI__builtin_riscv_pmulq_i16x2:
+    case RISCV::BI__builtin_riscv_pmulq_i16x4:
+    case RISCV::BI__builtin_riscv_pmulq_i32x2:
+      ID = Intrinsic::riscv_pmulq;
+      break;
+    case RISCV::BI__builtin_riscv_pmulqr_i16x2:
+    case RISCV::BI__builtin_riscv_pmulqr_i16x4:
+    case RISCV::BI__builtin_riscv_pmulqr_i32x2:
+      ID = Intrinsic::riscv_pmulqr;
+      break;
+    case RISCV::BI__builtin_riscv_psext_b_i16x2:
+    case RISCV::BI__builtin_riscv_psext_b_i16x4:
+    case RISCV::BI__builtin_riscv_psext_b_i32x2:
+      ID = Intrinsic::riscv_psext_b;
+      break;
+    case RISCV::BI__builtin_riscv_psext_h_i32x2:
+      ID = Intrinsic::riscv_psext_h;
+      break;
+    case RISCV::BI__builtin_riscv_pzext_b_u16x2:
+    case RISCV::BI__builtin_riscv_pzext_b_u16x4:
+      ID = Intrinsic::riscv_pzext_b;
+      break;
+    case RISCV::BI__builtin_riscv_pzext_h_u32x2:
+      ID = Intrinsic::riscv_pzext_h;
+      break;
+    case RISCV::BI__builtin_riscv_pssha_s_i16x2:
+    case RISCV::BI__builtin_riscv_pssha_s_i16x4:
+    case RISCV::BI__builtin_riscv_pssha_s_i32x2:
+      ID = Intrinsic::riscv_pssha;
+      break;
+    case RISCV::BI__builtin_riscv_psshar_s_i16x2:
+    case RISCV::BI__builtin_riscv_psshar_s_i16x4:
+    case RISCV::BI__builtin_riscv_psshar_s_i32x2:
+      ID = Intrinsic::riscv_psshar;
+      break;
+    case RISCV::BI__builtin_riscv_psshl_s_u16x2:
+    case RISCV::BI__builtin_riscv_psshl_s_u16x4:
+    case RISCV::BI__builtin_riscv_psshl_s_u32x2:
+      ID = Intrinsic::riscv_psshl;
+      break;
+    case RISCV::BI__builtin_riscv_psshlr_s_u16x2:
+    case RISCV::BI__builtin_riscv_psshlr_s_u16x4:
+    case RISCV::BI__builtin_riscv_psshlr_s_u32x2:
+      ID = Intrinsic::riscv_psshlr;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType};
+    break;
+  }
+
+  // Packed Multiplication with Horizontal Addition
+  case RISCV::BI__builtin_riscv_pm4add_i8x4:
+  case RISCV::BI__builtin_riscv_pm4add_i8x8:
+  case RISCV::BI__builtin_riscv_pm4add_i16x4:
+  case RISCV::BI__builtin_riscv_pm2add_i16x2:
+  case RISCV::BI__builtin_riscv_pm2add_i16x4:
+  case RISCV::BI__builtin_riscv_pm2add_i32x2:
+  case RISCV::BI__builtin_riscv_pm2add_x_i16x2:
+  case RISCV::BI__builtin_riscv_pm2add_x_i16x4:
+  case RISCV::BI__builtin_riscv_pm2add_x_i32x2:
+  case RISCV::BI__builtin_riscv_pm4addu_u8x4:
+  case RISCV::BI__builtin_riscv_pm4addu_u8x8:
+  case RISCV::BI__builtin_riscv_pm4addu_u16x4:
+  case RISCV::BI__builtin_riscv_pm2addu_u16x2:
+  case RISCV::BI__builtin_riscv_pm2addu_u16x4:
+  case RISCV::BI__builtin_riscv_pm2addu_u32x2:
+  case RISCV::BI__builtin_riscv_pmq2add_i16x2:
+  case RISCV::BI__builtin_riscv_pmq2add_i16x4:
+  case RISCV::BI__builtin_riscv_pmq2add_i32x2:
+  case RISCV::BI__builtin_riscv_pmqr2add_i16x2:
+  case RISCV::BI__builtin_riscv_pmqr2add_i16x4:
+  case RISCV::BI__builtin_riscv_pmqr2add_i32x2:
+  case RISCV::BI__builtin_riscv_pm2sadd_i16x2:
+  case RISCV::BI__builtin_riscv_pm2sadd_i16x4:
+  case RISCV::BI__builtin_riscv_pm2sadd_x_i16x2:
+  case RISCV::BI__builtin_riscv_pm2sadd_x_i16x4:
+  case RISCV::BI__builtin_riscv_pm2sub_i16x2:
+  case RISCV::BI__builtin_riscv_pm2sub_i16x4:
+  case RISCV::BI__builtin_riscv_pm2sub_i32x2:
+  case RISCV::BI__builtin_riscv_pm2sub_x_i16x2:
+  case RISCV::BI__builtin_riscv_pm2sub_x_i16x4:
+  case RISCV::BI__builtin_riscv_pm2sub_x_i32x2:
+  case RISCV::BI__builtin_riscv_pm4addsu_i8x4:
+  case RISCV::BI__builtin_riscv_pm4addsu_i8x8:
+  case RISCV::BI__builtin_riscv_pm4addsu_i16x4:
+  case RISCV::BI__builtin_riscv_pm2addsu_i16x2:
+  case RISCV::BI__builtin_riscv_pm2addsu_i16x4:
+  case RISCV::BI__builtin_riscv_pm2addsu_i32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pm4add_i8x4:
+    case RISCV::BI__builtin_riscv_pm4add_i8x8:
+    case RISCV::BI__builtin_riscv_pm4add_i16x4:
+      ID = Intrinsic::riscv_pm4add;
+      break;
+    case RISCV::BI__builtin_riscv_pm2add_i16x2:
+    case RISCV::BI__builtin_riscv_pm2add_i16x4:
+    case RISCV::BI__builtin_riscv_pm2add_i32x2:
+      ID = Intrinsic::riscv_pm2add;
+      break;
+    case RISCV::BI__builtin_riscv_pm2add_x_i16x2:
+    case RISCV::BI__builtin_riscv_pm2add_x_i16x4:
+    case RISCV::BI__builtin_riscv_pm2add_x_i32x2:
+      ID = Intrinsic::riscv_pm2add_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm4addu_u8x4:
+    case RISCV::BI__builtin_riscv_pm4addu_u8x8:
+    case RISCV::BI__builtin_riscv_pm4addu_u16x4:
+      ID = Intrinsic::riscv_pm4addu;
+      break;
+    case RISCV::BI__builtin_riscv_pm2addu_u16x2:
+    case RISCV::BI__builtin_riscv_pm2addu_u16x4:
+    case RISCV::BI__builtin_riscv_pm2addu_u32x2:
+      ID = Intrinsic::riscv_pm2addu;
+      break;
+    case RISCV::BI__builtin_riscv_pmq2add_i16x2:
+    case RISCV::BI__builtin_riscv_pmq2add_i16x4:
+    case RISCV::BI__builtin_riscv_pmq2add_i32x2:
+      ID = Intrinsic::riscv_pmq2add;
+      break;
+    case RISCV::BI__builtin_riscv_pmqr2add_i16x2:
+    case RISCV::BI__builtin_riscv_pmqr2add_i16x4:
+    case RISCV::BI__builtin_riscv_pmqr2add_i32x2:
+      ID = Intrinsic::riscv_pmqr2add;
+      break;
+    case RISCV::BI__builtin_riscv_pm2sadd_i16x2:
+    case RISCV::BI__builtin_riscv_pm2sadd_i16x4:
+      ID = Intrinsic::riscv_pm2sadd;
+      break;
+    case RISCV::BI__builtin_riscv_pm2sadd_x_i16x2:
+    case RISCV::BI__builtin_riscv_pm2sadd_x_i16x4:
+      ID = Intrinsic::riscv_pm2sadd_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2sub_i16x2:
+    case RISCV::BI__builtin_riscv_pm2sub_i16x4:
+    case RISCV::BI__builtin_riscv_pm2sub_i32x2:
+      ID = Intrinsic::riscv_pm2sub;
+      break;
+    case RISCV::BI__builtin_riscv_pm2sub_x_i16x2:
+    case RISCV::BI__builtin_riscv_pm2sub_x_i16x4:
+    case RISCV::BI__builtin_riscv_pm2sub_x_i32x2:
+      ID = Intrinsic::riscv_pm2sub_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm4addsu_i8x4:
+    case RISCV::BI__builtin_riscv_pm4addsu_i8x8:
+    case RISCV::BI__builtin_riscv_pm4addsu_i16x4:
+      ID = Intrinsic::riscv_pm4addsu;
+      break;
+    case RISCV::BI__builtin_riscv_pm2addsu_i16x2:
+    case RISCV::BI__builtin_riscv_pm2addsu_i16x4:
+    case RISCV::BI__builtin_riscv_pm2addsu_i32x2:
+      ID = Intrinsic::riscv_pm2addsu;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  }
+
+  // Packed Reduction Sum
+  case RISCV::BI__builtin_riscv_predsum_i8x4_i32:
+  case RISCV::BI__builtin_riscv_predsum_i16x2_i32:
+  case RISCV::BI__builtin_riscv_predsum_i8x8_i32:
+  case RISCV::BI__builtin_riscv_predsum_i16x4_i32:
+  case RISCV::BI__builtin_riscv_predsum_i8x8_i64:
+  case RISCV::BI__builtin_riscv_predsum_i16x4_i64:
+  case RISCV::BI__builtin_riscv_predsum_i32x2_i64:
+  case RISCV::BI__builtin_riscv_predsumu_u8x4_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u16x2_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u8x8_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u16x4_u32:
+  case RISCV::BI__builtin_riscv_predsumu_u8x8_u64:
+  case RISCV::BI__builtin_riscv_predsumu_u16x4_u64:
+  case RISCV::BI__builtin_riscv_predsumu_u32x2_u64:
+  // Packed Narrowing Clip Pair
+  case RISCV::BI__builtin_riscv_pnclipp_i8x4:
+  case RISCV::BI__builtin_riscv_pnclipp_i8x8:
+  case RISCV::BI__builtin_riscv_pnclipp_i16x2:
+  case RISCV::BI__builtin_riscv_pnclipp_i16x4:
+  case RISCV::BI__builtin_riscv_pnclipp_i32x2:
+  case RISCV::BI__builtin_riscv_pnclipup_u8x4:
+  case RISCV::BI__builtin_riscv_pnclipup_u8x8:
+  case RISCV::BI__builtin_riscv_pnclipup_u16x2:
+  case RISCV::BI__builtin_riscv_pnclipup_u16x4:
+  case RISCV::BI__builtin_riscv_pnclipup_u32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_predsum_i8x4_i32:
+    case RISCV::BI__builtin_riscv_predsum_i16x2_i32:
+    case RISCV::BI__builtin_riscv_predsum_i8x8_i32:
+    case RISCV::BI__builtin_riscv_predsum_i16x4_i32:
+    case RISCV::BI__builtin_riscv_predsum_i8x8_i64:
+    case RISCV::BI__builtin_riscv_predsum_i16x4_i64:
+    case RISCV::BI__builtin_riscv_predsum_i32x2_i64:
+      ID = Intrinsic::riscv_predsum;
+      break;
+    case RISCV::BI__builtin_riscv_predsumu_u8x4_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u16x2_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u8x8_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u16x4_u32:
+    case RISCV::BI__builtin_riscv_predsumu_u8x8_u64:
+    case RISCV::BI__builtin_riscv_predsumu_u16x4_u64:
+    case RISCV::BI__builtin_riscv_predsumu_u32x2_u64:
+      ID = Intrinsic::riscv_predsumu;
+      break;
+    case RISCV::BI__builtin_riscv_pnclipp_i8x4:
+    case RISCV::BI__builtin_riscv_pnclipp_i8x8:
+    case RISCV::BI__builtin_riscv_pnclipp_i16x2:
+    case RISCV::BI__builtin_riscv_pnclipp_i16x4:
+    case RISCV::BI__builtin_riscv_pnclipp_i32x2:
+      ID = Intrinsic::riscv_pnclipp;
+      break;
+    case RISCV::BI__builtin_riscv_pnclipup_u8x4:
+    case RISCV::BI__builtin_riscv_pnclipup_u8x8:
+    case RISCV::BI__builtin_riscv_pnclipup_u16x2:
+    case RISCV::BI__builtin_riscv_pnclipup_u16x4:
+    case RISCV::BI__builtin_riscv_pnclipup_u32x2:
+      ID = Intrinsic::riscv_pnclipup;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  }
+
+  // Packed Absolute Difference Sum
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x4_u32:
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u32:
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u64:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x4_u32:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u32:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x4_u32:
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u32:
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u64:
+      ID = Intrinsic::riscv_pabdsumu;
+      break;
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x4_u32:
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u32:
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u64:
+      ID = Intrinsic::riscv_pabdsumau;
+      break;
+    }
+
+    // The two vector sources are the last two arguments; the accumulate form
+    // has an extra accumulator argument first.
+    IntrinsicTypes = {ResultType, Ops.back()->getType()};
+    break;
+  }
+  // Packed Multiply Parts.
+  case RISCV::BI__builtin_riscv_pmul_b00_i16x2:
+  case RISCV::BI__builtin_riscv_pmul_b01_i16x2:
+  case RISCV::BI__builtin_riscv_pmul_b11_i16x2:
+  case RISCV::BI__builtin_riscv_pmulu_b00_u16x2:
+  case RISCV::BI__builtin_riscv_pmulu_b01_u16x2:
+  case RISCV::BI__builtin_riscv_pmulu_b11_u16x2:
+  case RISCV::BI__builtin_riscv_pmulsu_b00_i16x2:
+  case RISCV::BI__builtin_riscv_pmulsu_b11_i16x2:
+  case RISCV::BI__builtin_riscv_pmul_b00_i16x4:
+  case RISCV::BI__builtin_riscv_pmul_b01_i16x4:
+  case RISCV::BI__builtin_riscv_pmul_b11_i16x4:
+  case RISCV::BI__builtin_riscv_pmulu_b00_u16x4:
+  case RISCV::BI__builtin_riscv_pmulu_b01_u16x4:
+  case RISCV::BI__builtin_riscv_pmulu_b11_u16x4:
+  case RISCV::BI__builtin_riscv_pmulsu_b00_i16x4:
+  case RISCV::BI__builtin_riscv_pmulsu_b11_i16x4:
+  case RISCV::BI__builtin_riscv_pmul_h00_i32x2:
+  case RISCV::BI__builtin_riscv_pmul_h01_i32x2:
+  case RISCV::BI__builtin_riscv_pmul_h11_i32x2:
+  case RISCV::BI__builtin_riscv_pmulu_h00_u32x2:
+  case RISCV::BI__builtin_riscv_pmulu_h01_u32x2:
+  case RISCV::BI__builtin_riscv_pmulu_h11_u32x2:
+  case RISCV::BI__builtin_riscv_pmulsu_h00_i32x2:
+  case RISCV::BI__builtin_riscv_pmulsu_h11_i32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pmul_b00_i16x2:
+    case RISCV::BI__builtin_riscv_pmul_b00_i16x4:
+    case RISCV::BI__builtin_riscv_pmul_h00_i32x2:
+      ID = Intrinsic::riscv_pmul_00;
+      break;
+    case RISCV::BI__builtin_riscv_pmul_b01_i16x2:
+    case RISCV::BI__builtin_riscv_pmul_b01_i16x4:
+    case RISCV::BI__builtin_riscv_pmul_h01_i32x2:
+      ID = Intrinsic::riscv_pmul_01;
+      break;
+    case RISCV::BI__builtin_riscv_pmul_b11_i16x2:
+    case RISCV::BI__builtin_riscv_pmul_b11_i16x4:
+    case RISCV::BI__builtin_riscv_pmul_h11_i32x2:
+      ID = Intrinsic::riscv_pmul_11;
+      break;
+    case RISCV::BI__builtin_riscv_pmulu_b00_u16x2:
+    case RISCV::BI__builtin_riscv_pmulu_b00_u16x4:
+    case RISCV::BI__builtin_riscv_pmulu_h00_u32x2:
+      ID = Intrinsic::riscv_pmulu_00;
+      break;
+    case RISCV::BI__builtin_riscv_pmulu_b01_u16x2:
+    case RISCV::BI__builtin_riscv_pmulu_b01_u16x4:
+    case RISCV::BI__builtin_riscv_pmulu_h01_u32x2:
+      ID = Intrinsic::riscv_pmulu_01;
+      break;
+    case RISCV::BI__builtin_riscv_pmulu_b11_u16x2:
+    case RISCV::BI__builtin_riscv_pmulu_b11_u16x4:
+    case RISCV::BI__builtin_riscv_pmulu_h11_u32x2:
+      ID = Intrinsic::riscv_pmulu_11;
+      break;
+    case RISCV::BI__builtin_riscv_pmulsu_b00_i16x2:
+    case RISCV::BI__builtin_riscv_pmulsu_b00_i16x4:
+    case RISCV::BI__builtin_riscv_pmulsu_h00_i32x2:
+      ID = Intrinsic::riscv_pmulsu_00;
+      break;
+    case RISCV::BI__builtin_riscv_pmulsu_b11_i16x2:
+    case RISCV::BI__builtin_riscv_pmulsu_b11_i16x4:
+    case RISCV::BI__builtin_riscv_pmulsu_h11_i32x2:
+      ID = Intrinsic::riscv_pmulsu_11;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType};
+    break;
+  }
+
+  // Scalar Multiply Parts.
+  case RISCV::BI__builtin_riscv_mul_h00_i32:
+  case RISCV::BI__builtin_riscv_mul_w00_i64:
+  case RISCV::BI__builtin_riscv_mul_h01_i32:
+  case RISCV::BI__builtin_riscv_mul_w01_i64:
+  case RISCV::BI__builtin_riscv_mul_h11_i32:
+  case RISCV::BI__builtin_riscv_mul_w11_i64:
+  case RISCV::BI__builtin_riscv_mulu_h00_u32:
+  case RISCV::BI__builtin_riscv_mulu_w00_u64:
+  case RISCV::BI__builtin_riscv_mulu_h01_u32:
+  case RISCV::BI__builtin_riscv_mulu_w01_u64:
+  case RISCV::BI__builtin_riscv_mulu_h11_u32:
+  case RISCV::BI__builtin_riscv_mulu_w11_u64:
+  case RISCV::BI__builtin_riscv_mulsu_h00_i32:
+  case RISCV::BI__builtin_riscv_mulsu_w00_i64:
+  case RISCV::BI__builtin_riscv_mulsu_h11_i32:
+  case RISCV::BI__builtin_riscv_mulsu_w11_i64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_mul_h00_i32:
+    case RISCV::BI__builtin_riscv_mul_w00_i64:
+      ID = Intrinsic::riscv_mul_00;
+      break;
+    case RISCV::BI__builtin_riscv_mul_h01_i32:
+    case RISCV::BI__builtin_riscv_mul_w01_i64:
+      ID = Intrinsic::riscv_mul_01;
+      break;
+    case RISCV::BI__builtin_riscv_mul_h11_i32:
+    case RISCV::BI__builtin_riscv_mul_w11_i64:
+      ID = Intrinsic::riscv_mul_11;
+      break;
+    case RISCV::BI__builtin_riscv_mulu_h00_u32:
+    case RISCV::BI__builtin_riscv_mulu_w00_u64:
+      ID = Intrinsic::riscv_mulu_00;
+      break;
+    case RISCV::BI__builtin_riscv_mulu_h01_u32:
+    case RISCV::BI__builtin_riscv_mulu_w01_u64:
+      ID = Intrinsic::riscv_mulu_01;
+      break;
+    case RISCV::BI__builtin_riscv_mulu_h11_u32:
+    case RISCV::BI__builtin_riscv_mulu_w11_u64:
+      ID = Intrinsic::riscv_mulu_11;
+      break;
+    case RISCV::BI__builtin_riscv_mulsu_h00_i32:
+    case RISCV::BI__builtin_riscv_mulsu_w00_i64:
+      ID = Intrinsic::riscv_mulsu_00;
+      break;
+    case RISCV::BI__builtin_riscv_mulsu_h11_i32:
+    case RISCV::BI__builtin_riscv_mulsu_w11_i64:
+      ID = Intrinsic::riscv_mulsu_11;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  }
+
+  // Packed "Q-format" Multiply Parts Accumulate
+  case RISCV::BI__builtin_riscv_mqacc_h00_i32:
+  case RISCV::BI__builtin_riscv_mqacc_h01_i32:
+  case RISCV::BI__builtin_riscv_mqacc_h11_i32:
+  case RISCV::BI__builtin_riscv_mqracc_h00_i32:
+  case RISCV::BI__builtin_riscv_mqracc_h01_i32:
+  case RISCV::BI__builtin_riscv_mqracc_h11_i32:
+  case RISCV::BI__builtin_riscv_pmqacc_h00_i32x2:
+  case RISCV::BI__builtin_riscv_pmqacc_h01_i32x2:
+  case RISCV::BI__builtin_riscv_pmqacc_h11_i32x2:
+  case RISCV::BI__builtin_riscv_pmqracc_h00_i32x2:
+  case RISCV::BI__builtin_riscv_pmqracc_h01_i32x2:
+  case RISCV::BI__builtin_riscv_pmqracc_h11_i32x2:
+  case RISCV::BI__builtin_riscv_mqacc_w00_i64:
+  case RISCV::BI__builtin_riscv_mqacc_w01_i64:
+  case RISCV::BI__builtin_riscv_mqacc_w11_i64:
+  case RISCV::BI__builtin_riscv_mqracc_w00_i64:
+  case RISCV::BI__builtin_riscv_mqracc_w01_i64:
+  case RISCV::BI__builtin_riscv_mqracc_w11_i64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pmqacc_h00_i32x2:
+      ID = Intrinsic::riscv_pmqacc_h00;
+      break;
+    case RISCV::BI__builtin_riscv_pmqacc_h01_i32x2:
+      ID = Intrinsic::riscv_pmqacc_h01;
+      break;
+    case RISCV::BI__builtin_riscv_pmqacc_h11_i32x2:
+      ID = Intrinsic::riscv_pmqacc_h11;
+      break;
+    case RISCV::BI__builtin_riscv_pmqracc_h00_i32x2:
+      ID = Intrinsic::riscv_pmqracc_h00;
+      break;
+    case RISCV::BI__builtin_riscv_pmqracc_h01_i32x2:
+      ID = Intrinsic::riscv_pmqracc_h01;
+      break;
+    case RISCV::BI__builtin_riscv_pmqracc_h11_i32x2:
+      ID = Intrinsic::riscv_pmqracc_h11;
+      break;
+    // Scalar "Q-format" Multiply Parts Accumulate
+    case RISCV::BI__builtin_riscv_mqacc_h00_i32:
+    case RISCV::BI__builtin_riscv_mqacc_w00_i64:
+      ID = Intrinsic::riscv_mqacc_00;
+      break;
+    case RISCV::BI__builtin_riscv_mqacc_h01_i32:
+    case RISCV::BI__builtin_riscv_mqacc_w01_i64:
+      ID = Intrinsic::riscv_mqacc_01;
+      break;
+    case RISCV::BI__builtin_riscv_mqacc_h11_i32:
+    case RISCV::BI__builtin_riscv_mqacc_w11_i64:
+      ID = Intrinsic::riscv_mqacc_11;
+      break;
+    case RISCV::BI__builtin_riscv_mqracc_h00_i32:
+    case RISCV::BI__builtin_riscv_mqracc_w00_i64:
+      ID = Intrinsic::riscv_mqracc_00;
+      break;
+    case RISCV::BI__builtin_riscv_mqracc_h01_i32:
+    case RISCV::BI__builtin_riscv_mqracc_w01_i64:
+      ID = Intrinsic::riscv_mqracc_01;
+      break;
+    case RISCV::BI__builtin_riscv_mqracc_h11_i32:
+    case RISCV::BI__builtin_riscv_mqracc_w11_i64:
+      ID = Intrinsic::riscv_mqracc_11;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
     break;
   }
 
@@ -411,6 +2091,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   case RISCV::BI__builtin_riscv_cv_alu_subuRN:
     ID = Intrinsic::riscv_cv_alu_subuRN;
+    break;
+
+  // XAndesPerf
+  case RISCV::BI__builtin_riscv_nds_ffb_32:
+  case RISCV::BI__builtin_riscv_nds_ffb_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffb;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffzmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffzmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffzmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_ffmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_ffmism;
+    break;
+  case RISCV::BI__builtin_riscv_nds_flmism_32:
+  case RISCV::BI__builtin_riscv_nds_flmism_64:
+    IntrinsicTypes = {ResultType};
+    ID = Intrinsic::riscv_nds_flmism;
     break;
 
   // XAndesBFHCvt

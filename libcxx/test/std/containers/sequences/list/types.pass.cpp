@@ -21,8 +21,6 @@
 //     typedef typename allocator_type::pointer pointer;
 //     typedef typename allocator_type::const_pointer const_pointer;
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <list>
 #include <type_traits>
 

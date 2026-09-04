@@ -114,9 +114,9 @@
 // ITANIUM-DIAG-SAME: !type [[ALL16]]
 // ITANIUM-COMMON-MD-SAME: !type [[FAF16:![0-9]+]]
 
-// ITANIUM-COMMON-MD: @_ZTVN5test31EE = external unnamed_addr constant
-// ITANIUM-DEFAULTVIS: @_ZTVN5test31EE = external unnamed_addr constant
-// ITANIUM-OPT: @_ZTVN5test31EE = available_externally unnamed_addr constant {{[^!]*}},
+// ITANIUM-COMMON-MD: @_ZTVN5test31EE = external constant
+// ITANIUM-DEFAULTVIS: @_ZTVN5test31EE = external constant
+// ITANIUM-OPT: @_ZTVN5test31EE = available_externally constant {{[^!]*}},
 // ITANIUM-OPT-SAME: !type [[E16:![0-9]+]],
 // ITANIUM-OPT-SAME: !type [[EF16:![0-9]+]]
 // ITANIUM-OPT: @llvm.compiler.used = appending global [1 x ptr] [ptr @_ZTVN5test31EE]
@@ -125,9 +125,9 @@
 // MS-TYPEMETADATA: comdat($"??_7B@@6B0@@"), !type [[B8:![0-9]+]]
 // MS-TYPEMETADATA: comdat($"??_7B@@6BA@@@"), !type [[A8]]
 // MS-TYPEMETADATA: comdat($"??_7C@@6B@"), !type [[A8]]
-// MS-TYPEMETADATA: private unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr @"??_R4D@?{{.*}}@@6BB@@@", ptr @"?g@B@@UEAAXXZ", ptr @"?h@D@?{{.*}}@@UEAAXXZ"] }, !type [[B8]], !type [[D8:![0-9]+]]
-// MS-TYPEMETADATA: private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4D@?{{.*}}@@6BA@@@", ptr @"?f@D@?{{.*}}@@$4PPPPPPPM@A@EAAXXZ"] }, !type !0
-// MS: private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4FA@?1??foo@@YAXXZ@6B@", ptr @"?f@FA@?1??foo@@YAXXZ@UEAAXXZ"] }, !type !0, !type [[FA8:![0-9]+]]
+// MS-TYPEMETADATA: private constant { [3 x ptr] } { [3 x ptr] [ptr @"??_R4D@?{{.*}}@@6BB@@@", ptr @"?g@B@@UEAAXXZ", ptr @"?h@D@?{{.*}}@@UEAAXXZ"] }, !type [[B8]], !type [[D8:![0-9]+]]
+// MS-TYPEMETADATA: private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4D@?{{.*}}@@6BA@@@", ptr @"?f@D@?{{.*}}@@$4PPPPPPPM@A@EAAXXZ"] }, !type !0
+// MS: private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4FA@?1??foo@@YAXXZ@6B@", ptr @"?f@FA@?1??foo@@YAXXZ@UEAAXXZ"] }, !type !0, !type [[FA8:![0-9]+]]
 
 struct A {
   A();

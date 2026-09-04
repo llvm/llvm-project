@@ -12,12 +12,18 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrEnums.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -32,6 +38,17 @@ static ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 /// operation. Some operands are printed in their textual form.
 static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
                                ArrayRef<uint64_t> args);
+
+/// Parses a source language from either the historical inline `DW_LANG_*`
+/// syntax or a nested `DISourceLanguageNameAttr`.
+static ParseResult parseSourceLanguage(AsmParser &parser,
+                                       DISourceLanguageNameAttr &language);
+
+/// Prints an unversioned source language without a dialect using the
+/// historical inline `DW_LANG_*` syntax. All other source languages are
+/// printed as a nested `DISourceLanguageNameAttr`.
+static void printSourceLanguage(AsmPrinter &printer,
+                                DISourceLanguageNameAttr language);
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
@@ -48,6 +65,123 @@ void LLVMDialect::registerAttributes() {
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
 
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+/// Checks whether the given type is an LLVM type that can be loaded or stored.
+bool LLVM::detail::isValidLoadStoreImpl(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (!isLoadableType(type)) {
+    if (emitError)
+      emitError() << "type must be LLVM type with size, but got " << type;
+    return false;
+  }
+  if (ordering == ptr::AtomicOrdering::not_atomic)
+    return true;
+
+  // To check atomic validity we need a datalayout.
+  if (!dataLayout) {
+    if (emitError)
+      emitError() << "expected a valid data layout";
+    return false;
+  }
+  if (!isTypeCompatibleWithAtomicOp(type, *dataLayout)) {
+    if (emitError)
+      emitError() << "unsupported type " << type << " for atomic access";
+    return false;
+  }
+  return true;
+}
+
+bool AddressSpaceAttr::isValidLoad(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
+}
+
+bool AddressSpaceAttr::isValidStore(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return detail::isValidLoadStoreImpl(type, ordering, alignment, dataLayout,
+                                      emitError);
+}
+
+bool AddressSpaceAttr::isValidAtomicOp(
+    ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_rmw` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool AddressSpaceAttr::isValidAtomicXchg(
+    Type type, ptr::AtomicOrdering successOrdering,
+    ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_cmpxchg` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool AddressSpaceAttr::isValidAddrSpaceCast(
+    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the `ptr.addrspace_cast` op is added to the
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool AddressSpaceAttr::isValidPtrIntCast(
+    Type intLikeTy, Type ptrLikeTy,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the int-cast ops are added to the `ptr`
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// FunctionMetadataAttr
+//===----------------------------------------------------------------------===//
+
+static constexpr unsigned kReservedFunctionMetadataKinds[] = {
+    llvm::LLVMContext::MD_dbg, llvm::LLVMContext::MD_prof};
+
+static StringRef getFixedMetadataKindName(unsigned kind) {
+  switch (kind) {
+#define LLVM_FIXED_MD_KIND(EnumID, Name, Value)                                \
+  case llvm::LLVMContext::EnumID:                                              \
+    return Name;
+#include "llvm/IR/FixedMetadataKinds.def"
+#undef LLVM_FIXED_MD_KIND
+  }
+  llvm_unreachable("unknown fixed metadata kind");
+}
+
+LogicalResult
+FunctionMetadataAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             StringAttr metadataName, MDNodeAttr node) {
+  (void)node;
+  StringRef name = metadataName.getValue();
+  if (name.empty())
+    return emitError() << "function_metadata entry name must not be empty";
+  if (llvm::any_of(kReservedFunctionMetadataKinds, [&](unsigned kind) {
+        return name == getFixedMetadataKindName(kind);
+      })) {
+    return emitError() << "reserved function_metadata entry '" << name
+                       << "' is not supported by the generic carrier";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -120,6 +254,21 @@ bool DITypeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIDerivedTypeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult DIDerivedTypeAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, unsigned tag, StringAttr name,
+    DIFileAttr file, uint32_t line, DIScopeAttr scope, DITypeAttr baseType,
+    uint64_t sizeInBits, uint32_t alignInBits, uint64_t offsetInBits,
+    std::optional<unsigned> dwarfAddressSpace, DIFlags flags,
+    Attribute extraData) {
+  if (extraData && !llvm::isa<DINodeAttr, IntegerAttr>(extraData))
+    return emitError() << "extraData must be a DINodeAttr or an IntegerAttr";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TBAANodeAttr
 //===----------------------------------------------------------------------===//
 
@@ -134,11 +283,16 @@ bool TBAANodeAttr::classof(Attribute attr) {
 MemoryEffectsAttr MemoryEffectsAttr::get(MLIRContext *context,
                                          ArrayRef<ModRefInfo> memInfoArgs) {
   if (memInfoArgs.empty())
-    return MemoryEffectsAttr::get(context, ModRefInfo::ModRef,
-                                  ModRefInfo::ModRef, ModRefInfo::ModRef);
-  if (memInfoArgs.size() == 3)
+    return MemoryEffectsAttr::get(context, /*other=*/ModRefInfo::ModRef,
+                                  /*argMem=*/ModRefInfo::ModRef,
+                                  /*inaccessibleMem=*/ModRefInfo::ModRef,
+                                  /*errnoMem=*/ModRefInfo::ModRef,
+                                  /*targetMem0=*/ModRefInfo::ModRef,
+                                  /*targetMem1=*/ModRefInfo::ModRef);
+  if (memInfoArgs.size() == 6)
     return MemoryEffectsAttr::get(context, memInfoArgs[0], memInfoArgs[1],
-                                  memInfoArgs[2]);
+                                  memInfoArgs[2], memInfoArgs[3],
+                                  memInfoArgs[4], memInfoArgs[5]);
   return {};
 }
 
@@ -148,6 +302,12 @@ bool MemoryEffectsAttr::isReadWrite() {
   if (this->getInaccessibleMem() != ModRefInfo::ModRef)
     return false;
   if (this->getOther() != ModRefInfo::ModRef)
+    return false;
+  if (this->getErrnoMem() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem0() != ModRefInfo::ModRef)
+    return false;
+  if (this->getTargetMem1() != ModRefInfo::ModRef)
     return false;
   return true;
 }
@@ -223,15 +383,105 @@ DICompositeTypeAttr::withRecId(DistinctAttr recId) {
   return DICompositeTypeAttr::get(
       getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
       getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
-      getAlignInBits(), getElements(), getDataLocation(), getRank(),
-      getAllocated(), getAssociated());
+      getAlignInBits(), getDataLocation(), getRank(), getAllocated(),
+      getAssociated(), getIdentifier(), getDiscriminator(), getElements());
 }
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
   return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
                                   0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
-                                  {}, {}, {});
+                                  {}, {}, {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// DISourceLanguageNameAttr
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseSourceLanguage(AsmParser &parser,
+                                       DISourceLanguageNameAttr &language) {
+  DISourceLanguageNameAttr nestedLanguage;
+  OptionalParseResult nestedResult =
+      parser.parseOptionalAttribute(nestedLanguage);
+  if (nestedResult.has_value()) {
+    if (failed(*nestedResult))
+      return failure();
+    language = nestedLanguage;
+    return success();
+  }
+
+  // If we cannot parse the full attr, try to just parse a DWARF language.
+  SMLoc loc = parser.getCurrentLocation();
+  StringRef spelling;
+  if (parser.parseKeyword(&spelling))
+    return failure();
+  if (unsigned value = llvm::dwarf::getLanguage(spelling)) {
+    language = DISourceLanguageNameAttr::get(
+        parser.getContext(), value, /*name=*/0, /*version=*/std::nullopt,
+        /*dialect=*/0);
+    return success();
+  }
+  return parser.emitError(loc)
+         << "invalid debug info source language: " << spelling;
+}
+
+static void printSourceLanguage(AsmPrinter &printer,
+                                DISourceLanguageNameAttr language) {
+  // Print only the DWARF language if the other fields are not set.
+  if (language.getLanguage() && !language.getName() && !language.getVersion() &&
+      !language.getDialect()) {
+    printer << llvm::dwarf::LanguageString(language.getLanguage());
+    return;
+  }
+  printer.printAttribute(language);
+}
+
+LogicalResult DISourceLanguageNameAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, unsigned language,
+    unsigned name, std::optional<uint32_t> version, unsigned /*dialect*/) {
+  if (static_cast<bool>(language) == static_cast<bool>(name))
+    return emitError() << "expected exactly one of language or name";
+  if (name && !version)
+    return emitError() << "DW_LNAME requires a version";
+  if (language && version)
+    return emitError() << "DW_LANG cannot have a version";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DICompileUnitAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
+  return DICompileUnitAttr::get(
+      getContext(), recId, getIsRecSelf(), getId(), getSourceLanguage(),
+      getFile(), getProducer(), getIsOptimized(), getEmissionKind(),
+      getIsDebugInfoForProfiling(), getNameTableKind(), getSplitDebugFilename(),
+      getImportedEntities());
+}
+
+DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
+
+  return DICompileUnitAttr::get(
+      recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
+      /*sourceLanguage=*/{},
+      /*file=*/{}, /*producer=*/{}, /*isOptimized=*/false, DIEmissionKind::None,
+      /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
+      /*splitDebugFilename=*/{}, /*importedEntities=*/{});
+}
+
+LogicalResult DICompileUnitAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, DistinctAttr recId,
+    bool isRecSelf, DistinctAttr id, DISourceLanguageNameAttr sourceLanguage,
+    DIFileAttr file, StringAttr producer, bool isOptimized,
+    DIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    DINameTableKind nameTableKind, StringAttr splitDebugFilename,
+    ArrayRef<DINodeAttr> importedEntities) {
+  if (isRecSelf)
+    return success();
+  if (!sourceLanguage)
+    return emitError() << "sourceLanguage must be set";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -370,14 +620,64 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   auto parentFunction = op->getParentOfType<FunctionOpInterface>();
   if (!parentFunction)
     return {};
-  return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
+  Operation *parentOp = parentFunction.getOperation();
+  if (auto llvmFunc = dyn_cast<LLVMFuncOp>(parentOp))
+    return llvmFunc.getTargetFeaturesAttr();
+
+  // Dynamic operation definitions do not support direct inherent attribute
+  // lookup. Use the safe walker for other FunctionOpInterface implementations.
+  TargetFeaturesAttr targetFeatures;
+  parentOp->getName().walkInherentAttrs(
+      parentOp, [&](StringRef name, Attribute &attr) {
+        if (name == getAttributeName())
+          targetFeatures = dyn_cast<TargetFeaturesAttr>(attr);
+      });
+  if (targetFeatures)
+    return targetFeatures;
+  return parentOp->getDiscardableAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
 }
 
-LogicalResult
-ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
-                       Attribute value) {
+FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
+  auto stringKey = dyn_cast<StringAttr>(key);
+  if (!stringKey)
+    return failure();
+
+  if (contains(stringKey))
+    return UnitAttr::get(getContext());
+
+  if (contains((std::string("+") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), true);
+
+  if (contains((std::string("-") + stringKey.strref()).str()))
+    return BoolAttr::get(getContext(), false);
+
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAttr
+//===----------------------------------------------------------------------===//
+
+FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
+  if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
+    if (stringAttrKey.getValue() == "triple")
+      return getTriple();
+    if (stringAttrKey.getValue() == "chip")
+      return getChip();
+    if (stringAttrKey.getValue() == "features" && getFeatures())
+      return getFeatures();
+  }
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::detail::verifyModuleFlagValue(
+    StringAttr key, Attribute value,
+    function_ref<InFlightDiagnostic()> emitError) {
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
     auto arrayAttr = dyn_cast<ArrayAttr>(value);
     if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute attr) {
@@ -395,10 +695,53 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return success();
   }
 
-  if (isa<IntegerAttr, StringAttr>(value))
+  if (isa<IntegerAttr, StringAttr, IntrinsicIntegerAttrInterface>(value))
     return success();
 
-  return emitError() << "only integer and string values are currently "
-                        "supported for unknown key '"
-                     << key << "'";
+  // Allow non-empty ArrayAttr of StringAttrs to represent MDTuples of
+  // MDStrings (e.g. the "riscv-isa" module flag). Integer values within
+  // MDTuples are not handled here because integer module flags are encoded as
+  // ConstantAsMetadata at the top level (not as MDTuples), so no known use
+  // case requires an array-of-integers representation.
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(value))
+    if (!arrayAttr.empty() &&
+        llvm::all_of(arrayAttr, [](Attribute a) { return isa<StringAttr>(a); }))
+      return success();
+
+  return emitError()
+         << "only integer, integer-like dialect attributes, string, "
+            "and string-array values are currently supported for "
+            "unknown key '"
+         << key << "'";
+}
+
+LogicalResult
+ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
+                       Attribute value) {
+  return LLVM::detail::verifyModuleFlagValue(key, value, emitError);
+}
+
+ModFlagBehavior ModuleFlagAttr::getModuleFlagBehavior() const {
+  return getBehavior();
+}
+
+StringAttr ModuleFlagAttr::getModuleFlagKey() const { return getKey(); }
+
+Attribute ModuleFlagAttr::getModuleFlagValue() const { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// MDAddrSpaceCastAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            Attribute arg, unsigned addressSpace) {
+  // `addrspacecast` operates on pointers, so the operand must be a metadata
+  // attribute that models a pointer-typed constant.
+  if (!isa<MDGlobalValueAttr, MDNullAttr, MDAddrSpaceCastAttr>(arg))
+    return emitError() << "expected #llvm.md_global_value, #llvm.md_null, or "
+                          "#llvm.md_addrspacecast operand, but got "
+                       << arg;
+  return success();
 }

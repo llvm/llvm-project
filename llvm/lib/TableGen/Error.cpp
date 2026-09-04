@@ -19,10 +19,10 @@
 #include "llvm/TableGen/Record.h"
 #include <cstdlib>
 
-namespace llvm {
+using namespace llvm;
 
-SourceMgr SrcMgr;
-unsigned ErrorsPrinted = 0;
+SourceMgr llvm::SrcMgr;
+unsigned llvm::ErrorsPrinted = 0;
 
 static void PrintMessage(ArrayRef<SMLoc> Locs, SourceMgr::DiagKind Kind,
                          const Twine &Msg) {
@@ -49,118 +49,118 @@ static void PrintMessage(ArrayRef<SMLoc> Locs, SourceMgr::DiagKind Kind,
 
 // Functions to print notes.
 
-void PrintNote(const Twine &Msg) {
-  WithColor::note() << Msg << "\n";
-}
+void llvm::PrintNote(const Twine &Msg) { WithColor::note() << Msg << "\n"; }
 
-void PrintNote(function_ref<void(raw_ostream &OS)> PrintMsg) {
+void llvm::PrintNote(function_ref<void(raw_ostream &OS)> PrintMsg) {
   PrintMsg(WithColor::note());
 }
 
-void PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
+void llvm::PrintNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
   PrintMessage(NoteLoc, SourceMgr::DK_Note, Msg);
 }
 
 // Functions to print fatal notes.
 
-void PrintFatalNote(const Twine &Msg) {
+void llvm::PrintFatalNote(const Twine &Msg) {
   PrintNote(Msg);
   fatal_exit();
 }
 
-void PrintFatalNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
+void llvm::PrintFatalNote(ArrayRef<SMLoc> NoteLoc, const Twine &Msg) {
   PrintNote(NoteLoc, Msg);
   fatal_exit();
 }
 
 // This method takes a Record and uses the source location
 // stored in it.
-void PrintFatalNote(const Record *Rec, const Twine &Msg) {
+void llvm::PrintFatalNote(const Record *Rec, const Twine &Msg) {
   PrintNote(Rec->getLoc(), Msg);
   fatal_exit();
 }
 
 // This method takes a RecordVal and uses the source location
 // stored in it.
-void PrintFatalNote(const RecordVal *RecVal, const Twine &Msg) {
+void llvm::PrintFatalNote(const RecordVal *RecVal, const Twine &Msg) {
   PrintNote(RecVal->getLoc(), Msg);
   fatal_exit();
 }
 
 // Functions to print warnings.
 
-void PrintWarning(const Twine &Msg) { WithColor::warning() << Msg << "\n"; }
+void llvm::PrintWarning(const Twine &Msg) {
+  WithColor::warning() << Msg << "\n";
+}
 
-void PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg) {
+void llvm::PrintWarning(ArrayRef<SMLoc> WarningLoc, const Twine &Msg) {
   PrintMessage(WarningLoc, SourceMgr::DK_Warning, Msg);
 }
 
-void PrintWarning(const char *Loc, const Twine &Msg) {
+void llvm::PrintWarning(const char *Loc, const Twine &Msg) {
   SrcMgr.PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Warning, Msg);
 }
 
 // Functions to print errors.
 
-void PrintError(const Twine &Msg) { WithColor::error() << Msg << "\n"; }
+void llvm::PrintError(const Twine &Msg) { WithColor::error() << Msg << "\n"; }
 
-void PrintError(function_ref<void(raw_ostream &OS)> PrintMsg) {
+void llvm::PrintError(function_ref<void(raw_ostream &OS)> PrintMsg) {
   PrintMsg(WithColor::error());
 }
 
-void PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
+void llvm::PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
   PrintMessage(ErrorLoc, SourceMgr::DK_Error, Msg);
 }
 
-void PrintError(const char *Loc, const Twine &Msg) {
+void llvm::PrintError(const char *Loc, const Twine &Msg) {
   SrcMgr.PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Error, Msg);
 }
 
 // This method takes a Record and uses the source location
 // stored in it.
-void PrintError(const Record *Rec, const Twine &Msg) {
+void llvm::PrintError(const Record *Rec, const Twine &Msg) {
   PrintMessage(Rec->getLoc(), SourceMgr::DK_Error, Msg);
 }
 
 // This method takes a RecordVal and uses the source location
 // stored in it.
-void PrintError(const RecordVal *RecVal, const Twine &Msg) {
+void llvm::PrintError(const RecordVal *RecVal, const Twine &Msg) {
   PrintMessage(RecVal->getLoc(), SourceMgr::DK_Error, Msg);
 }
 
 // Functions to print fatal errors.
 
-void PrintFatalError(const Twine &Msg) {
+void llvm::PrintFatalError(const Twine &Msg) {
   PrintError(Msg);
   fatal_exit();
 }
 
-void PrintFatalError(function_ref<void(raw_ostream &OS)> PrintMsg) {
+void llvm::PrintFatalError(function_ref<void(raw_ostream &OS)> PrintMsg) {
   PrintError(PrintMsg);
   fatal_exit();
 }
 
-void PrintFatalError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
+void llvm::PrintFatalError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
   PrintError(ErrorLoc, Msg);
   fatal_exit();
 }
 
 // This method takes a Record and uses the source location
 // stored in it.
-void PrintFatalError(const Record *Rec, const Twine &Msg) {
+void llvm::PrintFatalError(const Record *Rec, const Twine &Msg) {
   PrintError(Rec->getLoc(), Msg);
   fatal_exit();
 }
 
 // This method takes a RecordVal and uses the source location
 // stored in it.
-void PrintFatalError(const RecordVal *RecVal, const Twine &Msg) {
+void llvm::PrintFatalError(const RecordVal *RecVal, const Twine &Msg) {
   PrintError(RecVal->getLoc(), Msg);
   fatal_exit();
 }
 
 // Check an assertion: Obtain the condition value and be sure it is true.
 // If not, print a nonfatal error along with the message.
-bool CheckAssert(SMLoc Loc, const Init *Condition, const Init *Message) {
+bool llvm::CheckAssert(SMLoc Loc, const Init *Condition, const Init *Message) {
   auto *CondValue = dyn_cast_or_null<IntInit>(Condition->convertInitializerTo(
       IntRecTy::get(Condition->getRecordKeeper())));
   if (!CondValue) {
@@ -178,11 +178,9 @@ bool CheckAssert(SMLoc Loc, const Init *Condition, const Init *Message) {
 }
 
 // Dump a message to stderr.
-void dumpMessage(SMLoc Loc, const Init *Message) {
+void llvm::dumpMessage(SMLoc Loc, const Init *Message) {
   if (auto *MessageInit = dyn_cast<StringInit>(Message))
     PrintNote(Loc, MessageInit->getValue());
   else
     PrintError(Loc, "dump value is not of type string");
 }
-
-} // end namespace llvm

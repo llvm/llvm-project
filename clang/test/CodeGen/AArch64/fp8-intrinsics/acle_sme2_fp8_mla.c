@@ -133,18 +133,18 @@ void test_svmla_lane_za32_vg4x4(uint32_t slice, svmfloat8x4_t zn, svmfloat8_t zm
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlal.single.za16.vg2x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlal.za16.vg2x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: define dso_local void @_Z28test_svmla_single_za16_vg2x1ju13__SVMfloat8_tS_m(
 // CPP-CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlal.single.za16.vg2x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlal.za16.vg2x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_za16_vg2x1(uint32_t slice, svmfloat8_t zn, svmfloat8_t zm, fpm_t fpm) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmla,_single,_za16,_mf8,_vg2x1_fpm)(slice, zn, zm, fpm);
+    SME_ACLE_FUNC(svmla_za16,_mf8,_vg2x1_fpm,,)(slice, zn, zm, fpm);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmla_single_za16_vg2x2(
@@ -189,18 +189,18 @@ void test_svmla_single_za16_vg2x4(uint32_t slice, svmfloat8x4_t zn, svmfloat8_t 
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlall.single.za32.vg4x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlall.za32.vg4x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: define dso_local void @_Z28test_svmla_single_za32_vg4x1ju13__SVMfloat8_tS_m(
 // CPP-CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlall.single.za32.vg4x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fp8.fmlall.za32.vg4x1(i32 [[SLICE]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single_za32_vg4x1(uint32_t slice, svmfloat8_t zn, svmfloat8_t zm, fpm_t fpm) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmla,_single,_za32,_mf8,_vg4x1_fpm)(slice, zn, zm, fpm);
+    SME_ACLE_FUNC(svmla_za32,_mf8,_vg4x1_fpm,,)(slice, zn, zm, fpm);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmla_single_za32_vg4x2(

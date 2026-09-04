@@ -9,19 +9,10 @@
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-
-namespace mlir {
-namespace bufferization {
-#define GEN_PASS_DEF_TENSORCOPYINSERTION
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
-} // namespace bufferization
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -35,7 +26,7 @@ LogicalResult mlir::bufferization::insertTensorCopies(
   // analysis depending on whether function boundary bufferization is enabled or
   // not.
   if (options.bufferizeFunctionBoundaries) {
-    if (failed(analyzeModuleOp(cast<ModuleOp>(op), analysisState, statistics)))
+    if (failed(analyzeModuleOp(op, analysisState, statistics)))
       return failure();
   } else {
     if (failed(analyzeOp(op, analysisState, statistics)))

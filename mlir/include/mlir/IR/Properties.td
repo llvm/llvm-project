@@ -468,7 +468,7 @@ class ArrayProp<Property elem = Property<>, string newSummary = ""> :
       return $_diag() << "expected array attribute";
     for (::mlir::Attribute elemAttr : arrayAttr) {
       }] # _makePropStorage<elem, "elemVal">.ret # [{
-      auto elemRes = [&](Attribute propAttr, }] # elem.storageType # [{& propStorage) -> ::mlir::LogicalResult {
+      auto elemRes = [&](::mlir::Attribute propAttr, }] # elem.storageType # [{& propStorage) -> ::mlir::LogicalResult {
         }] # !subst("$_attr", "propAttr",
           !subst("$_storage", "propStorage", elem.convertFromAttribute)) # [{
       }(elemAttr, elemVal);
@@ -480,7 +480,7 @@ class ArrayProp<Property elem = Property<>, string newSummary = ""> :
   }];
 
   let convertToAttribute = [{
-    SmallVector<Attribute> elems;
+    SmallVector<::mlir::Attribute> elems;
     for (const auto& elemVal : $_storage) {
       auto elemAttr = [&](const }] # elem.storageType #[{& propStorage) -> ::mlir::Attribute {
         }] # !subst("$_storage", "propStorage", elem.convertToAttribute) # [{
@@ -647,7 +647,7 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
     }
     ::mlir::Attribute presentAttr = arrayAttr[0];
     }] # _makePropStorage<p, "presentVal">.ret # [{
-    auto presentRes = [&](Attribute propAttr, }] # p.storageType # [{& propStorage) -> ::mlir::LogicalResult {
+    auto presentRes = [&](::mlir::Attribute propAttr, }] # p.storageType # [{& propStorage) -> ::mlir::LogicalResult {
       }] # !subst("$_storage", "propStorage",
           !subst("$_attr", "propAttr", p.convertFromAttribute)) # [{
     }(presentAttr, presentVal);
@@ -773,9 +773,10 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
   }];
   let writeToMlirBytecode = [{
     $_writer.writeOwnedBool($_storage.has_value());
-    if (!$_storage.has_value())
-      return;
-  }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode);
+    if ($_storage.has_value()) {
+      }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode) # [{
+    }
+  }];
 
   let hashProperty = !if(!empty(p.hashProperty), p.hashProperty,
     [{ hash_value($_storage.has_value() ? std::optional<::llvm::hash_code>{}] #

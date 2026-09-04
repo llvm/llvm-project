@@ -74,7 +74,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 }
 
 #if TEST_STD_VER >= 23
-// https://github.com/llvm/llvm-project/issues/95161
+// https://llvm.org/PR95161
 constexpr bool test_increasing_allocator() {
   std::vector<int, increasing_allocator<int>> v;
   v.push_back(1);

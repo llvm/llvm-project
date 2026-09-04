@@ -13,6 +13,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/Support/DJB.h"
 
 using namespace lldb;
@@ -117,11 +118,11 @@ HasImplementationFlag(const llvm::AppleAcceleratorTable::Entry &entry) {
          (*Flags & llvm::dwarf::AcceleratorTable::DW_FLAG_type_implementation);
 }
 
-void AppleDWARFIndex::SearchFor(const llvm::AppleAcceleratorTable &table,
-                                llvm::StringRef name,
-                                llvm::function_ref<bool(DWARFDIE die)> callback,
-                                std::optional<dw_tag_t> search_for_tag,
-                                std::optional<uint32_t> search_for_qualhash) {
+void AppleDWARFIndex::SearchFor(
+    const llvm::AppleAcceleratorTable &table, llvm::StringRef name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback,
+    std::optional<dw_tag_t> search_for_tag,
+    std::optional<uint32_t> search_for_qualhash) {
   auto converted_cb = DIERefCallback(callback, name);
   for (const auto &entry : table.equal_range(name)) {
     if (search_for_qualhash &&
@@ -129,13 +130,14 @@ void AppleDWARFIndex::SearchFor(const llvm::AppleAcceleratorTable &table,
       continue;
     if (search_for_tag && !EntryHasMatchingTag(entry, *search_for_tag))
       continue;
-    if (!converted_cb(entry))
+    if (converted_cb(entry) == IterationAction::Stop)
       break;
   }
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
   SearchFor(*m_apple_names_up, basename, callback);
@@ -143,7 +145,7 @@ void AppleDWARFIndex::GetGlobalVariables(
 
 void AppleDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
@@ -152,12 +154,12 @@ void AppleDWARFIndex::GetGlobalVariables(
   for (const auto &entry : m_apple_names_up->entries())
     if (std::optional<llvm::StringRef> name = entry.readName();
         name && Mangled(*name).NameMatches(regex))
-      if (!converted_cb(entry.BaseEntry))
+      if (converted_cb(entry.BaseEntry) == IterationAction::Stop)
         return;
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &cu, llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
@@ -171,13 +173,14 @@ void AppleDWARFIndex::GetGlobalVariables(
   DIERefCallbackImpl converted_cb = DIERefCallback(callback);
   for (auto entry : m_apple_names_up->entries()) {
     if (is_in_range(entry.BaseEntry.getDIESectionOffset()))
-      if (!converted_cb(entry.BaseEntry))
+      if (converted_cb(entry.BaseEntry) == IterationAction::Stop)
         return;
   }
 }
 
 void AppleDWARFIndex::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_objc_up)
     return;
   SearchFor(*m_apple_objc_up, class_name, callback);
@@ -185,7 +188,7 @@ void AppleDWARFIndex::GetObjCMethods(
 
 void AppleDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_types_up)
     return;
 
@@ -205,12 +208,13 @@ void AppleDWARFIndex::GetCompleteObjCClass(
   if (must_be_implementation)
     return;
   for (DIERef ref : decl_dies)
-    if (!converted_cb(ref))
+    if (converted_cb(ref) == IterationAction::Stop)
       return;
 }
 
 void AppleDWARFIndex::GetTypes(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_types_up)
     return;
   SearchFor(*m_apple_types_up, name, callback);
@@ -218,7 +222,7 @@ void AppleDWARFIndex::GetTypes(
 
 void AppleDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_types_up)
     return;
 
@@ -237,7 +241,7 @@ void AppleDWARFIndex::GetTypes(
     if (log)
       m_module.LogMessage(log, "FindByNameAndTagAndQualifiedNameHash()");
     SearchFor(*m_apple_types_up, expected_name, callback, expected_tag,
-               expected_qualname_hash);
+              expected_qualname_hash);
     return;
   }
 
@@ -266,7 +270,8 @@ void AppleDWARFIndex::GetTypes(
 }
 
 void AppleDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_namespaces_up)
     return;
   SearchFor(*m_apple_namespaces_up, name, callback);
@@ -275,7 +280,7 @@ void AppleDWARFIndex::GetNamespaces(
 void AppleDWARFIndex::GetFunctions(
     const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
@@ -288,14 +293,15 @@ void AppleDWARFIndex::GetFunctions(
       ReportInvalidDIERef(die_ref, name);
       continue;
     }
-    if (!ProcessFunctionDIE(lookup_info, die, parent_decl_ctx, callback))
+    if (ProcessFunctionDIE(lookup_info, die, parent_decl_ctx, callback) ==
+        IterationAction::Stop)
       return;
   }
 }
 
 void AppleDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   return GetGlobalVariables(regex, callback);
 }
 

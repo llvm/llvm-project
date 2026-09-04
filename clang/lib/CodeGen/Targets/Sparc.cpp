@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include <algorithm>
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -21,30 +22,97 @@ using namespace clang::CodeGen;
 namespace {
 class SparcV8ABIInfo : public DefaultABIInfo {
 public:
-  SparcV8ABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+  SparcV8ABIInfo(CodeGenTypes &CGT)
+      : DefaultABIInfo(CGT),
+        IsComplexGnuABI(!CGT.getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver23)) {}
 
 private:
+  /// Whether how `_Complex` values are passed and returned is GCC-compatible.
+  bool IsComplexGnuABI;
+
+  ABIArgInfo classifyComplexType(const ComplexType *Ty, bool IsRet) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
   void computeInfo(CGFunctionInfo &FI) const override;
 };
 } // end anonymous namespace
 
+ABIArgInfo SparcV8ABIInfo::classifyComplexType(const ComplexType *CT,
+                                               bool IsRet) const {
+  QualType ElementTy = CT->getElementType();
 
-ABIArgInfo
-SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
-  if (Ty->isAnyComplexType()) {
-    return ABIArgInfo::getDirect();
+  if (IsComplexGnuABI && ElementTy->isIntegerType()) {
+    // The default path already does the right thing for `long long _Complex`.
+    uint64_t ElementTypeSize = getContext().getTypeSize(ElementTy);
+    if (ElementTypeSize <= 32) {
+      // Coerce to an integer to get the correct scalar-like behavior.
+      return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), 2 * ElementTypeSize));
+    }
   }
-  else {
-    return DefaultABIInfo::classifyReturnType(Ty);
-  }
+
+  // Any other complex value is passed indirectly, but returned in registers.
+  if (!IsRet)
+    return getNaturalAlignIndirect(QualType(CT, 0),
+                                   getDataLayout().getAllocaAddrSpace());
+
+  // long double _Complex is special, it is marked as inreg.
+  const auto *BT = ElementTy->getAs<BuiltinType>();
+  if (BT && BT->getKind() == BuiltinType::LongDouble)
+    return ABIArgInfo::getDirectInReg();
+
+  return ABIArgInfo::getDirect();
+}
+
+ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
+  if (const auto *CT = Ty->getAs<ComplexType>())
+    return classifyComplexType(CT, /*IsRet=*/true);
+
+  if (const auto *BT = Ty->getAs<BuiltinType>();
+      BT && BT->getKind() == BuiltinType::LongDouble)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
+
+  return DefaultABIInfo::classifyReturnType(Ty);
+}
+
+ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
+  if (const auto *CT = Ty->getAs<ComplexType>())
+    return classifyComplexType(CT, /*IsRet=*/false);
+
+  const auto *BT = Ty->getAs<BuiltinType>();
+  if (BT && BT->getKind() == BuiltinType::LongDouble)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+  return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 void SparcV8ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   for (auto &Arg : FI.arguments())
     Arg.info = classifyArgumentType(Arg.type);
+}
+
+RValue SparcV8ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty, AggValueSlot Slot) const {
+  CharUnits SlotSize = CharUnits::fromQuantity(4);
+  auto TInfo = getContext().getTypeInfoInChars(Ty);
+
+  // E.g. long double, larger _Complex and aggregate values are indirect.
+  bool IsIndirect = classifyArgumentType(Ty).isIndirect();
+
+  // An alignment higher than the slot size is not respected.
+  bool AllowHigherAlign = false;
+
+  // Force values smaller than a slot (e.g. _Complex char)
+  // into the right-most bytes.
+  bool ForceRightAdjust = true;
+
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TInfo, SlotSize,
+                          AllowHigherAlign, Slot, ForceRightAdjust);
 }
 
 namespace {
@@ -106,10 +174,17 @@ public:
 namespace {
 class SparcV9ABIInfo : public ABIInfo {
 public:
-  SparcV9ABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
+  SparcV9ABIInfo(CodeGenTypes &CGT)
+      : ABIInfo(CGT),
+        IsComplexGnuABI(!CGT.getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver23)) {}
 
 private:
-  ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit) const;
+  /// Whether how `_Complex` values are passed and returned is GCC-compatible.
+  bool IsComplexGnuABI;
+
+  ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit,
+                          unsigned &RegOffset, bool IsVarArg) const;
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
@@ -131,9 +206,11 @@ private:
     SmallVector<llvm::Type*, 8> Elems;
     uint64_t Size;
     bool InReg;
+    bool IsVarArg;
 
-    CoerceBuilder(llvm::LLVMContext &c, const llvm::DataLayout &dl)
-      : Context(c), DL(dl), Size(0), InReg(false) {}
+    CoerceBuilder(llvm::LLVMContext &c, const llvm::DataLayout &dl,
+                  bool IsVarArg)
+        : Context(c), DL(dl), Size(0), InReg(false), IsVarArg(IsVarArg) {}
 
     // Pad Elems with integers until Size is ToSize.
     void pad(uint64_t ToSize) {
@@ -163,6 +240,9 @@ private:
 
     // Add a floating point element at Offset.
     void addFloat(uint64_t Offset, llvm::Type *Ty, unsigned Bits) {
+      // Varargs are treated as integers.
+      if (IsVarArg)
+        return;
       // Unaligned floats are treated as integers.
       if (Offset % Bits)
         return;
@@ -222,127 +302,147 @@ private:
 };
 } // end anonymous namespace
 
-ABIArgInfo
-SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
+ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
+                                        unsigned &RegOffset,
+                                        bool IsVarArg) const {
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  uint64_t Size = getContext().getTypeSize(Ty);
+  auto &Context = getContext();
+  auto &VMContext = getVMContext();
+
+  // FIXME: the GCC-style `aligned` attribute on typedefs is not taken into
+  // account here, because the canonicalized type no longer has that
+  // information. Hence such over-aligned typedefs are not ABI-compatible with
+  // GCC.
+  //
+  // This is different from the `aligned` attribute on structs or fields, which
+  // is taken into account.
+  unsigned Alignment = Context.getTypeAlign(Ty);
+  uint64_t Size = Context.getTypeSize(Ty);
 
   // Anything too big to fit in registers is passed with an explicit indirect
   // pointer / sret pointer.
-  if (Size > SizeLimit)
+  if (Size > SizeLimit) {
+    RegOffset += 1;
     return getNaturalAlignIndirect(
         Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
         /*ByVal=*/false);
+  }
+
+  // An argument that is passed in registers but has an alignment higher than 8
+  // bytes must be register-aligned. Insert a dummy i64 argument to fill the
+  // odd-numbered register.
+  //
+  // See SCD 2.4.1, pages 3P-11 and 3P-12.
+  llvm::Type *Padding = (Alignment > 64 && RegOffset % 2 != 0)
+                            ? llvm::Type::getInt64Ty(VMContext)
+                            : nullptr;
+  unsigned PaddingSlots = Padding ? 1 : 0;
+  unsigned SizeSlots = llvm::divideCeil(Size, 64);
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Integer types smaller than a register are extended.
-  if (Size < 64 && Ty->isIntegerType())
-    return ABIArgInfo::getExtend(Ty);
+  if (Size < 64 && Ty->isIntegerType()) {
+    RegOffset += PaddingSlots + SizeSlots;
+    return ABIArgInfo::getExtend(Ty, /*T=*/nullptr, Padding);
+  }
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
-    if (EIT->getNumBits() < 64)
-      return ABIArgInfo::getExtend(Ty);
+    if (EIT->getNumBits() < 64) {
+      RegOffset += PaddingSlots + SizeSlots;
+      return ABIArgInfo::getExtend(Ty, /*T=*/nullptr, Padding);
+    }
+
+  // When being GCC-compatible, cast a complex char, short and int to an integer
+  // type of the right size to get the correct scalar-like behavior. Other
+  // complex types fall through and are treated like a struct containing the
+  // real and imaginary parts, e.g. `{ i64, i64 }` or `{ double, double }`.
+  if (IsComplexGnuABI) {
+    const auto *CT = Ty->getAs<ComplexType>();
+    if (CT && CT->getElementType()->isIntegerType()) {
+      uint64_t ElementTypeSize = Context.getTypeSize(CT->getElementType());
+      if (ElementTypeSize <= 32) {
+        RegOffset += 1;
+        return ABIArgInfo::getDirect(
+            llvm::IntegerType::get(VMContext, 2 * ElementTypeSize),
+            /*Offset=*/0, Padding);
+      }
+    }
+  }
 
   // Other non-aggregates go in registers.
-  if (!isAggregateTypeForABI(Ty))
-    return ABIArgInfo::getDirect();
+  if (!isAggregateTypeForABI(Ty)) {
+    RegOffset += PaddingSlots + SizeSlots;
+    return ABIArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0, Padding);
+  }
 
   // If a C++ object has either a non-trivial copy constructor or a non-trivial
   // destructor, it is passed with an explicit indirect pointer / sret pointer.
-  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
+  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
+    RegOffset += 1;
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    RAA == CGCXXABI::RAA_DirectInMemory);
+  }
 
   // This is a small aggregate type that should be passed in registers.
   // Build a coercion type from the LLVM struct type.
   llvm::StructType *StrTy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty));
-  if (!StrTy)
-    return ABIArgInfo::getDirect();
+  if (!StrTy) {
+    RegOffset += PaddingSlots + SizeSlots;
+    return ABIArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0, Padding);
+  }
 
-  CoerceBuilder CB(getVMContext(), getDataLayout());
+  CoerceBuilder CB(VMContext, getDataLayout(), IsVarArg);
   CB.addStruct(0, StrTy);
   // All structs, even empty ones, should take up a register argument slot,
   // so pin the minimum struct size to one bit.
   CB.pad(llvm::alignTo(
       std::max(CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue(), uint64_t(1)),
       64));
+  RegOffset += PaddingSlots + CB.Size / 64;
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();
 
-  if (CB.InReg)
-    return ABIArgInfo::getDirectInReg(CoerceTy);
-  else
-    return ABIArgInfo::getDirect(CoerceTy);
+  ABIArgInfo AAI = ABIArgInfo::getDirect(CoerceTy, 0, Padding);
+  AAI.setInReg(CB.InReg);
+  return AAI;
 }
 
 RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                  QualType Ty, AggValueSlot Slot) const {
-  ABIArgInfo AI = classifyType(Ty, 16 * 8);
-  llvm::Type *ArgTy = CGT.ConvertType(Ty);
-  if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
-    AI.setCoerceToType(ArgTy);
-
   CharUnits SlotSize = CharUnits::fromQuantity(8);
+  auto TInfo = getContext().getTypeInfoInChars(Ty);
 
-  CGBuilderTy &Builder = CGF.Builder;
-  Address Addr = Address(Builder.CreateLoad(VAListAddr, "ap.cur"),
-                         getVAListElementType(CGF), SlotSize);
-  llvm::Type *ArgPtrTy = CGF.UnqualPtrTy;
+  // Zero-sized types have a width of one byte for parameter passing purposes.
+  TInfo.Width = std::max(TInfo.Width, CharUnits::fromQuantity(1));
 
-  auto TypeInfo = getContext().getTypeInfoInChars(Ty);
+  // Small _Complex types are right-adjusted, but small aggregates are not.
+  bool ForceRightAdjust = Ty->isAnyComplexType();
 
-  Address ArgAddr = Address::invalid();
-  CharUnits Stride;
-  switch (AI.getKind()) {
-  case ABIArgInfo::Expand:
-  case ABIArgInfo::CoerceAndExpand:
-  case ABIArgInfo::InAlloca:
-    llvm_unreachable("Unsupported ABI kind for va_arg");
-
-  case ABIArgInfo::Extend: {
-    Stride = SlotSize;
-    CharUnits Offset = SlotSize - TypeInfo.Width;
-    ArgAddr = Builder.CreateConstInBoundsByteGEP(Addr, Offset, "extend");
-    break;
-  }
-
-  case ABIArgInfo::Direct: {
-    auto AllocSize = getDataLayout().getTypeAllocSize(AI.getCoerceToType());
-    Stride = CharUnits::fromQuantity(AllocSize).alignTo(SlotSize);
-    ArgAddr = Addr;
-    break;
-  }
-
-  case ABIArgInfo::Indirect:
-  case ABIArgInfo::IndirectAliased:
-    Stride = SlotSize;
-    ArgAddr = Addr.withElementType(ArgPtrTy);
-    ArgAddr = Address(Builder.CreateLoad(ArgAddr, "indirect.arg"), ArgTy,
-                      TypeInfo.Align);
-    break;
-
-  case ABIArgInfo::Ignore:
-    return Slot.asRValue();
-  }
-
-  // Update VAList.
-  Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
-  Builder.CreateStore(NextPtr.emitRawPointer(CGF), VAListAddr);
-
-  return CGF.EmitLoadOfAnyValue(
-      CGF.MakeAddrLValue(ArgAddr.withElementType(ArgTy), Ty), Slot);
+  // Arguments bigger than 2*SlotSize bytes are passed indirectly.
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
+                          /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
+                          SlotSize,
+                          /*AllowHigherAlign=*/true, Slot, ForceRightAdjust);
 }
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  FI.getReturnInfo() = classifyType(FI.getReturnType(), 32 * 8);
-  for (auto &I : FI.arguments())
-    I.info = classifyType(I.type, 16 * 8);
+  unsigned RetOffset = 0;
+  ABIArgInfo RetType =
+      classifyType(FI.getReturnType(), 32 * 8, RetOffset, /*IsVarArg=*/false);
+  FI.getReturnInfo() = RetType;
+
+  // Indirect returns will have its pointer passed as an argument.
+  unsigned ArgOffset = RetType.isIndirect() ? RetOffset : 0;
+  for (auto [ArgNo, I] : llvm::enumerate(FI.arguments())) {
+    bool IsVarArg = ArgNo >= FI.getNumRequiredArgs();
+    I.info = classifyType(I.type, 16 * 8, ArgOffset, IsVarArg);
+  }
 }
 
 namespace {

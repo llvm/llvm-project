@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, system-cygwin
 // RUN: %clang -E -ffile-prefix-map=%p=/UNLIKELY_PATH/empty -c -o - %s | FileCheck %s
 // RUN: %clang -E -fmacro-prefix-map=%p=/UNLIKELY_PATH/empty -c -o - %s | FileCheck %s
 // RUN: %clang -E -fmacro-prefix-map=%p=/UNLIKELY_PATH=empty -c -o - %s | FileCheck %s -check-prefix CHECK-EVIL

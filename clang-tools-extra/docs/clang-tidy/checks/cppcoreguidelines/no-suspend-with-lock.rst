@@ -36,5 +36,5 @@ Examples:
   }
 
 This check implements `CP.52
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-locks>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rcoro-locks>`_
 from the C++ Core Guidelines.

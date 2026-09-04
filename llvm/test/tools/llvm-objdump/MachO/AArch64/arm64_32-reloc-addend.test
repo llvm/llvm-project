@@ -1,0 +1,7 @@
+## Test ARM64_RELOC_ADDEND formatting for arm64_32 architecture.
+
+RUN: llvm-objdump -r %p/Inputs/reloc-addend.obj.macho-arm64_32 | FileCheck %s
+
+CHECK-DAG: ARM64_RELOC_ADDEND       0x999
+CHECK-DAG: ARM64_RELOC_PAGE21       _global
+CHECK-DAG: ARM64_RELOC_PAGEOFF12    _global

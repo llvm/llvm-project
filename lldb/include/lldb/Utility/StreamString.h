@@ -26,7 +26,7 @@ class StreamString : public Stream {
 public:
   StreamString(bool colors = false);
 
-  StreamString(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
+  StreamString(uint32_t flags, lldb::ByteOrder byte_order);
 
   ~StreamString() override;
 
@@ -47,7 +47,7 @@ public:
   void FillLastLineToColumn(uint32_t column, char fill_char);
 
 protected:
-  friend class ScriptInterpreter;
+  friend class ScriptInterpreterBridge;
 
   std::string m_packet;
   size_t WriteImpl(const void *s, size_t length) override;

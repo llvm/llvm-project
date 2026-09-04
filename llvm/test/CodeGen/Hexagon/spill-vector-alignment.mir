@@ -1,17 +1,29 @@
-# RUN: llc -mtriple=hexagon -run-pass prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass prolog-epilog %s -o - | FileCheck %s
+
+# Check that the aligned-stack base register $r16 is
+# saved before it is clobbered by PS_aligna in the prologue.
+# CHECK: S2_storerd_io $r30, -8, killed $d8
+
+# Check that PS_aligna is emitted with the final stack alignment after late HVX
+# spill slots increase the required stack alignment.
+# CHECK: $r16 = PS_aligna 128
 
 # Check that the spill of $q0 no longer uses unaligned store instruction.
 # CHECK: V6_vS32b_ai $r16, -256, killed $v0
 
+# Check that the aligned-stack base register is restored on the way out.
+# CHECK: $d8 = L2_loadrd_io $r30, -8
+
 ---
 name:            test
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackAlignBaseReg: '$r16'
 stack:
   - { id: 0, type: variable-sized, offset: 0, alignment: 1 }
   - { id: 1, type: spill-slot, size: 128, alignment: 128 }
 body: |
   bb.0:
     liveins: $q0
-    $r16 = PS_aligna 128, implicit $r30
     PS_vstorerq_ai %stack.1, 0, $q0
 ...

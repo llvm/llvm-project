@@ -37,6 +37,11 @@ static cl::opt<unsigned> KernargPreloadCount(
     "amdgpu-kernarg-preload-count",
     cl::desc("How many kernel arguments to preload onto SGPRs"), cl::init(0));
 
+static cl::opt<bool>
+    EnableKernargPreload("amdgpu-kernarg-preload",
+                         cl::desc("Enable preload kernel arguments to SGPRs"),
+                         cl::init(true));
+
 namespace {
 
 class AMDGPUPreloadKernelArgumentsLegacy : public ModulePass {
@@ -122,7 +127,7 @@ private:
   // will also be preloaded even if that data is unused.
   Function *cloneFunctionWithPreloadImplicitArgs(unsigned LastPreloadIndex) {
     FunctionType *FT = F.getFunctionType();
-    LLVMContext &Ctx = F.getParent()->getContext();
+    LLVMContext &Ctx = F.getContext();
     SmallVector<Type *, 16> FTypes(FT->param_begin(), FT->param_end());
     for (unsigned I = 0; I <= LastPreloadIndex; ++I)
       FTypes.push_back(getHiddenArgType(Ctx, HiddenArg(I)));
@@ -191,14 +196,15 @@ public:
     SmallVector<std::pair<LoadInst *, unsigned>, 4> ImplicitArgLoads;
     for (auto *U : ImplicitArgPtr->users()) {
       Instruction *CI = dyn_cast<Instruction>(U);
-      if (!CI || CI->getParent()->getParent() != &F)
+      if (!CI || CI->getFunction() != &F)
         continue;
 
       for (auto *U : CI->users()) {
         int64_t Offset = 0;
         auto *Load = dyn_cast<LoadInst>(U); // Load from ImplicitArgPtr?
         if (!Load) {
-          if (GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
+          if (U->user_empty() ||
+              GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
             continue;
 
           Load = dyn_cast<LoadInst>(*U->user_begin()); // Load from GEP?
@@ -208,7 +214,7 @@ public:
           continue;
 
         // FIXME: Expand handle merged loads.
-        LLVMContext &Ctx = F.getParent()->getContext();
+        LLVMContext &Ctx = F.getContext();
         Type *LoadTy = Load->getType();
         HiddenArg HA = getHiddenArgFromOffset(Offset);
         if (HA == END_HIDDEN_ARGS || LoadTy != getHiddenArgType(Ctx, HA))
@@ -275,6 +281,9 @@ AMDGPUPreloadKernelArgumentsLegacy::AMDGPUPreloadKernelArgumentsLegacy(
     : ModulePass(ID), TM(TM) {}
 
 static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
+  if (!EnableKernargPreload)
+    return false;
+
   SmallVector<Function *, 4> FunctionsToErase;
   bool Changed = false;
   for (auto &F : M) {
@@ -333,6 +342,7 @@ static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
     Changed |= NumPreloadedExplicitArgs > 0;
   }
 
+  Changed |= !FunctionsToErase.empty();
   // Erase cloned functions if we needed to update the kernel signature to
   // support preloading hidden kernel arguments.
   for (auto *F : FunctionsToErase)

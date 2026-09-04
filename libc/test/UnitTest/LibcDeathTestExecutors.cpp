@@ -8,11 +8,10 @@
 
 #include "LibcTest.h"
 
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
-
-#include <assert.h>
 
 namespace {
 constexpr unsigned TIMEOUT_MS = 10000;
@@ -22,27 +21,28 @@ namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
-                             const char *LHSStr, const char *RHSStr,
+                             const char *LHSStr,
+                             [[maybe_unused]] const char *RHSStr,
                              internal::Location Loc) {
   testutils::ProcessStatus Result =
       testutils::invoke_in_subprocess(Func, TIMEOUT_MS);
 
   if (const char *error = Result.get_error()) {
-    Ctx->markFail();
+    internal::current_context->markFail();
     tlog << Loc;
     tlog << error << '\n';
     return false;
   }
 
   if (Result.timed_out()) {
-    Ctx->markFail();
+    internal::current_context->markFail();
     tlog << Loc;
     tlog << "Process timed out after " << TIMEOUT_MS << " milliseconds.\n";
     return false;
   }
 
   if (Result.exited_normally()) {
-    Ctx->markFail();
+    internal::current_context->markFail();
     tlog << Loc;
     tlog << "Expected " << LHSStr
          << " to be killed by a signal\nBut it exited normally!\n";
@@ -50,12 +50,12 @@ bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
   }
 
   int KilledBy = Result.get_fatal_signal();
-  assert(KilledBy != 0 && "Not killed by any signal");
+  LIBC_ASSERT(KilledBy != 0 && "Not killed by any signal");
   if (Signal == -1 || KilledBy == Signal)
     return true;
 
   using testutils::signal_as_string;
-  Ctx->markFail();
+  internal::current_context->markFail();
   tlog << Loc;
   tlog << "              Expected: " << LHSStr << '\n'
        << "To be killed by signal: " << Signal << '\n'
@@ -72,21 +72,21 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
       testutils::invoke_in_subprocess(Func, TIMEOUT_MS);
 
   if (const char *error = Result.get_error()) {
-    Ctx->markFail();
+    internal::current_context->markFail();
     tlog << Loc;
     tlog << error << '\n';
     return false;
   }
 
   if (Result.timed_out()) {
-    Ctx->markFail();
+    internal::current_context->markFail();
     tlog << Loc;
     tlog << "Process timed out after " << TIMEOUT_MS << " milliseconds.\n";
     return false;
   }
 
   if (!Result.exited_normally()) {
-    Ctx->markFail();
+    internal::current_context->markFail();
     tlog << Loc;
     tlog << "Expected " << LHSStr << '\n'
          << "to exit with exit code " << ExitCode << '\n'
@@ -98,7 +98,7 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
   if (ActualExit == ExitCode)
     return true;
 
-  Ctx->markFail();
+  internal::current_context->markFail();
   tlog << Loc;
   tlog << "Expected exit code of: " << LHSStr << '\n'
        << "             Which is: " << ActualExit << '\n'

@@ -94,11 +94,11 @@ static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
     return;
   }
 
-  Value zero = b.create<arith::ConstantIndexOp>(0);
-  Value condition = b.create<arith::CmpIOp>(arith::CmpIPredicate::sgt,
-                                            cast<Value>(value), zero);
-  b.create<cf::AssertOp>(
-      condition,
+  Value zero = arith::ConstantIndexOp::create(b, 0);
+  Value condition = arith::CmpIOp::create(b, arith::CmpIPredicate::sgt,
+                                          cast<Value>(value), zero);
+  cf::AssertOp::create(
+      b, condition,
       b.getStringAttr("expected strictly positive tile size and divisor"));
 }
 
@@ -317,11 +317,12 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
     Value coveredSize =
         apply(s0 * s1 + s2 * s3, {spec.lowTileSize, spec.lowTripCount,
                                   spec.highTileSize, spec.highTripCount});
-    Value equals = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq,
-                                           coveredSize, tripCount);
-    b.create<cf::AssertOp>(
-        equals, builder.getStringAttr(
-                    "could not compute dynamic multi-size tile shapes"));
+    Value equals = arith::CmpIOp::create(b, arith::CmpIPredicate::eq,
+                                         coveredSize, tripCount);
+    cf::AssertOp::create(
+        b, equals,
+        builder.getStringAttr(
+            "could not compute dynamic multi-size tile shapes"));
   }
 
   return spec;
@@ -451,8 +452,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   SmallVector<OpFoldResult> allShapeSizes =
       op.createFlatListOfOperandDims(b, op.getLoc());
   AffineMap shapeSizesToLoopsMap = op.getShapesToLoopsMap();
-  if (!shapeSizesToLoopsMap)
-    return failure();
+  assert(shapeSizesToLoopsMap && "invalid linalgOp with null ShapesToLoopsMap");
 
   auto [loopRanges, loopIndexToRangeIndex] = makeTiledLoopRanges(
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
@@ -656,8 +656,8 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       getValueOrCreateConstantIndexOp(b, loc, nonZeroNumThreads);
 
   // 2. Create the ForallOp with an empty region.
-  scf::ForallOp forallOp = b.create<scf::ForallOp>(
-      loc, getAsOpFoldResult(materializedNonZeroNumThreads), initTensors,
+  scf::ForallOp forallOp = scf::ForallOp::create(
+      b, loc, getAsOpFoldResult(materializedNonZeroNumThreads), initTensors,
       mapping);
 
   // 3. Calculate the tile offsets and sizes for the subsequent loop that will
@@ -689,8 +689,8 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       sizes[reductionDim] = b.getIndexAttr(1);
       outOffsets[reductionDim] = forallOp.getInductionVars()[0];
       // TODO: use SubsetExtractOpInterface once it is available.
-      tiledDpsInitOperands.push_back(b.create<tensor::ExtractSliceOp>(
-          loc, cast<RankedTensorType>(initOperand.getType()),
+      tiledDpsInitOperands.push_back(tensor::ExtractSliceOp::create(
+          b, loc, cast<RankedTensorType>(initOperand.getType()),
           destBbArgs[destNum], outOffsets, sizes, strides));
     }
 
@@ -768,8 +768,8 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
     // 6.b. Parallel insertions are inserted at the end of the combining
     // terminator.
     b.setInsertionPointToEnd(forallOp.getTerminator().getBody());
-    b.create<tensor::ParallelInsertSliceOp>(
-        loc, result, bbArg, resultOffsetsRank, resultSizesRank, strides);
+    tensor::ParallelInsertSliceOp::create(
+        b, loc, result, bbArg, resultOffsetsRank, resultSizesRank, strides);
   }
 
   // 7. Merge the partial reductions.
@@ -827,6 +827,9 @@ mlir::linalg::tileLinalgOp(RewriterBase &b, LinalgOp op,
 
 namespace {
 /// Helper classes for type list expansion.
+/// TODO: Move this to a common header, so all dialects, passes and
+/// transforms can utilize this method to compose canonicalization
+/// patterns.
 template <typename... OpTypes>
 class CanonicalizationPatternList;
 
@@ -844,39 +847,33 @@ public:
     CanonicalizationPatternList<OpTypes...>::insert(patterns);
   }
 };
-} // namespace
 
-RewritePatternSet
-mlir::linalg::getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx) {
-  RewritePatternSet patterns(ctx);
-  populateLinalgTilingCanonicalizationPatterns(patterns);
-  return patterns;
-}
-
-void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
-    RewritePatternSet &patterns) {
+/// TODO: Move this into `getCanonicalizationPattern` and do the same for all
+/// dialects, so that we don't need this hack to also get the operations'
+/// canonicalization patterns per dialect.
+static void
+populateLinalgCanonicalizationPatterns(RewritePatternSet &patterns) {
   auto *ctx = patterns.getContext();
-  affine::AffineApplyOp::getCanonicalizationPatterns(patterns, ctx);
-  affine::AffineForOp::getCanonicalizationPatterns(patterns, ctx);
-  affine::AffineMinOp::getCanonicalizationPatterns(patterns, ctx);
-  affine::AffineMaxOp::getCanonicalizationPatterns(patterns, ctx);
-  arith::ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
-
-  memref::SubViewOp::getCanonicalizationPatterns(patterns, ctx);
-  memref::ViewOp::getCanonicalizationPatterns(patterns, ctx);
-
-  scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
-  scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
-
-  tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::EmptyOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::InsertSliceOp::getCanonicalizationPatterns(patterns, ctx);
-  tensor::PadOp::getCanonicalizationPatterns(patterns, ctx);
   ctx->getLoadedDialect<LinalgDialect>()->getCanonicalizationPatterns(patterns);
 
   CanonicalizationPatternList<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
       >::insert(patterns);
+}
+} // namespace
+
+void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
+    RewritePatternSet &patterns) {
+  // Extra patterns from other dialects that we want to register for tiling
+  // Linalg operations.
+  CanonicalizationPatternList<
+      affine::AffineApplyOp, affine::AffineForOp, affine::AffineMinOp,
+      affine::AffineMaxOp, arith::ConstantIndexOp, memref::SubViewOp,
+      memref::ViewOp, scf::ForOp, scf::ParallelOp, tensor::CastOp,
+      tensor::EmptyOp, tensor::ExtractSliceOp, tensor::InsertSliceOp,
+      tensor::PadOp>::insert(patterns);
+
+  // Linalg's own patterns
+  populateLinalgCanonicalizationPatterns(patterns);
 }

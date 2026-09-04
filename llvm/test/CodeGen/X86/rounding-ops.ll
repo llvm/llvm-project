@@ -18,11 +18,11 @@ define float @test1(float %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call float @floorf(float %x) nounwind readnone
+  %call = tail call float @llvm.floor.f32(float %x) nounwind readnone
   ret float %call
 }
 
-declare float @floorf(float) nounwind readnone
+declare float @llvm.floor.f32(float) nounwind readnone
 
 define double @test2(double %x) nounwind  {
 ; CHECK-SSE-LABEL: test2:
@@ -39,11 +39,11 @@ define double @test2(double %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call double @floor(double %x) nounwind readnone
+  %call = tail call double @llvm.floor.f64(double %x) nounwind readnone
   ret double %call
 }
 
-declare double @floor(double) nounwind readnone
+declare double @llvm.floor.f64(double) nounwind readnone
 
 define float @test3(float %x) nounwind  {
 ; CHECK-SSE-LABEL: test3:
@@ -60,11 +60,9 @@ define float @test3(float %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call float @nearbyintf(float %x) nounwind readnone
+  %call = tail call float @llvm.nearbyint.f32(float %x) nounwind readnone
   ret float %call
 }
-
-declare float @nearbyintf(float) nounwind readnone
 
 define double @test4(double %x) nounwind  {
 ; CHECK-SSE-LABEL: test4:
@@ -81,11 +79,9 @@ define double @test4(double %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call double @nearbyint(double %x) nounwind readnone
+  %call = tail call double @llvm.nearbyint.f64(double %x) nounwind readnone
   ret double %call
 }
-
-declare double @nearbyint(double) nounwind readnone
 
 define float @test5(float %x) nounwind  {
 ; CHECK-SSE-LABEL: test5:
@@ -102,11 +98,11 @@ define float @test5(float %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call float @ceilf(float %x) nounwind readnone
+  %call = tail call float @llvm.ceil.f32(float %x) nounwind readnone
   ret float %call
 }
 
-declare float @ceilf(float) nounwind readnone
+declare float @llvm.ceil.f32(float) nounwind readnone
 
 define double @test6(double %x) nounwind  {
 ; CHECK-SSE-LABEL: test6:
@@ -123,11 +119,11 @@ define double @test6(double %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call double @ceil(double %x) nounwind readnone
+  %call = tail call double @llvm.ceil.f64(double %x) nounwind readnone
   ret double %call
 }
 
-declare double @ceil(double) nounwind readnone
+declare double @llvm.ceil.f64(double) nounwind readnone
 
 define float @test7(float %x) nounwind  {
 ; CHECK-SSE-LABEL: test7:
@@ -144,11 +140,11 @@ define float @test7(float %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call float @rintf(float %x) nounwind readnone
+  %call = tail call float @llvm.rint.f32(float %x) nounwind readnone
   ret float %call
 }
 
-declare float @rintf(float) nounwind readnone
+declare float @llvm.rint.f32(float) nounwind readnone
 
 define double @test8(double %x) nounwind  {
 ; CHECK-SSE-LABEL: test8:
@@ -165,11 +161,11 @@ define double @test8(double %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $4, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call double @rint(double %x) nounwind readnone
+  %call = tail call double @llvm.rint.f64(double %x) nounwind readnone
   ret double %call
 }
 
-declare double @rint(double) nounwind readnone
+declare double @llvm.rint.f64(double) nounwind readnone
 
 define float @test9(float %x) nounwind  {
 ; CHECK-SSE-LABEL: test9:
@@ -186,11 +182,11 @@ define float @test9(float %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call float @truncf(float %x) nounwind readnone
+  %call = tail call float @llvm.trunc.f32(float %x) nounwind readnone
   ret float %call
 }
 
-declare float @truncf(float) nounwind readnone
+declare float @llvm.trunc.f32(float) nounwind readnone
 
 define double @test10(double %x) nounwind  {
 ; CHECK-SSE-LABEL: test10:
@@ -207,11 +203,11 @@ define double @test10(double %x) nounwind  {
 ; CHECK-AVX512:       ## %bb.0:
 ; CHECK-AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
-  %call = tail call double @trunc(double %x) nounwind readnone
+  %call = tail call double @llvm.trunc.f64(double %x) nounwind readnone
   ret double %call
 }
 
-declare double @trunc(double) nounwind readnone
+declare double @llvm.trunc.f64(double) nounwind readnone
 
 define float @test11(ptr %xptr) nounwind optsize {
 ; CHECK-SSE-LABEL: test11:
@@ -229,7 +225,7 @@ define float @test11(ptr %xptr) nounwind optsize {
 ; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load float, ptr %xptr
-  %call = tail call float @truncf(float %x) nounwind readnone
+  %call = tail call float @llvm.trunc.f32(float %x) nounwind readnone
   ret float %call
 }
 
@@ -249,7 +245,7 @@ define double @test12(ptr %xptr) nounwind optsize {
 ; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load double, ptr %xptr
-  %call = tail call double @trunc(double %x) nounwind readnone
+  %call = tail call double @llvm.trunc.f64(double %x) nounwind readnone
   ret double %call
 }
 
@@ -269,7 +265,7 @@ define float @test11_pgso(ptr %xptr) nounwind !prof !14 {
 ; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load float, ptr %xptr
-  %call = tail call float @truncf(float %x) nounwind readnone
+  %call = tail call float @llvm.trunc.f32(float %x) nounwind readnone
   ret float %call
 }
 
@@ -289,7 +285,7 @@ define double @test12_pgso(ptr %xptr) nounwind !prof !14 {
 ; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load double, ptr %xptr
-  %call = tail call double @trunc(double %x) nounwind readnone
+  %call = tail call double @llvm.trunc.f64(double %x) nounwind readnone
   ret double %call
 }
 

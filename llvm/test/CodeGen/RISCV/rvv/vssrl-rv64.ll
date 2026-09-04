@@ -14,8 +14,6 @@ entry:
   ret <vscale x 1 x i8> %0
 }
 
-declare <vscale x 1 x i8> @llvm.riscv.vssrl.nxv1i8.nxv1i8.i64(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, i64 immarg, i64)
-
 define <vscale x 1 x i8> @test_vssrl_vx_u8mf8(<vscale x 1 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8mf8:
 ; CHECK:       # %bb.0: # %entry
@@ -27,8 +25,6 @@ entry:
   %0 = call <vscale x 1 x i8> @llvm.riscv.vssrl.nxv1i8.i64.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 1 x i8> %0
 }
-
-declare <vscale x 1 x i8> @llvm.riscv.vssrl.nxv1i8.i64.i64(<vscale x 1 x i8>, <vscale x 1 x i8>, i64, i64 immarg, i64)
 
 define <vscale x 2 x i8> @test_vssrl_vv_u8mf4(<vscale x 2 x i8> %op1, <vscale x 2 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8mf4:
@@ -42,8 +38,6 @@ entry:
   ret <vscale x 2 x i8> %0
 }
 
-declare <vscale x 2 x i8> @llvm.riscv.vssrl.nxv2i8.nxv2i8.i64(<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, i64 immarg, i64)
-
 define <vscale x 2 x i8> @test_vssrl_vx_u8mf4(<vscale x 2 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8mf4:
 ; CHECK:       # %bb.0: # %entry
@@ -55,8 +49,6 @@ entry:
   %0 = call <vscale x 2 x i8> @llvm.riscv.vssrl.nxv2i8.i64.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 2 x i8> %0
 }
-
-declare <vscale x 2 x i8> @llvm.riscv.vssrl.nxv2i8.i64.i64(<vscale x 2 x i8>, <vscale x 2 x i8>, i64, i64 immarg, i64)
 
 define <vscale x 4 x i8> @test_vssrl_vv_u8mf2(<vscale x 4 x i8> %op1, <vscale x 4 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8mf2:
@@ -70,8 +62,6 @@ entry:
   ret <vscale x 4 x i8> %0
 }
 
-declare <vscale x 4 x i8> @llvm.riscv.vssrl.nxv4i8.nxv4i8.i64(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, i64 immarg, i64)
-
 define <vscale x 4 x i8> @test_vssrl_vx_u8mf2(<vscale x 4 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8mf2:
 ; CHECK:       # %bb.0: # %entry
@@ -83,8 +73,6 @@ entry:
   %0 = call <vscale x 4 x i8> @llvm.riscv.vssrl.nxv4i8.i64.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 4 x i8> %0
 }
-
-declare <vscale x 4 x i8> @llvm.riscv.vssrl.nxv4i8.i64.i64(<vscale x 4 x i8>, <vscale x 4 x i8>, i64, i64 immarg, i64)
 
 define <vscale x 8 x i8> @test_vssrl_vv_u8m1(<vscale x 8 x i8> %op1, <vscale x 8 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m1:
@@ -98,8 +86,6 @@ entry:
   ret <vscale x 8 x i8> %0
 }
 
-declare <vscale x 8 x i8> @llvm.riscv.vssrl.nxv8i8.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, i64 immarg, i64)
-
 define <vscale x 8 x i8> @test_vssrl_vx_u8m1(<vscale x 8 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m1:
 ; CHECK:       # %bb.0: # %entry
@@ -111,8 +97,6 @@ entry:
   %0 = call <vscale x 8 x i8> @llvm.riscv.vssrl.nxv8i8.i64.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 8 x i8> %0
 }
-
-declare <vscale x 8 x i8> @llvm.riscv.vssrl.nxv8i8.i64.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, i64, i64 immarg, i64)
 
 define <vscale x 16 x i8> @test_vssrl_vv_u8m2(<vscale x 16 x i8> %op1, <vscale x 16 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m2:
@@ -126,8 +110,6 @@ entry:
   ret <vscale x 16 x i8> %0
 }
 
-declare <vscale x 16 x i8> @llvm.riscv.vssrl.nxv16i8.nxv16i8.i64(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, i64 immarg, i64)
-
 define <vscale x 16 x i8> @test_vssrl_vx_u8m2(<vscale x 16 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m2:
 ; CHECK:       # %bb.0: # %entry
@@ -139,8 +121,6 @@ entry:
   %0 = call <vscale x 16 x i8> @llvm.riscv.vssrl.nxv16i8.i64.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 16 x i8> %0
 }
-
-declare <vscale x 16 x i8> @llvm.riscv.vssrl.nxv16i8.i64.i64(<vscale x 16 x i8>, <vscale x 16 x i8>, i64, i64 immarg, i64)
 
 define <vscale x 32 x i8> @test_vssrl_vv_u8m4(<vscale x 32 x i8> %op1, <vscale x 32 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m4:
@@ -154,8 +134,6 @@ entry:
   ret <vscale x 32 x i8> %0
 }
 
-declare <vscale x 32 x i8> @llvm.riscv.vssrl.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>, i64 immarg, i64)
-
 define <vscale x 32 x i8> @test_vssrl_vx_u8m4(<vscale x 32 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m4:
 ; CHECK:       # %bb.0: # %entry
@@ -167,8 +145,6 @@ entry:
   %0 = call <vscale x 32 x i8> @llvm.riscv.vssrl.nxv32i8.i64.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 32 x i8> %0
 }
-
-declare <vscale x 32 x i8> @llvm.riscv.vssrl.nxv32i8.i64.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i64, i64 immarg, i64)
 
 define <vscale x 64 x i8> @test_vssrl_vv_u8m8(<vscale x 64 x i8> %op1, <vscale x 64 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m8:
@@ -182,8 +158,6 @@ entry:
   ret <vscale x 64 x i8> %0
 }
 
-declare <vscale x 64 x i8> @llvm.riscv.vssrl.nxv64i8.nxv64i8.i64(<vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8>, i64 immarg, i64)
-
 define <vscale x 64 x i8> @test_vssrl_vx_u8m8(<vscale x 64 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m8:
 ; CHECK:       # %bb.0: # %entry
@@ -195,8 +169,6 @@ entry:
   %0 = call <vscale x 64 x i8> @llvm.riscv.vssrl.nxv64i8.i64.i64(<vscale x 64 x i8> poison, <vscale x 64 x i8> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 64 x i8> %0
 }
-
-declare <vscale x 64 x i8> @llvm.riscv.vssrl.nxv64i8.i64.i64(<vscale x 64 x i8>, <vscale x 64 x i8>, i64, i64 immarg, i64)
 
 define <vscale x 1 x i16> @test_vssrl_vv_u16mf4(<vscale x 1 x i16> %op1, <vscale x 1 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16mf4:
@@ -210,8 +182,6 @@ entry:
   ret <vscale x 1 x i16> %0
 }
 
-declare <vscale x 1 x i16> @llvm.riscv.vssrl.nxv1i16.nxv1i16.i64(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, i64 immarg, i64)
-
 define <vscale x 1 x i16> @test_vssrl_vx_u16mf4(<vscale x 1 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16mf4:
 ; CHECK:       # %bb.0: # %entry
@@ -223,8 +193,6 @@ entry:
   %0 = call <vscale x 1 x i16> @llvm.riscv.vssrl.nxv1i16.i64.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 1 x i16> %0
 }
-
-declare <vscale x 1 x i16> @llvm.riscv.vssrl.nxv1i16.i64.i64(<vscale x 1 x i16>, <vscale x 1 x i16>, i64, i64 immarg, i64)
 
 define <vscale x 2 x i16> @test_vssrl_vv_u16mf2(<vscale x 2 x i16> %op1, <vscale x 2 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16mf2:
@@ -238,8 +206,6 @@ entry:
   ret <vscale x 2 x i16> %0
 }
 
-declare <vscale x 2 x i16> @llvm.riscv.vssrl.nxv2i16.nxv2i16.i64(<vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, i64 immarg, i64)
-
 define <vscale x 2 x i16> @test_vssrl_vx_u16mf2(<vscale x 2 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16mf2:
 ; CHECK:       # %bb.0: # %entry
@@ -251,8 +217,6 @@ entry:
   %0 = call <vscale x 2 x i16> @llvm.riscv.vssrl.nxv2i16.i64.i64(<vscale x 2 x i16> poison, <vscale x 2 x i16> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 2 x i16> %0
 }
-
-declare <vscale x 2 x i16> @llvm.riscv.vssrl.nxv2i16.i64.i64(<vscale x 2 x i16>, <vscale x 2 x i16>, i64, i64 immarg, i64)
 
 define <vscale x 4 x i16> @test_vssrl_vv_u16m1(<vscale x 4 x i16> %op1, <vscale x 4 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m1:
@@ -266,8 +230,6 @@ entry:
   ret <vscale x 4 x i16> %0
 }
 
-declare <vscale x 4 x i16> @llvm.riscv.vssrl.nxv4i16.nxv4i16.i64(<vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, i64 immarg, i64)
-
 define <vscale x 4 x i16> @test_vssrl_vx_u16m1(<vscale x 4 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m1:
 ; CHECK:       # %bb.0: # %entry
@@ -279,8 +241,6 @@ entry:
   %0 = call <vscale x 4 x i16> @llvm.riscv.vssrl.nxv4i16.i64.i64(<vscale x 4 x i16> poison, <vscale x 4 x i16> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 4 x i16> %0
 }
-
-declare <vscale x 4 x i16> @llvm.riscv.vssrl.nxv4i16.i64.i64(<vscale x 4 x i16>, <vscale x 4 x i16>, i64, i64 immarg, i64)
 
 define <vscale x 8 x i16> @test_vssrl_vv_u16m2(<vscale x 8 x i16> %op1, <vscale x 8 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m2:
@@ -294,8 +254,6 @@ entry:
   ret <vscale x 8 x i16> %0
 }
 
-declare <vscale x 8 x i16> @llvm.riscv.vssrl.nxv8i16.nxv8i16.i64(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, i64 immarg, i64)
-
 define <vscale x 8 x i16> @test_vssrl_vx_u16m2(<vscale x 8 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m2:
 ; CHECK:       # %bb.0: # %entry
@@ -307,8 +265,6 @@ entry:
   %0 = call <vscale x 8 x i16> @llvm.riscv.vssrl.nxv8i16.i64.i64(<vscale x 8 x i16> poison, <vscale x 8 x i16> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 8 x i16> %0
 }
-
-declare <vscale x 8 x i16> @llvm.riscv.vssrl.nxv8i16.i64.i64(<vscale x 8 x i16>, <vscale x 8 x i16>, i64, i64 immarg, i64)
 
 define <vscale x 16 x i16> @test_vssrl_vv_u16m4(<vscale x 16 x i16> %op1, <vscale x 16 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m4:
@@ -322,8 +278,6 @@ entry:
   ret <vscale x 16 x i16> %0
 }
 
-declare <vscale x 16 x i16> @llvm.riscv.vssrl.nxv16i16.nxv16i16.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>, i64 immarg, i64)
-
 define <vscale x 16 x i16> @test_vssrl_vx_u16m4(<vscale x 16 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m4:
 ; CHECK:       # %bb.0: # %entry
@@ -335,8 +289,6 @@ entry:
   %0 = call <vscale x 16 x i16> @llvm.riscv.vssrl.nxv16i16.i64.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 16 x i16> %0
 }
-
-declare <vscale x 16 x i16> @llvm.riscv.vssrl.nxv16i16.i64.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, i64, i64 immarg, i64)
 
 define <vscale x 32 x i16> @test_vssrl_vv_u16m8(<vscale x 32 x i16> %op1, <vscale x 32 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m8:
@@ -350,8 +302,6 @@ entry:
   ret <vscale x 32 x i16> %0
 }
 
-declare <vscale x 32 x i16> @llvm.riscv.vssrl.nxv32i16.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>, i64 immarg, i64)
-
 define <vscale x 32 x i16> @test_vssrl_vx_u16m8(<vscale x 32 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m8:
 ; CHECK:       # %bb.0: # %entry
@@ -363,8 +313,6 @@ entry:
   %0 = call <vscale x 32 x i16> @llvm.riscv.vssrl.nxv32i16.i64.i64(<vscale x 32 x i16> poison, <vscale x 32 x i16> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 32 x i16> %0
 }
-
-declare <vscale x 32 x i16> @llvm.riscv.vssrl.nxv32i16.i64.i64(<vscale x 32 x i16>, <vscale x 32 x i16>, i64, i64 immarg, i64)
 
 define <vscale x 1 x i32> @test_vssrl_vv_u32mf2(<vscale x 1 x i32> %op1, <vscale x 1 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32mf2:
@@ -378,8 +326,6 @@ entry:
   ret <vscale x 1 x i32> %0
 }
 
-declare <vscale x 1 x i32> @llvm.riscv.vssrl.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, i64 immarg, i64)
-
 define <vscale x 1 x i32> @test_vssrl_vx_u32mf2(<vscale x 1 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32mf2:
 ; CHECK:       # %bb.0: # %entry
@@ -391,8 +337,6 @@ entry:
   %0 = call <vscale x 1 x i32> @llvm.riscv.vssrl.nxv1i32.i64.i64(<vscale x 1 x i32> poison, <vscale x 1 x i32> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 1 x i32> %0
 }
-
-declare <vscale x 1 x i32> @llvm.riscv.vssrl.nxv1i32.i64.i64(<vscale x 1 x i32>, <vscale x 1 x i32>, i64, i64 immarg, i64)
 
 define <vscale x 2 x i32> @test_vssrl_vv_u32m1(<vscale x 2 x i32> %op1, <vscale x 2 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m1:
@@ -406,8 +350,6 @@ entry:
   ret <vscale x 2 x i32> %0
 }
 
-declare <vscale x 2 x i32> @llvm.riscv.vssrl.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, i64 immarg, i64)
-
 define <vscale x 2 x i32> @test_vssrl_vx_u32m1(<vscale x 2 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m1:
 ; CHECK:       # %bb.0: # %entry
@@ -419,8 +361,6 @@ entry:
   %0 = call <vscale x 2 x i32> @llvm.riscv.vssrl.nxv2i32.i64.i64(<vscale x 2 x i32> poison, <vscale x 2 x i32> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 2 x i32> %0
 }
-
-declare <vscale x 2 x i32> @llvm.riscv.vssrl.nxv2i32.i64.i64(<vscale x 2 x i32>, <vscale x 2 x i32>, i64, i64 immarg, i64)
 
 define <vscale x 4 x i32> @test_vssrl_vv_u32m2(<vscale x 4 x i32> %op1, <vscale x 4 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m2:
@@ -434,8 +374,6 @@ entry:
   ret <vscale x 4 x i32> %0
 }
 
-declare <vscale x 4 x i32> @llvm.riscv.vssrl.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, i64 immarg, i64)
-
 define <vscale x 4 x i32> @test_vssrl_vx_u32m2(<vscale x 4 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m2:
 ; CHECK:       # %bb.0: # %entry
@@ -447,8 +385,6 @@ entry:
   %0 = call <vscale x 4 x i32> @llvm.riscv.vssrl.nxv4i32.i64.i64(<vscale x 4 x i32> poison, <vscale x 4 x i32> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 4 x i32> %0
 }
-
-declare <vscale x 4 x i32> @llvm.riscv.vssrl.nxv4i32.i64.i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i64, i64 immarg, i64)
 
 define <vscale x 8 x i32> @test_vssrl_vv_u32m4(<vscale x 8 x i32> %op1, <vscale x 8 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m4:
@@ -462,8 +398,6 @@ entry:
   ret <vscale x 8 x i32> %0
 }
 
-declare <vscale x 8 x i32> @llvm.riscv.vssrl.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, i64 immarg, i64)
-
 define <vscale x 8 x i32> @test_vssrl_vx_u32m4(<vscale x 8 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m4:
 ; CHECK:       # %bb.0: # %entry
@@ -475,8 +409,6 @@ entry:
   %0 = call <vscale x 8 x i32> @llvm.riscv.vssrl.nxv8i32.i64.i64(<vscale x 8 x i32> poison, <vscale x 8 x i32> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 8 x i32> %0
 }
-
-declare <vscale x 8 x i32> @llvm.riscv.vssrl.nxv8i32.i64.i64(<vscale x 8 x i32>, <vscale x 8 x i32>, i64, i64 immarg, i64)
 
 define <vscale x 16 x i32> @test_vssrl_vv_u32m8(<vscale x 16 x i32> %op1, <vscale x 16 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m8:
@@ -490,8 +422,6 @@ entry:
   ret <vscale x 16 x i32> %0
 }
 
-declare <vscale x 16 x i32> @llvm.riscv.vssrl.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32>, i64 immarg, i64)
-
 define <vscale x 16 x i32> @test_vssrl_vx_u32m8(<vscale x 16 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m8:
 ; CHECK:       # %bb.0: # %entry
@@ -503,8 +433,6 @@ entry:
   %0 = call <vscale x 16 x i32> @llvm.riscv.vssrl.nxv16i32.i64.i64(<vscale x 16 x i32> poison, <vscale x 16 x i32> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 16 x i32> %0
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.vssrl.nxv16i32.i64.i64(<vscale x 16 x i32>, <vscale x 16 x i32>, i64, i64 immarg, i64)
 
 define <vscale x 1 x i64> @test_vssrl_vv_u64m1(<vscale x 1 x i64> %op1, <vscale x 1 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m1:
@@ -518,8 +446,6 @@ entry:
   ret <vscale x 1 x i64> %0
 }
 
-declare <vscale x 1 x i64> @llvm.riscv.vssrl.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64 immarg, i64)
-
 define <vscale x 1 x i64> @test_vssrl_vx_u64m1(<vscale x 1 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m1:
 ; CHECK:       # %bb.0: # %entry
@@ -531,8 +457,6 @@ entry:
   %0 = call <vscale x 1 x i64> @llvm.riscv.vssrl.nxv1i64.i64.i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 1 x i64> %0
 }
-
-declare <vscale x 1 x i64> @llvm.riscv.vssrl.nxv1i64.i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64, i64 immarg, i64)
 
 define <vscale x 2 x i64> @test_vssrl_vv_u64m2(<vscale x 2 x i64> %op1, <vscale x 2 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m2:
@@ -546,8 +470,6 @@ entry:
   ret <vscale x 2 x i64> %0
 }
 
-declare <vscale x 2 x i64> @llvm.riscv.vssrl.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, i64 immarg, i64)
-
 define <vscale x 2 x i64> @test_vssrl_vx_u64m2(<vscale x 2 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m2:
 ; CHECK:       # %bb.0: # %entry
@@ -559,8 +481,6 @@ entry:
   %0 = call <vscale x 2 x i64> @llvm.riscv.vssrl.nxv2i64.i64.i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 2 x i64> %0
 }
-
-declare <vscale x 2 x i64> @llvm.riscv.vssrl.nxv2i64.i64.i64(<vscale x 2 x i64>, <vscale x 2 x i64>, i64, i64 immarg, i64)
 
 define <vscale x 4 x i64> @test_vssrl_vv_u64m4(<vscale x 4 x i64> %op1, <vscale x 4 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m4:
@@ -574,8 +494,6 @@ entry:
   ret <vscale x 4 x i64> %0
 }
 
-declare <vscale x 4 x i64> @llvm.riscv.vssrl.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64>, i64 immarg, i64)
-
 define <vscale x 4 x i64> @test_vssrl_vx_u64m4(<vscale x 4 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m4:
 ; CHECK:       # %bb.0: # %entry
@@ -587,8 +505,6 @@ entry:
   %0 = call <vscale x 4 x i64> @llvm.riscv.vssrl.nxv4i64.i64.i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 4 x i64> %0
 }
-
-declare <vscale x 4 x i64> @llvm.riscv.vssrl.nxv4i64.i64.i64(<vscale x 4 x i64>, <vscale x 4 x i64>, i64, i64 immarg, i64)
 
 define <vscale x 8 x i64> @test_vssrl_vv_u64m8(<vscale x 8 x i64> %op1, <vscale x 8 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m8:
@@ -602,8 +518,6 @@ entry:
   ret <vscale x 8 x i64> %0
 }
 
-declare <vscale x 8 x i64> @llvm.riscv.vssrl.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64>, i64 immarg, i64)
-
 define <vscale x 8 x i64> @test_vssrl_vx_u64m8(<vscale x 8 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m8:
 ; CHECK:       # %bb.0: # %entry
@@ -615,8 +529,6 @@ entry:
   %0 = call <vscale x 8 x i64> @llvm.riscv.vssrl.nxv8i64.i64.i64(<vscale x 8 x i64> poison, <vscale x 8 x i64> %op1, i64 %shift, i64 0, i64 %vl)
   ret <vscale x 8 x i64> %0
 }
-
-declare <vscale x 8 x i64> @llvm.riscv.vssrl.nxv8i64.i64.i64(<vscale x 8 x i64>, <vscale x 8 x i64>, i64, i64 immarg, i64)
 
 define <vscale x 1 x i8> @test_vssrl_vv_u8mf8_m(<vscale x 1 x i1> %mask, <vscale x 1 x i8> %op1, <vscale x 1 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8mf8_m:
@@ -630,8 +542,6 @@ entry:
   ret <vscale x 1 x i8> %0
 }
 
-declare <vscale x 1 x i8> @llvm.riscv.vssrl.mask.nxv1i8.nxv1i8.i64(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 1 x i8> @test_vssrl_vx_u8mf8_m(<vscale x 1 x i1> %mask, <vscale x 1 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8mf8_m:
 ; CHECK:       # %bb.0: # %entry
@@ -643,8 +553,6 @@ entry:
   %0 = call <vscale x 1 x i8> @llvm.riscv.vssrl.mask.nxv1i8.i64.i64(<vscale x 1 x i8> poison, <vscale x 1 x i8> %op1, i64 %shift, <vscale x 1 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 1 x i8> %0
 }
-
-declare <vscale x 1 x i8> @llvm.riscv.vssrl.mask.nxv1i8.i64.i64(<vscale x 1 x i8>, <vscale x 1 x i8>, i64, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 2 x i8> @test_vssrl_vv_u8mf4_m(<vscale x 2 x i1> %mask, <vscale x 2 x i8> %op1, <vscale x 2 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8mf4_m:
@@ -658,8 +566,6 @@ entry:
   ret <vscale x 2 x i8> %0
 }
 
-declare <vscale x 2 x i8> @llvm.riscv.vssrl.mask.nxv2i8.nxv2i8.i64(<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 2 x i8> @test_vssrl_vx_u8mf4_m(<vscale x 2 x i1> %mask, <vscale x 2 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8mf4_m:
 ; CHECK:       # %bb.0: # %entry
@@ -671,8 +577,6 @@ entry:
   %0 = call <vscale x 2 x i8> @llvm.riscv.vssrl.mask.nxv2i8.i64.i64(<vscale x 2 x i8> poison, <vscale x 2 x i8> %op1, i64 %shift, <vscale x 2 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 2 x i8> %0
 }
-
-declare <vscale x 2 x i8> @llvm.riscv.vssrl.mask.nxv2i8.i64.i64(<vscale x 2 x i8>, <vscale x 2 x i8>, i64, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 4 x i8> @test_vssrl_vv_u8mf2_m(<vscale x 4 x i1> %mask, <vscale x 4 x i8> %op1, <vscale x 4 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8mf2_m:
@@ -686,8 +590,6 @@ entry:
   ret <vscale x 4 x i8> %0
 }
 
-declare <vscale x 4 x i8> @llvm.riscv.vssrl.mask.nxv4i8.nxv4i8.i64(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 4 x i8> @test_vssrl_vx_u8mf2_m(<vscale x 4 x i1> %mask, <vscale x 4 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8mf2_m:
 ; CHECK:       # %bb.0: # %entry
@@ -699,8 +601,6 @@ entry:
   %0 = call <vscale x 4 x i8> @llvm.riscv.vssrl.mask.nxv4i8.i64.i64(<vscale x 4 x i8> poison, <vscale x 4 x i8> %op1, i64 %shift, <vscale x 4 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 4 x i8> %0
 }
-
-declare <vscale x 4 x i8> @llvm.riscv.vssrl.mask.nxv4i8.i64.i64(<vscale x 4 x i8>, <vscale x 4 x i8>, i64, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 8 x i8> @test_vssrl_vv_u8m1_m(<vscale x 8 x i1> %mask, <vscale x 8 x i8> %op1, <vscale x 8 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m1_m:
@@ -714,8 +614,6 @@ entry:
   ret <vscale x 8 x i8> %0
 }
 
-declare <vscale x 8 x i8> @llvm.riscv.vssrl.mask.nxv8i8.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 8 x i8> @test_vssrl_vx_u8m1_m(<vscale x 8 x i1> %mask, <vscale x 8 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m1_m:
 ; CHECK:       # %bb.0: # %entry
@@ -727,8 +625,6 @@ entry:
   %0 = call <vscale x 8 x i8> @llvm.riscv.vssrl.mask.nxv8i8.i64.i64(<vscale x 8 x i8> poison, <vscale x 8 x i8> %op1, i64 %shift, <vscale x 8 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 8 x i8> %0
 }
-
-declare <vscale x 8 x i8> @llvm.riscv.vssrl.mask.nxv8i8.i64.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, i64, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 16 x i8> @test_vssrl_vv_u8m2_m(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %op1, <vscale x 16 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m2_m:
@@ -742,8 +638,6 @@ entry:
   ret <vscale x 16 x i8> %0
 }
 
-declare <vscale x 16 x i8> @llvm.riscv.vssrl.mask.nxv16i8.nxv16i8.i64(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 16 x i8> @test_vssrl_vx_u8m2_m(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m2_m:
 ; CHECK:       # %bb.0: # %entry
@@ -755,8 +649,6 @@ entry:
   %0 = call <vscale x 16 x i8> @llvm.riscv.vssrl.mask.nxv16i8.i64.i64(<vscale x 16 x i8> poison, <vscale x 16 x i8> %op1, i64 %shift, <vscale x 16 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 16 x i8> %0
 }
-
-declare <vscale x 16 x i8> @llvm.riscv.vssrl.mask.nxv16i8.i64.i64(<vscale x 16 x i8>, <vscale x 16 x i8>, i64, <vscale x 16 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 32 x i8> @test_vssrl_vv_u8m4_m(<vscale x 32 x i1> %mask, <vscale x 32 x i8> %op1, <vscale x 32 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m4_m:
@@ -770,8 +662,6 @@ entry:
   ret <vscale x 32 x i8> %0
 }
 
-declare <vscale x 32 x i8> @llvm.riscv.vssrl.mask.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 32 x i8> @test_vssrl_vx_u8m4_m(<vscale x 32 x i1> %mask, <vscale x 32 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m4_m:
 ; CHECK:       # %bb.0: # %entry
@@ -783,8 +673,6 @@ entry:
   %0 = call <vscale x 32 x i8> @llvm.riscv.vssrl.mask.nxv32i8.i64.i64(<vscale x 32 x i8> poison, <vscale x 32 x i8> %op1, i64 %shift, <vscale x 32 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 32 x i8> %0
 }
-
-declare <vscale x 32 x i8> @llvm.riscv.vssrl.mask.nxv32i8.i64.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i64, <vscale x 32 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 64 x i8> @test_vssrl_vv_u8m8_m(<vscale x 64 x i1> %mask, <vscale x 64 x i8> %op1, <vscale x 64 x i8> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u8m8_m:
@@ -798,8 +686,6 @@ entry:
   ret <vscale x 64 x i8> %0
 }
 
-declare <vscale x 64 x i8> @llvm.riscv.vssrl.mask.nxv64i8.nxv64i8.i64(<vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 64 x i8> @test_vssrl_vx_u8m8_m(<vscale x 64 x i1> %mask, <vscale x 64 x i8> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u8m8_m:
 ; CHECK:       # %bb.0: # %entry
@@ -811,8 +697,6 @@ entry:
   %0 = call <vscale x 64 x i8> @llvm.riscv.vssrl.mask.nxv64i8.i64.i64(<vscale x 64 x i8> poison, <vscale x 64 x i8> %op1, i64 %shift, <vscale x 64 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 64 x i8> %0
 }
-
-declare <vscale x 64 x i8> @llvm.riscv.vssrl.mask.nxv64i8.i64.i64(<vscale x 64 x i8>, <vscale x 64 x i8>, i64, <vscale x 64 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 1 x i16> @test_vssrl_vv_u16mf4_m(<vscale x 1 x i1> %mask, <vscale x 1 x i16> %op1, <vscale x 1 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16mf4_m:
@@ -826,8 +710,6 @@ entry:
   ret <vscale x 1 x i16> %0
 }
 
-declare <vscale x 1 x i16> @llvm.riscv.vssrl.mask.nxv1i16.nxv1i16.i64(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 1 x i16> @test_vssrl_vx_u16mf4_m(<vscale x 1 x i1> %mask, <vscale x 1 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16mf4_m:
 ; CHECK:       # %bb.0: # %entry
@@ -839,8 +721,6 @@ entry:
   %0 = call <vscale x 1 x i16> @llvm.riscv.vssrl.mask.nxv1i16.i64.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> %op1, i64 %shift, <vscale x 1 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 1 x i16> %0
 }
-
-declare <vscale x 1 x i16> @llvm.riscv.vssrl.mask.nxv1i16.i64.i64(<vscale x 1 x i16>, <vscale x 1 x i16>, i64, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 2 x i16> @test_vssrl_vv_u16mf2_m(<vscale x 2 x i1> %mask, <vscale x 2 x i16> %op1, <vscale x 2 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16mf2_m:
@@ -854,8 +734,6 @@ entry:
   ret <vscale x 2 x i16> %0
 }
 
-declare <vscale x 2 x i16> @llvm.riscv.vssrl.mask.nxv2i16.nxv2i16.i64(<vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 2 x i16> @test_vssrl_vx_u16mf2_m(<vscale x 2 x i1> %mask, <vscale x 2 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16mf2_m:
 ; CHECK:       # %bb.0: # %entry
@@ -867,8 +745,6 @@ entry:
   %0 = call <vscale x 2 x i16> @llvm.riscv.vssrl.mask.nxv2i16.i64.i64(<vscale x 2 x i16> poison, <vscale x 2 x i16> %op1, i64 %shift, <vscale x 2 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 2 x i16> %0
 }
-
-declare <vscale x 2 x i16> @llvm.riscv.vssrl.mask.nxv2i16.i64.i64(<vscale x 2 x i16>, <vscale x 2 x i16>, i64, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 4 x i16> @test_vssrl_vv_u16m1_m(<vscale x 4 x i1> %mask, <vscale x 4 x i16> %op1, <vscale x 4 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m1_m:
@@ -882,8 +758,6 @@ entry:
   ret <vscale x 4 x i16> %0
 }
 
-declare <vscale x 4 x i16> @llvm.riscv.vssrl.mask.nxv4i16.nxv4i16.i64(<vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 4 x i16> @test_vssrl_vx_u16m1_m(<vscale x 4 x i1> %mask, <vscale x 4 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m1_m:
 ; CHECK:       # %bb.0: # %entry
@@ -895,8 +769,6 @@ entry:
   %0 = call <vscale x 4 x i16> @llvm.riscv.vssrl.mask.nxv4i16.i64.i64(<vscale x 4 x i16> poison, <vscale x 4 x i16> %op1, i64 %shift, <vscale x 4 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 4 x i16> %0
 }
-
-declare <vscale x 4 x i16> @llvm.riscv.vssrl.mask.nxv4i16.i64.i64(<vscale x 4 x i16>, <vscale x 4 x i16>, i64, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 8 x i16> @test_vssrl_vv_u16m2_m(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %op1, <vscale x 8 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m2_m:
@@ -910,8 +782,6 @@ entry:
   ret <vscale x 8 x i16> %0
 }
 
-declare <vscale x 8 x i16> @llvm.riscv.vssrl.mask.nxv8i16.nxv8i16.i64(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 8 x i16> @test_vssrl_vx_u16m2_m(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m2_m:
 ; CHECK:       # %bb.0: # %entry
@@ -923,8 +793,6 @@ entry:
   %0 = call <vscale x 8 x i16> @llvm.riscv.vssrl.mask.nxv8i16.i64.i64(<vscale x 8 x i16> poison, <vscale x 8 x i16> %op1, i64 %shift, <vscale x 8 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 8 x i16> %0
 }
-
-declare <vscale x 8 x i16> @llvm.riscv.vssrl.mask.nxv8i16.i64.i64(<vscale x 8 x i16>, <vscale x 8 x i16>, i64, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 16 x i16> @test_vssrl_vv_u16m4_m(<vscale x 16 x i1> %mask, <vscale x 16 x i16> %op1, <vscale x 16 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m4_m:
@@ -938,8 +806,6 @@ entry:
   ret <vscale x 16 x i16> %0
 }
 
-declare <vscale x 16 x i16> @llvm.riscv.vssrl.mask.nxv16i16.nxv16i16.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 16 x i16> @test_vssrl_vx_u16m4_m(<vscale x 16 x i1> %mask, <vscale x 16 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m4_m:
 ; CHECK:       # %bb.0: # %entry
@@ -951,8 +817,6 @@ entry:
   %0 = call <vscale x 16 x i16> @llvm.riscv.vssrl.mask.nxv16i16.i64.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> %op1, i64 %shift, <vscale x 16 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 16 x i16> %0
 }
-
-declare <vscale x 16 x i16> @llvm.riscv.vssrl.mask.nxv16i16.i64.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, i64, <vscale x 16 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 32 x i16> @test_vssrl_vv_u16m8_m(<vscale x 32 x i1> %mask, <vscale x 32 x i16> %op1, <vscale x 32 x i16> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u16m8_m:
@@ -966,8 +830,6 @@ entry:
   ret <vscale x 32 x i16> %0
 }
 
-declare <vscale x 32 x i16> @llvm.riscv.vssrl.mask.nxv32i16.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 32 x i16> @test_vssrl_vx_u16m8_m(<vscale x 32 x i1> %mask, <vscale x 32 x i16> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u16m8_m:
 ; CHECK:       # %bb.0: # %entry
@@ -979,8 +841,6 @@ entry:
   %0 = call <vscale x 32 x i16> @llvm.riscv.vssrl.mask.nxv32i16.i64.i64(<vscale x 32 x i16> poison, <vscale x 32 x i16> %op1, i64 %shift, <vscale x 32 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 32 x i16> %0
 }
-
-declare <vscale x 32 x i16> @llvm.riscv.vssrl.mask.nxv32i16.i64.i64(<vscale x 32 x i16>, <vscale x 32 x i16>, i64, <vscale x 32 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 1 x i32> @test_vssrl_vv_u32mf2_m(<vscale x 1 x i1> %mask, <vscale x 1 x i32> %op1, <vscale x 1 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32mf2_m:
@@ -994,8 +854,6 @@ entry:
   ret <vscale x 1 x i32> %0
 }
 
-declare <vscale x 1 x i32> @llvm.riscv.vssrl.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 1 x i32> @test_vssrl_vx_u32mf2_m(<vscale x 1 x i1> %mask, <vscale x 1 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32mf2_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1007,8 +865,6 @@ entry:
   %0 = call <vscale x 1 x i32> @llvm.riscv.vssrl.mask.nxv1i32.i64.i64(<vscale x 1 x i32> poison, <vscale x 1 x i32> %op1, i64 %shift, <vscale x 1 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 1 x i32> %0
 }
-
-declare <vscale x 1 x i32> @llvm.riscv.vssrl.mask.nxv1i32.i64.i64(<vscale x 1 x i32>, <vscale x 1 x i32>, i64, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 2 x i32> @test_vssrl_vv_u32m1_m(<vscale x 2 x i1> %mask, <vscale x 2 x i32> %op1, <vscale x 2 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m1_m:
@@ -1022,8 +878,6 @@ entry:
   ret <vscale x 2 x i32> %0
 }
 
-declare <vscale x 2 x i32> @llvm.riscv.vssrl.mask.nxv2i32.nxv2i32.i64(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 2 x i32> @test_vssrl_vx_u32m1_m(<vscale x 2 x i1> %mask, <vscale x 2 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m1_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1035,8 +889,6 @@ entry:
   %0 = call <vscale x 2 x i32> @llvm.riscv.vssrl.mask.nxv2i32.i64.i64(<vscale x 2 x i32> poison, <vscale x 2 x i32> %op1, i64 %shift, <vscale x 2 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 2 x i32> %0
 }
-
-declare <vscale x 2 x i32> @llvm.riscv.vssrl.mask.nxv2i32.i64.i64(<vscale x 2 x i32>, <vscale x 2 x i32>, i64, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 4 x i32> @test_vssrl_vv_u32m2_m(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %op1, <vscale x 4 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m2_m:
@@ -1050,8 +902,6 @@ entry:
   ret <vscale x 4 x i32> %0
 }
 
-declare <vscale x 4 x i32> @llvm.riscv.vssrl.mask.nxv4i32.nxv4i32.i64(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 4 x i32> @test_vssrl_vx_u32m2_m(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m2_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1063,8 +913,6 @@ entry:
   %0 = call <vscale x 4 x i32> @llvm.riscv.vssrl.mask.nxv4i32.i64.i64(<vscale x 4 x i32> poison, <vscale x 4 x i32> %op1, i64 %shift, <vscale x 4 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 4 x i32> %0
 }
-
-declare <vscale x 4 x i32> @llvm.riscv.vssrl.mask.nxv4i32.i64.i64(<vscale x 4 x i32>, <vscale x 4 x i32>, i64, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 8 x i32> @test_vssrl_vv_u32m4_m(<vscale x 8 x i1> %mask, <vscale x 8 x i32> %op1, <vscale x 8 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m4_m:
@@ -1078,8 +926,6 @@ entry:
   ret <vscale x 8 x i32> %0
 }
 
-declare <vscale x 8 x i32> @llvm.riscv.vssrl.mask.nxv8i32.nxv8i32.i64(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 8 x i32> @test_vssrl_vx_u32m4_m(<vscale x 8 x i1> %mask, <vscale x 8 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m4_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1091,8 +937,6 @@ entry:
   %0 = call <vscale x 8 x i32> @llvm.riscv.vssrl.mask.nxv8i32.i64.i64(<vscale x 8 x i32> poison, <vscale x 8 x i32> %op1, i64 %shift, <vscale x 8 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 8 x i32> %0
 }
-
-declare <vscale x 8 x i32> @llvm.riscv.vssrl.mask.nxv8i32.i64.i64(<vscale x 8 x i32>, <vscale x 8 x i32>, i64, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 16 x i32> @test_vssrl_vv_u32m8_m(<vscale x 16 x i1> %mask, <vscale x 16 x i32> %op1, <vscale x 16 x i32> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u32m8_m:
@@ -1106,8 +950,6 @@ entry:
   ret <vscale x 16 x i32> %0
 }
 
-declare <vscale x 16 x i32> @llvm.riscv.vssrl.mask.nxv16i32.nxv16i32.i64(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 16 x i32> @test_vssrl_vx_u32m8_m(<vscale x 16 x i1> %mask, <vscale x 16 x i32> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u32m8_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1119,8 +961,6 @@ entry:
   %0 = call <vscale x 16 x i32> @llvm.riscv.vssrl.mask.nxv16i32.i64.i64(<vscale x 16 x i32> poison, <vscale x 16 x i32> %op1, i64 %shift, <vscale x 16 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 16 x i32> %0
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.vssrl.mask.nxv16i32.i64.i64(<vscale x 16 x i32>, <vscale x 16 x i32>, i64, <vscale x 16 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 1 x i64> @test_vssrl_vv_u64m1_m(<vscale x 1 x i1> %mask, <vscale x 1 x i64> %op1, <vscale x 1 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m1_m:
@@ -1134,8 +974,6 @@ entry:
   ret <vscale x 1 x i64> %0
 }
 
-declare <vscale x 1 x i64> @llvm.riscv.vssrl.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 1 x i64> @test_vssrl_vx_u64m1_m(<vscale x 1 x i1> %mask, <vscale x 1 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m1_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1147,8 +985,6 @@ entry:
   %0 = call <vscale x 1 x i64> @llvm.riscv.vssrl.mask.nxv1i64.i64.i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> %op1, i64 %shift, <vscale x 1 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 1 x i64> %0
 }
-
-declare <vscale x 1 x i64> @llvm.riscv.vssrl.mask.nxv1i64.i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, i64, <vscale x 1 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 2 x i64> @test_vssrl_vv_u64m2_m(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %op1, <vscale x 2 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m2_m:
@@ -1162,8 +998,6 @@ entry:
   ret <vscale x 2 x i64> %0
 }
 
-declare <vscale x 2 x i64> @llvm.riscv.vssrl.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 2 x i64> @test_vssrl_vx_u64m2_m(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m2_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1175,8 +1009,6 @@ entry:
   %0 = call <vscale x 2 x i64> @llvm.riscv.vssrl.mask.nxv2i64.i64.i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> %op1, i64 %shift, <vscale x 2 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 2 x i64> %0
 }
-
-declare <vscale x 2 x i64> @llvm.riscv.vssrl.mask.nxv2i64.i64.i64(<vscale x 2 x i64>, <vscale x 2 x i64>, i64, <vscale x 2 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 4 x i64> @test_vssrl_vv_u64m4_m(<vscale x 4 x i1> %mask, <vscale x 4 x i64> %op1, <vscale x 4 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m4_m:
@@ -1190,8 +1022,6 @@ entry:
   ret <vscale x 4 x i64> %0
 }
 
-declare <vscale x 4 x i64> @llvm.riscv.vssrl.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 4 x i64> @test_vssrl_vx_u64m4_m(<vscale x 4 x i1> %mask, <vscale x 4 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m4_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1203,8 +1033,6 @@ entry:
   %0 = call <vscale x 4 x i64> @llvm.riscv.vssrl.mask.nxv4i64.i64.i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> %op1, i64 %shift, <vscale x 4 x i1> %mask, i64 0, i64 %vl, i64 3)
   ret <vscale x 4 x i64> %0
 }
-
-declare <vscale x 4 x i64> @llvm.riscv.vssrl.mask.nxv4i64.i64.i64(<vscale x 4 x i64>, <vscale x 4 x i64>, i64, <vscale x 4 x i1>, i64 immarg, i64, i64 immarg)
 
 define <vscale x 8 x i64> @test_vssrl_vv_u64m8_m(<vscale x 8 x i1> %mask, <vscale x 8 x i64> %op1, <vscale x 8 x i64> %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vv_u64m8_m:
@@ -1218,8 +1046,6 @@ entry:
   ret <vscale x 8 x i64> %0
 }
 
-declare <vscale x 8 x i64> @llvm.riscv.vssrl.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)
-
 define <vscale x 8 x i64> @test_vssrl_vx_u64m8_m(<vscale x 8 x i1> %mask, <vscale x 8 x i64> %op1, i64 %shift, i64 %vl) {
 ; CHECK-LABEL: test_vssrl_vx_u64m8_m:
 ; CHECK:       # %bb.0: # %entry
@@ -1232,4 +1058,3 @@ entry:
   ret <vscale x 8 x i64> %0
 }
 
-declare <vscale x 8 x i64> @llvm.riscv.vssrl.mask.nxv8i64.i64.i64(<vscale x 8 x i64>, <vscale x 8 x i64>, i64, <vscale x 8 x i1>, i64 immarg, i64, i64 immarg)

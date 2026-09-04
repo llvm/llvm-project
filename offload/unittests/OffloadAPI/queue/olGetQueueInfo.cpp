@@ -20,6 +20,20 @@ TEST_P(olGetQueueInfoTest, SuccessDevice) {
   ASSERT_EQ(Device, RetrievedDevice);
 }
 
+TEST_P(olGetQueueInfoTest, SuccessContext) {
+  ol_context_handle_t RetrievedContext;
+  ASSERT_SUCCESS(olGetQueueInfo(Queue, OL_QUEUE_INFO_CONTEXT,
+                                sizeof(ol_context_handle_t),
+                                &RetrievedContext));
+  ASSERT_EQ(Context, RetrievedContext);
+}
+
+TEST_P(olGetQueueInfoTest, SuccessEmpty) {
+  bool Empty;
+  ASSERT_SUCCESS(
+      olGetQueueInfo(Queue, OL_QUEUE_INFO_EMPTY, sizeof(Empty), &Empty));
+}
+
 TEST_P(olGetQueueInfoTest, InvalidNullHandle) {
   ol_device_handle_t RetrievedDevice;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,

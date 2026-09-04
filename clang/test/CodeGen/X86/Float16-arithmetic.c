@@ -230,7 +230,7 @@ _Float16 RealOp_c(_Float16 _Complex a) {
 // CHECK-NEXT:    store half [[A:%.*]], ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[TMP0]] to float
-// CHECK-NEXT:    ret half 0xH0000
+// CHECK-NEXT:    ret half 0.000000e+00
 //
 _Float16 ImagOp(_Float16 a) {
   return __imag a;

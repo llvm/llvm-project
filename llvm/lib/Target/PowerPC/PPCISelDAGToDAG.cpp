@@ -16,10 +16,10 @@
 #include "PPC.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -401,7 +401,7 @@ namespace {
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
         const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        const TargetRegisterClass *TRC = TRI->getPointerRegClass(*MF, /*Kind=*/1);
+        const TargetRegisterClass *TRC = TRI->getPointerRegClass(/*Kind=*/1);
         SDLoc dl(Op);
         SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i32);
         SDValue NewOp =
@@ -880,6 +880,12 @@ bool PPCDAGToDAGISel::tryBitfieldInsert(SDNode *N) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDLoc dl(N);
+
+  // If either operand is a constant, let ORI/ORIS/ADDI/ADDIS tablegen
+  // patterns handle it — they produce a single instruction without the
+  // tied-register constraint that RLWIMI requires.
+  if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))
+    return false;
 
   KnownBits LKnown = CurDAG->computeKnownBits(Op0);
   KnownBits RKnown = CurDAG->computeKnownBits(Op1);
@@ -3216,7 +3222,7 @@ SDValue IntegerCompareEliminator::addExtOrTrunc(SDValue NatWidthRes,
   SDLoc dl(NatWidthRes);
 
   // For reinterpreting 32-bit values as 64 bit values, we generate
-  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<1>
+  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<%subreg.sub_32>
   if (Conv == ExtOrTruncConversion::Ext) {
     SDValue ImDef(CurDAG->getMachineNode(PPC::IMPLICIT_DEF, dl, MVT::i64), 0);
     SDValue SubRegIdx =
@@ -4571,6 +4577,20 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
       return false;
 
     EVT VecVT = LHS.getValueType();
+    // Optimize 'Not equal to zero-vector' comparisons to 'Greater than or
+    // less than' operators.
+    // Example: Consider k to be any non-zero positive value.
+    // * for k != 0, change SETNE to SETUGT (k > 0)
+    // * for 0 != k, change SETNE to SETULT (0 < k)
+    if (CC == ISD::SETNE) {
+      // Only optimize for integer types (avoid FP completely)
+      if (VecVT.getVectorElementType().isInteger()) {
+        if (ISD::isBuildVectorAllZeros(RHS.getNode()))
+          CC = ISD::SETUGT;
+        else if (ISD::isBuildVectorAllZeros(LHS.getNode()))
+          CC = ISD::SETULT;
+      }
+    }
     bool Swap, Negate;
     unsigned int VCmpInst =
         getVCmpInst(VecVT.getSimpleVT(), CC, Subtarget->hasVSX(), Swap, Negate);
@@ -5162,7 +5182,7 @@ bool PPCDAGToDAGISel::tryAsSingleRLDICL(SDNode *N) {
 
       Val = SDValue(CurDAG->getMachineNode(PPC::INSERT_SUBREG, dl, ResultType,
                                            IDVal, Op0.getOperand(0),
-                                           getI32Imm(1, dl)),
+                                           getI32Imm(PPC::sub_32, dl)),
                     0);
       SH = 64 - Imm;
     }

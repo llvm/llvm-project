@@ -381,3 +381,22 @@ entry:
   %vzip.i = shufflevector <8 x i8> %lane, <8 x i8> %lane3, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   ret <8 x i8> %vzip.i
 }
+
+define <16 x i16> @test_15xi16(ptr %next.gep, ptr %next.gep13) {
+; CHECK-LABEL: test_15xi16:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    add r1, r1, #2
+; CHECK-NEXT:    mov r2, #4
+; CHECK-NEXT:    vld1.16 {d16, d17}, [r1], r2
+; CHECK-NEXT:    vld1.16 {d18, d19}, [r1]
+; CHECK-NEXT:    vzip.16 q8, q9
+; CHECK-NEXT:    vst1.16 {d16, d17}, [r0:128]!
+; CHECK-NEXT:    vst1.64 {d18, d19}, [r0:128]
+; CHECK-NEXT:    mov pc, lr
+  %a = getelementptr inbounds nuw i8, ptr %next.gep, i32 2
+  %b = load <15 x i16>, ptr %a, align 2
+  %c = getelementptr inbounds nuw i8, ptr %next.gep, i32 6
+  %d = load <15 x i16>, ptr %c, align 2
+  %interleaved.vec = shufflevector <15 x i16> %b, <15 x i16> %d, <16 x i32> <i32 0, i32 15, i32 1, i32 16, i32 2, i32 17, i32 3, i32 18, i32 4, i32 19, i32 5, i32 20, i32 6, i32 21, i32 7, i32 22>
+  ret <16 x i16> %interleaved.vec
+}

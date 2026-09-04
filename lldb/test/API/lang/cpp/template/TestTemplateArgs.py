@@ -11,7 +11,9 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class TemplateArgsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     def prepareProcess(self):
         self.build()
 

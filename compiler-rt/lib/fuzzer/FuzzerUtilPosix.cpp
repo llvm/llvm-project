@@ -132,6 +132,8 @@ void SetSignalHandler(const FuzzingOptions& Options) {
     SetSigaction(SIGILL, CrashHandler);
   if (Options.HandleFpe)
     SetSigaction(SIGFPE, CrashHandler);
+  if (Options.HandleTrap)
+    SetSigaction(SIGTRAP, CrashHandler);
   if (Options.HandleXfsz)
     SetSigaction(SIGXFSZ, FileSizeExceedHandler);
   if (Options.HandleUsr1)
@@ -187,6 +189,11 @@ size_t PageSize() {
   static size_t PageSizeCached = sysconf(_SC_PAGESIZE);
   return PageSizeCached;
 }
+
+#if !LIBFUZZER_APPLE
+// FuzzerUtilDarwin.cpp has its own implementation.
+void PlatformInit() {}
+#endif
 
 }  // namespace fuzzer
 

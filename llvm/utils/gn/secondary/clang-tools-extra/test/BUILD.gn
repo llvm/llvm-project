@@ -46,6 +46,9 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=0" ]
   }
 
+  # FIXME: Add option for this?
+  extra_values += [ "CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS=1" ]
+
   if (host_os == "mac") {
     extra_values += [ "LLVM_PLUGIN_EXT=.dylib" ]
   } else if (host_os == "win") {

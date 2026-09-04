@@ -7,7 +7,7 @@ We expect 5 MIBs, each with different AccessHistogramValues.
 
 CHECK: MemprofProfile:
 CHECK-NEXT:   Summary:
-CHECK-NEXT:     Version: 4
+CHECK-NEXT:     Version: 5
 CHECK-NEXT:     NumSegments: {{[0-9]+}}
 CHECK-NEXT:     NumMibInfo: 5
 CHECK-NEXT:     NumAllocFunctions: 3

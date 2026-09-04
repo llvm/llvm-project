@@ -332,6 +332,7 @@ public:
   MaybeAlign getAlignment() const;
   MaybeAlign getStackAlignment() const;
   uint64_t getDereferenceableBytes() const;
+  DeadOnReturnInfo getDeadOnReturnInfo() const;
   uint64_t getDereferenceableOrNullBytes() const;
   std::optional<std::pair<unsigned, std::optional<unsigned>>> getAllocSizeArgs()
       const;

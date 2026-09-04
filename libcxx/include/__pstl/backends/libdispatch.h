@@ -9,6 +9,10 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 #define _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/max.h>
@@ -17,6 +21,7 @@
 #include <__atomic/atomic.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__exception/terminate.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -26,13 +31,20 @@
 #include <__memory/unique_ptr.h>
 #include <__new/exceptions.h>
 #include <__numeric/reduce.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/cpu_algos/fill.h>
+#include <__pstl/cpu_algos/find_end.h>
 #include <__pstl/cpu_algos/find_if.h>
 #include <__pstl/cpu_algos/for_each.h>
 #include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/mismatch.h>
+#include <__pstl/cpu_algos/reverse.h>
+#include <__pstl/cpu_algos/search.h>
+#include <__pstl/cpu_algos/search_n.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
@@ -40,7 +52,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <optional>
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -48,6 +59,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
 namespace __libdispatch {
@@ -236,7 +248,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
       auto __index           = __chunk == 0 ? 0
                                             : (__chunk * __partitions.__chunk_size_) +
-                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
       if (__this_chunk_size != 1) {
         std::__construct_at(
             __values.get() + __chunk,
@@ -269,7 +281,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       return __empty{};
     }
 
-    using _Value = __iter_value_type<_RandomAccessIterator>;
+    using _Value = __iterator_value_type<_RandomAccessIterator>;
 
     auto __destroy = [__size](_Value* __ptr) {
       std::destroy_n(__ptr, __size);
@@ -282,7 +294,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
     // Initialize all elements to a moved-from state
     // TODO: Don't do this - this can be done in the first merge - see https://llvm.org/PR63928
     std::__construct_at(__values.get(), std::move(*__first));
-    for (__iter_diff_t<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
+    for (__iterator_difference_type<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
       std::__construct_at(__values.get() + __i, std::move(__values.get()[__i - 1]));
     }
     *__first = std::move(__values.get()[__size - 1]);
@@ -352,6 +364,10 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 
 // Mandatory implementations of the computational basis
 template <class _ExecutionPolicy>
+struct __find_end<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_find_end<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
 struct __find_if<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_find_if<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
@@ -362,6 +378,22 @@ struct __for_each<__libdispatch_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __merge<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_merge<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __mismatch<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_mismatch<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __reverse<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_reverse<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __search<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_search<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __search_n<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_search_n<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __stable_sort<__libdispatch_backend_tag, _ExecutionPolicy>
@@ -393,6 +425,7 @@ struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 } // namespace __pstl
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

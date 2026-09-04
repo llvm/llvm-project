@@ -336,13 +336,13 @@ define <4 x i32> @test_mul_v4i32_v4i16(<4 x i16> %A) {
 ; SSE4-32-LABEL: test_mul_v4i32_v4i16:
 ; SSE4-32:       # %bb.0:
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; SSE4-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [18778,18778,18778,18778]
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v4i32_v4i16:
 ; SSE4-64:       # %bb.0:
 ; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE4-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [18778,18778,18778,18778]
 ; SSE4-64-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: test_mul_v4i32_v4i16:
@@ -495,7 +495,7 @@ define <16 x i32> @test_mul_v16i32_v16i16(<16 x i16> %A) {
 ; AVX2-SLOW-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpunpckhwd {{.*#+}} ymm1 = ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[12],ymm2[12],ymm0[13],ymm2[13],ymm0[14],ymm2[14],ymm0[15],ymm2[15]
 ; AVX2-SLOW-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[8],ymm2[8],ymm0[9],ymm2[9],ymm0[10],ymm2[10],ymm0[11],ymm2[11]
-; AVX2-SLOW-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm2[0,1],ymm1[0,1]
+; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm0
 ; AVX2-SLOW-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm2[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    ret{{[l|q]}}
 ;
@@ -838,13 +838,13 @@ define <4 x i32> @test_mul_v4i32_v4i16_minsize(<4 x i16> %A) minsize {
 ; SSE-32-LABEL: test_mul_v4i32_v4i16_minsize:
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; SSE-32-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [18778,18778,18778,18778]
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: test_mul_v4i32_v4i16_minsize:
 ; SSE-64:       # %bb.0:
 ; SSE-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-64-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [18778,18778,18778,18778]
 ; SSE-64-NEXT:    retq
 ;
 ; AVX2-LABEL: test_mul_v4i32_v4i16_minsize:

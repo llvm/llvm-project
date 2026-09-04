@@ -5,11 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
-
-// XFAIL: LIBCXX-FREEBSD-FIXME
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
@@ -77,14 +75,6 @@ void assert_sign_symbol_none_value(std::money_base::pattern p)
     assert(p.field[1] == std::money_base::symbol);
     assert(p.field[2] == std::money_base::none);
     assert(p.field[3] == std::money_base::value);
-}
-
-void assert_value_none_symbol_sign(std::money_base::pattern p)
-{
-    assert(p.field[0] == std::money_base::value);
-    assert(p.field[1] == std::money_base::none);
-    assert(p.field[2] == std::money_base::symbol);
-    assert(p.field[3] == std::money_base::sign);
 }
 
 void assert_sign_value_none_symbol(std::money_base::pattern p)
@@ -192,7 +182,7 @@ int main(int, char**)
     {
         Fnf f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.pos_format();
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
         assert_sign_symbol_none_value(p);
 #else
         assert_symbol_sign_none_value(p);
@@ -211,7 +201,7 @@ int main(int, char**)
     {
         Fwf f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.pos_format();
-#if defined(__APPLE__) || defined(_AIX)
+#  if defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
         assert_sign_symbol_none_value(p);
 #else
         assert_symbol_sign_none_value(p);

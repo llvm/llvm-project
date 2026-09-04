@@ -247,6 +247,9 @@ public:
     return static_cast<ObjCDeclQualifier>(ObjCMethodDeclBits.objcDeclQualifier);
   }
 
+  void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
+                            bool Qualified) const override;
+
   void setObjCDeclQualifier(ObjCDeclQualifier QV) {
     ObjCMethodDeclBits.objcDeclQualifier = QV;
   }
@@ -643,6 +646,9 @@ public:
   /// from the explicitly-specified bound.
   SourceLocation getColonLoc() const { return ColonLoc; }
 
+  using TypeDecl::getTypeForDecl;
+  using TypeDecl::setTypeForDecl;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCTypeParam; }
@@ -789,6 +795,9 @@ public:
                                   PropertyControl propControl = None);
 
   static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+
+  void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
+                            bool Qualified) const override;
 
   SourceLocation getAtLoc() const { return AtLoc; }
   void setAtLoc(SourceLocation L) { AtLoc = L; }

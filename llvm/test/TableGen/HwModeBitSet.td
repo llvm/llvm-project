@@ -1,5 +1,5 @@
 // This is to test the scenario where different HwMode attributes coexist.
-// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-REG
+// RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o - 2>&1 >/dev/null | FileCheck %s --check-prefix=CHECK-REG
 // RUN: llvm-tblgen -gen-subtarget -I %p/../../include %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SUBTARGET
 
 
@@ -11,9 +11,17 @@ def TestTarget : Target {
   let InstructionSet = TestTargetInstrInfo;
 }
 
-def TestMode : HwMode<"+feat", []>;
-def TestMode1 : HwMode<"+feat1", []>;
-def TestMode2 : HwMode<"+feat2", []>;
+def Feat1 : SubtargetFeature<"feat1", "HasFeat1", "true", "enable feature 1">;
+def Feat2 : SubtargetFeature<"feat2", "HasFeat2", "true", "enable feature 2">;
+
+def HasFeat1 : Predicate<"Subtarget->hasFeat1()">,
+               AssemblerPredicate<(all_of Feat1)>;
+def HasFeat2 : Predicate<"Subtarget->hasFeat2()">,
+               AssemblerPredicate<(all_of Feat2)>;
+
+def TestMode : HwMode<[HasFeat1]>;
+def TestMode1 : HwMode<[HasFeat2]>;
+def TestMode2 : HwMode<[HasFeat1, HasFeat2]>;
 
 class MyReg<string n>
   : Register<n> {
@@ -69,22 +77,22 @@ def XPairsClass : MyClass<64, [untyped], (add XPairs)>;
 // Modes who are not controlling Register related features will be manipulated
 // the same as DefaultMode.
 // CHECK-REG-LABEL: RegisterClass XRegs:
-// CHECK-REG: SpillSize: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
-// CHECK-REG: SpillAlignment: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillSize: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillAlignment: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG: Regs: X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15
 
 // CHECK-REG-LABEL: RegisterClass XPairsClass:
-// CHECK-REG: SpillSize: { Default:64 TestMode:128 TestMode1:64 TestMode2:64 }
-// CHECK-REG: SpillAlignment: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillSize: { DefaultMode:64 TestMode:128 TestMode1:64 TestMode2:64 }
+// CHECK-REG: SpillAlignment: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG: CoveredBySubRegs: 1
 // CHECK-REG: Regs: X0_X1 X2_X3 X4_X5 X6_X7 X8_X9 X10_X11 X12_X13 X14_X15
 
 // CHECK-REG-LABEL: SubRegIndex sub_even:
-// CHECK-REG: Offset: { Default:0 TestMode:0 TestMode1:0 TestMode2:0 }
-// CHECK-REG: Size: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Offset: { DefaultMode:0 TestMode:0 TestMode1:0 TestMode2:0 }
+// CHECK-REG: Size: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG-LABEL: SubRegIndex sub_odd:
-// CHECK-REG: Offset: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
-// CHECK-REG: Size: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Offset: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Size: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 
 //============================================================================//
 //--------------------- Encoding/Decoding parts ------------------------------//
@@ -120,13 +128,26 @@ def foo : Instruction {
   let AsmString = "foo  $factor";
 }
 
+// CHECK-SUBTARGET-LABEL:  unsigned TestTargetGenMCSubtargetInfo::getHwModeSet() const {
+// CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const FeatureBitset &FB = getFeatureBits();
+// CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
+// CHECK-SUBTARGET-NEXT:    unsigned Modes = 0;
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1]) Modes |= (1 << 0);
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat2]) Modes |= (1 << 1);
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1] && FB[TestTarget::Feat2]) Modes |= (1 << 2);
+// CHECK-SUBTARGET-NEXT:    return Modes;
+// CHECK-SUBTARGET-NEXT:  }
+
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwModeSet() const {
-// CHECK-SUBTARGET:         unsigned Modes = 0;
-// CHECK-SUBTARGET:         if (checkFeatures("+feat")) Modes |= (1 << 0);
-// CHECK-SUBTARGET:         if (checkFeatures("+feat1")) Modes |= (1 << 1);
-// CHECK-SUBTARGET:         if (checkFeatures("+feat2")) Modes |= (1 << 2);
-// CHECK-SUBTARGET:         return Modes;
-// CHECK-SUBTARGET:       }
+// CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const auto *Subtarget =
+// CHECK-SUBTARGET-NEXT:        static_cast<const TestTargetSubtarget *>(this);
+// CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
+// CHECK-SUBTARGET-NEXT:    unsigned Modes = 0;
+// CHECK-SUBTARGET-NEXT:    if ((Subtarget->hasFeat1())) Modes |= (1 << 0);
+// CHECK-SUBTARGET-NEXT:    if ((Subtarget->hasFeat2())) Modes |= (1 << 1);
+// CHECK-SUBTARGET-NEXT:    if ((Subtarget->hasFeat1()) && (Subtarget->hasFeat2())) Modes |= (1 << 2);
+// CHECK-SUBTARGET-NEXT:    return Modes;
+// CHECK-SUBTARGET-NEXT:  }
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwMode(enum HwModeType type) const {
 // CHECK-SUBTARGET:         unsigned Modes = getHwModeSet();
 // CHECK-SUBTARGET:         if (!Modes)
@@ -159,4 +180,3 @@ def foo : Instruction {
 // CHECK-SUBTARGET:         llvm_unreachable("unexpected HwModeType");
 // CHECK-SUBTARGET:         return 0; // should not get here
 // CHECK-SUBTARGET:       }
-

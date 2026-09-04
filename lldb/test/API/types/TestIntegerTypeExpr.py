@@ -8,7 +8,7 @@ from lldbsuite.test.decorators import *
 
 
 class IntegerTypeExprTestCase(AbstractBase.GenericTester):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_unsigned_short_type_from_block(self):
         """Test that 'unsigned short'-type variables are displayed correctly from a block."""
         self.build_and_run_expr("unsigned_short.cpp", ["unsigned", "short"], bc=True)
@@ -17,7 +17,7 @@ class IntegerTypeExprTestCase(AbstractBase.GenericTester):
         """Test that int-type variable expressions are evaluated correctly."""
         self.build_and_run_expr("int.cpp", ["int"])
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_int_type_from_block(self):
         """Test that int-type variables are displayed correctly from a block."""
         self.build_and_run_expr("int.cpp", ["int"])
@@ -26,7 +26,7 @@ class IntegerTypeExprTestCase(AbstractBase.GenericTester):
         """Test that 'unsigned_int'-type variable expressions are evaluated correctly."""
         self.build_and_run_expr("unsigned_int.cpp", ["unsigned", "int"])
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_unsigned_int_type_from_block(self):
         """Test that 'unsigned int'-type variables are displayed correctly from a block."""
         self.build_and_run_expr("unsigned_int.cpp", ["unsigned", "int"], bc=True)

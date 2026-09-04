@@ -12,7 +12,6 @@
 
 #include "MachOLinkGraphBuilder.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Sequence.h"
 #include <optional>
 
 #define DEBUG_TYPE "jitlink"
@@ -203,9 +202,8 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
   llvm::sort(Sections,
              [](const NormalizedSection *LHS, const NormalizedSection *RHS) {
                assert(LHS && RHS && "Null section?");
-               if (LHS->Address != RHS->Address)
-                 return LHS->Address < RHS->Address;
-               return LHS->Size < RHS->Size;
+               return std::tie(LHS->Address, LHS->Size) <
+                      std::tie(RHS->Address, RHS->Size);
              });
 
   for (unsigned I = 0, E = Sections.size() - 1; I != E; ++I) {

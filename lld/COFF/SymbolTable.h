@@ -31,6 +31,7 @@ class DefinedAbsolute;
 class DefinedRegular;
 class ImportThunkChunk;
 class LazyArchive;
+class SameAddressThunkARM64EC;
 class SectionChunk;
 class Symbol;
 
@@ -67,7 +68,10 @@ public:
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
   // symbols and warn about imported local symbols.
-  void resolveRemainingUndefines();
+  void resolveRemainingUndefines(std::vector<Undefined *> &aliases);
+
+  // Try to resolve undefined symbols with alternate names.
+  void resolveAlternateNames();
 
   // Load lazy objects that are needed for MinGW automatic import and for
   // doing stdcall fixups.
@@ -105,6 +109,8 @@ public:
   // added and before the writer writes results to a file.
   void compileBitcodeFiles();
 
+  void waitForLTOCleanup();
+
   // Creates an Undefined symbol and marks it as live.
   Symbol *addGCRoot(StringRef sym, bool aliasEC = false);
 
@@ -137,6 +143,7 @@ public:
   void addEntryThunk(Symbol *from, Symbol *to);
   void addExitThunk(Symbol *from, Symbol *to);
   void initializeECThunks();
+  void initializeSameAddressThunks();
 
   void reportDuplicate(Symbol *existing, InputFile *newFile,
                        SectionChunk *newSc = nullptr,
@@ -155,6 +162,8 @@ public:
 
   // A list of EC EXP+ symbols.
   std::vector<Symbol *> expSymbols;
+
+  std::vector<SameAddressThunkARM64EC *> sameAddressThunks;
 
   // A list of DLL exports.
   std::vector<Export> exports;

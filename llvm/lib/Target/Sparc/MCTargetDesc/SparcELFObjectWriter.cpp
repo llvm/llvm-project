@@ -42,7 +42,9 @@ namespace {
 unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
                                             bool IsPCRel) const {
-  switch (Target.getSpecifier()) {
+  auto Kind = Fixup.getKind();
+  auto Spec = Target.getSpecifier();
+  switch (Spec) {
   case ELF::R_SPARC_TLS_GD_HI22:
   case ELF::R_SPARC_TLS_GD_LO10:
   case ELF::R_SPARC_TLS_GD_ADD:
@@ -59,23 +61,23 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ELF::R_SPARC_TLS_IE_ADD:
   case ELF::R_SPARC_TLS_LE_HIX22:
   case ELF::R_SPARC_TLS_LE_LOX10:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
+  case ELF::R_SPARC_DISP32:
+    if (Kind == FK_Data_4)
+      return ELF::R_SPARC_DISP32;
+    reportError(Fixup.getLoc(), "%" + Sparc::getSpecifierName(Spec) +
+                                    " can only be used in a .word directive");
+    return ELF::R_SPARC_NONE;
   default:
     break;
   }
 
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
-  auto Kind = Fixup.getKind();
   if (mc::isRelocation(Fixup.getKind()))
     return Kind;
-
-  if (const auto *SExpr = dyn_cast<MCSpecifierExpr>(Fixup.getValue())) {
-    if (SExpr->getSpecifier() == ELF::R_SPARC_DISP32)
-      return ELF::R_SPARC_DISP32;
-  }
 
   if (IsPCRel) {
     switch (Kind) {

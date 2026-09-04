@@ -205,6 +205,15 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
+
   /// Does this instruction set its full destination register to zero?
   static bool isGPRZero(const MachineInstr &MI);
 
@@ -245,6 +254,12 @@ public:
 
   /// Returns whether the instruction is a pre-indexed load/store.
   static bool isPreLdSt(const MachineInstr &MI);
+
+  /// Returns whether the instruction is a zero-extending load.
+  static bool isZExtLoad(const MachineInstr &MI);
+
+  /// Returns whether the instruction is a sign-extending load.
+  static bool isSExtLoad(const MachineInstr &MI);
 
   /// Returns whether the instruction is a paired load/store.
   static bool isPairedLdSt(const MachineInstr &MI);
@@ -340,12 +355,16 @@ public:
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, MCRegister DestReg,
-                        MCRegister SrcReg, bool KillSrc, unsigned Opcode,
+                        MCRegister SrcReg, bool KillSrc,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                        const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                        bool KillSrc, unsigned Opcode, unsigned ZeroReg,
                        llvm::ArrayRef<unsigned> Indices) const;
+  void copyPhysRegImpl(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                       const DebugLoc &DL, Register DestReg, Register SrcReg,
+                       bool KillSrc, bool RenamableDest = false,
+                       bool RenamableSrc = false) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
@@ -353,14 +372,13 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // This tells target independent code that it is okay to pass instructions
@@ -368,12 +386,11 @@ public:
   bool isSubregFoldable() const override { return true; }
 
   using TargetInstrInfo::foldMemoryOperandImpl;
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// \returns true if a branch from an instruction with opcode \p BranchOpc
   ///  bytes is capable of jumping to a position \p BrOffset bytes away.
@@ -400,6 +417,14 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  /// Inserts the compare instruction needed to un-fuse a fused conditional
+  /// branch instruction and returns the condition code of the original fused
+  /// branch.
+  AArch64CC::CondCode insertCmpForCondBr(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MI,
+                                         const DebugLoc &DL,
+                                         ArrayRef<MachineOperand> Cond) const;
 
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
@@ -563,6 +588,18 @@ public:
                                                Register TargetReg,
                                                bool FrameSetup) const;
 
+  static int
+  findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr);
+
+  /// Insert a `PAUTH_EPILOGUE` pseudo before the first terminator in \p MBB to
+  /// authenticate the return address. Adds an implicit def of X16 when the
+  /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
+  /// instructions. If the epilogue has callee-popped argument stack to restore,
+  /// it additionally implicit defines X15 and X17 to cover clobbered registers
+  /// for the required sequence on subtargets both with and without PAuthLR
+  /// instructions.
+  void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
@@ -576,8 +613,6 @@ protected:
   isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
@@ -646,8 +681,10 @@ bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
 MCCFIInstruction createDefCFA(const TargetRegisterInfo &TRI, unsigned FrameReg,
                               unsigned Reg, const StackOffset &Offset,
                               bool LastAdjustmentWasScalable = true);
-MCCFIInstruction createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
-                                 const StackOffset &OffsetFromDefCFA);
+MCCFIInstruction
+createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
+                const StackOffset &OffsetFromDefCFA,
+                std::optional<int64_t> IncomingVGOffsetFromDefCFA);
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
 /// plus Offset.  This is intended to be used from within the prolog/epilog
@@ -695,6 +732,8 @@ int isAArch64FrameOffsetLegal(const MachineInstr &MI, StackOffset &Offset,
                               unsigned *OutUnscaledOp = nullptr,
                               int64_t *EmittableOffset = nullptr);
 
+bool optimizeTerminators(MachineBasicBlock *MBB, const TargetInstrInfo &TII);
+
 static inline bool isUncondBranchOpcode(int Opc) { return Opc == AArch64::B; }
 
 static inline bool isCondBranchOpcode(int Opc) {
@@ -710,6 +749,8 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBNZX:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return true;
@@ -794,6 +835,27 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
+/// Return B(L)RA opcode to be used for an authenticated branch or call using
+/// the given key, or its B(L)RA*Z variant that doesn't take a discriminator
+/// operand, using zero instead.
+static inline unsigned getBranchOpcodeForKey(bool IsCall, AArch64PACKey::ID K,
+                                             bool Zero) {
+  using namespace AArch64PACKey;
+  static const unsigned BranchOpcode[2][2] = {
+      {AArch64::BRAA, AArch64::BRAAZ},
+      {AArch64::BRAB, AArch64::BRABZ},
+  };
+  static const unsigned CallOpcode[2][2] = {
+      {AArch64::BLRAA, AArch64::BLRAAZ},
+      {AArch64::BLRAB, AArch64::BLRABZ},
+  };
+
+  assert((K == IA || K == IB) && "B(L)RA* instructions require IA or IB key");
+  if (IsCall)
+    return CallOpcode[K == IB][Zero];
+  return BranchOpcode[K == IB][Zero];
+}
+
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)        // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3)  // 4-bits
@@ -804,6 +866,7 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
 
 namespace AArch64 {
 
+// clang-format off
 enum ElementSizeType {
   ElementSizeMask = TSFLAG_ELEMENT_SIZE_TYPE(0x7),
   ElementSizeNone = TSFLAG_ELEMENT_SIZE_TYPE(0x0),
@@ -824,7 +887,10 @@ enum DestructiveInstType {
   DestructiveBinaryComm         = TSFLAG_DESTRUCTIVE_INST_TYPE(0x6),
   DestructiveBinaryCommWithRev  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x7),
   DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
-  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
+  Destructive2xRegImmUnpred     = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
+  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0xa),
+  DestructivePredicate          = TSFLAG_DESTRUCTIVE_INST_TYPE(0xb),
+  DestructiveBinaryImmUnpred    = TSFLAG_DESTRUCTIVE_INST_TYPE(0xc),
 };
 
 enum FalseLaneType {
@@ -832,6 +898,8 @@ enum FalseLaneType {
   FalseLanesZero  = TSFLAG_FALSE_LANE_TYPE(0x1),
   FalseLanesUndef = TSFLAG_FALSE_LANE_TYPE(0x2),
 };
+
+// clang-format on
 
 // NOTE: This is a bit field.
 static const uint64_t InstrFlagIsWhile     = TSFLAG_INSTR_FLAGS(0x1);
@@ -854,11 +922,11 @@ enum SMEMatrixType {
 #undef TSFLAG_INSTR_FLAGS
 #undef TSFLAG_SME_MATRIX_TYPE
 
-int getSVEPseudoMap(uint16_t Opcode);
-int getSVERevInstr(uint16_t Opcode);
-int getSVENonRevInstr(uint16_t Opcode);
+int32_t getSVEPseudoMap(uint32_t Opcode);
+int32_t getSVERevInstr(uint32_t Opcode);
+int32_t getSVENonRevInstr(uint32_t Opcode);
 
-int getSMEPseudoMap(uint16_t Opcode);
+int32_t getSMEPseudoMap(uint32_t Opcode);
 }
 
 } // end namespace llvm

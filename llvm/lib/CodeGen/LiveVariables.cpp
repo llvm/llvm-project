@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -190,7 +191,7 @@ void LiveVariables::HandleVirtRegUse(Register Reg, MachineBasicBlock *MBB,
   // where there is a use in a PHI node that's a predecessor to the defining
   // block. We don't want to mark all predecessors as having the value "alive"
   // in this case.
-  if (MBB == MRI->getVRegDef(Reg)->getParent())
+  if (MBB == MRI->getDefBlock(Reg))
     return;
 
   // Add a new kill entry for this basic block. If this virtual register is
@@ -201,7 +202,7 @@ void LiveVariables::HandleVirtRegUse(Register Reg, MachineBasicBlock *MBB,
 
   // Update all dominating blocks to mark them as "known live".
   for (MachineBasicBlock *Pred : MBB->predecessors())
-    MarkVirtRegAliveInBlock(VRInfo, MRI->getVRegDef(Reg)->getParent(), Pred);
+    MarkVirtRegAliveInBlock(VRInfo, MRI->getDefBlock(Reg), Pred);
 }
 
 void LiveVariables::HandleVirtRegDef(Register Reg, MachineInstr &MI) {
@@ -213,11 +214,7 @@ void LiveVariables::HandleVirtRegDef(Register Reg, MachineInstr &MI) {
 }
 
 /// FindLastPartialDef - Return the last partial def of the specified register.
-/// Also returns the sub-registers that're defined by the instruction.
-MachineInstr *
-LiveVariables::FindLastPartialDef(Register Reg,
-                                  SmallSet<Register, 4> &PartDefRegs) {
-  Register LastDefReg = 0;
+MachineInstr *LiveVariables::FindLastPartialDef(Register Reg) {
   unsigned LastDefDist = 0;
   MachineInstr *LastDef = nullptr;
   for (MCPhysReg SubReg : TRI->subregs(Reg)) {
@@ -226,7 +223,6 @@ LiveVariables::FindLastPartialDef(Register Reg,
       continue;
     unsigned Dist = DistanceMap[Def];
     if (Dist > LastDefDist) {
-      LastDefReg  = SubReg;
       LastDef     = Def;
       LastDefDist = Dist;
     }
@@ -235,14 +231,6 @@ LiveVariables::FindLastPartialDef(Register Reg,
   if (!LastDef)
     return nullptr;
 
-  PartDefRegs.insert(LastDefReg);
-  for (MachineOperand &MO : LastDef->all_defs()) {
-    if (MO.getReg() == 0)
-      continue;
-    Register DefReg = MO.getReg();
-    if (TRI->isSubRegister(Reg, DefReg))
-      PartDefRegs.insert_range(TRI->subregs_inclusive(DefReg));
-  }
   return LastDef;
 }
 
@@ -261,27 +249,11 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
     // ...
     //    = EAX
     // All of the sub-registers must have been defined before the use of Reg!
-    SmallSet<Register, 4> PartDefRegs;
-    MachineInstr *LastPartialDef = FindLastPartialDef(Reg, PartDefRegs);
+    MachineInstr *LastPartialDef = FindLastPartialDef(Reg);
     // If LastPartialDef is NULL, it must be using a livein register.
     if (LastPartialDef) {
-      LastPartialDef->addOperand(MachineOperand::CreateReg(Reg, true/*IsDef*/,
-                                                           true/*IsImp*/));
-      PhysRegDef[Reg.id()] = LastPartialDef;
-      SmallSet<MCPhysReg, 8> Processed;
-      for (MCPhysReg SubReg : TRI->subregs(Reg)) {
-        if (Processed.count(SubReg))
-          continue;
-        if (PartDefRegs.count(SubReg))
-          continue;
-        // This part of Reg was defined before the last partial def. It's killed
-        // here.
-        LastPartialDef->addOperand(MachineOperand::CreateReg(SubReg,
-                                                             false/*IsDef*/,
-                                                             true/*IsImp*/));
-        PhysRegDef[SubReg] = LastPartialDef;
-        Processed.insert_range(TRI->subregs(SubReg));
-      }
+      LastPartialDef->addOperand(
+          MachineOperand::CreateReg(Reg, /*IsDef=*/true, /*IsImp=*/true));
     }
   } else if (LastDef && !PhysRegUse[Reg.id()] &&
              !LastDef->findRegisterDefOperand(Reg, /*TRI=*/nullptr))
@@ -594,13 +566,12 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
 
     for (Register I : VarInfoVec)
       // Mark it alive only in the block we are representing.
-      MarkVirtRegAliveInBlock(getVarInfo(I), MRI->getVRegDef(I)->getParent(),
-                              MBB);
+      MarkVirtRegAliveInBlock(getVarInfo(I), MRI->getDefBlock(I), MBB);
   }
 
   // MachineCSE may CSE instructions which write to non-allocatable physical
   // registers across MBBs. Remember if any reserved register is liveout.
-  SmallSet<unsigned, 4> LiveOuts;
+  SmallSet<MCRegister, 4> LiveOuts;
   for (const MachineBasicBlock *SuccMBB : MBB->successors()) {
     if (SuccMBB->isEHPad())
       continue;

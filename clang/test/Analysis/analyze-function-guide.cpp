@@ -46,14 +46,17 @@ int fizzbuzz(int x, bool y) {
 // CHECK-ADVOCATE-DISPLAY-PROGRESS-NEXT: Pass the -analyzer-display-progress for tracking which functions are analyzed.
 // CHECK-ADVOCATE-DISPLAY-PROGRESS-NOT:  For analyzing
 
-// Same as the previous but syntax mode only.
-// FIXME: This should have empty standard output.
+// The user only enables syntax-only analysis, like `debug.DumpDominators`.
+// `-analyze-function` should only match the given function.
 //
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config ipa=none \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.DumpDominators -analyzer-config ipa=none \
 // RUN:   -analyze-function='fizzbuzz(int, _Bool)' -x c++ \
 // RUN:   -triple x86_64-pc-linux-gnu 2>&1 %s \
-// RUN: | FileCheck %s -check-prefix=CHECK-EMPTY3 --allow-empty
+// RUN: | FileCheck %s -check-prefix=CHECK-SYNTAX-ONLY --allow-empty
 //
-// FIXME: This should have empty standard output.
-// CHECK-EMPTY3:      Every top-level function was skipped.
-// CHECK-EMPTY3-NEXT: Pass the -analyzer-display-progress for tracking which functions are analyzed.
+// With syntax-only analysis, the function is found and analyzed, so no error message.
+// CHECK-SYNTAX-ONLY:      Immediate dominance tree (Node#,IDom#):
+// CHECK-SYNTAX-ONLY-NEXT: (0,1)
+// CHECK-SYNTAX-ONLY-NEXT: (1,2)
+// CHECK-SYNTAX-ONLY-NEXT: (2,2)
+// CHECK-SYNTAX-ONLY-NOT: Every top-level function was skipped.

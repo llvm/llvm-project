@@ -36,7 +36,7 @@ program acc_atomic_capture_test
 !CHECK: }
 
     !$acc atomic capture
-        y = x * y 
+        y = x * y
         x = y
     !$acc end atomic
 
@@ -53,8 +53,8 @@ program acc_atomic_capture_test
 
     !$acc atomic capture
         x = y
-        y = 2 * 10 + (8 - x) 
-    !$acc end atomic 
+        y = 2 * 10 + (8 - x)
+    !$acc end atomic
 end program
 
 
@@ -124,16 +124,19 @@ end subroutine
 
 subroutine capture_with_convert_i32_to_f64()
   real(8) :: x
-  integer :: v
+  integer :: v, u
   x = 1.0
   v = 0
+  u = 1
   !$acc atomic capture
   v = x
-  x = v
+  x = u
   !$acc end atomic
 end subroutine capture_with_convert_i32_to_f64
 
 ! CHECK-LABEL: func.func @_QPcapture_with_convert_i32_to_f64()
+! CHECK: %[[U:.*]] = fir.alloca i32 {bindc_name = "u", uniq_name = "_QFcapture_with_convert_i32_to_f64Eu"}
+! CHECK: %[[U_DECL:.*]]:2 = hlfir.declare %[[U]] {uniq_name = "_QFcapture_with_convert_i32_to_f64Eu"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[V:.*]] = fir.alloca i32 {bindc_name = "v", uniq_name = "_QFcapture_with_convert_i32_to_f64Ev"}
 ! CHECK: %[[V_DECL:.*]]:2 = hlfir.declare %[[V]] {uniq_name = "_QFcapture_with_convert_i32_to_f64Ev"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[X:.*]] = fir.alloca f64 {bindc_name = "x", uniq_name = "_QFcapture_with_convert_i32_to_f64Ex"}
@@ -142,7 +145,9 @@ end subroutine capture_with_convert_i32_to_f64
 ! CHECK: hlfir.assign %[[CST]] to %[[X_DECL]]#0 : f64, !fir.ref<f64>
 ! CHECK: %c0_i32 = arith.constant 0 : i32
 ! CHECK: hlfir.assign %c0_i32 to %[[V_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK: %[[LOAD:.*]] = fir.load %[[V_DECL]]#0 : !fir.ref<i32>
+! CHECK: %c1_i32 = arith.constant 1 : i32
+! CHECK: hlfir.assign %c1_i32 to %[[U_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK: %[[LOAD:.*]] = fir.load %[[U_DECL]]#0 : !fir.ref<i32>
 ! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (i32) -> f64
 ! CHECK: acc.atomic.capture {
 ! CHECK:   acc.atomic.read %[[V_DECL]]#0 = %[[X_DECL]]#0 : !fir.ref<i32>, !fir.ref<f64>, f64
@@ -155,7 +160,7 @@ subroutine capture_with_convert_f64_to_i32()
   x = 1
   v = 0
   !$acc atomic capture
-  x = v * v
+  x = x * 2.0_8
   v = x
   !$acc end atomic
 end subroutine capture_with_convert_f64_to_i32
@@ -167,15 +172,14 @@ end subroutine capture_with_convert_f64_to_i32
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFcapture_with_convert_f64_to_i32Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %c1_i32 = arith.constant 1 : i32
 ! CHECK: hlfir.assign %c1_i32 to %[[X_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f64
-! CHECK: hlfir.assign %[[CST]] to %[[V_DECL]]#0 : f64, !fir.ref<f64>
-! CHECK: %[[LOAD:.*]] = fir.load %[[V_DECL]]#0 : !fir.ref<f64>
+! CHECK: %[[CST:.*]] = arith.constant 2.000000e+00 : f64
 ! CHECK: acc.atomic.capture {
 ! CHECK:   acc.atomic.update %[[X_DECL]]#0 : !fir.ref<i32> {
-! CHECK:   ^bb0(%arg0: i32):
-! CHECK:     %[[MUL:.*]] = arith.mulf %[[LOAD]], %[[LOAD]] fastmath<contract> : f64
-! CHECK:     %[[CONV:.*]] = fir.convert %[[MUL]] : (f64) -> i32
-! CHECK:     acc.yield %[[CONV]] : i32
+! CHECK:   ^bb0(%[[ARG:.*]]: i32):
+! CHECK:     %[[CONV_ARG:.*]] = fir.convert %[[ARG]] : (i32) -> f64
+! CHECK:     %[[MUL:.*]] = arith.mulf %[[CONV_ARG]], %[[CST]] fastmath<contract> : f64
+! CHECK:     %[[CONV_MUL:.*]] = fir.convert %[[MUL]] : (f64) -> i32
+! CHECK:     acc.yield %[[CONV_MUL]] : i32
 ! CHECK:   }
 ! CHECK:   acc.atomic.read %[[V_DECL]]#0 = %[[X_DECL]]#0 : !fir.ref<f64>, !fir.ref<i32>, i32
 ! CHECK: }

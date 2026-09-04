@@ -17,7 +17,7 @@ define bfloat @normal_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[VMOVSR:%[0-9]+]]:spr = VMOVSR killed [[MOVsi]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi1:%[0-9]+]]:gpr = MOVsi [[COPY1]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR1:%[0-9]+]]:spr = VMOVSR killed [[MOVsi1]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = nofpexcept VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS:%[0-9]+]]:gpr = VMOVRS killed [[VADDS]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS]]
@@ -44,7 +44,7 @@ define bfloat @fast_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[VMOVSR:%[0-9]+]]:spr = VMOVSR killed [[MOVsi]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi1:%[0-9]+]]:gpr = MOVsi [[COPY1]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR1:%[0-9]+]]:spr = VMOVSR killed [[MOVsi1]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc nofpexcept VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS:%[0-9]+]]:gpr = VMOVRS killed [[VADDS]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS]]
@@ -71,7 +71,7 @@ define bfloat @ninf_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[VMOVSR:%[0-9]+]]:spr = VMOVSR killed [[MOVsi]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi1:%[0-9]+]]:gpr = MOVsi [[COPY1]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR1:%[0-9]+]]:spr = VMOVSR killed [[MOVsi1]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf nofpexcept VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS:%[0-9]+]]:gpr = VMOVRS killed [[VADDS]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS]]
@@ -102,7 +102,7 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[VMOVSR:%[0-9]+]]:spr = VMOVSR killed [[MOVsi]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi1:%[0-9]+]]:gpr = MOVsi [[COPY2]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR1:%[0-9]+]]:spr = VMOVSR killed [[MOVsi1]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = nofpexcept VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS:%[0-9]+]]:gpr = VMOVRS killed [[VADDS]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS]]
@@ -113,7 +113,7 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[VMOVSR2:%[0-9]+]]:spr = VMOVSR killed [[MOVsi2]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi3:%[0-9]+]]:gpr = MOVsi [[COPY3]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR3:%[0-9]+]]:spr = VMOVSR killed [[MOVsi3]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS1:%[0-9]+]]:spr = VADDS killed [[VMOVSR3]], killed [[VMOVSR2]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS1:%[0-9]+]]:spr = nofpexcept VADDS killed [[VMOVSR3]], killed [[VMOVSR2]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS1:%[0-9]+]]:gpr = VMOVRS killed [[VADDS1]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS1]]
@@ -142,10 +142,10 @@ define bfloat @nnan_ninf_contract_fadd_sequence(bfloat %x, bfloat %y, bfloat %z)
   ; CHECK-NOBF16-NEXT:   [[VMOVSR:%[0-9]+]]:spr = VMOVSR killed [[MOVsi]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi1:%[0-9]+]]:gpr = MOVsi [[COPY2]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR1:%[0-9]+]]:spr = VMOVSR killed [[MOVsi1]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf contract VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf contract nofpexcept VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[MOVsi2:%[0-9]+]]:gpr = MOVsi [[COPY]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR2:%[0-9]+]]:spr = VMOVSR killed [[MOVsi2]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS1:%[0-9]+]]:spr = nnan ninf contract VADDS killed [[VADDS]], killed [[VMOVSR2]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS1:%[0-9]+]]:spr = nnan ninf contract nofpexcept VADDS killed [[VADDS]], killed [[VMOVSR2]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS:%[0-9]+]]:gpr = VMOVRS killed [[VADDS1]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS]]
@@ -174,7 +174,7 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[VMOVSR:%[0-9]+]]:spr = VMOVSR killed [[MOVsi]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi1:%[0-9]+]]:gpr = MOVsi [[COPY2]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR1:%[0-9]+]]:spr = VMOVSR killed [[MOVsi1]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS:%[0-9]+]]:spr = ninf nofpexcept VADDS killed [[VMOVSR1]], killed [[VMOVSR]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS:%[0-9]+]]:gpr = VMOVRS killed [[VADDS]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS]]
@@ -185,7 +185,7 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[VMOVSR2:%[0-9]+]]:spr = VMOVSR killed [[MOVsi2]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   [[MOVsi3:%[0-9]+]]:gpr = MOVsi [[COPY3]], 130, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NOBF16-NEXT:   [[VMOVSR3:%[0-9]+]]:spr = VMOVSR killed [[MOVsi3]], 14 /* CC::al */, $noreg
-  ; CHECK-NOBF16-NEXT:   [[VADDS1:%[0-9]+]]:spr = ninf VADDS killed [[VMOVSR3]], killed [[VMOVSR2]], 14 /* CC::al */, $noreg
+  ; CHECK-NOBF16-NEXT:   [[VADDS1:%[0-9]+]]:spr = ninf nofpexcept VADDS killed [[VMOVSR3]], killed [[VMOVSR2]], 14 /* CC::al */, $noreg, implicit $fpscr
   ; CHECK-NOBF16-NEXT:   [[VMOVRS1:%[0-9]+]]:gpr = VMOVRS killed [[VADDS1]], 14 /* CC::al */, $noreg
   ; CHECK-NOBF16-NEXT:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK-NOBF16-NEXT:   $r0 = COPY [[VMOVRS1]]

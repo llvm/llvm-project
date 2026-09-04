@@ -20,6 +20,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DataLayout.h"
@@ -56,10 +57,36 @@ static cl::opt<bool>
 static cl::opt<bool>
     OptimizeHotColdNew("optimize-hot-cold-new", cl::Hidden, cl::init(false),
                        cl::desc("Enable hot/cold operator new library calls"));
-static cl::opt<bool> OptimizeExistingHotColdNew(
-    "optimize-existing-hot-cold-new", cl::Hidden, cl::init(false),
+enum class OptimizeExistingHotColdNewKind {
+  None,
+  Cold,
+  Always,
+};
+static cl::opt<OptimizeExistingHotColdNewKind> OptimizeExistingHotColdNew(
+    "optimize-existing-hot-cold-new", cl::Hidden,
     cl::desc(
-        "Enable optimization of existing hot/cold operator new library calls"));
+        "Enable optimization of existing hot/cold operator new library calls"),
+    cl::values(
+        clEnumValN(
+            OptimizeExistingHotColdNewKind::None, "none",
+            "Do not optimize existing hot/cold operator new library calls"),
+        clEnumValN(OptimizeExistingHotColdNewKind::Cold, "cold",
+                   "Only optimize existing hot/cold operator new library calls "
+                   "if determined to be cold"),
+        clEnumValN(
+            OptimizeExistingHotColdNewKind::Always, "always",
+            "Always optimize existing hot/cold operator new library calls"),
+        clEnumValN(
+            OptimizeExistingHotColdNewKind::Always, "",
+            "Always optimize existing hot/cold operator new library calls")),
+    cl::init(OptimizeExistingHotColdNewKind::None), cl::ValueOptional);
+static cl::opt<bool> OptimizeNoBuiltinHotColdNew(
+    "optimize-nobuiltin-hot-cold-new-new", cl::Hidden, cl::init(false),
+    cl::desc("Enable transformation of nobuiltin operator new library calls"));
+static cl::opt<bool> MinExistingHotColdNewHint(
+    "min-existing-hot-cold-new-hint", cl::Hidden, cl::init(false),
+    cl::desc("Take the minimum of compiler hint and existing hint when "
+             "optimizing existing hot/cold operator new library calls"));
 
 namespace {
 
@@ -96,6 +123,10 @@ static cl::opt<unsigned, false, HotColdHintParser>
 static cl::opt<unsigned, false, HotColdHintParser> HotNewHintValue(
     "hot-new-hint-value", cl::Hidden, cl::init(254),
     cl::desc("Value to pass to hot/cold operator new for hot allocation"));
+static cl::opt<unsigned, false, HotColdHintParser> AmbiguousNewHintValue(
+    "ambiguous-new-hint-value", cl::Hidden, cl::init(222),
+    cl::desc(
+        "Value to pass to hot/cold operator new for ambiguous allocation"));
 
 //===----------------------------------------------------------------------===//
 // Helper Functions
@@ -232,11 +263,15 @@ static Value *convertStrToInt(CallInst *CI, StringRef &Str, Value *EndPtr,
     B.CreateStore(StrEnd, EndPtr);
   }
 
-  if (Negate)
+  if (Negate) {
     // Unsigned negation doesn't overflow.
     Result = -Result;
+    // For unsigned numbers, discard sign bits.
+    if (!AsSigned)
+      Result &= maxUIntN(NBits);
+  }
 
-  return ConstantInt::get(RetTy, Result);
+  return ConstantInt::get(RetTy, Result, AsSigned);
 }
 
 static bool isOnlyUsedInComparisonWithZero(Value *V) {
@@ -252,11 +287,11 @@ static bool isOnlyUsedInComparisonWithZero(Value *V) {
 }
 
 static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
-                                 const DataLayout &DL) {
+                                 const SimplifyQuery &SQ) {
   if (!isOnlyUsedInComparisonWithZero(CI))
     return false;
 
-  if (!isDereferenceableAndAlignedPointer(Str, Align(1), APInt(64, Len), DL))
+  if (!isDereferenceablePointer(Str, APInt(64, Len), SQ))
     return false;
 
   if (CI->getFunction()->hasFnAttribute(Attribute::SanitizeMemory))
@@ -319,10 +354,10 @@ static void annotateNonNullAndDereferenceable(CallInst *CI, ArrayRef<unsigned> A
     annotateDereferenceableBytes(CI, ArgNos, LenC->getZExtValue());
   } else if (isKnownNonZero(Size, DL)) {
     annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
-    const APInt *X, *Y;
+    uint64_t X, Y;
     uint64_t DerefMin = 1;
-    if (match(Size, m_Select(m_Value(), m_APInt(X), m_APInt(Y)))) {
-      DerefMin = std::min(X->getZExtValue(), Y->getZExtValue());
+    if (match(Size, m_Select(m_Value(), m_ConstantInt(X), m_ConstantInt(Y)))) {
+      DerefMin = std::min(X, Y);
       annotateDereferenceableBytes(CI, ArgNos, DerefMin);
     }
   }
@@ -569,8 +604,8 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
 
   // strcmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2)
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(Str1.compare(Str2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(Str1.compare(Str2), -1, 1));
 
   if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
     return B.CreateNeg(B.CreateZExt(
@@ -596,13 +631,14 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
   }
 
   // strcmp to memcmp
+  SimplifyQuery SQ(DL, TLI, DT, AC, CI);
   if (!HasStr1 && HasStr2) {
-    if (canTransformToMemCmp(CI, Str1P, Len2, DL))
+    if (canTransformToMemCmp(CI, Str1P, Len2, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len2, *CI->getModule()),
                                        B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
-    if (canTransformToMemCmp(CI, Str2P, Len1, DL))
+    if (canTransformToMemCmp(CI, Str2P, Len1, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len1, *CI->getModule()),
                                        B, DL, TLI));
@@ -649,8 +685,8 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
     // Avoid truncating the 64-bit Length to 32 bits in ILP32.
     StringRef SubStr1 = substr(Str1, Length);
     StringRef SubStr2 = substr(Str2, Length);
-    return ConstantInt::get(CI->getType(),
-                            std::clamp(SubStr1.compare(SubStr2), -1, 1));
+    return ConstantInt::getSigned(CI->getType(),
+                                  std::clamp(SubStr1.compare(SubStr2), -1, 1));
   }
 
   if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
@@ -977,8 +1013,14 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
   // it's not very useful because calling strlen for a pointer of other types is
   // very uncommon.
   if (GEPOperator *GEP = dyn_cast<GEPOperator>(Src)) {
-    // TODO: Handle subobjects.
-    if (!isGEPBasedOnPointerToString(GEP, CharSize))
+    unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
+    APInt ConstOffset(BW, 0);
+    assert(CharSize % 8 == 0 && "Expected a multiple of 8 sized CharSize");
+    // Check the gep is a single variable offset.
+    if (!GEP->collectOffset(DL, BW, VarOffsets, ConstOffset) ||
+        VarOffsets.size() != 1 || ConstOffset != 0 ||
+        VarOffsets.begin()->second != CharSize / 8)
       return nullptr;
 
     ConstantDataArraySlice Slice;
@@ -1000,10 +1042,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
           return nullptr;
       }
 
-      Value *Offset = GEP->getOperand(2);
+      Value *Offset = VarOffsets.begin()->first;
       KnownBits Known = computeKnownBits(Offset, DL, nullptr, CI, nullptr);
-      uint64_t ArrSize =
-             cast<ArrayType>(GEP->getSourceElementType())->getNumElements();
 
       // If Offset is not provably in the range [0, NullTermIdx], we can still
       // optimize if we can prove that the program has undefined behavior when
@@ -1011,7 +1051,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
       // is a pointer to an object whose memory extent is NullTermIdx+1.
       if ((Known.isNonNegative() && Known.getMaxValue().ule(NullTermIdx)) ||
           (isa<GlobalVariable>(GEP->getOperand(0)) &&
-           NullTermIdx == ArrSize - 1)) {
+           NullTermIdx == Slice.Length - 1)) {
         Offset = B.CreateSExtOrTrunc(Offset, CI->getType());
         return B.CreateSub(ConstantInt::get(CI->getType(), NullTermIdx),
                            Offset);
@@ -1522,7 +1562,7 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
   int IRes = UChar(LStr[Pos]) < UChar(RStr[Pos]) ? -1 : 1;
   Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
   Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
-  Value *Res = ConstantInt::get(CI->getType(), IRes);
+  Value *Res = ConstantInt::getSigned(CI->getType(), IRes);
   return B.CreateSelect(Cmp, Zero, Res);
 }
 
@@ -1708,10 +1748,65 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
-  if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
-    return copyFlags(*CI, emitMalloc(CI->getArgOperand(1), B, DL, TLI));
+  if (isa<ConstantPointerNull>(CI->getArgOperand(0))) {
+    Value *Malloc = emitMalloc(CI->getArgOperand(1), B, DL, TLI);
+    if (auto *MallocCI = dyn_cast_or_null<CallInst>(Malloc))
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alloc_token))
+        MallocCI->setMetadata(LLVMContext::MD_alloc_token, MD);
+    return copyFlags(*CI, Malloc);
+  }
 
   return nullptr;
+}
+
+// Optionally allow optimization of nobuiltin calls to operator new and its
+// variants.
+Value *LibCallSimplifier::maybeOptimizeNoBuiltinOperatorNew(CallInst *CI,
+                                                            IRBuilderBase &B) {
+  if (!OptimizeHotColdNew)
+    return nullptr;
+  Function *Callee = CI->getCalledFunction();
+  if (!Callee)
+    return nullptr;
+  LibFunc Func = TLI->getLibFunc(*Callee);
+  if (Func == NotLibFunc)
+    return nullptr;
+  switch (Func) {
+  case LibFunc_Znwm:
+  case LibFunc_ZnwmRKSt9nothrow_t:
+  case LibFunc_ZnwmSt11align_val_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_Znam:
+  case LibFunc_ZnamRKSt9nothrow_t:
+  case LibFunc_ZnamSt11align_val_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_size_returning_new:
+  case LibFunc_size_returning_new_aligned:
+    // By default normal operator new calls (not already passing a hot_cold_t
+    // parameter) are not mutated if the call is not marked builtin. Optionally
+    // enable that in cases where it is known to be safe.
+    if (!OptimizeNoBuiltinHotColdNew)
+      return nullptr;
+    break;
+  case LibFunc_Znwm12__hot_cold_t:
+  case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_Znam12__hot_cold_t:
+  case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+  case LibFunc_size_returning_new_hot_cold:
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    // If the nobuiltin call already passes a hot_cold_t parameter, allow update
+    // of that parameter when enabled.
+    if (OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::None)
+      return nullptr;
+    break;
+  default:
+    return nullptr;
+  }
+  return optimizeNew(CI, B, Func);
 }
 
 // When enabled, replace operator new() calls marked with a hot or cold memprof
@@ -1724,15 +1819,39 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
     return nullptr;
 
   uint8_t HotCold;
-  if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "cold")
+  bool IsCold = false;
+  if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "cold") {
     HotCold = ColdNewHintValue;
-  else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() ==
-           "notcold")
+    IsCold = true;
+  } else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() ==
+             "notcold")
     HotCold = NotColdNewHintValue;
   else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "hot")
     HotCold = HotNewHintValue;
+  else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() ==
+           "ambiguous")
+    HotCold = AmbiguousNewHintValue;
   else
     return nullptr;
+
+  bool ShouldOptimizeExistingHotColdNew =
+      OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::Always ||
+      (OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::Cold &&
+       IsCold);
+
+  Value *HotColdVal = B.getInt8(HotCold);
+  auto getHotColdHintForExisting = [&](uint8_t HotCold) -> Value * {
+    // If not taking the minimum, simply use the compiler hint value.
+    if (!MinExistingHotColdNewHint)
+      return HotColdVal;
+    Value *ExistingHint = CI->getArgOperand(CI->arg_size() - 1);
+    if (ExistingHint->getType() != B.getInt8Ty())
+      ExistingHint = B.CreateTruncOrBitCast(ExistingHint, B.getInt8Ty());
+    // Emit a umin intrinsic to take the minimum of the existing hint and the
+    // compiler hint. When the existing hint is a compile-time constant, the
+    // IRBuilder folder will automatically constant-fold this into a constant.
+    return B.CreateBinaryIntrinsic(Intrinsic::umin, ExistingHint, HotColdVal);
+  };
 
   // For calls that already pass a hot/cold hint, only update the hint if
   // directed by OptimizeExistingHotColdNew. For other calls to new, add a hint
@@ -1741,131 +1860,133 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   // better to replace the hinted call with a non hinted call, to avoid the
   // extra parameter and the if condition check of the hint value in the
   // allocator. This can be considered in the future.
+  Value *NewCall = nullptr;
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znwm12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                               LibFunc_Znwm12__hot_cold_t,
+                               getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_Znwm:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znwm12__hot_cold_t, HotCold);
+    NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                             LibFunc_Znwm12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_Znam12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znam12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                               LibFunc_Znam12__hot_cold_t,
+                               getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_Znam:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                            LibFunc_Znam12__hot_cold_t, HotCold);
+    NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                             LibFunc_Znam12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnwmRKSt9nothrow_t:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
+    NewCall = emitHotColdNewNoThrow(
+        CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+        LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnamRKSt9nothrow_t:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
+    NewCall = emitHotColdNewNoThrow(
+        CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+        LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnwmSt11align_val_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnwmSt11align_val_t:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
+    NewCall = emitHotColdNewAligned(
+        CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+        LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnamSt11align_val_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnamSt11align_val_t:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
+    NewCall = emitHotColdNewAligned(
+        CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+        LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNewAlignedNoThrow(
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall = emitHotColdNewAlignedNoThrow(
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+    NewCall = emitHotColdNewAlignedNoThrow(
+        CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+        TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+        HotColdVal);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdNewAlignedNoThrow(
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall = emitHotColdNewAlignedNoThrow(
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdNewAlignedNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+    NewCall = emitHotColdNewAlignedNoThrow(
+        CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+        TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+        HotColdVal);
     break;
   case LibFunc_size_returning_new:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                         LibFunc_size_returning_new_hot_cold,
-                                         HotCold);
+    NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                          LibFunc_size_returning_new_hot_cold,
+                                          HotColdVal);
     break;
   case LibFunc_size_returning_new_hot_cold:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                         LibFunc_size_returning_new_hot_cold,
-                                         HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
+                                            LibFunc_size_returning_new_hot_cold,
+                                            getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_size_returning_new_aligned:
-    if (HotCold != NotColdNewHintValue)
-      return emitHotColdSizeReturningNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
+    NewCall = emitHotColdSizeReturningNewAligned(
+        CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
-    if (OptimizeExistingHotColdNew)
-      return emitHotColdSizeReturningNewAligned(
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall = emitHotColdSizeReturningNewAligned(
           CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
+          LibFunc_size_returning_new_aligned_hot_cold,
+          getHotColdHintForExisting(HotCold));
     break;
   default:
     return nullptr;
   }
-  return nullptr;
+
+  if (auto *NewCI = dyn_cast_or_null<Instruction>(NewCall))
+    NewCI->copyMetadata(*CI);
+
+  return NewCall;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1875,7 +1996,15 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
 // Replace a libcall \p CI with a call to intrinsic \p IID
 static Value *replaceUnaryCall(CallInst *CI, IRBuilderBase &B,
                                Intrinsic::ID IID) {
-  CallInst *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
+  Value *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
+  NewCall->takeName(CI);
+  return copyFlags(*CI, NewCall);
+}
+
+static Value *replaceBinaryCall(CallInst *CI, IRBuilderBase &B,
+                                Intrinsic::ID IID) {
+  Value *NewCall = B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
+                                           CI->getArgOperand(1), CI);
   NewCall->takeName(CI);
   return copyFlags(*CI, NewCall);
 }
@@ -1953,10 +2082,11 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
     R = isBinary ? B.CreateIntrinsic(IID, B.getFloatTy(), V)
                  : B.CreateIntrinsic(IID, B.getFloatTy(), V[0]);
   } else {
-    AttributeList CalleeAttrs = CalleeFn->getAttributes();
-    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
-                                         CalleeAttrs)
-                 : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CalleeAttrs);
+    AttributeList CallsiteAttrs = CI->getAttributes();
+    R = isBinary
+            ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
+                                    CallsiteAttrs)
+            : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CallsiteAttrs);
   }
   return B.CreateFPExt(R, B.getDoubleTy());
 }
@@ -1973,6 +2103,47 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
                                      const TargetLibraryInfo *TLI,
                                      bool isPrecise = false) {
   return optimizeDoubleFP(CI, B, true, TLI, isPrecise);
+}
+
+/// Shrink double -> float for llvm.sincos.
+static Value *optimizeSinCosDoubleFP(CallInst *CI, IRBuilderBase &B) {
+  auto *RetTy = dyn_cast<StructType>(CI->getType());
+  if (!RetTy || RetTy->getNumElements() != 2 ||
+      !RetTy->getElementType(0)->getScalarType()->isDoubleTy())
+    return nullptr;
+
+  Value *X = valueHasFloatPrecision(CI->getArgOperand(0));
+  if (!X)
+    if (auto *Ext = dyn_cast<FPExtInst>(CI->getArgOperand(0)))
+      if (Ext->getOperand(0)->getType()->getScalarType()->isFloatTy())
+        X = Ext->getOperand(0);
+  if (!X)
+    return nullptr;
+
+  for (User *U : CI->users()) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    if (!EV)
+      return nullptr;
+    for (User *EVU : EV->users()) {
+      auto *Cast = dyn_cast<FPTruncInst>(EVU);
+      if (!Cast || !Cast->getType()->getScalarType()->isFloatTy())
+        return nullptr;
+    }
+  }
+
+  IRBuilderBase::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+
+  Value *NewCall = B.CreateIntrinsic(Intrinsic::sincos, X->getType(), X);
+  cast<Instruction>(NewCall)->setMetadata(
+      LLVMContext::MD_fpmath, CI->getMetadata(LLVMContext::MD_fpmath));
+  Value *Res = PoisonValue::get(RetTy);
+  for (unsigned I = 0; I != 2; ++I) {
+    Value *Ext = B.CreateFPExt(B.CreateExtractValue(NewCall, I),
+                               RetTy->getElementType(I));
+    Res = B.CreateInsertValue(Res, Ext, I);
+  }
+  return Res;
 }
 
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
@@ -2009,8 +2180,7 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
     }
 
     if (AbsOp)
-      return copyFlags(
-          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, CI, "cabs"));
+      return copyFlags(*CI, B.CreateFAbs(AbsOp, CI, "cabs"));
 
     if (!CI->isFast())
       return nullptr;
@@ -2069,11 +2239,10 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   // TODO: Handle exp10() when more targets have it available.
   CallInst *BaseFn = dyn_cast<CallInst>(Base);
   if (BaseFn && BaseFn->hasOneUse() && BaseFn->isFast() && Pow->isFast()) {
-    LibFunc LibFn;
-
     Function *CalleeFn = BaseFn->getCalledFunction();
-    if (CalleeFn && TLI->getLibFunc(CalleeFn->getName(), LibFn) &&
-        isLibFuncEmittable(M, TLI, LibFn)) {
+    LibFunc LibFn =
+        CalleeFn ? TLI->getLibFunc(CalleeFn->getName()) : NotLibFunc;
+    if (isLibFuncEmittable(M, TLI, LibFn)) {
       StringRef ExpName;
       Intrinsic::ID ID;
       Value *ExpFn;
@@ -2181,9 +2350,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
       hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l)) {
 
     if (Pow->doesNotAccessMemory()) {
-      CallInst *NewExp10 =
-          B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10");
-      return copyFlags(*Pow, NewExp10);
+      return B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10", {},
+                               [Pow](CallInst *CI) { CI->copyIRFlags(Pow); });
     }
 
     return copyFlags(*Pow, emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10,
@@ -2272,7 +2440,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
 
   // Handle signed zero base by expanding to fabs(sqrt(x)).
   if (!Pow->hasNoSignedZeros())
-    Sqrt = B.CreateUnaryIntrinsic(Intrinsic::fabs, Sqrt, nullptr, "abs");
+    Sqrt = B.CreateFAbs(Sqrt, nullptr, "abs");
 
   Sqrt = copyFlags(*Pow, Sqrt);
 
@@ -2336,7 +2504,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
     return Base;
 
   // pow(x, 2.0) -> x * x
-  if (match(Expo, m_SpecificFP(2.0)))
+  if (match(Expo, m_SpecificFP(2.0)) && Pow->doesNotAccessMemory())
     return B.CreateFMul(Base, Base, "square");
 
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
@@ -2395,7 +2563,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   }
 
   // powf(x, itofp(y)) -> powi(x, y)
-  if (AllowApprox && (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
+  // The powi exponent must be a scalar integer, so a vector y is not usable.
+  if (AllowApprox && !Expo->getType()->isVectorTy() &&
+      (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
     if (Value *ExpoI = getIntToFPVal(Expo, B, TLI->getIntSize()))
       return copyFlags(*Pow, createPowWithIntegerExponent(Base, ExpoI, M, B));
   }
@@ -2458,17 +2628,8 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   return Ret;
 }
 
-Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
-  Module *M = CI->getModule();
-
-  // If we can shrink the call to a float function rather than a double
-  // function, do that first.
-  Function *Callee = CI->getCalledFunction();
-  StringRef Name = Callee->getName();
-  if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(M, Name))
-    if (Value *Ret = optimizeBinaryDoubleFP(CI, B, TLI))
-      return Ret;
-
+Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B,
+                                           Intrinsic::ID IID) {
   // The LLVM intrinsics minnum/maxnum correspond to fmin/fmax. Canonicalize to
   // the intrinsics for improved optimization (for example, vectorization).
   // No-signed-zeros is implied by the definitions of fmax/fmin themselves.
@@ -2478,9 +2639,6 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   // might be impractical."
   FastMathFlags FMF = CI->getFastMathFlags();
   FMF.setNoSignedZeros();
-
-  Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
-                                                            : Intrinsic::maxnum;
   return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
                                                 CI->getArgOperand(1), FMF));
 }
@@ -2499,7 +2657,8 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   LibFunc LogLb, ExpLb, Exp2Lb, Exp10Lb, PowLb;
 
   // This is only applicable to log(), log2(), log10().
-  if (TLI->getLibFunc(LogNm, LogLb)) {
+  LogLb = TLI->getLibFunc(LogNm);
+  if (LogLb != NotLibFunc) {
     switch (LogLb) {
     case LibFunc_logf:
       LogID = Intrinsic::log;
@@ -2582,9 +2741,12 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
           Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
     if (IsKnownNoErrno) {
-      auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
-      NewLog->copyMetadata(*Log);
-      return copyFlags(*Log, NewLog);
+      Value *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
+      if (auto *I = dyn_cast<Instruction>(NewLog)) {
+        I->copyMetadata(*Log);
+        return copyFlags(*Log, I);
+      }
+      return NewLog;
     }
   } else if (LogID == Intrinsic::log || LogID == Intrinsic::log2 ||
              LogID == Intrinsic::log10) {
@@ -2612,8 +2774,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   B.setFastMathFlags(FastMathFlags::getFast());
 
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
-  LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(*Arg, ArgLb);
+  LibFunc ArgLb = TLI->getLibFunc(*Arg);
 
   // log(pow(x,y)) -> y*log(x)
   AttributeList NoAttrs;
@@ -2668,12 +2829,12 @@ Value *LibCallSimplifier::mergeSqrtToExp(CallInst *CI, IRBuilderBase &B) {
   if (!Arg || !Arg->hasAllowReassoc() || !Arg->hasOneUse())
     return nullptr;
   Intrinsic::ID ArgID = Arg->getIntrinsicID();
-  LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(*Arg, ArgLb);
+  LibFunc ArgLb = TLI->getLibFunc(*Arg);
 
   LibFunc SqrtLb, ExpLb, Exp2Lb, Exp10Lb;
 
-  if (TLI->getLibFunc(SqrtFn->getName(), SqrtLb))
+  SqrtLb = TLI->getLibFunc(SqrtFn->getName());
+  if (SqrtLb != NotLibFunc)
     switch (SqrtLb) {
     case LibFunc_sqrtf:
       ExpLb = LibFunc_expf;
@@ -2781,8 +2942,7 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
   // If we found a repeated factor, hoist it out of the square root and
   // replace it with the fabs of that factor.
-  Value *FabsCall =
-      B.CreateUnaryIntrinsic(Intrinsic::fabs, RepeatOp, I, "fabs");
+  Value *FabsCall = B.CreateFAbs(RepeatOp, I, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
@@ -2796,11 +2956,10 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
 
-  // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
-  // case. If we know those do not happen, then we can convert the fmod into
-  // frem.
-  bool IsNoNan = CI->hasNoNaNs();
-  if (!IsNoNan) {
+  // fmod(x,y) sets errno if y == 0 or x == +/-inf. frem does not set errno,
+  // so the fold is valid only when we can prove fmod wouldn't either.
+  bool IsNoErrno = CI->hasNoNaNs();
+  if (!IsNoErrno) {
     SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
     KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf, SQ);
     if (Known0.isKnownNeverInfinity()) {
@@ -2809,16 +2968,12 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
       Function *F = CI->getParent()->getParent();
       const fltSemantics &FltSem =
           CI->getType()->getScalarType()->getFltSemantics();
-      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
+      IsNoErrno = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 
-  if (IsNoNan) {
-    Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
-    if (auto *FRemI = dyn_cast<Instruction>(FRem))
-      FRemI->setHasNoNaNs(true);
-    return FRem;
-  }
+  if (IsNoErrno)
+    return B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
   return nullptr;
 }
 
@@ -2848,10 +3003,9 @@ Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
   // sinh(asinh(x)) -> x
   // asinh(sinh(x)) -> x
   // cosh(acosh(x)) -> x
-  LibFunc Func;
   Function *F = OpC->getCalledFunction();
-  if (F && TLI->getLibFunc(F->getName(), Func) &&
-      isLibFuncEmittable(M, TLI, Func)) {
+  LibFunc Func = F ? TLI->getLibFunc(F->getName()) : NotLibFunc;
+  if (isLibFuncEmittable(M, TLI, Func)) {
     LibFunc inverseFunc = llvm::StringSwitch<LibFunc>(Callee->getName())
                               .Case("tan", LibFunc_atan)
                               .Case("atanh", LibFunc_tanh)
@@ -2868,7 +3022,7 @@ Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
                               .Case("asinh", LibFunc_sinh)
                               .Case("asinhf", LibFunc_sinhf)
                               .Case("asinhl", LibFunc_sinhl)
-                              .Default(NumLibFuncs); // Used as error value
+                              .Default(NotLibFunc); // Used as error value
     if (Func == inverseFunc)
       Ret = OpC->getArgOperand(0);
   }
@@ -2907,8 +3061,7 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
 
   if (!isLibFuncEmittable(M, TLI, Name))
     return false;
-  LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
+  LibFunc TheLibFunc = TLI->getLibFunc(Name);
   FunctionCallee Callee = getOrInsertLibFunc(
       M, *TLI, TheLibFunc, OrigCallee->getAttributes(), ResTy, ArgTy);
 
@@ -2929,10 +3082,8 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
     Sin = B.CreateExtractValue(SinCos, 0, "sinpi");
     Cos = B.CreateExtractValue(SinCos, 1, "cospi");
   } else {
-    Sin = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 0),
-                                 "sinpi");
-    Cos = B.CreateExtractElement(SinCos, ConstantInt::get(B.getInt32Ty(), 1),
-                                 "cospi");
+    Sin = B.CreateExtractElement(SinCos, uint64_t{0}, "sinpi");
+    Cos = B.CreateExtractElement(SinCos, uint64_t{1}, "cospi");
   }
 
   return true;
@@ -2944,8 +3095,7 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *Src = CI->getArgOperand(0);
 
   if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
-    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
-    Call->copyFastMathFlags(CI);
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);
     if (IsEven) {
       // Even function: f(-x) = f(x)
@@ -2958,8 +3108,7 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   // Even function: f(abs(x)) = f(x), f(copysign(x, y)) = f(x)
   if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
                  match(Src, m_CopySign(m_Value(X), m_Value())))) {
-    auto *Call = B.CreateCall(CI->getCalledFunction(), {X});
-    Call->copyFastMathFlags(CI);
+    auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     return copyFlags(*CI, Call);
   }
 
@@ -2972,15 +3121,27 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_cos:
   case LibFunc_cosf:
   case LibFunc_cosl:
+
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_coshl:
     return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
 
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinl:
 
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinhl:
+
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanl:
+
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_tanhl:
 
   case LibFunc_erf:
   case LibFunc_erff:
@@ -3052,10 +3213,8 @@ void LibCallSimplifier::classifyArgUse(
 
   Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
-  LibFunc Func;
-  if (!Callee || !TLI->getLibFunc(*Callee, Func) ||
-      !isLibFuncEmittable(M, TLI, Func) ||
-      !isTrigLibCall(CI))
+  LibFunc Func = Callee ? TLI->getLibFunc(*Callee) : NotLibFunc;
+  if (!isLibFuncEmittable(M, TLI, Func) || !isTrigLibCall(CI))
     return;
 
   if (IsFloat) {
@@ -3101,7 +3260,7 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   B.CreateAlignedStore(
-      ConstantInt::get(B.getIntNTy(IntBW), QuotInt.getExtValue()),
+      ConstantInt::getSigned(B.getIntNTy(IntBW), QuotInt.getExtValue()),
       CI->getArgOperand(2), CI->getParamAlign(2));
   return ConstantFP::get(CI->getType(), Rem);
 }
@@ -3125,12 +3284,12 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
       !match(CI->getArgOperand(1), m_APFloat(Y)))
     return nullptr;
 
+  // C99 fdim(x, y) = (x > y) ? x - y : +0.
+  if (X->compare(*Y) != APFloat::cmpGreaterThan && !X->isNaN() && !Y->isNaN())
+    return ConstantFP::getZero(CI->getType());
   APFloat Difference = *X;
   Difference.subtract(*Y, RoundingMode::NearestTiesToEven);
-
-  APFloat MaxVal =
-      maximum(Difference, APFloat::getZero(CI->getType()->getFltSemantics()));
-  return ConstantFP::get(CI->getType(), MaxVal);
+  return ConstantFP::get(CI->getType(), Difference);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3319,6 +3478,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
     }
     // printf("%s", str"\n") --> puts(str)
     if (OperandStr.back() == '\n') {
+      if (!isLibFuncEmittable(CI->getModule(), TLI, LibFunc_puts))
+        return nullptr;
       OperandStr = OperandStr.drop_back();
       Value *GV = B.CreateGlobalString(OperandStr, "str");
       return copyFlags(*CI, emitPutS(GV, B, TLI));
@@ -3329,6 +3490,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilderBase &B) {
   // printf("foo\n") --> puts("foo")
   if (FormatStr.back() == '\n' &&
       !FormatStr.contains('%')) { // No format characters.
+    if (!isLibFuncEmittable(CI->getModule(), TLI, LibFunc_puts))
+      return nullptr;
     // Create a string literal with no \n on it.  We expect the constant merge
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
@@ -3450,7 +3613,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       return ConstantInt::get(CI->getType(), SrcLen - 1);
     } else if (Value *V = emitStpCpy(Dest, CI->getArgOperand(2), B, TLI)) {
       // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
-      Value *PtrDiff = B.CreatePtrDiff(B.getInt8Ty(), V, Dest);
+      Value *PtrDiff = B.CreatePtrDiff(V, Dest);
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 
@@ -3828,11 +3991,11 @@ bool LibCallSimplifier::hasFloatVersion(const Module *M, StringRef FuncName) {
 Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
                                                       IRBuilderBase &Builder) {
   Module *M = CI->getModule();
-  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  LibFunc Func = TLI->getLibFunc(*Callee);
 
   // Check for string/memory library functions.
-  if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
+  if (isLibFuncEmittable(M, TLI, Func)) {
     // Make sure we never change the calling convention.
     assert(
         (ignoreCallingConv(Func) ||
@@ -3970,6 +4133,16 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cospif:
   case LibFunc_cospi:
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
+  case LibFunc_sinf:
+  case LibFunc_sinl:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::sin);
+    return nullptr;
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::cos);
+    return nullptr;
   case LibFunc_powf:
   case LibFunc_pow:
   case LibFunc_powl:
@@ -4036,6 +4209,16 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::rint);
   case LibFunc_trunc:
     return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
+  case LibFunc_sin:
+  case LibFunc_cos:
+    if (UnsafeFPShrink &&
+        hasFloatVersion(M, CI->getCalledFunction()->getName()))
+      if (Value *V = optimizeUnaryDoubleFP(CI, Builder, TLI, true))
+        return V;
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(
+          CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
+    return nullptr;
   case LibFunc_acos:
   case LibFunc_acosh:
   case LibFunc_asin:
@@ -4044,8 +4227,6 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp:
   case LibFunc_exp10:
   case LibFunc_expm1:
-  case LibFunc_cos:
-  case LibFunc_sin:
   case LibFunc_tanh:
     if (UnsafeFPShrink && hasFloatVersion(M, CI->getCalledFunction()->getName()))
       return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
@@ -4061,10 +4242,19 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_fminf:
   case LibFunc_fmin:
   case LibFunc_fminl:
+    return optimizeFMinFMax(CI, Builder, Intrinsic::minnum);
   case LibFunc_fmaxf:
   case LibFunc_fmax:
   case LibFunc_fmaxl:
-    return optimizeFMinFMax(CI, Builder);
+    return optimizeFMinFMax(CI, Builder, Intrinsic::maxnum);
+  case LibFunc_fminimum_numf:
+  case LibFunc_fminimum_num:
+  case LibFunc_fminimum_numl:
+    return replaceBinaryCall(CI, Builder, Intrinsic::minimumnum);
+  case LibFunc_fmaximum_numf:
+  case LibFunc_fmaximum_num:
+  case LibFunc_fmaximum_numl:
+    return replaceBinaryCall(CI, Builder, Intrinsic::maximumnum);
   case LibFunc_cabs:
   case LibFunc_cabsf:
   case LibFunc_cabsl:
@@ -4089,11 +4279,13 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   // TODO: Split out the code below that operates on FP calls so that
   //       we can all non-FP calls with the StrictFP attribute to be
   //       optimized.
-  if (CI->isNoBuiltin())
-    return nullptr;
+  if (CI->isNoBuiltin()) {
+    // Optionally update operator new calls.
+    return maybeOptimizeNoBuiltinOperatorNew(CI, Builder);
+  }
 
-  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
+  LibFunc Func = TLI->getLibFunc(*Callee);
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;
@@ -4138,6 +4330,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       if (UnsafeFPShrink)
         return optimizeUnaryDoubleFP(CI, Builder, TLI, /*isPrecise=*/true);
       return nullptr;
+    case Intrinsic::sincos:
+      if (UnsafeFPShrink)
+        return optimizeSinCosDoubleFP(CI, Builder);
+      return nullptr;
     default:
       return nullptr;
     }
@@ -4149,7 +4345,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     return SimplifiedFortifiedCI;
 
   // Then check for known library functions.
-  if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {
+  if (isLibFuncEmittable(M, TLI, Func)) {
     // We never change the calling convention.
     if (!ignoreCallingConv(Func) && !IsCallingConvC)
       return nullptr;
@@ -4536,7 +4732,6 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
   //
   // PR23093.
 
-  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
@@ -4548,7 +4743,8 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI,
 
   // First, check that this is a known library functions and that the prototype
   // is correct.
-  if (!TLI->getLibFunc(*Callee, Func))
+  LibFunc Func = TLI->getLibFunc(*Callee);
+  if (Func == NotLibFunc)
     return nullptr;
 
   // We never change the calling convention.

@@ -55,9 +55,14 @@ using namespace __dfsan;
 #define DECLARE_WEAK_INTERCEPTOR_HOOK(f, ...) \
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void f(__VA_ARGS__);
 
+#define PRAGMA(x) _Pragma(#x)
 #define WRAPPER_ALIAS(fun, real)                                          \
+  PRAGMA(clang diagnostic push)                                           \
+  PRAGMA(clang diagnostic ignored "-Wunknown-warning-option")             \
+  PRAGMA(clang diagnostic ignored "-Wattribute-alias")                    \
   SANITIZER_INTERFACE_ATTRIBUTE void __dfsw_##fun() ALIAS(__dfsw_##real); \
-  SANITIZER_INTERFACE_ATTRIBUTE void __dfso_##fun() ALIAS(__dfso_##real);
+  SANITIZER_INTERFACE_ATTRIBUTE void __dfso_##fun() ALIAS(__dfso_##real); \
+  PRAGMA(clang diagnostic pop)
 
 // Async-safe, non-reentrant spin lock.
 namespace {
@@ -2332,7 +2337,20 @@ static int format_buffer(char *str, size_t size, const char *fmt,
         case 'g':
         case 'G':
           if (*(formatter.fmt_cur - 1) == 'L') {
+#if defined(__s390x__)
+            // SystemZ treats float128 argument as an aggregate type and copies
+            // shadow and Origin to passed argument temporary. But passed
+            // argument va_labels and va_origins are zero. Here. we get
+            // Shadow/Origin corresponding to in-memory argument and update
+            // va_labels and va_origins.
+            long double* arg = va_arg(ap, long double*);
+            *va_labels = *shadow_for(arg);
+            if (va_origins != nullptr)
+              *va_origins = *origin_for(arg);
+            retval = formatter.format(*arg);
+#else
             retval = formatter.format(va_arg(ap, long double));
+#endif
           } else {
             retval = formatter.format(va_arg(ap, double));
           }

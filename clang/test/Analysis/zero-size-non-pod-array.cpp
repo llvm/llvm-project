@@ -95,7 +95,7 @@ void zeroSizeArrayBinding() {
     // Note: This is an error in gcc but a warning in clang.
     // In MSVC the declaration of 'S arr[0]' is already an error
     // and it doesn't recognize this syntax as a structured binding.
-    auto [] = arr; //expected-warning{{ISO C++17 does not allow a decomposition group to be empty}}
+    auto [] = arr; //expected-warning{{ISO C++17 does not allow a structured binding group to be empty}}
 
     clang_analyzer_eval(S::CtorInvocationCount == 0); //expected-warning{{TRUE}}
 }

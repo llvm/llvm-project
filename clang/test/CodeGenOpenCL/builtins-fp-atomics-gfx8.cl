@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx810 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu8.10-amd-amdhsa \
 // RUN:   %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx810 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu8.10-amd-amdhsa \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX8 %s
 
 // REQUIRES: amdgpu-registered-target

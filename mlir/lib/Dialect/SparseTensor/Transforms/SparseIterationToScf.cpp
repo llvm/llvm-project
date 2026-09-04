@@ -134,8 +134,11 @@ static ValueRange genLoopWithIterator(
         });
     {
       OpBuilder::InsertionGuard guard(rewriter);
-      it->linkNewScope(forOp.getInductionVar());
       rewriter.setInsertionPointToStart(forOp.getBody());
+      if (it->randomAccessible())
+        it->locate(rewriter, loc, forOp.getInductionVar());
+      else
+        it->linkNewScope(forOp.getInductionVar());
       SmallVector<Value> ret = bodyBuilder(rewriter, loc, forOp.getBodyRegion(),
                                            it, forOp.getRegionIterArgs());
 
@@ -443,8 +446,8 @@ mlir::SparseIterationTypeConverter::SparseIterationTypeConverter() {
 
   addSourceMaterialization([](OpBuilder &builder, IterSpaceType spTp,
                               ValueRange inputs, Location loc) -> Value {
-    return builder
-        .create<UnrealizedConversionCastOp>(loc, TypeRange(spTp), inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, TypeRange(spTp),
+                                              inputs)
         .getResult(0);
   });
 }

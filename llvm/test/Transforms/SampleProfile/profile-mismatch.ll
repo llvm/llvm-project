@@ -43,13 +43,13 @@ define dso_local i32 @foo(i32 noundef %x) #0 !dbg !12 {
 entry:
   %y = alloca i32, align 4
   call void @llvm.dbg.value(metadata i32 %x, metadata !16, metadata !DIExpression()), !dbg !18
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %y), !dbg !19
+  call void @llvm.lifetime.start.p0(ptr nonnull %y), !dbg !19
   call void @llvm.dbg.declare(metadata ptr %y, metadata !17, metadata !DIExpression()), !dbg !20
   %add = add nsw i32 %x, 1, !dbg !21
   store volatile i32 %add, ptr %y, align 4, !dbg !20, !tbaa !22
   %y.0. = load volatile i32, ptr %y, align 4, !dbg !26, !tbaa !22
   %add1 = add nsw i32 %y.0., 1, !dbg !27
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %y), !dbg !28
+  call void @llvm.lifetime.end.p0(ptr nonnull %y), !dbg !28
   ret i32 %add1, !dbg !29
 }
 
@@ -57,10 +57,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @bar(i32 noundef %x) #3 !dbg !30 {

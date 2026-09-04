@@ -105,6 +105,34 @@ def ForallToParallelOp : Op<Transform_Dialect, "loop.forall_to_parallel",
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
 }
 
+def ParallelForToNestedForOps : Op<Transform_Dialect, "loop.parallel_for_to_nested_fors",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Converts scf.parallel into a nest of scf.for operations";
+  let description = [{
+    Converts the `scf.parallel` operation pointed to by the given handle into a
+    set of nested `scf.for` operations. Each new operation corresponds to one
+    dimension of the original parallel loop.
+
+    The operand handle must be associated with exactly one payload operation.
+
+    Loops with shared outputs are currently not supported.
+
+    #### Return Modes
+
+    Consumes the operand handle. Produces a silenceable failure if the operand
+    is not associated with a single `scf.parallel` payload operation.
+    Returns as many handles as the given `parallel` op has dimensions that are
+    associated with the generated `scf.for` loops.
+    Produces a silenceable failure if another number of resulting handles is
+    requested.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs Variadic<TransformHandleTypeInterface>:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
+
 def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -274,8 +302,9 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
   let summary = "Unrolls the given loop with the given unroll factor";
   let description = [{
     Unrolls each loop associated with the given handle to have up to the given
-    number of loop body copies per iteration. If the unroll factor is larger
-    than the loop trip count, the latter is used as the unroll factor instead.
+    number of loop body copies per iteration. If the unroll factor exceeds the
+    loop trip count, the main unrolled loop may have zero iterations and a
+    cleanup loop may execute all remaining iterations.
 
     #### Return modes
 
@@ -290,6 +319,36 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        ConfinedAttr<I64Attr, [IntPositive]>:$factor);
+
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+def LoopUnrollFullOp : Op<Transform_Dialect, "loop.unroll_full",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait]> {
+  let summary = "Fully unrolls the given loop";
+  let description = [{
+    Fully unrolls each loop associated with the given handle.
+
+    #### Return modes
+
+    This operation ignores non-`scf.for`, non-`affine.for` ops and drops them
+    in the return. If all the operations referred to by the `target` operand
+    unroll properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.
+
+    Does not return handles as the loop is removed after a full unrolling.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
 
   let assemblyFormat = "$target attr-dict `:` type($target)";
 
@@ -348,6 +407,34 @@ def LoopCoalesceOp : Op<Transform_Dialect, "loop.coalesce", [
 
     The return handle points to the coalesced loop if coalescing happens, or
     the given input loop if coalescing does not happen.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat =
+      "$target attr-dict `:` functional-type($target, $transformed)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+def LoopCoalesceNestedOp : Op<Transform_Dialect, "loop.coalesce_nested", [
+  FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+  TransformOpInterface, TransformEachOpTrait]> {
+  let summary = "Coalesces nested loops including imperfectly nested ones";
+  let description = [{
+    Given a loop, collects all nested loops (including imperfectly nested
+    loops with operations between them) and coalesces them directly using
+    coalesceLoops.
+
+    #### Return modes
+
+    The return handle points to the coalesced loop.
   }];
   let arguments = (ins TransformHandleTypeInterface:$target);
   let results = (outs TransformHandleTypeInterface:$transformed);

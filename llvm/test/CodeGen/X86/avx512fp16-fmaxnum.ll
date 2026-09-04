@@ -32,10 +32,9 @@ define half @test_intrinsic_fmaxh(half %x, half %y) {
 define <2 x half> @test_intrinsic_fmax_v2f16(<2 x half> %x, <2 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmax_v2f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vmaxph %xmm0, %xmm1, %xmm2 # encoding: [0x62,0xf5,0x74,0x08,0x5f,0xd0]
-; HasVL-NEXT:    vcmpunordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x09,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vmaxph %xmm0, %xmm1, %xmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x09,0x5f,0xc8]
+; HasVL-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmax_v2f16:
@@ -110,10 +109,9 @@ define <2 x half> @test_intrinsic_fmax_v2f16(<2 x half> %x, <2 x half> %y) {
 define <4 x half> @test_intrinsic_fmax_v4f16(<4 x half> %x, <4 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmax_v4f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vmaxph %xmm0, %xmm1, %xmm2 # encoding: [0x62,0xf5,0x74,0x08,0x5f,0xd0]
-; HasVL-NEXT:    vcmpunordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x09,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vmaxph %xmm0, %xmm1, %xmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x09,0x5f,0xc8]
+; HasVL-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmax_v4f16:
@@ -188,10 +186,9 @@ define <4 x half> @test_intrinsic_fmax_v4f16(<4 x half> %x, <4 x half> %y) {
 define <8 x half> @test_intrinsic_fmax_v8f16(<8 x half> %x, <8 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmax_v8f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vmaxph %xmm0, %xmm1, %xmm2 # encoding: [0x62,0xf5,0x74,0x08,0x5f,0xd0]
-; HasVL-NEXT:    vcmpunordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %xmm1, %xmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x09,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %xmm0, %xmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x08,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vmaxph %xmm0, %xmm1, %xmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x09,0x5f,0xc8]
+; HasVL-NEXT:    vmovaps %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmax_v8f16:
@@ -266,10 +263,9 @@ define <8 x half> @test_intrinsic_fmax_v8f16(<8 x half> %x, <8 x half> %y) {
 define <16 x half> @test_intrinsic_fmax_v16f16(<16 x half> %x, <16 x half> %y) {
 ; HasVL-LABEL: test_intrinsic_fmax_v16f16:
 ; HasVL:       # %bb.0:
-; HasVL-NEXT:    vmaxph %ymm0, %ymm1, %ymm2 # encoding: [0x62,0xf5,0x74,0x28,0x5f,0xd0]
-; HasVL-NEXT:    vcmpunordph %ymm0, %ymm0, %k1 # encoding: [0x62,0xf3,0x7c,0x28,0xc2,0xc8,0x03]
-; HasVL-NEXT:    vmovdqu16 %ymm1, %ymm2 {%k1} # encoding: [0x62,0xf1,0xff,0x29,0x6f,0xd1]
-; HasVL-NEXT:    vmovdqa %ymm2, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
+; HasVL-NEXT:    vcmpordph %ymm0, %ymm0, %k1 # encoding: [0x62,0xf3,0x7c,0x28,0xc2,0xc8,0x07]
+; HasVL-NEXT:    vmaxph %ymm0, %ymm1, %ymm1 {%k1} # encoding: [0x62,0xf5,0x74,0x29,0x5f,0xc8]
+; HasVL-NEXT:    vmovaps %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xc1]
 ; HasVL-NEXT:    retq # encoding: [0xc3]
 ;
 ; NOVL-LABEL: test_intrinsic_fmax_v16f16:
@@ -408,10 +404,9 @@ define <16 x half> @test_intrinsic_fmax_v16f16(<16 x half> %x, <16 x half> %y) {
 define <32 x half> @test_intrinsic_fmax_v32f16(<32 x half> %x, <32 x half> %y) {
 ; CHECK-LABEL: test_intrinsic_fmax_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxph %zmm0, %zmm1, %zmm2 # encoding: [0x62,0xf5,0x74,0x48,0x5f,0xd0]
-; CHECK-NEXT:    vcmpunordph %zmm0, %zmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x48,0xc2,0xc8,0x03]
-; CHECK-NEXT:    vmovdqu16 %zmm1, %zmm2 {%k1} # encoding: [0x62,0xf1,0xff,0x49,0x6f,0xd1]
-; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; CHECK-NEXT:    vcmpordph %zmm0, %zmm0, %k1 # encoding: [0x62,0xf3,0x7c,0x48,0xc2,0xc8,0x07]
+; CHECK-NEXT:    vmaxph %zmm0, %zmm1, %zmm1 {%k1} # encoding: [0x62,0xf5,0x74,0x49,0x5f,0xc8]
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0 # encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %z = call <32 x half> @llvm.maxnum.v32f16(<32 x half> %x, <32 x half> %y) readnone
   ret <32 x half> %z
@@ -425,56 +420,48 @@ define <4 x half> @maxnum_intrinsic_nnan_fmf_f432(<4 x half> %a, <4 x half> %b) 
 ;
 ; NOVL-LABEL: maxnum_intrinsic_nnan_fmf_f432:
 ; NOVL:       # %bb.0:
-; NOVL-NEXT:    vpsrldq $14, %xmm0, %xmm2 # encoding: [0xc5,0xe9,0x73,0xd8,0x0e]
-; NOVL-NEXT:    # xmm2 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; NOVL-NEXT:    vpsrldq $14, %xmm1, %xmm3 # encoding: [0xc5,0xe1,0x73,0xd9,0x0e]
-; NOVL-NEXT:    # xmm3 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; NOVL-NEXT:    vcmpltsh %xmm2, %xmm3, %k1 # encoding: [0x62,0xf3,0x66,0x08,0xc2,0xca,0x01]
-; NOVL-NEXT:    vmovsh %xmm2, %xmm0, %xmm3 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xda]
-; NOVL-NEXT:    vshufps $255, %xmm0, %xmm0, %xmm2 # encoding: [0xc5,0xf8,0xc6,0xd0,0xff]
-; NOVL-NEXT:    # xmm2 = xmm0[3,3,3,3]
-; NOVL-NEXT:    vpshufd $255, %xmm1, %xmm4 # encoding: [0xc5,0xf9,0x70,0xe1,0xff]
-; NOVL-NEXT:    # xmm4 = xmm1[3,3,3,3]
-; NOVL-NEXT:    vcmpltsh %xmm2, %xmm4, %k1 # encoding: [0x62,0xf3,0x5e,0x08,0xc2,0xca,0x01]
-; NOVL-NEXT:    vmovsh %xmm2, %xmm0, %xmm4 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xe2]
-; NOVL-NEXT:    vpunpcklwd %xmm3, %xmm4, %xmm2 # encoding: [0xc5,0xd9,0x61,0xd3]
-; NOVL-NEXT:    # xmm2 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; NOVL-NEXT:    vpsrldq $10, %xmm0, %xmm3 # encoding: [0xc5,0xe1,0x73,0xd8,0x0a]
-; NOVL-NEXT:    # xmm3 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; NOVL-NEXT:    vpsrldq $10, %xmm1, %xmm4 # encoding: [0xc5,0xd9,0x73,0xd9,0x0a]
-; NOVL-NEXT:    # xmm4 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; NOVL-NEXT:    vcmpltsh %xmm3, %xmm4, %k1 # encoding: [0x62,0xf3,0x5e,0x08,0xc2,0xcb,0x01]
-; NOVL-NEXT:    vmovsh %xmm3, %xmm0, %xmm4 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xe3]
-; NOVL-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm3 # encoding: [0xc5,0xf9,0xc6,0xd8,0x01]
-; NOVL-NEXT:    # xmm3 = xmm0[1,0]
-; NOVL-NEXT:    vshufpd $1, %xmm1, %xmm1, %xmm5 # encoding: [0xc5,0xf1,0xc6,0xe9,0x01]
-; NOVL-NEXT:    # xmm5 = xmm1[1,0]
-; NOVL-NEXT:    vcmpltsh %xmm3, %xmm5, %k1 # encoding: [0x62,0xf3,0x56,0x08,0xc2,0xcb,0x01]
-; NOVL-NEXT:    vmovsh %xmm3, %xmm0, %xmm5 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xeb]
-; NOVL-NEXT:    vpunpcklwd %xmm4, %xmm5, %xmm3 # encoding: [0xc5,0xd1,0x61,0xdc]
-; NOVL-NEXT:    # xmm3 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; NOVL-NEXT:    vpsrldq $14, %xmm1, %xmm2 # encoding: [0xc5,0xe9,0x73,0xd9,0x0e]
+; NOVL-NEXT:    # xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NOVL-NEXT:    vpsrldq $14, %xmm0, %xmm3 # encoding: [0xc5,0xe1,0x73,0xd8,0x0e]
+; NOVL-NEXT:    # xmm3 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NOVL-NEXT:    vmaxsh %xmm2, %xmm3, %xmm2 # encoding: [0x62,0xf5,0x66,0x08,0x5f,0xd2]
+; NOVL-NEXT:    vpshufd $255, %xmm1, %xmm3 # encoding: [0xc5,0xf9,0x70,0xd9,0xff]
+; NOVL-NEXT:    # xmm3 = xmm1[3,3,3,3]
+; NOVL-NEXT:    vpshufd $255, %xmm0, %xmm4 # encoding: [0xc5,0xf9,0x70,0xe0,0xff]
+; NOVL-NEXT:    # xmm4 = xmm0[3,3,3,3]
+; NOVL-NEXT:    vmaxsh %xmm3, %xmm4, %xmm3 # encoding: [0x62,0xf5,0x5e,0x08,0x5f,0xdb]
+; NOVL-NEXT:    vpunpcklwd %xmm2, %xmm3, %xmm2 # encoding: [0xc5,0xe1,0x61,0xd2]
+; NOVL-NEXT:    # xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; NOVL-NEXT:    vpsrldq $10, %xmm1, %xmm3 # encoding: [0xc5,0xe1,0x73,0xd9,0x0a]
+; NOVL-NEXT:    # xmm3 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NOVL-NEXT:    vpsrldq $10, %xmm0, %xmm4 # encoding: [0xc5,0xd9,0x73,0xd8,0x0a]
+; NOVL-NEXT:    # xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; NOVL-NEXT:    vmaxsh %xmm3, %xmm4, %xmm3 # encoding: [0x62,0xf5,0x5e,0x08,0x5f,0xdb]
+; NOVL-NEXT:    vshufpd $1, %xmm1, %xmm1, %xmm4 # encoding: [0xc5,0xf1,0xc6,0xe1,0x01]
+; NOVL-NEXT:    # xmm4 = xmm1[1,0]
+; NOVL-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm5 # encoding: [0xc5,0xf9,0xc6,0xe8,0x01]
+; NOVL-NEXT:    # xmm5 = xmm0[1,0]
+; NOVL-NEXT:    vmaxsh %xmm4, %xmm5, %xmm4 # encoding: [0x62,0xf5,0x56,0x08,0x5f,0xe4]
+; NOVL-NEXT:    vpunpcklwd %xmm3, %xmm4, %xmm3 # encoding: [0xc5,0xd9,0x61,0xdb]
+; NOVL-NEXT:    # xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
 ; NOVL-NEXT:    vpunpckldq %xmm2, %xmm3, %xmm2 # encoding: [0xc5,0xe1,0x62,0xd2]
 ; NOVL-NEXT:    # xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm3 # encoding: [0xc5,0xe1,0x73,0xd0,0x30]
-; NOVL-NEXT:    vpsrlq $48, %xmm1, %xmm4 # encoding: [0xc5,0xd9,0x73,0xd1,0x30]
-; NOVL-NEXT:    vcmpltsh %xmm3, %xmm4, %k1 # encoding: [0x62,0xf3,0x5e,0x08,0xc2,0xcb,0x01]
-; NOVL-NEXT:    vmovsh %xmm3, %xmm0, %xmm4 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xe3]
-; NOVL-NEXT:    vmovshdup %xmm0, %xmm3 # encoding: [0xc5,0xfa,0x16,0xd8]
-; NOVL-NEXT:    # xmm3 = xmm0[1,1,3,3]
-; NOVL-NEXT:    vmovshdup %xmm1, %xmm5 # encoding: [0xc5,0xfa,0x16,0xe9]
-; NOVL-NEXT:    # xmm5 = xmm1[1,1,3,3]
-; NOVL-NEXT:    vcmpltsh %xmm3, %xmm5, %k1 # encoding: [0x62,0xf3,0x56,0x08,0xc2,0xcb,0x01]
-; NOVL-NEXT:    vmovsh %xmm3, %xmm0, %xmm5 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xeb]
-; NOVL-NEXT:    vpunpcklwd %xmm4, %xmm5, %xmm3 # encoding: [0xc5,0xd1,0x61,0xdc]
-; NOVL-NEXT:    # xmm3 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; NOVL-NEXT:    vcmpltsh %xmm0, %xmm1, %k1 # encoding: [0x62,0xf3,0x76,0x08,0xc2,0xc8,0x01]
-; NOVL-NEXT:    vpsrld $16, %xmm1, %xmm4 # encoding: [0xc5,0xd9,0x72,0xd1,0x10]
-; NOVL-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xc8]
+; NOVL-NEXT:    vpsrlq $48, %xmm1, %xmm3 # encoding: [0xc5,0xe1,0x73,0xd1,0x30]
+; NOVL-NEXT:    vpsrlq $48, %xmm0, %xmm4 # encoding: [0xc5,0xd9,0x73,0xd0,0x30]
+; NOVL-NEXT:    vmaxsh %xmm3, %xmm4, %xmm3 # encoding: [0x62,0xf5,0x5e,0x08,0x5f,0xdb]
+; NOVL-NEXT:    vmovshdup %xmm1, %xmm4 # encoding: [0xc5,0xfa,0x16,0xe1]
+; NOVL-NEXT:    # xmm4 = xmm1[1,1,3,3]
+; NOVL-NEXT:    vmovshdup %xmm0, %xmm5 # encoding: [0xc5,0xfa,0x16,0xe8]
+; NOVL-NEXT:    # xmm5 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vmaxsh %xmm4, %xmm5, %xmm4 # encoding: [0x62,0xf5,0x56,0x08,0x5f,0xe4]
+; NOVL-NEXT:    vpunpcklwd %xmm3, %xmm4, %xmm3 # encoding: [0xc5,0xd9,0x61,0xdb]
+; NOVL-NEXT:    # xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; NOVL-NEXT:    vmaxsh %xmm1, %xmm0, %xmm4 # encoding: [0x62,0xf5,0x7e,0x08,0x5f,0xe1]
+; NOVL-NEXT:    vpsrld $16, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x72,0xd1,0x10]
 ; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x72,0xd0,0x10]
-; NOVL-NEXT:    vcmpltsh %xmm0, %xmm4, %k1 # encoding: [0x62,0xf3,0x5e,0x08,0xc2,0xc8,0x01]
-; NOVL-NEXT:    vmovsh %xmm0, %xmm0, %xmm4 {%k1} # encoding: [0x62,0xf5,0x7e,0x09,0x10,0xe0]
-; NOVL-NEXT:    vpunpcklwd %xmm4, %xmm1, %xmm0 # encoding: [0xc5,0xf1,0x61,0xc4]
-; NOVL-NEXT:    # xmm0 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3]
+; NOVL-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7e,0x08,0x5f,0xc1]
+; NOVL-NEXT:    vpunpcklwd %xmm0, %xmm4, %xmm0 # encoding: [0xc5,0xd9,0x61,0xc0]
+; NOVL-NEXT:    # xmm0 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3]
 ; NOVL-NEXT:    vpunpckldq %xmm3, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x62,0xc3]
 ; NOVL-NEXT:    # xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; NOVL-NEXT:    vpunpcklqdq %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x6c,0xc2]
@@ -484,12 +471,12 @@ define <4 x half> @maxnum_intrinsic_nnan_fmf_f432(<4 x half> %a, <4 x half> %b) 
   ret <4 x half> %r
 }
 
-define half @maxnum_intrinsic_nnan_attr_f16(half %a, half %b) #0 {
+define half @maxnum_intrinsic_nnan_attr_f16(half %a, half %b) {
 ; CHECK-LABEL: maxnum_intrinsic_nnan_attr_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7e,0x08,0x5f,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %r = tail call half @llvm.maxnum.f16(half %a, half %b)
+  %r = tail call nnan nsz half @llvm.maxnum.f16(half %a, half %b)
   ret half %r
 }
 
@@ -520,5 +507,3 @@ define half @test_maxnum_const_nan(half %x) {
   %r = call half @llvm.maxnum.f16(half %x, half 0x7fff000000000000)
   ret half %r
 }
-
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true"}

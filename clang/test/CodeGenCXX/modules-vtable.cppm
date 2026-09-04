@@ -1,4 +1,4 @@
-// REQUIRES: !system-windows
+// REQUIRES: !system-windows, !system-cygwin
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
@@ -39,12 +39,12 @@ inline
 #endif
 Base::~Base() {}
 
-// CHECK: @_ZTVW3Mod4Base = unnamed_addr constant
+// CHECK: @_ZTVW3Mod4Base = constant
 // CHECK: @_ZTIW3Mod4Base = constant
 // CHECK: @_ZTSW3Mod4Base = constant
 
 // With the new Itanium C++ ABI, the linkage of vtables in modules don't need to be linkonce ODR.
-// CHECK-INLINE: @_ZTVW3Mod4Base = {{.*}}unnamed_addr constant
+// CHECK-INLINE: @_ZTVW3Mod4Base = {{.*}}constant
 // CHECK-INLINE: @_ZTIW3Mod4Base = {{.*}}constant
 // CHECK-INLINE: @_ZTSW3Mod4Base = {{.*}}constant
 
@@ -85,7 +85,7 @@ int a_use() {
     return 43;
 }
 
-// CHECK: @_ZTVW1M1C = unnamed_addr constant
+// CHECK: @_ZTVW1M1C = constant
 // CHECK: @_ZTIW1M1C = constant
 // CHECK: @_ZTSW1M1C = constant
 

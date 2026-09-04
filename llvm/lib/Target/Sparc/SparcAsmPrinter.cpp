@@ -66,6 +66,7 @@ public:
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
 
   void LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
                                  const MCSubtargetInfo &STI);
@@ -326,6 +327,15 @@ void SparcAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
 void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   Sparc_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
+  if (MI->isBundle()) {
+    const MachineBasicBlock *MBB = MI->getParent();
+    MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
+    while (I != MBB->instr_end() && I->isInsideBundle()) {
+      emitInstruction(&*I);
+      ++I;
+    }
+    return;
+  }
 
   switch (MI->getOpcode()) {
   default: break;
@@ -335,8 +345,11 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SP::CASArr:
   case SP::SWAPrr:
   case SP::SWAPri:
+  case SP::LDSTUBrr:
+  case SP::LDSTUBri:
+  case SP::LDSTUBArr:
     if (MF->getSubtarget<SparcSubtarget>().fixTN0011())
-      OutStreamer->emitCodeAlignment(Align(16), &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(16), getSubtargetInfo());
     break;
   case SP::GETPCX:
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());
@@ -394,7 +407,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     O << MO.getSymbolName();
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << "_"
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << "_"
       << MO.getIndex();
     break;
   case MachineOperand::MO_Metadata:
@@ -403,6 +416,17 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   default:
     llvm_unreachable("<unknown operand type>");
   }
+}
+
+void SparcAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
+                                         raw_ostream &O) {
+  const unsigned RelType = MO.getTargetFlags();
+  StringRef Specifier = Sparc::getSpecifierName(RelType);
+  if (!Specifier.empty())
+    O << '%' << Specifier << '(';
+  AsmPrinter::PrintSymbolOperand(MO, O);
+  if (!Specifier.empty())
+    O << ')';
 }
 
 void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,

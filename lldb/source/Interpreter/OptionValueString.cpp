@@ -9,11 +9,27 @@
 #include "lldb/Interpreter/OptionValueString.h"
 
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+static void DumpString(Stream &strm, const std::string &str, bool escape,
+                       bool raw) {
+  if (escape) {
+    std::string escaped_str;
+    Args::ExpandEscapedCharacters(str.c_str(), escaped_str);
+    DumpString(strm, escaped_str, false, raw);
+    return;
+  }
+
+  if (raw)
+    strm.PutCString(str);
+  else
+    strm.QuotedCString(str.c_str());
+}
 
 void OptionValueString::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                                   uint32_t dump_mask) {
@@ -22,21 +38,15 @@ void OptionValueString::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
-    if (!m_current_value.empty() || m_value_was_set) {
-      if (m_options.Test(eOptionEncodeCharacterEscapeSequences)) {
-        std::string expanded_escape_value;
-        Args::ExpandEscapedCharacters(m_current_value.c_str(),
-                                      expanded_escape_value);
-        if (dump_mask & eDumpOptionRaw)
-          strm.Printf("%s", expanded_escape_value.c_str());
-        else
-          strm.Printf("\"%s\"", expanded_escape_value.c_str());
-      } else {
-        if (dump_mask & eDumpOptionRaw)
-          strm.Printf("%s", m_current_value.c_str());
-        else
-          strm.Printf("\"%s\"", m_current_value.c_str());
-      }
+    const bool escape = m_options.Test(eOptionEncodeCharacterEscapeSequences);
+    const bool raw = dump_mask & eDumpOptionRaw;
+    if (!m_current_value.empty() || m_value_was_set)
+      DumpString(strm, m_current_value, escape, raw);
+
+    if (dump_mask & eDumpOptionDefaultValue &&
+        m_current_value != m_default_value && !m_default_value.empty()) {
+      DefaultValueFormat label(strm);
+      DumpString(strm, m_default_value, escape, raw);
     }
   }
 }

@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// FIXME: This fails with optimization enabled and prints b: 0
-// FIXME: RUN: %libomptarget-compileopt-run-and-check-generic
+
+// FIXME: https://github.com/llvm/llvm-project/issues/161265
+// UNSUPPORTED: gpu
 
 #include <omp.h>
 #include <stdio.h>

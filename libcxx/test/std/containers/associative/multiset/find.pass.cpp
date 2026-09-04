@@ -10,8 +10,8 @@
 
 // class multiset
 
-//       iterator find(const key_type& k);
-// const_iterator find(const key_type& k) const;
+//       iterator find(const key_type& k); // constexpr since C++26
+// const_iterator find(const key_type& k) const; // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 #include "private_constructor.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int V;
     typedef std::multiset<int> M;
@@ -70,6 +70,21 @@ int main(int, char**) {
       r = m.find(4);
       assert(r == std::next(m.begin(), 8));
     }
+  }
+  { // Check with std::greater to ensure we're actually using the correct comparator
+    using Set = std::multiset<int, std::greater<int> >;
+    int ar[]  = {5, 6, 7, 8, 9, 10, 11, 12};
+    Set m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+    assert(m.find(12) == std::next(m.begin(), 0));
+    assert(m.find(11) == std::next(m.begin(), 1));
+    assert(m.find(10) == std::next(m.begin(), 2));
+    assert(m.find(9) == std::next(m.begin(), 3));
+    assert(m.find(8) == std::next(m.begin(), 4));
+    assert(m.find(7) == std::next(m.begin(), 5));
+    assert(m.find(6) == std::next(m.begin(), 6));
+    assert(m.find(5) == std::next(m.begin(), 7));
+    assert(m.find(4) == std::next(m.begin(), 8));
+    assert(std::next(m.begin(), 8) == m.end());
   }
 #if TEST_STD_VER >= 11
   {
@@ -187,5 +202,13 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

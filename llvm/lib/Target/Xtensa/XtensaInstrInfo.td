@@ -496,6 +496,8 @@ def EXTW : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
   let hasSideEffects = 1;
 }
 
+def : Pat<(atomic_fence timm, timm), (MEMW)>;
+
 //===----------------------------------------------------------------------===//
 // Illegal instructions
 //===----------------------------------------------------------------------===//
@@ -506,6 +508,7 @@ def ILL : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
   let n = 0x0;
   let r = 0;
   let s = 0;
+  let isTrap = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -652,6 +655,7 @@ def ILL_N : RRRN_Inst<0x0D, (outs), (ins),
   let r = 0xF;
   let s = 0x0;
   let t = 0x6;
+  let isTrap = 1;
 }
 
 def MOV_N : RRRN_Inst<0x0D, (outs AR:$t), (ins AR:$s),
@@ -1399,13 +1403,13 @@ let Predicates = [HasRegionProtection] in {
 // Debug instructions
 //===----------------------------------------------------------------------===//
 
-let isBarrier = 1, isTerminator = 1 in {
+let isBarrier = 1, isTerminator = 1, isTrap = 1 in {
   def BREAK : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$s, uimm4:$t),
                       "break\t$s, $t", []>, Requires<[HasDebug]> {
     let r = 0x04;
   }
 
-  def BREAK_N : RRRN_Inst<0x0C, (outs), (ins uimm4:$imm),
+  def BREAK_N : RRRN_Inst<0x0D, (outs), (ins uimm4:$imm),
                          "break.n\t$imm", []>, Requires<[HasDensity, HasDebug]> {
     bits<4> imm;
 
@@ -1417,7 +1421,25 @@ let isBarrier = 1, isTerminator = 1 in {
 
 def : InstAlias<"_break.n\t$imm", (BREAK_N uimm4:$imm)>;
 
-def : Pat<(trap), (BREAK (i32 1), (i32 15))>;
+def : Pat<(trap), (ILL)>;
+def : Pat<(debugtrap), (ILL)>;
+
+let AddedComplexity = 15 in {
+  def : Pat<(trap), (ILL_N)>,
+      Requires<[HasDensity]>;
+  def : Pat<(debugtrap), (ILL_N)>,
+      Requires<[HasDensity]>;
+}
+
+let AddedComplexity = 20 in {
+  def : Pat<(debugtrap), (BREAK (i32 1), (i32 15))>,
+      Requires<[HasDebug]>;
+}
+
+let AddedComplexity = 25 in {
+  def : Pat<(debugtrap), (BREAK_N (i32 1))>,
+      Requires<[HasDensity, HasDebug]>;
+}
 
 // Load instruction
 def LDDR32P : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$s), (ins),
@@ -1496,6 +1518,80 @@ def RFI : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
   let r = 0x3;
   let s = imm{3-0};
   let t = 0x1;
+}
+
+//===----------------------------------------------------------------------===//
+// S32C1I
+//===----------------------------------------------------------------------===//
+
+let mayStore = 1, mayLoad = 1, Predicates = [HasS32C1I] in {
+  def S32C1I : RRI8_Inst<0x02, (outs AR:$a), (ins AR:$t, mem32:$addr),
+                        "s32c1i\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x0e;
+    let Uses = [SCOMPARE1];
+    let Constraints = "$a = $t";
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic patterns
+//===----------------------------------------------------------------------===//
+
+// Atomic load/store are available under both +s32c1i and +force-atomics.
+// Fences will be inserted for atomic load/stores according to the logic in
+// XtensaTargetLowering.
+let Predicates = [HasAtomicLdSt] in {
+  def : Pat<(i32 (atomic_load_8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+  def : Pat<(i32 (atomic_load_16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
+  def : Pat<(i32 (atomic_load_32 addr_ish4:$addr)), (L32I addr_ish4:$addr)>;
+
+  def : Pat<(atomic_store_8  AR:$t, addr_ish1:$addr), (S8I AR:$t, addr_ish1:$addr)>;
+  def : Pat<(atomic_store_16 AR:$t, addr_ish2:$addr), (S16I AR:$t, addr_ish2:$addr)>;
+  def : Pat<(atomic_store_32 AR:$t, addr_ish4:$addr), (S32I AR:$t, addr_ish4:$addr)>;
+}
+
+let usesCustomInserter = 1, Predicates = [HasS32C1I] in {
+  def ATOMIC_CMP_SWAP_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+                                   "!atomic_cmp_swap_32_p, $dst, $ptr, $cmp, $swap",
+                                   [(set AR:$dst, (atomic_cmp_swap_i32 AR:$ptr, AR:$cmp, AR:$swap))]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Xtensa ESP32S2 Instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasESP32S2Ops] in {
+  def WR_MASK_GPIO_OUT : RRR_Inst<0x0, 0x06, 0x0, (outs), (ins AR:$s, AR:$t),
+                                 "wr_mask_gpio_out\t$s, $t", []> {
+    let r = 0x2;
+  }
+
+  def SET_BIT_GPIO_OUT : RRR_Inst<0x0, 0x06, 0x0, (outs), (ins select_256:$imm),
+                                 "set_bit_gpio_out\t$imm", []> {
+    bits<8> imm;
+
+    let r = 0x1;
+    let s = imm{7-4};
+    let t = imm{3-0};
+  }
+
+  def CLR_BIT_GPIO_OUT : RRR_Inst<0x0, 0x06, 0x0, (outs), (ins select_256:$imm),
+                                 "clr_bit_gpio_out\t$imm", []> {
+    bits<8> imm;
+
+    let r = 0x0;
+    let s = imm{7-4};
+    let t = imm{3-0};
+  }
+
+  def GET_GPIO_IN : RRR_Inst<0x0, 0x06, 0x0, (outs AR:$t), (ins),
+                            "get_gpio_in\t$t", []> {
+    let r = 0x3;
+    let s = 0x0;
+  }
 }
 
 //===----------------------------------------------------------------------===//

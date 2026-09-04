@@ -482,7 +482,8 @@ void benchmarkMain() {
   InitializeAllExegesisTargets();
 #define LLVM_EXEGESIS(TargetName)                                              \
   LLVMInitialize##TargetName##AsmPrinter();                                    \
-  LLVMInitialize##TargetName##AsmParser();
+  LLVMInitialize##TargetName##AsmParser();                                     \
+  LLVMInitialize##TargetName##Disassembler();
 #include "llvm/Config/TargetExegesis.def"
 
   const LLVMState State = ExitOnErr(

@@ -2,6 +2,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang -### %s --target=arm-unknown-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -14,6 +18,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang -### %s --target=arm-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
 // RUN: %clang -### %s --target=aarch64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -24,6 +32,7 @@
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // CHECK: "-cc1"
 // CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
+// CHECK-ARMV8A: "-triple" "thumbv8a-unknown-fuchsia"
 // CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
 // CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
 // CHECK: "-funwind-tables=2"
@@ -55,9 +64,19 @@
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
 
-// RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
-// RUN:     --emit-static-lib 2>&1 | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
-// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia --emit-static-lib \
+// RUN:       -Xstatic-lib-tool -U -Xstatic-lib-tool --format=gnu -o %t.out 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
+// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD" "-U" "--format=gnu" "{{.*}}.out"
+
+// The libtool-only options do not apply to ar(1) and are reported unused.
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia --emit-static-lib \
+// RUN:       --static-lib-target-arch-only 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK-LIBTOOL-ARG %s
+// CHECK-LIBTOOL-ARG: warning: argument unused during compilation: '--static-lib-target-arch-only'
+// CHECK-LIBTOOL-ARG: {{.*}}llvm-ar{{.*}}" "rcsD"
+// CHECK-LIBTOOL-ARG-NOT: "--static-lib-target-arch-only"
+// CHECK-LIBTOOL-ARG-NOT: "-arch_only"
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FP-ALL
@@ -68,12 +87,12 @@
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia -O3 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FP-NONE
 // CHECK-FP-ALL: "-mframe-pointer=all"
-// CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf"
+// CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf-no-reserve"
 // CHECK-FP-NONE: "-mframe-pointer=none"
 
 // RUN: not %clang -### %s --target=x86_64-unknown-fuchsia -rtlib=libgcc 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB
-// CHECK-RTLIB: error: invalid runtime library name in argument '-rtlib=libgcc'
+// CHECK-RTLIB: error: unsupported runtime library 'libgcc' for platform 'Fuchsia'
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia -static -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
@@ -117,6 +136,11 @@
 // CHECK-NOLIBC-NOT: "-lc"
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=ld \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia -m32 \
 // RUN:     -fsanitize=safe-stack 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=ld \
@@ -303,3 +327,13 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIB-NOLIBC
 // CHECK-NOSTDLIB-NOLIBC-NOT: "warning:"
 // CHECK-NOSTDLIB-NOLIBC-NOT: "error:"
+
+// RUN: not %clang -### %s --target=aarch64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NONX86-SAFESTACK
+// RUN: not %clang -### %s --target=riscv64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NONX86-SAFESTACK
+// CHECK-NONX86-SAFESTACK: error: unsupported option '-fsanitize=safe-stack' for target '{{.*}}'

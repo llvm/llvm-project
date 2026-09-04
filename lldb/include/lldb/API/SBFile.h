@@ -27,7 +27,10 @@ public:
   SBFile(FileSP file_sp);
 #ifndef SWIG
   SBFile(const SBFile &rhs);
+  LLDB_DEPRECATED_FIXME("Use the constructor that specifies mode instead",
+                        "SBFile(FILE*, const char*, bool)")
   SBFile(FILE *file, bool transfer_ownership);
+  SBFile(FILE *file, const char *mode, bool transfer_ownership);
 #endif
   SBFile(int fd, const char *mode, bool transfer_ownership);
   ~SBFile();
@@ -40,7 +43,7 @@ public:
   bool IsValid() const;
   SBError Close();
 
-  operator bool() const;
+  explicit operator bool() const;
 #ifndef SWIG
   bool operator!() const;
 #endif

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<optree>' -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Forward a the LoadInst %val into %bodyB. %val is executed multiple times,
 ; we must get the last loaded values.

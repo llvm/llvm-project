@@ -57,7 +57,7 @@ TEST(SmallPtrSetTest, GrowthTest) {
 
 
   SmallPtrSet<int *, 4> s;
-  typedef SmallPtrSet<int *, 4>::iterator iter;
+  using iter = SmallPtrSet<int *, 4>::iterator;
 
   s.insert(&buf[0]);
   s.insert(&buf[1]);
@@ -475,4 +475,40 @@ TEST(SmallPtrSetTest, Reserve) {
   EXPECT_EQ(Set.capacity(), 128u);
   EXPECT_EQ(Set.size(), 6u);
   EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2], &Vals[3], &Vals[4], &Vals[5]));
+
+  // Reserving 192 should result in 512 buckets: 192 * 3 / 2 = 288, rounded
+  // up to the next power of two.
+  Set.reserve(192);
+  EXPECT_EQ(Set.capacity(), 512u);
 }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(SmallPtrSetTest, SwapInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other;
+  Set.swap(Other);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveConstructInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+
+TEST(SmallPtrSetTest, MoveAssignInvalidatesIterators) {
+  int buf[1];
+  SmallPtrSet<int *, 2> Set;
+  Set.insert(&buf[0]);
+  auto It = Set.begin();
+  SmallPtrSet<int *, 2> Other;
+  Other = std::move(Set);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+#endif

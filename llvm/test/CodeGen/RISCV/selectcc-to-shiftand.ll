@@ -76,12 +76,19 @@ define i32 @not_pos_sel_same_variable(i32 signext %a) {
 
 ; Compare if positive and select of constants where one constant is zero.
 define i32 @pos_sel_constants(i32 signext %a) {
-; CHECK-LABEL: pos_sel_constants:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    slti a0, a0, 0
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    andi a0, a0, 5
-; CHECK-NEXT:    ret
+; RV32-LABEL: pos_sel_constants:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    andi a0, a0, 5
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pos_sel_constants:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    andi a0, a0, 5
+; RV64-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 5, i32 0
   ret i32 %retval
@@ -101,7 +108,7 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 ;
 ; RV64-LABEL: pos_sel_special_constant:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slti a0, a0, 0
+; RV64-NEXT:    srli a0, a0, 63
 ; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    slli a0, a0, 9
 ; RV64-NEXT:    ret
@@ -114,14 +121,14 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 define i32 @pos_sel_variable_and_zero(i32 signext %a, i32 signext %b) {
 ; RV32I-LABEL: pos_sel_variable_and_zero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slti a0, a0, 0
+; RV32I-NEXT:    srli a0, a0, 31
 ; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: pos_sel_variable_and_zero:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slti a0, a0, 0
+; RV64I-NEXT:    srli a0, a0, 63
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret

@@ -8,6 +8,8 @@
 
 #include "MinidumpFileBuilder.h"
 
+#include <cstring>
+
 #include "Plugins/Process/minidump/RegisterContextMinidump_ARM64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
@@ -201,7 +203,7 @@ Status MinidumpFileBuilder::AddSystemInfo() {
     return error;
   };
 
-  llvm::minidump::SystemInfo sys_info;
+  llvm::minidump::SystemInfo sys_info{};
   sys_info.ProcessorArch =
       static_cast<llvm::support::little_t<ProcessorArchitecture>>(arch);
   // Global offset to beginning of a csd_string in a data section
@@ -279,7 +281,7 @@ llvm::Expected<uint64_t> getModuleFileSize(Target &target,
   lldb::SectionSP next_sect_sp = sect_so_addr.GetSection();
   while (next_sect_sp &&
          next_sect_sp->GetLoadBaseAddress(&target) == next_sect_addr) {
-    sect_size = sect_sp->GetByteSize();
+    sect_size = next_sect_sp->GetByteSize();
     SizeOfImage += sect_size;
     next_sect_addr += sect_size;
     target.ResolveLoadAddress(next_sect_addr, sect_so_addr);
@@ -308,23 +310,13 @@ Status MinidumpFileBuilder::AddModuleList() {
   // the llvm::minidump::Module's structures into helper data
   size_t size_before = GetCurrentDataEndOffset();
 
-  // This is the size of the main part of the ModuleList stream.
-  // It consists of a module number and corresponding number of
-  // structs describing individual modules
-  size_t module_stream_size =
-      sizeof(llvm::support::ulittle32_t) + modules_count * minidump_module_size;
-
-  // Adding directory describing this stream.
-  error = AddDirectory(StreamType::ModuleList, module_stream_size);
-  if (error.Fail())
-    return error;
-
-  m_data.AppendData(&modules_count, sizeof(llvm::support::ulittle32_t));
-
   // Temporary storage for the helper data (of variable length)
   // as these cannot be dumped to m_data before dumping entire
   // array of module structures.
   DataBufferHeap helper_data;
+
+  // Vector to store modules that pass validation.
+  std::vector<std::pair<ModuleSP, uint64_t>> valid_modules;
 
   for (size_t i = 0; i < modules_count; ++i) {
     ModuleSP mod = modules.GetModuleAtIndex(i);
@@ -332,16 +324,33 @@ Status MinidumpFileBuilder::AddModuleList() {
     auto maybe_mod_size = getModuleFileSize(target, mod);
     if (!maybe_mod_size) {
       llvm::Error mod_size_err = maybe_mod_size.takeError();
-      llvm::handleAllErrors(std::move(mod_size_err),
-                            [&](const llvm::ErrorInfoBase &E) {
-                              error = Status::FromErrorStringWithFormat(
-                                  "Unable to get the size of module %s: %s.",
-                                  module_name.c_str(), E.message().c_str());
-                            });
-      return error;
+      Log *log = GetLog(LLDBLog::Object);
+      llvm::handleAllErrors(
+          std::move(mod_size_err), [&](const llvm::ErrorInfoBase &E) {
+            LLDB_LOGF(log, "Unable to get the size of module %s: %s",
+                      module_name.c_str(), E.message().c_str());
+          });
+      continue;
     }
+    valid_modules.emplace_back(mod, *maybe_mod_size);
+  }
 
-    uint64_t mod_size = std::move(*maybe_mod_size);
+  size_t module_stream_size = sizeof(llvm::support::ulittle32_t) +
+                              valid_modules.size() * minidump_module_size;
+
+  error = AddDirectory(StreamType::ModuleList, module_stream_size);
+  if (error.Fail())
+    return error;
+
+  // Setting the header with the number of modules.
+  llvm::support::ulittle32_t count =
+      static_cast<llvm::support::ulittle32_t>(valid_modules.size());
+  m_data.AppendData(&count, sizeof(llvm::support::ulittle32_t));
+
+  for (const auto &valid_module : valid_modules) {
+    ModuleSP mod = valid_module.first;
+    uint64_t module_size = valid_module.second;
+    std::string module_name = mod->GetSpecificationDescription();
 
     llvm::support::ulittle32_t signature =
         static_cast<llvm::support::ulittle32_t>(
@@ -378,10 +387,10 @@ Status MinidumpFileBuilder::AddModuleList() {
     helper_data.AppendData(&signature, sizeof(llvm::support::ulittle32_t));
     helper_data.AppendData(uuid.begin(), uuid.size());
 
-    llvm::minidump::Module m;
+    llvm::minidump::Module m{};
     m.BaseOfImage = static_cast<llvm::support::ulittle64_t>(
         mod->GetObjectFile()->GetBaseAddress().GetLoadAddress(&target));
-    m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(mod_size);
+    m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(module_size);
     m.Checksum = static_cast<llvm::support::ulittle32_t>(0);
     m.TimeDateStamp =
         static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
@@ -745,7 +754,7 @@ lldb_private::Status MinidumpFileBuilder::AddMiscInfo() {
   if (error.Fail())
     return error;
 
-  lldb_private::minidump::MinidumpMiscInfo misc_info;
+  lldb_private::minidump::MinidumpMiscInfo misc_info{};
   misc_info.size = static_cast<llvm::support::ulittle32_t>(
       sizeof(lldb_private::minidump::MinidumpMiscInfo));
   // Default set flags1 to 0, in case that we will not be able to
@@ -961,72 +970,50 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
   const lldb::addr_t addr = range.range.start();
   const lldb::addr_t size = range.range.size();
   Log *log = GetLog(LLDBLog::Object);
-  uint64_t total_bytes_read = 0;
+  void *buf = data_buffer.GetBytes();
+  const lldb::addr_t chunk_size = data_buffer.GetByteSize();
+  // Step over an unreadable page at a time, so we never zero-fill memory that
+  // could be read.
+  const lldb::addr_t page_size = 4096;
+
+  // Write exactly `size` bytes: Memory64List locates each range by the
+  // cumulative DataSize of the ranges before it.
+  bytes_read = 0;
   Status addDataError;
-  Process::ReadMemoryChunkCallback callback =
-      [&](Status &error, lldb::addr_t current_addr, const void *buf,
-          uint64_t bytes_read) -> lldb_private::IterationAction {
-    if (error.Fail() || bytes_read == 0) {
+  while (bytes_read < size) {
+    const lldb::addr_t current_addr = addr + bytes_read;
+    const lldb::addr_t bytes_remaining = size - bytes_read;
+    const lldb::addr_t bytes_to_read = std::min(bytes_remaining, chunk_size);
+    Status error;
+    const lldb::addr_t bytes_read_for_chunk =
+        m_process_sp->ReadMemoryFromInferior(current_addr, buf, bytes_to_read,
+                                             error);
+
+    if (bytes_read_for_chunk > 0) {
+      addDataError = AddData(buf, bytes_read_for_chunk);
+      if (addDataError.Fail())
+        return addDataError;
+      bytes_read += bytes_read_for_chunk;
+    }
+
+    // Unreadable page: zero-fill it and continue past the hole.
+    if (bytes_read_for_chunk < bytes_to_read) {
+      const lldb::addr_t hole = addr + bytes_read;
+      lldb::addr_t fill = ((hole + page_size) & ~(page_size - 1)) - hole;
+      fill = std::min(fill, size - bytes_read);
+      fill = std::min(fill, chunk_size);
       LLDB_LOGF(log,
                 "Failed to read memory region at: 0x%" PRIx64
-                ". Bytes read: 0x%" PRIx64 ", error: %s",
-                current_addr, bytes_read, error.AsCString());
-
-      // If we failed in a memory read, we would normally want to skip
-      // this entire region. If we had already written to the minidump
-      // file, we can't easily rewind that state.
-      //
-      // So if we do encounter an error while reading, we return
-      // immediately, any prior bytes read will still be included but
-      // any bytes partially read before the error are ignored.
-      return lldb_private::IterationAction::Stop;
+                ". Zero-filling 0x%" PRIx64 " bytes, error: %s",
+                hole, fill, error.AsCString());
+      ::memset(buf, 0, fill);
+      addDataError = AddData(buf, fill);
+      if (addDataError.Fail())
+        return addDataError;
+      bytes_read += fill;
     }
+  }
 
-    if (current_addr != addr + total_bytes_read) {
-      LLDB_LOGF(log,
-                "Current addr is at unexpected address, 0x%" PRIx64
-                ", expected at 0x%" PRIx64,
-                current_addr, addr + total_bytes_read);
-
-      // Something went wrong and the address is not where it should be
-      // we'll error out of this Minidump generation.
-      addDataError = Status::FromErrorStringWithFormat(
-          "Unexpected address encounterd when reading memory in chunks "
-          "0x%" PRIx64 " expected 0x%" PRIx64,
-          current_addr, addr + total_bytes_read);
-      return lldb_private::IterationAction::Stop;
-    }
-
-    // Write to the minidump file with the chunk potentially flushing to
-    // disk.
-    // This error will be captured by the outer scope and is considered fatal.
-    // If we get an error writing to disk we can't easily guarauntee that we
-    // won't corrupt the minidump.
-    addDataError = AddData(buf, bytes_read);
-    if (addDataError.Fail())
-      return lldb_private::IterationAction::Stop;
-
-    total_bytes_read += bytes_read;
-    // If we have a partial read, report it, but only if the partial read
-    // didn't finish reading the entire region.
-    if (bytes_read != data_buffer.GetByteSize() && total_bytes_read != size) {
-      LLDB_LOGF(log,
-                "Memory region at: 0x%" PRIx64 " partial read 0x%" PRIx64
-                " bytes out of 0x%" PRIx64 " bytes.",
-                current_addr, bytes_read,
-                data_buffer.GetByteSize() - bytes_read);
-
-      // If we've read some bytes, we stop trying to read more and return
-      // this best effort attempt
-      return lldb_private::IterationAction::Stop;
-    }
-
-    // No problems, keep going!
-    return lldb_private::IterationAction::Continue;
-  };
-
-  bytes_read = m_process_sp->ReadMemoryInChunks(
-      addr, data_buffer.GetBytes(), data_buffer.GetByteSize(), size, callback);
   return addDataError;
 }
 

@@ -16,11 +16,13 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
+#include "flang/Optimizer/Dialect/FIRBoxUtils.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Support/MathOptionsBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -39,12 +41,21 @@ class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
 
+/// Default alignment (in bytes) applied to array globals.
+constexpr unsigned defaultArrayGlobalAlignment = 64;
 /// Get the integer type with a pointer size.
 inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   // TODO: Delay the need of such type until codegen or find a way to use
   // llvm::DataLayout::getPointerSizeInBits here.
   return builder.getI64Type();
 }
+
+/// Get the block of \p region where alloca-like operations should be inserted:
+/// the block where the closest parent operation owning the stack allocations of
+/// \p region expects them (an OpenACC compute construct, an outlineable OpenMP
+/// operation, a privatization or reduction recipe, ...), or the entry block of
+/// the enclosing function.
+mlir::Block *getAllocaBlock(mlir::Region &region);
 
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
@@ -208,6 +219,11 @@ public:
     return createRealConstant(loc, realType, 0u);
   }
 
+  /// Create a real constant of type \p realType with value one.
+  mlir::Value createRealOneConstant(mlir::Location loc, mlir::Type realType) {
+    return createRealConstant(loc, realType, 1u);
+  }
+
   /// Create a slot for a local on the stack. Besides the variable's type and
   /// shape, it may be given name, pinned, or target attributes.
   mlir::Value allocateLocal(mlir::Location loc, mlir::Type ty,
@@ -324,21 +340,23 @@ public:
   /// Create a global value.
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name,
-                             mlir::StringAttr linkage = {},
+                             fir::LinkageAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             cuf::DataAttributeAttr dataAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
-                             mlir::StringAttr linkage = {},
-                             cuf::DataAttributeAttr dataAttr = {});
+                             fir::LinkageAttr linkage = {},
+                             cuf::DataAttributeAttr dataAttr = {},
+                             bool setDefaultAlignment = true);
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
                                      llvm::StringRef name,
-                                     mlir::StringAttr linkage = {},
+                                     fir::LinkageAttr linkage = {},
                                      mlir::Attribute value = {}) {
     return createGlobal(loc, type, name, linkage, value, /*isConst=*/true,
                         /*isTarget=*/false);
@@ -348,7 +366,7 @@ public:
   createGlobalConstant(mlir::Location loc, mlir::Type type,
                        llvm::StringRef name,
                        std::function<void(FirOpBuilder &)> bodyBuilder,
-                       mlir::StringAttr linkage = {}) {
+                       fir::LinkageAttr linkage = {}) {
     return createGlobal(loc, type, name, /*isConst=*/true, /*isTarget=*/false,
                         bodyBuilder, linkage);
   }
@@ -365,17 +383,32 @@ public:
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
 
-  mlir::StringAttr createCommonLinkage() { return getStringAttr("common"); }
-
-  mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
-
-  mlir::StringAttr createLinkOnceLinkage() { return getStringAttr("linkonce"); }
-
-  mlir::StringAttr createLinkOnceODRLinkage() {
-    return getStringAttr("linkonce_odr");
+  static fir::LinkageAttr createCommonLinkage(mlir::MLIRContext *context) {
+    return fir::LinkageAttr::get(context, fir::LinkageEnum::Common);
+  }
+  fir::LinkageAttr createCommonLinkage() {
+    return createCommonLinkage(getContext());
   }
 
-  mlir::StringAttr createWeakLinkage() { return getStringAttr("weak"); }
+  fir::LinkageAttr createExternalLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::External);
+  }
+
+  fir::LinkageAttr createInternalLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::Internal);
+  }
+
+  fir::LinkageAttr createLinkOnceLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::Linkonce);
+  }
+
+  fir::LinkageAttr createLinkOnceODRLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::LinkonceODR);
+  }
+
+  fir::LinkageAttr createWeakLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::Weak);
+  }
 
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
@@ -475,7 +508,8 @@ public:
   /// Array entities are boxed with a shape and possibly a shift. Character
   /// entities are boxed with a LEN parameter.
   mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv,
-                        bool isPolymorphic = false, bool isAssumedType = false);
+                        bool isPolymorphic = false, bool isAssumedType = false,
+                        unsigned corank = 0);
 
   mlir::Value createBox(mlir::Location loc, mlir::Type boxType,
                         mlir::Value addr, mlir::Value shape, mlir::Value slice,
@@ -530,27 +564,28 @@ public:
   /// bodies.
   IfBuilder genIfOp(mlir::Location loc, mlir::TypeRange results,
                     mlir::Value cdt, bool withElseRegion) {
-    auto op = create<fir::IfOp>(loc, results, cdt, withElseRegion);
+    auto op = fir::IfOp::create(*this, loc, results, cdt, withElseRegion);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with no "else" region, and no result values.
   /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
   IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, false);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, false);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with an "else" region, and no result values.
   /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
   IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, true);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, true);
     return IfBuilder(op, *this);
   }
 
   mlir::Value genNot(mlir::Location loc, mlir::Value boolean) {
-    return create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
-                                       boolean, createBool(loc, false));
+    return mlir::arith::CmpIOp::create(*this, loc,
+                                       mlir::arith::CmpIPredicate::eq, boolean,
+                                       createBool(loc, false));
   }
 
   /// Generate code testing \p addr is not a null address.
@@ -563,7 +598,7 @@ public:
   /// Fortran 2018 9.5.3.3.2 section for more details.
   mlir::Value genExtentFromTriplet(mlir::Location loc, mlir::Value lb,
                                    mlir::Value ub, mlir::Value step,
-                                   mlir::Type type);
+                                   mlir::Type type, bool fold = false);
 
   /// Create an AbsentOp of \p argTy type and handle special cases, such as
   /// Character Procedure Tuple arguments.
@@ -597,6 +632,23 @@ public:
     return fmfString;
   }
 
+  /// RAII helper to set FastMathFlags for a scope and restore the previous
+  /// value on destruction.
+  class FastMathFlagGuard {
+  public:
+    FastMathFlagGuard(FirOpBuilder &builder, mlir::arith::FastMathFlags flags)
+        : builder{builder}, savedFlags{builder.getFastMathFlags()} {
+      builder.setFastMathFlags(flags);
+    }
+    FastMathFlagGuard(const FastMathFlagGuard &) = delete;
+    FastMathFlagGuard &operator=(const FastMathFlagGuard &) = delete;
+    ~FastMathFlagGuard() { builder.setFastMathFlags(savedFlags); }
+
+  private:
+    FirOpBuilder &builder;
+    mlir::arith::FastMathFlags savedFlags;
+  };
+
   /// Set default IntegerOverflowFlags value for all operations
   /// supporting mlir::arith::IntegerOverflowFlagsAttr that will be created
   /// by this builder.
@@ -620,6 +672,14 @@ public:
     return complexDivisionToRuntimeFlag;
   }
 
+  /// Setter/getter for fpMaxminBehavior.
+  void setFPMaxminBehavior(Fortran::common::FPMaxminBehavior mode) {
+    fpMaxminBehavior = mode;
+  }
+  Fortran::common::FPMaxminBehavior getFPMaxminBehavior() const {
+    return fpMaxminBehavior;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -641,7 +701,7 @@ public:
   mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
                              mlir::Value left, mlir::Value right) {
     if (!resultType.isIntOrFloat())
-      return create<OpTy>(loc, resultType, left, right);
+      return OpTy::create(*this, loc, resultType, left, right);
     mlir::Type signlessType = mlir::IntegerType::get(
         getContext(), resultType.getIntOrFloatBitWidth(),
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -654,7 +714,7 @@ public:
       right = createConvert(loc, signlessType, right);
       opResType = signlessType;
     }
-    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    mlir::Value result = OpTy::create(*this, loc, opResType, left, right);
     if (resultType.isUnsignedInteger())
       result = createConvert(loc, resultType, result);
     return result;
@@ -666,7 +726,7 @@ public:
                             mlir::Value ptr1, mlir::Value ptr2) {
     ptr1 = createConvert(loc, getIndexType(), ptr1);
     ptr2 = createConvert(loc, getIndexType(), ptr2);
-    return create<mlir::arith::CmpIOp>(loc, predicate, ptr1, ptr2);
+    return mlir::arith::CmpIOp::create(*this, loc, predicate, ptr1, ptr2);
   }
 
 private:
@@ -679,6 +739,14 @@ private:
   /// FastMathFlags that need to be set for operations that support
   /// mlir::arith::FastMathAttr.
   mlir::arith::FastMathFlags fastMathFlags{};
+
+  /// Controls how max/min idioms should be implemented.
+  /// Right now, it is only used to propagate FPMaxminBehavior
+  /// to the IntrinsicCall lowering. In general, it can be used
+  /// for generating max/min idioms through FirBuilder anywhere
+  /// in the pipeline.
+  Fortran::common::FPMaxminBehavior fpMaxminBehavior{
+      Fortran::common::FPMaxminBehavior::Legacy};
 
   /// IntegerOverflowFlags that need to be set for operations that support
   /// mlir::arith::IntegerOverflowFlagsAttr.
@@ -701,6 +769,8 @@ private:
 } // namespace fir
 
 namespace fir::factory {
+
+using fir::genDimInfoFromBox;
 
 //===----------------------------------------------------------------------===//
 // ExtendedValue inquiry helpers
@@ -742,12 +812,6 @@ fir::ExtendedValue readBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &exv);
-
-/// Return LEN parameters associated to \p exv that are not deferred (that are
-/// available without having to read any fir.box values). Empty if \p exv has no
-/// LEN parameters or if they are all deferred.
-llvm::SmallVector<mlir::Value>
-getNonDeferredLenParams(const fir::ExtendedValue &exv);
 
 //===----------------------------------------------------------------------===//
 // String literal helper helpers
@@ -812,7 +876,8 @@ void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
                          bool needFinalization = false,
-                         bool isTemporaryLHS = false);
+                         bool isTemporaryLHS = false,
+                         mlir::ArrayAttr accessGroups = {});
 
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for
@@ -823,33 +888,15 @@ void genRecordAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          bool needFinalization = false,
                          bool isTemporaryLHS = false);
 
-/// Builds and returns the type of a ragged array header used to cache mask
-/// evaluations. RaggedArrayHeader is defined in
-/// flang/include/flang/Runtime/ragged.h.
-mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
-
-/// Generate the, possibly dynamic, LEN of a CHARACTER. \p arrLoad determines
-/// the base array. After applying \p path, the result must be a reference to a
-/// `!fir.char` type object. \p substring must have 0, 1, or 2 members. The
-/// first member is the starting offset. The second is the ending offset.
-mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
-                              fir::ArrayLoadOp arrLoad,
-                              llvm::ArrayRef<mlir::Value> path,
-                              llvm::ArrayRef<mlir::Value> substring);
-mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
-                              fir::SequenceType seqTy, mlir::Value memref,
-                              llvm::ArrayRef<mlir::Value> typeParams,
-                              llvm::ArrayRef<mlir::Value> path,
-                              llvm::ArrayRef<mlir::Value> substring);
-
 /// Create the zero value of a given the numerical or logical \p type (`false`
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
 
-/// Get the integer constants of triplet and compute the extent.
-std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
-                                                 mlir::Value stride);
+/// Create a one value of a given numerical or logical \p type (`true`
+/// for logical types).
+mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type type);
 
 /// Compute the extent value given the lower bound \lb and upper bound \ub.
 /// All inputs must have the same SSA integer type.
@@ -865,16 +912,9 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value, mlir::Value zero);
 
-/// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
-/// component of integer 64, and the component is the C address. Get the C
-/// address.
+/// Get the C address from a type(C_PTR/C_FUNPTR/C_DEVPTR) entity.
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
-
-/// The type(C_DEVPTR) is defined as the derived type with only one
-/// component of C_PTR type. Get the C address from the C_PTR component.
-mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value cDevPtr, mlir::Type ty);
 
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
@@ -883,7 +923,8 @@ mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
 /// Create a fir.box from a fir::ExtendedValue and wrap it in a fir::BoxValue
 /// to keep all the lower bound and explicit parameter information.
 fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
-                             const fir::ExtendedValue &exv);
+                             const fir::ExtendedValue &exv,
+                             unsigned corank = 0);
 
 /// Generate Null BoxProc for procedure pointer null initialization.
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -932,27 +973,35 @@ uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
 
-/// Given \p box of type fir::BaseBoxType representing an array,
-/// the function generates code to fetch the lower bounds,
-/// the extents and the strides from the box. The values are returned via
-/// \p lbounds, \p extents and \p strides.
-void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                       mlir::Value box,
-                       llvm::SmallVectorImpl<mlir::Value> *lbounds,
-                       llvm::SmallVectorImpl<mlir::Value> *extents,
-                       llvm::SmallVectorImpl<mlir::Value> *strides);
-
 /// Generate an LLVM dialect lifetime start marker at the current insertion
-/// point given an fir.alloca and its constant size in bytes. Returns the value
-/// to be passed to the lifetime end marker.
+/// point given an fir.alloca. Returns the value to be passed to the lifetime
+/// end marker.
 mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
-                             fir::AllocaOp alloc, int64_t size,
-                             const mlir::DataLayout *dl);
+                             fir::AllocaOp alloc, const mlir::DataLayout *dl);
 
 /// Generate an LLVM dialect lifetime end marker at the current insertion point
-/// given an llvm.ptr value and the constant size in bytes of its storage.
+/// given an llvm.ptr value.
 void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
-                    mlir::Value mem, int64_t size);
+                    mlir::Value mem);
+
+/// Given a fir.box or fir.class \p box describing an entity and a raw address
+/// \p newAddr for an entity with the same Fortran properties (rank, dynamic
+/// type, length parameters and bounds) and attributes (POINTER or ALLOCATABLE),
+/// create a box for \p newAddr with the same type as \p box. This assumes \p
+/// newAddr is for contiguous storage (\p box does not have to be contiguous).
+mlir::Value getDescriptorWithNewBaseAddress(fir::FirOpBuilder &builder,
+                                            mlir::Location loc, mlir::Value box,
+                                            mlir::Value newAddr);
+
+/// Generate a index-based disjointness check.
+std::optional<mlir::Value>
+genIndexBasedDisjointnessCheck(mlir::Location loc, fir::FirOpBuilder &builder,
+                               mlir::Value lhsRef, mlir::Value rhsRef);
+
+/// Generate a address-based disjointness check.
+std::optional<mlir::Value>
+genAddressBasedDisjointnessCheck(mlir::Location loc, fir::FirOpBuilder &builder,
+                                 mlir::Value lhsRef, mlir::Value rhsRef);
 
 } // namespace fir::factory
 

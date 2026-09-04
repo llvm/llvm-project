@@ -5,9 +5,9 @@ define void @matrix_phi_loop(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-LABEL: @matrix_phi_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN1:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN1]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN1]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN1]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[IN1]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -16,9 +16,9 @@ define void @matrix_phi_loop(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[PHI11:%.*]] = phi <3 x double> [ [[COL_LOAD3]], [[ENTRY]] ], [ [[TMP2:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[DEC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <3 x double>, ptr [[IN2:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[IN2]], i64 3
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[IN2]], i64 6
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI9]], [[COL_LOAD4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI10]], [[COL_LOAD6]]
@@ -34,9 +34,9 @@ define void @matrix_phi_loop(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
-; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP12]], align 8
-; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP13]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -71,9 +71,9 @@ define void @matrix_phi_loop_zeroinitializer(ptr %in1, ptr %in2, i32 %count, ptr
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi <3 x double> [ zeroinitializer, [[ENTRY]] ], [ [[TMP2:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[DEC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN2:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN2]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN2]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
@@ -89,9 +89,9 @@ define void @matrix_phi_loop_zeroinitializer(ptr %in1, ptr %in2, i32 %count, ptr
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP7]], align 8
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP8]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -161,9 +161,9 @@ define void @matrix_phi_loop_poison(ptr %in, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi <3 x double> [ poison, [[ENTRY]] ], [ [[TMP2:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[DEC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN2:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN2]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN2]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
@@ -179,9 +179,9 @@ define void @matrix_phi_loop_poison(ptr %in, i32 %count, ptr %out) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP7]], align 8
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP8]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -215,9 +215,9 @@ define void @matrix_phi_loop_cdv(ptr %in, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi <3 x double> [ <double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[ENTRY]] ], [ [[TMP2:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[DEC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN2:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN2]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN2]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
@@ -233,9 +233,9 @@ define void @matrix_phi_loop_cdv(ptr %in, i32 %count, ptr %out) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP7]], align 8
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP8]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -263,9 +263,9 @@ define void @matrix_phi_loop_delay(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-LABEL: @matrix_phi_loop_delay(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN1:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN1]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN1]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN1]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[IN1]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -277,9 +277,9 @@ define void @matrix_phi_loop_delay(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[TMP2]] = phi <3 x double> [ [[COL_LOAD3]], [[ENTRY]] ], [ [[SPLIT11:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[DEC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <3 x double>, ptr [[IN2:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[IN2]], i64 3
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[IN2]], i64 6
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI14]], [[COL_LOAD4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI15]], [[COL_LOAD6]]
@@ -298,9 +298,9 @@ define void @matrix_phi_loop_delay(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store <3 x double> [[TMP12]], ptr [[OUT:%.*]], align 128
-; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP13]], ptr [[VEC_GEP12]], align 8
-; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[TMP14]], ptr [[VEC_GEP13]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -331,9 +331,9 @@ define void @matrix_phi_loop_delay_reshape(ptr %in1, ptr %in2, ptr %in3, i32 %co
 ; CHECK-LABEL: @matrix_phi_loop_delay_reshape(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[IN3:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN3]], i64 2
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[IN3]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP1:%.*]] = getelementptr double, ptr [[IN3]], i64 4
+; CHECK-NEXT:    [[VEC_GEP1:%.*]] = getelementptr inbounds double, ptr [[IN3]], i64 4
 ; CHECK-NEXT:    [[COL_LOAD12:%.*]] = load <2 x double>, ptr [[VEC_GEP1]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[COL_LOAD1]], <2 x double> [[COL_LOAD8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD12]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
@@ -342,7 +342,7 @@ define void @matrix_phi_loop_delay_reshape(ptr %in1, ptr %in2, ptr %in3, i32 %co
 ; CHECK-NEXT:    [[COL_LOAD10:%.*]] = shufflevector <6 x double> [[TMP2]], <6 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <6 x double>, ptr [[IN2:%.*]], align 8
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN1:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN1]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[IN1]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -363,7 +363,7 @@ define void @matrix_phi_loop_delay_reshape(ptr %in1, ptr %in2, ptr %in3, i32 %co
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    store <3 x double> [[TMP5]], ptr [[OUT:%.*]], align 64
-; CHECK-NEXT:    [[VEC_GEP30:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP30:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[VEC_GEP30]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -399,23 +399,23 @@ define void @matrix_phi_three_preds(i1 %cond1, i1 %cond2, ptr %a, ptr %b, ptr %c
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[BBB:%.*]], label [[BBC:%.*]]
 ; CHECK:       bba:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bbb:
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <3 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr inbounds double, ptr [[B]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <3 x double>, ptr [[VEC_GEP10]], align 8
-; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr inbounds double, ptr [[B]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, ptr [[VEC_GEP12]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       bbc:
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <3 x double>, ptr [[C:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[C]], i64 3
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds double, ptr [[C]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[C]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -423,9 +423,9 @@ define void @matrix_phi_three_preds(i1 %cond1, i1 %cond2, ptr %a, ptr %b, ptr %c
 ; CHECK-NEXT:    [[PHI15:%.*]] = phi <3 x double> [ [[COL_LOAD1]], [[BBA]] ], [ [[COL_LOAD11]], [[BBB]] ], [ [[COL_LOAD6]], [[BBC]] ]
 ; CHECK-NEXT:    [[PHI16:%.*]] = phi <3 x double> [ [[COL_LOAD3]], [[BBA]] ], [ [[COL_LOAD13]], [[BBB]] ], [ [[COL_LOAD8]], [[BBC]] ]
 ; CHECK-NEXT:    store <3 x double> [[PHI14]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP17:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP17:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[PHI15]], ptr [[VEC_GEP17]], align 8
-; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[PHI16]], ptr [[VEC_GEP18]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -459,9 +459,9 @@ define void @matrix_phi_two_preds_shape_mismatch1(i1 %cond1, ptr %a, ptr %b, ptr
 ; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[BBA:%.*]], label [[BBB:%.*]]
 ; CHECK:       bba:
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[A]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <3 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <3 x double> [[COL_LOAD1]], <3 x double> [[COL_LOAD2]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x double> [[COL_LOAD4]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
@@ -505,9 +505,9 @@ define void @matrix_phi_two_preds_shape_mismatch2(i1 %cond1, ptr %a, ptr %b, ptr
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bbb:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[B]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -515,9 +515,9 @@ define void @matrix_phi_two_preds_shape_mismatch2(i1 %cond1, ptr %a, ptr %b, ptr
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi <3 x double> [ [[SPLIT8]], [[BBA]] ], [ [[COL_LOAD1]], [[BBB]] ]
 ; CHECK-NEXT:    [[PHI7:%.*]] = phi <3 x double> [ [[SPLIT9]], [[BBA]] ], [ [[COL_LOAD3]], [[BBB]] ]
 ; CHECK-NEXT:    store <3 x double> [[PHI5]], ptr [[OUT:%.*]], align 128
-; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
 ; CHECK-NEXT:    store <3 x double> [[PHI6]], ptr [[VEC_GEP10]], align 8
-; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
 ; CHECK-NEXT:    store <3 x double> [[PHI7]], ptr [[VEC_GEP11]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -786,4 +786,112 @@ if.end:                                        ; preds = %if.then, %if.else
   %merge = phi <9 x double> [ %A.trans, %if.then], [ %B.trans, %if.else ]
   %res = tail call <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double> %C, <9 x double> %merge, i32 3, i32 3, i32 3)
   ret <9 x double> %res
+}
+
+define <4 x float> @matrix_phi_argument_incoming(<4 x float> %arg, i1 %cond) {
+; CHECK-LABEL: @matrix_phi_argument_incoming(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x float> [[ARG:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <4 x float> [[ARG]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[EXIT:%.*]], label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi <2 x float> [ zeroinitializer, [[BB]] ], [ [[SPLIT]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi <2 x float> [ zeroinitializer, [[BB]] ], [ [[SPLIT3]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[PHI1]], <2 x float> [[PHI2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP0]]
+;
+entry:
+  br i1 %cond, label %exit, label %bb
+
+bb:
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> zeroinitializer, i32 2, i32 2)
+  br label %exit
+
+exit:
+  %phi = phi <4 x float> [ %t, %bb ], [ %arg, %entry ]
+  ret <4 x float> %phi
+}
+
+declare <4 x float> @get_matrix()
+declare i32 @__gxx_personality_v0(...)
+
+define <4 x float> @matrix_phi_invoke_incoming(i1 %cond) personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @matrix_phi_invoke_incoming(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[CALL:%.*]], label [[BB:%.*]]
+; CHECK:       call:
+; CHECK-NEXT:    [[INV:%.*]] = invoke <4 x float> @get_matrix()
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x float> [[INV]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <4 x float> [[INV]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[L:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret <4 x float> zeroinitializer
+; CHECK:       bb:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi <2 x float> [ [[SPLIT]], [[CONT]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi <2 x float> [ [[SPLIT3]], [[CONT]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[PHI1]], <2 x float> [[PHI2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP0]]
+;
+entry:
+  br i1 %cond, label %call, label %bb
+
+call:
+  %inv = invoke <4 x float> @get_matrix() to label %cont unwind label %lpad
+
+cont:
+  br label %exit
+
+lpad:
+  %l = landingpad { ptr, i32 } cleanup
+  ret <4 x float> zeroinitializer
+
+bb:
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> zeroinitializer, i32 2, i32 2)
+  br label %exit
+
+exit:
+  %phi = phi <4 x float> [ %inv, %cont ], [ %t, %bb ]
+  ret <4 x float> %phi
+}
+
+define <4 x float> @matrix_phi_duplicate_predecessor(ptr %arg, i32 %sw) {
+; CHECK-LABEL: @matrix_phi_duplicate_predecessor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPLIT:%.*]] = load <2 x float>, ptr [[ARG:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 2
+; CHECK-NEXT:    [[SPLIT3:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    switch i32 [[SW:%.*]], label [[BB:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       bb:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi <2 x float> [ [[SPLIT]], [[ENTRY:%.*]] ], [ [[SPLIT]], [[ENTRY]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi <2 x float> [ [[SPLIT3]], [[ENTRY]] ], [ [[SPLIT3]], [[ENTRY]] ], [ zeroinitializer, [[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[PHI1]], <2 x float> [[PHI2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP0]]
+;
+entry:
+  %m = load <4 x float>, ptr %arg
+  switch i32 %sw, label %bb [
+  i32 0, label %exit
+  i32 1, label %exit
+  ]
+
+bb:
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> zeroinitializer, i32 2, i32 2)
+  br label %exit
+
+exit:
+  %phi = phi <4 x float> [ %m, %entry ], [ %m, %entry ], [ %t, %bb ]
+  ret <4 x float> %phi
 }

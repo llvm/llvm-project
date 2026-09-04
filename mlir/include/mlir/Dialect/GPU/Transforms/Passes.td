@@ -14,7 +14,6 @@ include "mlir/Pass/PassBase.td"
 def GpuLaunchSinkIndexComputationsPass
     : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
 def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
@@ -39,8 +38,19 @@ def GpuMapParallelLoopsPass
     encountered to the local workgroup. Within each mapping, the first three
     dimensions are mapped to x/y/z hardware ids and all following dimensions are
     mapped to sequential loops.
+
+    Ordering of the loop mapping against the different dimensions is controlled
+    by the `mapping-policy` option.
+    Two policies are supported:
+       1. `outermost-first` (default): the outermost loop maps to X, then Y
+          and finally Z.
+       2. `innermost-first`: the innermost loop maps to X, then Y and finally Z.
   }];
   let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [Option<"mappingPolicyStr", "mapping-policy", "std::string",
+                        /*default=*/"\"outermost-first\"",
+                        "Policy outlining how to assign loops to GPU dimensions."
+                        "Supported values are `outermost-first` and `innermost-first`.">];
 }
 
 def GpuEliminateBarriers
@@ -55,7 +65,6 @@ def GpuEliminateBarriers
     PPoPP 2023 and implementation in Polygeist.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect",
     "mlir::memref::MemRefDialect",
     "mlir::scf::SCFDialect"
   ];
@@ -73,7 +82,7 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     `gpu.launch`.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
+    "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
   ];
 }
@@ -132,10 +141,10 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/ "\"nvptx64-nvidia-cuda\"",
            "Target triple.">,
     Option<"chip", "chip", "std::string",
-           /*default=*/"\"sm_50\"",
+           /*default=*/"\"sm_75\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
-           /*default=*/"\"+ptx60\"",
+           /*default=*/"\"\"",
            "Target features.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
@@ -146,11 +155,17 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
     Option<"ftzFlag", "ftz", "bool",
            /*default=*/"false",
            "Enable flush to zero for denormals.">,
+    Option<"compilerDiagnosticsFlag", "collect-compiler-diagnostics", "bool",
+           /*default=*/"false",
+           "Enable collection of compiler diagnostics.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
     Option<"cmdOptions", "ptxas-cmd-options", "std::string",
            /*default=*/ [{""}],
            "Command line options passed to downstream compiler">,
+    Option<"verifyTarget", "verify-target-arch", "bool",
+           /*default=*/"true",
+           "Enable verification of the target architecture">,
   ];
 }
 

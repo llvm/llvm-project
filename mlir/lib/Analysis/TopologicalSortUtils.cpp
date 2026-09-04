@@ -101,12 +101,7 @@ bool mlir::sortTopologically(
 
 bool mlir::sortTopologically(
     Block *block, function_ref<bool(Value, Operation *)> isOperandReady) {
-  if (block->empty())
-    return true;
-  if (block->back().hasTrait<OpTrait::IsTerminator>())
-    return sortTopologically(block, block->without_terminator(),
-                             isOperandReady);
-  return sortTopologically(block, *block, isOperandReady);
+  return sortTopologically(block, block->without_terminator(), isOperandReady);
 }
 
 bool mlir::computeTopologicalSorting(

@@ -1,30 +1,16 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/index.json
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %S/../Inputs/namespace.cpp
+// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 
-class MyClass {};
-
-void myFunction(int Param);
-
-namespace NestedNamespace {
-} // namespace NestedNamespace
-
-static int Global;
-
-enum Color {
-  RED,
-  GREEN,
-  BLUE = 5
-};
-
-typedef int MyTypedef;
-
-// CHECK:       { 
+// CHECK:       {
+// CHECK-NEXT:    "DocumentationFileName": "index",
 // CHECK-NEXT:    "Enums": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "End": true,
+// CHECK-NEXT:        "InfoType": "enum",
 // CHECK-NEXT:        "Location": {
 // CHECK-NEXT:          "Filename": "{{.*}}namespace.cpp",
-// CHECK-NEXT:          "LineNumber": 14
+// CHECK-NEXT:          "LineNumber": 9
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Members": [
 // CHECK-NEXT:          {
@@ -36,6 +22,7 @@ typedef int MyTypedef;
 // CHECK-NEXT:            "Value": "1"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "BLUE",
 // CHECK-NEXT:            "ValueExpr": "5"
 // CHECK-NEXT:          }
@@ -47,12 +34,19 @@ typedef int MyTypedef;
 // CHECK-NEXT:    ],
 // CHECK-NEXT:   "Functions": [
 // CHECK-NEXT:     {
+// CHECK-NEXT:       "End": true,
+// CHECK-NEXT:       "InfoType": "function",
 // CHECK-NEXT:       "IsStatic": false,
 // CHECK-NEXT:       "Name": "myFunction",
 // CHECK-NEXT:       "Params": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "Name": "Param",
-// CHECK-NEXT:           "Type": "int"
+// CHECK-NEXT:           "ParamEnd": true,
+// CHECK-NEXT:           "Type": {
+// CHECK-NEXT:             "Name": "int",
+// CHECK-NEXT:             "QualName": "int",
+// CHECK-NEXT:             "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "ReturnType": {
@@ -62,20 +56,30 @@ typedef int MyTypedef;
 // CHECK-NEXT:         "QualName": "void",
 // CHECK-NEXT:         "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:       "USR": "{{[0-9A-F]*}}",
+// CHECK-NEXT:       "VerticalDisplay": false
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
-// CHECK-NEXT:   "Name": "",
+// CHECK-NEXT:   "HasEnums": true,
+// CHECK-NEXT:   "HasFunctions": true,
+// CHECK-NEXT:   "HasNamespaces": true,
+// CHECK-NEXT:   "HasRecords": true,
+// CHECK-NEXT:   "HasTypedefs": true,
+// CHECK-NEXT:   "HasVariables": true,
+// CHECK-NEXT:   "InfoType": "namespace",
+// CHECK-NEXT:   "Name": "Global Namespace",
 // CHECK-NEXT:   "Namespaces": [
 // CHECK-NEXT:     {
+// CHECK-NEXT:       "End": true,
 // CHECK-NEXT:       "Name": "NestedNamespace",
-// CHECK-NEXT:       "Path": "",
 // CHECK-NEXT:       "QualName": "NestedNamespace",
 // CHECK-NEXT:       "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "Records": [
 // CHECK-NEXT:     {
+// CHECK-NEXT:       "DocumentationFileName": "_ZTV7MyClass",
+// CHECK-NEXT:       "End": true,
 // CHECK-NEXT:       "Name": "MyClass",
 // CHECK-NEXT:       "Path": "GlobalNamespace",
 // CHECK-NEXT:       "QualName": "MyClass",
@@ -84,10 +88,12 @@ typedef int MyTypedef;
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "Typedefs": [
 // CHECK-NEXT:    {
+// CHECK-NEXT:      "End": true,
+// CHECK-NEXT:      "InfoType": "typedef",
 // CHECK-NEXT:      "IsUsing": false,
 // CHECK-NEXT:      "Location": {
 // CHECK-NEXT:        "Filename": "{{.*}}namespace.cpp",
-// CHECK-NEXT:        "LineNumber": 20
+// CHECK-NEXT:        "LineNumber": 11
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "Name": "MyTypedef",
 // CHECK-NEXT:      "TypeDeclaration": "",
@@ -101,13 +107,14 @@ typedef int MyTypedef;
 // CHECK-NEXT:        }
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK-NEXT:    "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:   "Variables": [
 // CHECK-NEXT:     {
+// CHECK-NEXT:       "End": true,
+// CHECK-NEXT:       "InfoType": "variable",
 // CHECK-NEXT:       "IsStatic": true,
 // CHECK-NEXT:       "Location": {
 // CHECK-NEXT:         "Filename": "{{.*}}namespace.cpp",
-// CHECK-NEXT:         "LineNumber": 12
+// CHECK-NEXT:         "LineNumber": 7
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "Name": "Global",
 // CHECK-NEXT:       "Type": {

@@ -93,7 +93,7 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
 
   // Emit function to add the generated matchers to the pattern list.
   os << "template <typename... ConfigsT>\n"
-        "static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns("
+        "[[maybe_unused]] static void populateGeneratedPDLLPatterns("
         "::mlir::RewritePatternSet &patterns, ConfigsT &&...configs) {\n";
   for (const auto &name : patternNames)
     os << "  patterns.add<" << name

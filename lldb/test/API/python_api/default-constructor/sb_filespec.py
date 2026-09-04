@@ -10,5 +10,5 @@ def fuzz_obj(obj):
     obj.ResolveExecutableLocation()
     obj.GetFilename()
     obj.GetDirectory()
-    obj.GetPath(None, 0)
+    obj.GetPath(1)
     obj.GetDescription(lldb.SBStream())

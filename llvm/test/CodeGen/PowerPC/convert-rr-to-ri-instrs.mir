@@ -983,10 +983,10 @@
     ret i64 %xor
   }
 
-  attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #1 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #2 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,-vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #3 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "use-soft-float"="false" }
+  attributes #1 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "use-soft-float"="false" }
+  attributes #2 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,-vsx" "use-soft-float"="false" }
+  attributes #3 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "use-soft-float"="false" }
 
   !llvm.module.flags = !{!0, !1}
   !llvm.ident = !{!2}
@@ -1044,8 +1044,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1100,8 +1100,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1160,8 +1160,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1221,8 +1221,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1280,8 +1280,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1335,8 +1335,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1385,8 +1385,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1439,8 +1439,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1494,8 +1494,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1548,8 +1548,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1602,8 +1602,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1655,8 +1655,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1708,8 +1708,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1762,8 +1762,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1818,8 +1818,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1877,8 +1877,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1938,8 +1938,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -1957,7 +1957,7 @@ body:             |
     %6 = ISEL $zero, %3, %4.sub_gt
     %7 = ADD4 killed %6, %2
     %9 = IMPLICIT_DEF
-    %8 = INSERT_SUBREG %9, killed %7, 1
+    %8 = INSERT_SUBREG %9, killed %7, %subreg.sub_32
     %10 = RLDICL killed %8, 0, 32
     $x3 = COPY %10
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2002,8 +2002,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2020,7 +2020,7 @@ body:             |
     ; CHECK: ADDI killed %2, 0
     %7 = ADD4 killed %6, killed %2
     %9 = IMPLICIT_DEF
-    %8 = INSERT_SUBREG %9, killed %7, 1
+    %8 = INSERT_SUBREG %9, killed %7, %subreg.sub_32
     %10 = RLDICL killed %8, 0, 32
     $x3 = COPY %10
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2072,8 +2072,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2086,19 +2086,19 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDICL killed %4, 0, 32
     %7 = LBZX %0, killed %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -15
     %12,%17 = LBZUX %0, killed %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
     ; CHECK: LBZU -15, killed %0
     ; CHECK-LATE: lbzu 5, -15(3)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = RLWINM8 killed %14, 0, 24, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2149,8 +2149,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2163,21 +2163,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDICL killed %4, 0, 32
     %7 = LBZX %0, killed %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
     ; CHECK: LBZ 45, killed %6
     ; CHECK-LATE: lbz 5, 45(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = RLDICL killed %9, 0, 32
     %12 = LBZX %0, killed %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
     ; CHECK: LBZ 45, killed %11
     ; CHECK-LATE: lbz 3, 45(4)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = RLWINM8 killed %14, 0, 24, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2229,8 +2229,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2243,19 +2243,19 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDIC killed %4, 1, 31
     %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 31440
     %12,%17 = LHZUX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
     ; CHECK: LHZU 31440, killed %0
     ; CHECK-LATE: lhzu 5, 31440(3)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = RLWINM8 killed %14, 0, 16, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2306,8 +2306,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2320,19 +2320,19 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDIC killed %4, 1, 31
     %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 882
     %12 = LHZX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
     ; CHECK: LHZ 882, killed %0
     ; CHECK-LATE: lhz 3, 882(3)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = RLWINM8 killed %14, 0, 16, 31
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2384,8 +2384,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2398,19 +2398,19 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDIC %4, 1, 31
     %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 400
     %12,%17 = LHAUX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
     ; CHECK: LHAU 400, killed %0
     ; CHECK-LATE: lhau 5, 400(3)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = EXTSH8 killed %14
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2461,8 +2461,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2475,21 +2475,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 -999
     %7 = LHAX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     ; CHECK: LHA -999, %0
     ; CHECK-LATE: lha 4, -999(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 999
     %12 = LHAX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
     ; CHECK: LHA 999, killed %0
     ; CHECK-LATE: lha 3, 999(3)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = EXTSH8 killed %14
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2542,8 +2542,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2556,21 +2556,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 889
     %7,%17 = LWZUX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWZU 889, %0
     ; CHECK-LATE: lwzu {{[0-9]+}}, 889({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -2
     %12,%18 = LWZUX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
     ; CHECK: LWZU -2, killed %0
     ; CHECK-LATE: lwzu {{[0-9]+}}, -2({{[0-9]+}})
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = RLDICL killed %14, 0, 32
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2621,8 +2621,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2635,21 +2635,21 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDIC %4, 2, 30
     %7 = LWZX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWZ 1000, killed %6
     ; CHECK-LATE: lwz 5, 1000(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = RLDIC %9, 2, 30
     %12 = LWZX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
     ; CHECK: LWZ 1000, killed %11
     ; CHECK-LATE: lwz 3, 1000(4)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
-    %14 = INSERT_SUBREG %15, killed %13, 1
+    %14 = INSERT_SUBREG %15, killed %13, %subreg.sub_32
     %16 = RLDICL killed %14, 0, 32
     $x3 = COPY %16
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -2697,8 +2697,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2711,14 +2711,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDIC %4, 2, 30
     %7 = LWAX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWA 444, killed %6
     ; CHECK-LATE: lwa 5, 444(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = RLDIC %9, 2, 30
     %12 = LWAX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
     ; CHECK: LWA 444, killed %11
@@ -2772,8 +2772,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2786,14 +2786,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 100
     %7,%14 = LDUX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
     ; CHECK: LDU 100, %0
     ; CHECK-LATE: ldu {{[0-9]+}}, 100({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 200
     %12,%15 = LDUX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
     ; CHECK: LDU 200, killed %0
@@ -2845,8 +2845,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2859,14 +2859,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 120
     %7 = LDX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
     ; CHECK: LD 120, %0
     ; CHECK-LATE: ld 4, 120(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 280
     %12 = LDX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
     ; CHECK: LD 280, killed %0
@@ -2920,8 +2920,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -2934,14 +2934,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 440
     %7,%14 = LFDUX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: LFDU 440, %0
     ; CHECK-LATE: lfdu {{[0-9]+}}, 440({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 16
     %12,%15 = LFDUX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
     ; CHECK: LFDU 16, killed %0
@@ -2993,8 +2993,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3007,14 +3007,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = RLDIC %4, 3, 29
     %7 = LFDX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: LFD -20, killed %6
     ; CHECK-LATE: lfd {{[0-9]+}}, -20({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = RLDIC %9, 3, 29
     %12 = LFDX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
     ; CHECK: LFD -20, killed %11
@@ -3077,8 +3077,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 16,
@@ -3183,8 +3183,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3197,14 +3197,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 88
     %7 = LFSX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
     ; CHECK: LFS 88, %0
     ; CHECK-LATE: lfs 0, 88(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -88
     %12 = LFSX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
     ; CHECK: LFS -88, killed %0
@@ -3256,8 +3256,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3270,14 +3270,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 100
     %7 = LXSDX %0, killed %6, implicit $rm :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: DFLOADf64 100, %0
     ; CHECK-LATE: lfd 0, 100(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -120
     %12 = LXSDX %0, killed %11, implicit $rm :: (load (s64) from %ir.arrayidx3, !tbaa !12)
     ; CHECK: DFLOADf64 -120, killed %0
@@ -3329,8 +3329,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3343,14 +3343,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 96
     %7 = LXSSPX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
     ; CHECK: DFLOADf32 96, %0
     ; CHECK-LATE: lfs 0, 96(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -92
     %12 = LXSSPX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
     ; CHECK: DFLOADf32 -92, killed %0
@@ -3402,8 +3402,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3416,14 +3416,14 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = ADDI %2, 1
     %5 = IMPLICIT_DEF
-    %4 = INSERT_SUBREG %5, killed %3, 1
+    %4 = INSERT_SUBREG %5, killed %3, %subreg.sub_32
     %6 = LI8 32
     %7 = LXVX %0, killed %6 :: (load (s128) from %ir.arrayidx, !tbaa !3)
     ; CHECK: LXV 32, %0
     ; CHECK-LATE: lxv 34, 32(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -16
     %12 = LXVX %0, killed %11 :: (load (s128) from %ir.arrayidx3, !tbaa !3)
     ; CHECK: LXV -16, killed %0
@@ -3465,8 +3465,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3515,8 +3515,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3562,8 +3562,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3608,8 +3608,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3658,8 +3658,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3713,8 +3713,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3768,8 +3768,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3823,8 +3823,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3874,8 +3874,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3920,8 +3920,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -3970,8 +3970,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4024,8 +4024,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4078,8 +4078,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4131,8 +4131,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4183,8 +4183,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4235,8 +4235,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4284,8 +4284,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4339,8 +4339,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4360,7 +4360,7 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
+    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
     %9 = RLDICL killed %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4404,8 +4404,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4424,7 +4424,7 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
+    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
     %9 = RLDICL killed %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4467,8 +4467,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4522,8 +4522,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4575,8 +4575,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4628,8 +4628,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4681,8 +4681,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4739,8 +4739,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4797,8 +4797,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4816,7 +4816,7 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
+    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
     %9 = RLDICL killed %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4859,8 +4859,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4917,8 +4917,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -4936,7 +4936,7 @@ body:             |
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF
-    %7 = INSERT_SUBREG %8, killed %6, 1
+    %7 = INSERT_SUBREG %8, killed %6, %subreg.sub_32
     %9 = RLDICL killed %7, 0, 32
     $x3 = COPY %9
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -4976,8 +4976,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5036,8 +5036,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5091,8 +5091,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5144,8 +5144,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5209,8 +5209,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5225,14 +5225,14 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, killed %5, %subreg.sub_32
     %8 = LI8 966
     %13 = STBUX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STBU %3, 966, %0
     ; CHECK-LATE: {{[0-9]+}}, 966({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, killed %9, %subreg.sub_32
     %12 = LI8 777
     %14 = STBUX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STBU killed %3, 777, killed %0
@@ -5282,8 +5282,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5298,14 +5298,14 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, killed %5, %subreg.sub_32
     %8 = RLDICL killed %6, 0, 32
     STBX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STB %3, 975, killed %8
     ; CHECK-LATE: stb 4, 975(6)
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, killed %9, %subreg.sub_32
     %12 = RLDICL killed %10, 0, 32
     STBX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STB killed %3, 975, killed %12
@@ -5357,8 +5357,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5373,14 +5373,14 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, killed %5, %subreg.sub_32
     %8 = LI8 32000
     %13 = STHUX %3, %0, killed %8 :: (store (s16) into %ir.arrayidx, !tbaa !6)
     ; CHECK: STHU %3, 32000, %0
     ; CHECK-LATE: sthu {{[0-9]+}}, 32000({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, killed %9, %subreg.sub_32
     %12 = LI8 -761
     %14 = STHUX %3, %0, killed %12 :: (store (s16) into %ir.arrayidx3, !tbaa !6)
     ; CHECK: STHU killed %3, -761, killed %0
@@ -5430,8 +5430,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5446,14 +5446,14 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, killed %5, %subreg.sub_32
     %8 = LI8 900
     STHX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STH %3, 900, %0
     ; CHECK-LATE: sth {{[0-9]+}}, 900({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, killed %9, %subreg.sub_32
     %12 = LI8 -900
     STHX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STH killed %3, -900, killed %0
@@ -5505,8 +5505,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5521,14 +5521,14 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, killed %5, %subreg.sub_32
     %8 = LI8 111
     %13 = STWUX %3, %0, killed %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
     ; CHECK: STWU %3, 111, %0
     ; CHECK-LATE: stwu {{[0-9]+}}, 111({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, killed %9, %subreg.sub_32
     %12 = LI8 0
     %14 = STWUX %3, %0, killed %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
     ; CHECK: STWU killed %3, 0, killed %0
@@ -5578,8 +5578,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5594,14 +5594,14 @@ body:             |
     %4 = COPY %2.sub_32
     %5 = ADDI %4, 1
     %7 = IMPLICIT_DEF
-    %6 = INSERT_SUBREG %7, killed %5, 1
+    %6 = INSERT_SUBREG %7, killed %5, %subreg.sub_32
     %8 = LI8 2
     STWX %3, %0, killed %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
     ; CHECK: STW %3, 2, %0
     ; CHECK-LATE: stw 4, 2(3)
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
-    %10 = INSERT_SUBREG %11, killed %9, 1
+    %10 = INSERT_SUBREG %11, killed %9, %subreg.sub_32
     %12 = LI8 99
     STWX %3, %0, killed %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
     ; CHECK: STW killed %3, 99, killed %0
@@ -5652,8 +5652,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5667,14 +5667,14 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, killed %4, %subreg.sub_32
     %7 = LI8 444
     %12 = STDUX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
     ; CHECK: STDU %1, 444, %0
     ; CHECK-LATE: stdu {{[0-9]+}}, 444({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -8
     %13 = STDUX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
     ; CHECK: STDU killed %1, -8, killed %0
@@ -5723,8 +5723,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5738,14 +5738,14 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, killed %4, %subreg.sub_32
     %7 = LI8 900
     STDX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
     ; CHECK: STD %1, 1000, killed %7
     ; CHECK-LATE: {{[0-9]+}}, 1000({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -900
     STDX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
     ; CHECK: STD killed %1, 1000, killed %11
@@ -5794,8 +5794,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5809,14 +5809,14 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, killed %4, %subreg.sub_32
     %7 = LI8 400
     STFSX %1, %0, killed %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
     ; CHECK: STFS %1, 400, %0
     ; CHECK-LATE: stfs 1, 400(3)
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -401
     STFSX %1, %0, killed %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
     ; CHECK: STFS killed %1, -401, killed %0
@@ -5867,8 +5867,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5882,14 +5882,14 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, killed %4, %subreg.sub_32
     %7 = LI8 111
     %12 = STFSUX %1, %0, killed %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
     ; CHECK: STFSU %1, 111, %0
     ; CHECK-LATE: stfsu {{[0-9]+}}, 111({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 987
     %13 = STFSUX %1, %0, killed %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
     ; CHECK: STFSU killed %1, 987, killed %0
@@ -5938,8 +5938,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -5953,14 +5953,14 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, killed %4, %subreg.sub_32
     %7 = LI8 876
     STFDX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
     ; CHECK: STFD %1, 876, %0
     ; CHECK-LATE: stfd 1, 876(3)
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 -873
     STFDX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
     ; CHECK: STFD killed %1, -873, killed %0
@@ -6011,8 +6011,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6026,14 +6026,14 @@ body:             |
     %3 = COPY %2.sub_32
     %4 = ADDI %3, 1
     %6 = IMPLICIT_DEF
-    %5 = INSERT_SUBREG %6, killed %4, 1
+    %5 = INSERT_SUBREG %6, killed %4, %subreg.sub_32
     %7 = LI8 -9038
     %12 = STFDUX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
     ; CHECK: STFDU %1, -9038, %0
     ; CHECK-LATE: stfdu {{[0-9]+}}, -9038({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %10, killed %8, 1
+    %9 = INSERT_SUBREG %10, killed %8, %subreg.sub_32
     %11 = LI8 6477
     %13 = STFDUX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
     ; CHECK: STFDU killed %1, 6477, killed %0
@@ -6074,8 +6074,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6126,8 +6126,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6178,8 +6178,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6236,8 +6236,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6297,8 +6297,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6351,8 +6351,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6401,8 +6401,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6448,8 +6448,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -6494,8 +6494,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:

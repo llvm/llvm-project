@@ -58,8 +58,8 @@ func.func @dc_2d(%i_lb: index, %i_ub: index, %i_st: index,
 // CHECK-SAME:                     %[[J_UB:[^[:space:]]+]]: index,
 // CHECK-SAME:                     %[[J_ST:[^[:space:]]+]]: index) {
 
-// CHECK:           %[[I:.*]] = fir.alloca i32
 // CHECK:           %[[J:.*]] = fir.alloca i32
+// CHECK:           %[[I:.*]] = fir.alloca i32
 // CHECK:           llvm.br ^bb1
 
 // CHECK:         ^bb1:
@@ -105,8 +105,8 @@ func.func @dc_2d_reduction(%i_lb: index, %i_ub: index, %i_st: index,
 // CHECK-SAME:                     %[[J_UB:[^[:space:]]+]]: index,
 // CHECK-SAME:                     %[[J_ST:[^[:space:]]+]]: index) {
 
-// CHECK:           %[[I:.*]] = fir.alloca i32
 // CHECK:           %[[J:.*]] = fir.alloca i32
+// CHECK:           %[[I:.*]] = fir.alloca i32
 // CHECK:           %[[SUM:.*]] = fir.alloca i32
 
 // CHECK:           fir.do_loop %[[I_IV:.*]] = %[[I_LB]] to %[[I_UB]] step %[[I_ST]] unordered reduce({{.*}}<add>] -> %[[SUM]] : !fir.ref<i32>) {
@@ -179,6 +179,90 @@ func.func @do_concurrent_locality_specs() {
 
 // CHECK:               hlfir.assign %{{.*}} to %[[VAL_15]]#0 : i32, !fir.ref<i32>
 // CHECK:               hlfir.assign %{{.*}} to %[[VAL_16]]#0 : i32, !fir.ref<i32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+// -----
+
+// Check that moving operations out of fir.do_concurrent
+// does not result in %newval2 definition being inserted
+// before %newval1 definition. Definitions like %newval2
+// may appear after LICM.
+func.func @after_licm(%i_lb: index, %i_ub: index, %i_st: index, %val : i32) {
+  %c1_i32 = arith.constant 1 : i32
+  %c7_i32 = arith.constant 7 : i32
+  cf.br ^bb1
+^bb1:
+  %newval1 = arith.muli %val, %c7_i32 : i32
+  fir.do_concurrent {
+    %i = fir.alloca i32
+    %newval2 = arith.subi %newval1, %c1_i32 : i32
+    fir.do_concurrent.loop (%i_iv) = (%i_lb) to (%i_ub) step (%i_st) {
+      %0 = fir.convert %i_iv : (index) -> i32
+      %1 = arith.addi %newval2, %0 : i32
+      fir.store %1 to %i : !fir.ref<i32>
+    }
+  }
+  return
+}
+// CHECK-LABEL:   func.func @after_licm(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[ARG1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[ARG2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[ARG3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 7 : i32
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           %[[MULI_0:.*]] = arith.muli %[[ARG3]], %[[CONSTANT_0]] : i32
+// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[MULI_0]], %[[CONSTANT_1]] : i32
+// CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[ARG0]] to %[[ARG1]] step %[[ARG2]] unordered {
+// CHECK:             %[[CONVERT_0:.*]] = fir.convert %[[VAL_0]] : (index) -> i32
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[SUBI_0]], %[[CONVERT_0]] : i32
+// CHECK:             fir.store %[[ADDI_0]] to %[[ALLOCA_0]] : !fir.ref<i32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+// -----
+
+// Check that a chain of dependent operations (e.g. subi/index_cast below)
+// is moved in proper order.
+func.func @after_licm2(%i_lb: index, %i_ub: index, %i_st: index, %val : i32) {
+  %c1_i32 = arith.constant 1 : i32
+  %c7_i32 = arith.constant 7 : i32
+  cf.br ^bb1
+^bb1:
+  %newval1 = arith.muli %val, %c7_i32 : i32
+  fir.do_concurrent {
+    %i = fir.alloca index
+    %newval2 = arith.subi %newval1, %c1_i32 : i32
+    %newval3 = arith.index_cast %newval2 : i32 to index
+    fir.do_concurrent.loop (%i_iv) = (%i_lb) to (%i_ub) step (%i_st) {
+      %1 = arith.addi %newval3, %i_iv : index
+      fir.store %1 to %i : !fir.ref<index>
+    }
+  }
+  return
+}
+// CHECK-LABEL:   func.func @after_licm2(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[ARG1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[ARG2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[ARG3:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 7 : i32
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca index
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           %[[MULI_0:.*]] = arith.muli %[[ARG3]], %[[CONSTANT_0]] : i32
+// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[MULI_0]], %[[CONSTANT_1]] : i32
+// CHECK:           %[[INDEX_CAST_0:.*]] = arith.index_cast %[[SUBI_0]] : i32 to index
+// CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[ARG0]] to %[[ARG1]] step %[[ARG2]] unordered {
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[INDEX_CAST_0]], %[[VAL_0]] : index
+// CHECK:             fir.store %[[ADDI_0]] to %[[ALLOCA_0]] : !fir.ref<index>
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }

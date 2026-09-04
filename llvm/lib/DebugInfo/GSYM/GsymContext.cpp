@@ -14,6 +14,7 @@
 using namespace llvm;
 using namespace llvm::gsym;
 
+GsymContext::~GsymContext() = default;
 GsymContext::GsymContext(std::unique_ptr<GsymReader> Reader)
     : DIContext(CK_GSYM), Reader(std::move(Reader)) {}
 

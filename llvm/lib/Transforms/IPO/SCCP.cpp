@@ -169,6 +169,13 @@ static bool runIPSCCP(
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
+    // Skip the dead functions marked by FunctionSpecializer, avoiding removing
+    // blocks in dead functions. Set MadeChanges if there is any dead function
+    // that will be removed later.
+    if (IsFuncSpecEnabled && Specializer.isDeadFunction(&F)) {
+      MadeChanges = true;
+      continue;
+    }
 
     SmallVector<BasicBlock *, 512> BlocksToErase;
 
@@ -270,7 +277,8 @@ static bool runIPSCCP(
   for (const auto &[F, ReturnValue] : Solver.getTrackedRetVals()) {
     assert(!F->getReturnType()->isVoidTy() &&
            "should not track void functions");
-    if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
+    if (SCCPSolver::isReplaceableConstant(ReturnValue) ||
+        ReturnValue.isUnknownOrUndef())
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
@@ -319,19 +327,23 @@ static bool runIPSCCP(
 
   // If we inferred constant or undef values for globals variables, we can
   // delete the global and any stores that remain to it.
-  for (const auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
-    GlobalVariable *GV = I.first;
-    if (SCCPSolver::isOverdefined(I.second))
+  for (const auto &[GV, LV] : Solver.getTrackedGlobals()) {
+    // We may have inferred a constant that is not replaceable (e.g., due to
+    // different pointer provenance), so skip deleting the global in this case.
+    if (!SCCPSolver::isReplaceableConstant(LV) && !LV.isUnknownOrUndef())
       continue;
     LLVM_DEBUG(dbgs() << "Found that GV '" << GV->getName()
                       << "' is constant!\n");
     for (User *U : make_early_inc_range(GV->users())) {
-      // We can remove LoadInst here, because we already replaced its users
-      // with a constant.
+      // We can remove LoadInst here. The LoadInsts in dead functions marked by
+      // FuncSpec are not simplified to constants, thus poison them.
       assert((isa<StoreInst>(U) || isa<LoadInst>(U)) &&
              "Only Store|Load Instruction can be user of GlobalVariable at "
              "reaching here.");
-      cast<Instruction>(U)->eraseFromParent();
+      Instruction *I = cast<Instruction>(U);
+      if (isa<LoadInst>(I))
+        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+      I->eraseFromParent();
     }
 
     // Try to create a debug constant expression for the global variable

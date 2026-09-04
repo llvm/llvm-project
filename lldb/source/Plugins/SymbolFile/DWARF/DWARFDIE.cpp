@@ -44,7 +44,7 @@ class ElaboratingDIEIterator
   // Container sizes are optimized for the case of following DW_AT_specification
   // and DW_AT_abstract_origin just once.
   llvm::SmallVector<DWARFDIE, 2> m_worklist;
-  llvm::SmallSet<DWARFDebugInfoEntry *, 3> m_seen;
+  llvm::SmallPtrSet<DWARFDebugInfoEntry *, 3> m_seen;
 
   void Next() {
     assert(!m_worklist.empty() && "Incrementing end iterator?");
@@ -195,8 +195,8 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
       }
       check_children = addr_in_range;
     } else {
-      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                     "DIE({1:x}): {0}", GetID());
+      LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                      "DIE({1:x}): {0}", GetID());
     }
   }
 

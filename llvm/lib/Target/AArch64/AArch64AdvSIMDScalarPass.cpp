@@ -62,9 +62,9 @@ STATISTIC(NumCopiesInserted, "Number of cross-class copies inserted");
 #define AARCH64_ADVSIMD_NAME "AdvSIMD Scalar Operation Optimization"
 
 namespace {
-class AArch64AdvSIMDScalar : public MachineFunctionPass {
-  MachineRegisterInfo *MRI;
-  const TargetInstrInfo *TII;
+class AArch64AdvSIMDScalarImpl {
+public:
+  bool run(MachineFunction &MF);
 
 private:
   // isProfitableToTransform - Predicate function to determine whether an
@@ -80,9 +80,14 @@ private:
   // processMachineBasicBlock - Main optimization loop.
   bool processMachineBasicBlock(MachineBasicBlock *MBB);
 
+  MachineRegisterInfo *MRI;
+  const TargetInstrInfo *TII;
+};
+
+class AArch64AdvSIMDScalarLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
-  explicit AArch64AdvSIMDScalar() : MachineFunctionPass(ID) {}
+  explicit AArch64AdvSIMDScalarLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -93,11 +98,22 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char AArch64AdvSIMDScalar::ID = 0;
+char AArch64AdvSIMDScalarLegacy::ID = 0;
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64AdvSIMDScalar, "aarch64-simd-scalar",
+INITIALIZE_PASS(AArch64AdvSIMDScalarLegacy, "aarch64-simd-scalar",
                 AARCH64_ADVSIMD_NAME, false, false)
+
+PreservedAnalyses
+AArch64AdvSIMDScalarPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  const bool Changed = AArch64AdvSIMDScalarImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
 static bool isGPR64(unsigned Reg, unsigned SubReg,
                     const MachineRegisterInfo *MRI) {
@@ -187,7 +203,7 @@ static bool isTransformable(const MachineInstr &MI) {
 // isProfitableToTransform - Predicate function to determine whether an
 // instruction should be transformed to its equivalent AdvSIMD scalar
 // instruction. "add Xd, Xn, Xm" ==> "add Dd, Da, Db", for example.
-bool AArch64AdvSIMDScalar::isProfitableToTransform(
+bool AArch64AdvSIMDScalarImpl::isProfitableToTransform(
     const MachineInstr &MI) const {
   // If this instruction isn't eligible to be transformed (no SIMD equivalent),
   // early exit since that's the common case.
@@ -282,7 +298,7 @@ static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr &MI,
 // transformInstruction - Perform the transformation of an instruction
 // to its equivalent AdvSIMD scalar instruction. Update inputs and outputs
 // to be the correct register class, minimizing cross-class copies.
-void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
+void AArch64AdvSIMDScalarImpl::transformInstruction(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Scalar transform: " << MI);
 
   MachineBasicBlock *MBB = MI.getParent();
@@ -373,7 +389,8 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
 }
 
 // processMachineBasicBlock - Main optimization loop.
-bool AArch64AdvSIMDScalar::processMachineBasicBlock(MachineBasicBlock *MBB) {
+bool AArch64AdvSIMDScalarImpl::processMachineBasicBlock(
+    MachineBasicBlock *MBB) {
   bool Changed = false;
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
     if (isProfitableToTransform(MI)) {
@@ -385,18 +402,22 @@ bool AArch64AdvSIMDScalar::processMachineBasicBlock(MachineBasicBlock *MBB) {
 }
 
 // runOnMachineFunction - Pass entry point from PassManager.
-bool AArch64AdvSIMDScalar::runOnMachineFunction(MachineFunction &mf) {
+bool AArch64AdvSIMDScalarLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return AArch64AdvSIMDScalarImpl().run(MF);
+}
+
+bool AArch64AdvSIMDScalarImpl::run(MachineFunction &MF) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "***** AArch64AdvSIMDScalar *****\n");
 
-  if (skipFunction(mf.getFunction()))
-    return false;
-
-  MRI = &mf.getRegInfo();
-  TII = mf.getSubtarget().getInstrInfo();
+  MRI = &MF.getRegInfo();
+  TII = MF.getSubtarget().getInstrInfo();
 
   // Just check things on a one-block-at-a-time basis.
-  for (MachineBasicBlock &MBB : mf)
+  for (MachineBasicBlock &MBB : MF)
     if (processMachineBasicBlock(&MBB))
       Changed = true;
   return Changed;
@@ -405,5 +426,5 @@ bool AArch64AdvSIMDScalar::runOnMachineFunction(MachineFunction &mf) {
 // createAArch64AdvSIMDScalar - Factory function used by AArch64TargetMachine
 // to add the pass to the PassManager.
 FunctionPass *llvm::createAArch64AdvSIMDScalar() {
-  return new AArch64AdvSIMDScalar();
+  return new AArch64AdvSIMDScalarLegacy();
 }

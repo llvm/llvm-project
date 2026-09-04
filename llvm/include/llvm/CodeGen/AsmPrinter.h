@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
@@ -93,7 +94,7 @@ public:
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// This is the context for the output file that we are streaming. This owns
   /// all of the global MC-related objects for the generated translation unit.
@@ -135,12 +136,12 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
-  /// Vector of symbols marking the position of callsites in the current
+  /// Vector of symbols marking the end of the callsites in the current
   /// function, keyed by their containing basic block.
   /// The callsite symbols of each block are stored in the order they appear
   /// in that block.
   DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
-      CurrentFnCallsiteSymbols;
+      CurrentFnCallsiteEndSymbols;
 
   /// Provides the profile information for constants.
   const StaticDataProfileInfo *SDPI = nullptr;
@@ -168,6 +169,19 @@ public:
     Debug = 2 ///< Emit .debug_frame
   };
 
+  // Callbacks to get analyses to allow portability between the new and
+  // legacy pass managers.
+  // TODO(boomanaiden154): Remove these and use a more native solution once
+  // we drop support for the legacy PM.
+  std::function<MachineModuleInfo *()> GetMMI;
+  std::function<MachineOptimizationRemarkEmitter *(MachineFunction &)> GetORE;
+  std::function<MachineDominatorTree *(MachineFunction &)> GetMDT;
+  std::function<MachineLoopInfo *(MachineFunction &)> GetMLI;
+  std::function<void(Module &)> BeginGCAssembly;
+  std::function<void(Module &)> FinishGCAssembly;
+  std::function<void(Module &)> EmitStackMaps;
+  std::function<void()> AssertDebugEHFinalized;
+
 private:
   MCSymbol *CurrentFnEnd = nullptr;
 
@@ -190,6 +204,23 @@ private:
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
 
+  /// Store symbols and type identifiers used to create callgraph section
+  /// entries related to a function.
+  struct FunctionCallGraphInfo {
+    /// Numeric type identifier used in callgraph section for indirect calls
+    /// and targets.
+    using CGTypeId = uint64_t;
+
+    /// Unique target type IDs.
+    SmallSetVector<CGTypeId, 4> IndirectCalleeTypeIDs;
+    /// Unique direct callees.
+    SmallSetVector<MCSymbol *, 4> DirectCallees;
+  };
+
+  enum CallGraphSectionFormatVersion : uint8_t {
+    V_0 = 0,
+  };
+
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
@@ -205,9 +236,7 @@ protected:
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
   /// A handle to the EH info emitter (if present).
-  // Only for EHStreamer subtypes, but some C++ compilers will incorrectly warn
-  // us if we declare that directly.
-  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
+  SmallVector<std::unique_ptr<EHStreamer>, 1> EHHandlers;
 
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the
@@ -250,6 +279,10 @@ private:
 protected:
   AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
              char &ID = AsmPrinter::ID);
+
+  /// Create the DwarfDebug handler. Targets can override this to provide
+  /// custom debug information handling.
+  virtual DwarfDebug *createDwarfDebug();
 
 public:
   ~AsmPrinter() override;
@@ -302,9 +335,9 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
-  /// Creates a new symbol to be used for the beginning of a callsite at the
-  /// specified basic block.
-  MCSymbol *createCallsiteSymbol(const MachineBasicBlock &MBB);
+  /// Creates a new symbol to be used for the end of a callsite at the specified
+  /// basic block.
+  MCSymbol *createCallsiteEndSymbol(const MachineBasicBlock &MBB);
 
   /// If the specified function has had any references to address-taken blocks
   /// generated, but the block got deleted, return the symbol now so we can
@@ -326,9 +359,6 @@ public:
   const MCSubtargetInfo &getSubtargetInfo() const;
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
-
-  /// Emits inital debug location directive.
-  void emitInitialRawDwarfLocDirective(const MachineFunction &MF);
 
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
@@ -354,6 +384,14 @@ public:
   /// Returns a section suffix (hot or unlikely) for the constant if profiles
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
+
+  /// If MI is an indirect call, add expected type IDs to indirect type ids
+  /// list. If MI is a direct call add the callee symbol to direct callsites
+  /// list of FuncCGInfo.
+  void handleCallsiteForCallgraph(
+      FunctionCallGraphInfo &FuncCGInfo,
+      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+      const MachineInstr &MI);
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
@@ -442,6 +480,18 @@ public:
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
 
+  void emitCallGraphSection(const MachineFunction &MF,
+                            FunctionCallGraphInfo &FuncCGInfo);
+
+  /// Helper to emit a symbol for the prefetch target associated with the given
+  /// BBID and callsite index. The symbol is emitted as a label and its linkage
+  /// is set based on the function's linkage.
+  void emitPrefetchTargetSymbol(const UniqueBBID &BBID, unsigned CallsiteIndex);
+
+  /// Emit prefetch targets that were not mapped to any basic block. These
+  /// targets are emitted at the beginning of the function body.
+  void emitDanglingPrefetchTargets();
+
   void emitPseudoProbe(const MachineInstr &MI);
 
   void emitRemarksSection(remarks::RemarkStreamer &RS);
@@ -484,6 +534,11 @@ public:
   /// Emit the specified global variable to the .s file.
   virtual void emitGlobalVariable(const GlobalVariable *GV);
 
+  /// Emit the specified global variable to the .s file, with an explicit
+  /// alignment granule applied to both address and size.
+  virtual void emitGlobalVariable(const GlobalVariable *GV,
+                                  MaybeAlign AlignmentGranule);
+
   /// Check to see if the specified global is a special global used by LLVM. If
   /// so, emit it and return true, otherwise do nothing and return false.
   bool emitSpecialLLVMGlobal(const GlobalVariable *GV);
@@ -517,9 +572,10 @@ public:
   /// Emit an alignment directive to the specified power of two boundary. If a
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
-  /// correctness.
-  void emitAlignment(Align Alignment, const GlobalObject *GV = nullptr,
-                     unsigned MaxBytesToEmit = 0) const;
+  /// correctness. Returns the effective alignment that was emitted (which may
+  /// exceed \p Alignment when \p GV has a stricter explicit alignment).
+  Align emitAlignment(Align Alignment, const GlobalObject *GV = nullptr,
+                      unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   /// When BaseCV is present, we are lowering the element at BaseCV plus Offset.
@@ -548,9 +604,6 @@ public:
   /// eligible for PC relative GOT entry conversion, in such cases we need to
   /// emit the proxies we previously omitted in EmitGlobalVariable.
   void emitGlobalGOTEquivs();
-
-  /// Emit the stack maps.
-  void emitStackMaps();
 
   //===------------------------------------------------------------------===//
   // Overridable Hooks
@@ -609,7 +662,7 @@ public:
   }
 
   virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
-    report_fatal_error("ptrauth constant lowering not implemented");
+    reportFatalUsageError("ptrauth constant lowering not implemented");
   }
 
   /// Lower the specified BlockAddress to an MCExpr.
@@ -879,7 +932,21 @@ public:
   /// \p EndInfo   - the final subtarget info after parsing the inline asm,
   ///                or NULL if the value is unknown.
   virtual void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                const MCSubtargetInfo *EndInfo) const;
+                                const MCSubtargetInfo *EndInfo,
+                                const MachineInstr *MI);
+
+  /// Emit necessary directives to allow use of instructions that are permitted
+  /// by target features enabled by STI, but are not permitted by target
+  /// features enabled by the global subtarget (TM.getSubTargetInfo()).
+  /// Returns whether anything was emitted.
+  virtual bool emitTargetFeaturePush(const MCSubtargetInfo &STI) {
+    return false;
+  }
+
+  /// Emit necessary directives to restore target feature state.
+  /// The \p DidPush argument is the result of the prior emitTargetFeaturePush()
+  /// call.
+  virtual void emitTargetFeaturePop(const MCSubtargetInfo &STI, bool DidPush) {}
 
   /// This emits visibility information about symbol, if this is supported by
   /// the target.
@@ -913,15 +980,16 @@ private:
   void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
 
   /// Emit a blob of inline asm to the output streamer.
-  void
+  virtual void
   emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                 const MCTargetOptions &MCOptions,
                 const MDNode *LocMDNode = nullptr,
-                InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT) const;
+                InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT,
+                const MachineInstr *MI = nullptr);
 
   /// This method formats and emits the specified machine instruction that is an
   /// inline asm.
-  void emitInlineAsm(const MachineInstr *MI) const;
+  void emitInlineAsm(const MachineInstr *MI);
 
   /// Add inline assembly info to the diagnostics machinery, so we can
   /// emit file and position info. Returns SrcMgr memory buffer position.
@@ -945,7 +1013,7 @@ private:
   virtual void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
-  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
+  virtual void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
@@ -958,7 +1026,23 @@ protected:
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;
   }
+
+  /// Returns a optional minimum alignment that applies to both the address and
+  /// the allocation size of the global. This is used for systems like CHERI and
+  /// MTE that impose a minimum alignment, and require globals to be padded to
+  /// that alignment.
+  virtual MaybeAlign
+  getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
+    return std::nullopt;
+  };
 };
+
+LLVM_ABI void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
+                                    AsmPrinter &AsmPrinter);
+
+LLVM_ABI void
+setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                               MachineFunction &MF, AsmPrinter &AsmPrinter);
 
 } // end namespace llvm
 

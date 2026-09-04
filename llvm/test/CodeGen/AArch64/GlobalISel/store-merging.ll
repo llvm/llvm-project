@@ -342,3 +342,16 @@ define void @invalid_zero_offset_no_merge(i64 %0) {
   store i32 0, ptr getelementptr inbounds ([10 x i32], ptr @G, i64 0, i64 1), align 4
   ret void
 }
+
+define void @mismatching_types_i16f16(ptr %ptr) {
+; CHECK-LABEL: mismatching_types_i16f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov w8, #4 ; =0x4
+; CHECK-NEXT:    strh wzr, [x0, #2]
+; CHECK-NEXT:    strh w8, [x0]
+; CHECK-NEXT:    ret
+  store i16 4, ptr %ptr
+  %addr2 = getelementptr i16, ptr %ptr, i64 1
+  store half 0.0, ptr %addr2
+  ret void
+}

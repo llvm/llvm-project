@@ -19,6 +19,7 @@
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -31,8 +32,8 @@ namespace {
 class PPDependencyDirectivesTest : public ::testing::Test {
 protected:
   PPDependencyDirectivesTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-macos12";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -40,7 +41,6 @@ protected:
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
@@ -70,12 +70,68 @@ public:
   }
 };
 
+class EmbedCollector : public PPCallbacks {
+public:
+  Preprocessor &PP;
+  SmallVectorImpl<StringRef> &EmbeddedFiles;
+
+  EmbedCollector(Preprocessor &PP, SmallVectorImpl<StringRef> &EmbeddedFiles)
+      : PP(PP), EmbeddedFiles(EmbeddedFiles) {}
+
+  void EmbedDirective(SourceLocation, StringRef, bool,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &) override {
+    assert(File && "expected to only be called when the file is found");
+    StringRef Filename =
+        llvm::sys::path::remove_leading_dotslash(File->getName());
+    EmbeddedFiles.push_back(Filename);
+  }
+
+  void HasEmbed(SourceLocation, StringRef, bool,
+                OptionalFileEntryRef File) override {
+    if (!File)
+      return;
+    StringRef Filename =
+        llvm::sys::path::remove_leading_dotslash(File->getName());
+    EmbeddedFiles.push_back(Filename);
+  }
+};
+
+struct DepDirectives {
+  SmallVector<dependency_directives_scan::Token> Tokens;
+  SmallVector<dependency_directives_scan::Directive> Directives;
+};
+
+class TestDependencyDirectivesGetter : public DependencyDirectivesGetter {
+  FileManager &FileMgr;
+  SmallVector<std::unique_ptr<DepDirectives>> DepDirectivesObjects;
+
+public:
+  TestDependencyDirectivesGetter(FileManager &FileMgr) : FileMgr(FileMgr) {}
+
+  std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) override {
+    return std::make_unique<TestDependencyDirectivesGetter>(FileMgr);
+  }
+
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) override {
+    DepDirectivesObjects.push_back(std::make_unique<DepDirectives>());
+    StringRef Input = (*FileMgr.getBufferForFile(File))->getBuffer();
+    bool Err = scanSourceForDependencyDirectives(
+        Input, DepDirectivesObjects.back()->Tokens,
+        DepDirectivesObjects.back()->Directives);
+    EXPECT_FALSE(Err);
+    return DepDirectivesObjects.back()->Directives;
+  }
+};
+
 TEST_F(PPDependencyDirectivesTest, MacroGuard) {
   // "head1.h" has a macro guard and should only be included once.
   // "head2.h" and "head3.h" have tokens following the macro check, they should
   // be included multiple times.
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->addFile(
       "head1.h", 0,
       llvm::MemoryBuffer::getMemBuffer("#ifndef H1_H\n#define H1_H\n#endif\n"));
@@ -100,34 +156,6 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
   SourceMgr.setMainFileID(
       SourceMgr.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
 
-  struct DepDirectives {
-    SmallVector<dependency_directives_scan::Token> Tokens;
-    SmallVector<dependency_directives_scan::Directive> Directives;
-  };
-
-  class TestDependencyDirectivesGetter : public DependencyDirectivesGetter {
-    FileManager &FileMgr;
-    SmallVector<std::unique_ptr<DepDirectives>> DepDirectivesObjects;
-
-  public:
-    TestDependencyDirectivesGetter(FileManager &FileMgr) : FileMgr(FileMgr) {}
-
-    std::unique_ptr<DependencyDirectivesGetter>
-    cloneFor(FileManager &FileMgr) override {
-      return std::make_unique<TestDependencyDirectivesGetter>(FileMgr);
-    }
-
-    std::optional<ArrayRef<dependency_directives_scan::Directive>>
-    operator()(FileEntryRef File) override {
-      DepDirectivesObjects.push_back(std::make_unique<DepDirectives>());
-      StringRef Input = (*FileMgr.getBufferForFile(File))->getBuffer();
-      bool Err = scanSourceForDependencyDirectives(
-          Input, DepDirectivesObjects.back()->Tokens,
-          DepDirectivesObjects.back()->Directives);
-      EXPECT_FALSE(Err);
-      return DepDirectivesObjects.back()->Directives;
-    }
-  };
   TestDependencyDirectivesGetter GetDependencyDirectives(FileMgr);
 
   PreprocessorOptions PPOpts;
@@ -154,6 +182,127 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
       "main.c", "./head1.h", "./head2.h", "./head2.h", "./head3.h", "./head3.h",
   };
   EXPECT_EQ(IncludedFilesSlash, ExpectedIncludes);
+}
+
+TEST_F(PPDependencyDirectivesTest, HeaderNamesStartingWithCompoundTokens) {
+  StringRef Source = "#if __has_include(<=>)\n"
+                     "#include <=>\n"
+                     "#endif\n"
+                     "#if __has_include(<<>)\n"
+                     "#include <<>\n"
+                     "#endif\n"
+                     "#include \\\n<=>";
+
+  SmallVector<dependency_directives_scan::Token> Tokens;
+  SmallVector<dependency_directives_scan::Directive> Directives;
+  ASSERT_FALSE(scanSourceForDependencyDirectives(Source, Tokens, Directives));
+
+  unsigned LessEqualCount = 0;
+  unsigned LessLessCount = 0;
+  for (const dependency_directives_scan::Token &Tok : Tokens) {
+    StringRef Spelling = Source.slice(Tok.Offset, Tok.getEnd());
+    if (Spelling == "<=") {
+      EXPECT_TRUE(Tok.is(tok::lessequal));
+      ++LessEqualCount;
+    } else if (Spelling == "<<") {
+      EXPECT_TRUE(Tok.is(tok::lessless));
+      ++LessLessCount;
+    }
+  }
+  EXPECT_EQ(LessEqualCount, 1u);
+  EXPECT_EQ(LessLessCount, 1u);
+
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory("/source");
+  VFS->addFile("/source/=", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  VFS->addFile("/source/<", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  VFS->addFile("/source/main.c", 0, llvm::MemoryBuffer::getMemBuffer(Source));
+  FileMgr.setVirtualFileSystem(VFS);
+
+  OptionalFileEntryRef FE;
+  ASSERT_THAT_ERROR(FileMgr.getFileRef("/source/main.c").moveInto(FE),
+                    llvm::Succeeded());
+  SourceMgr.setMainFileID(
+      SourceMgr.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
+
+  TestDependencyDirectivesGetter GetDependencyDirectives(FileMgr);
+  PreprocessorOptions PPOpts;
+  HeaderSearchOptions HSOpts;
+  TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+  auto DE = FileMgr.getOptionalDirectoryRef("/source");
+  ASSERT_TRUE(DE);
+  HeaderInfo.AddSearchPath(
+      DirectoryLookup(*DE, SrcMgr::C_User, /*isFramework=*/false),
+      /*isAngled=*/true);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr,
+                  /*OwnsHeaderSearch =*/false);
+  PP.Initialize(*Target);
+  PP.setDependencyDirectivesGetter(GetDependencyDirectives);
+
+  SmallVector<StringRef> IncludedFiles;
+  PP.addPPCallbacks(std::make_unique<IncludeCollector>(PP, IncludedFiles));
+  PP.EnterMainSourceFile();
+  PP.LexTokensUntilEOF();
+
+  SmallVector<std::string> IncludedFilesSlash;
+  for (StringRef IncludedFile : IncludedFiles)
+    IncludedFilesSlash.push_back(
+        llvm::sys::path::convert_to_slash(IncludedFile));
+  SmallVector<std::string> ExpectedIncludes{
+      "/source/main.c", "/source/=", "/source/<", "/source/="};
+  EXPECT_EQ(IncludedFilesSlash, ExpectedIncludes);
+}
+
+TEST_F(PPDependencyDirectivesTest, Embed) {
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory("/source");
+  VFS->addFile("/source/inputs/jk.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("jk"));
+  VFS->addFile("/source/inputs/single_byte.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("a"));
+  VFS->addFile("/source/inputs/single_byte1.txt", 0,
+               llvm::MemoryBuffer::getMemBuffer("b"));
+  VFS->addFile(
+      "/source/inc/head.h", 0,
+      llvm::MemoryBuffer::getMemBuffer("#embed \"inputs/single_byte.txt\"\n"
+                                       "extern int foo;\n"));
+  VFS->addFile(
+      "main.c", 0,
+      llvm::MemoryBuffer::getMemBuffer("#include \"inc/head.h\"\n"
+                                       "#if __has_embed(\"inputs/jk.txt\")\n"
+                                       "const char arr[] =\n"
+                                       "#embed \"inputs/single_byte1.txt\"\n"
+                                       ";\n"
+                                       "#endif\n"));
+  FileMgr.setVirtualFileSystem(VFS);
+
+  OptionalFileEntryRef FE;
+  ASSERT_THAT_ERROR(FileMgr.getFileRef("main.c").moveInto(FE),
+                    llvm::Succeeded());
+  SourceMgr.setMainFileID(
+      SourceMgr.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
+  PreprocessorOptions PPOpts;
+  HeaderSearchOptions HSOpts;
+  TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr,
+                  /*OwnsHeaderSearch =*/false);
+  PP.Initialize(*Target);
+
+  SmallVector<StringRef> EmbeddedFiles;
+  PP.addPPCallbacks(std::make_unique<EmbedCollector>(PP, EmbeddedFiles));
+  PP.EnterMainSourceFile();
+  PP.LexTokensUntilEOF();
+
+  SmallVector<StringRef> ExpectedEmbeds{
+      "inputs/single_byte.txt",
+      "inputs/jk.txt",
+      "inputs/single_byte1.txt",
+  };
+  EXPECT_EQ(EmbeddedFiles, ExpectedEmbeds);
 }
 
 } // anonymous namespace

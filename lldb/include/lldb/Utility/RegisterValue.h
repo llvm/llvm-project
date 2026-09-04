@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_REGISTERVALUE_H
 
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
@@ -24,7 +25,6 @@
 namespace lldb_private {
 class DataExtractor;
 class Stream;
-struct RegisterInfo;
 
 class RegisterValue {
 public:
@@ -46,7 +46,8 @@ public:
     eTypeUInt16,
     eTypeUInt32,
     eTypeUInt64,
-    eTypeUInt128,
+    eTypeUIntN, /// < This value is used when the (integer) register is larger
+                /// than 64-bits.
     eTypeFloat,
     eTypeDouble,
     eTypeLongDouble,
@@ -69,7 +70,7 @@ public:
     m_scalar = inst;
   }
 
-  explicit RegisterValue(llvm::APInt inst) : m_type(eTypeUInt128) {
+  explicit RegisterValue(llvm::APInt inst) : m_type(eTypeUIntN) {
     m_scalar = llvm::APInt(std::move(inst));
   }
 
@@ -178,7 +179,7 @@ public:
   }
 
   void operator=(llvm::APInt uint) {
-    m_type = eTypeUInt128;
+    m_type = eTypeUIntN;
     m_scalar = llvm::APInt(std::move(uint));
   }
 
@@ -217,8 +218,8 @@ public:
     m_scalar = uint;
   }
 
-  void SetUInt128(llvm::APInt uint) {
-    m_type = eTypeUInt128;
+  void SetUIntN(llvm::APInt uint) {
+    m_type = eTypeUIntN;
     m_scalar = std::move(uint);
   }
 

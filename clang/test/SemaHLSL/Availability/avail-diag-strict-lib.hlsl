@@ -180,7 +180,7 @@ namespace A {
 
 [shader("compute")]
 [numthreads(4,1,1)]
-float main() {
+void main() {
   float f = 3;
   MyClass C = { 1.0f };
   float a = alive(f);float b = aliveTemp<float>(f); // #aliveTemp_inst
@@ -188,5 +188,4 @@ float main() {
   float d = test((float)1.0);
   float e = test((half)1.0);
   exportedFunctionUsed(1.0f);
-  return a * b * c;
 }

@@ -28,3 +28,7 @@ void testComplexFloat(_Atomic(_Complex float) *fp) {
   _Complex float f = *fp;
   *fp = f;
 }
+
+// The RUN lines above pass no -pedantic, so the C23 '_BitInt' suffix extension
+// is not diagnosed here.
+void ZeroNeedsAlloc() { 9999999999999999999wb / 1wbi; }

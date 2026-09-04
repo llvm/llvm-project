@@ -10,19 +10,21 @@ from lldbsuite.test import lldbutil
 
 
 class NSSetSyntheticTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number("main.m", "// Set break point at this line.")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar12529957_with_run_command(self):
         """Test that NSSet reports its synthetic children properly."""
         self.build()
         self.run_tests()
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar12529957_with_run_command_no_const(self):
         """Test that NSSet reports its synthetic children properly."""
         disable_constant_classes = {

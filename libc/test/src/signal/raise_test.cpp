@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/signal/raise.h"
-
 #include "test/UnitTest/Test.h"
-
-#include <signal.h>
 
 TEST(LlvmLibcSignalTest, Raise) {
   // SIGCONT is ingored unless stopped, so we can use it to check the return

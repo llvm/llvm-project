@@ -1,4 +1,4 @@
-//===--- OperatorsRepresentationCheck.h - clang-tidy ------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 /// and overloaded operators in C++ code.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/operators-representation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/operators-representation.html
 class OperatorsRepresentationCheck : public ClangTidyCheck {
 public:
   OperatorsRepresentationCheck(StringRef Name, ClangTidyContext *Context);
@@ -33,8 +33,8 @@ private:
   void registerUnaryOperatorMatcher(ast_matchers::MatchFinder *Finder);
   void registerOverloadedOperatorMatcher(ast_matchers::MatchFinder *Finder);
 
-  std::vector<llvm::StringRef> BinaryOperators;
-  std::vector<llvm::StringRef> OverloadedOperators;
+  std::vector<StringRef> BinaryOperators;
+  std::vector<StringRef> OverloadedOperators;
 };
 
 } // namespace clang::tidy::readability

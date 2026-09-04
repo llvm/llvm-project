@@ -610,3 +610,49 @@ void top() {
   consume(parseMatchComponent());
 }
 } // namespace elementwise_copy_small_array_from_post_initializer_of_cctor
+
+namespace gh147686 {
+// The problem reported in https://github.com/llvm/llvm-project/issues/147686
+// is sensitive to the initializer form: using parenthesis to initialize m_ptr
+// resulted in crashes when analyzing *m_ptr = '\0'; but using braces is fine.
+
+struct A {
+  A() : m_ptr(m_buf) { *m_ptr = '\0'; } // no-crash
+  A(int overload) : m_ptr{m_buf} { *m_ptr = '\0'; }
+  A(char src) : m_ptr(m_buf) { *m_ptr = src; } // no-crash
+  A(char src, int overload) : m_ptr{m_buf} { *m_ptr = src; }
+  char m_buf[64] = {0};
+  char * m_ptr;
+};
+
+void test1() {
+  A a;
+  clang_analyzer_eval(a.m_buf[0] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(*a.m_ptr == 0); // expected-warning{{TRUE}}
+}
+
+void test2() {
+  A a(314);
+  clang_analyzer_eval(a.m_buf[0] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(*a.m_ptr == 0); // expected-warning{{TRUE}}
+}
+
+void test3() {
+  A a(0);
+  clang_analyzer_eval(a.m_buf[0] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(*a.m_ptr == 0); // expected-warning{{TRUE}}
+}
+
+void test3Bis(char arg) {
+  A a(arg);
+  clang_analyzer_eval(a.m_buf[0] == arg); // expected-warning{{TRUE}}
+  clang_analyzer_eval(*a.m_ptr == arg); // expected-warning{{TRUE}}
+}
+
+void test4(char arg) {
+  A a(arg, 314);
+  clang_analyzer_eval(a.m_buf[0] == arg); // expected-warning{{TRUE}}
+  clang_analyzer_eval(*a.m_ptr == arg); // expected-warning{{TRUE}}
+}
+
+} // namespace gh147686

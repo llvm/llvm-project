@@ -11,7 +11,9 @@
 
 #include <__config>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_generic_transparent_comparator.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -46,7 +48,11 @@ template <class _Tp>
 inline const bool __desugars_to_v<__less_tag, __less<>, _Tp, _Tp> = true;
 
 template <class _Tp>
-inline const bool __desugars_to_v<__totally_ordered_less_tag, __less<>, _Tp, _Tp> = is_integral<_Tp>::value;
+inline const bool __desugars_to_v<__totally_ordered_less_tag, __less<>, _Tp, _Tp> =
+    is_integral<__remove_cvref_t<_Tp> >::value;
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<__less<> > = true;
 
 _LIBCPP_END_NAMESPACE_STD
 

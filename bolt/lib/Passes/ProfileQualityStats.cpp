@@ -15,6 +15,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
+#include <cmath>
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
@@ -37,7 +38,7 @@ static cl::opt<unsigned> PercentileForProfileQualityCheck(
 } // namespace opts
 
 namespace {
-using FunctionListType = std::vector<const BinaryFunction *>;
+using FunctionListType = ConstBinaryFunctionListType;
 using function_iterator = FunctionListType::iterator;
 
 // Function number -> vector of flows for BBs in the function

@@ -278,8 +278,7 @@ define i1 @t8_oneuse5(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    call void @use64(i64 [[T3]])
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T3_TRUNC]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y]], 1
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[Y]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len

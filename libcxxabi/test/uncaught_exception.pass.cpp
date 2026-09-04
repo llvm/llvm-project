@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // UNSUPPORTED: no-exceptions
 
 // This tests that libc++abi still provides __cxa_uncaught_exception() for

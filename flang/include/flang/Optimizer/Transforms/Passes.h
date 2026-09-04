@@ -9,9 +9,8 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
-#include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Transforms/AllocationPlacementPolicy.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include <memory>
@@ -27,6 +26,14 @@ class ModuleOp;
 
 namespace fir {
 
+/// Controls hoisting of invariant ops from nested regions (e.g. scf.if
+/// within loops) in the flang-licm pass.
+enum class LICMNestedHoistingMode {
+  None,       ///< Do not hoist from nested regions.
+  Cheap,      ///< Only hoist cheap ops like fir.convert.
+  Aggressive, ///< Hoist all safe invariant ops.
+};
+
 //===----------------------------------------------------------------------===//
 // Passes defined in Passes.td
 //===----------------------------------------------------------------------===//
@@ -35,12 +42,16 @@ namespace fir {
 
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
-std::unique_ptr<mlir::Pass> createAffineDemotionPass();
+/// Create the allocation-placement pass with the given options and a hook that
+/// can override the thresholds per allocation (e.g. for device routines or
+/// parallel regions). This complements the tablegen-generated overloads.
 std::unique_ptr<mlir::Pass>
-createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
+createAllocationPlacement(const AllocationPlacementOptions &options,
+                          AllocationPlacementHook placementHook);
+
+std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
-std::unique_ptr<mlir::Pass> createFIRToSCFPass();
 std::unique_ptr<mlir::Pass>
 createAddDebugInfoPass(fir::AddDebugInfoOptions options = {});
 
@@ -52,6 +63,10 @@ createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 std::unique_ptr<mlir::Pass> createVScaleAttrPass();
 std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
+
+void populateFIRToSCFRewrites(mlir::RewritePatternSet &patterns,
+                              bool parallelUnordered = false,
+                              bool setNSW = true);
 
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,

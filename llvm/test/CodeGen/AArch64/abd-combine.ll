@@ -17,12 +17,9 @@ define <8 x i16> @abdu_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @abdu_const(<8 x i16> %src1) {
 ; CHECK-LABEL: abdu_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    uabd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uabd v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -34,12 +31,9 @@ define <8 x i16> @abdu_const(<8 x i16> %src1) {
 define <8 x i16> @abdu_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: abdu_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    uabd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uabd v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -318,12 +312,9 @@ define <8 x i16> @abds_base(<8 x i16> %src1, <8 x i16> %src2) {
 define <8 x i16> @abds_const(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sabd v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> %zextsrc1, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -335,12 +326,9 @@ define <8 x i16> @abds_const(<8 x i16> %src1) {
 define <8 x i16> @abds_const_lhs(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    sshll v2.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sabd v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    movi v1.4h, #1
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, %zextsrc1
@@ -352,11 +340,10 @@ define <8 x i16> @abds_const_lhs(<8 x i16> %src1) {
 define <8 x i16> @abds_const_zero(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v1.4s, v0.4h, #0
-; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    abs v1.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    abs v0.4h, v0.4h
+; CHECK-NEXT:    abs v1.4h, v1.4h
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %sub = sub <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
@@ -536,9 +523,26 @@ define <1 x i64> @recursive() {
   ret <1 x i64> %10
 }
 
+; Poison elements in the constant operand pass a null ConstantSDNode to the
+; matchUnaryPredicate lambda in visitABD; make sure that does not crash.
+define <4 x i32> @abdu_const_poison(<4 x i8> %x) {
+; CHECK-LABEL: abdu_const_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #8388736 // =0x800080
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    uabdl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %ext = zext <4 x i8> %x to <4 x i32>
+  %sub = sub <4 x i32> <i32 128, i32 128, i32 poison, i32 poison>, %ext
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 false)
+  ret <4 x i32> %abs
+}
+
 declare <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8>, <8 x i8>)
 declare <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32>)
 declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)
 declare <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1)
+declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)

@@ -23,11 +23,13 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -125,6 +127,7 @@ class X86AsmBackend : public MCAsmBackend {
 
   MCInst PrevInst;
   unsigned PrevInstOpcode = 0;
+  bool PrefixEndsBundleLock = false;
   MCBoundaryAlignFragment *PendingBA = nullptr;
   std::pair<MCFragment *, size_t> PrevInstPosition;
 
@@ -133,6 +136,8 @@ class X86AsmBackend : public MCAsmBackend {
   bool needAlign(const MCInst &Inst) const;
   bool canPadBranches(MCObjectStreamer &OS) const;
   bool canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const;
+  void emitInstructionBeginBundle(MCObjectStreamer &OS);
+  void emitInstructionEndBundle(MCObjectStreamer &OS);
 
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
@@ -160,6 +165,16 @@ public:
         AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone;
     AllowEnhancedRelaxation =
         AllowAutoPadding && TargetPrefixMax != 0 && X86PadForBranchAlign;
+    AllowBundling = true;
+  }
+
+  // The streamer frees the fragments these point into.
+  void reset() override {
+    PrevInst = MCInst();
+    PrevInstOpcode = 0;
+    PrefixEndsBundleLock = false;
+    PendingBA = nullptr;
+    PrevInstPosition = {};
   }
 
   void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
@@ -174,8 +189,7 @@ public:
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
                                     uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
@@ -196,7 +210,13 @@ public:
   bool padInstructionEncoding(MCFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
 
-  bool finishLayout(const MCAssembler &Asm) const override;
+  bool finishLayout() const override;
+
+  bool padInstsBackward(SmallVectorImpl<MCFragment *> &Relaxable,
+                        unsigned &RemainingSize) const;
+  bool foldBundlePad(const MCAssembler &Asm, MCBoundaryAlignFragment &BF,
+                     SmallVectorImpl<MCFragment *> &Relaxable) const;
+  bool optimizeBundleNops(const MCAssembler &Asm) const;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -249,14 +269,11 @@ classifySecondInstInMacroFusion(const MCInst &MI, const MCInstrInfo &MCII) {
 
 /// Check if the instruction uses RIP relative addressing.
 static bool isRIPRelative(const MCInst &MI, const MCInstrInfo &MCII) {
-  unsigned Opcode = MI.getOpcode();
-  const MCInstrDesc &Desc = MCII.get(Opcode);
-  uint64_t TSFlags = Desc.TSFlags;
-  unsigned CurOp = X86II::getOperandBias(Desc);
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
   if (MemoryOperand < 0)
     return false;
-  unsigned BaseRegNum = MemoryOperand + CurOp + X86::AddrBaseReg;
+  unsigned BaseRegNum = MemoryOperand + X86::AddrBaseReg;
   MCRegister BaseReg = MI.getOperand(BaseRegNum).getReg();
   return (BaseReg == X86::RIP);
 }
@@ -293,9 +310,7 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   uint64_t TSFlags = Desc.TSFlags;
 
   // Determine where the memory operand starts, if present.
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
-  if (MemoryOperand != -1)
-    MemoryOperand += X86II::getOperandBias(Desc);
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
 
   MCRegister SegmentReg;
   if (MemoryOperand >= 0) {
@@ -388,36 +403,6 @@ static bool mayHaveInterruptDelaySlot(unsigned InstOpcode) {
   return false;
 }
 
-/// Check if the instruction to be emitted is right after any data.
-static bool
-isRightAfterData(MCFragment *CurrentFragment,
-                 const std::pair<MCFragment *, size_t> &PrevInstPosition) {
-  MCFragment *F = CurrentFragment;
-  // Since data is always emitted into a DataFragment, our check strategy is
-  // simple here.
-  //   - If the fragment is a DataFragment
-  //     - If it's empty (section start or data after align), return false.
-  //     - If it's not the fragment where the previous instruction is,
-  //       returns true.
-  //     - If it's the fragment holding the previous instruction but its
-  //       size changed since the previous instruction was emitted into
-  //       it, returns true.
-  //     - Otherwise returns false.
-  //   - If the fragment is not a DataFragment, returns false.
-  if (F->getKind() == MCFragment::FT_Data)
-    return F->getFixedSize() && (F != PrevInstPosition.first ||
-                                 F->getFixedSize() != PrevInstPosition.second);
-
-  return false;
-}
-
-/// \returns the fragment size if it has instructions, otherwise returns 0.
-static size_t getSizeForInstFragment(const MCFragment *F) {
-  if (!F || !F->hasInstructions())
-    return 0;
-  return F->getSize();
-}
-
 /// Return true if we can insert NOP or prefixes automatically before the
 /// the instruction to be emitted.
 bool X86AsmBackend::canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const {
@@ -441,9 +426,11 @@ bool X86AsmBackend::canPadInst(const MCInst &Inst, MCObjectStreamer &OS) const {
     // semantic.
     return false;
 
-  if (isRightAfterData(OS.getCurrentFragment(), PrevInstPosition))
-    // If this instruction follows any data, there is no clear
-    // instruction boundary, inserting a nop/prefix would change semantic.
+  // If this instruction follows any data, there is no clear instruction
+  // boundary, inserting a nop/prefix would change semantic.
+  auto Offset = OS.getCurFragSize();
+  if (Offset && (OS.getCurrentFragment() != PrevInstPosition.first ||
+                 Offset != PrevInstPosition.second))
     return false;
 
   return true;
@@ -486,16 +473,80 @@ void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
     return;
   }
 
+  // Run the LFI rewriter outside of emitInstructionBegin/End so that nested
+  // instructions or bundle_lock/unlock directives do not corrupt the Begin/End
+  // bookkeeping for the original instruction.
+  if (S.getLFIRewriter() && S.getLFIRewriter()->rewriteInst(Inst, S, STI))
+    return;
+
   auto &Backend = static_cast<X86AsmBackend &>(S.getAssembler().getBackend());
   Backend.emitInstructionBegin(S, Inst, STI);
   S.MCObjectStreamer::emitInstruction(Inst, STI);
   Backend.emitInstructionEnd(S, Inst);
 }
 
+/// Open a MCBoundaryAlignFragment for the upcoming instruction so that layout
+/// can pad it into the next bundle. Within .bundle_lock the group's fragment
+/// already covers it.
+void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
+  assert(Asm->isBundlingEnabled());
+
+  // The prefix stays in the group while this instruction gets its own
+  // fragment, so padding may land between the two.
+  if (PrefixEndsBundleLock && OS.getCurrentFragment() != PrevInstPosition.first)
+    getContext().reportError(OS.getStartTokLoc(),
+                             "instruction prefix cannot be the last "
+                             "instruction of a .bundle_lock group");
+
+  if (OS.isBundleLocked())
+    return;
+  // A pending fragment means the previous MCInst was a prefix, which must stay
+  // with this one: extend its range. Adjacency rejects a fragment left stale by
+  // an intervening .bundle_lock group.
+  if (PendingBA &&
+      PendingBA->getLastFragment()->getNext() == OS.getCurrentFragment()) {
+    PendingBA->setLastFragment(OS.getCurrentFragment());
+    return;
+  }
+  PendingBA = OS.newSpecialFragment<MCBoundaryAlignFragment>(
+      Asm->getBundleAlign(), STI);
+  // We can set LastFragment now, before the instruction is emitted, as bundling
+  // emits one fragment per instruction. Deferring setLastFragment to
+  // post-emitInstruction would risk capturing a fragment that a subsequent
+  // emitCodeAlignment repurposes in-place to FT_Align, corrupting the BA's
+  // boundary range.
+  PendingBA->setLastFragment(OS.getCurrentFragment());
+}
+
+/// Close the fragment opened by emitInstructionBeginBundle, unless the
+/// instruction was a prefix, in which case the next one extends it.
+void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
+  assert(Asm->isBundlingEnabled());
+
+  if (OS.isBundleLocked()) {
+    PrefixEndsBundleLock = isPrefix(PrevInstOpcode, *MCII);
+    return;
+  }
+  PrefixEndsBundleLock = false;
+  assert(PendingBA && "MCBoundaryAlignFragment is expected for every "
+                      "instruction if it is not bundle-locked");
+
+  OS.getCurrentSectionOnly()->ensureMinAlignment(Asm->getBundleAlign());
+
+  if (!isPrefix(PrevInstOpcode, *MCII))
+    PendingBA = nullptr;
+}
+
 /// Insert BoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
-                                         const MCInst &Inst, const MCSubtargetInfo &STI) {
+                                         const MCInst &Inst,
+                                         const MCSubtargetInfo &STI) {
   bool CanPadInst = canPadInst(Inst, OS);
+  if (Asm->isBundlingEnabled()) {
+    emitInstructionBeginBundle(OS);
+    OS.getCurrentFragment()->setAllowAutoPadding(CanPadInst);
+    return;
+  }
   if (CanPadInst)
     OS.getCurrentFragment()->setAllowAutoPadding(true);
 
@@ -514,7 +565,16 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   if (!CanPadInst)
     return;
 
-  if (PendingBA && PendingBA->getNext() == OS.getCurrentFragment()) {
+  if (PendingBA) {
+    auto *NextFragment = PendingBA->getNext();
+    assert(NextFragment && "NextFragment should not be null");
+    if (NextFragment == OS.getCurrentFragment())
+      return;
+    // We eagerly create an empty fragment when inserting a fragment
+    // with a variable-size tail.
+    if (NextFragment->getNext() == OS.getCurrentFragment())
+      return;
+
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction.
     //
@@ -540,9 +600,8 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                           isFirstMacroFusibleInst(Inst, *MCII))) {
     // If we meet a unfused branch or the first instuction in a fusiable pair,
     // insert a BoundaryAlign fragment.
-    PendingBA = OS.getContext().allocFragment<MCBoundaryAlignFragment>(
-        AlignBoundary, STI);
-    OS.insert(PendingBA);
+    PendingBA =
+        OS.newSpecialFragment<MCBoundaryAlignFragment>(AlignBoundary, STI);
   }
 }
 
@@ -552,7 +611,9 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
   // Update PrevInstOpcode here, canPadInst() reads that.
   MCFragment *CF = OS.getCurrentFragment();
   PrevInstOpcode = Inst.getOpcode();
-  PrevInstPosition = std::make_pair(CF, getSizeForInstFragment(CF));
+  PrevInstPosition = std::make_pair(CF, OS.getCurFragSize());
+  if (Asm->isBundlingEnabled())
+    return emitInstructionEndBundle(OS);
 
   if (!canPadBranches(OS))
     return;
@@ -580,7 +641,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
 std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     unsigned Type;
-    if (STI.getTargetTriple().getArch() == Triple::x86_64) {
+    if (STI.getTargetTriple().isX86_64()) {
       Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
@@ -704,9 +765,8 @@ std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
 }
 
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   // Force relocation when there is a specifier. This might be too conservative
   // - GAS doesn't emit a relocation for call local@plt; local:.
   if (Target.getSpecifier())
@@ -718,27 +778,29 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return;
   unsigned Size = getFixupKindSize(Kind);
 
-  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
 
-  int64_t SignedValue = static_cast<int64_t>(Value);
-  if (IsResolved && Fixup.isPCRel()) {
-    // check that PC relative fixup fits into the fixup size.
-    if (Size > 0 && !isIntN(Size * 8, SignedValue))
+  // Check fixup value overflow similar to GAS (fixups emitted as RELA
+  // relocations have a value of 0).
+  // - Unknown signedness: the range (-2^N, 2^N) is allowed,
+  //   accommodating intN_t, uintN_t, and a non-positive value type.
+  // - Signed (intN_t): the range [-2^(N-1), 2^(N-1)) is allowed.
+  //
+  // Currently only resolved PC-relative fixups are treated as signed. GAS
+  // treats more as signed (e.g. unresolved R_X86_64_32S).
+  // Unresolved fixups have unknown signedness to allow `jmp foo+0xffffffff`.
+  if (Size && Size < 8) {
+    bool Signed = IsResolved && Fixup.isPCRel();
+    uint64_t Mask = ~uint64_t(0) << (Size * 8 - (Signed ? 1 : 0));
+    if ((Value & Mask) && (Signed ? (Value & Mask) != Mask : (-Value & Mask)))
       getContext().reportError(Fixup.getLoc(),
-                               "value of " + Twine(SignedValue) +
+                               "value of " + Twine(int64_t(Value)) +
                                    " is too large for field of " + Twine(Size) +
-                                   ((Size == 1) ? " byte." : " bytes."));
-  } else {
-    // Check that uppper bits are either all zeros or all ones.
-    // Specifically ignore overflow/underflow as long as the leakage is
-    // limited to the lower bits. This is to remain compatible with
-    // other assemblers.
-    assert((Size == 0 || isIntN(Size * 8 + 1, SignedValue)) &&
-           "Value does not fit in the Fixup field");
+                                   (Size == 1 ? " byte" : " bytes"));
   }
 
   for (unsigned i = 0; i != Size; ++i)
-    Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
+    Data[i] = uint8_t(Value >> (i * 8));
 }
 
 bool X86AsmBackend::mayNeedRelaxation(unsigned Opcode,
@@ -750,7 +812,7 @@ bool X86AsmBackend::mayNeedRelaxation(unsigned Opcode,
           Operands[Operands.size() - 1 - SkipOperands].isExpr());
 }
 
-bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &F,
                                                  const MCFixup &Fixup,
                                                  const MCValue &Target,
                                                  uint64_t Value,
@@ -759,8 +821,17 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
   //
   // Currently, `jmp local@plt` relaxes JMP even if the offset is small,
   // different from gas.
-  if (Resolved)
-    return !isInt<8>(Value) || Target.getSpecifier();
+  if (Resolved) {
+    // finishLayout folds padding into encodings after relaxation, shifting a
+    // branch and its target within their bundles. Keep a bundle of headroom.
+    // Immediates do not shift.
+    int64_t Slack = Asm->isBundlingEnabled() && TargetPrefixMax != 0 &&
+                            isRelaxableBranch(F.getOpcode())
+                        ? Asm->getBundleAlign().value()
+                        : 0;
+    return !isInt<8>(int64_t(Value) + Slack) ||
+           !isInt<8>(int64_t(Value) - Slack) || Target.getSpecifier();
+  }
 
   // Otherwise, relax unless there is a @ABS8 specifier.
   if (Fixup.getKind() == FK_Data_1 && Target.getAddSym() &&
@@ -872,7 +943,129 @@ bool X86AsmBackend::padInstructionEncoding(MCFragment &RF,
   return Changed;
 }
 
-bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
+bool X86AsmBackend::padInstsBackward(SmallVectorImpl<MCFragment *> &Relaxable,
+                                     unsigned &RemainingSize) const {
+  bool Changed = false;
+  while (!Relaxable.empty() && RemainingSize != 0) {
+    auto &RF = *Relaxable.pop_back_val();
+    // Give the backend a chance to play any tricks it wishes to increase
+    // the encoding size of the given instruction.  Target independent code
+    // will try further relaxation, but target's may play further tricks.
+    Changed |= padInstructionEncoding(RF, Asm->getEmitter(), RemainingSize);
+
+    // If we have an instruction which hasn't been fully relaxed, we can't
+    // skip past it and insert bytes before it.  Changing its starting
+    // offset might require a larger negative offset than it can encode.
+    // We don't need to worry about larger positive offsets as none of the
+    // possible offsets between this and our align are visible, and the
+    // ones afterwards aren't changing.
+    if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                          *RF.getSubtargetInfo()))
+      break;
+  }
+  Relaxable.clear();
+  return Changed;
+}
+
+/// Trade the padding held by \p BF for ignored prefixes on the instructions
+/// around it. Padding never leaves its own bundle, so no instruction or
+/// bundle-locked group moves across a boundary. \p Relaxable holds the
+/// preceding instructions in that bundle and is consumed.
+bool X86AsmBackend::foldBundlePad(
+    const MCAssembler &Asm, MCBoundaryAlignFragment &BF,
+    SmallVectorImpl<MCFragment *> &Relaxable) const {
+  const uint64_t BundleSize = Asm.getBundleAlign().value();
+  const uint64_t PadStart = Asm.getFragmentOffset(BF);
+  unsigned Remaining = BF.getSize();
+
+  // Only padding in PadStart's own bundle may move backward; an align_to_end
+  // group can push the rest into the next bundle.
+  unsigned Budget =
+      std::min<uint64_t>(Remaining, BundleSize - PadStart % BundleSize);
+  unsigned Left = Budget;
+  bool Changed = padInstsBackward(Relaxable, Left);
+  Remaining -= Budget - Left;
+
+  // Absorbing padding moves the group's start earlier while its end is pinned,
+  // so it may only grow into the slack in its bundle: BundleSize - GroupSize
+  // for align_to_end, zero for a group that already starts on a boundary.
+  if (BF.isAlignToEnd() && Remaining) {
+    uint64_t GroupSize = 0;
+    for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
+      GroupSize += Asm.computeFragmentSize(*F);
+      if (F == BF.getLastFragment())
+        break;
+    }
+    if (GroupSize < BundleSize) {
+      Left = Budget = std::min<uint64_t>(Remaining, BundleSize - GroupSize);
+      for (MCFragment *F = BF.getNext(); F; F = F->getNext()) {
+        if (F->getKind() == MCFragment::FT_Relaxable)
+          Changed |= padInstructionEncoding(*F, Asm.getEmitter(), Left);
+        if (F == BF.getLastFragment() || Left == 0)
+          break;
+      }
+      Remaining -= Budget - Left;
+    }
+  }
+
+  BF.setSize(Remaining);
+  return Changed;
+}
+
+bool X86AsmBackend::optimizeBundleNops(const MCAssembler &Asm) const {
+  const uint64_t BundleSize = Asm.getBundleAlign().value();
+  bool Changed = false;
+  for (MCSection &Sec : Asm) {
+    if (!Sec.isText())
+      continue;
+
+    // Instructions preceding the next padding and sharing its bundle.
+    SmallVector<MCFragment *, 8> Relaxable;
+    // Folding leaves stale offsets until the next layout, so skip the
+    // rewritten range.
+    const MCFragment *ResumeAfter = nullptr;
+    for (MCFragment &F : Sec) {
+      if (ResumeAfter) {
+        if (&F == ResumeAfter)
+          ResumeAfter = nullptr;
+        continue;
+      }
+      uint64_t Offset = Asm.getFragmentOffset(F);
+      if (!Relaxable.empty() &&
+          Asm.getFragmentOffset(*Relaxable.front()) / BundleSize !=
+              Offset / BundleSize)
+        Relaxable.clear();
+
+      switch (F.getKind()) {
+      case MCFragment::FT_BoundaryAlign: {
+        auto &BF = static_cast<MCBoundaryAlignFragment &>(F);
+        if (!BF.getSize())
+          break; // Nothing to fold, and not a barrier.
+        Changed |= foldBundlePad(Asm, BF, Relaxable);
+        ResumeAfter = BF.getLastFragment();
+        break;
+      }
+      case MCFragment::FT_Relaxable:
+        Relaxable.push_back(&F);
+        break;
+      case MCFragment::FT_Data:
+        break; // Fixed bytes, safe to shift.
+      default:
+        // Other kinds may change size when shifted (.p2align, .org, LEBs).
+        Relaxable.clear();
+        break;
+      }
+    }
+  }
+
+  return Changed;
+}
+
+bool X86AsmBackend::finishLayout() const {
+  // With bundling, padding is fully determined during layout and the only
+  // post-layout optimization is prefix padding.
+  if (Asm->isBundlingEnabled())
+    return TargetPrefixMax != 0 && optimizeBundleNops(*Asm);
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
@@ -886,11 +1079,11 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
   // MCSymbols and therefore different relaxation results. X86PadForAlign is
   // disabled by default to eliminate the -g vs non -g difference.
   DenseSet<MCFragment *> LabeledFragments;
-  for (const MCSymbol &S : Asm.symbols())
+  for (const MCSymbol &S : Asm->symbols())
     LabeledFragments.insert(S.getFragment());
 
   bool Changed = false;
-  for (MCSection &Sec : Asm) {
+  for (MCSection &Sec : *Asm) {
     if (!Sec.isText())
       continue;
 
@@ -930,25 +1123,8 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
       // the align directive.  This is purely about human understandability
       // of the resulting code.  If we later find a reason to expand
       // particular instructions over others, we can adjust.
-      unsigned RemainingSize = Asm.computeFragmentSize(F) - F.getFixedSize();
-      while (!Relaxable.empty() && RemainingSize != 0) {
-        auto &RF = *Relaxable.pop_back_val();
-        // Give the backend a chance to play any tricks it wishes to increase
-        // the encoding size of the given instruction.  Target independent code
-        // will try further relaxation, but target's may play further tricks.
-        Changed |= padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize);
-
-        // If we have an instruction which hasn't been fully relaxed, we can't
-        // skip past it and insert bytes before it.  Changing its starting
-        // offset might require a larger negative offset than it can encode.
-        // We don't need to worry about larger positive offsets as none of the
-        // possible offsets between this and our align are visible, and the
-        // ones afterwards aren't changing.
-        if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
-                              *RF.getSubtargetInfo()))
-          break;
-      }
-      Relaxable.clear();
+      unsigned RemainingSize = Asm->computeFragmentSize(F) - F.getFixedSize();
+      Changed |= padInstsBackward(Relaxable, RemainingSize);
 
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
@@ -1308,7 +1484,7 @@ public:
   DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
                       const MCSubtargetInfo &STI)
       : X86AsmBackend(T, STI), MRI(MRI), TT(STI.getTargetTriple()),
-        Is64Bit(TT.isArch64Bit()) {
+        Is64Bit(TT.isX86_64()) {
     memset(SavedRegs, 0, sizeof(SavedRegs));
     OffsetSize = Is64Bit ? 8 : 4;
     MoveInstrSize = Is64Bit ? 3 : 2;
@@ -1326,6 +1502,13 @@ public:
   /// for the CFI instructions.
   uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
+    if (Ctxt->emitDwarfUnwindInfo() == EmitDwarfUnwindType::DwarfOnly)
+      return CU::UNWIND_MODE_DWARF;
+
+    // Signal frames cannot be encoded in compact unwind.
+    if (FI->IsSignalFrame)
+      return CU::UNWIND_MODE_DWARF;
+
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty()) return 0;
     if (!isDarwinCanonicalPersonality(FI->Personality) &&
@@ -1413,7 +1596,7 @@ public:
           return CU::UNWIND_MODE_DWARF;
 
         MCRegister Reg = *MRI.getLLVMRegNum(Inst.getRegister(), true);
-        SavedRegs[SavedRegIdx++] = Reg;
+        SavedRegs[SavedRegIdx++] = Reg.id();
         StackAdjust += OffsetSize;
         MinAbsOffset = std::min(MinAbsOffset, std::abs(Inst.getOffset()));
         InstrOffset += PushInstrSize(Reg);

@@ -125,12 +125,12 @@ csrrs t1, mhpmevent31h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system reg
 
 csrrs t1, mstateen0h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'mstateen0h' is RV32 only
 csrrs t1, mstateen1h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'mstateen1h' is RV32 only
-csrrs t1, mstateen3h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'mstateen3h' is RV32 only
+csrrs t1, mstateen2h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'mstateen2h' is RV32 only
 csrrs t1, mstateen3h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'mstateen3h' is RV32 only
 
 csrrs t1, hstateen0h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'hstateen0h' is RV32 only
 csrrs t1, hstateen1h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'hstateen1h' is RV32 only
-csrrs t1, hstateen3h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'hstateen3h' is RV32 only
+csrrs t1, hstateen2h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'hstateen2h' is RV32 only
 csrrs t1, hstateen3h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'hstateen3h' is RV32 only
 
 csrrs t1, stimecmph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register 'stimecmph' is RV32 only

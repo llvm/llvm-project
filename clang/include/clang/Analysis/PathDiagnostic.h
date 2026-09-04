@@ -43,7 +43,6 @@ class CallEnter;
 class CallExitEnd;
 class ConditionalOperator;
 class Decl;
-class LocationContext;
 class MemberExpr;
 class ProgramPoint;
 class SourceManager;
@@ -189,8 +188,8 @@ public:
   PathDiagnosticRange() = default;
 };
 
-using LocationOrAnalysisDeclContext =
-    llvm::PointerUnion<const LocationContext *, AnalysisDeclContext *>;
+using StackFrameOrAnalysisDeclContext =
+    llvm::PointerUnion<const StackFrame *, AnalysisDeclContext *>;
 
 class PathDiagnosticLocation {
 private:
@@ -205,12 +204,12 @@ private:
   PathDiagnosticLocation(SourceLocation L, const SourceManager &sm, Kind kind)
       : K(kind), SM(&sm), Loc(genLocation(L)), Range(genRange()) {}
 
-  FullSourceLoc genLocation(
-      SourceLocation L = SourceLocation(),
-      LocationOrAnalysisDeclContext LAC = (AnalysisDeclContext *)nullptr) const;
+  FullSourceLoc genLocation(SourceLocation L = SourceLocation(),
+                            StackFrameOrAnalysisDeclContext SFAC =
+                                (AnalysisDeclContext *)nullptr) const;
 
-  PathDiagnosticRange genRange(
-      LocationOrAnalysisDeclContext LAC = (AnalysisDeclContext *)nullptr) const;
+  PathDiagnosticRange genRange(StackFrameOrAnalysisDeclContext SFAC =
+                                   (AnalysisDeclContext *)nullptr) const;
 
 public:
   /// Create an invalid location.
@@ -218,10 +217,10 @@ public:
 
   /// Create a location corresponding to the given statement.
   PathDiagnosticLocation(const Stmt *s, const SourceManager &sm,
-                         LocationOrAnalysisDeclContext lac)
+                         StackFrameOrAnalysisDeclContext SFAC)
       : K(s->getBeginLoc().isValid() ? StmtK : SingleLocK),
         S(K == StmtK ? s : nullptr), SM(&sm),
-        Loc(genLocation(SourceLocation(), lac)), Range(genRange(lac)) {
+        Loc(genLocation(SourceLocation(), SFAC)), Range(genRange(SFAC)) {
     assert(K == SingleLocK || S);
     assert(K == SingleLocK || Loc.isValid());
     assert(K == SingleLocK || Range.isValid());
@@ -259,22 +258,22 @@ public:
   /// of statements and declarations.
   static PathDiagnosticLocation
   createBegin(const Decl *D, const SourceManager &SM,
-              const LocationOrAnalysisDeclContext LAC) {
+              const StackFrameOrAnalysisDeclContext SFAC) {
     return createBegin(D, SM);
   }
 
   /// Create a location for the beginning of the statement.
-  static PathDiagnosticLocation createBegin(const Stmt *S,
-                                            const SourceManager &SM,
-                                            const LocationOrAnalysisDeclContext LAC);
+  static PathDiagnosticLocation
+  createBegin(const Stmt *S, const SourceManager &SM,
+              const StackFrameOrAnalysisDeclContext SFAC);
 
   /// Create a location for the end of the statement.
   ///
   /// If the statement is a CompoundStatement, the location will point to the
   /// closing brace instead of following it.
-  static PathDiagnosticLocation createEnd(const Stmt *S,
-                                          const SourceManager &SM,
-                                       const LocationOrAnalysisDeclContext LAC);
+  static PathDiagnosticLocation
+  createEnd(const Stmt *S, const SourceManager &SM,
+            const StackFrameOrAnalysisDeclContext SFAC);
 
   /// Create the location for the operator of the binary expression.
   /// Assumes the statement has a valid location.
@@ -301,13 +300,13 @@ public:
 
   /// Create a location for the beginning of the enclosing declaration body.
   /// Defaults to the beginning of the first statement in the declaration body.
-  static PathDiagnosticLocation createDeclBegin(const LocationContext *LC,
+  static PathDiagnosticLocation createDeclBegin(const StackFrame *SF,
                                                 const SourceManager &SM);
 
   /// Constructs a location for the end of the enclosing declaration body.
   /// Defaults to the end of brace.
-  static PathDiagnosticLocation createDeclEnd(const LocationContext *LC,
-                                                   const SourceManager &SM);
+  static PathDiagnosticLocation createDeclEnd(const StackFrame *SF,
+                                              const SourceManager &SM);
 
   /// Create a location corresponding to the given valid ProgramPoint.
   static PathDiagnosticLocation create(const ProgramPoint &P,
@@ -321,7 +320,7 @@ public:
   /// or the end of the given statement, or a nearby valid source location
   /// if the statement does not have a valid source location of its own.
   static SourceLocation
-  getValidSourceLocation(const Stmt *S, LocationOrAnalysisDeclContext LAC,
+  getValidSourceLocation(const Stmt *S, StackFrameOrAnalysisDeclContext SFAC,
                          bool UseEndOfStatement = false);
 
   bool operator==(const PathDiagnosticLocation &X) const {
@@ -884,6 +883,10 @@ public:
   const Decl *getUniqueingDecl() const {
     return UniqueingDecl;
   }
+
+  /// Get a hash that identifies the issue.
+  SmallString<32> getIssueHash(const SourceManager &SrcMgr,
+                               const LangOptions &LangOpts) const;
 
   void flattenLocations() {
     Loc.flatten();

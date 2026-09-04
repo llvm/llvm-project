@@ -36,6 +36,7 @@ namespace {
 
 struct SCFToControlFlowPass
     : public impl::SCFToControlFlowPassBase<SCFToControlFlowPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
@@ -312,6 +313,22 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
 
 } // namespace
 
+static void copyLLVMDialectAttrs(Operation *from, Operation *to) {
+  SmallVector<NamedAttribute> llvmAttrs;
+  llvm::copy_if(from->getAttrs(), std::back_inserter(llvmAttrs), [](auto attr) {
+    return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+  });
+  to->setDiscardableAttrs(llvmAttrs);
+}
+
+static void propagateLoopAttrs(Operation *scfOp, Operation *brOp) {
+  // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
+  // llvm.loop_annotation attribute.
+  // LLVM requires the loop metadata to be attached on the "latch" block. Which
+  // is the back-edge to the header block (conditionBlock)
+  copyLLVMDialectAttrs(scfOp, brOp);
+}
+
 LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
                                            PatternRewriter &rewriter) const {
   Location loc = forOp.getLoc();
@@ -350,17 +367,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   auto branchOp =
       cf::BranchOp::create(rewriter, loc, conditionBlock, loopCarried);
 
-  // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
-  // llvm.loop_annotation attribute.
-  // LLVM requires the loop metadata to be attached on the "latch" block. Which
-  // is the back-edge to the header block (conditionBlock)
-  SmallVector<NamedAttribute> llvmAttrs;
-  llvm::copy_if(forOp->getAttrs(), std::back_inserter(llvmAttrs),
-                [](auto attr) {
-                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
-                });
-  branchOp->setDiscardableAttrs(llvmAttrs);
-
+  propagateLoopAttrs(forOp, branchOp);
   rewriter.eraseOp(terminator);
 
   // Compute loop bounds before branching to the condition.
@@ -379,8 +386,11 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
-  auto comparison = arith::CmpIOp::create(
-      rewriter, loc, arith::CmpIPredicate::slt, iv, upperBound);
+  arith::CmpIPredicate predicate = forOp.getUnsignedCmp()
+                                       ? arith::CmpIPredicate::ult
+                                       : arith::CmpIPredicate::slt;
+  auto comparison =
+      arith::CmpIOp::create(rewriter, loc, predicate, iv, upperBound);
 
   cf::CondBranchOp::create(rewriter, loc, comparison, firstBodyBlock,
                            ArrayRef<Value>(), endBlock, ArrayRef<Value>());
@@ -500,10 +510,12 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   ivs.reserve(parallelOp.getNumLoops());
   bool first = true;
   SmallVector<Value, 4> loopResults(iterArgs);
+  ForOp innermostForOp;
   for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
     ForOp forOp = ForOp::create(rewriter, loc, lower, upper, step, iterArgs);
+    innermostForOp = forOp;
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();
     iterArgs.assign(iterRange.begin(), iterRange.end());
@@ -522,6 +534,12 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
 
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
+
+  // Serializing into the for nest would drop attributes such as
+  // llvm.loop_annotation. The loop above emits one scf.for per dimension, so
+  // the attributes go to the innermost one, which runs the body.
+  if (innermostForOp)
+    copyLLVMDialectAttrs(parallelOp, innermostForOp);
 
   // First, merge reduction blocks into the main region.
   SmallVector<Value> yieldOperands;
@@ -582,18 +600,20 @@ LogicalResult WhileLowering::matchAndRewrite(WhileOp whileOp,
   // block. This should be reconsidered if we allow break/continue in SCF.
   rewriter.setInsertionPointToEnd(before);
   auto condOp = cast<ConditionOp>(before->getTerminator());
+  SmallVector<Value> args = llvm::to_vector(condOp.getArgs());
   rewriter.replaceOpWithNewOp<cf::CondBranchOp>(condOp, condOp.getCondition(),
                                                 after, condOp.getArgs(),
                                                 continuation, ValueRange());
 
   rewriter.setInsertionPointToEnd(after);
   auto yieldOp = cast<scf::YieldOp>(after->getTerminator());
-  rewriter.replaceOpWithNewOp<cf::BranchOp>(yieldOp, before,
-                                            yieldOp.getResults());
+  auto latch = rewriter.replaceOpWithNewOp<cf::BranchOp>(yieldOp, before,
+                                                         yieldOp.getResults());
 
+  propagateLoopAttrs(whileOp, latch);
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
-  rewriter.replaceOp(whileOp, condOp.getArgs());
+  rewriter.replaceOp(whileOp, args);
 
   return success();
 }
@@ -630,10 +650,11 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
   // Loop around the "before" region based on condition.
   rewriter.setInsertionPointToEnd(before);
   auto condOp = cast<ConditionOp>(before->getTerminator());
-  cf::CondBranchOp::create(rewriter, condOp.getLoc(), condOp.getCondition(),
-                           before, condOp.getArgs(), continuation,
-                           ValueRange());
+  auto latch = cf::CondBranchOp::create(
+      rewriter, condOp.getLoc(), condOp.getCondition(), before,
+      condOp.getArgs(), continuation, ValueRange());
 
+  propagateLoopAttrs(whileOp, latch);
   // Replace the op with values "yielded" from the "before" region, which are
   // visible by dominance.
   rewriter.replaceOp(whileOp, condOp.getArgs());
@@ -674,7 +695,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
 
   // Convert the case regions.
   SmallVector<Block *> caseSuccessors;
-  SmallVector<int32_t> caseValues;
+  SmallVector<APInt> caseValues;
   caseSuccessors.reserve(op.getCases().size());
   caseValues.reserve(op.getCases().size());
   for (auto [region, value] : llvm::zip(op.getCaseRegions(), op.getCases())) {
@@ -682,7 +703,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
     if (failed(block))
       return failure();
     caseSuccessors.push_back(*block);
-    caseValues.push_back(value);
+    caseValues.push_back(APInt(64, value));
   }
 
   // Convert the default region.
@@ -694,13 +715,12 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
   rewriter.setInsertionPointToEnd(condBlock);
   SmallVector<ValueRange> caseOperands(caseSuccessors.size(), {});
 
-  // Cast switch index to integer case value.
+  // Cast switch index to i64 to avoid truncation for large case values.
   Value caseValue = arith::IndexCastOp::create(
-      rewriter, op.getLoc(), rewriter.getI32Type(), op.getArg());
+      rewriter, op.getLoc(), rewriter.getI64Type(), op.getArg());
 
   cf::SwitchOp::create(rewriter, op.getLoc(), caseValue, *defaultBlock,
-                       ValueRange(), rewriter.getDenseI32ArrayAttr(caseValues),
-                       caseSuccessors, caseOperands);
+                       ValueRange(), caseValues, caseSuccessors, caseOperands);
   rewriter.replaceOp(op, continueBlock->getArguments());
   return success();
 }
@@ -727,7 +747,9 @@ void SCFToControlFlowPass::runOnOperation() {
   target.addIllegalOp<scf::ForallOp, scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
                       scf::ParallelOp, scf::WhileOp, scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
+  ConversionConfig config;
+  config.allowPatternRollback = allowPatternRollback;
+  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns),
+                                    config)))
     signalPassFailure();
 }

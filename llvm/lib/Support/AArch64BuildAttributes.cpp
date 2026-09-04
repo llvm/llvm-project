@@ -67,8 +67,8 @@ StringRef AArch64BuildAttributes::getTypeStr(unsigned Type) {
 }
 SubsectionType AArch64BuildAttributes::getTypeID(StringRef Type) {
   return StringSwitch<SubsectionType>(Type)
-      .Cases("uleb128", "ULEB128", ULEB128)
-      .Cases("ntbs", "NTBS", NTBS)
+      .Cases({"uleb128", "ULEB128"}, ULEB128)
+      .Cases({"ntbs", "NTBS"}, NTBS)
       .Default(TYPE_NOT_FOUND);
 }
 StringRef AArch64BuildAttributes::getSubsectionTypeUnknownError() {

@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, TensorsARM], [SPV_ARM_tensors]> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, TensorsARM, Int64, BFloat16TypeKHR, Float8EXT], [SPV_ARM_tensors, SPV_KHR_bfloat16, SPV_EXT_float8]> {
   // CHECK: spirv.func @shaped_int_arm_tensor(%arg0: !spirv.arm.tensor<2xi32>) "None" {
   spirv.func @shaped_int_arm_tensor(%arg0 : !spirv.arm.tensor<2xi32>) "None" {
     spirv.Return
@@ -63,4 +68,24 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, TensorsARM], [SP
   spirv.func @unshaped_int_arm_tensor_2(%arg0 : !spirv.arm.tensor<?x?xi32>) "None" {
     spirv.Return
   }
+// -----
+
+  // CHECK: spirv.func @shaped_bf16_arm_tensor(%arg0: !spirv.arm.tensor<2xbf16>) "None" {
+  spirv.func @shaped_bf16_arm_tensor(%arg0 : !spirv.arm.tensor<2xbf16>) "None" {
+    spirv.Return
+  }
+// -----
+
+  // CHECK: spirv.func @shaped_fp8e4m3fn_arm_tensor(%arg0: !spirv.arm.tensor<2xf8E4M3FN>) "None" {
+  spirv.func @shaped_fp8e4m3fn_arm_tensor(%arg0 : !spirv.arm.tensor<2xf8E4M3FN>) "None" {
+    spirv.Return
+  }
+
+// -----
+
+  // CHECK: spirv.func @shaped_fp8e5m2_arm_tensor(%arg0: !spirv.arm.tensor<2xf8E5M2>) "None" {
+  spirv.func @shaped_fp8e5m2_arm_tensor(%arg0 : !spirv.arm.tensor<2xf8E5M2>) "None" {
+    spirv.Return
+  }
+
 }

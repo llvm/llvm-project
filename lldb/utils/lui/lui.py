@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##===-- lui.py -----------------------------------------------*- Python -*-===##
 ##
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -17,11 +17,7 @@ from optparse import OptionParser
 import os
 import signal
 import sys
-
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 import debuggerdriver
 import cui

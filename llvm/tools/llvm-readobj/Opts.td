@@ -20,6 +20,7 @@ def all : FF<"all", "Equivalent to setting: --file-header, --program-headers, --
 def arch_specific : FF<"arch-specific", "Display architecture-specific information">;
 def bb_addr_map : FF<"bb-addr-map", "Display the BB address map section">;
 def pretty_pgo_analysis_map : FF<"pretty-pgo-analysis-map", "Display PGO analysis values with formatting rather than raw numbers">;
+def call_graph_info : FF<"call-graph-info", "Display call graph information">;
 def cg_profile : FF<"cg-profile", "Display call graph profile section">;
 def decompress : FF<"decompress", "Dump decompressed section content when used with -x or -p">;
 defm demangle : BB<"demangle", "Demangle symbol names", "Do not demangle symbol names (default)">;
@@ -32,6 +33,7 @@ def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
 def pretty_print : FF<"pretty-print", "Pretty print JSON output">;
+def offloading : FF<"offloading", "Display the content of the offloading section">;
 def relocs : FF<"relocs", "Display the relocation entries in the file">;
 def section_data : FF<"section-data", "Display section data for each section shown. This option has no effect for GNU style output">;
 def section_details : FF<"section-details", "Display the section details">;
@@ -47,6 +49,7 @@ defm string_dump : Eq<"string-dump", "Display the specified section(s) as a list
 def string_table : FF<"string-table", "Display the string table (only for XCOFF/COFF now)">;
 def symbols : FF<"symbols", "Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF">;
 def unwind : FF<"unwind", "Display unwind information">;
+def unwind_show_wod_pool : FF<"unwind-show-wod-pool", "Also display the raw Windows x64 unwind V3 WOD pool with byte offsets (requires --unwind)">;
 
 // ELF specific options.
 def grp_elf : OptionGroup<"kind">, HelpText<"OPTIONS (ELF specific)">;
@@ -73,6 +76,7 @@ def macho_dysymtab : FF<"macho-dysymtab", "Display Dysymtab command">, Group<grp
 def macho_indirect_symbols : FF<"macho-indirect-symbols", "Display indirect symbols">, Group<grp_mach_o>;
 def macho_linker_options : FF<"macho-linker-options", "Display linker options">, Group<grp_mach_o>;
 def macho_segment : FF<"macho-segment", "Display Segment command">, Group<grp_mach_o>;
+def macho_target_triple : FF<"macho-target-triple", "Display target triple command">, Group<grp_mach_o>;
 def macho_version_min : FF<"macho-version-min", "Display version min command">, Group<grp_mach_o>;
 
 // PE/COFF specific options.
@@ -87,6 +91,10 @@ def coff_directives : FF<"coff-directives", "Display .drectve section">, Group<g
 def coff_exports : FF<"coff-exports", "Display export table">, Group<grp_coff>;
 def coff_imports : FF<"coff-imports", "Display import table">, Group<grp_coff>;
 def coff_load_config : FF<"coff-load-config", "Display load config">, Group<grp_coff>;
+def coff_pseudoreloc
+    : FF<"coff-pseudoreloc",
+         "Display runtime pseudo-relocations (Cygwin/MinGW specific)">,
+      Group<grp_coff>;
 def coff_resources : FF<"coff-resources", "Display .rsrc section">, Group<grp_coff>;
 def coff_tls_directory : FF<"coff-tls-directory", "Display TLS directory">, Group<grp_coff>;
 

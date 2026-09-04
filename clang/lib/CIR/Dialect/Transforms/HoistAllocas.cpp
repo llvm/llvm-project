@@ -8,6 +8,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -20,29 +21,54 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_HOISTALLOCAS
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
-struct HoistAllocasPass : public HoistAllocasBase<HoistAllocasPass> {
+struct HoistAllocasPass : public impl::HoistAllocasBase<HoistAllocasPass> {
 
   HoistAllocasPass() = default;
   void runOnOperation() override;
 };
 
+// Find the block that an alloca should be hoisted into. Allocas are normally
+// hoisted to the entry block of the enclosing function. However, an alloca may
+// be nested inside an OpenMP region such as omp.parallel, omp.teams
+// etc. Hoisting it out of these ops breaks the isolated from above requirement
+// for omp.teams and it changes privatization semantics.
+static mlir::Block *getHoistDestBlock(cir::AllocaOp alloca) {
+  mlir::Region *region = alloca->getParentRegion();
+  while (true) {
+    mlir::Operation *parentOp = region->getParentOp();
+
+    // Note: We may want some kind of interface in the future for blocking
+    // alloca hoisting since other dialects may have similar restrictions.
+    if (parentOp->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>() ||
+        mlir::isa<mlir::omp::OutlineableOpenMPOpInterface>(parentOp))
+      return &region->front();
+    region = parentOp->getParentRegion();
+  }
+}
+
 static void process(mlir::ModuleOp mod, cir::FuncOp func) {
   if (func.getRegion().empty())
     return;
 
-  // Hoist all static allocas to the entry block.
-  mlir::Block &entryBlock = func.getRegion().front();
-  mlir::Operation *insertPoint = &*entryBlock.begin();
+  // Keep track of destination so that the order of allocas is preserved.
+  llvm::DenseMap<mlir::Block *, mlir::Operation *> insertPoints;
 
   // Post-order is the default, but the code below requires it, so
   // let's not depend on the default staying that way.
   func.getBody().walk<mlir::WalkOrder::PostOrder>([&](cir::AllocaOp alloca) {
-    if (alloca->getBlock() == &entryBlock)
+    mlir::Block *destBlock = getHoistDestBlock(alloca);
+    if (alloca->getBlock() == destBlock)
       return;
     // Don't hoist allocas with dynamic alloca size.
-    assert(!cir::MissingFeatures::opAllocaDynAllocSize());
+    if (alloca.getDynAllocSize())
+      return;
 
     // Hoist allocas into the entry block.
 
@@ -56,6 +82,8 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
     if (alloca.getConstant())
       alloca.setConstant(false);
 
+    mlir::Operation *&insertPoint =
+        insertPoints.try_emplace(destBlock, &*destBlock->begin()).first->second;
     alloca->moveBefore(insertPoint);
   });
 }

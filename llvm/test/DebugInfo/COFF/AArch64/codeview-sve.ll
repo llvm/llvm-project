@@ -101,7 +101,7 @@
 ; CHECK-NEXT:      LocalVariableAddrRange {
 ; CHECK-NEXT:        OffsetStart: .text+0x0
 ; CHECK-NEXT:        ISectStart: 0x0
-; CHECK-NEXT:        Range: 0xBC
+; CHECK-NEXT:        Range: 0xB8
 ; CHECK-NEXT:      }
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    ProcEnd {

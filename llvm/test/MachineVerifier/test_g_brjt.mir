@@ -1,16 +1,15 @@
-# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_jump_table
-legalized:       true
+name: test_jump_table
 tracksRegLiveness: true
 jumpTable:
-  kind:            block-address
+  kind: block-address
   entries:
-    - id:              0
-      blocks:          [ '%bb.0' ]
-body:             |
+    - id: 0
+      blocks: [ '%bb.0' ]
+body: |
   bb.0:
     liveins: $x0
     %0:_(s64) = COPY $x0
@@ -26,5 +25,4 @@ body:             |
 
     ; CHECK: G_BRJT src operand 2 must be a scalar reg type
     G_BRJT %1, %jump-table.0, %1
-
 ...

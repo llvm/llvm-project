@@ -10,8 +10,8 @@ define void @test() {
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 
 ; CHECK-LABEL: @test_lifetime_alloca
 define i32 @test_lifetime_alloca() {
@@ -21,8 +21,8 @@ define i32 @test_lifetime_alloca() {
 ; CHECK-NOT: llvm.lifetime.start
 ; CHECK-NOT: llvm.lifetime.end
   %i = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   ret i32 0
 }
 

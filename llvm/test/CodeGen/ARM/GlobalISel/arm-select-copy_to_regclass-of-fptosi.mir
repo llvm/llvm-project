@@ -19,7 +19,7 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fptosi
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
-    ; CHECK: [[VTOSIZS:%[0-9]+]]:spr = VTOSIZS [[COPY]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VTOSIZS:%[0-9]+]]:spr = nofpexcept VTOSIZS [[COPY]], 14 /* CC::al */, $noreg
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOSIZS]]
     ; CHECK: $r0 = COPY [[COPY1]]
     ; CHECK: MOVPCLR 14 /* CC::al */, $noreg, implicit $r0

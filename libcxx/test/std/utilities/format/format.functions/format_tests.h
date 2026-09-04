@@ -3190,7 +3190,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     check(SV("hello 09azAZ!"), SV("hello {}"), data);
   }
   {
-    // https://github.com/llvm/llvm-project/issues/115935
+    // https://llvm.org/PR115935
     // Contents after the embedded null character are discarded.
     CharT buffer[] = {CharT('a'), CharT('b'), CharT('c'), 0, CharT('d'), CharT('e'), CharT('f'), 0};
     check(SV("hello abc"), SV("hello {}"), buffer);

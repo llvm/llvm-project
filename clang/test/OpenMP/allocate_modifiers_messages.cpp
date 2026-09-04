@@ -88,7 +88,7 @@ int main() {
   // expected-warning@+2 {{extra tokens at the end of '#pragma omp scope' are ignored}}
   // expected-note@+1 {{to match this '('}}
   #pragma omp scope private(a,b,c) allocate(allocator(omp_const_mem_alloc):c:b;a)
-  // expected-error@+1 {{initializing 'const omp_allocator_handle_t' with an expression of incompatible type 'int'}}
+  // expected-error@+1 {{initializing 'const omp_allocator_handle_t' (aka 'const enum omp_allocator_handle_t') with an expression of incompatible type 'int'}}
   #pragma omp scope private(c,a,b) allocate(allocator(myAlloc()):a,b,c)
   // expected-error@+2 {{missing ':' after allocate clause modifier}}
   // expected-error@+1 {{expected expression}}

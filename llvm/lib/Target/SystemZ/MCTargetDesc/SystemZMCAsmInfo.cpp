@@ -7,21 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {SystemZ::S_DTPOFF, "DTPOFF"}, {SystemZ::S_GOT, "GOT"},
-    {SystemZ::S_GOTENT, "GOTENT"}, {SystemZ::S_INDNTPOFF, "INDNTPOFF"},
-    {SystemZ::S_NTPOFF, "NTPOFF"}, {SystemZ::S_PLT, "PLT"},
-    {SystemZ::S_TLSGD, "TLSGD"},   {SystemZ::S_TLSLD, "TLSLD"},
-    {SystemZ::S_TLSLDM, "TLSLDM"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"DTPOFF"}, SystemZ::S_DTPOFF}, {{"GOT"}, SystemZ::S_GOT},
+    {{"GOTENT"}, SystemZ::S_GOTENT}, {{"INDNTPOFF"}, SystemZ::S_INDNTPOFF},
+    {{"NTPOFF"}, SystemZ::S_NTPOFF}, {{"PLT"}, SystemZ::S_PLT},
+    {{"TLSGD"}, SystemZ::S_TLSGD},   {{"TLSLD"}, SystemZ::S_TLSLD},
+    {{"TLSLDM"}, SystemZ::S_TLSLDM},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
-SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
+SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
+                                         const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   AssemblerDialect = AD_GNU;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
@@ -36,7 +40,9 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   initializeAtSpecifiers(atSpecifiers);
 }
 
-SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
+SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
+                                           const MCTargetOptions &Options)
+    : MCAsmInfoGOFF(Options) {
   AllowAdditionalComments = false;
   AllowAtInName = true;
   AllowAtAtStartOfIdentifier = true;
@@ -55,21 +61,20 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   initializeAtSpecifiers(atSpecifiers);
 }
 
-bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {
-  return MCAsmInfo::isAcceptableChar(C) || C == '#';
-}
-
 void SystemZMCAsmInfoGOFF::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   switch (Expr.getSpecifier()) {
   case SystemZ::S_None:
-    OS << "A";
+    OS << "AD";
+    break;
+  case SystemZ::S_QCon:
+    OS << "QD";
     break;
   case SystemZ::S_RCon:
-    OS << "R";
+    OS << "RD";
     break;
   case SystemZ::S_VCon:
-    OS << "V";
+    OS << "VD";
     break;
   default:
     llvm_unreachable("Invalid kind");

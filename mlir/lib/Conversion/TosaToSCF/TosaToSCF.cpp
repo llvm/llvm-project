@@ -101,6 +101,13 @@ public:
     auto input = scatter.getInput();
     auto loc = scatter.getLoc();
 
+    if (!isa<RankedTensorType>(valuesIn.getType()) ||
+        !isa<RankedTensorType>(indices.getType()) ||
+        !isa<RankedTensorType>(input.getType())) {
+      return rewriter.notifyMatchFailure(
+          scatter, "expected ranked tensor operands for scatter lowering");
+    }
+
     // N, W, C are chosen to match the TOSA spec
     auto dimN = createTensorDim(rewriter, loc, input, 0);
     auto dimW = createTensorDim(rewriter, loc, input, 1);
@@ -110,8 +117,8 @@ public:
     auto one = createIndexConst(rewriter, loc, 1);
 
     // Loop bounds
-    auto lbs = llvm::SmallVector<Value>(2, zero);
-    auto steps = llvm::SmallVector<Value>(2, one);
+    auto lbs = Repeated<Value>(2, zero);
+    auto steps = Repeated<Value>(2, one);
     auto ubs = llvm::SmallVector<Value>{{dimN, dimW}};
 
     auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,

@@ -1,0 +1,91 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "UnwindWasm.h"
+#include "Plugins/Process/gdb-remote/ThreadGDBRemote.h"
+#include "ProcessWasm.h"
+#include "RegisterContextWasm.h"
+#include "ThreadWasm.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+
+using namespace lldb;
+using namespace lldb_private;
+using namespace process_gdb_remote;
+using namespace wasm;
+
+/// Base for synthesized Wasm frame call frame addresses. It sits above any
+/// call depth a Wasm stack can reach and clear of zero and the invalid-address
+/// sentinel, so the derived addresses stay distinct and valid.
+static constexpr lldb::addr_t kWasmSyntheticCFABase = 0x40000000;
+
+lldb::RegisterContextSP
+UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
+  const uint32_t concrete_frame_idx = frame->GetConcreteFrameIndex();
+  if (m_frames.size() <= concrete_frame_idx)
+    return lldb::RegisterContextSP();
+
+  ThreadSP thread = frame->GetThread();
+  ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread.get());
+  ProcessWasm *wasm_process =
+      static_cast<ProcessWasm *>(thread->GetProcess().get());
+
+  return std::make_shared<RegisterContextWasm>(*gdb_thread, concrete_frame_idx,
+                                               wasm_process->GetRegisterInfo());
+}
+
+uint32_t UnwindWasm::DoGetFrameCount() {
+  if (m_unwind_complete)
+    return GetVisibleFrameCount();
+
+  m_unwind_complete = true;
+  m_frames.clear();
+
+  ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(GetThread());
+  llvm::Expected<std::vector<lldb::addr_t>> call_stack_pcs =
+      wasm_thread.GetWasmCallStack();
+  if (!call_stack_pcs) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), call_stack_pcs.takeError(),
+                   "Failed to get Wasm callstack: {0}");
+    m_frames.clear();
+    return 0;
+  }
+
+  m_frames = *call_stack_pcs;
+  return GetVisibleFrameCount();
+}
+
+uint32_t UnwindWasm::GetVisibleFrameCount() {
+  // A backtrace goes no deeper than the target asks for, which is what bounds
+  // the walk of a stack that recurses without end. The depth bounds what a
+  // caller is told rather than what is kept, because it can be raised after a
+  // stack has been fetched.
+  return std::min<uint64_t>(m_frames.size(),
+                            GetThread().GetMaxBacktraceDepth());
+}
+
+bool UnwindWasm::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
+                                       lldb::addr_t &pc,
+                                       bool &behaves_like_zeroth_frame) {
+  if (m_frames.size() == 0)
+    DoGetFrameCount();
+
+  if (frame_idx >= GetVisibleFrameCount())
+    return false;
+
+  behaves_like_zeroth_frame = (frame_idx == 0);
+  // StackID orders frames by call frame address, expecting a younger frame to
+  // sit below its caller. Wasm has no in-memory frame address to read, so
+  // derive one from the frame's distance to the outermost frame, which stays
+  // fixed as frames are pushed and popped above it, inverted so younger frames
+  // compare lower.
+  const size_t depth_from_outermost = m_frames.size() - 1 - frame_idx;
+  cfa = kWasmSyntheticCFABase - depth_from_outermost;
+  pc = m_frames[frame_idx];
+  return true;
+}

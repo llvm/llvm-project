@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify %s -DCXX14COMPAT
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify %s -DCXX14COMPAT -DCXX17COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify=expected,not-cpp20 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT -DCXX17COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wc++98-compat -verify=expected,cpp20 %s -DCXX14COMPAT -DCXX17COMPAT
 
 namespace std {
   struct type_info;
@@ -34,7 +35,7 @@ template<int ...I>  // expected-warning {{variadic templates are incompatible wi
 class Variadic3 {};
 
 alignas(8) int with_alignas; // expected-warning {{'alignas' is incompatible with C++98}}
-int with_attribute [[ ]]; // expected-warning {{[[]] attributes are incompatible with C++ standards before C++11}}
+int with_attribute [[ ]]; // expected-warning {{[[]] attributes are incompatible with C++98}}
 
 void Literals() {
   (void)u8"str"; // expected-warning {{unicode literals are incompatible with C++98}}
@@ -132,7 +133,7 @@ void RangeFor() {
 }
 
 struct InClassInit {
-  int n = 0; // expected-warning {{default member initializer for non-static data members is incompatible with C++98}}
+  int n = 0; // expected-warning {{default member initializer for non-static data member is incompatible with C++98}}
 };
 
 struct OverrideControlBase {
@@ -430,3 +431,12 @@ void ctad_test() {
   CTAD t = s; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17}}
 }
 #endif
+
+namespace GH161702 {
+struct S {
+  enum E { A };
+  using E::A; // expected-warning {{enumeration type in nested name specifier is incompatible with C++98}}
+              // not-cpp20-error@-1 {{using declaration refers to its own class}}
+             // cpp20-warning@-2 {{member using declaration naming non-class ''E'' enumerator is incompatible with C++ standards before C++20}}
+};
+}

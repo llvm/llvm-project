@@ -83,8 +83,8 @@ getLibraryCallSymbolRef(Operation *op, PatternRewriter &rewriter) {
   // Insert a function attribute that will trigger the emission of the
   // corresponding `_mlir_ciface_xxx` interface so that external libraries see
   // a normalized ABI. This interface is added during std to llvm conversion.
-  funcOp->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                  UnitAttr::get(op->getContext()));
+  funcOp->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                             UnitAttr::get(op->getContext()));
   funcOp.setPrivate();
   return fnNameAttr;
 }
@@ -144,7 +144,7 @@ void ConvertLinalgToStandardPass::runOnOperation() {
   target.addLegalDialect<affine::AffineDialect, arith::ArithDialect,
                          func::FuncDialect, memref::MemRefDialect,
                          scf::SCFDialect>();
-  target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp>();
+  target.addLegalOp<ModuleOp>();
   RewritePatternSet patterns(&getContext());
   populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))

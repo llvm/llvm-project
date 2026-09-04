@@ -3,7 +3,6 @@
 
 // Check that access chain indices are properly adjusted if non-32-bit types are
 // emulated via 32-bit types.
-// TODO: Test i64 types.
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, Int64], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
@@ -75,6 +74,47 @@ func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, 
   return %0: i16
 }
 
+// The target does not support native i16 storage, so this load requires
+// bitwidth emulation even though the memref has rank zero.
+// CHECK-LABEL: @load_i16_rank0
+//  CHECK-SAME: (%[[ARG0:.+]]: memref<i16, #spirv.storage_class<StorageBuffer>>)
+//       CHECK: %[[BASE:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<i16, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
+//       CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+//       CHECK: %[[PTR:.+]] = spirv.AccessChain %[[BASE]][%[[ZERO]], %[[ZERO]]] : {{.+}} -> !spirv.ptr<i32, StorageBuffer>
+//       CHECK: %[[LOAD:.+]] = spirv.Load "StorageBuffer" %[[PTR]] : i32
+//       CHECK: %[[MASK:.+]] = spirv.Constant 65535 : i32
+//       CHECK: %[[T1:.+]] = spirv.BitwiseAnd %[[LOAD]], %[[MASK]] : i32
+//       CHECK: %[[SIXTEEN:.+]] = spirv.Constant 16 : i32
+//       CHECK: %[[T2:.+]] = spirv.ShiftLeftLogical %[[T1]], %[[SIXTEEN]] : i32, i32
+//       CHECK: %[[T3:.+]] = spirv.ShiftRightArithmetic %[[T2]], %[[SIXTEEN]] : i32, i32
+//       CHECK: %[[RES:.+]] = builtin.unrealized_conversion_cast %[[T3]] : i32 to i16
+//       CHECK: return %[[RES]] : i16
+func.func @load_i16_rank0(%arg0: memref<i16, #spirv.storage_class<StorageBuffer>>) -> i16 {
+  %0 = memref.load %arg0[] : memref<i16, #spirv.storage_class<StorageBuffer>>
+  return %0 : i16
+}
+
+// i64 is a native type with Int64; the access chain index is used as-is without
+// the SDiv/UMod adjustment that emulated sub-32-bit types require.
+// CHECK-LABEL: @load_i64
+//       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: index)
+// INDEX64-LABEL: @load_i64
+func.func @load_i64(%arg0: memref<10xi64, #spirv.storage_class<StorageBuffer>>, %index : index) -> i64 {
+  //     CHECK: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
+  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK-NOT: spirv.SDiv
+  //     CHECK: %[[PTR:.+]] = spirv.InBoundsAccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
+  //     CHECK: spirv.Load "StorageBuffer" %[[PTR]] : i64
+  // CHECK-NOT: spirv.ShiftRightArithmetic
+
+  //   INDEX64: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %{{.+}} : index to i64
+  //   INDEX64: %[[ZERO:.+]] = spirv.Constant 0 : i64
+  //   INDEX64: %[[PTR:.+]] = spirv.InBoundsAccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i64, i64
+  //   INDEX64: spirv.Load "StorageBuffer" %[[PTR]] : i64
+  %0 = memref.load %arg0[%index] : memref<10xi64, #spirv.storage_class<StorageBuffer>>
+  return %0: i64
+}
+
 // CHECK-LABEL: @load_f32
 func.func @load_f32(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>) {
   // CHECK-NOT: spirv.SDiv
@@ -93,8 +133,8 @@ func.func @store_i1(%arg0: memref<i1, #spirv.storage_class<StorageBuffer>>, %val
   //     CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
   //     CHECK: %[[CASTED_ARG1:.+]] = spirv.Select %[[ARG1]], %[[ONE]], %[[ZERO]] : i1, i32
   //     CHECK: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ZERO]]]
-  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease> %[[PTR]], %[[MASK]]
-  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease> %[[PTR]], %[[CASTED_ARG1]]
+  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK]]
+  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[CASTED_ARG1]]
   memref.store %value, %arg0[] : memref<i1, #spirv.storage_class<StorageBuffer>>
   return
 }
@@ -111,8 +151,8 @@ func.func @store_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>, %val
   //     CHECK: %[[MASK2:.+]] = spirv.Constant -256 : i32
   //     CHECK: %[[CLAMPED_VAL:.+]] = spirv.BitwiseAnd %[[ARG1_CAST]], %[[MASK1]] : i32
   //     CHECK: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ZERO]]]
-  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease> %[[PTR]], %[[MASK2]]
-  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease> %[[PTR]], %[[CLAMPED_VAL]]
+  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK2]]
+  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[CLAMPED_VAL]]
 
   //   INDEX64-DAG: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : i8 to i32
   //   INDEX64-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
@@ -121,8 +161,8 @@ func.func @store_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>, %val
   //   INDEX64: %[[MASK2:.+]] = spirv.Constant -256 : i32
   //   INDEX64: %[[CLAMPED_VAL:.+]] = spirv.BitwiseAnd %[[ARG1_CAST]], %[[MASK1]] : i32
   //   INDEX64: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ZERO]]] : {{.+}}, i64, i64
-  //   INDEX64: spirv.AtomicAnd <Device> <AcquireRelease> %[[PTR]], %[[MASK2]]
-  //   INDEX64: spirv.AtomicOr <Device> <AcquireRelease> %[[PTR]], %[[CLAMPED_VAL]]
+  //   INDEX64: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK2]]
+  //   INDEX64: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[CLAMPED_VAL]]
   memref.store %value, %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
   return
 }
@@ -145,9 +185,28 @@ func.func @store_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>,
   //     CHECK: %[[STORE_VAL:.+]] = spirv.ShiftLeftLogical %[[CLAMPED_VAL]], %[[OFFSET]] : i32, i32
   //     CHECK: %[[ACCESS_IDX:.+]] = spirv.SDiv %[[ARG1_CAST]], %[[TWO]] : i32
   //     CHECK: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ACCESS_IDX]]]
-  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease> %[[PTR]], %[[MASK]]
-  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease> %[[PTR]], %[[STORE_VAL]]
+  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK]]
+  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[STORE_VAL]]
   memref.store %value, %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @store_i64
+//       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: index, %[[ARG2:.+]]: i64)
+// INDEX64-LABEL: @store_i64
+func.func @store_i64(%arg0: memref<10xi64, #spirv.storage_class<StorageBuffer>>, %index: index, %value: i64) {
+  //     CHECK-DAG: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
+  //     CHECK-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK-NOT: spirv.AtomicAnd
+  //     CHECK: %[[PTR:.+]] = spirv.InBoundsAccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
+  //     CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[ARG2]] : i64
+  // CHECK-NOT: spirv.AtomicOr
+
+  //   INDEX64: %[[ZERO:.+]] = spirv.Constant 0 : i64
+  //   INDEX64: %[[PTR:.+]] = spirv.InBoundsAccessChain %{{.+}}[%[[ZERO]], %{{.+}}] : {{.+}}, i64, i64
+  //   INDEX64: spirv.Store "StorageBuffer" %[[PTR]], %{{.+}} : i64
+  memref.store %value, %arg0[%index] : memref<10xi64, #spirv.storage_class<StorageBuffer>>
   return
 }
 
@@ -210,8 +269,8 @@ func.func @store_i4(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>, %v
   // CHECK: %[[STORE_VAL:.+]] = spirv.ShiftLeftLogical %[[CLAMPED_VAL]], %[[BITS]] : i32, i32
   // CHECK: %[[ACCESS_INDEX:.+]] = spirv.SDiv %[[INDEX]], %[[EIGHT]] : i32
   // CHECK: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %[[ACCESS_INDEX]]]
-  // CHECK: spirv.AtomicAnd <Device> <AcquireRelease> %[[PTR]], %[[MASK2]]
-  // CHECK: spirv.AtomicOr <Device> <AcquireRelease> %[[PTR]], %[[STORE_VAL]]
+  // CHECK: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK2]]
+  // CHECK: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[STORE_VAL]]
   memref.store %value, %arg0[%i] : memref<?xi4, #spirv.storage_class<StorageBuffer>>
   return
 }
@@ -265,16 +324,16 @@ func.func @store_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>, %val
   //     CHECK: %[[MASK1:.+]] = spirv.Constant -256 : i32
   //     CHECK: %[[ARG1_CAST:.+]] = spirv.UConvert %[[ARG1]] : i8 to i32
   //     CHECK: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ZERO]]]
-  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease> %[[PTR]], %[[MASK1]]
-  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease> %[[PTR]], %[[ARG1_CAST]]
+  //     CHECK: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK1]]
+  //     CHECK: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[ARG1_CAST]]
 
   //   INDEX64-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
   //   INDEX64: %[[ZERO:.+]] = spirv.Constant 0 : i64
   //   INDEX64: %[[MASK1:.+]] = spirv.Constant -256 : i32
   //   INDEX64: %[[ARG1_CAST:.+]] = spirv.UConvert %[[ARG1]] : i8 to i32
   //   INDEX64: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ZERO]]] : {{.+}}, i64, i64
-  //   INDEX64: spirv.AtomicAnd <Device> <AcquireRelease> %[[PTR]], %[[MASK1]]
-  //   INDEX64: spirv.AtomicOr <Device> <AcquireRelease> %[[PTR]], %[[ARG1_CAST]]
+  //   INDEX64: spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[MASK1]]
+  //   INDEX64: spirv.AtomicOr <Device> <AcquireRelease|UniformMemory> %[[PTR]], %[[ARG1_CAST]]
   memref.store %value, %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
   return
 }

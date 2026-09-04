@@ -6,5 +6,5 @@ define < 3 x i32 > @clobber() {
   ret < 3 x i32 > undef
   ; CHECK-LABEL: clobber:
   ; CHECK-NOT: popl %esp
-  ; CHECK: addl $4, %esp
+  ; CHECK: popl %eax
 }

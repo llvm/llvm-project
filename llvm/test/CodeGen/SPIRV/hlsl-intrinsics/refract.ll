@@ -33,4 +33,3 @@ entry:
 }
 
 declare <4 x half> @llvm.spv.refract.v4f16.f16(<4 x half>, <4 x half>, half)
-declare <4 x float> @llvm.spv.reflect.v4f32.f32(<4 x float>, <4 x float>, float)

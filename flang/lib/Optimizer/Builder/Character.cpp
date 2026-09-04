@@ -92,7 +92,7 @@ getCompileTimeLength(const fir::CharBoxValue &box) {
 
 /// Detect the precondition that the value `str` does not reside in memory. Such
 /// values will have a type `!fir.array<...x!fir.char<N>>` or `!fir.char<N>`.
-LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
+[[maybe_unused]] static bool needToMaterialize(mlir::Value str) {
   return mlir::isa<fir::SequenceType>(str.getType()) ||
          fir::isa_char(str.getType());
 }
@@ -373,7 +373,8 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   auto typeLen = fir::CharacterType::unknownLen();
   // If len is a constant, reflect the length in the type.
   if (auto cstLen = getIntIfConstant(len))
-    typeLen = *cstLen;
+    if (std::optional<std::int64_t> cstLen64 = cstLen->trySExtValue())
+      typeLen = *cstLen64;
   auto *ctxt = builder.getContext();
   auto charTy = fir::CharacterType::get(ctxt, kind, typeLen);
   llvm::SmallVector<mlir::Value> lenParams;

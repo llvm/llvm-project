@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -passes=polly-codegen -polly-parallel \
-; RUN: -polly-parallel-force -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly<no-default-opts>' -polly-parallel -polly-parallel-force -S < %s | FileCheck %s
 ;
 ; Test to verify that we pass %rem96 to the parallel subfunction.
 ;

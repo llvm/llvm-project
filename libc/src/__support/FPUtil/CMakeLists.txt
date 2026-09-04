@@ -6,6 +6,9 @@ add_header_library(
     libc.hdr.types.fenv_t
     libc.hdr.fenv_macros
     libc.hdr.math_macros
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.errno.errno
 )
@@ -28,6 +31,7 @@ add_header_library(
   HDRS
     FPBits.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
@@ -72,6 +76,7 @@ add_header_library(
     NormalFloat.h
   DEPENDS
     .fp_bits
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
 )
@@ -227,6 +232,7 @@ add_header_library(
     Hypot.h
   DEPENDS
     .basic_operations
+    .cast
     .fenv_impl
     .fp_bits
     .rounding_mode
@@ -248,6 +254,7 @@ add_header_library(
     .nearest_integer_operations
     .normal_float
     libc.hdr.math_macros
+    libc.hdr.stdint_proxy
     libc.src.errno.errno
     libc.src.__support.common
     libc.src.__support.CPP.bit
@@ -277,10 +284,52 @@ add_header_library(
     .cast
     .comparison_operations
     .dyadic_float
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  float128
+  HDRS
+    float128.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.uint128
+)
+
+add_header_library(
+  float80
+  HDRS
+    float80.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    .float128
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.uint128
 )
 
 add_subdirectory(generic)

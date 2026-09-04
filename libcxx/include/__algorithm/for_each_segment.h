@@ -48,6 +48,32 @@ __for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Funct
   __func(_Traits::__begin(__sfirst), _Traits::__local(__last));
 }
 
+template <class _SegmentedIterator, class _Functor>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__for_each_segment_backward(_SegmentedIterator __first, _SegmentedIterator __last, _Functor __func) {
+  using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
+
+  auto __sfirst = _Traits::__segment(__first);
+  auto __slast  = _Traits::__segment(__last);
+
+  // We are in a single segment, so we might not be at the beginning or end
+  if (__sfirst == __slast) {
+    __func(_Traits::__local(__first), _Traits::__local(__last));
+    return;
+  }
+
+  // We have more than one segment. Iterate over the last segment, since we might not start at the end
+  __func(_Traits::__begin(__slast), _Traits::__local(__last));
+  --__slast;
+  // iterate over the segments which are guaranteed to be completely in the range
+  while (__sfirst != __slast) {
+    __func(_Traits::__begin(__slast), _Traits::__end(__slast));
+    --__slast;
+  }
+  // iterate over the first segment
+  __func(_Traits::__local(__first), _Traits::__end(__slast));
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ALGORITHM_FOR_EACH_SEGMENT_H

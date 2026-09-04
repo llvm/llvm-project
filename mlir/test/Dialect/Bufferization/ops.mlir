@@ -46,8 +46,8 @@ func.func @test_alloc_tensor_op(%t: tensor<?x5xf32>, %sz: index)
   %c100 = arith.constant 100 : index
   // CHECK: bufferization.alloc_tensor() size_hint=
   %6 = bufferization.alloc_tensor() size_hint=%c100 : tensor<100x100xf64, #CSR>
-  // CHECK: bufferization.alloc_tensor(%{{.+}}) {memory_space = "foo"} : tensor<?xf32>
-  %7 = bufferization.alloc_tensor(%sz) {memory_space = "foo"} : tensor<?xf32>
+  // CHECK: bufferization.alloc_tensor(%{{.+}}) <{memory_space = "foo"}> {escape = true} : tensor<?xf32>
+  %7 = bufferization.alloc_tensor(%sz) <{memory_space = "foo"}> {escape = true} : tensor<?xf32>
   return %1 : tensor<?x5xf32>
 }
 
@@ -82,4 +82,41 @@ func.func @test_dealloc_op(%arg0: memref<2xf32>, %arg1: memref<4xi32>,
   // CHECK: bufferization.dealloc
   bufferization.dealloc
   return %0#0, %0#1 : i1, i1
+}
+
+// CHECK: func.func @test_builtin_custom_builtin_type_conversion
+// CHECK-SAME: (%[[t:.*]]: tensor<42xf32>) -> tensor<42xf32>
+func.func @test_builtin_custom_builtin_type_conversion(%t: tensor<42xf32>)
+    -> tensor<42xf32> {
+  // CHECK: %[[buffer:.*]] = bufferization.to_buffer %[[t]]
+  // CHECK-SAME: to !test.test_memref<[42], f32>
+  %buffer = bufferization.to_buffer %t
+    : tensor<42xf32> to !test.test_memref<[42], f32>
+
+  // CHECK: %[[tensor:.*]] = bufferization.to_tensor %[[buffer]]
+  // CHECK-SAME: to tensor<42xf32>
+  %tensor = bufferization.to_tensor %buffer
+    : !test.test_memref<[42], f32> to tensor<42xf32>
+
+  // CHECK: return %[[tensor]]
+  return %tensor : tensor<42xf32>
+}
+
+// CHECK: func.func @test_custom_builtin_custom_type_conversion
+// CHECK-SAME: (%[[t:.*]]: !test.test_tensor<[42], f32>)
+// CHECK-SAME: -> !test.test_tensor<[42], f32>
+func.func @test_custom_builtin_custom_type_conversion(%t: !test.test_tensor<[42], f32>)
+    -> !test.test_tensor<[42], f32> {
+  // CHECK: %[[buffer:.*]] = bufferization.to_buffer %[[t]]
+  // CHECK-SAME: to memref<42xf32>
+  %buffer = bufferization.to_buffer %t
+    : !test.test_tensor<[42], f32> to memref<42xf32>
+
+  // CHECK: %[[tensor:.*]] = bufferization.to_tensor %[[buffer]]
+  // CHECK-SAME: to !test.test_tensor<[42], f32>
+  %tensor = bufferization.to_tensor %buffer
+    : memref<42xf32> to !test.test_tensor<[42], f32>
+
+  // CHECK: return %[[tensor]]
+  return %tensor : !test.test_tensor<[42], f32>
 }

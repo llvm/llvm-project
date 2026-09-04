@@ -383,7 +383,7 @@ void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
   // field of all the elements of Edges.
   // I.e., forall elt in Edges, it exists BB in NewBBs
   // such as BB == elt.NewBB.
-  SmallSet<BasicBlockT *, 32> NewBBs;
+  SmallPtrSet<BasicBlockT *, 32> NewBBs;
   for (auto &Edge : Edges)
     NewBBs.insert(Edge.NewBB);
   // For each element in Edges, remember whether or not element

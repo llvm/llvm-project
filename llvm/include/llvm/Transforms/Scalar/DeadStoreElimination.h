@@ -25,9 +25,9 @@ class Function;
 
 /// This class implements a trivial dead store elimination. We consider
 /// only the redundant stores that are local to a single Basic Block.
-class DSEPass : public PassInfoMixin<DSEPass> {
+class DSEPass : public OptionalPassInfoMixin<DSEPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // end namespace llvm

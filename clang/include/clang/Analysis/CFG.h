@@ -57,11 +57,15 @@ public:
   enum Kind {
     // main kind
     Initializer,
+    NewAllocator,
+    LoopExit,
+    FullExprCleanup,
+    // scope marker kind
     ScopeBegin,
     ScopeEnd,
-    NewAllocator,
     LifetimeEnds,
-    LoopExit,
+    SCOPE_BEGIN = ScopeBegin,
+    SCOPE_END = LifetimeEnds,
     // stmt kind
     Statement,
     Constructor,
@@ -81,12 +85,12 @@ public:
 
 protected:
   // The int bits are used to mark the kind.
-  llvm::PointerIntPair<void *, 2> Data1;
-  llvm::PointerIntPair<void *, 2> Data2;
+  llvm::PointerIntPair<const void *, 2> Data1;
+  llvm::PointerIntPair<const void *, 2> Data2;
 
   CFGElement(Kind kind, const void *Ptr1, const void *Ptr2 = nullptr)
-      : Data1(const_cast<void*>(Ptr1), ((unsigned) kind) & 0x3),
-        Data2(const_cast<void*>(Ptr2), (((unsigned) kind) >> 2) & 0x3) {
+      : Data1(Ptr1, ((unsigned)kind) & 0x3),
+        Data2(Ptr2, (((unsigned)kind) >> 2) & 0x3) {
     assert(getKind() == kind);
   }
 
@@ -160,11 +164,11 @@ public:
                           const ConstructionContext *C)
       : CFGStmt(CE, Constructor) {
     assert(C);
-    Data2.setPointer(const_cast<ConstructionContext *>(C));
+    Data2.setPointer(C);
   }
 
   const ConstructionContext *getConstructionContext() const {
-    return static_cast<ConstructionContext *>(Data2.getPointer());
+    return static_cast<const ConstructionContext *>(Data2.getPointer());
   }
 
 private:
@@ -206,11 +210,11 @@ public:
                  isa<ConstructorInitializerConstructionContext>(C) ||
                  isa<ArgumentConstructionContext>(C) ||
                  isa<LambdaCaptureConstructionContext>(C)));
-    Data2.setPointer(const_cast<ConstructionContext *>(C));
+    Data2.setPointer(C);
   }
 
   const ConstructionContext *getConstructionContext() const {
-    return static_cast<ConstructionContext *>(Data2.getPointer());
+    return static_cast<const ConstructionContext *>(Data2.getPointer());
   }
 
 private:
@@ -230,8 +234,8 @@ public:
   explicit CFGInitializer(const CXXCtorInitializer *initializer)
       : CFGElement(Initializer, initializer) {}
 
-  CXXCtorInitializer* getInitializer() const {
-    return static_cast<CXXCtorInitializer*>(Data1.getPointer());
+  const CXXCtorInitializer *getInitializer() const {
+    return static_cast<const CXXCtorInitializer *>(Data1.getPointer());
   }
 
 private:
@@ -252,7 +256,7 @@ public:
 
   // Get the new expression.
   const CXXNewExpr *getAllocatorExpr() const {
-    return static_cast<CXXNewExpr *>(Data1.getPointer());
+    return static_cast<const CXXNewExpr *>(Data1.getPointer());
   }
 
 private:
@@ -276,7 +280,7 @@ public:
   explicit CFGLoopExit(const Stmt *stmt) : CFGElement(LoopExit, stmt) {}
 
   const Stmt *getLoopStmt() const {
-    return static_cast<Stmt *>(Data1.getPointer());
+    return static_cast<const Stmt *>(Data1.getPointer());
   }
 
 private:
@@ -289,18 +293,38 @@ private:
   }
 };
 
-/// Represents the point where the lifetime of an automatic object ends
-class CFGLifetimeEnds : public CFGElement {
+/// Base class for representing elements related to the lifetime of automatic
+/// objects.
+class CFGScopeMarker : public CFGElement {
 public:
-  explicit CFGLifetimeEnds(const VarDecl *var, const Stmt *stmt)
-      : CFGElement(LifetimeEnds, var, stmt) {}
-
-  const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const Stmt *getTriggerStmt() const {
+    return static_cast<const Stmt *>(Data1.getPointer());
   }
 
-  const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt *>(Data2.getPointer());
+private:
+  friend class CFGElement;
+
+  static bool isKind(const CFGElement &E) {
+    return E.getKind() >= SCOPE_BEGIN && E.getKind() <= SCOPE_END;
+  }
+
+protected:
+  CFGScopeMarker() = default;
+
+  explicit CFGScopeMarker(Kind K, const Stmt *S, const void *Ptr2 = nullptr)
+      : CFGElement(K, S, Ptr2) {
+    assert(isKind(*this));
+  }
+};
+
+/// Represents the point where the lifetime of an automatic object ends
+class CFGLifetimeEnds : public CFGScopeMarker {
+public:
+  explicit CFGLifetimeEnds(const VarDecl *Var, const Stmt *Stmt)
+      : CFGScopeMarker(LifetimeEnds, Stmt, Var) {}
+
+  const VarDecl *getVarDecl() const {
+    return static_cast<const VarDecl *>(Data2.getPointer());
   }
 
 private:
@@ -313,52 +337,75 @@ private:
   }
 };
 
-/// Represents beginning of a scope implicitly generated
-/// by the compiler on encountering a CompoundStmt
-class CFGScopeBegin : public CFGElement {
-public:
-  CFGScopeBegin() {}
-  CFGScopeBegin(const VarDecl *VD, const Stmt *S)
-      : CFGElement(ScopeBegin, VD, S) {}
+class CFGFullExprCleanup : public CFGElement {
 
-  // Get statement that triggered a new scope.
-  const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+public:
+  using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
+  explicit CFGFullExprCleanup(const MTEVecTy *MTEs,
+                              const ExprWithCleanups *CleanupExpr)
+      : CFGElement(FullExprCleanup, MTEs, CleanupExpr) {}
+
+  const ExprWithCleanups *getCleanupExpr() const {
+    return static_cast<const ExprWithCleanups *>(Data2.getPointer());
   }
 
-  // Get VD that triggered a new scope.
-  const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+  SourceLocation getCleanupLoc() const { return getCleanupExpr()->getEndLoc(); }
+
+  ArrayRef<const MaterializeTemporaryExpr *> getExpiringMTEs() const {
+    const MTEVecTy *ExpiringMTEs =
+        static_cast<const MTEVecTy *>(Data1.getPointer());
+    if (!ExpiringMTEs)
+      return {};
+    return ArrayRef<const MaterializeTemporaryExpr *>(ExpiringMTEs->begin(),
+                                                      ExpiringMTEs->end());
   }
 
 private:
   friend class CFGElement;
-  static bool isKind(const CFGElement &E) {
-    Kind kind = E.getKind();
-    return kind == ScopeBegin;
+
+  CFGFullExprCleanup() = default;
+
+  static bool isKind(const CFGElement &elem) {
+    return elem.getKind() == FullExprCleanup;
+  }
+};
+
+/// Represents beginning of a scope implicitly generated
+/// by the compiler on encountering a CompoundStmt
+class CFGScopeBegin : public CFGScopeMarker {
+public:
+  CFGScopeBegin() {}
+  CFGScopeBegin(const VarDecl *VD, const Stmt *S)
+      : CFGScopeMarker(ScopeBegin, S, VD) {}
+
+  // Get VD that triggered a new scope.
+  const VarDecl *getVarDecl() const {
+    return static_cast<const VarDecl *>(Data2.getPointer());
+  }
+
+private:
+  friend class CFGElement;
+  static bool isKind(const CFGElement &Elem) {
+    return Elem.getKind() == ScopeBegin;
   }
 };
 
 /// Represents end of a scope implicitly generated by
 /// the compiler after the last Stmt in a CompoundStmt's body
-class CFGScopeEnd : public CFGElement {
+class CFGScopeEnd : public CFGScopeMarker {
 public:
   CFGScopeEnd() {}
-  CFGScopeEnd(const VarDecl *VD, const Stmt *S) : CFGElement(ScopeEnd, VD, S) {}
+  CFGScopeEnd(const VarDecl *VD, const Stmt *S)
+      : CFGScopeMarker(ScopeEnd, S, VD) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
-  }
-
-  const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt *>(Data2.getPointer());
+    return static_cast<const VarDecl *>(Data2.getPointer());
   }
 
 private:
   friend class CFGElement;
-  static bool isKind(const CFGElement &E) {
-    Kind kind = E.getKind();
-    return kind == ScopeEnd;
+  static bool isKind(const CFGElement &elem) {
+    return elem.getKind() == ScopeEnd;
   }
 };
 
@@ -395,7 +442,7 @@ public:
   }
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl *>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   /// Returns the function to be called when cleaning up the var decl.
@@ -421,12 +468,12 @@ public:
       : CFGImplicitDtor(AutomaticObjectDtor, var, stmt) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<VarDecl*>(Data1.getPointer());
+    return static_cast<const VarDecl *>(Data1.getPointer());
   }
 
   // Get statement end of which triggered the destructor call.
   const Stmt *getTriggerStmt() const {
-    return static_cast<Stmt*>(Data2.getPointer());
+    return static_cast<const Stmt *>(Data2.getPointer());
   }
 
 private:
@@ -446,12 +493,12 @@ public:
       : CFGImplicitDtor(DeleteDtor, RD, DE) {}
 
   const CXXRecordDecl *getCXXRecordDecl() const {
-    return static_cast<CXXRecordDecl*>(Data1.getPointer());
+    return static_cast<const CXXRecordDecl *>(Data1.getPointer());
   }
 
   // Get Delete expression which triggered the destructor call.
   const CXXDeleteExpr *getDeleteExpr() const {
-    return static_cast<CXXDeleteExpr *>(Data2.getPointer());
+    return static_cast<const CXXDeleteExpr *>(Data2.getPointer());
   }
 
 private:
@@ -1095,11 +1142,7 @@ public:
   /// C itself, while this method would only return C.
   const Expr *getLastCondition() const;
 
-  Stmt *getTerminatorCondition(bool StripParens = true);
-
-  const Stmt *getTerminatorCondition(bool StripParens = true) const {
-    return const_cast<CFGBlock*>(this)->getTerminatorCondition(StripParens);
-  }
+  const Stmt *getTerminatorCondition(bool StripParens = true) const;
 
   const Stmt *getLoopTarget() const { return LoopTarget; }
 
@@ -1187,6 +1230,12 @@ public:
     Elements.push_back(CFGLifetimeEnds(VD, S), C);
   }
 
+  void appendFullExprCleanup(BumpVector<const MaterializeTemporaryExpr *> *BV,
+                             const ExprWithCleanups *CleanupExpr,
+                             BumpVectorContext &C) {
+    Elements.push_back(CFGFullExprCleanup(BV, CleanupExpr), C);
+  }
+
   void appendLoopExit(const Stmt *LoopStmt, BumpVectorContext &C) {
     Elements.push_back(CFGLoopExit(LoopStmt), C);
   }
@@ -1240,6 +1289,11 @@ public:
     bool AddInitializers = false;
     bool AddImplicitDtors = false;
     bool AddLifetime = false;
+    // Add lifetime markers for function parameters. In principle, function
+    // parameters are constructed and destructed in the caller context but
+    // analyses could still choose to include these in the callee's CFG to
+    // represent the lifetime ends of parameters on function exit.
+    bool AddParameterLifetimes = false;
     bool AddLoopExit = false;
     bool AddTemporaryDtors = false;
     bool AddScopes = false;
@@ -1251,6 +1305,7 @@ public:
     bool MarkElidedCXXConstructors = false;
     bool AddVirtualBaseBranches = false;
     bool OmitImplicitValueInitializers = false;
+    bool AssumeReachableDefaultInSwitchStatements = false;
 
     BuildOptions() = default;
 
@@ -1397,7 +1452,7 @@ public:
     for (CFGBlock *BB : *this)
       for (const CFGElement &Elem : *BB) {
         if (std::optional<CFGStmt> stmt = Elem.getAs<CFGStmt>())
-          O(const_cast<Stmt *>(stmt->getStmt()));
+          O(stmt->getStmt());
       }
   }
 
@@ -1465,11 +1520,42 @@ private:
 
 Expr *extractElementInitializerFromNestedAILE(const ArrayInitLoopExpr *AILE);
 
-} // namespace clang
-
 //===----------------------------------------------------------------------===//
 // GraphTraits specializations for CFG basic block graphs (source-level CFGs)
 //===----------------------------------------------------------------------===//
+
+namespace detail {
+// The GraphTraits below present a CFGBlock's successors and predecessors as
+// plain CFGBlock *, so generic graph algorithms need not know about
+// AdjacentBlock. AB_Unreachable edges, whose reachable target is null, are kept
+// in the CFG to preserve terminator successor positions but are not real
+// control-flow edges and are skipped here.
+struct CFGBlockReachableEdge {
+  bool operator()(const CFGBlock::AdjacentBlock &AB) const {
+    return AB.getReachableBlock() != nullptr;
+  }
+};
+template <typename BlockT> struct CFGBlockEdgeTarget {
+  BlockT *operator()(const CFGBlock::AdjacentBlock &AB) const {
+    return AB.getReachableBlock();
+  }
+};
+
+// A GraphTraits child iterator over BlockT: each AdjacentBlock edge projected
+// to its reachable target, with unreachable (null) edges skipped.
+template <typename IterT, typename BlockT>
+using CFGReachableChildIterator =
+    llvm::mapped_iterator<llvm::filter_iterator<IterT, CFGBlockReachableEdge>,
+                          CFGBlockEdgeTarget<BlockT>>;
+
+template <typename BlockT, typename RangeT>
+auto cfgReachableChildren(RangeT Edges) {
+  return llvm::map_range(
+      llvm::make_filter_range(Edges, CFGBlockReachableEdge()),
+      CFGBlockEdgeTarget<BlockT>());
+}
+} // namespace detail
+} // namespace clang
 
 namespace llvm {
 
@@ -1485,62 +1571,129 @@ template <> struct simplify_type< ::clang::CFGTerminator> {
 
 // Traits for: CFGBlock
 
-template <> struct GraphTraits< ::clang::CFGBlock *> {
-  using NodeRef = ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::succ_iterator;
+// CFGBlocks are numbered densely from 0 by their BlockID, so dominator tree
+// construction can index by number instead of using a DenseMap.
+template <> struct GraphTraits<clang::CFGBlock *> {
+  using NodeRef = clang::CFGBlock *;
+  using ChildIteratorType =
+      clang::detail::CFGReachableChildIterator<clang::CFGBlock::succ_iterator,
+                                               clang::CFGBlock>;
 
-  static NodeRef getEntryNode(::clang::CFGBlock *BB) { return BB; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static NodeRef getEntryNode(clang::CFGBlock *BB) { return BB; }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->succs())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->succs())
+        .end();
+  }
+
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
 };
 
-template <> struct GraphTraits< const ::clang::CFGBlock *> {
-  using NodeRef = const ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::const_succ_iterator;
+static_assert(GraphHasNodeNumbers<clang::CFGBlock *>,
+              "GraphTraits getNumber() not detected");
+
+template <> struct GraphTraits<const clang::CFGBlock *> {
+  using NodeRef = const clang::CFGBlock *;
+  using ChildIteratorType = clang::detail::CFGReachableChildIterator<
+      clang::CFGBlock::const_succ_iterator, const clang::CFGBlock>;
 
   static NodeRef getEntryNode(const clang::CFGBlock *BB) { return BB; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
-};
-
-template <> struct GraphTraits<Inverse< ::clang::CFGBlock *>> {
-  using NodeRef = ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::const_pred_iterator;
-
-  static NodeRef getEntryNode(Inverse<::clang::CFGBlock *> G) {
-    return G.Graph;
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->succs())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->succs())
+        .end();
   }
 
-  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
 };
 
-template <> struct GraphTraits<Inverse<const ::clang::CFGBlock *>> {
-  using NodeRef = const ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::const_pred_iterator;
+static_assert(GraphHasNodeNumbers<const clang::CFGBlock *>,
+              "GraphTraits getNumber() not detected");
 
-  static NodeRef getEntryNode(Inverse<const ::clang::CFGBlock *> G) {
-    return G.Graph;
+template <> struct GraphTraits<Inverse<clang::CFGBlock *>> {
+  using NodeRef = clang::CFGBlock *;
+  using ChildIteratorType =
+      clang::detail::CFGReachableChildIterator<clang::CFGBlock::pred_iterator,
+                                               clang::CFGBlock>;
+
+  static NodeRef getEntryNode(Inverse<clang::CFGBlock *> G) { return G.Graph; }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->preds())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->preds())
+        .end();
   }
 
-  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<clang::CFGBlock *>>,
+              "GraphTraits getNumber() not detected");
+
+template <> struct GraphTraits<Inverse<const clang::CFGBlock *>> {
+  using NodeRef = const clang::CFGBlock *;
+  using ChildIteratorType = clang::detail::CFGReachableChildIterator<
+      clang::CFGBlock::const_pred_iterator, const clang::CFGBlock>;
+
+  static NodeRef getEntryNode(Inverse<const clang::CFGBlock *> G) {
+    return G.Graph;
+  }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->preds())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->preds())
+        .end();
+  }
+
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
+};
+
+static_assert(GraphHasNodeNumbers<Inverse<const clang::CFGBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 // Traits for: CFG
 
-template <> struct GraphTraits< ::clang::CFG* >
-    : public GraphTraits< ::clang::CFGBlock *>  {
+template <>
+struct GraphTraits<::clang::CFG *> : public GraphTraits<clang::CFGBlock *> {
   using nodes_iterator = ::clang::CFG::iterator;
 
   static NodeRef getEntryNode(::clang::CFG *F) { return &F->getEntry(); }
   static nodes_iterator nodes_begin(::clang::CFG* F) { return F->nodes_begin();}
   static nodes_iterator   nodes_end(::clang::CFG* F) { return F->nodes_end(); }
   static unsigned              size(::clang::CFG* F) { return F->size(); }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  // Block numbers are fixed when the CFG is built and never change afterwards.
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
-template <> struct GraphTraits<const ::clang::CFG* >
-    : public GraphTraits<const ::clang::CFGBlock *>  {
+template <>
+struct GraphTraits<const ::clang::CFG *>
+    : public GraphTraits<const clang::CFGBlock *> {
   using nodes_iterator = ::clang::CFG::const_iterator;
 
   static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getEntry(); }
@@ -1556,19 +1709,31 @@ template <> struct GraphTraits<const ::clang::CFG* >
   static unsigned size(const ::clang::CFG* F) {
     return F->size();
   }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
-template <> struct GraphTraits<Inverse< ::clang::CFG *>>
-  : public GraphTraits<Inverse< ::clang::CFGBlock *>> {
+template <>
+struct GraphTraits<Inverse<::clang::CFG *>>
+    : public GraphTraits<Inverse<clang::CFGBlock *>> {
   using nodes_iterator = ::clang::CFG::iterator;
 
   static NodeRef getEntryNode(::clang::CFG *F) { return &F->getExit(); }
   static nodes_iterator nodes_begin( ::clang::CFG* F) {return F->nodes_begin();}
   static nodes_iterator nodes_end( ::clang::CFG* F) { return F->nodes_end(); }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
-template <> struct GraphTraits<Inverse<const ::clang::CFG *>>
-  : public GraphTraits<Inverse<const ::clang::CFGBlock *>> {
+template <>
+struct GraphTraits<Inverse<const ::clang::CFG *>>
+    : public GraphTraits<Inverse<const clang::CFGBlock *>> {
   using nodes_iterator = ::clang::CFG::const_iterator;
 
   static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getExit(); }
@@ -1580,6 +1745,11 @@ template <> struct GraphTraits<Inverse<const ::clang::CFG *>>
   static nodes_iterator nodes_end(const ::clang::CFG* F) {
     return F->nodes_end();
   }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
 } // namespace llvm

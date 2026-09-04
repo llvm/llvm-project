@@ -83,13 +83,15 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << ") {\n";
 
   // Check offload is initialized
-  if (F.getName() != "olInit")
+  if (F.getName() != "olInit") {
     OS << "if (!llvm::offload::isOffloadInitialized()) return &UninitError;";
 
-  // Emit pre-call prints
-  OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
-  OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
-  OS << TAB_1 "}\n\n";
+    // Emit pre-call prints
+    // Postpone pre-calls for olInit as tracing requires liboffload to be initialized
+    OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
+    OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
+    OS << TAB_1 "}\n\n";
+  }
 
   // Perform actual function call to the validation wrapper
   ParamNameList = ParamNameList.substr(0, ParamNameList.size() - 2);
@@ -99,6 +101,10 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 
   // Emit post-call prints
   OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
+  // postponed pre-call print for olInit
+  if (F.getName() == "olInit")
+    OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
+
   if (F.getParams().size() > 0) {
     OS << formatv(TAB_2 "{0} Params = {{", F.getParamStructName());
     for (const auto &Param : F.getParams()) {

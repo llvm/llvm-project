@@ -1,0 +1,5 @@
+# REQUIRES: riscv-registered-target
+## Check that --show-inst output is handled correctly
+
+# RUN: cp -f %S/Inputs/riscv_show_inst.s %t.s && %update_mc_test_checks %t.s
+# RUN: diff -u %S/Inputs/riscv_show_inst.s.expected %t.s

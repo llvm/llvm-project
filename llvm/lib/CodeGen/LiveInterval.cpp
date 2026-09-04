@@ -540,6 +540,28 @@ LiveRange::iterator LiveRange::addSegment(Segment S) {
   return CalcLiveRangeUtilVector(this).addSegment(S);
 }
 
+LiveRange::iterator LiveRange::mergeAdjacentSegments(iterator I) {
+  assert(segmentSet == nullptr && "Cannot merge with active segment set");
+  assert(I != end() && "Cannot merge end iterator");
+
+  if (I != begin()) {
+    iterator Prev = std::prev(I);
+    if (Prev->valno == I->valno && Prev->end == I->start) {
+      Prev->end = I->end;
+      segments.erase(I);
+      I = Prev;
+    }
+  }
+
+  iterator Next = std::next(I);
+  if (Next != end() && I->valno == Next->valno && I->end == Next->start) {
+    I->end = Next->end;
+    segments.erase(Next);
+  }
+
+  return I;
+}
+
 void LiveRange::append(const Segment S) {
   // Check that the segment belongs to the back of the list.
   assert(segments.empty() || segments.back().end <= S.start);
@@ -754,34 +776,10 @@ VNInfo *LiveRange::MergeValueNumberInto(VNInfo *V1, VNInfo *V2) {
     iterator S = I++;
     if (S->valno != V1) continue;  // Not a V1 Segment.
 
-    // Okay, we found a V1 live range.  If it had a previous, touching, V2 live
-    // range, extend it.
-    if (S != begin()) {
-      iterator Prev = S-1;
-      if (Prev->valno == V2 && Prev->end == S->start) {
-        Prev->end = S->end;
-
-        // Erase this live-range.
-        segments.erase(S);
-        I = Prev+1;
-        S = Prev;
-      }
-    }
-
-    // Okay, now we have a V1 or V2 live range that is maximally merged forward.
-    // Ensure that it is a V2 live-range.
+    // After changing this segment to V2, it may touch an adjacent V2 segment.
+    // Merge with either neighbor before continuing.
     S->valno = V2;
-
-    // If we can merge it into later V2 segments, do so now.  We ignore any
-    // following V1 segments, as they will be merged in subsequent iterations
-    // of the loop.
-    if (I != end()) {
-      if (I->start == S->end && I->valno == V2) {
-        S->end = I->end;
-        segments.erase(I);
-        I = S+1;
-      }
-    }
+    I = std::next(mergeAdjacentSegments(S));
   }
 
   // Now that V1 is dead, remove it.
@@ -996,6 +994,17 @@ LLVM_DUMP_METHOD void LiveRange::Segment::dump() const {
 }
 #endif
 
+void VNInfo::print(raw_ostream &OS) const {
+  OS << id << '@';
+  if (isUnused()) {
+    OS << 'x';
+  } else {
+    OS << def;
+    if (isPHIDef())
+      OS << "-phi";
+  }
+}
+
 void LiveRange::print(raw_ostream &OS) const {
   if (empty())
     OS << "EMPTY";
@@ -1013,15 +1022,10 @@ void LiveRange::print(raw_ostream &OS) const {
     for (const_vni_iterator i = vni_begin(), e = vni_end(); i != e;
          ++i, ++vnum) {
       const VNInfo *vni = *i;
-      if (vnum) OS << ' ';
-      OS << vnum << '@';
-      if (vni->isUnused()) {
-        OS << 'x';
-      } else {
-        OS << vni->def;
-        if (vni->isPHIDef())
-          OS << "-phi";
-      }
+      if (vnum)
+        OS << ' ';
+      OS << *vni;
+      assert(vnum == vni->id && "Bad VNInfo");
     }
   }
 }
@@ -1041,9 +1045,9 @@ void LiveInterval::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void LiveRange::dump() const {
-  dbgs() << *this << '\n';
-}
+LLVM_DUMP_METHOD void VNInfo::dump() const { dbgs() << *this << '\n'; }
+
+LLVM_DUMP_METHOD void LiveRange::dump() const { dbgs() << *this << '\n'; }
 
 LLVM_DUMP_METHOD void LiveInterval::SubRange::dump() const {
   dbgs() << *this << '\n';

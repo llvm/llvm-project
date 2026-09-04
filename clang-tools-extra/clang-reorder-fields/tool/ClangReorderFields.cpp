@@ -53,7 +53,7 @@ int main(int argc, const char **argv) {
   auto ExpectedParser = tooling::CommonOptionsParser::create(
       argc, argv, ClangReorderFieldsCategory, cl::OneOrMore, Usage);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
 
@@ -74,9 +74,8 @@ int main(int argc, const char **argv) {
   LangOptions DefaultLangOptions;
   DiagnosticOptions DiagOpts;
   TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
-      &DiagnosticPrinter, false);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
 
   auto &FileMgr = Tool.getFiles();
   SourceManager Sources(Diagnostics, FileMgr);

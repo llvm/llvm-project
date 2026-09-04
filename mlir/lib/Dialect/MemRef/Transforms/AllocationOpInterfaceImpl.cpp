@@ -22,11 +22,11 @@ struct DefaultAllocationInterface
           DefaultAllocationInterface, memref::AllocOp> {
   static std::optional<Operation *> buildDealloc(OpBuilder &builder,
                                                  Value alloc) {
-    return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
+    return memref::DeallocOp::create(builder, alloc.getLoc(), alloc)
         .getOperation();
   }
   static std::optional<Value> buildClone(OpBuilder &builder, Value alloc) {
-    return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
+    return bufferization::CloneOp::create(builder, alloc.getLoc(), alloc)
         .getResult();
   }
   static ::mlir::HoistingKind getHoistingKind() {
@@ -34,10 +34,12 @@ struct DefaultAllocationInterface
   }
   static ::std::optional<::mlir::Operation *>
   buildPromotedAlloc(OpBuilder &builder, Value alloc) {
-    Operation *definingOp = alloc.getDefiningOp();
-    return builder.create<memref::AllocaOp>(
-        definingOp->getLoc(), cast<MemRefType>(definingOp->getResultTypes()[0]),
-        definingOp->getOperands(), definingOp->getAttrs());
+    auto allocOp = cast<memref::AllocOp>(alloc.getDefiningOp());
+    memref::AllocaOp allocaOp = memref::AllocaOp::create(
+        builder, allocOp.getLoc(), allocOp.getType(), allocOp.getDynamicSizes(),
+        allocOp.getSymbolOperands(), allocOp.getAlignmentAttr());
+    allocaOp->setDiscardableAttrs(allocOp->getDiscardableAttrDictionary());
+    return allocaOp.getOperation();
   }
 };
 
@@ -52,7 +54,7 @@ struct DefaultReallocationInterface
           DefaultAllocationInterface, memref::ReallocOp> {
   static std::optional<Operation *> buildDealloc(OpBuilder &builder,
                                                  Value realloc) {
-    return builder.create<memref::DeallocOp>(realloc.getLoc(), realloc)
+    return memref::DeallocOp::create(builder, realloc.getLoc(), realloc)
         .getOperation();
   }
 };

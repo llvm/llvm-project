@@ -10,6 +10,8 @@
 
 #include "Cocoa.h"
 
+#include "llvm/Support/ErrorExtras.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -23,13 +25,15 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include <optional>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
                           ValueObjectSP *reason_sp, ValueObjectSP *userinfo_sp,
-                          ValueObjectSP *reserved_sp) {
+                          ValueObjectSP *reserved_sp, bool owned_by_valobj) {
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)
     return false;
@@ -49,24 +53,30 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
     return false;
   size_t ptr_size = process_sp->GetAddressByteSize();
 
-  Status error;
-  auto name = process_sp->ReadPointerFromMemory(ptr + 1 * ptr_size, error);
-  if (error.Fail() || name == LLDB_INVALID_ADDRESS)
+  // Read the ivar at the given pointer-sized slot in the NSException object.
+  // Returns std::nullopt if the read fails.
+  auto read_field = [&](size_t slot) {
+    return llvm::expectedToOptional(
+        process_sp->ReadPointerFromMemory(ptr + slot * ptr_size));
+  };
+
+  std::optional<lldb::addr_t> name = read_field(1);
+  if (!name)
     return false;
-  auto reason = process_sp->ReadPointerFromMemory(ptr + 2 * ptr_size, error);
-  if (error.Fail() || reason == LLDB_INVALID_ADDRESS)
+  std::optional<lldb::addr_t> reason = read_field(2);
+  if (!reason)
     return false;
-  auto userinfo = process_sp->ReadPointerFromMemory(ptr + 3 * ptr_size, error);
-  if (error.Fail() || userinfo == LLDB_INVALID_ADDRESS)
+  std::optional<lldb::addr_t> userinfo = read_field(3);
+  if (!userinfo)
     return false;
-  auto reserved = process_sp->ReadPointerFromMemory(ptr + 4 * ptr_size, error);
-  if (error.Fail() || reserved == LLDB_INVALID_ADDRESS)
+  std::optional<lldb::addr_t> reserved = read_field(4);
+  if (!reserved)
     return false;
 
-  InferiorSizedWord name_isw(name, *process_sp);
-  InferiorSizedWord reason_isw(reason, *process_sp);
-  InferiorSizedWord userinfo_isw(userinfo, *process_sp);
-  InferiorSizedWord reserved_isw(reserved, *process_sp);
+  InferiorSizedWord name_isw(*name, *process_sp);
+  InferiorSizedWord reason_isw(*reason, *process_sp);
+  InferiorSizedWord userinfo_isw(*userinfo, *process_sp);
+  InferiorSizedWord reserved_isw(*reserved, *process_sp);
 
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
@@ -75,23 +85,25 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
 
   CompilerType voidstar =
       scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+  ExecutionContextRef exe_ref = valobj.GetExecutionContextRef();
+  ByteOrder byte_order = process_sp->GetByteOrder();
 
-  if (name_sp)
-    *name_sp = ValueObject::CreateValueObjectFromData(
-        "name", name_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
-  if (reason_sp)
-    *reason_sp = ValueObject::CreateValueObjectFromData(
-        "reason", reason_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
-  if (userinfo_sp)
-    *userinfo_sp = ValueObject::CreateValueObjectFromData(
-        "userInfo", userinfo_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
-  if (reserved_sp)
-    *reserved_sp = ValueObject::CreateValueObjectFromData(
-        "reserved", reserved_isw.GetAsData(process_sp->GetByteOrder()),
-        valobj.GetExecutionContextRef(), voidstar);
+  auto set_sp = [&](llvm::StringRef name, InferiorSizedWord &data_source,
+                    ValueObjectSP *set_me_sp) {
+    if (!set_me_sp)
+      return;
+    if (owned_by_valobj)
+      *set_me_sp = valobj.CreateChildValueObjectFromData(
+          name, data_source.GetAsData(byte_order), exe_ref, voidstar);
+    else
+      *set_me_sp = valobj.CreateValueObjectFromData(
+          name, data_source.GetAsData(byte_order), exe_ref, voidstar);
+  };
+
+  set_sp("name", name_isw, name_sp);
+  set_sp("reason", reason_isw, reason_sp);
+  set_sp("userInfo", userinfo_isw, userinfo_sp);
+  set_sp("reserved", reserved_isw, reserved_sp);
 
   return true;
 }
@@ -99,7 +111,8 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
 bool lldb_private::formatters::NSException_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   lldb::ValueObjectSP reason_sp;
-  if (!ExtractFields(valobj, nullptr, &reason_sp, nullptr, nullptr))
+  if (!ExtractFields(valobj, nullptr, &reason_sp, nullptr, nullptr,
+                     /*owned_by_valobj=*/false))
     return false;
 
   if (!reason_sp) {
@@ -142,7 +155,8 @@ public:
     m_reserved_sp.reset();
 
     const auto ret = ExtractFields(m_backend, &m_name_sp, &m_reason_sp,
-                                   &m_userinfo_sp, &m_reserved_sp);
+                                   &m_userinfo_sp, &m_reserved_sp,
+                                   /*owned_by_valobj=*/true);
 
     return ret ? lldb::ChildCacheState::eReuse
                : lldb::ChildCacheState::eRefetch;
@@ -154,16 +168,15 @@ public:
     //   NSString *reason;
     //   NSDictionary *userInfo;
     //   id reserved;
-    static ConstString g_name("name");
-    static ConstString g_reason("reason");
-    static ConstString g_userInfo("userInfo");
-    static ConstString g_reserved("reserved");
+    static constexpr llvm::StringLiteral g_name("name");
+    static constexpr llvm::StringLiteral g_reason("reason");
+    static constexpr llvm::StringLiteral g_userInfo("userInfo");
+    static constexpr llvm::StringLiteral g_reserved("reserved");
     if (name == g_name) return 0;
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;
     if (name == g_reserved) return 3;
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
 private:

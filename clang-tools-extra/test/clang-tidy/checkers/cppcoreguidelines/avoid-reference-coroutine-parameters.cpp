@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s cppcoreguidelines-avoid-reference-coroutine-parameters %t --
+// RUN: %check_clang_tidy -std=c++20-or-later %s cppcoreguidelines-avoid-reference-coroutine-parameters %t
 
 // NOLINTBEGIN
 namespace std {

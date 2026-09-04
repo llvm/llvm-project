@@ -11,13 +11,13 @@ define void @lifetime_for_first_arg_before_multiply(ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca <4 x double>, align 32
 ; CHECK-NEXT:    call void @init(ptr [[A]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -69,11 +69,11 @@ define void @lifetime_for_first_arg_before_multiply(ptr noalias %B, ptr noalias 
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -81,7 +81,7 @@ entry:
   call void @init(ptr %A)
   %a = load <4 x double>, ptr %A, align 8
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
   store <4 x double> %c, ptr %C, align 8
   ret void
@@ -92,13 +92,13 @@ define void @lifetime_for_second_arg_before_multiply(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca <4 x double>, align 32
 ; CHECK-NEXT:    call void @init(ptr [[B]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -150,11 +150,11 @@ define void @lifetime_for_second_arg_before_multiply(ptr noalias %A, ptr noalias
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -162,7 +162,7 @@ entry:
   call void @init(ptr %B)
   %a = load <4 x double>, ptr %A, align 8
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
   store <4 x double> %c, ptr %C, align 8
   ret void
@@ -174,13 +174,13 @@ define void @lifetime_for_first_arg_before_multiply_load_from_offset(ptr noalias
 ; CHECK-NEXT:    [[A:%.*]] = alloca <8 x double>, align 64
 ; CHECK-NEXT:    call void @init(ptr [[A]])
 ; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[GEP_8]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[GEP_8]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -232,11 +232,11 @@ define void @lifetime_for_first_arg_before_multiply_load_from_offset(ptr noalias
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -245,7 +245,7 @@ entry:
   %gep.8 = getelementptr i8, ptr %A, i64 8
   %a = load <4 x double>, ptr %gep.8, align 8
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   %c = call <4 x double> @llvm.matrix.multiply(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
   store <4 x double> %c, ptr %C, align 8
   ret void
@@ -260,13 +260,13 @@ define void @lifetime_for_first_arg_before_multiply_lifetime_does_not_dominate(p
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -318,9 +318,9 @@ define void @lifetime_for_first_arg_before_multiply_lifetime_does_not_dominate(p
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C1:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -332,7 +332,7 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   br label %exit
 
 exit:
@@ -350,13 +350,13 @@ define void @lifetime_for_second_arg_before_multiply_lifetime_does_not_dominate(
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -408,9 +408,9 @@ define void @lifetime_for_second_arg_before_multiply_lifetime_does_not_dominate(
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C1:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -422,7 +422,7 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   br label %exit
 
 exit:
@@ -442,17 +442,17 @@ define void @multiple_unrelated_lifetimes(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[ALLOC_1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[ALLOC_2]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOC_1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOC_2]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -504,9 +504,9 @@ define void @multiple_unrelated_lifetimes(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C1:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -522,10 +522,10 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
-  call void @llvm.lifetime.end(i64 -1, ptr %alloc.1)
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
-  call void @llvm.lifetime.end(i64 -1, ptr %alloc.2)
+  call void @llvm.lifetime.end(ptr %B)
+  call void @llvm.lifetime.end(ptr %alloc.1)
+  call void @llvm.lifetime.end(ptr %A)
+  call void @llvm.lifetime.end(ptr %alloc.2)
   br label %exit
 
 exit:
@@ -543,13 +543,13 @@ define void @lifetimes_for_args_in_different_blocks(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -601,14 +601,14 @@ define void @lifetimes_for_args_in_different_blocks(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C1:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -626,8 +626,8 @@ then:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %A)
+  call void @llvm.lifetime.end(ptr %B)
   ret void
 }
 
@@ -640,17 +640,17 @@ define void @lifetimes_for_args_in_different_blocks2(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -702,9 +702,9 @@ define void @lifetimes_for_args_in_different_blocks2(ptr noalias %C, i1 %c.0) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C1:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -716,8 +716,8 @@ entry:
   br i1 %c.0, label %then, label %exit
 
 then:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %A)
+  call void @llvm.lifetime.end(ptr %B)
   br label %exit
 
 exit:
@@ -737,13 +737,13 @@ define void @lifetimes_for_args_load0_in_different_block(ptr noalias %C, i1 %c.0
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -795,9 +795,9 @@ define void @lifetimes_for_args_load0_in_different_block(ptr noalias %C, i1 %c.0
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C1:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -809,7 +809,7 @@ entry:
   call void @init(ptr %A)
   call void @init(ptr %B)
   %a = load <4 x double>, ptr %A, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   br i1 %c.0, label %then, label %exit
 
 then:
@@ -819,7 +819,7 @@ then:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   ret void
 }
 
@@ -832,13 +832,13 @@ define void @lifetimes_for_args_load1_in_different_block(ptr noalias %C, i1 %c.0
 ; CHECK-NEXT:    call void @init(ptr [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 0
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[COL_LOAD2]], i64 0
@@ -890,9 +890,9 @@ define void @lifetimes_for_args_load1_in_different_block(ptr noalias %C, i1 %c.0
 ; CHECK-NEXT:    [[TMP23:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP21]])
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <1 x double> [[TMP23]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x double> [[TMP19]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[C1:%.*]], i64 0
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr double, ptr [[TMP26]], i64 2
+; CHECK-NEXT:    [[VEC_GEP28:%.*]] = getelementptr inbounds double, ptr [[TMP26]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr [[VEC_GEP28]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -904,7 +904,7 @@ entry:
   call void @init(ptr %A)
   call void @init(ptr %B)
   %b = load <4 x double>, ptr %B, align 8
-  call void @llvm.lifetime.end(i64 -1, ptr %B)
+  call void @llvm.lifetime.end(ptr %B)
   br i1 %c.0, label %then, label %exit
 
 then:
@@ -914,11 +914,11 @@ then:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end(i64 -1, ptr %A)
+  call void @llvm.lifetime.end(ptr %A)
   ret void
 }
 
 declare void @init(ptr)
-declare void @llvm.lifetime.end(i64, ptr)
+declare void @llvm.lifetime.end(ptr)
 
 declare <4 x double> @llvm.matrix.multiply(<4 x double>, <4 x double>, i32, i32, i32)

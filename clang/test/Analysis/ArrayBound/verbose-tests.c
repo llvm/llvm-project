@@ -11,7 +11,7 @@ int TenElements[10];
 void arrayUnderflow(void) {
   TenElements[-3] = 5;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}
+  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -3}}
 }
 
 int underflowWithDeref(void) {
@@ -19,8 +19,37 @@ int underflowWithDeref(void) {
   --p;
   return *p;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -4}}
+  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -1}}
 }
+
+char underflowReportedAsChar(void) {
+  // Underflow is reported with the type of the accessed element (here 'char'),
+  // not the type that appears in the declaration of the original array (which
+  // would be 'int').
+  return ((char *)TenElements)[-1];
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'char' element in 'TenElements' at negative index -1}}
+}
+
+struct TwoInts {
+  int a, b;
+};
+
+struct TwoInts underflowReportedAsStruct(void) {
+  // Another case where the accessed type is used for reporting the offset.
+  return *(struct TwoInts*)(TenElements - 4);
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'struct TwoInts' element in 'TenElements' at negative index -2}}
+}
+
+struct TwoInts underflowOnlyByteOffset(void) {
+  // In this case the negative byte offset is not a multiple of the size of the
+  // accessed element, so we use a byte offset instead of an index.
+  return *(struct TwoInts*)(TenElements - 3);
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}
+}
+
 
 int rng(void);
 int getIndex(void) {
@@ -40,10 +69,10 @@ void gh86959(void) {
   while (rng())
     TenElements[getIndex()] = 10;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -688}}
+  // expected-note@-2 {{Access of 'int' element in 'TenElements' at negative index -172}}
 }
 
-int scanf(const char *restrict fmt, ...);
+int scanf(const char *fmt, ...);
 
 void taintedIndex(void) {
   int index;
@@ -69,6 +98,22 @@ void taintedIndexNonneg(void) {
   TenElements[index] = 5;
   // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
   // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
+}
+
+void taintedIndexNonlarge(void) {
+  int index;
+  scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
+
+  // expected-note@+2 {{Assuming 'index' is < 10}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index >= 10)
+    return;
+
+  TenElements[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be negative}}
 }
 
 void taintedIndexUnsigned(void) {
@@ -113,6 +158,18 @@ void taintedOffset(void) {
   p[0] = 5;
   // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted offset}}
   // expected-note@-2 {{Access of 'TenElements' with a tainted offset that may be negative or too large}}
+}
+
+void taintedIndexCast(void) {
+  // '(unsigned)index < 10' guarantees that index is non-negative and less than
+  // 10, because the cast converts negative values to large positive values.
+  int index;
+  scanf("%d", &index);
+  if ((unsigned)index < 10)
+    TenElements[index] = 5; // no-warning
+  unsigned uidx = (unsigned)index;
+  if (uidx < 10)
+    TenElements[index] = 5; // no-warning
 }
 
 void arrayOverflow(void) {
@@ -334,6 +391,34 @@ int *mallocRegionDeref(void) {
   return mem;
 }
 
+void taintedExtentNotInteresting(void) {
+  // This is a potential underflow report, so the extent is not interesting
+  // (and e.g. we should not print notes about its taintedness).
+  int n;
+  scanf("%d", &n);
+  // expected-note@+4 {{Assuming 'n' is >= 1}}
+  // expected-note@+3 {{Left side of '||' is false}}
+  // expected-note@+2 {{Assuming 'n' is <= 100}}
+  // expected-note@+1 {{Taking false branch}}
+  if (n < 1 || n > 100)
+    return;
+
+  char *p = (char *)malloc(n);
+  int index;
+  // expected-note@+2 {{Taint originated here}}
+  // expected-note@+1 {{Taint propagated to the 2nd argument}}
+  scanf("%d", &index);
+  // expected-note@+2 {{Assuming 'index' is < 'n'}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index >= n) {
+    free(p);
+    return;
+  }
+  p[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to the heap area with tainted index}}
+  // expected-note@-2 {{Access of the heap area with a tainted index that may be negative}}
+}
+
 void *alloca(size_t size);
 
 int allocaRegion(void) {
@@ -351,27 +436,9 @@ int *symbolicExtent(int arg) {
     return 0;
   int *mem = (int*)malloc(arg);
 
-  // TODO: without the following reference to 'arg', the analyzer would discard
-  // the range information about (the symbolic value of) 'arg'. This is
-  // incorrect because while the variable itself is inaccessible, it becomes
-  // the symbolic extent of 'mem', so we still want to reason about its
-  // potential values.
-  (void)arg;
-
   mem[8] = -2;
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of 'int' element in the heap area at index 8}}
-  return mem;
-}
-
-int *symbolicExtentDiscardedRangeInfo(int arg) {
-  // This is a copy of the case 'symbolicExtent' without the '(void)arg' hack.
-  // TODO: if the analyzer can detect the out-of-bounds access within this
-  // testcase, then remove this and the `(void)arg` hack from `symbolicExtent`.
-  if (arg >= 5)
-    return 0;
-  int *mem = (int*)malloc(arg);
-  mem[8] = -2;
   return mem;
 }
 
@@ -396,9 +463,55 @@ int *nothingIsCertain(int x, int y) {
   //   {{Access of 'int' element in the heap area at an overflowing index}}
   // but apparently the analyzer isn't smart enough to deduce this.
 
-  // Keep constraints alive. (Without this, the overeager garbage collection of
-  // constraints would _also_ prevent the intended behavior in this testcase.)
-  (void)x;
-
   return mem;
 }
+
+#ifndef _WIN32
+// We disable this test under Windows because 'struct Empty {}' has a nozero
+// size on that platform. Note that '_WIN32' is also defined on 64-bit systems
+// and is apparently the customary way to detect Windows OS.
+// The empty struct also has nonzero size under C++ so these corner cases are
+// only relevant under C.
+
+struct Empty {};
+struct Empty ZeroSizeElements[10];
+
+struct Empty zeroSizeElements(void) {
+  // Here the offset and extent are both 0, which previously caused a false
+  // positive out of bounds report.
+  return ZeroSizeElements[5]; // no-warning
+}
+
+struct Empty zeroSizeElementsNegativeIndex(void) {
+  // The negative index does not change anything, it still means offset = 0.
+  return ZeroSizeElements[-5]; // no-warning
+}
+
+int zeroSizeContainerIntAccess(void) {
+  return ((int*)ZeroSizeElements)[5];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'ZeroSizeElements'}}
+  // expected-note@-2 {{Access of 'ZeroSizeElements' at index 5, while it holds only 0 'int' elements}}
+}
+
+struct Empty zeroSizeAccessOfPastTheEnd(void) {
+  // We currently allow zero-sized access of past-the-end pointers as a side
+  // effect of the logic that handles the testcase 'zeroSizeElements'.
+  return *(struct Empty *)(TenElements + 10); // no-warning
+}
+
+struct Empty zeroSizeAccessFarAway(void) {
+  // However, zero-sized access of other out-of-bounds pointers is reported
+  // (with byte offsets, because the zero-sized element is not suitable for
+  // calculating indices).
+  return *(struct Empty *)(TenElements + 20);
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at byte offset 80, while it holds only 40 bytes}}
+}
+
+struct Empty zeroSizeAccessUnderflow(void) {
+  return *(struct Empty *)(TenElements - 10);
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -40}}
+}
+
+#endif

@@ -15,6 +15,7 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include <optional>
 
@@ -23,38 +24,15 @@ namespace targets {
 
 enum AArch64AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
 
-static const unsigned ARM64AddrSpaceMap[] = {
-    0, // Default
-    0, // opencl_global
-    0, // opencl_local
-    0, // opencl_constant
-    0, // opencl_private
-    0, // opencl_generic
-    0, // opencl_global_device
-    0, // opencl_global_host
-    0, // cuda_device
-    0, // cuda_constant
-    0, // cuda_shared
-    0, // sycl_global
-    0, // sycl_global_device
-    0, // sycl_global_host
-    0, // sycl_local
-    0, // sycl_private
-    static_cast<unsigned>(AArch64AddrSpace::ptr32_sptr),
-    static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr),
-    static_cast<unsigned>(AArch64AddrSpace::ptr64),
-    0, // hlsl_groupshared
-    0, // hlsl_constant
-    0, // hlsl_private
-    0, // hlsl_device
-    0, // hlsl_input
-    // Wasm address space values for this target are dummy values,
-    // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+static constexpr LangASMap ARM64AddrSpaceMap = {
+    {LangAS::ptr32_sptr, static_cast<unsigned>(AArch64AddrSpace::ptr32_sptr)},
+    {LangAS::ptr32_uptr, static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr)},
+    {LangAS::ptr64, static_cast<unsigned>(AArch64AddrSpace::ptr64)},
 };
 
+using AArch64FeatureSet = llvm::SmallDenseSet<StringRef, 32>;
+
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
-  virtual void setDataLayout() = 0;
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
 
@@ -75,7 +53,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasDotProd = false;
   bool HasFP16FML = false;
   bool HasMTE = false;
-  bool HasTME = false;
   bool HasPAuth = false;
   bool HasLS64 = false;
   bool HasRandGen = false;
@@ -132,9 +109,29 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasRCPC3 = false;
   bool HasSMEFA64 = false;
   bool HasPAuthLR = false;
+  bool HasFPRCVT = false;
+  bool HasF8F16MM = false;
+  bool HasF8F32MM = false;
+  bool HasSVE_F16F32MM = false;
+  bool HasSVE_BFSCALE = false;
+  bool HasSVE_AES2 = false;
+  bool HasSSVE_AES = false;
+  bool HasSVE2p2 = false;
+  bool HasSME2p2 = false;
+  bool HasSVE2p3 = false;
+  bool HasSME2p3 = false;
+  bool HasSVE_B16MM = false;
+  bool HasF16MM = false;
+  bool HasF16F32DOT = false;
+  bool HasF16F32MM = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
+  AArch64FeatureSet HasFeatureLookup;
+
+  void computeFeatureLookup();
+
+protected:
   std::string ABI;
 
 public:
@@ -150,13 +147,9 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-  bool setCPU(const std::string &Name) override;
+  bool setCPU(StringRef Name) override;
 
   llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
-
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
 
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
@@ -189,6 +182,8 @@ public:
   void getTargetDefinesARMV95A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV96A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
+  void getTargetDefinesARMV97A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -272,10 +267,18 @@ public:
   AArch64leTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   void getTargetDefines(const LangOptions &Opts,
-                            MacroBuilder &Builder) const override;
-private:
-  void setDataLayout() override;
+                        MacroBuilder &Builder) const override;
 };
+
+template <>
+inline bool
+LinuxTargetInfo<AArch64leTargetInfo>::setABI(const std::string &Name) {
+  if (Name == "pauthtest") {
+    ABI = Name;
+    return true;
+  }
+  return AArch64leTargetInfo::setABI(Name);
+}
 
 class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
     : public WindowsTargetInfo<AArch64leTargetInfo> {
@@ -284,8 +287,6 @@ class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
 public:
   WindowsARM64TargetInfo(const llvm::Triple &Triple,
                          const TargetOptions &Opts);
-
-  void setDataLayout() override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override;
 
@@ -320,9 +321,6 @@ public:
   AArch64beTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
-
-private:
-  void setDataLayout() override;
 };
 
 void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,
@@ -333,6 +331,12 @@ class LLVM_LIBRARY_VISIBILITY AppleMachOAArch64TargetInfo
 public:
   AppleMachOAArch64TargetInfo(const llvm::Triple &Triple,
                               const TargetOptions &Opts);
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    // Apple AArch64 cores use a 128-byte cache line, unlike the ARM-documented
+    // value of 256 used by the generic aarch64 triple.
+    return std::make_pair(128, 64);
+  }
 
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
@@ -345,6 +349,13 @@ public:
   DarwinAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    // Apple AArch64 cores use a 128-byte cache line, so 128 (not the generic
+    // AArch64 value of 256) is the right destructive interference size. These
+    // values are implementation-defined and not part of the ABI.
+    return std::make_pair(128, 64);
+  }
 
  protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,

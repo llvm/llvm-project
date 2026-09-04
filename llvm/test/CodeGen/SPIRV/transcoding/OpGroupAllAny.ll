@@ -14,12 +14,16 @@
 ; CHECK-SPIRV: %[[#]] = OpGroupAny %[[#BoolTypeID]] %[[#]] %[[#True]]
 ; CHECK-SPIRV: %[[#]] = OpGroupAll %[[#BoolTypeID]] %[[#]] %[[#True]]
 ; CHECK-SPIRV: %[[#]] = OpGroupAny %[[#BoolTypeID]] %[[#]] %[[#False]]
-define spir_kernel void @test(i32 addrspace(1)* nocapture readnone %i) {
+; CHECK-SPIRV: %[[#]] = OpGroupAll %[[#BoolTypeID]] %[[#]] %[[#True]]
+; CHECK-SPIRV: %[[#]] = OpGroupAny %[[#BoolTypeID]] %[[#]] %[[#True]]
+define spir_kernel void @test(ptr addrspace(1) nocapture readnone %i) {
 entry:
   %call = tail call spir_func i32 @_Z14work_group_alli(i32 5)
   %call1 = tail call spir_func i32 @_Z14work_group_anyi(i32 5)
   %call3 = tail call spir_func i32 @__spirv_GroupAll(i32 0, i1 1)
   %call4 = tail call spir_func i32 @__spirv_GroupAny(i32 0, i1 0)
+  %call5 = tail call spir_func i32 @_Z14work_group_alli(i32 4)
+  %call6 = tail call spir_func i32 @_Z14work_group_anyi(i32 4)
   ret void
 }
 

@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/FunctionSpecialization.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -17,7 +19,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Transforms/IPO/FunctionSpecialization.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -27,12 +28,11 @@ namespace llvm {
 static void removeSSACopy(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-      if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-        if (II->getIntrinsicID() != Intrinsic::ssa_copy)
-          continue;
-        Inst.replaceAllUsesWith(II->getOperand(0));
-        Inst.eraseFromParent();
-      }
+      auto *BC = dyn_cast<BitCastInst>(&Inst);
+      if (!BC || BC->getType() != BC->getOperand(0)->getType())
+        continue;
+      Inst.replaceAllUsesWith(BC->getOperand(0));
+      Inst.eraseFromParent();
     }
   }
 }
@@ -50,6 +50,7 @@ protected:
     FAM.registerPass([&] { return TargetIRAnalysis(); });
     FAM.registerPass([&] { return BlockFrequencyAnalysis(); });
     FAM.registerPass([&] { return BranchProbabilityAnalysis(); });
+    FAM.registerPass([&] { return CycleAnalysis(); });
     FAM.registerPass([&] { return LoopAnalysis(); });
     FAM.registerPass([&] { return AssumptionAnalysis(); });
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
@@ -208,7 +209,7 @@ TEST_F(FunctionSpecializationTest, SwitchInst) {
   EXPECT_TRUE(Test > 0);
 }
 
-TEST_F(FunctionSpecializationTest, BranchInst) {
+TEST_F(FunctionSpecializationTest, CondBrInst) {
   const char *ModuleString = R"(
     define void @foo(i32 %a, i32 %b, i1 %cond) {
     entry:

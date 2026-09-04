@@ -10,7 +10,7 @@ define i32 @test_call_known_max_range() #0 {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
-  %id = tail call i32 @foo(), !range !0, !noundef !{}
+  %id = tail call i32 @foo(), !range !0
   %and = and i32 %id, 1023
   ret i32 %and
 }
@@ -24,7 +24,7 @@ define i32 @test_call_known_trunc_1_bit_range() #0 {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
-  %id = tail call i32 @foo(), !range !0, !noundef !{}
+  %id = tail call i32 @foo(), !range !0
   %and = and i32 %id, 511
   ret i32 %and
 }
@@ -38,7 +38,7 @@ define i32 @test_call_known_max_range_m1() #0 {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
-  %id = tail call i32 @foo(), !range !1, !noundef !{}
+  %id = tail call i32 @foo(), !range !1
   %and = and i32 %id, 255
   ret i32 %and
 }

@@ -25,8 +25,8 @@
 // CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}t.h:9:27
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 1 | isDef: 1 | isContainer: 1
-// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
 // CHECK-NEXT: [indexEntityReference]: kind: c++-class | name: C |
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
 // CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}t.h:15:5
 // CHECK-NEXT: [indexDeclaration]: kind: function | name: foo1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: 1
 // CHECK-NEXT: [indexEntityReference]: kind: variable | name: some_val | {{.*}} | loc: .{{/|\\\\?}}t.h:19:5
@@ -40,8 +40,8 @@
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isContainer: skipped
-// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
 // CHECK-NEXT: [indexEntityReference]: kind: c++-class | name: C |
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
 // CHECK-NEXT: [indexDeclaration]: kind: function | name: foo1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
 // CHECK-NEXT: [ppIncludedFile]: .{{/|\\\\?}}pragma_once.h
 // CHECK-NEXT: [indexDeclaration]: kind: function | name: foo2 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: 1
@@ -60,8 +60,8 @@
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 0 | isDef: 0 | isContainer: 0
 // CHECK-NEXT: [indexDeclaration]: kind: c++-instance-method | name: method_def2 | {{.*}} | isRedecl: 1 | isDef: 1 | isContainer: skipped
-// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
 // CHECK-NEXT: [indexEntityReference]: kind: c++-class | name: C |
+// CHECK-NEXT: [indexEntityReference]: kind: namespace | name: NS |
 // CHECK-NEXT: [indexDeclaration]: kind: function | name: foo1 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped
 // CHECK-NEXT: [ppIncludedFile]: .{{/|\\\\?}}pragma_once.h
 // CHECK-NEXT: [indexDeclaration]: kind: function | name: foo2 | {{.*}} | isRedecl: 0 | isDef: 1 | isContainer: skipped

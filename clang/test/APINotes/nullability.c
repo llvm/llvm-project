@@ -15,7 +15,7 @@ int main() {
 
   take_pointer_and_int(0, 0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 
-  float *fp = global_int; // expected-warning{{incompatible pointer types initializing 'float *' with an expression of type 'int * _Nonnull'}}
+  float *fp = global_int; // expected-error{{incompatible pointer types initializing 'float *' with an expression of type 'int * _Nonnull'}}
   return 0;
 }
 

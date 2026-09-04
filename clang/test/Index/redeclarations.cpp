@@ -17,5 +17,5 @@ class A
 // CHECK: redeclarations.h:19:19: FieldDecl=x:19:19 (Definition) Extent=[19:5 - 19:20]
 // CHECK: redeclarations.h:19:5: TemplateRef=B:8:7 Extent=[19:5 - 19:6]
 // CHECK: redeclarations.h:19:7: TypeRef=class D:17:7 Extent=[19:7 - 19:8]
-// CHECK: redeclarations.h:19:16: TypeRef=class A:3:7 Extent=[19:16 - 19:17]
+// CHECK: redeclarations.h:19:16: TypeRef=class A:19:16 Extent=[19:16 - 19:17]
 // CHECK: redeclarations.cpp:3:7: ClassDecl=A:3:7 (Definition) Extent=[3:1 - 5:2]

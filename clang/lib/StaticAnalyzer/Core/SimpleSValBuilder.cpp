@@ -861,7 +861,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 
     // If one of the operands is a symbol and the other is a constant,
     // build an expression for use by the constraint manager.
-    if (SymbolRef rSym = rhs.getAsLocSymbol()) {
+    if (SymbolRef rSym = rhs.getAsLocSymbol(true)) {
       if (op == BO_Cmp)
         return UnknownVal();
 
@@ -952,12 +952,8 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     const MemSpaceRegion *RightMS = RightBase->getMemorySpace(state);
     const MemSpaceRegion *UnknownMS = MemMgr.getUnknownRegion();
 
-    // If the two regions are from different known memory spaces they cannot be
-    // equal. Also, assume that no symbolic region (whose memory space is
-    // unknown) is on the stack.
-    if (LeftMS != RightMS &&
-        ((LeftMS != UnknownMS && RightMS != UnknownMS) ||
-         (isa<StackSpaceRegion>(LeftMS) || isa<StackSpaceRegion>(RightMS)))) {
+    // Two regions from different known memory spaces cannot be equal.
+    if (LeftMS != RightMS && LeftMS != UnknownMS && RightMS != UnknownMS) {
       switch (op) {
       default:
         return UnknownVal();
@@ -1110,6 +1106,10 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
   assert(!BinaryOperator::isComparisonOp(op) &&
          "arguments to comparison ops must be of the same type");
+
+  SVal simplifiedRhs = simplifySVal(state, rhs);
+  if (auto simplifiedRhsAsNonLoc = simplifiedRhs.getAs<NonLoc>())
+    rhs = *simplifiedRhsAsNonLoc;
 
   // Special case: rhs is a zero constant.
   if (rhs.isZeroConstant())

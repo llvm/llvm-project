@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile && %libomp-run | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 #include "callback.h"
 #include <omp.h>
 
@@ -52,6 +54,7 @@ int main() {
     }
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
@@ -67,6 +70,7 @@ int main() {
 
   // CHECK-NOT: {{^}}[[THREAD_ID]]: impl_name is NULL
   // CHECK-NOT: {{^}}[[THREAD_ID]]: mutex_impls enumeration did not end
+  // clang-format on
 
   return 0;
 }

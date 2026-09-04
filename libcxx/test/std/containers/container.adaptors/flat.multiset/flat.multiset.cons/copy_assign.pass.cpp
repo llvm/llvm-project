@@ -13,8 +13,11 @@
 // flat_multiset& operator=(const flat_multiset& m);
 
 #include <algorithm>
+#include <cassert>
+#include <deque>
 #include <flat_set>
 #include <functional>
+#include <utility>
 #include <vector>
 
 #include "operator_hijacker.h"
@@ -22,11 +25,12 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     // test_allocator is not propagated
     using C = test_less<int>;
-    std::vector<int, test_allocator<int>> ks({1, 3, 5, 5}, test_allocator<int>(6));
+    KeyContainer<int, test_allocator<int>> ks({1, 3, 5, 5}, test_allocator<int>(6));
     using M = std::flat_multiset<int, C, decltype(ks)>;
     auto mo = M(ks, C(5));
     auto m  = M({{3, 4, 5, 4}}, C(3), test_allocator<int>(2));
@@ -46,7 +50,7 @@ void test() {
   {
     // other_allocator is propagated
     using C              = test_less<int>;
-    using Ks             = std::vector<int, other_allocator<int>>;
+    using Ks             = KeyContainer<int, other_allocator<int>>;
     auto ks              = Ks({1, 3, 5, 3}, other_allocator<int>(6));
     const int expected[] = {1, 3, 3, 5};
     using M              = std::flat_multiset<int, C, Ks>;
@@ -65,7 +69,7 @@ void test() {
     auto keys2 = std::move(mo).extract();
     assert(keys2.get_allocator() == other_allocator<int>(6));
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // comparator is copied and invariant is preserved
     using M = std::flat_multiset<int, std::function<bool(int, int)>>;
     M mo    = M({1, 2}, std::less<int>());
@@ -103,8 +107,22 @@ void test() {
   }
 }
 
+constexpr bool test() {
+  test<std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

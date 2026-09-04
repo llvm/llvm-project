@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 "-triple" "arm64-apple-watchos4.0" -fsyntax-only -verify %s
-// RUN: %clang_cc1 "-triple" "arm64-apple-watchos4.0" -DUSE_VERSION_MAP -isysroot %S/Inputs/WatchOS7.0.sdk -fsyntax-only -verify %s
+// RUN: %clang_cc1 "-triple" "arm64-apple-watchos4.0" -DUSE_VERSION_MAP -isysroot %S/Inputs/WatchOS8.0.sdk -fsyntax-only -verify %s
 
 void f0(int) __attribute__((availability(ios,introduced=2.0,deprecated=2.1))); // expected-note {{'f0' has been explicitly marked deprecated here}}
 void f1(int) __attribute__((availability(ios,introduced=2.1)));

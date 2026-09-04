@@ -23,6 +23,6 @@ for.end:
   ret void
 }
 
-declare double @atan(double) local_unnamed_addr
+declare double @atan(double)
 declare <2 x double> @vector_atan(<2 x double>) #0
 attributes #0 = { nounwind readnone "vector-function-abi-variant"="_ZGV_LLVM_N2v_atan(vector_atan)" }

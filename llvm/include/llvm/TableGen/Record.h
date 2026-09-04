@@ -36,6 +36,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -616,6 +617,9 @@ public:
   convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
   std::optional<int64_t> convertInitializerToInt() const;
 
+  // Returns the set of known bits as a 64-bit integer.
+  uint64_t convertKnownBitsToInt() const;
+
   bool isComplete() const override;
   bool allInComplete() const;
   bool isConcrete() const override;
@@ -767,8 +771,6 @@ public:
   }
   static const ListInit *get(ArrayRef<const Init *> Range, const RecTy *EltTy);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   ArrayRef<const Init *> getElements() const {
     return ArrayRef(getTrailingObjects(), NumElements);
   }
@@ -777,6 +779,10 @@ public:
   ArrayRef<const Init *> getValues() const { return getElements(); }
 
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
+
+  std::pair<ArrayRef<const Init *>, const RecTy *> getKey() const {
+    return {getElements(), getElementType()};
+  }
 
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
@@ -841,6 +847,7 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
+    GETDAGOPNAME,
     LOG2,
     REPR,
     LISTFLATTEN,
@@ -863,10 +870,12 @@ public:
 
   static const UnOpInit *get(UnaryOp opc, const Init *lhs, const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
+
+  std::tuple<UnaryOp, const Init *, const RecTy *> getKey() const {
+    return {getOpcode(), LHS, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -910,6 +919,7 @@ public:
     GETDAGARG,
     GETDAGNAME,
     SETDAGOP,
+    SETDAGOPNAME
   };
 
 private:
@@ -931,11 +941,14 @@ public:
   static const Init *getStrConcat(const Init *lhs, const Init *rhs);
   static const Init *getListConcat(const TypedInit *lhs, const Init *rhs);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getRHS() const { return RHS; }
+
+  std::tuple<BinaryOp, const Init *, const Init *, const RecTy *>
+  getKey() const {
+    return {getOpcode(), LHS, RHS, getType()};
+  }
 
   std::optional<bool> CompareInit(unsigned Opc, const Init *LHS,
                                   const Init *RHS) const;
@@ -963,6 +976,7 @@ public:
     FIND,
     SETDAGARG,
     SETDAGNAME,
+    SORT,
   };
 
 private:
@@ -983,12 +997,15 @@ public:
   static const TernOpInit *get(TernaryOp opc, const Init *lhs, const Init *mhs,
                                const Init *rhs, const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getMHS() const { return MHS; }
   const Init *getRHS() const { return RHS; }
+
+  std::tuple<TernaryOp, const Init *, const Init *, const Init *, const RecTy *>
+  getKey() const {
+    return {getOpcode(), LHS, MHS, RHS, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1206,7 +1223,9 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  const Init *getBit(unsigned Bit) const override;
+  const Init *getBit(unsigned Bit) const override {
+    llvm_unreachable("Illegal bit reference off !instances");
+  }
 
   std::string getAsString() const override;
 };
@@ -1572,7 +1591,7 @@ public:
   }
 
   /// Get the source location of the point where the field was defined.
-  const SMLoc &getLoc() const { return Loc; }
+  SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
   bool isNonconcreteOK() const {

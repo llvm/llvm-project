@@ -209,7 +209,10 @@ struct DIDumpOptions {
   bool IsEH = false;
   bool DumpNonSkeleton = false;
   bool ShowAggregateErrors = false;
+  bool PrintRegisterOnly = false;
   std::string JsonErrSummaryFile;
+  /// List of DWARF tags to filter children by.
+  llvm::SmallVector<unsigned, 0> FilterChildTag;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
 

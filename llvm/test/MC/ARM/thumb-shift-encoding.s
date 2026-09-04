@@ -1,7 +1,7 @@
 @ RUN: llvm-mc -mcpu=cortex-a8 -triple thumbv7 -show-encoding < %s | FileCheck %s
 
 @ Uses printT2SOOperand(), used by t2ADCrs t2ADDrs t2ANDrs t2BICrs t2EORrs
-@ t2ORNrs t2ORRrs t2RSBrs t2SBCrs t2SUBrs t2CMNzrs t2CMPrs t2MOVSsi t2MOVsi
+@ t2ORNrs t2ORRrs t2RSBrs t2SBCrs t2SUBrs t2CMNrs t2CMPrs t2MOVSsi t2MOVsi
 @ t2MVNs t2TEQrs t2TSTrs
 
 	sbc.w r12, lr, r0

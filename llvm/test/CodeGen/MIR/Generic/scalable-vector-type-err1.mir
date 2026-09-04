@@ -6,4 +6,4 @@ body: |
     %0:_(<vscale notanx) = IMPLICIT_DEF
 ...
 
-# CHECK: expected <vscale x M x sN> or <vscale x M x pA>
+# CHECK: expected <vscale x M x tN>, where t = {'s', 'i', 'f', 'bf', 'p'}

@@ -51,10 +51,7 @@ TEST(LowerTypeTests, BitSetBuilder) {
   };
 
   for (auto &&T : BSBTests) {
-    BitSetBuilder BSB;
-    for (auto Offset : T.Offsets)
-      BSB.addOffset(Offset);
-
+    BitSetBuilder BSB(T.Offsets);
     BitSetInfo BSI = BSB.build();
 
     EXPECT_EQ(T.Bits, BSI.Bits);
@@ -98,11 +95,7 @@ TEST(LowerTypeTests, GlobalLayoutBuilder) {
     for (auto &&F : T.Fragments)
       GLB.addFragment(F);
 
-    std::vector<uint64_t> ComputedLayout;
-    for (auto &&F : GLB.Fragments)
-      llvm::append_range(ComputedLayout, F);
-
-    EXPECT_EQ(T.WantLayout, ComputedLayout);
+    EXPECT_EQ(T.WantLayout, GLB.build());
   }
 }
 

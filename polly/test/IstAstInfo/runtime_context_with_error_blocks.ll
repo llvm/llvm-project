@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
 ;
 ; Verify we do not simplify the runtime check to "true" due to the domain
 ; constraints as the test contains an error block that influenced the domains
@@ -16,7 +16,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 $_ZNKSt5ctypeIcE5widenEc = comdat any
 
 ; Function Attrs: uwtable
-define weak_odr signext i8 @_ZNKSt5ctypeIcE5widenEc(ptr %this, i8 signext %__c) #0 comdat align 2 {
+define weak_odr signext i8 @_ZNKSt5ctypeIcE5widenEc(ptr %this, i8 signext %__c) comdat align 2 {
 entry:
   br label %entry.split
 
@@ -45,10 +45,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i8 %retval.0
 }
 
-declare void @_ZNKSt5ctypeIcE13_M_widen_initEv(ptr) #1
-
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @_ZNKSt5ctypeIcE13_M_widen_initEv(ptr)
 
 !llvm.ident = !{!0}
 

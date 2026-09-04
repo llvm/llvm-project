@@ -1,4 +1,4 @@
-//===--- HeaderGuardCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,24 +28,24 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
   // style in include/llvm and include/clang which we want to preserve.
 
   // We don't want _INCLUDE_ in our guards.
-  size_t PosInclude = Guard.rfind("include/");
+  const size_t PosInclude = Guard.rfind("include/");
   if (PosInclude != StringRef::npos)
     Guard = Guard.substr(PosInclude + std::strlen("include/"));
 
   // For clang we drop the _TOOLS_.
-  size_t PosToolsClang = Guard.rfind("tools/clang/");
+  const size_t PosToolsClang = Guard.rfind("tools/clang/");
   if (PosToolsClang != StringRef::npos)
     Guard = Guard.substr(PosToolsClang + std::strlen("tools/"));
 
   // Unlike LLVM svn, LLVM git monorepo is named llvm-project, so we replace
   // "/llvm-project/" with the canonical "/llvm/".
   const static StringRef LLVMProject = "/llvm-project/";
-  size_t PosLLVMProject = Guard.rfind(LLVMProject);
+  const size_t PosLLVMProject = Guard.rfind(LLVMProject);
   if (PosLLVMProject != StringRef::npos)
     Guard = Guard.replace(PosLLVMProject, LLVMProject.size(), "/llvm/");
 
   // The remainder is LLVM_FULL_PATH_TO_HEADER_H
-  size_t PosLLVM = Guard.rfind("llvm/");
+  const size_t PosLLVM = Guard.rfind("llvm/");
   if (PosLLVM != StringRef::npos)
     Guard = Guard.substr(PosLLVM);
 

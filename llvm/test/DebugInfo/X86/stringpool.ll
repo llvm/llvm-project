@@ -28,8 +28,12 @@ source_filename = "test/DebugInfo/X86/stringpool.ll"
 ; LINUX: .section .debug_str,"MS",@progbits,1
 ; LINUX: yyyy
 
+; DARWIN:      .section __DWARF,__debug_abbrev,regular,debug
+; DARWIN-NEXT: Lsection_abbrev:
+
 ; Verify that we refer to 'yyyy' with a direct offset.
 ; DARWIN: .section        __DWARF,__debug_info,regular,debug
+; DARWIN: Lset1 = Lsection_abbrev-Lsection_abbrev
 ; DARWIN: DW_TAG_variable
 ; DARWIN:             .long   [[YYYY:[0-9]+]]
 ; DARWIN-NEXT:        .long   {{[0-9]+}}              ## DW_AT_type

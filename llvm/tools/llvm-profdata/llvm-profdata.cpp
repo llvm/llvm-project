@@ -10,10 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/ProfileData/DataAccessProf.h"
@@ -34,7 +36,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -47,6 +49,15 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+static int SkipLeakCheck;
+LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
+static void skipLeakCheck() { SkipLeakCheck = 1; }
+#else
+static void skipLeakCheck() {}
+#endif
 
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
@@ -235,6 +246,16 @@ static cl::opt<bool> SplitLayout(
     cl::desc("Split the profile to two sections with one containing sample "
              "profiles with inlined functions and the other without (only "
              "meaningful for -extbinary)"));
+static cl::opt<bool>
+    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
+                        cl::sub(MergeSubcommand),
+                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
+                                 "64-bit MD5 hashes in Eytzinger layout"));
+static cl::opt<bool> WriteMD5IndexedTables(
+    "md5-indexed-tables", cl::init(false), cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Write MD5-based indexed NameTable and parallel "
+             "FuncOffsetTable in Eytzinger layout (only meaningful for "
+             "-extbinary)"));
 static cl::opt<std::string> SupplInstrWithSample(
     "supplement-instr-with-sample", cl::init(""), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -344,14 +365,20 @@ static cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
 
-static cl::opt<bool>
-    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
-                                 cl::Hidden, cl::sub(MergeSubcommand),
-                                 cl::desc("Generate random hotness values"));
-static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
-    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
+static cl::opt<bool> MemprofGenerateRandomHotness(
+    "memprof-random-hotness", cl::init(false), cl::Hidden,
     cl::sub(MergeSubcommand),
-    cl::desc("Random hotness seed to use (0 to generate new seed)"));
+    cl::desc("Generate random hotness values. Use -random-seed to set the seed "
+             "value, otherwise the constant default seed is used"));
+static cl::opt<unsigned>
+    RandomSeed("random-seed", cl::init(0), cl::Hidden, cl::sub(MergeSubcommand),
+               cl::desc("Seed for the random number generator used by "
+                        "-memprof-random-hotness and temporal profile "
+                        "reservoir sampling"));
+static cl::alias MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::Hidden,
+    cl::desc("Alias for -random-seed. Deprecated, please use -random-seed"),
+    cl::aliasopt(RandomSeed));
 
 // Options specific to overlap subcommand.
 static cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -521,6 +548,10 @@ static void exitWithError(Twine Message, StringRef Whence = "",
   errs() << Message << "\n";
   if (!Hint.empty())
     WithColor::note() << Hint << "\n";
+  // exit() terminates without unwinding the stack or running destructors, and
+  // there is no guaranty that pointers to allocations will be preserved, so
+  // LSan reports in-flight heap allocations as leaks at atexit.
+  skipLeakCheck();
   ::exit(1);
 }
 
@@ -657,7 +688,7 @@ struct WriterContext {
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
                MemProfVersionRequested, MemProfFullSchema,
-               MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
+               MemprofGenerateRandomHotness, RandomSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -760,7 +791,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     auto DataAccessProfData = Reader->takeDataAccessProfData();
 
     // Check for the empty input in case the YAML file is invalid.
-    if (MemProfData.Records.empty()) {
+    if (MemProfData.Records.empty() &&
+        (!DataAccessProfData || DataAccessProfData->empty())) {
       WC->Errors.emplace_back(
           make_error<StringError>("The profile is empty.", std::error_code()),
           Filename);
@@ -777,6 +809,12 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // we have more non-fatal errors from InstrProfReader in the future. How
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
+  llvm::scope_exit ReaderWarningScope([&] {
+    // If we hit a different error we may still have an error in ReaderWarning.
+    // Consume it now to avoid an assert
+    if (ReaderWarning)
+      consumeError(std::move(ReaderWarning->first));
+  });
   auto Warn = [&](Error E) {
     if (ReaderWarning) {
       consumeError(std::move(E));
@@ -803,12 +841,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
   auto Reader = std::move(ReaderOrErr.get());
   if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
-    consumeError(std::move(E));
-    WC->Errors.emplace_back(
-        make_error<StringError>(
-            "Merge IR generated profile with Clang generated profile.",
-            std::error_code()),
-        Filename);
+    WC->Errors.emplace_back(std::move(E), Filename);
     return;
   }
 
@@ -817,6 +850,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       I.Name = (*Remapper)(I.Name);
     const StringRef FuncName = I.Name;
     bool Reported = false;
+
     WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
       if (Reported) {
         consumeError(std::move(E));
@@ -924,17 +958,15 @@ static void filterFunctions(T &ProfileMap) {
   std::string NegativeMD5Name =
       std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
 
-  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
-    auto Tmp = I++;
-    const auto &FuncName = getFuncName(*Tmp);
+  ProfileMap.remove_if([&](const auto &Entry) {
+    const auto &FuncName = getFuncName(Entry);
     // Negative filter has higher precedence than positive filter.
-    if ((hasNegativeFilter &&
-         (NegativePattern.match(FuncName) ||
-          (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
-        (hasFilter && !(Pattern.match(FuncName) ||
-                        (FunctionSamples::UseMD5 && MD5Name == FuncName))))
-      ProfileMap.erase(Tmp);
-  }
+    return (hasNegativeFilter &&
+            (NegativePattern.match(FuncName) ||
+             (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
+           (hasFilter && !(Pattern.match(FuncName) ||
+                           (FunctionSamples::UseMD5 && MD5Name == FuncName)));
+  });
 
   llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
                << "in the original profile are filtered.\n";
@@ -1489,6 +1521,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
   Result.setFunction(Remapper(Samples.getFunction()));
   Result.addTotalSamples(Samples.getTotalSamples());
   Result.addHeadSamples(Samples.getHeadSamples());
+  Result.reserveBodySamples(Samples.getBodySamples().size());
   for (const auto &BodySample : Samples.getBodySamples()) {
     uint32_t MaskedDiscriminator =
         BodySample.first.Discriminator & getDiscriminatorMask();
@@ -1583,6 +1616,18 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
       warn("-gen-partial-profile is ignored. Specify -extbinary to enable it");
     else
       Writer.setPartialProfile();
+  }
+  if (WriteMD5ProfSymList) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-prof-sym-list is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5ProfileSymbolList();
+  }
+  if (WriteMD5IndexedTables) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-indexed-tables is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5IndexedTables();
   }
 }
 
@@ -2039,8 +2084,7 @@ public:
   /// Load profiles specified by BaseFilename and TestFilename.
   std::error_code loadProfiles();
 
-  using FuncSampleStatsMap =
-      std::unordered_map<SampleContext, FuncSampleStats, SampleContext::Hash>;
+  using FuncSampleStatsMap = DenseMap<SampleContext, FuncSampleStats>;
 
 private:
   SampleOverlapStats ProfOverlap;
@@ -2201,7 +2245,7 @@ void SampleOverlapAggregator::getHotFunctions(
     uint64_t HotThreshold) const {
   for (const auto &F : ProfStats) {
     if (isFunctionHot(F.second, HotThreshold))
-      HotFunc.emplace(F.first, F.second);
+      HotFunc.try_emplace(F.first, F.second);
   }
 }
 
@@ -2428,12 +2472,10 @@ double SampleOverlapAggregator::computeSampleFunctionOverlap(
 void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
   using namespace sampleprof;
 
-  std::unordered_map<SampleContext, const FunctionSamples *,
-                     SampleContext::Hash>
-      BaseFuncProf;
+  DenseMap<SampleContext, const FunctionSamples *> BaseFuncProf;
   const auto &BaseProfiles = BaseReader->getProfiles();
   for (const auto &BaseFunc : BaseProfiles) {
-    BaseFuncProf.emplace(BaseFunc.second.getContext(), &(BaseFunc.second));
+    BaseFuncProf.try_emplace(BaseFunc.second.getContext(), &(BaseFunc.second));
   }
   ProfOverlap.UnionCount = BaseFuncProf.size();
 
@@ -2551,7 +2593,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, BaseHotThreshold);
     ProfOverlap.BaseSample += FuncStats.SampleSum;
-    BaseStats.emplace(I.second.getContext(), FuncStats);
+    BaseStats.try_emplace(I.second.getContext(), FuncStats);
   }
 
   const auto &TestProf = TestReader->getProfiles();
@@ -2560,7 +2602,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, TestHotThreshold);
     ProfOverlap.TestSample += FuncStats.SampleSum;
-    TestStats.emplace(I.second.getContext(), FuncStats);
+    TestStats.try_emplace(I.second.getContext(), FuncStats);
   }
 
   ProfOverlap.BaseName = StringRef(BaseFilename);
@@ -2629,7 +2671,7 @@ void SampleOverlapAggregator::dumpFuncSimilarity(raw_fd_ostream &OS) const {
 }
 
 void SampleOverlapAggregator::dumpProgramSummary(raw_fd_ostream &OS) const {
-  OS << "Profile overlap infomation for base_profile: "
+  OS << "Profile overlap information for base_profile: "
      << ProfOverlap.BaseName.toString()
      << " and test_profile: " << ProfOverlap.TestName.toString()
      << "\nProgram level:\n";
@@ -2921,9 +2963,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       continue;
     }
 
-    for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      FuncMax = std::max(FuncMax, Func.Counts[I]);
-      FuncSum += Func.Counts[I];
+    for (uint64_t Count : Func.Counts) {
+      FuncMax = std::max(FuncMax, Count);
+      FuncSum += Count;
     }
 
     if (FuncMax < ShowValueCutoff) {
@@ -2971,6 +3013,16 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
           OS << (I == Start ? "" : ", ") << Func.Counts[I];
         }
         OS << "]\n";
+
+        // Show uniformity bits if present
+        if (!Func.UniformityBits.empty()) {
+          OS << "    Block uniformity: [";
+          for (size_t I = Start, E = Func.Counts.size(); I < E; ++I) {
+            bool IsUniform = Func.isBlockUniform(I);
+            OS << (I == Start ? "" : ", ") << (IsUniform ? "U" : "D");
+          }
+          OS << "]\n";
+        }
       }
 
       if (ShowIndirectCallTargets) {
@@ -3463,10 +3515,8 @@ static int order_main() {
   return 0;
 }
 
-int llvm_profdata_main(int argc, char **argvNonConst,
-                       const llvm::ToolContext &) {
-  const char **argv = const_cast<const char **>(argvNonConst);
-
+int main(int argc, const char *argv[]) {
+  InitLLVM X(argc, argv);
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {

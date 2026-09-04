@@ -135,6 +135,12 @@ public:
       if (Mode.Input != DenormalMode::IEEE)
         return {Invalid, fcAllFlags, fcAllFlags};
 
+      auto ExactClass = [IsFabs, Src](FPClassTest Mask) {
+        if (IsFabs)
+          Mask = llvm::inverse_fabs(Mask);
+        return exactClass(Src, Mask);
+      };
+
       switch (Pred) {
       case FCmpInst::FCMP_OEQ: // Match x == 0.0
         return exactClass(Src, fcZero);
@@ -151,26 +157,24 @@ public:
       case FCmpInst::FCMP_UNO:
         return exactClass(Src, fcNan);
       case FCmpInst::FCMP_OGT: // x > 0
-        return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf);
+        return ExactClass(fcPosSubnormal | fcPosNormal | fcPosInf);
       case FCmpInst::FCMP_UGT: // isnan(x) || x > 0
-        return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan);
+        return ExactClass(fcPosSubnormal | fcPosNormal | fcPosInf | fcNan);
       case FCmpInst::FCMP_OGE: // x >= 0
-        return exactClass(Src, fcPositive | fcNegZero);
+        return ExactClass(fcPositive | fcNegZero);
       case FCmpInst::FCMP_UGE: // isnan(x) || x >= 0
-        return exactClass(Src, fcPositive | fcNegZero | fcNan);
+        return ExactClass(fcPositive | fcNegZero | fcNan);
       case FCmpInst::FCMP_OLT: // x < 0
-        return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf);
+        return ExactClass(fcNegSubnormal | fcNegNormal | fcNegInf);
       case FCmpInst::FCMP_ULT: // isnan(x) || x < 0
-        return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan);
+        return ExactClass(fcNegSubnormal | fcNegNormal | fcNegInf | fcNan);
       case FCmpInst::FCMP_OLE: // x <= 0
-        return exactClass(Src, fcNegative | fcPosZero);
+        return ExactClass(fcNegative | fcPosZero);
       case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
-        return exactClass(Src, fcNegative | fcPosZero | fcNan);
+        return ExactClass(fcNegative | fcPosZero | fcNan);
       default:
         llvm_unreachable("all compare types are handled");
       }
-
-      return {Invalid, fcAllFlags, fcAllFlags};
     }
 
     const bool IsDenormalRHS = (OrigClass & fcSubnormal) == OrigClass;

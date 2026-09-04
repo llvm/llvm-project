@@ -327,7 +327,7 @@ void LineTable::Dump(Stream *s, Target *target, Address::DumpStyle style,
                      Address::DumpStyle fallback_style, bool show_line_ranges) {
   const size_t count = m_entries.size();
   LineEntry line_entry;
-  SupportFileSP prev_file;
+  SupportFileNSP prev_file = std::make_shared<SupportFile>();
   for (size_t idx = 0; idx < count; ++idx) {
     ConvertEntryAtIndexToLineEntry(idx, line_entry);
     line_entry.Dump(s, target, !prev_file->Equal(*line_entry.original_file_sp),

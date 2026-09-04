@@ -1,6 +1,7 @@
-# REQUIRES: asserts
 # RUN: not --crash llc -o - %s -mtriple=x86_64-- \
 # RUN:     -run-pass=cfi-instr-inserter 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- \
+# RUN:     -passes=cfi-instr-inserter 2>&1 | FileCheck %s
 # Test that CSR being saved in multiple locations can be caught by
 # an assertion.
 --- |
@@ -10,8 +11,7 @@
   }
 ...
 ---
-# CHECK: Different saved locations for the same CSR
-# CHECK-NEXT: UNREACHABLE executed 
+# CHECK: LLVM ERROR: Different saved locations for the same CSR
 name: inconsistentlocs
 body: |
   bb.0:

@@ -6,9 +6,11 @@ add_mlir_conversion_library(MLIRConvertToEmitC
 
   DEPENDS
   MLIRConversionPassIncGen
+  MLIRConvertToEmitCPatternInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithToEmitC
+  MLIREmitCCommonConversion
   MLIRFuncToEmitC
   MLIRMemRefToEmitC
   MLIRPass

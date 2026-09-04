@@ -13,10 +13,14 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
+
+#include <optional>
 
 namespace lldb_private {
 
@@ -49,6 +53,8 @@ public:
 
   Symbol(const Symbol &rhs);
 
+  ~Symbol() { m_addr_or_reexport.Clear(*this); }
+
   const Symbol &operator=(const Symbol &rhs);
 
   static llvm::Expected<Symbol> FromJSON(const JSONSymbol &symbol,
@@ -69,9 +75,13 @@ public:
   // an Address object that contains an constant integer value in
   // m_addr_range.m_base_addr.m_offset which could be incorrectly used to
   // represent an absolute address since it has no section.
-  Address &GetAddressRef() { return m_addr_range.GetBaseAddress(); }
+  Address &GetAddressRef() {
+    return m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
+  }
 
-  const Address &GetAddressRef() const { return m_addr_range.GetBaseAddress(); }
+  const Address &GetAddressRef() const {
+    return m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
+  }
 
   // Makes sure the symbol's value is an address and returns the file address.
   // Returns LLDB_INVALID_ADDRESS if the symbol's value isn't an address.
@@ -95,7 +105,7 @@ public:
     // GetAddress() accessor, we need to hand out an invalid address if the
     // symbol's value isn't an address.
     if (ValueIsAddress())
-      return m_addr_range.GetBaseAddress();
+      return m_addr_or_reexport.GetAddressRange(*this).GetBaseAddress();
     else
       return Address();
   }
@@ -107,7 +117,9 @@ public:
   /// no section, then getting the file address will return the correct value
   /// as it will return the offset in the base address which is the value.
   uint64_t GetRawValue() const {
-    return m_addr_range.GetBaseAddress().GetFileAddress();
+    return m_addr_or_reexport.GetAddressRange(*this)
+        .GetBaseAddress()
+        .GetFileAddress();
   }
 
   // When a symbol's value isn't an address, we need to access the raw value.
@@ -121,11 +133,15 @@ public:
       return fail_value;
     } else {
       // The value is stored in the base address' offset
-      return m_addr_range.GetBaseAddress().GetOffset();
+      return m_addr_or_reexport.GetAddressRange(*this)
+          .GetBaseAddress()
+          .GetOffset();
     }
   }
 
-  lldb::addr_t ResolveCallableAddress(Target &target) const;
+  lldb::addr_t
+  ResolveCallableAddress(Target &target,
+                         const lldb::ModuleSP &containing_module_sp) const;
 
   ConstString GetName() const;
 
@@ -161,13 +177,26 @@ public:
 
   bool SetReExportedSymbolSharedLibrary(const FileSpec &fspec);
 
-  Symbol *ResolveReExportedSymbol(Target &target) const;
+  /// Find the symbol this re-exported symbol resolves to.
+  ///
+  /// The library recorded on the symbol is searched first. If
+  /// \p containing_module_sp is provided, the libraries re-exported by that
+  /// module (ObjectFile::GetReExportedLibraries()) are then searched in
+  /// order. This matches the DT_FILTER / DT_AUXILIARY behavior in ELF, where
+  /// a filter library may reference multiple filtees and the dynamic linker
+  /// searches them in the order they appear in the dynamic section.
+  /// MachO provides per-symbol ReExported tag, which means every symbol knows
+  /// their final filtee and therefore no need to relies on
+  /// containing_module_sp.
+  Symbol *ResolveReExportedSymbol(
+      Target &target,
+      const lldb::ModuleSP &containing_module_sp = lldb::ModuleSP()) const;
 
   uint32_t GetSiblingIndex() const;
 
   lldb::SymbolType GetType() const { return (lldb::SymbolType)m_type; }
 
-  void SetType(lldb::SymbolType type) { m_type = (lldb::SymbolType)type; }
+  void SetType(lldb::SymbolType type) { m_type = type; }
 
   const char *GetTypeAsString() const;
 
@@ -211,7 +240,7 @@ public:
 
   void SetByteSize(lldb::addr_t size) {
     m_size_is_valid = size > 0;
-    m_addr_range.SetByteSize(size);
+    m_addr_or_reexport.GetAddressRange(*this).SetByteSize(size);
   }
 
   bool GetSizeIsSibling() const { return m_size_is_sibling; }
@@ -221,6 +250,13 @@ public:
   // If m_type is "Code" or "Function" then this will return the prologue size
   // in bytes, else it will return zero.
   uint32_t GetPrologueByteSize();
+
+  void SetPrologueByteSize(uint32_t prologue_byte_size) {
+    assert(m_type == lldb::eSymbolTypeCode ||
+           m_type == lldb::eSymbolTypeResolver);
+    m_type_data = prologue_byte_size;
+    m_type_data_resolved = true;
+  }
 
   bool GetDemangledNameIsSynthesized() const {
     return m_demangled_is_synthesized;
@@ -268,11 +304,11 @@ public:
   ///
   /// \param offset_ptr
   ///   A pointer that contains the offset from which the data will be decoded
-  ///   from that gets updated as data gets decoded.
+  ///   from.  The offset_ptr offset value will be updated as data is read.
   ///
   /// \param section_list
   ///   A section list that allows lldb_private::Address objects to be filled
-  ///   in. The address information for symbols are serilized as file addresses
+  ///   in. The address information for symbols are serialized as file addresses
   ///   and must be converted into Address objects with the right section and
   ///   offset.
   ///
@@ -301,20 +337,55 @@ public:
 
   bool operator==(const Symbol &rhs) const;
 
+  static const char *GetTypeAsString(lldb::SymbolType symbol_type);
+
+  static lldb::SymbolType GetTypeFromString(const char *str);
+
 protected:
   // This is the internal guts of ResolveReExportedSymbol, it assumes
   // reexport_name is not null, and that module_spec is valid.  We track the
   // modules we've already seen to make sure we don't get caught in a cycle.
 
   Symbol *ResolveReExportedSymbolInModuleSpec(
-      Target &target, ConstString &reexport_name,
+      Target &target, ConstString reexport_name,
       lldb_private::ModuleSpec &module_spec,
       lldb_private::ModuleList &seen_modules) const;
 
   void SynthesizeNameIfNeeded() const;
 
-  uint32_t m_uid =
-      UINT32_MAX;           // User ID (usually the original symbol table index)
+  // Initially, a ReExportInfo will only have a name: the symbol name
+  // that this Symbol will remap to, at runtime.
+  // We won't have the library that this symbol is defined in,
+  // until later, when we have other binaries loaded in the Target.
+  struct ReExportInfo {
+    ConstString name;
+    std::unique_ptr<FileSpec> library_up;
+    ReExportInfo() : name(), library_up() {}
+    ReExportInfo(const ReExportInfo &rhs) {
+      name = rhs.name;
+      if (rhs.library_up)
+        library_up = std::make_unique<FileSpec>(*rhs.library_up);
+      else
+        library_up.reset();
+    }
+    const ReExportInfo &operator=(const ReExportInfo &rhs) {
+      if (this != &rhs) {
+        name = rhs.name;
+        if (rhs.library_up)
+          library_up = std::make_unique<FileSpec>(*rhs.library_up);
+        else
+          library_up.reset();
+      }
+      return *this;
+    }
+    void Clear() {
+      name.Clear();
+      library_up.reset();
+    }
+  };
+
+  uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
+                                           // symbol table index)
   uint16_t m_type_data = 0; // data specific to m_type
   uint16_t m_type_data_resolved : 1, // True if the data in m_type_data has
                                      // already been calculated
@@ -339,14 +410,57 @@ protected:
       m_is_weak : 1,
       m_type : 6;            // Values from the lldb::SymbolType enum.
   mutable Mangled m_mangled; // uniqued symbol name/mangled name pair
-  AddressRange m_addr_range; // Contains the value, or the section offset
-                             // address when the value is an address in a
-                             // section, and the size (if any)
+
+  // A wrapper around a `union {AddressRange, ReExportInfo}` to
+  // enforce the types being get/set match the Symbol's m_type,
+  // assert if there is a type mismatch.
+  struct AddrRangeOrReExport {
+    AddressRange &GetAddressRange(Symbol &sym);
+    const AddressRange &GetAddressRange(const Symbol &sym) const;
+    ReExportInfo &GetReExportInfo(Symbol &sym);
+    const ReExportInfo &GetReExportInfo(const Symbol &sym) const;
+    void SetAddressRange(Symbol &sym, const AddressRange addr_range);
+    void SetReExportInfo(Symbol &sym, const ReExportInfo reexport_info);
+
+    AddrRangeOrReExport(const Symbol &sym) : m_addr_range() {
+      if (sym.GetType() == lldb::eSymbolTypeReExported)
+        m_reexport_info.Clear();
+    }
+    // Proper destruction is handled by Symbol's dtor; supply a no-op
+    // impl to let the compiler know it's handled.
+    ~AddrRangeOrReExport() {}
+
+    void Clear(const Symbol &sym) {
+      if (sym.GetType() == lldb::eSymbolTypeReExported)
+        m_reexport_info.Clear();
+      else
+        m_addr_range.Clear();
+    }
+
+  private:
+    union {
+      // Contains the value, or the section offset address when the value is an
+      // address in a section, and the size (if known).  For non-re-export
+      // symbols.
+      AddressRange m_addr_range;
+
+      // Stores re-export information if this symbol is of type
+      // eSymbolTypeReExported; no address information for these symbols.
+      ReExportInfo m_reexport_info;
+    };
+  } m_addr_or_reexport;
+
   uint32_t m_flags = 0; // A copy of the flags from the original symbol table,
                         // the ObjectFile plug-in can interpret these
 };
 
 } // namespace lldb_private
+
+#if __SIZEOF_POINTER__ == 8
+static_assert(
+    sizeof(lldb_private::Symbol) == 80,
+    "Symbol is a high volume data type, size must be increased with care");
+#endif
 
 namespace llvm {
 namespace json {

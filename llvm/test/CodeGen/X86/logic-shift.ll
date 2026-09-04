@@ -129,10 +129,10 @@ define <16 x i8> @or_ashr_commute3(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %y, <
 ; CHECK-NEXT:    vpsraw $4, %xmm1, %xmm5
 ; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsraw $2, %xmm1, %xmm5
-; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm6
+; CHECK-NEXT:    vpblendvb %xmm6, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsraw $1, %xmm1, %xmm5
-; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpsllw $2, %xmm4, %xmm4
 ; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; CHECK-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -140,10 +140,10 @@ define <16 x i8> @or_ashr_commute3(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %y, <
 ; CHECK-NEXT:    vpsraw $4, %xmm0, %xmm4
 ; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsraw $2, %xmm0, %xmm4
-; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm5
+; CHECK-NEXT:    vpblendvb %xmm5, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsraw $1, %xmm0, %xmm4
-; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpsllw $2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsrlw $8, %xmm0, %xmm0
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
@@ -413,10 +413,10 @@ define <16 x i8> @xor_ashr_commute3(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %y, 
 ; CHECK-NEXT:    vpsraw $4, %xmm1, %xmm5
 ; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsraw $2, %xmm1, %xmm5
-; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm6
+; CHECK-NEXT:    vpblendvb %xmm6, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsraw $1, %xmm1, %xmm5
-; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpsllw $2, %xmm4, %xmm4
 ; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; CHECK-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -424,10 +424,10 @@ define <16 x i8> @xor_ashr_commute3(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %y, 
 ; CHECK-NEXT:    vpsraw $4, %xmm0, %xmm4
 ; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsraw $2, %xmm0, %xmm4
-; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm5
+; CHECK-NEXT:    vpblendvb %xmm5, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsraw $1, %xmm0, %xmm4
-; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpsllw $2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsrlw $8, %xmm0, %xmm0
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
@@ -697,10 +697,10 @@ define <16 x i8> @and_ashr_commute3(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %y, 
 ; CHECK-NEXT:    vpsraw $4, %xmm1, %xmm5
 ; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsraw $2, %xmm1, %xmm5
-; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm4
-; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm6
+; CHECK-NEXT:    vpblendvb %xmm6, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsraw $1, %xmm1, %xmm5
-; CHECK-NEXT:    vpaddw %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vpsllw $2, %xmm4, %xmm4
 ; CHECK-NEXT:    vpblendvb %xmm4, %xmm5, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; CHECK-NEXT:    vpunpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -708,10 +708,10 @@ define <16 x i8> @and_ashr_commute3(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %y, 
 ; CHECK-NEXT:    vpsraw $4, %xmm0, %xmm4
 ; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsraw $2, %xmm0, %xmm4
-; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm5
+; CHECK-NEXT:    vpblendvb %xmm5, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsraw $1, %xmm0, %xmm4
-; CHECK-NEXT:    vpaddw %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpsllw $2, %xmm2, %xmm2
 ; CHECK-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpsrlw $8, %xmm0, %xmm0
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0

@@ -17,8 +17,8 @@ define i64 @and_bic(i64 %0, i64 %1) {
 define i64 @and_bic2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_bic2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    and x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -31,8 +31,8 @@ define i64 @and_bic2(i32 %0, i64 %1) {
 define i32 @and_bic3(i32 %0, i32 %1) {
 ; CHECK-LABEL: and_bic3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    and w0, w8, w1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -56,8 +56,8 @@ define i64 @and_eon(i64 %0, i64 %1) {
 define i64 @and_eon2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_eon2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    eor x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -94,8 +94,8 @@ define i64 @and_orn(i64 %0, i64 %1) {
 define i64 @and_orn2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_orn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -132,7 +132,7 @@ define i64 @_Z6or_bic(i64 %0, i64 %1) {
 define i64 @or_bic2(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_bic2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-65281
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    and x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -158,7 +158,7 @@ define i32 @or_bic3(i32 %0, i32 %1) {
 define i64 @_Z6or_orn(i64 %0, i64 %1) {
 ; CHECK-LABEL: _Z6or_orn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-4096
+; CHECK-NEXT:    mov x8, #-4096 // =0xfffffffffffff000
 ; CHECK-NEXT:    bic x8, x8, x0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -171,7 +171,7 @@ define i64 @_Z6or_orn(i64 %0, i64 %1) {
 define i64 @or_orn2(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_orn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -185,7 +185,7 @@ define i64 @or_orn2(i32 %0, i64 %1) {
 define i64 @or_orn3(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_orn3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -212,7 +212,7 @@ define i64 @_Z6or_eon(i64 %0, i64 %1) {
 define i64 @or_eon2(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_eon2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    eor x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -226,7 +226,7 @@ define i64 @or_eon2(i32 %0, i64 %1) {
 define i64 @or_eon3(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_eon3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    eor x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -235,4 +235,530 @@ define i64 @or_eon3(i32 %0, i64 %1) {
   %5 = zext i32 %4 to i64
   %6 = xor i64 %5, %1
   ret i64 %6
+}
+
+define i32 @mvn_lsl_i32(i32 %0) {
+; CHECK-LABEL: mvn_lsl_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, lsl #5
+; CHECK-NEXT:    ret
+  %2 = shl i32 %0, 5
+  %3 = xor i32 %2, -1
+  ret i32 %3
+}
+
+define i64 @mvn_lsl_i64(i64 %0) {
+; CHECK-LABEL: mvn_lsl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, lsl #5
+; CHECK-NEXT:    ret
+  %2 = shl i64 %0, 5
+  %3 = xor i64 %2, -1
+  ret i64 %3
+}
+
+define i32 @mvn_lsr_i32(i32 %0) {
+; CHECK-LABEL: mvn_lsr_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, lsr #10
+; CHECK-NEXT:    ret
+  %2 = lshr i32 %0, 10
+  %3 = xor i32 %2, -1
+  ret i32 %3
+}
+
+define i64 @mvn_lsr_i64(i64 %0) {
+; CHECK-LABEL: mvn_lsr_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, lsr #10
+; CHECK-NEXT:    ret
+  %2 = lshr i64 %0, 10
+  %3 = xor i64 %2, -1
+  ret i64 %3
+}
+
+define i32 @mvn_asr_i32(i32 %0) {
+; CHECK-LABEL: mvn_asr_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, asr #15
+; CHECK-NEXT:    ret
+  %2 = ashr i32 %0, 15
+  %3 = xor i32 %2, -1
+  ret i32 %3
+}
+
+define i64 @mvn_asr_i64(i64 %0) {
+; CHECK-LABEL: mvn_asr_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, asr #15
+; CHECK-NEXT:    ret
+  %2 = ashr i64 %0, 15
+  %3 = xor i64 %2, -1
+  ret i64 %3
+}
+
+define i32 @mvn_ror_i32(i32 %0) {
+; CHECK-LABEL: mvn_ror_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, ror #1
+; CHECK-NEXT:    ret
+  %2 = shl i32 %0, 31
+  %3 = lshr i32 %0, 1
+  %4 = or i32 %2, %3
+  %5 = xor i32 %4, -1
+  ret i32 %5
+}
+
+define i64 @mvn_ror_i64(i64 %0) {
+; CHECK-LABEL: mvn_ror_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, ror #1
+; CHECK-NEXT:    ret
+  %2 = shl i64 %0, 63
+  %3 = lshr i64 %0, 1
+  %4 = or i64 %2, %3
+  %5 = xor i64 %4, -1
+  ret i64 %5
+}
+
+define void @array_and_not_i8(ptr %a, i8 %m) {
+; CHECK-LABEL: array_and_not_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB26_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrb w9, [x0, x8]
+; CHECK-NEXT:    bic w9, w9, w1
+; CHECK-NEXT:    strb w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    b.ne .LBB26_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i8 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
+  %load = load i8, ptr %arrayidx, align 1
+  %and = and i8 %load, %not
+  store i8 %and, ptr %arrayidx, align 1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_and_not_i16(ptr %a, i16 %m) {
+; CHECK-LABEL: array_and_not_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB27_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w9, [x0, x8]
+; CHECK-NEXT:    bic w9, w9, w1
+; CHECK-NEXT:    strh w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    cmp x8, #32
+; CHECK-NEXT:    b.ne .LBB27_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i16 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i16, ptr %a, i64 %indvars.iv
+  %load = load i16, ptr %arrayidx, align 2
+  %and = and i16 %load, %not
+  store i16 %and, ptr %arrayidx, align 2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_and_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_and_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB28_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w9, [x0, x8]
+; CHECK-NEXT:    bic w9, w9, w1
+; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #64
+; CHECK-NEXT:    b.ne .LBB28_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %load = load i32, ptr %arrayidx, align 4
+  %and = and i32 %load, %not
+  store i32 %and, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_and_not_i64(ptr %a, i64 %m) {
+; CHECK-LABEL: array_and_not_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB29_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x9, [x0, x8]
+; CHECK-NEXT:    bic x9, x9, x1
+; CHECK-NEXT:    str x9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    b.ne .LBB29_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i64 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv
+  %load = load i64, ptr %arrayidx, align 8
+  %and = and i64 %load, %not
+  store i64 %and, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i8(ptr %a, i8 %m) {
+; CHECK-LABEL: array_or_not_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB30_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrb w9, [x0, x8]
+; CHECK-NEXT:    orn w9, w9, w1
+; CHECK-NEXT:    strb w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    b.ne .LBB30_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i8 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
+  %load = load i8, ptr %arrayidx, align 1
+  %or = or i8 %load, %not
+  store i8 %or, ptr %arrayidx, align 1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i16(ptr %a, i16 %m) {
+; CHECK-LABEL: array_or_not_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB31_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w9, [x0, x8]
+; CHECK-NEXT:    orn w9, w9, w1
+; CHECK-NEXT:    strh w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    cmp x8, #32
+; CHECK-NEXT:    b.ne .LBB31_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i16 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i16, ptr %a, i64 %indvars.iv
+  %load = load i16, ptr %arrayidx, align 2
+  %or = or i16 %load, %not
+  store i16 %or, ptr %arrayidx, align 2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_or_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB32_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w9, [x0, x8]
+; CHECK-NEXT:    orn w9, w9, w1
+; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #64
+; CHECK-NEXT:    b.ne .LBB32_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %load = load i32, ptr %arrayidx, align 4
+  %or = or i32 %load, %not
+  store i32 %or, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_or_not_i64(ptr %a, i64 %m) {
+; CHECK-LABEL: array_or_not_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB33_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x9, [x0, x8]
+; CHECK-NEXT:    orn x9, x9, x1
+; CHECK-NEXT:    str x9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    b.ne .LBB33_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i64 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv
+  %load = load i64, ptr %arrayidx, align 8
+  %or = or i64 %load, %not
+  store i64 %or, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i8(ptr %a, i8 %m) {
+; CHECK-LABEL: array_xor_not_i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB34_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrb w9, [x0, x8]
+; CHECK-NEXT:    eon w9, w1, w9
+; CHECK-NEXT:    strb w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    b.ne .LBB34_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i8 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i8, ptr %a, i64 %indvars.iv
+  %load = load i8, ptr %arrayidx, align 1
+  %xor = xor i8 %load, %not
+  store i8 %xor, ptr %arrayidx, align 1
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i16(ptr %a, i16 %m) {
+; CHECK-LABEL: array_xor_not_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB35_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w9, [x0, x8]
+; CHECK-NEXT:    eon w9, w1, w9
+; CHECK-NEXT:    strh w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    cmp x8, #32
+; CHECK-NEXT:    b.ne .LBB35_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i16 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i16, ptr %a, i64 %indvars.iv
+  %load = load i16, ptr %arrayidx, align 2
+  %xor = xor i16 %load, %not
+  store i16 %xor, ptr %arrayidx, align 2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_xor_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB36_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w9, [x0, x8]
+; CHECK-NEXT:    eon w9, w1, w9
+; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #64
+; CHECK-NEXT:    b.ne .LBB36_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %load = load i32, ptr %arrayidx, align 4
+  %xor = xor i32 %load, %not
+  store i32 %xor, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_xor_not_i64(ptr %a, i64 %m) {
+; CHECK-LABEL: array_xor_not_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB37_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x9, [x0, x8]
+; CHECK-NEXT:    eon x9, x1, x9
+; CHECK-NEXT:    str x9, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    b.ne .LBB37_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i64 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %indvars.iv
+  %load = load i64, ptr %arrayidx, align 8
+  %xor = xor i64 %load, %not
+  store i64 %xor, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 16
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+define void @array_and_lsl2_not_i32(ptr %a, i32 %m) {
+; CHECK-LABEL: array_and_lsl2_not_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mvn w9, w1
+; CHECK-NEXT:  .LBB38_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr w10, [x0, x8]
+; CHECK-NEXT:    and w10, w9, w10, lsl #2
+; CHECK-NEXT:    str w10, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x8, #1024
+; CHECK-NEXT:    b.ne .LBB38_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor i32 %m, -1
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %shl = shl i32 %0, 2
+  %and = and i32 %shl, %not
+  store i32 %and, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 256
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; ORN with a constant should use "mov + orn" like BIC does, not "mvn + orr".
+
+define i32 @orn_cst_i32(i32 %c) {
+; CHECK-LABEL: orn_cst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    orn w0, w8, w0
+; CHECK-NEXT:    ret
+  %not = xor i32 %c, -1
+  %or  = or  i32 %not, 4
+  ret i32 %or
+}
+
+define i64 @orn_cst_i64(i64 %c) {
+; CHECK-LABEL: orn_cst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    orn x0, x8, x0
+; CHECK-NEXT:    ret
+  %not = xor i64 %c, -1
+  %or  = or  i64 %not, 4
+  ret i64 %or
 }

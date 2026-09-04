@@ -152,14 +152,14 @@ namespace PR10924 {
 
   template< class Topology, class ctype >
   template< int codim >
-  class ReferenceElement< Topology, ctype > :: BaryCenterArray // expected-error{{out-of-line definition of 'BaryCenterArray' does not match any declaration in 'ReferenceElement<Topology, ctype>'}}
+  class ReferenceElement< Topology, ctype > :: BaryCenterArray // expected-error{{out-of-line definition of 'BaryCenterArray' does not match any declaration in 'PR10924::ReferenceElement<Topology, ctype>'}}
   {
   };
 }
 
 class Outer1 {
     template <typename T> struct X;
-    template <typename T> int X<T>::func() {} //  expected-error{{out-of-line definition of 'func' from class 'X<T>' without definition}}
+    template <typename T> int X<T>::func() {} //  expected-error{{out-of-line definition of 'func' from class 'Outer1::X<T>' without definition}}
 };
 
 namespace RefPack {
@@ -167,4 +167,18 @@ namespace RefPack {
   constexpr int k = 10;
   int arr[10];
   void g() { A<k>().f(arr); }
+}
+
+namespace GH104057 {
+  template <class T>
+  struct A {
+    template <bool> struct B {};
+  };
+
+  template <class T>
+  struct C {
+    using type = typename A<T>::template B<true>;
+  };
+
+  A<int>::B<true> *p = (C<int>::type *)0;
 }

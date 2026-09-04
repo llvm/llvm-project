@@ -18,10 +18,9 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Compiler.h"
-
-#include <functional>
-#include <optional>
+#include "llvm/Support/HashBuilder.h"
 
 namespace llvm {
 namespace memprof {

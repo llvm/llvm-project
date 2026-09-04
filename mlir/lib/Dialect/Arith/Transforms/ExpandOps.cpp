@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -29,22 +28,33 @@ static Value createConst(Location loc, Type type, int value,
                          PatternRewriter &rewriter) {
   auto attr = rewriter.getIntegerAttr(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return rewriter.create<arith::ConstantOp>(
-        loc, DenseElementsAttr::get(shapedTy, attr));
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
-  return rewriter.create<arith::ConstantOp>(loc, attr);
+  return arith::ConstantOp::create(rewriter, loc, attr);
+}
+
+/// Create an integer constant from an APInt.
+static Value createAPIntConst(Location loc, Type type, const APInt &value,
+                              PatternRewriter &rewriter) {
+  auto attr = IntegerAttr::get(getElementTypeOrSelf(type), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
+  }
+  return arith::ConstantOp::create(rewriter, loc, attr);
 }
 
 /// Create a float constant.
-static Value createFloatConst(Location loc, Type type, APFloat value,
+static Value createFloatConst(Location loc, Type type, const APFloat &value,
                               PatternRewriter &rewriter) {
   auto attr = rewriter.getFloatAttr(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return rewriter.create<arith::ConstantOp>(
-        loc, DenseElementsAttr::get(shapedTy, attr));
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
 
-  return rewriter.create<arith::ConstantOp>(loc, attr);
+  return arith::ConstantOp::create(rewriter, loc, attr);
 }
 
 /// Creates shapedType using shape from cloneFrom and base type from cloneTo
@@ -60,7 +70,7 @@ namespace {
 /// Expands CeilDivUIOp (n, m) into
 ///  n == 0 ? 0 : ((n-1) / m) + 1
 struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::CeilDivUIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -68,11 +78,11 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
     Value b = op.getRhs();
     Value zero = createConst(loc, a.getType(), 0, rewriter);
     Value compare =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, a, zero);
+        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq, a, zero);
     Value one = createConst(loc, a.getType(), 1, rewriter);
-    Value minusOne = rewriter.create<arith::SubIOp>(loc, a, one);
-    Value quotient = rewriter.create<arith::DivUIOp>(loc, minusOne, b);
-    Value plusOne = rewriter.create<arith::AddIOp>(loc, quotient, one);
+    Value minusOne = arith::SubIOp::create(rewriter, loc, a, one);
+    Value quotient = arith::DivUIOp::create(rewriter, loc, minusOne, b);
+    Value plusOne = arith::AddIOp::create(rewriter, loc, quotient, one);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, compare, zero, plusOne);
     return success();
   }
@@ -86,7 +96,7 @@ struct CeilDivUIOpConverter : public OpRewritePattern<arith::CeilDivUIOp> {
 ///   return z;
 /// }
 struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::CeilDivSIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -97,22 +107,22 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
     Value zero = createConst(loc, type, 0, rewriter);
     Value one = createConst(loc, type, 1, rewriter);
 
-    Value quotient = rewriter.create<arith::DivSIOp>(loc, a, b);
-    Value product = rewriter.create<arith::MulIOp>(loc, quotient, b);
-    Value notEqualDivisor = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::ne, a, product);
+    Value quotient = arith::DivSIOp::create(rewriter, loc, a, b);
+    Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
+    Value notEqualDivisor = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne, a, product);
 
-    Value aNeg =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, a, zero);
-    Value bNeg =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, b, zero);
+    Value aNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       a, zero);
+    Value bNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       b, zero);
 
-    Value signEqual = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::eq, aNeg, bNeg);
+    Value signEqual = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, aNeg, bNeg);
     Value cond =
-        rewriter.create<arith::AndIOp>(loc, notEqualDivisor, signEqual);
+        arith::AndIOp::create(rewriter, loc, notEqualDivisor, signEqual);
 
-    Value quotientPlusOne = rewriter.create<arith::AddIOp>(loc, quotient, one);
+    Value quotientPlusOne = arith::AddIOp::create(rewriter, loc, quotient, one);
 
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cond, quotientPlusOne,
                                                  quotient);
@@ -128,7 +138,7 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
 ///   return z;
 /// }
 struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::FloorDivSIOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -136,25 +146,25 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
     Value a = op.getLhs();
     Value b = op.getRhs();
 
-    Value quotient = rewriter.create<arith::DivSIOp>(loc, a, b);
-    Value product = rewriter.create<arith::MulIOp>(loc, quotient, b);
-    Value notEqualDivisor = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::ne, a, product);
+    Value quotient = arith::DivSIOp::create(rewriter, loc, a, b);
+    Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
+    Value notEqualDivisor = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne, a, product);
     Value zero = createConst(loc, type, 0, rewriter);
 
-    Value aNeg =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, a, zero);
-    Value bNeg =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, b, zero);
+    Value aNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       a, zero);
+    Value bNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       b, zero);
 
-    Value signOpposite = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::ne, aNeg, bNeg);
+    Value signOpposite = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne, aNeg, bNeg);
     Value cond =
-        rewriter.create<arith::AndIOp>(loc, notEqualDivisor, signOpposite);
+        arith::AndIOp::create(rewriter, loc, notEqualDivisor, signOpposite);
 
     Value minusOne = createConst(loc, type, -1, rewriter);
     Value quotientMinusOne =
-        rewriter.create<arith::AddIOp>(loc, quotient, minusOne);
+        arith::AddIOp::create(rewriter, loc, quotient, minusOne);
 
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cond, quotientMinusOne,
                                                  quotient);
@@ -172,7 +182,7 @@ public:
     Value lhs = op.getLhs();
     Value rhs = op.getRhs();
 
-    Value cmp = rewriter.create<arith::CmpIOp>(op.getLoc(), pred, lhs, rhs);
+    Value cmp = arith::CmpIOp::create(rewriter, op.getLoc(), pred, lhs, rhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmp, lhs, rhs);
     return success();
   }
@@ -193,12 +203,12 @@ public:
     static_assert(pred == arith::CmpFPredicate::UGT ||
                       pred == arith::CmpFPredicate::ULT,
                   "pred must be either UGT or ULT");
-    Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
-    Value select = rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
+    Value cmp = arith::CmpFOp::create(rewriter, loc, pred, lhs, rhs);
+    Value select = arith::SelectOp::create(rewriter, loc, cmp, lhs, rhs);
 
     // Handle the case where rhs is NaN: 'isNaN(rhs) ? rhs : select'.
-    Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
-                                                 rhs, rhs);
+    Value isNaN = arith::CmpFOp::create(rewriter, loc,
+                                        arith::CmpFPredicate::UNO, rhs, rhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
     return success();
   }
@@ -219,19 +229,19 @@ public:
     static_assert(pred == arith::CmpFPredicate::UGT ||
                       pred == arith::CmpFPredicate::ULT,
                   "pred must be either UGT or ULT");
-    Value cmp = rewriter.create<arith::CmpFOp>(loc, pred, lhs, rhs);
-    Value select = rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
+    Value cmp = arith::CmpFOp::create(rewriter, loc, pred, lhs, rhs);
+    Value select = arith::SelectOp::create(rewriter, loc, cmp, lhs, rhs);
 
     // Handle the case where lhs is NaN: 'isNaN(lhs) ? rhs : select'.
-    Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
-                                                 lhs, lhs);
+    Value isNaN = arith::CmpFOp::create(rewriter, loc,
+                                        arith::CmpFPredicate::UNO, lhs, lhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
     return success();
   }
 };
 
 struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -248,12 +258,12 @@ struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
 
-    Value bitcast = b.create<arith::BitcastOp>(i16Ty, operand);
-    Value exti = b.create<arith::ExtUIOp>(i32Ty, bitcast);
+    Value bitcast = arith::BitcastOp::create(b, i16Ty, operand);
+    Value exti = arith::ExtUIOp::create(b, i32Ty, bitcast);
 
     Value c16 = createConst(op.getLoc(), i32Ty, 16, rewriter);
-    Value shl = b.create<arith::ShLIOp>(exti, c16);
-    Value result = b.create<arith::BitcastOp>(resultTy, shl);
+    Value shl = arith::ShLIOp::create(b, exti, c16);
+    Value result = arith::BitcastOp::create(b, resultTy, shl);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -261,7 +271,7 @@ struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 };
 
 struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -297,7 +307,7 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     // exponent bits, that simple truncation is the desired outcome for
     // infinities.
     Value isNan =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNE, operand, operand);
+        arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, operand, operand);
     // Constant used to make the rounding bias.
     Value c7FFF = createConst(op.getLoc(), i32Ty, 0x7fff, rewriter);
     // Constant used to generate a quiet NaN.
@@ -306,30 +316,30 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value c16 = createConst(op.getLoc(), i32Ty, 16, rewriter);
     Value c1 = createConst(op.getLoc(), i32Ty, 1, rewriter);
     // Reinterpret the input f32 value as bits.
-    Value bitcast = b.create<arith::BitcastOp>(i32Ty, operand);
+    Value bitcast = arith::BitcastOp::create(b, i32Ty, operand);
     // Read bit 16 as a value in {0,1}.
     Value bit16 =
-        b.create<arith::AndIOp>(b.create<arith::ShRUIOp>(bitcast, c16), c1);
+        arith::AndIOp::create(b, arith::ShRUIOp::create(b, bitcast, c16), c1);
     // Determine the rounding bias to add as either 0x7fff or 0x8000 depending
     // on bit 16, implementing the tie-breaking "to nearest even".
-    Value roundingBias = b.create<arith::AddIOp>(bit16, c7FFF);
+    Value roundingBias = arith::AddIOp::create(b, bit16, c7FFF);
     // Add the rounding bias. Generally we want this to be added to the
     // mantissa, but nothing prevents this to from carrying into the exponent
     // bits, which would feel like a bug, but this is the magic trick here:
     // when that happens, the mantissa gets reset to zero and the exponent
     // gets incremented by the carry... which is actually exactly what we
     // want.
-    Value biased = b.create<arith::AddIOp>(bitcast, roundingBias);
+    Value biased = arith::AddIOp::create(b, bitcast, roundingBias);
     // Now that the rounding-bias has been added, truncating the low bits
     // yields the correctly rounded result.
-    Value biasedAndShifted = b.create<arith::ShRUIOp>(biased, c16);
+    Value biasedAndShifted = arith::ShRUIOp::create(b, biased, c16);
     Value normalCaseResultI16 =
-        b.create<arith::TruncIOp>(i16Ty, biasedAndShifted);
+        arith::TruncIOp::create(b, i16Ty, biasedAndShifted);
     // Select either the above-computed result, or a quiet NaN constant
     // if the input was NaN.
     Value select =
-        b.create<arith::SelectOp>(isNan, c7FC0I16, normalCaseResultI16);
-    Value result = b.create<arith::BitcastOp>(resultTy, select);
+        arith::SelectOp::create(b, isNan, c7FC0I16, normalCaseResultI16);
+    Value result = arith::BitcastOp::create(b, resultTy, select);
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -365,7 +375,7 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
 ///
 /// 4) F32 bits[1:22] = 0
 struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -382,47 +392,51 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
     Type i4Ty = cloneToShapedType(operandTy, b.getI4Type());
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
-    Value i4Bits = b.create<arith::BitcastOp>(i4Ty, operand);
+    Value i4Bits = arith::BitcastOp::create(b, i4Ty, operand);
 
     Value c0x0 = createConst(loc, i4Ty, 0x0, rewriter);
     Value c0x1 = createConst(loc, i4Ty, 0x1, rewriter);
     Value c0x2 = createConst(loc, i4Ty, 0x2, rewriter);
     Value c0x4 = createConst(loc, i4Ty, 0x4, rewriter);
+    Value c0x7 = createConst(loc, i4Ty, 0x7, rewriter);
+
+    Value i4BitsNoSign = arith::AndIOp::create(b, i4Bits, c0x7);
 
     // Set last Exponent bit and Mantissa.
     Value c0x00000014 = createConst(loc, i32Ty, 0x14, rewriter);
-    Value bits1To24 = b.create<arith::ShLIOp>(i4Bits, c0x2);
+    Value bits1To24 = arith::ShLIOp::create(b, i4BitsNoSign, c0x2);
     Value isHalf =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, i4Bits, c0x1);
-    bits1To24 = b.create<arith::SelectOp>(isHalf, c0x0, bits1To24);
-    bits1To24 = b.create<arith::ExtUIOp>(i32Ty, bits1To24);
-    bits1To24 = b.create<arith::ShLIOp>(bits1To24, c0x00000014);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, i4BitsNoSign, c0x1);
+    bits1To24 = arith::SelectOp::create(b, isHalf, c0x0, bits1To24);
+    bits1To24 = arith::ExtUIOp::create(b, i32Ty, bits1To24);
+    bits1To24 = arith::ShLIOp::create(b, bits1To24, c0x00000014);
 
     // Set first 7 bits of Exponent.
     Value zeroExpBits = createConst(loc, i32Ty, 0x00000000, rewriter);
     Value highExpBits = createConst(loc, i32Ty, 0x40000000, rewriter);
     Value lowExpBits = createConst(loc, i32Ty, 0x3f000000, rewriter);
     Value useLargerExp =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::uge, i4Bits, c0x4);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::uge, i4BitsNoSign, c0x4);
     Value bits25To31 =
-        b.create<arith::SelectOp>(useLargerExp, highExpBits, lowExpBits);
+        arith::SelectOp::create(b, useLargerExp, highExpBits, lowExpBits);
     Value zeroExp =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, i4Bits, c0x0);
-    bits25To31 = b.create<arith::SelectOp>(zeroExp, zeroExpBits, bits25To31);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, i4BitsNoSign, c0x0);
+    bits25To31 = arith::SelectOp::create(b, zeroExp, zeroExpBits, bits25To31);
 
     // Set sign.
     Value c0x80000000 = createConst(loc, i32Ty, 0x80000000, rewriter);
     Value c0x8 = createConst(loc, i4Ty, 0x8, rewriter);
     Value negative =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::uge, i4Bits, c0x8);
-    Value bit32 = b.create<arith::SelectOp>(negative, c0x80000000, zeroExpBits);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::uge, i4Bits, c0x8);
+    Value bit32 =
+        arith::SelectOp::create(b, negative, c0x80000000, zeroExpBits);
 
     // Add segments together.
-    Value bits1To31 = b.create<arith::AddIOp>(bits1To24, bits25To31);
-    Value bits1To32 = b.create<arith::AddIOp>(bits1To31, bit32);
-    Value result = b.create<arith::BitcastOp>(f32Ty, bits1To32);
+    Value bits1To31 = arith::AddIOp::create(b, bits1To24, bits25To31);
+    Value bits1To32 = arith::AddIOp::create(b, bits1To31, bit32);
+    Value result = arith::BitcastOp::create(b, f32Ty, bits1To32);
     if (!isa<Float32Type>(resultETy))
-      result = b.create<arith::TruncFOp>(resultTy, result);
+      result = arith::TruncFOp::create(b, resultTy, result);
 
     rewriter.replaceOp(op, result);
     return success();
@@ -430,7 +444,7 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 };
 
 struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -448,25 +462,32 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
-    Value bitcast = b.create<arith::BitcastOp>(i8Ty, operand);
-    // create constants for NaNs
-    Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
-    Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
+    Value bitcast = arith::BitcastOp::create(b, i8Ty, operand);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
+    Value exti = arith::ExtUIOp::create(b, i32Ty, bitcast);
+    Value f32Bits = arith::ShLIOp::create(b, exti, cF32MantissaWidth);
 
-    Value exti = b.create<arith::ExtUIOp>(i32Ty, bitcast);
-    Value f32Bits = b.create<arith::ShLIOp>(exti, cF32MantissaWidth);
+    // If FastMathFlag allows no NaN checks, skip it
+    auto fastMath = op.getFastmathAttr();
+    bool NoNaN = fastMath
+                     ? (fastMath.getValue() & arith::FastMathFlags::nnan) ==
+                           arith::FastMathFlags::nnan
+                     : false;
+    if (!NoNaN) {
+      Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
+      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
+      Value isNan =
+          arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
+      // select for NaNs
+      f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
+    }
 
-    Value isNan =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, bitcast, cF8NaN);
-    // select for NaNs
-    f32Bits = b.create<arith::SelectOp>(isNan, cF32NaN, f32Bits);
-    Value result = b.create<arith::BitcastOp>(f32Ty, f32Bits);
+    Value result = arith::BitcastOp::create(b, f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
-      result = b.create<arith::TruncFOp>(resultTy, result, nullptr,
-                                         op.getFastmathAttr());
+      result = arith::TruncFOp::create(b, resultTy, result, nullptr,
+                                       op.getFastmathAttr());
     } else if (resultETy.getIntOrFloatBitWidth() > 32) {
-      result = b.create<arith::ExtFOp>(resultTy, result, op.getFastmathAttr());
+      result = arith::ExtFOp::create(b, resultTy, result, op.getFastmathAttr());
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -502,7 +523,7 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 ///   Step 5: Round up if necessary, if mantissa[1:] greater than 1000000 or
 ///   subnormal.
 struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
@@ -521,7 +542,7 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     if (!isa<Float4E2M1FNType>(resultETy))
       return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
     if (!isa<Float32Type>(operandETy))
-      operand = b.create<arith::ExtFOp>(f32Ty, operand);
+      operand = arith::ExtFOp::create(b, f32Ty, operand);
 
     Value c0x1 = createConst(loc, i4Ty, 1, rewriter);
     Value c0x3 = createConst(loc, i4Ty, 3, rewriter);
@@ -533,65 +554,65 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     // Step 0: Clamp to bounds.
     Value cHigherBound = createFloatConst(loc, f32Ty, APFloat(6.0f), rewriter);
     Value cLowerBound = createFloatConst(loc, f32Ty, APFloat(-6.0f), rewriter);
-    Value operandClamped = b.create<arith::MinNumFOp>(cHigherBound, operand);
-    operandClamped = b.create<arith::MaxNumFOp>(cLowerBound, operandClamped);
-    Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operandClamped);
+    Value operandClamped = arith::MinNumFOp::create(b, cHigherBound, operand);
+    operandClamped = arith::MaxNumFOp::create(b, cLowerBound, operandClamped);
+    Value f32Bits = arith::BitcastOp::create(b, i32Ty, operandClamped);
 
     // Step 1: Set sign bit.
     Value cF32ExpManWidth = createConst(loc, i32Ty, 31, rewriter); // 23
-    Value f32Sign = b.create<arith::ShRUIOp>(f32Bits, cF32ExpManWidth);
-    Value f4Sign = b.create<arith::TruncIOp>(i4Ty, f32Sign);
-    Value f4Bits = b.create<arith::ShLIOp>(f4Sign, c0x3);
+    Value f32Sign = arith::ShRUIOp::create(b, f32Bits, cF32ExpManWidth);
+    Value f4Sign = arith::TruncIOp::create(b, i4Ty, f32Sign);
+    Value f4Bits = arith::ShLIOp::create(b, f4Sign, c0x3);
 
     // Step 2: Convert exponent by adjusting bias.
     Value biasAdjustment = createConst(loc, i32Ty, 0x7e, rewriter);
     Value cF4MantissaWidth = c0x1;                                   // 1
     Value cF32MantissaWidth = createConst(loc, i32Ty, 23, rewriter); // 23
-    Value f32SignExp = b.create<arith::ShRUIOp>(f32Bits, cF32MantissaWidth);
+    Value f32SignExp = arith::ShRUIOp::create(b, f32Bits, cF32MantissaWidth);
     Value biasAdjustedSignExp =
-        b.create<arith::SubIOp>(f32SignExp, biasAdjustment);
-    Value f4Exp = b.create<arith::TruncIOp>(i4Ty, biasAdjustedSignExp);
-    f4Exp = b.create<arith::ShLIOp>(f4Exp, cF4MantissaWidth);
-    f4Bits = b.create<arith::AddIOp>(f4Bits, f4Exp);
+        arith::SubIOp::create(b, f32SignExp, biasAdjustment);
+    Value f4Exp = arith::TruncIOp::create(b, i4Ty, biasAdjustedSignExp);
+    f4Exp = arith::ShLIOp::create(b, f4Exp, cF4MantissaWidth);
+    f4Bits = arith::AddIOp::create(b, f4Bits, f4Exp);
 
     // Step 3: Set mantissa to first bit.
     Value cF32FirstBitMask = createConst(loc, i32Ty, 0x400000, rewriter);
-    Value man1Bit = b.create<arith::AndIOp>(f32Bits, cF32FirstBitMask);
-    man1Bit = b.create<arith::ShRUIOp>(man1Bit, c0x00000016);
-    Value f4Man = b.create<arith::TruncIOp>(i4Ty, man1Bit);
-    f4Bits = b.create<arith::AddIOp>(f4Bits, f4Man);
+    Value man1Bit = arith::AndIOp::create(b, f32Bits, cF32FirstBitMask);
+    man1Bit = arith::ShRUIOp::create(b, man1Bit, c0x00000016);
+    Value f4Man = arith::TruncIOp::create(b, i4Ty, man1Bit);
+    f4Bits = arith::AddIOp::create(b, f4Bits, f4Man);
 
     // Step 4: Special consideration for conversion to 0.5.
     Value cF32MantissaMask = createConst(loc, i32Ty, 0x7fffff, rewriter);
-    Value f8Exp = b.create<arith::TruncIOp>(i8Ty, biasAdjustedSignExp);
+    Value f8Exp = arith::TruncIOp::create(b, i8Ty, biasAdjustedSignExp);
     Value isSubnormal =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::sle, f8Exp, c0x00);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::sle, f8Exp, c0x00);
     Value isNegOneExp =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, f8Exp, c0xff);
-    Value man23Bits = b.create<arith::AndIOp>(f32Bits, cF32MantissaMask);
-    Value isNonZeroMan = b.create<arith::CmpIOp>(arith::CmpIPredicate::ugt,
-                                                 man23Bits, zeroExpBits);
-    Value roundToHalf = b.create<arith::AndIOp>(isNegOneExp, isNonZeroMan);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, f8Exp, c0xff);
+    Value man23Bits = arith::AndIOp::create(b, f32Bits, cF32MantissaMask);
+    Value isNonZeroMan = arith::CmpIOp::create(b, arith::CmpIPredicate::ugt,
+                                               man23Bits, zeroExpBits);
+    Value roundToHalf = arith::AndIOp::create(b, isNegOneExp, isNonZeroMan);
     Value isZeroExp =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, f8Exp, c0x00);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, f8Exp, c0x00);
     Value subnormalF4Bits = createConst(loc, i4Ty, 0xf, rewriter);
     Value halfF4Bits = createConst(loc, i4Ty, 0x0, rewriter);
     Value subResult =
-        b.create<arith::SelectOp>(isSubnormal, subnormalF4Bits, f4Bits);
-    subResult = b.create<arith::SelectOp>(roundToHalf, halfF4Bits, subResult);
-    f4Bits = b.create<arith::SelectOp>(isZeroExp, f4Bits, subResult);
+        arith::SelectOp::create(b, isSubnormal, subnormalF4Bits, f4Bits);
+    subResult = arith::SelectOp::create(b, roundToHalf, halfF4Bits, subResult);
+    f4Bits = arith::SelectOp::create(b, isZeroExp, f4Bits, subResult);
 
     // Step 5: Round up if necessary.
     Value cF32Last22BitMask = createConst(loc, i32Ty, 0x3fffff, rewriter);
     Value cRound = createConst(loc, i32Ty, 0x200000, rewriter); // 010 0000...
-    Value man22Bits = b.create<arith::AndIOp>(f32Bits, cF32Last22BitMask);
+    Value man22Bits = arith::AndIOp::create(b, f32Bits, cF32Last22BitMask);
     Value shouldRound =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::uge, man22Bits, cRound);
-    shouldRound = b.create<arith::OrIOp>(shouldRound, isSubnormal);
-    Value roundedF4Bits = b.create<arith::AddIOp>(f4Bits, c0x1);
-    f4Bits = b.create<arith::SelectOp>(shouldRound, roundedF4Bits, f4Bits);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::uge, man22Bits, cRound);
+    shouldRound = arith::OrIOp::create(b, shouldRound, isSubnormal);
+    Value roundedF4Bits = arith::AddIOp::create(b, f4Bits, c0x1);
+    f4Bits = arith::SelectOp::create(b, shouldRound, roundedF4Bits, f4Bits);
 
-    Value result = b.create<arith::BitcastOp>(resultTy, f4Bits);
+    Value result = arith::BitcastOp::create(b, resultTy, f4Bits);
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -603,7 +624,7 @@ Since All kinds of Infs and NaNs are mapped to same exponent bits in F32 type,
 they all map to NaN in F8E8M0 Type.
 */
 struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -626,23 +647,283 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     if (operandETy.getIntOrFloatBitWidth() < 32) {
-      operand = b.create<arith::ExtFOp>(f32Ty, operand, op.getFastmathAttr());
+      operand = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
-      operand = b.create<arith::TruncFOp>(
-          f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());
+      operand = arith::TruncFOp::create(
+          b, f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());
     }
-    Value f32Bits = b.create<arith::BitcastOp>(i32Ty, operand);
+    Value f32Bits = arith::BitcastOp::create(b, i32Ty, operand);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
-    Value f32SignExp = b.create<arith::ShRUIOp>(f32Bits, cF32MantissaWidth);
-    Value exp8Bits = b.create<arith::TruncIOp>(i8Ty, f32SignExp);
-    Value result = b.create<arith::BitcastOp>(resultTy, exp8Bits);
+    Value f32SignExp = arith::ShRUIOp::create(b, f32Bits, cF32MantissaWidth);
+    Value exp8Bits = arith::TruncIOp::create(b, i8Ty, f32SignExp);
+    Value result = arith::BitcastOp::create(b, resultTy, exp8Bits);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Expand an ExtF from F8E5M2. F8E5M2 uses a 5-bit exponent with bias 15 and a
+/// 2-bit mantissa, i.e. it is bit-for-bit the high byte of an IEEE F16 value
+/// (same exponent field and bias), including infinities and NaNs. The exact
+/// F16 value is therefore obtained by placing the 8 F8E5M2 bits into the high
+/// byte of an i16. The F16 value is then converted to the requested result
+/// type with the native (LLVM-lowerable) extf/truncf.
+struct F8E5M2ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E5M2Type>(operandETy))
+      return rewriter.notifyMatchFailure(op, "not a ext of F8E5M2");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+
+    Value bitcast = arith::BitcastOp::create(b, i8Ty, operand);
+    Value exti = arith::ExtUIOp::create(b, i16Ty, bitcast);
+    Value c8 = createConst(op.getLoc(), i16Ty, 8, rewriter);
+    Value f16Bits = arith::ShLIOp::create(b, exti, c8);
+    Value f16 = arith::BitcastOp::create(b, f16Ty, f16Bits);
+
+    Value result = f16;
+    if (!resultETy.isF16()) {
+      if (resultETy.getIntOrFloatBitWidth() < 16)
+        result = arith::TruncFOp::create(b, resultTy, f16, nullptr,
+                                         op.getFastmathAttr());
+      else
+        result = arith::ExtFOp::create(b, resultTy, f16, op.getFastmathAttr());
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Expand a TruncF to F8E5M2. The input is first reduced to F16 (which shares
+/// the F8E5M2 exponent layout and bias) using the native truncf, then the low
+/// 8 mantissa bits of the F16 value are dropped with round-to-nearest-even.
+/// The rounding-bias trick is borrowed from the BF16 converter: adding the
+/// bias may carry into the exponent field, which is exactly the desired
+/// behavior since F16 and F8E5M2 share the same exponent bias. NaN is handled
+/// separately.
+struct F8E5M2TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::TruncFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E5M2Type>(resultETy))
+      return rewriter.notifyMatchFailure(op, "not a trunc to F8E5M2");
+    if (op.getRoundingmodeAttr())
+      return rewriter.notifyMatchFailure(
+          op, "only applicable to default rounding mode.");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+
+    Value h16 = operand;
+    if (!operandETy.isF16())
+      h16 = arith::TruncFOp::create(b, f16Ty, operand, nullptr,
+                                    op.getFastmathAttr());
+
+    Value isNan = arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, h16, h16);
+    Value h16Bits = arith::BitcastOp::create(b, i16Ty, h16);
+    // Rounding bias constants for dropping the low 8 mantissa bits.
+    Value c7F = createConst(op.getLoc(), i16Ty, 0x7f, rewriter);
+    Value c8 = createConst(op.getLoc(), i16Ty, 8, rewriter);
+    Value c1 = createConst(op.getLoc(), i16Ty, 1, rewriter);
+    Value bit8 =
+        arith::AndIOp::create(b, arith::ShRUIOp::create(b, h16Bits, c8), c1);
+    Value roundingBias = arith::AddIOp::create(b, bit8, c7F);
+    Value biased = arith::AddIOp::create(b, h16Bits, roundingBias);
+    Value biasedAndShifted = arith::ShRUIOp::create(b, biased, c8);
+    Value normalCaseResult = arith::TruncIOp::create(b, i8Ty, biasedAndShifted);
+    // Quiet NaN for F8E5M2 (exponent all ones, mantissa MSB set).
+    Value cNan = createConst(op.getLoc(), i8Ty, 0x7e, rewriter);
+    Value select = arith::SelectOp::create(b, isNan, cNan, normalCaseResult);
+    Value result = arith::BitcastOp::create(b, resultTy, select);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Expand an ExtF from F8E4M3FN. F8E4M3FN uses a 4-bit exponent with bias 7, a
+/// 3-bit mantissa, no infinities and a single NaN encoding (S.1111.111). The
+/// 7 magnitude bits (EEEE.MMM) are placed into the high mantissa/exponent bits
+/// of an F16 by shifting left by 7, producing an F16 whose value equals the
+/// desired magnitude scaled by 2^-8 (the F16 bias is 15 while F8E4M3FN's is
+/// 7). Multiplying by 256 in F32 recovers the true magnitude for both normal
+/// and subnormal inputs. The sign bit and the NaN encoding are re-applied
+/// explicitly.
+struct F8E4M3FNExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E4M3FNType>(operandETy))
+      return rewriter.notifyMatchFailure(op, "not a ext of F8E4M3FN");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+    Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+
+    Value bits = arith::BitcastOp::create(b, i8Ty, operand);
+    Value c7F8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
+    Value mag8 = arith::AndIOp::create(b, bits, c7F8);
+    // Build an F16 equal to the magnitude times 2^-8.
+    Value mag16 = arith::ExtUIOp::create(b, i16Ty, mag8);
+    Value c7 = createConst(op.getLoc(), i16Ty, 7, rewriter);
+    Value g16Bits = arith::ShLIOp::create(b, mag16, c7);
+    Value g16 = arith::BitcastOp::create(b, f16Ty, g16Bits);
+    Value gF32 = arith::ExtFOp::create(b, f32Ty, g16, op.getFastmathAttr());
+    Value c256 =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(256.0f), rewriter);
+    Value magF32 = arith::MulFOp::create(b, gF32, c256, op.getFastmathAttr());
+    // Re-apply the sign bit into the F32 result.
+    Value magI32 = arith::BitcastOp::create(b, i32Ty, magF32);
+    Value c80I8 = createConst(op.getLoc(), i8Ty, 0x80, rewriter);
+    Value sign8 = arith::AndIOp::create(b, bits, c80I8);
+    Value sign32 = arith::ExtUIOp::create(b, i32Ty, sign8);
+    Value c24 = createConst(op.getLoc(), i32Ty, 24, rewriter);
+    Value signBit = arith::ShLIOp::create(b, sign32, c24);
+    Value signedI32 = arith::OrIOp::create(b, magI32, signBit);
+    Value signedF32 = arith::BitcastOp::create(b, f32Ty, signedI32);
+    // NaN encoding is magnitude == 0x7f.
+    Value isNan =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, mag8, c7F8);
+    Value cNan32 = createConst(op.getLoc(), i32Ty, 0x7fc00000, rewriter);
+    Value nanSigned = arith::OrIOp::create(b, cNan32, signBit);
+    Value nanF32 = arith::BitcastOp::create(b, f32Ty, nanSigned);
+    Value resultF32 = arith::SelectOp::create(b, isNan, nanF32, signedF32);
+
+    Value result = resultF32;
+    if (!resultETy.isF32()) {
+      if (resultETy.getIntOrFloatBitWidth() < 32)
+        result = arith::TruncFOp::create(b, resultTy, resultF32, nullptr,
+                                         op.getFastmathAttr());
+      else
+        result =
+            arith::ExtFOp::create(b, resultTy, resultF32, op.getFastmathAttr());
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Expand a TruncF to F8E4M3FN. The magnitude is scaled by 2^-8 and reduced to
+/// F16 (undoing the bias difference so the F16 value equals the magnitude times
+/// 2^-8). The low 7 bits of the F16 encoding are then dropped with
+/// round-to-nearest-even to recover the 7 magnitude bits. F8E4M3FN has no
+/// infinity, so any input that overflows the maximum representable magnitude
+/// (448), as well as infinities and NaNs, maps to the F8E4M3FN NaN encoding to
+/// match the LLVM APFloat NanOnly overflow behavior and the OCP FP8 (E4M3)
+/// spec.
+struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::TruncFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E4M3FNType>(resultETy))
+      return rewriter.notifyMatchFailure(op, "not a trunc to F8E4M3FN");
+    if (op.getRoundingmodeAttr())
+      return rewriter.notifyMatchFailure(
+          op, "only applicable to default rounding mode.");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+    Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+
+    Value f32 = operand;
+    if (!operandETy.isF32()) {
+      if (operandETy.getIntOrFloatBitWidth() < 32)
+        f32 = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
+      else
+        f32 = arith::TruncFOp::create(b, f32Ty, operand, nullptr,
+                                      op.getFastmathAttr());
+    }
+
+    Value isNan = arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, f32, f32);
+    // Split sign and magnitude.
+    Value f32Bits = arith::BitcastOp::create(b, i32Ty, f32);
+    Value cSignMask = createConst(op.getLoc(), i32Ty, 0x80000000, rewriter);
+    Value cAbsMask = createConst(op.getLoc(), i32Ty, 0x7fffffff, rewriter);
+    Value signBits = arith::AndIOp::create(b, f32Bits, cSignMask);
+    Value absBits = arith::AndIOp::create(b, f32Bits, cAbsMask);
+    Value absF32 = arith::BitcastOp::create(b, f32Ty, absBits);
+    // F8E4M3FN has no infinity: a magnitude above the round-to-nearest-even
+    // overflow boundary (464 = 448 + half an ulp) or an infinity maps to NaN.
+    Value cOverflow =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(464.0f), rewriter);
+    Value isOverflow =
+        arith::CmpFOp::create(b, arith::CmpFPredicate::OGT, absF32, cOverflow);
+    // Clamp to the F8E4M3FN maximum magnitude (448) so the finite path stays
+    // well-defined; overflowing inputs are replaced by NaN below.
+    Value cMax =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(448.0f), rewriter);
+    absF32 = arith::MinNumFOp::create(b, absF32, cMax);
+    Value cInv256 =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(0.00390625f), rewriter);
+    Value scaled = arith::MulFOp::create(b, absF32, cInv256, nullptr);
+    Value h16 = arith::TruncFOp::create(b, f16Ty, scaled, nullptr,
+                                        op.getFastmathAttr());
+    Value h16Bits = arith::BitcastOp::create(b, i16Ty, h16);
+    // Drop the low 7 bits with round-to-nearest-even.
+    Value c3F = createConst(op.getLoc(), i16Ty, 0x3f, rewriter);
+    Value c7 = createConst(op.getLoc(), i16Ty, 7, rewriter);
+    Value c1 = createConst(op.getLoc(), i16Ty, 1, rewriter);
+    Value bit7 =
+        arith::AndIOp::create(b, arith::ShRUIOp::create(b, h16Bits, c7), c1);
+    Value roundingBias = arith::AddIOp::create(b, bit7, c3F);
+    Value biased = arith::AddIOp::create(b, h16Bits, roundingBias);
+    Value shifted = arith::ShRUIOp::create(b, biased, c7);
+    Value mag8 = arith::TruncIOp::create(b, i8Ty, shifted);
+    Value c7F8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
+    mag8 = arith::AndIOp::create(b, mag8, c7F8);
+    // Re-apply the sign.
+    Value c24 = createConst(op.getLoc(), i32Ty, 24, rewriter);
+    Value sign8 = arith::TruncIOp::create(
+        b, i8Ty, arith::ShRUIOp::create(b, signBits, c24));
+    Value res8 = arith::OrIOp::create(b, mag8, sign8);
+    // NaN input or an overflowing/infinite magnitude maps to the NaN encoding.
+    Value isNanOrOverflow = arith::OrIOp::create(b, isNan, isOverflow);
+    Value cNan8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
+    Value res = arith::SelectOp::create(b, isNanOrOverflow, cNan8, res8);
+    Value result = arith::BitcastOp::create(b, resultTy, res);
     rewriter.replaceOp(op, result);
     return success();
   }
 };
 
 struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -654,8 +935,8 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     if (scaleETy.getIntOrFloatBitWidth() >= 16) {
       scaleETy = b.getF8E8M0Type();
       scaleTy = cloneToShapedType(scaleTy, scaleETy);
-      scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
-                                               op.getFastmathAttr());
+      scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
+                                             op.getFastmathAttr());
     }
     // Catch scale types like f8E5M2.
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
@@ -667,11 +948,11 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     // extf on scale will essentially create floating point number
     // of type resulTy that is 2^scale and will also propagate NaNs
     Value scaleExt =
-        b.create<arith::ExtFOp>(resultTy, scaleOperand, op.getFastmathAttr());
+        arith::ExtFOp::create(b, resultTy, scaleOperand, op.getFastmathAttr());
     Value inputExt =
-        b.create<arith::ExtFOp>(resultTy, inputOperand, op.getFastmathAttr());
+        arith::ExtFOp::create(b, resultTy, inputOperand, op.getFastmathAttr());
     Value result =
-        b.create<arith::MulFOp>(inputExt, scaleExt, op.getFastmathAttr());
+        arith::MulFOp::create(b, inputExt, scaleExt, op.getFastmathAttr());
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -684,7 +965,7 @@ Expands arith.ScalingTruncFOp(in, scale) into
  */
 struct ScalingTruncFOpConverter
     : public OpRewritePattern<arith::ScalingTruncFOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(arith::ScalingTruncFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
@@ -696,8 +977,8 @@ struct ScalingTruncFOpConverter
     if (scaleETy.getIntOrFloatBitWidth() >= 16) {
       scaleETy = b.getF8E8M0Type();
       scaleTy = cloneToShapedType(scaleTy, scaleETy);
-      scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
-                                               op.getFastmathAttr());
+      scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
+                                             op.getFastmathAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
@@ -709,12 +990,87 @@ struct ScalingTruncFOpConverter
     // this will create a floating point number of type
     // inputTy that is 2^scale and will also propagate NaNs
     scaleOperand =
-        b.create<arith::ExtFOp>(inputTy, scaleOperand, op.getFastmathAttr());
-    Value result = b.create<arith::DivFOp>(inputOperand, scaleOperand,
-                                           op.getFastmathAttr());
-    Value resultCast = b.create<arith::TruncFOp>(
-        resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
+        arith::ExtFOp::create(b, inputTy, scaleOperand, op.getFastmathAttr());
+    Value result = arith::DivFOp::create(b, inputOperand, scaleOperand,
+                                         op.getFastmathAttr());
+    Value resultCast = arith::TruncFOp::create(
+        b, resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
     rewriter.replaceOp(op, resultCast);
+    return success();
+  }
+};
+
+/// Expands `arith.flush_denormals` into integer arithmetic.
+///
+/// For an IEEE-like floating-point value with a sign|exponent|mantissa bit
+/// layout, a value is denormal iff its biased exponent field is zero and its
+/// stored mantissa is non-zero. When the exponent field is zero, the value is
+/// either pos/neg 0 (mantissa = 0) or a denormal (mantissa != 0); in both
+/// cases, clearing the mantissa bits produces the desired sign-preserved zero
+/// (a no-op for pos/neg 0, a flush for denormals). When the exponent field is
+/// non-zero, the value passes through unchanged.
+///
+/// Pseudocode:
+///   bits        = bitcast(x, iN)
+///   expIsZero   = (bits & expMask) == 0
+///   cleared     = bits & ~manMask
+///   resultBits  = select(expIsZero, cleared, bits)
+///   result      = bitcast(resultBits, floatTy)
+struct FlushDenormalsOpConverter
+    : public OpRewritePattern<arith::FlushDenormalsOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::FlushDenormalsOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    ImplicitLocOpBuilder b(loc, rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    auto floatTy = dyn_cast<FloatType>(getElementTypeOrSelf(operandTy));
+    if (!floatTy)
+      return rewriter.notifyMatchFailure(op, "operand is not a float type");
+
+    const llvm::fltSemantics &sem = floatTy.getFloatSemantics();
+    // Restrict to IEEE-like encodings, where the sign bit is the MSB and
+    // denormals are exactly "biased exponent == 0 and non-zero mantissa".
+    if (!llvm::APFloatBase::isIEEELikeFP(sem))
+      return rewriter.notifyMatchFailure(
+          op, "only IEEE-like floating-point types are supported");
+
+    unsigned totalBits = llvm::APFloatBase::semanticsSizeInBits(sem);
+    unsigned precision = llvm::APFloatBase::semanticsPrecision(sem);
+    // Stored mantissa bits = precision - 1 (implicit leading bit not stored).
+    // Exponent field bits = totalBits - 1 (sign) - storedMantissa.
+    if (precision < 1 || precision > totalBits)
+      return rewriter.notifyMatchFailure(op, "unexpected float semantics");
+    unsigned mantissaBits = precision - 1;
+    unsigned expBits = totalBits - 1 - mantissaBits;
+    if (expBits == 0 || mantissaBits == 0)
+      return rewriter.notifyMatchFailure(
+          op, "degenerate float encoding has no exponent or mantissa");
+
+    Type intTy =
+        cloneToShapedType(operandTy, rewriter.getIntegerType(totalBits));
+    Value bits = arith::BitcastOp::create(b, intTy, operand);
+    APInt expMaskVal =
+        APInt::getBitsSet(totalBits, mantissaBits, mantissaBits + expBits);
+    APInt clearMantissaMaskVal = ~APInt::getLowBitsSet(totalBits, mantissaBits);
+    APInt zeroVal = APInt::getZero(totalBits);
+    Value expMask = createAPIntConst(loc, intTy, expMaskVal, rewriter);
+    Value clearMantissaMask =
+        createAPIntConst(loc, intTy, clearMantissaMaskVal, rewriter);
+    Value zero = createAPIntConst(loc, intTy, zeroVal, rewriter);
+
+    // expField == 0
+    Value expField = arith::AndIOp::create(b, bits, expMask);
+    Value expIsZero =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, expField, zero);
+
+    // Clear mantissa bits: when exp == 0, this produces pos/neg 0.0.
+    Value cleared = arith::AndIOp::create(b, bits, clearMantissaMask);
+    Value resultBits = arith::SelectOp::create(b, expIsZero, cleared, bits);
+    Value result = arith::BitcastOp::create(b, operandTy, resultBits);
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -727,7 +1083,8 @@ struct ArithExpandOpsPass
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
 
-    arith::populateArithExpandOpsPatterns(patterns);
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
+    arith::populateExpandScalingExtTruncPatterns(patterns);
 
     target.addLegalDialect<arith::ArithDialect>();
     target.addLegalDialect<vector::VectorDialect>();
@@ -737,17 +1094,39 @@ struct ArithExpandOpsPass
       arith::CeilDivSIOp,
       arith::CeilDivUIOp,
       arith::FloorDivSIOp,
-      arith::MaxSIOp,
-      arith::MaxUIOp,
-      arith::MinSIOp,
-      arith::MinUIOp,
-      arith::MaximumFOp,
-      arith::MinimumFOp,
-      arith::MaxNumFOp,
-      arith::MinNumFOp,
       arith::ScalingExtFOp,
       arith::ScalingTruncFOp
     >();
+    // clang-format on
+
+    // The min/max ops also have a direct arith-to-llvm lowering to the
+    // `llvm.intr.maximum`/`minimum`/... (and smax/umax/...) intrinsics, which
+    // are a single hardware instruction on many targets. Only expand them into
+    // cmpf/cmpi + select when requested, so pipelines that run arith-to-llvm
+    // can keep the intrinsic lowering. The float and integer ops are gated
+    // separately.
+    if (includeMinMaxF) {
+      arith::populateExpandMinMaxFPatterns(patterns);
+      // clang-format off
+      target.addIllegalOp<
+        arith::MaximumFOp,
+        arith::MinimumFOp,
+        arith::MaxNumFOp,
+        arith::MinNumFOp
+      >();
+      // clang-format on
+    }
+    if (includeMinMaxI) {
+      arith::populateExpandMinMaxIPatterns(patterns);
+      // clang-format off
+      target.addIllegalOp<
+        arith::MaxSIOp,
+        arith::MaxUIOp,
+        arith::MinSIOp,
+        arith::MinUIOp
+      >();
+      // clang-format on
+    }
 
     if (includeBf16)
       arith::populateExpandBFloat16Patterns(patterns);
@@ -755,34 +1134,58 @@ struct ArithExpandOpsPass
       arith::populateExpandF8E8M0Patterns(patterns);
     if (includeF4E2M1)
       arith::populateExpandF4E2M1Patterns(patterns);
+    if (includeF8E5M2)
+      arith::populateExpandF8E5M2Patterns(patterns);
+    if (includeF8E4M3FN)
+      arith::populateExpandF8E4M3FNPatterns(patterns);
+    if (includeFlushDenormals) {
+      arith::populateExpandFlushDenormalsPatterns(patterns);
+      // Only IEEE-like floating-point types are expanded by the pattern;
+      // leave `arith.flush_denormals` on other types alone.
+      target.addDynamicallyLegalOp<arith::FlushDenormalsOp>(
+          [](arith::FlushDenormalsOp op) {
+            auto floatTy =
+                dyn_cast<FloatType>(getElementTypeOrSelf(op.getType()));
+            if (!floatTy)
+              return true;
+            return !llvm::APFloatBase::isIEEELikeFP(
+                floatTy.getFloatSemantics());
+          });
+    }
 
-    target.addDynamicallyLegalOp<arith::ExtFOp>(
-      [=](arith::ExtFOp op) {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        bool legalTypes = true;
-        if (includeBf16)
-          legalTypes &= !(inETy.isBF16() && outETy.isF32());
-        if (includeF8E8M0)
-          legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
-        if (includeF4E2M1)
-          legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
-        return legalTypes;
-      });
+    target.addDynamicallyLegalOp<arith::ExtFOp>([=](arith::ExtFOp op) {
+      Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+      Type outETy = getElementTypeOrSelf(op.getType());
+      bool legalTypes = true;
+      if (includeBf16)
+        legalTypes &= !(inETy.isBF16() && outETy.isF32());
+      if (includeF8E8M0)
+        legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
+      if (includeF4E2M1)
+        legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
+      if (includeF8E5M2)
+        legalTypes &= !llvm::isa<Float8E5M2Type>(inETy);
+      if (includeF8E4M3FN)
+        legalTypes &= !llvm::isa<Float8E4M3FNType>(inETy);
+      return legalTypes;
+    });
 
-    target.addDynamicallyLegalOp<arith::TruncFOp>(
-      [=](arith::TruncFOp op)  {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        bool legalTypes = true;
-        if (includeBf16)
-          legalTypes &= !(inETy.isF32() && outETy.isBF16());
-        if (includeF8E8M0)
-          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
-        if (includeF4E2M1)
-          legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
-        return legalTypes;
-      });
+    target.addDynamicallyLegalOp<arith::TruncFOp>([=](arith::TruncFOp op) {
+      Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+      Type outETy = getElementTypeOrSelf(op.getType());
+      bool legalTypes = true;
+      if (includeBf16)
+        legalTypes &= !(inETy.isF32() && outETy.isBF16());
+      if (includeF8E8M0)
+        legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
+      if (includeF4E2M1)
+        legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
+      if (includeF8E5M2)
+        legalTypes &= !llvm::isa<Float8E5M2Type>(outETy);
+      if (includeF8E4M3FN)
+        legalTypes &= !llvm::isa<Float8E4M3FNType>(outETy);
+      return legalTypes;
+    });
 
     // clang-format on
     if (failed(applyPartialConversion(getOperation(), target,
@@ -810,6 +1213,16 @@ void mlir::arith::populateExpandF4E2M1Patterns(RewritePatternSet &patterns) {
       patterns.getContext());
 }
 
+void mlir::arith::populateExpandF8E5M2Patterns(RewritePatternSet &patterns) {
+  patterns.add<F8E5M2ExtFOpConverter, F8E5M2TruncFOpConverter>(
+      patterns.getContext());
+}
+
+void mlir::arith::populateExpandF8E4M3FNPatterns(RewritePatternSet &patterns) {
+  patterns.add<F8E4M3FNExtFOpConverter, F8E4M3FNTruncFOpConverter>(
+      patterns.getContext());
+}
+
 void mlir::arith::populateExpandF8E8M0Patterns(RewritePatternSet &patterns) {
   patterns.add<F8E8M0ExtFOpConverter, F8E8M0TruncFOpConverter>(
       patterns.getContext());
@@ -821,19 +1234,40 @@ void mlir::arith::populateExpandScalingExtTruncPatterns(
       patterns.getContext());
 }
 
-void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
-  populateCeilFloorDivExpandOpsPatterns(patterns);
-  populateExpandScalingExtTruncPatterns(patterns);
+void mlir::arith::populateExpandFlushDenormalsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<FlushDenormalsOpConverter>(patterns.getContext());
+}
+
+void mlir::arith::populateExpandMinMaxFPatterns(RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-    MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
-    MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
-    MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
-    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>,
     MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
     MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>,
     MaxNumMinNumFOpConverter<MaxNumFOp, arith::CmpFPredicate::UGT>,
     MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
+}
+
+void mlir::arith::populateExpandMinMaxIPatterns(RewritePatternSet &patterns) {
+  // clang-format off
+  patterns.add<
+    MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
+    MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
+    MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
+    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>
+   >(patterns.getContext());
+  // clang-format on
+}
+
+void mlir::arith::populateExpandMinMaxPatterns(RewritePatternSet &patterns) {
+  populateExpandMinMaxFPatterns(patterns);
+  populateExpandMinMaxIPatterns(patterns);
+}
+
+void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
+  populateCeilFloorDivExpandOpsPatterns(patterns);
+  populateExpandScalingExtTruncPatterns(patterns);
+  populateExpandMinMaxPatterns(patterns);
 }

@@ -66,3 +66,34 @@ namespace MutableInConst {
   static_assert(mutableInConst() == 1, "");
 }
 #endif
+
+struct D { mutable int y; }; // both-note {{declared here}}
+constexpr D d1 = { 1 };
+constexpr D d2 = d1; // both-error {{must be initialized by a constant expression}} \
+                     // both-note {{read of mutable member 'y}} \
+                     // both-note {{in call to}}
+
+namespace MutablenessFromBasePtr {
+  struct Foo  {
+    constexpr int five() const { return 5; }
+    int k = 12;
+  };
+  struct M {
+    mutable Foo F; // both-note {{declared here}}
+  };
+  constexpr M m{};
+  static_assert(m.F.k == 12, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of mutable member 'F' is not allowed in a constant expression}}
+}
+
+namespace MemberCall {
+  struct Foo  {
+    constexpr int five() const { return 5; }
+  };
+  struct M {
+    mutable Foo F;
+    constexpr int zomg() const { return F.five(); }
+  };
+  constexpr M m{};
+  static_assert(m.zomg() == 5, "");
+}

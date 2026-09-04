@@ -66,7 +66,7 @@ def AbsOp : ComplexUnaryOp<"abs",
 // AddOp
 //===----------------------------------------------------------------------===//
 
-def AddOp : ComplexArithmeticOp<"add"> {
+def AddOp : ComplexArithmeticOp<"add", [Commutative]> {
   let summary = "complex addition";
   let description = [{
     The `add` operation takes two complex numbers and returns their sum.
@@ -337,8 +337,6 @@ def LogOp : ComplexUnaryOp<"log", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
-
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -367,7 +365,7 @@ def Log1pOp : ComplexUnaryOp<"log1p", [SameOperandsAndResultType]> {
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def MulOp : ComplexArithmeticOp<"mul"> {
+def MulOp : ComplexArithmeticOp<"mul", [Commutative]> {
   let summary = "complex multiplication";
   let description = [{
     The `mul` operation takes two complex numbers and returns their product:
@@ -441,6 +439,36 @@ def PowOp : ComplexArithmeticOp<"pow"> {
     %a = complex.pow %b, %c : complex<f32>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// PowiOp
+//===----------------------------------------------------------------------===//
+
+def PowiOp : Complex_Op<"powi",
+    [Pure, Elementwise, SameOperandsAndResultShape,
+     AllTypesMatch<["lhs", "result"]>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "complex number raised to signed integer power";
+  let description = [{
+    The `powi` operation takes a `base` operand of complex type and a `power`
+    operand of signed integer type and returns one result of the same type
+    as `base`. The result is `base` raised to the power of `power`.
+
+    Example:
+
+    ```mlir
+    %a = complex.powi %b, %c : complex<f32>, i32
+    ```
+  }];
+
+  let arguments = (ins Complex<AnyFloat>:$lhs,
+                       AnySignlessInteger:$rhs,
+                       OptionalAttr<Arith_FastMathAttr>:$fastmath);
+  let results = (outs Complex<AnyFloat>:$result);
+
+  let assemblyFormat =
+      "$lhs `,` $rhs (`fastmath` `` $fastmath^)? attr-dict `:` type($result) `,` type($rhs)";
 }
 
 //===----------------------------------------------------------------------===//

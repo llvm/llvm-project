@@ -9,7 +9,7 @@ define void @test_scoped_alloca(i64 %n) {
 ; CHECK-LABEL: test_scoped_alloca:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    .cfi_def_cfa w29, 32
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -24,7 +24,7 @@ define void @test_scoped_alloca(i64 %n) {
 ; CHECK-NEXT:    bl use_addr
 ; CHECK-NEXT:    mov sp, x19
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %sp = call ptr @llvm.stacksave.p0()

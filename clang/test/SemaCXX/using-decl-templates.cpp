@@ -64,6 +64,17 @@ template <class T> struct Bar : public Foo<T>, Baz {
 template int Bar<int>::foo();
 }
 
+namespace CrashOnInvalidUsingShadow {
+template <class T> struct BaseTpl {};
+template <class T> struct Derived : public BaseTpl<T>, Derivd { // expected-error {{expected class name}} expected-note {{'Derived' declared here}}
+  using BaseTpl<T>::k;
+  using Derivd::k; // expected-error {{use of undeclared identifier 'Derivd'; did you mean 'Derived'?}}
+  int foo() {
+    return k(1.0f);
+  }
+};
+} // namespace CrashOnInvalidUsingShadow
+
 // PR10883
 namespace PR10883 {
   template <typename T>
@@ -153,3 +164,11 @@ T foo(T t) { // OK
 }
 } // namespace sss
 } // namespace func_templ
+
+namespace DependentName {
+  template <typename T> struct S {
+    using typename T::Ty;
+    static Ty Val;
+  };
+  template <typename T> typename S<T>::Ty S<T>::Val;
+} // DependentName

@@ -34,9 +34,9 @@ define void @test2(i1 %cond, ptr %ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 [[X]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"(i32 0) ]
-; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], 0
+; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[X]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 
@@ -45,7 +45,7 @@ entry:
 
 loop:
   %x = phi i32 [ 0, %entry ], [ %x.inc, %loop ]
-  store i32 0, ptr %ptr
+  store i32 %x, ptr %ptr
   call void (i1, ...) @llvm.experimental.guard(i1 %cond) ["deopt" (i32 0)]
   %val = load i32, ptr %ptr
   %x.inc = add i32 %x, %val

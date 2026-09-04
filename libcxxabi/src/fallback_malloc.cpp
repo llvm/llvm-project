@@ -16,7 +16,7 @@
 #endif
 #endif
 
-#include <__memory/aligned_alloc.h>
+#include "include/aligned_alloc.h" // from libc++
 #include <__assert>
 #include <stdlib.h> // for malloc, calloc, free
 #include <string.h> // for memset
@@ -35,9 +35,9 @@ namespace {
 
 // When POSIX threads are not available, make the mutex operations a nop
 #ifndef _LIBCXXABI_HAS_NO_THREADS
-static _LIBCPP_CONSTINIT std::__libcpp_mutex_t heap_mutex = _LIBCPP_MUTEX_INITIALIZER;
+static constinit std::__libcpp_mutex_t heap_mutex = _LIBCPP_MUTEX_INITIALIZER;
 #else
-static _LIBCPP_CONSTINIT void* heap_mutex = 0;
+static constinit void* heap_mutex = 0;
 #endif
 
 class mutexor {

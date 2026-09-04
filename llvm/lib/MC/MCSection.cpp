@@ -18,12 +18,10 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
-                     MCSymbol *Begin)
+MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsBss(IsBss), LinkerRelaxable(false), Name(Name), Variant(V) {
-  // The initial subsection number is 0. Create a fragment list.
-  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
+      IsBss(IsBss), Name(Name) {
+  DummyFragment.setParent(this);
 }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
@@ -41,6 +39,8 @@ LLVM_DUMP_METHOD void MCSection::dump(
   raw_ostream &OS = errs();
 
   OS << "MCSection Name:" << getName();
+  if (isLinkerRelaxable())
+    OS << " FirstLinkerRelaxable:" << firstLinkerRelaxable();
   for (auto &F : *this) {
     OS << '\n';
     F.dump();
@@ -70,7 +70,7 @@ void MCFragment::setVarContents(ArrayRef<char> Contents) {
 
 void MCFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
 
-void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+void MCFragment::moveFixupsToEnd() {
   auto &S = getParent()->FixupStorage;
   if (LLVM_UNLIKELY(FixupEnd != S.size())) {
     // Move the elements to the end. Reserve space to avoid invalidating
@@ -80,17 +80,38 @@ void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
     S.reserve(S.size() + Size);
     S.append(S.begin() + I, S.begin() + I + Size);
   }
+}
+
+void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+  moveFixupsToEnd();
+
+  auto &S = getParent()->FixupStorage;
   S.append(Fixups.begin(), Fixups.end());
   FixupEnd = S.size();
 }
 
-void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+void MCFragment::insertRelocFixups(ArrayRef<MCFixup> Fixups) {
+  moveFixupsToEnd();
+
+  // See MCAssembler::layout() for the rule being followed here.
   auto &S = getParent()->FixupStorage;
-  if (VarFixupStart + Fixups.size() > VarFixupEnd) {
+  S.insert(std::upper_bound(S.begin() + FixupStart, S.end(), Fixups[0],
+                            [](MCFixup F1, MCFixup F2) {
+                              return F1.getOffset() < F2.getOffset();
+                            }),
+           Fixups.begin(), Fixups.end());
+  FixupEnd = S.size();
+}
+
+void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+  assert(Fixups.size() < 256 &&
+         "variable-size tail cannot have more than 256 fixups");
+  auto &S = getParent()->FixupStorage;
+  if (Fixups.size() > VarFixupSize) {
     VarFixupStart = S.size();
     S.resize_for_overwrite(S.size() + Fixups.size());
   }
-  VarFixupEnd = VarFixupStart + Fixups.size();
+  VarFixupSize = Fixups.size();
   // Source fixup offsets are relative to the variable part's start. Add the
   // fixed part size to make them relative to the fixed part's start.
   std::transform(Fixups.begin(), Fixups.end(), S.begin() + VarFixupStart,

@@ -1,5 +1,6 @@
-; REQUIRES: x86_64-linux
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-- -O3 | FileCheck %s
+; REQUIRES: x86-registered-target
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-unknown-linux-gnu -O3 | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-unknown-windows-msvc -O3 | FileCheck %s
 
 define float @foo(float %x) #0 {
   %tmp1 = fmul float %x, 3.000000e+00

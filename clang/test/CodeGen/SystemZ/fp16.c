@@ -32,8 +32,8 @@ void f(__fp16 *a, __fp16 *b, __fp16 *c, __fp16 *d, __fp16 *e) {
 // CHECK-NEXT:    %conv3 = fpext half %7 to float
 // CHECK-NEXT:    %mul4 = fmul float %conv2, %conv3
 // CHECK-NEXT:    %add = fadd float %mul, %mul4
-// CHECK-NEXT:    %8 = fptrunc float %add to half
-// CHECK-NEXT:    %9 = load ptr, ptr %e.addr, align 8
-// CHECK-NEXT:    store half %8, ptr %9, align 2
+// CHECK-NEXT:    %conv5 = fptrunc float %add to half
+// CHECK-NEXT:    %8 = load ptr, ptr %e.addr, align 8
+// CHECK-NEXT:    store half %conv5, ptr %8, align 2
 // CHECK-NEXT:    ret void
 // CHECK-NEXT:  }

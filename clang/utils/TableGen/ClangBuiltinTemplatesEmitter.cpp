@@ -52,7 +52,8 @@ ParseTemplateParameterList(ParserState &PS,
       Code << TemplateCode << " auto *" << ParmName
            << " = TemplateTemplateParmDecl::Create(C, DC, SourceLocation(), "
            << PS.CurrentDepth << ", " << Position++
-           << ", /*ParameterPack=*/false, /*Id=*/nullptr, /*Typename=*/false, "
+           << ", /*ParameterPack=*/false, /*Id=*/nullptr, "
+              "/*Kind=*/TNK_Type_template, /*Typename=*/false, "
            << TPLName << ");\n";
     } else if (Arg->isSubClassOf("Class")) {
       Code << " auto *" << ParmName

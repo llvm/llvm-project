@@ -1,0 +1,384 @@
+## Test yaml2obj for DWARFv5 .debug_line. This file only tests new features of
+## DWARFv5 and assumes that the common functionality is tested elsewhere.
+
+## An empty debug_line section - test DWARF32/64 and little-/big-endian cases.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Format:              [[FORMAT]]
+      Version:             5
+      AddressSize:         8
+      SegmentSelectorSize: 4
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB -DFORMAT=DWARF32 %s | \
+# RUN:   llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=HEADER32LE
+
+# HEADER32LE:      Hex dump of section '.debug_line':
+# HEADER32LE-NEXT: 0x00000000 1e000000 05000804 16000000 01010101
+##                            ^-------                            unit_length (4-byte)
+##                                     ^---                       version (2-byte)
+##                                         ^-                     address_size (1-byte)
+##                                           ^-                   segment_selector_size (4-byte)
+##                                              ^-------          header_length (4-byte)
+##                                                       ^-       minimum_instruction_length (1-byte)
+##                                                         ^-     maximum_operations_per_instruction (1-byte)
+##                                                           ^-   default_is_stmt (1-byte)
+##                                                             ^- line_base (1-byte)
+# HEADER32LE-NEXT: 0x00000010 0e0d0001 01010100 00000100 00010000
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_count (ULEB128)
+# HEADER32LE-NEXT: 0x00000020 0000{{ }}
+##                            ^-                                  file_name_entry_format_count (1-byte)
+##                              ^-                                file_names_count (ULEB128)
+##                                ^----                           EOF
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB -DFORMAT=DWARF32 %s | \
+# RUN:   llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=HEADER32BE
+
+# HEADER32BE:      Hex dump of section '.debug_line':
+# HEADER32BE-NEXT: 0x00000000 0000001e 00050804 00000016 01010101
+##                            ^-------                            unit_length (4-byte)
+##                                     ^---                       version (2-byte)
+##                                         ^-                     address_size (1-byte)
+##                                           ^-                   segment_selector_size (4-byte)
+##                                              ^-------          header_length (4-byte)
+##                                                       ^-       minimum_instruction_length (1-byte)
+##                                                         ^-     maximum_operations_per_instruction (1-byte)
+##                                                           ^-   default_is_stmt (1-byte)
+##                                                             ^- line_base (1-byte)
+# HEADER32BE-NEXT: 0x00000010 0e0d0001 01010100 00000100 00010000
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_count (ULEB128)
+# HEADER32BE-NEXT: 0x00000020 0000{{ }}
+##                            ^-                                  file_name_entry_format_count (1-byte)
+##                              ^-                                file_names_count (ULEB128)
+##                                ^----                           EOF
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB -DFORMAT=DWARF64 %s | \
+# RUN:   llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=HEADER64LE
+
+# HEADER64LE:      Hex dump of section '.debug_line':
+# HEADER64LE-NEXT: 0x00000000 ffffffff 22000000 00000000 05000804
+##                            ^------- -------- --------          unit_length (12-byte)
+##                                                       ^---     version (2-byte)
+##                                                           ^-   address_size (1-byte)
+##                                                             ^- segment_selector_size (4-byte)
+# HEADER64LE-NEXT: 0x00000010 16000000 00000000 01010101 0e0d0001
+##                            ^------- --------                   header_length (4-byte)
+##                                              ^-                minimum_instruction_length (1-byte)
+##                                                ^-              maximum_operations_per_instruction (1-byte)
+##                                                  ^-            default_is_stmt (1-byte)
+##                                                    ^-          line_base (1-byte)
+##                                                       ^-                                  line_range (1-byte)
+##                                                         ^-                                opcode_base (1-byte)
+##                                                           ^--- standard_opcode_lengths
+# HEADER64LE-NEXT: 0x00000020 01010100 00000100 00010000 0000{{ }}
+#                             -------- -------- ----              standard_opcode_lengths
+##                                                  ^-            directory_entry_format_count (1-byte)
+##                                                    ^-          directories_count (ULEB128)
+##                                                       ^-       file_name_entry_format_count (1-byte)
+##                                                         ^-     file_names_count (ULEB128)
+##                                                           ^----EOF
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB -DFORMAT=DWARF64 %s | \
+# RUN:   llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=HEADER64BE
+
+# HEADER64BE:      Hex dump of section '.debug_line':
+# HEADER64BE-NEXT: 0x00000000 ffffffff 00000000 00000022 00050804
+##                            ^------- -------- --------          unit_length (12-byte)
+##                                                       ^---     version (2-byte)
+##                                                           ^-   address_size (1-byte)
+##                                                             ^- segment_selector_size (4-byte)
+# HEADER64BE-NEXT: 0x00000010 00000000 00000016 01010101 0e0d0001
+##                            ^------- --------                   header_length (4-byte)
+##                                              ^-                minimum_instruction_length (1-byte)
+##                                                ^-              maximum_operations_per_instruction (1-byte)
+##                                                  ^-            default_is_stmt (1-byte)
+##                                                    ^-          line_base (1-byte)
+##                                                       ^-                                  line_range (1-byte)
+##                                                         ^-                                opcode_base (1-byte)
+##                                                           ^--- standard_opcode_lengths
+# HEADER64BE-NEXT: 0x00000020 01010100 00000100 00010000 0000{{ }}
+#                             -------- -------- ----              standard_opcode_lengths
+##                                                  ^-            directory_entry_format_count (1-byte)
+##                                                    ^-          directories_count (ULEB128)
+##                                                       ^-       file_name_entry_format_count (1-byte)
+##                                                         ^-     file_names_count (ULEB128)
+##                                                           ^----EOF
+
+## Check file/directory entry format handling, particularly the interaction
+## between the count and array fields.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      SegmentSelectorSize: 4
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      # DirectoryEntryFormatCount: 1  # Implicit
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      FileNameEntryFormatCount: 1  # Explicit
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+
+# RUN: yaml2obj --docnum=2 %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=FORMATCNT1
+
+# FORMATCNT1:      Hex dump of section '.debug_line':
+# FORMATCNT1-NEXT: 0x00000000 22000000 05000804 1a000000 01010101
+##                            ^-------                            unit_length (4-byte)
+##                                     ^---                       version (2-byte)
+##                                         ^-                     address_size (1-byte)
+##                                           ^-                   segment_selector_size (4-byte)
+##                                              ^-------          header_length (4-byte)
+##                                                       ^-       minimum_instruction_length (1-byte)
+##                                                         ^-     maximum_operations_per_instruction (1-byte)
+##                                                           ^-   default_is_stmt (1-byte)
+##                                                             ^- line_base (1-byte)
+# FORMATCNT1-NEXT: 0x00000010 0e0d0001 01010100 00000100 00010101
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_entry_format[0].content_type (ULEB128)
+# FORMATCNT1-NEXT: 0x00000020 08000101 0800{{ }}
+##                            ^-                                  directories_entry_format[0].form (ULEB128)
+##                              ^-                                directories_count (ULEB128)
+##                                ^-                              file_name_entry_format_count (1-byte)
+##                                  ^-                            file_name_entry_format[0].content_type (ULEB128)
+##                                     ^-                         file_name_entry_format[0].form (ULEB128)
+##                                       ^-                       file_names_count (ULEB128)
+##                                         ^----                  EOF
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      SegmentSelectorSize: 4
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      DirectoryEntryFormatCount: 0  # Smaller than the array length
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      FileNameEntryFormatCount: 2  # Larger than the array length
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+
+# RUN: yaml2obj --docnum=3 %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefix=FORMATCNT2
+
+# FORMATCNT2:      Hex dump of section '.debug_line':
+# FORMATCNT2-NEXT: 0x00000000 22000000 05000804 1a000000 01010101
+##                            ^-------                            unit_length (4-byte)
+##                                     ^---                       version (2-byte)
+##                                         ^-                     address_size (1-byte)
+##                                           ^-                   segment_selector_size (4-byte)
+##                                              ^-------          header_length (4-byte)
+##                                                       ^-       minimum_instruction_length (1-byte)
+##                                                         ^-     maximum_operations_per_instruction (1-byte)
+##                                                           ^-   default_is_stmt (1-byte)
+##                                                             ^- line_base (1-byte)
+# FORMATCNT2-NEXT: 0x00000010 0e0d0001 01010100 00000100 00010001
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_entry_format[0].content_type (ULEB128)
+# FORMATCNT2-NEXT: 0x00000020 08000201 0800{{ }}
+##                            ^-                                  directories_entry_format[0].form (ULEB128)
+##                              ^-                                directories_count (ULEB128)
+##                                ^-                              file_name_entry_format_count (1-byte)
+##                                  ^-                            file_name_entry_format[0].content_type (ULEB128)
+##                                     ^-                         file_name_entry_format[0].form (ULEB128)
+##                                       ^-                       file_names_count (ULEB128)
+##                                         ^----                  EOF
+
+
+## Check file name and directory handling, including the cases where the
+## specified length of a list does not match its contents.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[FORMAT]]
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_line_str
+    Type:    SHT_PROGBITS
+    Content: 666f6f2e63707000  # foo.cpp
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      # DirectoriesCount:    2  # Implicit
+      Directories:
+        - - CStr: "bar"
+        - - CStr: "baz"
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_line_strp
+        - ContentType:     DW_LNCT_directory_index
+          Form:            DW_FORM_udata
+        - ContentType:     DW_LNCT_timestamp
+          Form:            DW_FORM_block
+        - ContentType:     DW_LNCT_size
+          Form:            DW_FORM_data4
+      FileNamesCount:      1  # Explicit
+      FileNames:
+        - - Value: 0
+          - Value: 1
+          - BlockData: [ 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47 ]
+          - Value: 0xdead
+
+# RUN: yaml2obj --docnum=4 -DFORMAT=ELFDATA2LSB %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefixes=FILEDIR1,FILEDIR1LE
+# RUN: yaml2obj --docnum=4 -DFORMAT=ELFDATA2MSB %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefixes=FILEDIR1,FILEDIR1BE
+# FILEDIR1:        Hex dump of section '.debug_line':
+## Start of header tested above.
+# FILEDIR1:        0x00000010 0e0d0001 01010100 00000100 00010101
+##                            ^-                                  line_range (1-byte)
+##                              ^-                                opcode_base (1-byte)
+##                                ^--- -------- -------- ----     standard_opcode_lengths
+##                                                           ^-   directory_entry_format_count (1-byte)
+##                                                             ^- directories_entry_format[0].content_type (ULEB128)
+# FILEDIR1-NEXT:   0x00000020 08026261 72006261 7a000401 1f020f03
+##                            ^-                                  directories_entry_format[0].form (ULEB128)
+##                              ^-                                directories_count (ULEB128)
+##                                ^--- ----                       directories[0][path] ("bar")
+##                                         ^--- ----              directories[1][path] ("baz")
+##                                                  ^-            file_name_entry_format_count (1-byte)
+##                                                    ^-          file_name_entry_format[0].content_type (ULEB128)
+##                                                       ^-       file_name_entry_format[0].form (ULEB128)
+##                                                         ^-     file_name_entry_format[1].content_type (ULEB128)
+##                                                           ^-   file_name_entry_format[1].form (ULEB128)
+##                                                             ^- file_name_entry_format[2].content_type (ULEB128)
+# FILEDIR1-NEXT:   0x00000030 09040601 00000000 01084041 42434445
+##                            ^-                                  file_name_entry_format[2].form (ULEB128)
+##                              ^-                                file_name_entry_format[3].content_type (ULEB128)
+##                                ^-                              file_name_entry_format[3].form (ULEB128)
+##                                  ^-                            file_names_count (ULEB128)
+##                                     ^-------                   file_names[0].path (4-byte)
+##                                              ^-                file_names[0].directory_index (ULEB128)
+##                                                ^----- -------- file_names[0].timestamp (block)
+# FILEDIR1LE-NEXT: 0x00000040 4647adde 0000{{ }}
+# FILEDIR1BE-NEXT: 0x00000040 46470000 dead{{ }}
+##                            ----
+##                                ^--- ----                       file_names[0].path (4-byte)
+##                                         ^----                  EOF
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Format:              DWARF32
+      Version:             5
+      AddressSize:         8
+      MinInstLength:       1
+      MaxOpsPerInst:       1
+      DefaultIsStmt:       1
+      LineBase:            1
+      LineRange:           14
+      OpcodeBase:          13
+      DirectoryEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+      DirectoriesCount:    1  # Larger than the actual length
+      Directories:
+      FileNameEntryFormat:
+        - ContentType:     DW_LNCT_path
+          Form:            DW_FORM_string
+        - ContentType:     DW_LNCT_directory_index
+          Form:            DW_FORM_indirect
+      FileNamesCount:      0  # Smaller than the actual length
+      FileNames:
+        - - CStr: foo.cpp
+          - Value: 0x0b  # DW_FORM_data1
+          - Value: 1
+        - - CStr: foo.c  # Shorter list ends the entry early
+        - - CStr: bar.cpp
+          - Value: 0x0b  # DW_FORM_data1
+          - Value: 2
+          - Value: 0xdead  # Extra values ignored
+
+# RUN: yaml2obj --docnum=5 %s | llvm-readelf --hex-dump=.debug_line - | \
+# RUN:   FileCheck %s --check-prefixes=FILEDIR2
+# FILEDIR2:      Hex dump of section '.debug_line':
+## Start of header tested above.
+# FILEDIR2:      0x00000020 08010201 08021600 666f6f2e 63707000
+##                          ^-                                  directories_entry_format[0].form (ULEB128)
+##                            ^-                                directories_count (ULEB128)
+##                              ^-                              file_name_entry_format_count (1-byte)
+##                                ^-                            file_name_entry_format[0].content_type (ULEB128)
+##                                   ^-                         file_name_entry_format[0].form (ULEB128)
+##                                     ^-                       file_name_entry_format[1].content_type (ULEB128)
+##                                       ^-                     file_name_entry_format[1].form (ULEB128)
+##                                         ^-                   file_names_count (ULEB128)
+##                                            ^------- -------- file_names[0].path (foo.cpp)
+# FILEDIR2-NEXT: 0x00000030 0b01666f 6f2e6300 6261722e 63707000
+##                          ^---                                file_names[0].directory_index (ULEB128 + 1-byte)
+##                              ^--- --------                   file_names[1].path (foo.c)
+##                                            ^------- -------- file_names[2].path (bar.c)
+# FILEDIR2-NEXT: 0b02{{ }}
+##               ^---                                           file_names[0].directory_index (ULEB128 + 1-byte)
+##                   ^----                                      EOF

@@ -13,6 +13,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
+#include "hdr/types/pid_t.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {

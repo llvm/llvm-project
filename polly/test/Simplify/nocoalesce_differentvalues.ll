@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-import-jscop,print<polly-simplify>' -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<import-jscop;simplify-0>' -polly-print-simplify -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Do not combine stores that write different values.
 ;

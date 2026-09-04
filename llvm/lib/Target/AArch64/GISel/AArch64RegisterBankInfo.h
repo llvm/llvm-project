@@ -22,6 +22,7 @@
 namespace llvm {
 
 class TargetRegisterInfo;
+class AArch64RegisterInfo;
 
 class AArch64GenRegisterBankInfo : public RegisterBankInfo {
 protected:
@@ -123,21 +124,26 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   /// \returns true if \p MI is a PHI that its def is used by
   /// any instruction that onlyUsesFP.
   bool isPHIWithFPConstraints(const MachineInstr &MI,
-                             const MachineRegisterInfo &MRI,
-                             const TargetRegisterInfo &TRI,
-                             unsigned Depth = 0) const;
+                              const MachineRegisterInfo &MRI,
+                              const AArch64RegisterInfo &TRI,
+                              unsigned Depth = 0) const;
 
   /// \returns true if \p MI only uses and defines FPRs.
   bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                     const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+                        const AArch64RegisterInfo &TRI,
+                        unsigned Depth = 0) const;
 
   /// \returns true if \p MI only uses FPRs.
   bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                  const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+                  const AArch64RegisterInfo &TRI, unsigned Depth = 0) const;
 
   /// \returns true if \p MI only defines FPRs.
   bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                     const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+                     const AArch64RegisterInfo &TRI, unsigned Depth = 0) const;
+
+  /// \returns true if \p MI can take both fpr and gpr uses, but prefers fp.
+  bool prefersFPUse(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                    const AArch64RegisterInfo &TRI, unsigned Depth = 0) const;
 
   /// \returns true if the load \p MI is likely loading from a floating-point
   /// type.

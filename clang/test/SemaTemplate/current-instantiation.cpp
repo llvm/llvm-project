@@ -245,5 +245,5 @@ namespace RebuildDependentScopeDeclRefExpr {
   };
   template<typename T> N<X<T>::thing> X<T>::data() {}
   // FIXME: We should issue a typo-correction here.
-  template<typename T> N<X<T>::think> X<T>::foo() {} // expected-error {{no member named 'think' in 'X<T>'}}
+  template<typename T> N<X<T>::think> X<T>::foo() {} // expected-error {{no member named 'think' in 'RebuildDependentScopeDeclRefExpr::X<T>'}}
 }

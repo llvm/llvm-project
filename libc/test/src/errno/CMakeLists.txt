@@ -4,7 +4,7 @@ endif()
 
 add_custom_target(libc_errno_unittests)
 
-add_libc_unittest(
+add_libc_test(
   errno_test
   SUITE
     libc_errno_unittests
@@ -12,4 +12,5 @@ add_libc_unittest(
     errno_test.cpp
   DEPENDS
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )

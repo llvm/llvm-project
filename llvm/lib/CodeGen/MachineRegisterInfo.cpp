@@ -83,8 +83,6 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
 
 const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
     Register Reg, const TargetRegisterClass *RC, unsigned MinNumRegs) {
-  if (Reg.isPhysical())
-    return nullptr;
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 
@@ -432,6 +430,11 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
+MachineOperand *MachineRegisterInfo::getOneNonDBGUse(Register RegNo) const {
+  auto RegNoDbgUses = use_nodbg_operands(RegNo);
+  return hasSingleElement(RegNoDbgUses) ? &*RegNoDbgUses.begin() : nullptr;
+}
+
 MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
   auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
   return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
@@ -662,7 +665,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   IsUpdatedCSRsInitialized = true;
 }
 
-bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
+bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     if (all_of(TRI->superregs_inclusive(*Root),
@@ -670,4 +673,44 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
       return true;
   }
   return false;
+}
+
+void MachineRegisterInfo::updateDbgUsersToReg(
+    MCRegister OldReg, MCRegister NewReg,
+    ArrayRef<MachineInstr *> Users) const {
+  // If this operand is a register, check whether it overlaps with OldReg.
+  // If it does, replace with NewReg.
+  auto *TRI = getTargetRegisterInfo();
+  auto UpdateOp = [&NewReg, &OldReg, &TRI](MachineOperand &Op) {
+    if (!Op.isReg() || !TRI->regsOverlap(Op.getReg(), OldReg))
+      return;
+    if (Op.getReg() == OldReg) {
+      // Registers exactly match; replace OldReg with NewReg.
+      Op.setReg(NewReg);
+      return;
+    }
+    if (unsigned Idx = TRI->getSubRegIndex(OldReg, Op.getReg())) {
+      // Debug user refers to a subregister of OldReg; map to the corresponding
+      // subregister of NewReg.
+      if (MCRegister NewSubReg = TRI->getSubReg(NewReg, Idx)) {
+        Op.setReg(NewSubReg);
+        return;
+      }
+    }
+    // Registers have some more complicated relationship; discard the use.
+    Op.setReg(MCRegister::NoRegister);
+  };
+
+  // Iterate through (possibly several) operands to DBG_VALUEs and update
+  // each. For DBG_PHIs, only one operand will be present.
+  for (MachineInstr *MI : Users) {
+    if (MI->isDebugValue()) {
+      for (auto &Op : MI->debug_operands())
+        UpdateOp(Op);
+    } else if (MI->isDebugPHI()) {
+      UpdateOp(MI->getOperand(0));
+    } else {
+      llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
+    }
+  }
 }

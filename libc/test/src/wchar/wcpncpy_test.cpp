@@ -84,10 +84,10 @@ TEST(LlvmLibcWCPNCpyTest, CopyAndFill) {
   ASSERT_EQ(dest + 1, res);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST(LlvmLibcWCPNCpyTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
   EXPECT_DEATH([] { LIBC_NAMESPACE::wcpncpy(nullptr, nullptr, 1); },
                WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

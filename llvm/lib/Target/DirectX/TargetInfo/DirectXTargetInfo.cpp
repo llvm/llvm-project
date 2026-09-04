@@ -24,7 +24,8 @@ Target &getTheDirectXTarget() {
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeDirectXTargetInfo() {
   RegisterTarget<Triple::dxil, /*HasJIT=*/false> X(
       getTheDirectXTarget(), "dxil", "DirectX Intermediate Language", "DXIL");
 }

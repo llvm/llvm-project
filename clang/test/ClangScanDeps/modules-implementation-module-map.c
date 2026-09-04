@@ -18,7 +18,9 @@ framework module FWPrivate { header "private.h" }
 
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=command-line,file-deps,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 // CHECK:      "translation-units": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:     "commands": [
@@ -28,7 +30,8 @@ framework module FWPrivate { header "private.h" }
 // CHECK:                "-fmodule-name=FWPrivate",
 // CHECK:              ],
 // CHECK:              "file-deps": [
-// CHECK-NEXT:           "[[PREFIX]]/tu.m"
+// CHECK-NEXT:           "[[PREFIX]]/tu.m",
+// CHECK-NEXT:           "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap"
 // CHECK-NEXT:         ],
 // CHECK-NEXT:         "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:       }

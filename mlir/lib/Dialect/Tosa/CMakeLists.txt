@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRTosaDialect
   IR/TosaOps.cpp
   IR/TosaCanonicalizations.cpp
+  IR/TargetEnv.cpp
   Utils/ConversionUtils.cpp
   Utils/QuantUtils.cpp
 
@@ -13,7 +14,6 @@ add_mlir_dialect_library(MLIRTosaDialect
   MLIRTosaOpsIncGen
   MLIRTosaInterfacesIncGen
   MLIRTosaEnumsIncGen
-  MLIRTosaAvailabilityIncGen
   MLIRShardingInterfaceIncGen
 
   LINK_LIBS PUBLIC
@@ -36,7 +36,7 @@ add_mlir_dialect_library(MLIRTosaShardingInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRMeshDialect
+  MLIRShardDialect
   MLIRShardingInterface
   MLIRSupport
   MLIRTosaDialect

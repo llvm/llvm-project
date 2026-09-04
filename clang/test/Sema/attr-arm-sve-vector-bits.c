@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=1 -mvscale-max=1 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=2 -mvscale-max=2 -mvscale-streaming-min=2 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected -mvscale-min=4 -mvscale-max=4 -mvscale-streaming-min=4 -mvscale-streaming-max=4 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=8 -mvscale-max=8 -mvscale-streaming-min=4 -mvscale-streaming-max=8 %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=16 -mvscale-max=16 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=1 -mvscale-max=1 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=2 -mvscale-max=2 -mvscale-streaming-min=2 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected -mvscale-min=4 -mvscale-max=4 -mvscale-streaming-min=4 -mvscale-streaming-max=4 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=8 -mvscale-max=8 -mvscale-streaming-min=4 -mvscale-streaming-max=8 %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sme -ffreestanding -fsyntax-only -verify=expected,streamingdifferent -mvscale-min=16 -mvscale-max=16 %s
 
 #include <stdint.h>
 
@@ -282,6 +282,9 @@ svint32_t badcast(int4 x) { return x; } // expected-error {{returning 'int4' (ve
 // Test conversion between predicate and uint8 is invalid, both have the same
 // memory representation.
 fixed_bool_t to_fixed_bool_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
+
+// Do not allow implicit conversion between fixed-length uint8_t vectors and svbool_t.
+svbool_t to_svbool_t_from_fixed_uint8_t(fixed_uint8_t x) { return x; } // expected-error-re {{returning 'fixed_uint8_t' (vector of {{[0-9]+}} 'unsigned char' values) from a function with incompatible result type 'svbool_t' (aka '__SVBool_t')}}
 
 // --------------------------------------------------------------------------//
 // Test the scalable and fixed-length types can be used interchangeably

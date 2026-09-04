@@ -1,4 +1,4 @@
-//===--- UseNoexceptCheck.cpp - clang-tidy---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,17 +76,18 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   assert(FnTy && "FunctionProtoType is null.");
-  if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
+  if (FnTy->getExceptionSpecType() == EST_Unparsed ||
+      isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
     return;
 
   assert(Range.isValid() && "Exception Source Range is invalid.");
 
-  CharSourceRange CRange = Lexer::makeFileCharRange(
+  const CharSourceRange CRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Range), *Result.SourceManager,
       Result.Context->getLangOpts());
 
-  bool IsNoThrow = FnTy->isNothrow();
-  StringRef ReplacementStr =
+  const bool IsNoThrow = FnTy->isNothrow();
+  const StringRef ReplacementStr =
       IsNoThrow ? NoexceptMacro.empty() ? "noexcept" : NoexceptMacro
       : NoexceptMacro.empty()
           ? (DtorOrOperatorDel || UseNoexceptFalse) ? "noexcept(false)" : ""

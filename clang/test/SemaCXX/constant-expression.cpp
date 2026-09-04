@@ -149,7 +149,7 @@ namespace PR31701 {
   };
   template <int M> class D;
   template <int M>
-  template<int i> void D<M>::set() { // expected-error {{from class 'D<M>' without definition}}
+  template<int i> void D<M>::set() { // expected-error {{from class 'PR31701::D<M>' without definition}}
     const C c = C::n<i>;
   }
 }

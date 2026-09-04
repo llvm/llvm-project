@@ -7,7 +7,7 @@
 define double @test_fms_fold(double %a, double %b) {
 ; CHECK-LABEL: test_fms_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi {{d[0-9]+}}, #0000000000000000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   %mul = fmul fast double %a, 0.000000e+00
   %mul1 = fmul fast double %b, 0.000000e+00

@@ -25,8 +25,8 @@ entry:
 
 declare <4 x i32> @llvm.arm.mve.vabd.v4i32(<4 x i32>, <4 x i32>, i32) #1
 
-define arm_aapcs_vfpcc <8 x half> @test_vabdq_f32(<8 x half> %a, <8 x half> %b) local_unnamed_addr #0 {
-; CHECK-LABEL: test_vabdq_f32:
+define arm_aapcs_vfpcc <8 x half> @test_vabdq_f16(<8 x half> %a, <8 x half> %b) local_unnamed_addr #0 {
+; CHECK-LABEL: test_vabdq_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vabd.f16 q0, q0, q1
 ; CHECK-NEXT:    bx lr

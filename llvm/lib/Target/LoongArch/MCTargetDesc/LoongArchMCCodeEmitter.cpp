@@ -38,7 +38,7 @@ public:
   LoongArchMCCodeEmitter(MCContext &ctx, MCInstrInfo const &MCII)
       : Ctx(ctx), MCII(MCII) {}
 
-  ~LoongArchMCCodeEmitter() override {}
+  ~LoongArchMCCodeEmitter() override = default;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -77,7 +77,7 @@ public:
   /// The value returned is the value of the immediate shifted right
   //  arithmetically by N.
   /// Note that this function is dedicated to specific immediate types,
-  /// e.g. simm14_lsl2, simm16_lsl2, simm21_lsl2 and simm26_lsl2.
+  /// e.g. simm14_lsl2, simm16_lsl2, simm21_lsl2{,_br} and simm26_lsl2.
   template <unsigned N>
   unsigned getImmOpValueAsr(const MCInst &MI, unsigned OpNo,
                             SmallVectorImpl<MCFixup> &Fixups,
@@ -161,6 +161,13 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case ELF::R_LARCH_B26:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
+    case ELF::R_LARCH_MARK_LA:
+      // Match gas behavior: generate `R_LARCH_MARK_LA` relocation when using
+      // `la.abs`.
+      Fixups.push_back(
+          MCFixup::create(0, MCConstantExpr::create(0, Ctx),
+                          FirstLiteralRelocationKind + ELF::R_LARCH_MARK_LA));
+      [[fallthrough]];
     case ELF::R_LARCH_ABS_HI20:
       FixupKind = LoongArch::fixup_loongarch_abs_hi20;
       break;
@@ -173,6 +180,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case ELF::R_LARCH_ABS64_HI12:
       FixupKind = LoongArch::fixup_loongarch_abs64_hi12;
       break;
+    case ELF::R_LARCH_CALL30:
     case ELF::R_LARCH_CALL36:
     case ELF::R_LARCH_TLS_LE_HI20_R:
     case ELF::R_LARCH_TLS_LE_LO12_R:

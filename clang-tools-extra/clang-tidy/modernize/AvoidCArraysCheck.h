@@ -1,4 +1,4 @@
-//===--- AvoidCArraysCheck.h - clang-tidy -----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Find C-style array types and recommend to use std::array<> / std::vector<>.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-c-arrays.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-c-arrays.html
 class AvoidCArraysCheck : public ClangTidyCheck {
 public:
   AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context);

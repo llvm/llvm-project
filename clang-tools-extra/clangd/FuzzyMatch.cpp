@@ -62,9 +62,6 @@
 namespace clang {
 namespace clangd {
 
-constexpr int FuzzyMatcher::MaxPat;
-constexpr int FuzzyMatcher::MaxWord;
-
 static char lower(char C) { return C >= 'A' && C <= 'Z' ? C + ('a' - 'A') : C; }
 // A "negative infinity" score that won't overflow.
 // We use this to mark unreachable states and forbidden solutions.
@@ -148,7 +145,8 @@ constexpr static uint8_t CharRoles[] = {
     // clang-format on
 };
 
-template <typename T> static T packedLookup(const uint8_t *Data, int I) {
+template <typename T>
+static T packedLookup(const uint8_t *Data, unsigned char I) {
   return static_cast<T>((Data[I >> 2] >> ((I & 3) * 2)) & 3);
 }
 CharTypeSet calculateRoles(llvm::StringRef Text,

@@ -49,11 +49,11 @@ cl::opt<unsigned>
            cl::desc("Read specified document from input (default = 1)"),
            cl::cat(Cat));
 
-static cl::opt<uint64_t> MaxSize(
-    "max-size", cl::init(10 * 1024 * 1024),
-    cl::desc(
-        "Sets the maximum allowed output size (0 means no limit) [ELF only]"),
-    cl::cat(Cat));
+static cl::opt<uint64_t>
+    MaxSize("max-size", cl::init(10 * 1024 * 1024),
+            cl::desc("Sets the maximum allowed output size (0 means no limit) "
+                     "[ELF and COFF only]"),
+            cl::cat(Cat));
 
 cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                     cl::value_desc("filename"), cl::init("-"),
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions(Cat);
   cl::ParseCommandLineOptions(
       argc, argv, "Create an object file from a YAML description", nullptr,
-      nullptr, /*LongOptionsUseDoubleDash=*/true);
+      nullptr, nullptr, /*LongOptionsUseDoubleDash=*/true);
 
   constexpr StringRef ProgName = "yaml2obj";
   auto ErrHandler = [&](const Twine &Msg) {

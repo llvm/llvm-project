@@ -407,7 +407,18 @@ Error IndexedMemProfReader::deserializeRadixTreeBased(
     DataAccessProfOffset =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     MemProfSum = memprof::MemProfSummary::deserialize(Ptr);
+
+    if (DataAccessProfOffset > RecordTableOffset) {
+      DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+      const unsigned char *DAPPtr = Start + DataAccessProfOffset;
+      if (Error E = DataAccessProfileData->deserialize(DAPPtr))
+        return E;
+      MemProfSum->buildDataAccessSummary(*DataAccessProfileData);
+    }
   }
+
+  assert((!DataAccessProfOffset || DataAccessProfOffset > RecordTableOffset) &&
+         "Data access profile is either empty or after the record table");
 
   // Read the schema.
   auto SchemaOr = memprof::readMemProfSchema(Ptr);
@@ -429,15 +440,6 @@ Error IndexedMemProfReader::deserializeRadixTreeBased(
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
       /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
-
-  assert((!DataAccessProfOffset || DataAccessProfOffset > RecordTableOffset) &&
-         "Data access profile is either empty or after the record table");
-  if (DataAccessProfOffset > RecordTableOffset) {
-    DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
-    const unsigned char *DAPPtr = Start + DataAccessProfOffset;
-    if (Error E = DataAccessProfileData->deserialize(DAPPtr))
-      return E;
-  }
 
   return Error::success();
 }

@@ -22,6 +22,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/Parser.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 // static bool HACK_EnableDebugInUnitTest = (::llvm::DebugFlag = true);
@@ -33,10 +34,10 @@ namespace {
 class MacroExpansionContextTest : public ::testing::Test {
 protected:
   MacroExpansionContextTest()
-      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(
+            llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>()),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
-        DiagID(new DiagnosticIDs()),
-        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-pc-linux-unknown";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -45,7 +46,6 @@ protected:
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;

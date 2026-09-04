@@ -10,5 +10,7 @@ module {
 #loc1 = loc("test1.f90":1:1)
 #loc2 = loc("test1.f90":3:16)
 
-// CHECK: #[[TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_generic_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_over, DW_OP_constu(24), DW_OP_mul, DW_OP_plus_uconst(32), DW_OP_plus, DW_OP_deref]>, lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_over, DW_OP_constu(24), DW_OP_mul, DW_OP_plus_uconst(24), DW_OP_plus, DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_over, DW_OP_constu(24), DW_OP_mul, DW_OP_plus_uconst(40), DW_OP_plus, DW_OP_deref]>>, dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>, rank = <[DW_OP_push_object_address, DW_OP_plus_uconst(20), DW_OP_deref_size(1)]>>
+// CHECK: #[[TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type
+// CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>, rank = <[DW_OP_push_object_address, DW_OP_plus_uconst(20), DW_OP_deref_size(1)]>
+// CHECK-SAME: elements = #llvm.di_generic_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_over, DW_OP_constu(24), DW_OP_mul, DW_OP_plus_uconst(32), DW_OP_plus, DW_OP_deref]>, lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_over, DW_OP_constu(24), DW_OP_mul, DW_OP_plus_uconst(24), DW_OP_plus, DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_over, DW_OP_constu(24), DW_OP_mul, DW_OP_plus_uconst(40), DW_OP_plus, DW_OP_deref]>>>
 // CHECK: #llvm.di_local_variable<{{.*}}name = "x"{{.*}}type = #[[TY]]{{.*}}>

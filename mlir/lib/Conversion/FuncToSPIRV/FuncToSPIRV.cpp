@@ -34,7 +34,7 @@ namespace {
 /// Converts func.return to spirv.Return.
 class ReturnOpPattern final : public OpConversionPattern<func::ReturnOp> {
 public:
-  using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
@@ -55,7 +55,7 @@ public:
 /// Converts func.call to spirv.FunctionCall.
 class CallOpPattern final : public OpConversionPattern<func::CallOp> {
 public:
-  using OpConversionPattern<func::CallOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
@@ -68,11 +68,15 @@ public:
           getTypeConverter()->convertType(callOp.getResult(0).getType());
       if (!resultType)
         return failure();
-      rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
-          callOp, resultType, adaptor.getOperands(), callOp->getAttrs());
+      auto newCall = rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
+          callOp, resultType, callOp.getCalleeAttr(), adaptor.getOperands(),
+          callOp.getArgAttrsAttr(), callOp.getResAttrsAttr());
+      newCall->setDiscardableAttrs(callOp->getDiscardableAttrDictionary());
     } else {
-      rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
-          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
+      auto newCall = rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
+          callOp, TypeRange(), callOp.getCalleeAttr(), adaptor.getOperands(),
+          callOp.getArgAttrsAttr(), callOp.getResAttrsAttr());
+      newCall->setDiscardableAttrs(callOp->getDiscardableAttrDictionary());
     }
     return success();
   }

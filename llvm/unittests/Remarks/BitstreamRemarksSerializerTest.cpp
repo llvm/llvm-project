@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeAnalyzer.h"
-#include "llvm/Remarks/BitstreamRemarkSerializer.h"
 #include "llvm/Remarks/Remark.h"
+#include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -34,23 +34,24 @@ static void checkAnalyze(StringRef Input, StringRef Expected) {
   EXPECT_EQ(OutputOS.str(), Expected);
 }
 
-static void check(remarks::SerializerMode Mode, const remarks::Remark &R,
-                  StringRef ExpectedR, std::optional<StringRef> ExpectedMeta,
-                  std::optional<remarks::StringTable> StrTab) {
+static void check(const remarks::Remark &R, StringRef ExpectedR,
+                  std::optional<StringRef> ExpectedMeta = std::nullopt,
+                  std::optional<remarks::StringTable> StrTab = std::nullopt) {
   // Emit the remark.
   std::string InputBuf;
   raw_string_ostream InputOS(InputBuf);
   Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeSerializer = [&] {
     if (StrTab)
-      return createRemarkSerializer(remarks::Format::Bitstream, Mode, InputOS,
+      return createRemarkSerializer(remarks::Format::Bitstream, InputOS,
                                     std::move(*StrTab));
     else
-      return createRemarkSerializer(remarks::Format::Bitstream, Mode, InputOS);
+      return createRemarkSerializer(remarks::Format::Bitstream, InputOS);
   }();
   EXPECT_FALSE(errorToBool(MaybeSerializer.takeError()));
   std::unique_ptr<remarks::RemarkSerializer> Serializer =
       std::move(*MaybeSerializer);
   Serializer->emit(R);
+  Serializer->finalize();
 
   // Analyze the serialized remark.
   checkAnalyze(InputOS.str(), ExpectedR);
@@ -66,20 +67,6 @@ static void check(remarks::SerializerMode Mode, const remarks::Remark &R,
   }
 }
 
-static void check(const remarks::Remark &R, StringRef ExpectedR,
-                  StringRef ExpectedMeta,
-                  std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(remarks::SerializerMode::Separate, R, ExpectedR, ExpectedMeta,
-               std::move(StrTab));
-}
-
-static void
-checkStandalone(const remarks::Remark &R, StringRef ExpectedR,
-                std::optional<remarks::StringTable> StrTab = std::nullopt) {
-  return check(remarks::SerializerMode::Standalone, R, ExpectedR,
-               /*ExpectedMeta=*/std::nullopt, std::move(StrTab));
-}
-
 TEST(BitstreamRemarkSerializer, SeparateRemarkFileNoOptionals) {
   remarks::Remark R;
   R.RemarkType = remarks::Type::Missed;
@@ -89,19 +76,21 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileNoOptionals) {
   check(R,
         "<BLOCKINFO_BLOCK/>\n"
         "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=1/>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=1 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=0 op2=1 op3=2/>\n"
-        "</Remark>\n",
-        "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=14 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=0/>\n"
-        "  <String table codeid=3 abbrevid=5/> blob data = "
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=8 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
         "'remark\\x00pass\\x00function\\x00'\n"
-        "  <External File codeid=4 abbrevid=6/> blob data = "
-        "'" EXTERNALFILETESTPATH"'\n"
+        "</Meta>\n",
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=7 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=0/>\n"
+        "  <External File codeid=4 abbrevid=5/> blob data = "
+        "'" EXTERNALFILETESTPATH "'\n"
         "</Meta>\n");
 }
 
@@ -118,19 +107,21 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileNoOptionalsSeparateStrTab) {
   check(R,
         "<BLOCKINFO_BLOCK/>\n"
         "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=1/>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=1 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=2 op2=1 op3=0/>\n"
-        "</Remark>\n",
-        "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=14 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=0/>\n"
-        "  <String table codeid=3 abbrevid=5/> blob data = "
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=8 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
         "'function\\x00pass\\x00remark\\x00'\n"
-        "  <External File codeid=4 abbrevid=6/> blob data = "
-        "'" EXTERNALFILETESTPATH"'\n"
+        "</Meta>\n",
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=7 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=0/>\n"
+        "  <External File codeid=4 abbrevid=5/> blob data = "
+        "'" EXTERNALFILETESTPATH "'\n"
         "</Meta>\n",
         std::move(StrTab));
 }
@@ -148,20 +139,22 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileDebugLoc) {
   check(R,
         "<BLOCKINFO_BLOCK/>\n"
         "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=1/>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=0 op2=1 op3=2/>\n"
         "  <Remark debug location codeid=6 abbrevid=5 op0=3 op1=99 op2=55/>\n"
-        "</Remark>\n",
-        "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=15 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=0/>\n"
-        "  <String table codeid=3 abbrevid=5/> blob data = "
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=9 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
         "'remark\\x00pass\\x00function\\x00path\\x00'\n"
-        "  <External File codeid=4 abbrevid=6/> blob data = "
-        "'" EXTERNALFILETESTPATH"'\n"
+        "</Meta>\n",
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=7 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=0/>\n"
+        "  <External File codeid=4 abbrevid=5/> blob data = "
+        "'" EXTERNALFILETESTPATH "'\n"
         "</Meta>\n");
 }
 
@@ -175,20 +168,22 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileHotness) {
   check(R,
         "<BLOCKINFO_BLOCK/>\n"
         "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=1/>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=3 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=0 op2=1 op3=2/>\n"
         "  <Remark hotness codeid=7 abbrevid=6 op0=999999999/>\n"
-        "</Remark>\n",
-        "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=14 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=0/>\n"
-        "  <String table codeid=3 abbrevid=5/> blob data = "
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=8 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
         "'remark\\x00pass\\x00function\\x00'\n"
-        "  <External File codeid=4 abbrevid=6/> blob data = "
-        "'" EXTERNALFILETESTPATH"'\n"
+        "</Meta>\n",
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=7 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=0/>\n"
+        "  <External File codeid=4 abbrevid=5/> blob data = "
+        "'" EXTERNALFILETESTPATH "'\n"
         "</Meta>\n");
 }
 
@@ -204,20 +199,22 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileArgNoDebugLoc) {
   check(R,
         "<BLOCKINFO_BLOCK/>\n"
         "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=1/>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=2 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=0 op2=1 op3=2/>\n"
         "  <Argument codeid=9 abbrevid=8 op0=3 op1=4/>\n"
-        "</Remark>\n",
-        "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=16 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=0/>\n"
-        "  <String table codeid=3 abbrevid=5/> blob data = "
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=10 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
         "'remark\\x00pass\\x00function\\x00key\\x00value\\x00'\n"
-        "  <External File codeid=4 abbrevid=6/> blob data = "
-        "'" EXTERNALFILETESTPATH"'\n"
+        "</Meta>\n",
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=7 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=0/>\n"
+        "  <External File codeid=4 abbrevid=5/> blob data = "
+        "'" EXTERNALFILETESTPATH "'\n"
         "</Meta>\n");
 }
 
@@ -237,21 +234,23 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileArgDebugLoc) {
   check(R,
         "<BLOCKINFO_BLOCK/>\n"
         "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=1/>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=4 BlockCodeSize=4>\n"
         "  <Remark header codeid=5 abbrevid=4 op0=2 op1=0 op2=1 op3=2/>\n"
         "  <Argument with debug location codeid=8 abbrevid=7 op0=3 op1=4 op2=5 "
         "op3=99 op4=55/>\n"
-        "</Remark>\n",
-        "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=17 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=0/>\n"
-        "  <String table codeid=3 abbrevid=5/> blob data = "
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=11 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
         "'remark\\x00pass\\x00function\\x00key\\x00value\\x00path\\x00'\n"
-        "  <External File codeid=4 abbrevid=6/> blob data = "
-        "'" EXTERNALFILETESTPATH"'\n"
+        "</Meta>\n",
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=7 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=0/>\n"
+        "  <External File codeid=4 abbrevid=5/> blob data = "
+        "'" EXTERNALFILETESTPATH "'\n"
         "</Meta>\n");
 }
 
@@ -276,7 +275,7 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileAll) {
   check(R,
         "<BLOCKINFO_BLOCK/>\n"
         "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=1/>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
         "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
         "</Meta>\n"
         "<Remark BlockID=9 NumWords=8 BlockCodeSize=4>\n"
@@ -285,14 +284,17 @@ TEST(BitstreamRemarkSerializer, SeparateRemarkFileAll) {
         "  <Remark hotness codeid=7 abbrevid=6 op0=999999999/>\n"
         "  <Argument with debug location codeid=8 abbrevid=7 op0=4 op1=5 op2=6 "
         "op3=11 op4=66/>\n"
-        "</Remark>\n",
-        "<BLOCKINFO_BLOCK/>\n"
-        "<Meta BlockID=8 NumWords=19 BlockCodeSize=3>\n"
-        "  <Container info codeid=1 abbrevid=4 op0=0 op1=0/>\n"
-        "  <String table codeid=3 abbrevid=5/> blob data = "
+        "</Remark>\n"
+        "<Meta BlockID=8 NumWords=13 BlockCodeSize=3>\n"
+        "  <String table codeid=3 abbrevid=6/> blob data = "
         "'remark\\x00pass\\x00function\\x00path\\x00key\\x00value\\x00argpa"
-        "th\\x00'\n  <External File codeid=4 abbrevid=6/> blob data = "
-        "'" EXTERNALFILETESTPATH"'\n"
+        "th\\x00'\n"
+        "</Meta>\n",
+        "<BLOCKINFO_BLOCK/>\n"
+        "<Meta BlockID=8 NumWords=7 BlockCodeSize=3>\n"
+        "  <Container info codeid=1 abbrevid=4 op0=1 op1=0/>\n"
+        "  <External File codeid=4 abbrevid=5/> blob data = "
+        "'" EXTERNALFILETESTPATH "'\n"
         "</Meta>\n");
 }
 
@@ -323,15 +325,12 @@ TEST(BitstreamRemarkSerializer, Standalone) {
   R.Args.back().Loc->SourceFilePath = "argpath";
   R.Args.back().Loc->SourceLine = 11;
   R.Args.back().Loc->SourceColumn = 66;
-  checkStandalone(
+  check(
       R,
       "<BLOCKINFO_BLOCK/>\n"
-      "<Meta BlockID=8 NumWords=15 BlockCodeSize=3>\n"
-      "  <Container info codeid=1 abbrevid=4 op0=0 op1=2/>\n"
+      "<Meta BlockID=8 NumWords=3 BlockCodeSize=3>\n"
+      "  <Container info codeid=1 abbrevid=4 op0=1 op1=1/>\n"
       "  <Remark version codeid=2 abbrevid=5 op0=0/>\n"
-      "  <String table codeid=3 abbrevid=6/> blob data = "
-      "'pass\\x00remark\\x00function\\x00path\\x00key\\x00value\\x00argpath\\x0"
-      "0'\n"
       "</Meta>\n"
       "<Remark BlockID=9 NumWords=8 BlockCodeSize=4>\n"
       "  <Remark header codeid=5 abbrevid=4 op0=2 op1=1 op2=0 op3=2/>\n"
@@ -339,6 +338,11 @@ TEST(BitstreamRemarkSerializer, Standalone) {
       "  <Remark hotness codeid=7 abbrevid=6 op0=999999999/>\n"
       "  <Argument with debug location codeid=8 abbrevid=7 op0=4 op1=5 op2=6 "
       "op3=11 op4=66/>\n"
-      "</Remark>\n",
-      std::move(StrTab));
+      "</Remark>\n"
+      "<Meta BlockID=8 NumWords=13 BlockCodeSize=3>\n"
+      "  <String table codeid=3 abbrevid=6/> blob data = "
+      "'pass\\x00remark\\x00function\\x00path\\x00key\\x00value\\x00argpath\\x0"
+      "0'\n"
+      "</Meta>\n",
+      std::nullopt, std::move(StrTab));
 }

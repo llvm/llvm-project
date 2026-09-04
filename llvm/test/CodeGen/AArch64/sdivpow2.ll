@@ -3,86 +3,143 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -fast-isel=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,FAST
 
 define i32 @test1(i32 %x) {
-; CHECK-LABEL: test1:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #7
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    asr w0, w8, #3
-; CHECK-NEXT:    ret
+; ISEL-LABEL: test1:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    add w8, w0, #7
+; ISEL-NEXT:    cmp w0, #0
+; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w0, w8, #3
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: test1:
+; FAST:       // %bb.0:
+; FAST-NEXT:    add w8, w0, #7
+; FAST-NEXT:    cmp w0, #0
+; FAST-NEXT:    csel w8, w8, w0, lt
+; FAST-NEXT:    asr w0, w8, #3
+; FAST-NEXT:    ret
   %div = sdiv i32 %x, 8
   ret i32 %div
 }
 
 define i32 @test2(i32 %x) {
-; CHECK-LABEL: test2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #7
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    neg w0, w8, asr #3
-; CHECK-NEXT:    ret
+; ISEL-LABEL: test2:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    add w8, w0, #7
+; ISEL-NEXT:    cmp w0, #0
+; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    neg w0, w8, asr #3
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: test2:
+; FAST:       // %bb.0:
+; FAST-NEXT:    add w8, w0, #7
+; FAST-NEXT:    cmp w0, #0
+; FAST-NEXT:    csel w8, w8, w0, lt
+; FAST-NEXT:    neg w0, w8, asr #3
+; FAST-NEXT:    ret
   %div = sdiv i32 %x, -8
   ret i32 %div
 }
 
 define i32 @test3(i32 %x) {
-; CHECK-LABEL: test3:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #31
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csel w8, w8, w0, lt
-; CHECK-NEXT:    asr w0, w8, #5
-; CHECK-NEXT:    ret
+; ISEL-LABEL: test3:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    add w8, w0, #31
+; ISEL-NEXT:    cmp w0, #0
+; ISEL-NEXT:    csel w8, w8, w0, mi
+; ISEL-NEXT:    asr w0, w8, #5
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: test3:
+; FAST:       // %bb.0:
+; FAST-NEXT:    add w8, w0, #31
+; FAST-NEXT:    cmp w0, #0
+; FAST-NEXT:    csel w8, w8, w0, lt
+; FAST-NEXT:    asr w0, w8, #5
+; FAST-NEXT:    ret
   %div = sdiv i32 %x, 32
   ret i32 %div
 }
 
 define i64 @test4(i64 %x) {
-; CHECK-LABEL: test4:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #7
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    csel x8, x8, x0, lt
-; CHECK-NEXT:    asr x0, x8, #3
-; CHECK-NEXT:    ret
+; ISEL-LABEL: test4:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    add x8, x0, #7
+; ISEL-NEXT:    cmp x0, #0
+; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x0, x8, #3
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: test4:
+; FAST:       // %bb.0:
+; FAST-NEXT:    add x8, x0, #7
+; FAST-NEXT:    cmp x0, #0
+; FAST-NEXT:    csel x8, x8, x0, lt
+; FAST-NEXT:    asr x0, x8, #3
+; FAST-NEXT:    ret
   %div = sdiv i64 %x, 8
   ret i64 %div
 }
 
 define i64 @test5(i64 %x) {
-; CHECK-LABEL: test5:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #7
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    csel x8, x8, x0, lt
-; CHECK-NEXT:    neg x0, x8, asr #3
-; CHECK-NEXT:    ret
+; ISEL-LABEL: test5:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    add x8, x0, #7
+; ISEL-NEXT:    cmp x0, #0
+; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    neg x0, x8, asr #3
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: test5:
+; FAST:       // %bb.0:
+; FAST-NEXT:    add x8, x0, #7
+; FAST-NEXT:    cmp x0, #0
+; FAST-NEXT:    csel x8, x8, x0, lt
+; FAST-NEXT:    neg x0, x8, asr #3
+; FAST-NEXT:    ret
   %div = sdiv i64 %x, -8
   ret i64 %div
 }
 
 define i64 @test6(i64 %x) {
-; CHECK-LABEL: test6:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #63
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    csel x8, x8, x0, lt
-; CHECK-NEXT:    asr x0, x8, #6
-; CHECK-NEXT:    ret
+; ISEL-LABEL: test6:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    add x8, x0, #63
+; ISEL-NEXT:    cmp x0, #0
+; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x0, x8, #6
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: test6:
+; FAST:       // %bb.0:
+; FAST-NEXT:    add x8, x0, #63
+; FAST-NEXT:    cmp x0, #0
+; FAST-NEXT:    csel x8, x8, x0, lt
+; FAST-NEXT:    asr x0, x8, #6
+; FAST-NEXT:    ret
   %div = sdiv i64 %x, 64
   ret i64 %div
 }
 
 define i64 @test7(i64 %x) {
-; CHECK-LABEL: test7:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #281474976710655 // =0xffffffffffff
-; CHECK-NEXT:    cmp x0, #0
-; CHECK-NEXT:    add x8, x0, x8
-; CHECK-NEXT:    csel x8, x8, x0, lt
-; CHECK-NEXT:    asr x0, x8, #48
-; CHECK-NEXT:    ret
+; ISEL-LABEL: test7:
+; ISEL:       // %bb.0:
+; ISEL-NEXT:    mov x8, #281474976710655 // =0xffffffffffff
+; ISEL-NEXT:    cmp x0, #0
+; ISEL-NEXT:    add x8, x0, x8
+; ISEL-NEXT:    csel x8, x8, x0, mi
+; ISEL-NEXT:    asr x0, x8, #48
+; ISEL-NEXT:    ret
+;
+; FAST-LABEL: test7:
+; FAST:       // %bb.0:
+; FAST-NEXT:    mov x8, #281474976710655 // =0xffffffffffff
+; FAST-NEXT:    cmp x0, #0
+; FAST-NEXT:    add x8, x0, x8
+; FAST-NEXT:    csel x8, x8, x0, lt
+; FAST-NEXT:    asr x0, x8, #48
+; FAST-NEXT:    ret
   %div = sdiv i64 %x, 281474976710656
   ret i64 %div
 }
@@ -132,3 +189,5 @@ define i32 @sdiv_int(i32 %begin, i32 %first) #0 {
 }
 
 attributes #0 = { "target-features"="+sve" vscale_range(2,2) }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

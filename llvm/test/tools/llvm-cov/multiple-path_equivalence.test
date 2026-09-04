@@ -6,11 +6,12 @@
 # /tmp/coverage/b/c/f4.c
 
 # Setup
-// RUN: touch %/T/main.c; touch %/T/f1.c; touch %/T/f2.c; touch %/T/f3.c; touch %/T/f4.c
+// RUN: mkdir -p %t
+// RUN: touch %/t/main.c; touch %/t/f1.c; touch %/t/f2.c; touch %/t/f3.c; touch %/t/f4.c
 // RUN: llvm-profdata merge %S/Inputs/multiple-path_equivalence.proftext -o %t.profdata
 
 # Make sure that remapping follows the specified order with the first matching entry being used first (f4 comes before f3)
-// RUN: llvm-cov show %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/T -path-equivalence=/tmp/coverage/b/c,%/T -path-equivalence=/tmp/coverage/b,%/T -path-equivalence=/tmp/coverage,%/T 2>&1 | FileCheck %s
+// RUN: llvm-cov show %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/t -path-equivalence=/tmp/coverage/b/c,%/t -path-equivalence=/tmp/coverage/b,%/t -path-equivalence=/tmp/coverage,%/t 2>&1 | FileCheck %s
 
 // CHECK-DAG: {{/|\\}}tmp{{/|\\}}coverage{{/|\\}}main.c:
 // CHECK-DAG: {{/|\\}}tmp{{/|\\}}coverage{{/|\\}}f1.c:
@@ -20,7 +21,7 @@
 // CHECK-NOT: isn't covered.
 
 # Make sure remapping follows the specified order by proving paths in an overriding order (f4 comes after f3)
-// RUN: llvm-cov show %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/T -path-equivalence=/tmp/coverage/b,%/T -path-equivalence=/tmp/coverage/b/c,%/T -path-equivalence=/tmp/coverage,%/T 2>&1 | FileCheck %s -check-prefix=OVERRIDING_ORDER
+// RUN: llvm-cov show %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/t -path-equivalence=/tmp/coverage/b,%/t -path-equivalence=/tmp/coverage/b/c,%/t -path-equivalence=/tmp/coverage,%/t 2>&1 | FileCheck %s -check-prefix=OVERRIDING_ORDER
 
 // OVERRIDING_ORDER-DAG: {{/|\\}}tmp{{/|\\}}coverage{{/|\\}}main.c:
 // OVERRIDING_ORDER-DAG: {{/|\\}}tmp{{/|\\}}coverage{{/|\\}}f1.c:
@@ -28,5 +29,5 @@
 // OVERRIDING_ORDER-DAG: {{/|\\}}tmp{{/|\\}}coverage{{/|\\}}b{{/|\\}}f3.c:
 // OVERRIDING_ORDER-DAG: warning: The file '{{/|\\}}tmp{{/|\\}}coverage{{/|\\}}b{{/|\\}}c{{/|\\}}f4.c' isn't covered.
 
-// RUN: not llvm-cov show %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/T -path-equivalence=/tmp/coverage/b, -path-equivalence=/tmp/coverage/b/c,%/T -path-equivalence=/tmp/coverage,%/T 2>&1 | FileCheck %s -check-prefix=EMPTY_PATH
+// RUN: not llvm-cov show %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/t -path-equivalence=/tmp/coverage/b, -path-equivalence=/tmp/coverage/b/c,%/t -path-equivalence=/tmp/coverage,%/t 2>&1 | FileCheck %s -check-prefix=EMPTY_PATH
 // EMPTY_PATH: must be in format 'from,to'

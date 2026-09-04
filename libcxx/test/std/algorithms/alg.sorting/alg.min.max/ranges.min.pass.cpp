@@ -31,6 +31,7 @@
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <class T>
 concept HasMinR = requires { std::ranges::min(std::declval<T>()); };

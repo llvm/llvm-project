@@ -14,7 +14,8 @@
 #ifndef MLIR_TOOLS_LSPSERVERSUPPORT_SOURCEMGRUTILS_H
 #define MLIR_TOOLS_LSPSERVERSUPPORT_SOURCEMGRUTILS_H
 
-#include "mlir/Tools/lsp-server-support/Protocol.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 
@@ -45,17 +46,18 @@ bool contains(SMRange range, SMLoc loc);
 
 /// This class represents a single include within a root file.
 struct SourceMgrInclude {
-  SourceMgrInclude(const lsp::URIForFile &uri, const lsp::Range &range)
+  SourceMgrInclude(const llvm::lsp::URIForFile &uri,
+                   const llvm::lsp::Range &range)
       : uri(uri), range(range) {}
 
   /// Build a hover for the current include file.
-  Hover buildHover() const;
+  llvm::lsp::Hover buildHover() const;
 
   /// The URI of the file that is included.
-  lsp::URIForFile uri;
+  llvm::lsp::URIForFile uri;
 
   /// The range of the include directive.
-  lsp::Range range;
+  llvm::lsp::Range range;
 };
 
 /// Given a source manager, gather all of the processed include files. These are

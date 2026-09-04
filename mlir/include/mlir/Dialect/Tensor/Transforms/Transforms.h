@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
@@ -29,7 +30,8 @@ namespace tensor {
 /// transform dialect that control is done within the transform dialect. Other
 /// use cases can inherit from this pattern and add necessary controls.
 FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
-    OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp);
+    OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producerOp,
+    ArrayRef<InnerTileAlignment> innerTileAlignments = {});
 
 /// Method to swap `tensor.insert_slice`s with their consumers when the
 /// consumer implements the `TilingInterface`. The size of `sliceOps` and
@@ -37,10 +39,10 @@ FailureOr<TilingResult> replaceExtractSliceWithTiledProducer(
 /// `consumerOperands` represents a use of the the corresponding
 /// entry in `sliceOps` in the consumer. All entries of `consumerOperands` is
 /// expected to be uses in the same consumer.
-FailureOr<TilingResult>
-replaceInsertSlicesWithTiledConsumer(OpBuilder &builder,
-                                     ArrayRef<tensor::InsertSliceOp> sliceOps,
-                                     ArrayRef<OpOperand *> consumerOperands);
+FailureOr<TilingResult> replaceInsertSlicesWithTiledConsumer(
+    OpBuilder &builder, ArrayRef<tensor::InsertSliceOp> sliceOps,
+    ArrayRef<OpOperand *> consumerOperands,
+    ArrayRef<InnerTileAlignment> innerTileAlignments = {});
 
 //===----------------------------------------------------------------------===//
 // Populate functions.
@@ -141,6 +143,32 @@ FailureOr<Value> buildIndependentOp(OpBuilder &b, tensor::PadOp padOp,
 /// found.
 FailureOr<Value> buildIndependentOp(OpBuilder &b, tensor::EmptyOp emptyOp,
                                     ValueRange independencies);
+
+/// Computes the offsets, sizes, and strides needed to build a collapsed
+/// `sliceOp`. The dimensions to collapse are specified by `reassociation`.
+///
+/// This fails when the specified collapse cannot be represented by a valid
+/// ExtractSliceOp.
+LogicalResult
+getCollapsedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+                             ArrayRef<ReassociationIndices> reassociation,
+                             SmallVectorImpl<OpFoldResult> &collapsedOffsets,
+                             SmallVectorImpl<OpFoldResult> &collapsedSizes,
+                             SmallVectorImpl<OpFoldResult> &collapsedStrides);
+
+/// Computes the offsets, sizes, and strides needed to build an expanded
+/// `sliceOp`. The dimensions to expand are specified by `reassociation` and
+/// the shape of `expandedValue`.
+///
+/// This fails when the specified expansion cannot be represented by a valid
+/// ExtractSliceOp.
+LogicalResult
+getExpandedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            Value expandedValue,
+                            SmallVectorImpl<OpFoldResult> &expandedOffsets,
+                            SmallVectorImpl<OpFoldResult> &expandedSizes,
+                            SmallVectorImpl<OpFoldResult> &expandedStrides);
 
 } // namespace tensor
 } // namespace mlir

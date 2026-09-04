@@ -120,6 +120,11 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
+
+  MODULE_CODE_ASM_PROPERTY = 19, // [strchr x N]
+
+  // GUIDLIST: [n x i64]
+  MODULE_CODE_GUIDLIST = 20,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -177,6 +182,8 @@ enum TypeCodes {
   TYPE_CODE_OPAQUE_POINTER = 25, // OPAQUE_POINTER: [addrspace]
 
   TYPE_CODE_TARGET_TYPE = 26, // TARGET_TYPE
+
+  TYPE_CODE_BYTE = 27, // BYTE: [width]
 };
 
 enum OperandBundleTagCode {
@@ -265,6 +272,7 @@ enum GlobalValueSummarySymtabCodes {
   // strings in strtab.
   // [n * name]
   FS_CFI_FUNCTION_DECLS = 18,
+  // Deprecated, but still needed to read old bitcode files.
   // Per-module summary that also adds relative block frequency to callee info.
   // PERMODULE_RELBF: [valueid, flags, instcount, numrefs,
   //                   numrefs x valueid,
@@ -392,6 +400,7 @@ enum MetadataCodes {
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
   METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
   METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
+  METADATA_PROPERTY = 50, // [distinct, name, file, line, type, backing_storage]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -437,6 +446,10 @@ enum ConstantsCodes {
   CST_CODE_CE_GEP_WITH_INRANGE = 31,  // [opty, flags, range, n x operands]
   CST_CODE_CE_GEP = 32,               // [opty, flags, n x operands]
   CST_CODE_PTRAUTH = 33,              // [ptr, key, disc, addrdisc]
+  CST_CODE_PTRAUTH2 = 34,             // [ptr, key, disc, addrdisc,
+                                      //  deactivation_symbol]
+  CST_CODE_BYTE = 35,                 // BYTE:          [intval]
+  CST_CODE_WIDE_BYTE = 36,            // WIDE_BYTE:     [n x intval]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -456,7 +469,8 @@ enum CastOpcodes {
   CAST_PTRTOINT = 9,
   CAST_INTTOPTR = 10,
   CAST_BITCAST = 11,
-  CAST_ADDRSPACECAST = 12
+  CAST_ADDRSPACECAST = 12,
+  CAST_PTRTOADDR = 13,
 };
 
 /// UnaryOpcodes - These are values used in the bitcode files to encode which
@@ -512,6 +526,12 @@ enum RMWOperations {
   RMW_USUB_SAT = 18,
   RMW_FMAXIMUM = 19,
   RMW_FMINIMUM = 20,
+  RMW_FMAXIMUMNUM = 21,
+  RMW_FMINIMUMNUM = 22,
+};
+
+enum RMWOperationFlags {
+  RMW_ELEMENTWISE_FLAG = 1 << 5,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -552,6 +572,9 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInstOptionalFlags - Flags for serializing
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
+/// Flags for serializing AddrSpaceCastInst's SubclassOptionalData contents.
+enum AddrSpaceCastInstOptionalFlags { ASCI_NON_NULL = 0 };
 
 /// Mark to distinguish metadata from value in an operator bundle.
 enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };
@@ -638,25 +661,25 @@ enum FunctionCodes {
   FUNC_CODE_INST_CALL = 34, // CALL:    [attr, cc, fnty, fnid, args...]
 
   FUNC_CODE_DEBUG_LOC = 35,          // DEBUG_LOC:  [Line,Col,ScopeVal, IAVal]
-  FUNC_CODE_INST_FENCE = 36,         // FENCE: [ordering, synchscope]
+  FUNC_CODE_INST_FENCE = 36,         // FENCE: [ordering, syncscope]
   FUNC_CODE_INST_CMPXCHG_OLD = 37,   // CMPXCHG: [ptrty, ptr, cmp, val, vol,
-                                     //            ordering, synchscope,
+                                     //            ordering, syncscope,
                                      //            failure_ordering?, weak?]
   FUNC_CODE_INST_ATOMICRMW_OLD = 38, // ATOMICRMW: [ptrty,ptr,val, operation,
                                      //             align, vol,
-                                     //             ordering, synchscope]
+                                     //             ordering, syncscope]
   FUNC_CODE_INST_RESUME = 39,        // RESUME:     [opval]
   FUNC_CODE_INST_LANDINGPAD_OLD =
       40,                         // LANDINGPAD: [ty,val,val,num,id0,val0...]
   FUNC_CODE_INST_LOADATOMIC = 41, // LOAD: [opty, op, align, vol,
-                                  //        ordering, synchscope]
+                                  //        ordering, syncscope]
   FUNC_CODE_INST_STOREATOMIC_OLD = 42, // STORE: [ptrty,ptr,val, align, vol
-                                       //         ordering, synchscope]
+                                       //         ordering, syncscope]
   FUNC_CODE_INST_GEP = 43,             // GEP:  [inbounds, n x operands]
   FUNC_CODE_INST_STORE = 44,       // STORE: [ptrty,ptr,valty,val, align, vol]
   FUNC_CODE_INST_STOREATOMIC = 45, // STORE: [ptrty,ptr,val, align, vol
   FUNC_CODE_INST_CMPXCHG = 46,     // CMPXCHG: [ptrty, ptr, cmp, val, vol,
-                                   //           success_ordering, synchscope,
+                                   //           success_ordering, syncscope,
                                    //           failure_ordering, weak]
   FUNC_CODE_INST_LANDINGPAD = 47,  // LANDINGPAD: [ty,val,num,id0,val0...]
   FUNC_CODE_INST_CLEANUPRET = 48,  // CLEANUPRET: [val] or [val,bb#]
@@ -674,7 +697,7 @@ enum FunctionCodes {
   FUNC_CODE_INST_FREEZE = 58,     // FREEZE: [opty, opval]
   FUNC_CODE_INST_ATOMICRMW = 59,  // ATOMICRMW: [ptrty, ptr, valty, val,
                                   //             operation, align, vol,
-                                  //             ordering, synchscope]
+                                  //             ordering, syncscope]
   FUNC_CODE_BLOCKADDR_USERS = 60, // BLOCKADDR_USERS: [value...]
 
   FUNC_CODE_DEBUG_RECORD_VALUE =
@@ -687,6 +710,8 @@ enum FunctionCodes {
   FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE =
       64, // [DILocation, DILocalVariable, DIExpression, Value]
   FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
+  FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE =
+      66, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
 };
 
 enum UseListCodes {
@@ -799,6 +824,13 @@ enum AttributeKindCodes {
   ATTR_KIND_SANITIZE_TYPE = 101,
   ATTR_KIND_CAPTURES = 102,
   ATTR_KIND_DEAD_ON_RETURN = 103,
+  ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
+  ATTR_KIND_NO_CREATE_UNDEF_OR_POISON = 105,
+  ATTR_KIND_DENORMAL_FPENV = 106,
+  ATTR_KIND_NOOUTLINE = 107,
+  ATTR_KIND_FLATTEN = 108,
+  ATTR_KIND_NOIPA = 109,
+  ATTR_KIND_NOFREEOBJ = 110,
 };
 
 enum ComdatSelectionKindCodes {

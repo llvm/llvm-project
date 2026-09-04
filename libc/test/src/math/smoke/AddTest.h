@@ -47,6 +47,10 @@ public:
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.zero));
     EXPECT_FP_EQ(inf, func(in.inf, in.neg_zero));
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.neg_zero));
+    EXPECT_FP_EQ(inf, func(in.zero, in.inf));
+    EXPECT_FP_EQ(inf, func(in.neg_zero, in.inf));
+    EXPECT_FP_EQ(neg_inf, func(in.zero, in.neg_inf));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_zero, in.neg_inf));
   }
 
   void test_invalid_operations(AddFunc func) {
@@ -64,72 +68,67 @@ public:
 
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
+                                  FE_OVERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
-      EXPECT_FP_EQ_WITH_EXCEPTION(-inf,
-                                  func(in.neg_max_normal, in.neg_max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          -inf, func(in.neg_max_normal, in.neg_max_normal), FE_OVERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(in.min_denormal, in.min_denormal),
-                                  FE_UNDERFLOW | FE_INEXACT);
+                                  FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(
           neg_zero, func(in.neg_min_denormal, in.neg_min_denormal),
-          FE_UNDERFLOW | FE_INEXACT);
+          FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
     }
 
     if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal,
-                                  func(in.max_normal, in.max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          max_normal, func(in.max_normal, in.max_normal), FE_OVERFLOW);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
                                   func(in.neg_max_normal, in.neg_max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
+                                  FE_OVERFLOW);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(in.min_denormal, in.min_denormal),
-                                  FE_UNDERFLOW | FE_INEXACT);
+                                  FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(
           neg_zero, func(in.neg_min_denormal, in.neg_min_denormal),
-          FE_UNDERFLOW | FE_INEXACT);
+          FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
     }
 
     if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal,
-                                  func(in.max_normal, in.max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
-      EXPECT_FP_EQ_WITH_EXCEPTION(-inf,
-                                  func(in.neg_max_normal, in.neg_max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          max_normal, func(in.max_normal, in.max_normal), FE_OVERFLOW);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          -inf, func(in.neg_max_normal, in.neg_max_normal), FE_OVERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(in.min_denormal, in.min_denormal),
-                                  FE_UNDERFLOW | FE_INEXACT);
+                                  FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(
           neg_min_denormal, func(in.neg_min_denormal, in.neg_min_denormal),
-          FE_UNDERFLOW | FE_INEXACT);
+          FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
     }
 
     if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
+                                  FE_OVERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
                                   func(in.neg_max_normal, in.neg_max_normal),
-                                  FE_OVERFLOW | FE_INEXACT);
+                                  FE_OVERFLOW);
 
-      EXPECT_FP_EQ_WITH_EXCEPTION(min_denormal,
-                                  func(in.min_denormal, in.min_denormal),
-                                  FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          min_denormal, func(in.min_denormal, in.min_denormal), FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(
           neg_zero, func(in.neg_min_denormal, in.neg_min_denormal),
-          FE_UNDERFLOW | FE_INEXACT);
+          FE_UNDERFLOW);
       EXPECT_MATH_ERRNO(ERANGE);
     }
 #endif
@@ -149,6 +148,27 @@ public:
                  func(InFPBits::create_value(Sign::POS, 2U, 0U).get_val(),
                       InFPBits::create_value(Sign::POS, 0U, 0b10U).get_val()));
   }
+
+  void test_mixed_signs(AddFunc func) {
+    EXPECT_FP_EQ(OutType(3.0), func(InType(1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(1.0), InType(-2.0)));
+    EXPECT_FP_EQ(OutType(1.0), func(InType(-1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-1.0), InType(-2.0)));
+
+    EXPECT_FP_EQ(OutType(3.0), func(InType(2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(1.0), func(InType(2.0), InType(-1.0)));
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(-2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-2.0), InType(-1.0)));
+  }
+
+  void test_signed_zero_result(AddFunc func) {
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(in.zero, in.zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, func(in.neg_zero, in.neg_zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, zero, neg_zero, zero,
+                              func(in.neg_zero, in.zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, zero, neg_zero, zero,
+                              func(in.zero, in.neg_zero));
+  }
 };
 
 #define LIST_ADD_TESTS(OutType, InType, func)                                  \
@@ -159,7 +179,9 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcAddTest, RangeErrors) { test_range_errors(&func); }           \
   TEST_F(LlvmLibcAddTest, InexactResults) { test_inexact_results(&func); }     \
-  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }
+  TEST_F(LlvmLibcAddTest, MixedNormality) { test_mixed_normality(&func); }     \
+  TEST_F(LlvmLibcAddTest, MixedSigns) { test_mixed_signs(&func); }             \
+  TEST_F(LlvmLibcAddTest, SignedZeroResult) { test_signed_zero_result(&func); }
 
 #define LIST_ADD_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
   using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \
@@ -175,6 +197,10 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcAddTest##suffix, MixedNormality) {                            \
     test_mixed_normality(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcAddTest##suffix, MixedSigns) { test_mixed_signs(&func); }     \
+  TEST_F(LlvmLibcAddTest##suffix, SignedZeroResult) {                          \
+    test_signed_zero_result(&func);                                            \
   }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ADDTEST_H

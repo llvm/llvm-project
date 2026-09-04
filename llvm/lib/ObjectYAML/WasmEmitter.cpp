@@ -77,7 +77,6 @@ public:
   SubSectionWriter(raw_ostream &OS) : OS(OS), StringStream(OutString) {}
 
   void done() {
-    StringStream.flush();
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
     OutString.clear();
@@ -180,6 +179,27 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       writeStringRef(Needed, SubOS);
     SubSection.done();
   }
+  if (Section.ExportInfo.size()) {
+    writeUint8(OS, wasm::WASM_DYLINK_EXPORT_INFO);
+    raw_ostream &SubOS = SubSection.getStream();
+    encodeULEB128(Section.ExportInfo.size(), SubOS);
+    for (const WasmYAML::DylinkExportInfo &Info : Section.ExportInfo) {
+      writeStringRef(Info.Name, SubOS);
+      encodeULEB128(Info.Flags, SubOS);
+    }
+    SubSection.done();
+  }
+  if (Section.ImportInfo.size()) {
+    writeUint8(OS, wasm::WASM_DYLINK_IMPORT_INFO);
+    raw_ostream &SubOS = SubSection.getStream();
+    encodeULEB128(Section.ImportInfo.size(), SubOS);
+    for (const WasmYAML::DylinkImportInfo &Info : Section.ImportInfo) {
+      writeStringRef(Info.Module, SubOS);
+      writeStringRef(Info.Field, SubOS);
+      encodeULEB128(Info.Flags, SubOS);
+    }
+    SubSection.done();
+  }
   if (Section.RuntimePath.size()) {
     writeUint8(OS, wasm::WASM_DYLINK_RUNTIME_PATH);
     raw_ostream &SubOS = SubSection.getStream();
@@ -219,9 +239,15 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       case wasm::WASM_SYMBOL_TYPE_DATA:
         writeStringRef(Info.Name, SubSection.getStream());
         if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-          encodeULEB128(Info.DataRef.Segment, SubSection.getStream());
-          encodeULEB128(Info.DataRef.Offset, SubSection.getStream());
-          encodeULEB128(Info.DataRef.Size, SubSection.getStream());
+          if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+              wasm::WASM_SYMBOL_BINDING_COMMON) {
+            encodeULEB128(Info.CommonRef.Size, SubSection.getStream());
+            writeUint8(SubSection.getStream(), Info.CommonRef.Alignment);
+          } else {
+            encodeULEB128(Info.DataRef.Segment, SubSection.getStream());
+            encodeULEB128(Info.DataRef.Offset, SubSection.getStream());
+            encodeULEB128(Info.DataRef.Size, SubSection.getStream());
+          }
         }
         break;
       case wasm::WASM_SYMBOL_TYPE_SECTION:
@@ -545,7 +571,6 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     Func.Body.writeAsBinary(StringStream);
 
     // Write the section size followed by the content
-    StringStream.flush();
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
   }
@@ -653,8 +678,6 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     if (HasError)
       return false;
 
-    StringStream.flush();
-
     unsigned HeaderSecSizeEncodingLen =
         Sec->HeaderSecSizeEncodingLen.value_or(5);
     unsigned RequiredLen = getULEB128Size(OutString.size());
@@ -682,7 +705,6 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     std::string OutString;
     raw_string_ostream StringStream(OutString);
     writeRelocSection(StringStream, *Sec, SectionIndex++);
-    StringStream.flush();
 
     encodeULEB128(OutString.size(), OS);
     OS << OutString;

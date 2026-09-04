@@ -13,8 +13,10 @@
 #ifndef LLVM_ASMPARSER_PARSER_H
 #define LLVM_ASMPARSER_PARSER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 #include <optional>
@@ -62,7 +64,8 @@ parseAssemblyFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 ///              parsing.
 LLVM_ABI std::unique_ptr<Module>
 parseAssemblyString(StringRef AsmString, SMDiagnostic &Err,
-                    LLVMContext &Context, SlotMapping *Slots = nullptr);
+                    LLVMContext &Context, SlotMapping *Slots = nullptr,
+                    AsmParserContext *ParserContext = nullptr);
 
 /// Holds the Module and ModuleSummaryIndex returned by the interfaces
 /// that parse both.
@@ -128,9 +131,9 @@ parseSummaryIndexAssemblyString(StringRef AsmString, SMDiagnostic &Err);
 LLVM_ABI std::unique_ptr<Module> parseAssembly(
     MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
-      return std::nullopt;
-    });
+    DataLayoutCallbackTy DataLayoutCallback =
+        [](StringRef, StringRef) { return std::nullopt; },
+    AsmParserContext *ParserContext = nullptr);
 
 /// Parse LLVM Assembly including the summary index from a MemoryBuffer.
 ///
@@ -169,9 +172,9 @@ parseSummaryIndexAssembly(MemoryBufferRef F, SMDiagnostic &Err);
 LLVM_ABI bool parseAssemblyInto(
     MemoryBufferRef F, Module *M, ModuleSummaryIndex *Index, SMDiagnostic &Err,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
-      return std::nullopt;
-    });
+    DataLayoutCallbackTy DataLayoutCallback =
+        [](StringRef, StringRef) { return std::nullopt; },
+    AsmParserContext *ParserContext = nullptr);
 
 /// Parse a type and a constant value in the given string.
 ///
@@ -208,6 +211,15 @@ LLVM_ABI DIExpression *
 parseDIExpressionBodyAtBeginning(StringRef Asm, unsigned &Read,
                                  SMDiagnostic &Err, const Module &M,
                                  const SlotMapping *Slots);
+
+/// Parse standalone metadata definitions using and updating the supplied slot
+/// mapping. Each string must contain exactly one complete definition.
+/// \param ErrorDefinitionIndex The index of the definition containing an error.
+/// \return true on error.
+LLVM_ABI bool parseMetadataDefinitions(ArrayRef<StringRef> Definitions,
+                                       SMDiagnostic &Err, const Module &M,
+                                       SlotMapping &Slots,
+                                       unsigned &ErrorDefinitionIndex);
 
 } // End llvm namespace
 

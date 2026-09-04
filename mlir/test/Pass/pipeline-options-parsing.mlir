@@ -13,6 +13,7 @@
 // RUN: mlir-opt %s -verify-each=false -pass-pipeline='builtin.module(builtin.module(func.func(test-options-pass{list=3}), func.func(test-options-pass{enum=one list=1,2,3,4 string=foo"bar"baz})))' -dump-pass-pipeline 2>&1 | FileCheck --check-prefix=CHECK_6 %s
 // RUN: mlir-opt %s -verify-each=false '-test-options-super-pass-pipeline=super-list={{enum=zero list=1 string=foo},{enum=one list=2 string="bar"},{enum=two list=3 string={baz}}}' -dump-pass-pipeline 2>&1 | FileCheck --check-prefix=CHECK_7 %s
 // RUN: mlir-opt %s -verify-each=false -pass-pipeline='builtin.module(func.func(test-options-super-pass{list={{enum=zero list={1} string=foo },{enum=one list={2} string=bar },{enum=two list={3} string=baz }}}))' -dump-pass-pipeline 2>&1 | FileCheck --check-prefix=CHECK_7 %s
+// RUN: mlir-opt %s -verify-each=false -test-options-super-set-ab-pipeline='foo=true bar=false' -dump-pass-pipeline 2>&1 | FileCheck --check-prefix=CHECK_11 %s
 
 
 // This test checks that lists-of-nested-options like 'option1={...},{....}' can be parsed
@@ -106,3 +107,12 @@
 // CHECK_10-NEXT:     test-options-pass{enum=zero  string= string-list={,}}
 // CHECK_10-NEXT:   )
 // CHECK_10-NEXT: )
+
+// CHECK_11:      builtin.module(
+// CHECK_11-NEXT:   func.func(
+// CHECK_11-NEXT:     test-options-pass-a
+// CHECK_11-NEXT:   )
+// CHECK_11-NEXT:   func.func(
+// CHECK_11-NEXT:     test-options-pass-b
+// CHECK_11-NEXT:   )
+// CHECK_11-NEXT: )

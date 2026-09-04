@@ -104,3 +104,25 @@ struct T : S {
   ~T() = default;
 };
 } // namespace PR38671
+
+namespace GH159630 {
+
+struct X {
+  template<typename T>
+  struct typo { // expected-note {{'typo' declared here}}
+    ~typo();
+  };
+};
+
+template<typename T>
+X::typo<T>::typ0::~typ0() {} // expected-error {{no member named 'typ0'}} \
+                             // expected-error {{no type named 'typ0'}}
+
+}
+
+namespace GH209908 {
+  template <class T> using X = decltype(T().~E());
+  // expected-error@-1 {{undeclared identifier 'E' in destructor name}}
+  enum E : int;
+  using Z = X<E>; // expected-note {{requested here}}
+} // namespace GH209908

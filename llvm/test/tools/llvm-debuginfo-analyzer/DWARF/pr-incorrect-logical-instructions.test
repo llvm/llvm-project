@@ -84,7 +84,6 @@
 ; ONE-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
 ; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
 ; ONE-NEXT: [003]                 {Code} 'retq'
-; ONE-NEXT: [003]                 {Code} 'data16'
 ; ONE-NEXT: [002]    10         {Function} extern not_inlined 'test' -> 'int'
 ; ONE-NEXT: [003]                 {Block}
 ; ONE-NEXT: [004]    13             {Line}
@@ -106,8 +105,6 @@
 ; ONE-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
 ; ONE-NEXT: [004]                   {Code} 'addl	$0x1, %eax'
 ; ONE-NEXT: [004]                   {Code} 'movl	%eax, -0x8(%rbp)'
-; ONE-NEXT: [004]    17             {Line}
-; ONE-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
 ; ONE-NEXT: [003]    10           {Line}
 ; ONE-NEXT: [003]                 {Code} 'pushq	%rbp'
 ; ONE-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
@@ -119,6 +116,8 @@
 ; ONE-NEXT: [003]                 {Code} 'subl	(%rip), %eax'
 ; ONE-NEXT: [003]    11           {Line}
 ; ONE-NEXT: [003]                 {Code} 'movl	%eax, -0x8(%rbp)'
+; ONE-NEXT: [003]    17           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	-0x8(%rbp), %eax'
 ; ONE-NEXT: [003]    17           {Line}
 ; ONE-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
 ; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
@@ -132,7 +131,8 @@
 ; ONE-NEXT: [003]                 {Code} 'xorl	%eax, %eax'
 ; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
 ; ONE-NEXT: [003]                 {Code} 'retq'
-; ONE-NEXT: [003]    21           {Line}
+; ONE-NEXT: [002]               {Code} 'data16'
+; ONE-NEXT: [002]    21         {Line}
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level \
 ; RUN:                         --print=instructions \
@@ -172,7 +172,6 @@
 ; TWO-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
 ; TWO-NEXT: [003]                 {Code} 'popq	%rbp'
 ; TWO-NEXT: [003]                 {Code} 'retq'
-; TWO-NEXT: [003]                 {Code} 'data16'
 ; TWO-NEXT: [002]    10         {Function} extern not_inlined 'test' -> 'int'
 ; TWO-NEXT: [003]                 {Block}
 ; TWO-NEXT: [004]                   {Code} 'movl	$0x0, -0xc(%rbp)'
@@ -187,7 +186,6 @@
 ; TWO-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
 ; TWO-NEXT: [004]                   {Code} 'addl	$0x1, %eax'
 ; TWO-NEXT: [004]                   {Code} 'movl	%eax, -0x8(%rbp)'
-; TWO-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
 ; TWO-NEXT: [003]                 {Code} 'pushq	%rbp'
 ; TWO-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
 ; TWO-NEXT: [003]                 {Code} 'subq	$0x10, %rsp'
@@ -195,6 +193,7 @@
 ; TWO-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
 ; TWO-NEXT: [003]                 {Code} 'subl	(%rip), %eax'
 ; TWO-NEXT: [003]                 {Code} 'movl	%eax, -0x8(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'movl	-0x8(%rbp), %eax'
 ; TWO-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
 ; TWO-NEXT: [003]                 {Code} 'popq	%rbp'
 ; TWO-NEXT: [003]                 {Code} 'retq'

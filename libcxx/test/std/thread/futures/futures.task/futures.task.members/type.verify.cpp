@@ -12,7 +12,7 @@
 // <future>
 
 // Verify that the non-conforming extension packaged_task::result_type is removed.
-// See https://github.com/llvm/llvm-project/issues/112856.
+// See https://llvm.org/PR112856.
 
 #include <future>
 

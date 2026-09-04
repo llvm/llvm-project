@@ -33,7 +33,6 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
-#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -85,7 +84,8 @@ public:
 
     // Create new op with replaced operands and results
     auto *newOp = Operation::create(
-        op->getLoc(), op->getName(), resultTypes, operands, op->getAttrs(),
+        op->getLoc(), op->getName(), resultTypes, operands,
+        op->getDiscardableAttrDictionary().getValue(),
         op->getPropertiesStorage(), op->getSuccessors(), op->getNumRegions());
 
     // Handle regions in e.g. tosa.cond_if and tosa.while_loop
@@ -104,6 +104,33 @@ public:
   }
 };
 
+class ConvertTosaConstWithIntegerTensorType
+    : public OpConversionPattern<tosa::ConstOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::ConstOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    const ElementsAttr oldAttr = op.getValues();
+    const auto oldTy = llvm::cast<ShapedType>(oldAttr.getType());
+    const auto newTy =
+        llvm::cast<ShapedType>(typeConverter->convertType(oldTy));
+    if (oldTy == newTy)
+      return success();
+
+    ElementsAttr newAttr = oldAttr;
+    if (auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(oldAttr)) {
+      newAttr =
+          DenseElementsAttr::getFromRawBuffer(newTy, denseAttr.getRawData());
+    } else {
+      return rewriter.notifyMatchFailure(op, "unknown elements attribute type");
+    }
+
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, newTy, newAttr);
+    return success();
+  }
+};
+
 class TosaConvertIntegerTypeToSignless
     : public impl::TosaConvertIntegerTypeToSignlessBase<
           TosaConvertIntegerTypeToSignless> {
@@ -117,6 +144,10 @@ public:
       return typeConverter.isSignatureLegal(op.getFunctionType()) &&
              typeConverter.isLegal(&op.getBody());
     });
+    target.addDynamicallyLegalOp<tosa::ConstOp>([&](tosa::ConstOp op) {
+      return typeConverter.isLegal(op.getType()) &&
+             typeConverter.isLegal(op.getValues().getType());
+    });
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {
       return typeConverter.isLegal(op->getOperandTypes()) &&
              typeConverter.isLegal(op->getResultTypes());
@@ -126,6 +157,7 @@ public:
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);
     patterns.add<ConvertGenericOpWithIntegerTensorType>(typeConverter, context);
+    patterns.add<ConvertTosaConstWithIntegerTensorType>(typeConverter, context);
 
     if (failed(
             applyFullConversion(getOperation(), target, std::move(patterns))))

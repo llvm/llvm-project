@@ -35,3 +35,6 @@ int * __sptr * __ptr32 ppsp32;
 
 // CHECK: __attribute__((availability(macos, strict, introduced=10.6)));
 void f6(int) __attribute__((availability(macosx,strict,introduced=10.6)));
+
+// CHECK: _libc_intl_domainname asm("__gi__libc_intl_domainname") __attribute__((visibility("hidden")));
+extern const char _libc_intl_domainname[]; extern typeof (_libc_intl_domainname) _libc_intl_domainname asm("__gi__libc_intl_domainname") __attribute__((visibility("hidden")));

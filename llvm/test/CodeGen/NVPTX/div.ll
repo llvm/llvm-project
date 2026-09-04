@@ -163,4 +163,4 @@ define float @div_fast_vec_ftz(float %a, float %b, float %c, float %d) #0 {
   ret float %fadd
 }
 
-attributes #0 = { "denormal-fp-math-f32" = "preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }

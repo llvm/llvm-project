@@ -13,40 +13,16 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
-    "vector-library", cl::Hidden, cl::desc("Vector functions library"),
-    cl::init(TargetLibraryInfoImpl::NoLibrary),
-    cl::values(clEnumValN(TargetLibraryInfoImpl::NoLibrary, "none",
-                          "No vector functions library"),
-               clEnumValN(TargetLibraryInfoImpl::Accelerate, "Accelerate",
-                          "Accelerate framework"),
-               clEnumValN(TargetLibraryInfoImpl::DarwinLibSystemM,
-                          "Darwin_libsystem_m", "Darwin libsystem_m"),
-               clEnumValN(TargetLibraryInfoImpl::LIBMVEC, "LIBMVEC",
-                          "GLIBC Vector Math library"),
-               clEnumValN(TargetLibraryInfoImpl::MASSV, "MASSV",
-                          "IBM MASS vector library"),
-               clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
-                          "Intel SVML library"),
-               clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
-                          "SIMD Library for Evaluating Elementary Functions"),
-               clEnumValN(TargetLibraryInfoImpl::ArmPL, "ArmPL",
-                          "Arm Performance Libraries"),
-               clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
-                          "AMD vector math library")));
-
-StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
-    {
-#define TLI_DEFINE_STRING
-#include "llvm/Analysis/TargetLibraryInfo.def"
-};
+#define GET_TARGET_LIBRARY_INFO_STRING_TABLE
+#include "llvm/Analysis/TargetLibraryInfo.inc"
 
 std::string VecDesc::getVectorFunctionABIVariantString() const {
   assert(!VectorFnName.empty() && "Vector function name must not be empty.");
@@ -56,39 +32,8 @@ std::string VecDesc::getVectorFunctionABIVariantString() const {
   return std::string(Out.str());
 }
 
-// Recognized types of library function arguments and return types.
-enum FuncArgTypeID : char {
-  Void = 0, // Must be zero.
-  Bool,     // 8 bits on all targets
-  Int16,
-  Int32,
-  Int,
-  IntPlus, // Int or bigger.
-  Long,    // Either 32 or 64 bits.
-  IntX,    // Any integer type.
-  Int64,
-  LLong,    // 64 bits on all targets.
-  SizeT,    // size_t.
-  SSizeT,   // POSIX ssize_t.
-  Flt,      // IEEE float.
-  Dbl,      // IEEE double.
-  LDbl,     // Any floating type (TODO: tighten this up).
-  Floating, // Any floating type.
-  Ptr,      // Any pointer type.
-  Struct,   // Any struct type.
-  Ellip,    // The ellipsis (...).
-  Same,     // Same argument type as the previous one.
-};
-
-typedef std::array<FuncArgTypeID, 8> FuncProtoTy;
-
-static const FuncProtoTy Signatures[] = {
-#define TLI_DEFINE_SIG
-#include "llvm/Analysis/TargetLibraryInfo.def"
-};
-
-static_assert(sizeof Signatures / sizeof *Signatures == LibFunc::NumLibFuncs,
-              "Missing library function signatures");
+#define GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE
+#include "llvm/Analysis/TargetLibraryInfo.inc"
 
 static bool hasSinCosPiStret(const Triple &T) {
   // Only Darwin variants have _stret versions of combined trig functions.
@@ -182,7 +127,8 @@ static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
-                               ArrayRef<StringLiteral> StandardNames) {
+                               const llvm::StringTable &StandardNames,
+                               VectorLibrary VecLib) {
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
   TLI.setUnavailable(LibFunc_getc_unlocked);
@@ -196,12 +142,9 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
 
-  // There is really no runtime library on AMDGPU, apart from
-  // __kmpc_alloc/free_shared.
+  // There is really no runtime library on AMDGPU.
   if (T.isAMDGPU()) {
     TLI.disableAllFunctions();
-    TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
-    TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
     return;
   }
 
@@ -388,6 +331,10 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
         TLI.setAvailableWithName(LibFunc_logbf, "_logbf");
       else
         TLI.setUnavailable(LibFunc_logbf);
+      TLI.setUnavailable(LibFunc_nextafter);
+      TLI.setUnavailable(LibFunc_nextafterf);
+      TLI.setUnavailable(LibFunc_nexttoward);
+      TLI.setUnavailable(LibFunc_nexttowardf);
       TLI.setUnavailable(LibFunc_rint);
       TLI.setUnavailable(LibFunc_rintf);
       TLI.setUnavailable(LibFunc_round);
@@ -418,6 +365,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_logbl);
     TLI.setUnavailable(LibFunc_ilogbl);
     TLI.setUnavailable(LibFunc_nearbyintl);
+    TLI.setUnavailable(LibFunc_nextafterl);
+    TLI.setUnavailable(LibFunc_nexttowardl);
     TLI.setUnavailable(LibFunc_rintl);
     TLI.setUnavailable(LibFunc_roundl);
     TLI.setUnavailable(LibFunc_scalblnl);
@@ -740,11 +689,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_fgets_unlocked);
   }
 
-  if (T.isAndroid() && T.isAndroidVersionLT(21)) {
-    TLI.setUnavailable(LibFunc_stpcpy);
-    TLI.setUnavailable(LibFunc_stpncpy);
-  }
-
   if (T.isPS()) {
     // PS4/PS5 do have memalign.
     TLI.setAvailable(LibFunc_memalign);
@@ -838,8 +782,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     // Miscellaneous other functions not provided.
     TLI.setUnavailable(LibFunc_atomic_load);
     TLI.setUnavailable(LibFunc_atomic_store);
-    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
-    TLI.setUnavailable(LibFunc___kmpc_free_shared);
     TLI.setUnavailable(LibFunc_dunder_strndup);
     TLI.setUnavailable(LibFunc_bcmp);
     TLI.setUnavailable(LibFunc_bcopy);
@@ -875,6 +817,32 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_toascii);
   }
 
+  if (T.isOSFreeBSD()) {
+    TLI.setAvailable(LibFunc_dunder_strtok_r);
+    TLI.setAvailable(LibFunc_memalign);
+    TLI.setAvailable(LibFunc_fputc_unlocked);
+    TLI.setAvailable(LibFunc_fputs_unlocked);
+    TLI.setAvailable(LibFunc_fread_unlocked);
+    TLI.setAvailable(LibFunc_fwrite_unlocked);
+    TLI.setAvailable(LibFunc_getc_unlocked);
+    TLI.setAvailable(LibFunc_getchar_unlocked);
+    TLI.setAvailable(LibFunc_putc_unlocked);
+    TLI.setAvailable(LibFunc_putchar_unlocked);
+
+    TLI.setUnavailable(LibFunc_dunder_strndup);
+    TLI.setUnavailable(LibFunc_memccpy_chk);
+    TLI.setUnavailable(LibFunc_strlen_chk);
+    TLI.setUnavailable(LibFunc_fmaximum_num);
+    TLI.setUnavailable(LibFunc_fmaximum_numf);
+    TLI.setUnavailable(LibFunc_fmaximum_numl);
+    TLI.setUnavailable(LibFunc_fminimum_num);
+    TLI.setUnavailable(LibFunc_fminimum_numf);
+    TLI.setUnavailable(LibFunc_fminimum_numl);
+    TLI.setUnavailable(LibFunc_roundeven);
+    TLI.setUnavailable(LibFunc_roundevenf);
+    TLI.setUnavailable(LibFunc_roundevenl);
+  }
+
   // As currently implemented in clang, NVPTX code has no standard library to
   // speak of.  Headers provide a standard-ish library implementation, but many
   // of the signatures are wrong -- for example, many libm functions are not
@@ -900,8 +868,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     //    TLI.setAvailable(llvm::LibFunc_memcpy);
     //    TLI.setAvailable(llvm::LibFunc_memset);
 
-    TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
-    TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
   } else {
     TLI.setUnavailable(LibFunc_nvvm_reflect);
   }
@@ -917,23 +883,36 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   if (T.isOSAIX())
     TLI.setUnavailable(LibFunc_memrchr);
 
-  TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
+  TLI.addVectorizableFunctionsFromVecLib(VecLib, T);
 }
 
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringLiteral> StandardNames) {
+                       const llvm::StringTable &StandardNames,
+                       VectorLibrary VecLib) {
   initializeBase(TLI, T);
-  initializeLibCalls(TLI, T, StandardNames);
+  initializeLibCalls(TLI, T, StandardNames, VecLib);
 }
 
-TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
+static bool initializeIsErrnoFunctionCall(const Triple &T) {
+  // Assume errno is implemented as a function call on the following
+  // known environments.
+  // TODO: Could refine them.
+  return T.isOSDarwin() || T.isAndroid() || T.isGNUEnvironment() ||
+         T.isMusl() || T.getEnvironment() == Triple::LLVM ||
+         T.getEnvironment() == Triple::Mlibc ||
+         T.getEnvironment() == Triple::MSVC;
+}
+
+TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
+                                             VectorLibrary VecLib)
+    : IsErrnoFunctionCall(initializeIsErrnoFunctionCall(T)) {
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
-  initialize(*this, T, StandardNames);
+  initialize(*this, T, StandardNamesStrTable, VecLib);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
@@ -941,7 +920,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
@@ -953,7 +932,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -967,6 +946,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
 }
@@ -978,6 +958,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   return *this;
@@ -995,28 +976,26 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
 }
 
 static DenseMap<StringRef, LibFunc>
-buildIndexMap(ArrayRef<StringLiteral> StandardNames) {
+buildIndexMap(const llvm::StringTable &StandardNames) {
   DenseMap<StringRef, LibFunc> Indices;
-  unsigned Idx = 0;
+  unsigned Idx = 1; // 0 is NotLibFunc.
   Indices.reserve(LibFunc::NumLibFuncs);
   for (const auto &Func : StandardNames)
     Indices[Func] = static_cast<LibFunc>(Idx++);
   return Indices;
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
+LibFunc TargetLibraryInfoImpl::getLibFunc(StringRef funcName) const {
   funcName = sanitizeFunctionName(funcName);
   if (funcName.empty())
-    return false;
+    return NotLibFunc;
 
   static const DenseMap<StringRef, LibFunc> Indices =
-      buildIndexMap(StandardNames);
+      buildIndexMap(StandardNamesStrTable);
 
-  if (auto Loc = Indices.find(funcName); Loc != Indices.end()) {
-    F = Loc->second;
-    return true;
-  }
-  return false;
+  if (auto Loc = Indices.find(funcName); Loc != Indices.end())
+    return Loc->second;
+  return NotLibFunc;
 }
 
 // Return true if ArgTy matches Ty.
@@ -1180,18 +1159,18 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   // against the function's type FTy, starting with its return type.
   // Return true if both match in number and kind, inclduing the ellipsis.
   Type *Ty = FTy.getReturnType(), *LastTy = Ty;
-  const auto &ProtoTypes = Signatures[F];
-  for (auto TyID : ProtoTypes) {
-    if (Idx && TyID == Void)
-      // Except in the first position where it designates the function's
-      // return type Void ends the argument list.
+  const auto *ProtoTypes = &SignatureTable[SignatureOffset[F]];
+  for (auto TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
+       TyID = ProtoTypes[++Idx]) {
+    if (TyID == NoFuncArgType)
       break;
 
     if (TyID == Ellip) {
       // The ellipsis ends the protoype list but is not a part of FTy's
       // argument list.  Except when it's last it must be followed by
-      // Void.
-      assert(Idx == ProtoTypes.size() - 1 || ProtoTypes[Idx + 1] == Void);
+      // NoFuncArgType.
+      assert(ProtoTypes[Idx] == NoFuncArgType ||
+             ProtoTypes[Idx + 1] == NoFuncArgType);
       return FTy.isFunctionVarArg();
     }
 
@@ -1209,11 +1188,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
       // There's at least one and at most two more type ids than there are
       // arguments in FTy's argument list.
       Ty = nullptr;
-      ++Idx;
       continue;
     }
 
-    Ty = FTy.getParamType(Idx++);
+    Ty = FTy.getParamType(Idx);
   }
 
   // Return success only if all entries on both lists have been processed
@@ -1221,35 +1199,34 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   return Idx == NumParams + 1 && !FTy.isFunctionVarArg();
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
-                                       LibFunc &F) const {
+LibFunc TargetLibraryInfoImpl::getLibFunc(const Function &FDecl) const {
   // Intrinsics don't overlap w/libcalls; if our module has a large number of
   // intrinsics, this ends up being an interesting compile time win since we
   // avoid string normalization and comparison.
-  if (FDecl.isIntrinsic()) return false;
+  if (FDecl.isIntrinsic())
+    return NotLibFunc;
 
   const Module *M = FDecl.getParent();
   assert(M && "Expecting FDecl to be connected to a Module.");
 
   if (FDecl.LibFuncCache == Function::UnknownLibFunc)
-    if (!getLibFunc(FDecl.getName(), FDecl.LibFuncCache))
-      FDecl.LibFuncCache = NotLibFunc;
+    FDecl.LibFuncCache = getLibFunc(FDecl.getName());
 
   if (FDecl.LibFuncCache == NotLibFunc)
-    return false;
+    return NotLibFunc;
 
-  F = FDecl.LibFuncCache;
-  return isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
+  if (!isValidProtoForLibFunc(*FDecl.getFunctionType(), FDecl.LibFuncCache, *M))
+    return NotLibFunc;
+
+  return FDecl.LibFuncCache;
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *Ty,
-                                       LibFunc &F) const {
+LibFunc TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *Ty) const {
   // Must be a frem instruction with float or double arguments.
   if (Opcode != Instruction::FRem || (!Ty->isDoubleTy() && !Ty->isFloatTy()))
-    return false;
+    return NotLibFunc;
 
-  F = Ty->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
-  return true;
+  return Ty->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
 }
 
 void TargetLibraryInfoImpl::disableAllFunctions() {
@@ -1276,25 +1253,31 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
-static const VecDesc VecFuncs_Accelerate[] = {
+// The VecDesc tables should be constant-initialized to avoid compilation
+// regression. Now VecDesc (see class definition) intentionally keeps trivially
+// constructable/destructable, so the tables land in .rdata and do not run
+// through CRT dynamic init (which can overflow small stack on MSVC Debug
+// DLL loads). When LLVM requires C++20 mark them constinit to enforce this
+// at compile time.
+static constexpr VecDesc VecFuncs_Accelerate[] = {
 #define TLI_DEFINE_ACCELERATE_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
 };
 
-static const VecDesc VecFuncs_DarwinLibSystemM[] = {
+static constexpr VecDesc VecFuncs_DarwinLibSystemM[] = {
 #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 };
 
-static const VecDesc VecFuncs_LIBMVEC_X86[] = {
+static constexpr VecDesc VecFuncs_LIBMVEC_X86[] = {
 #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
 
-static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
+static constexpr VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
 #define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
@@ -1302,33 +1285,33 @@ static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
 #undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 };
 
-static const VecDesc VecFuncs_MASSV[] = {
+static constexpr VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_MASSV_VECFUNCS
 };
 
-static const VecDesc VecFuncs_SVML[] = {
+static constexpr VecDesc VecFuncs_SVML[] = {
 #define TLI_DEFINE_SVML_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SVML_VECFUNCS
 };
 
-static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 };
-static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 };
-static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
@@ -1336,7 +1319,7 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
 
-static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
+static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
@@ -1344,7 +1327,7 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 };
 
-static const VecDesc VecFuncs_ArmPL[] = {
+static constexpr VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
@@ -1352,7 +1335,7 @@ static const VecDesc VecFuncs_ArmPL[] = {
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 };
 
-const VecDesc VecFuncs_AMDLIBM[] = {
+constexpr VecDesc VecFuncs_AMDLIBM[] = {
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
@@ -1363,15 +1346,15 @@ const VecDesc VecFuncs_AMDLIBM[] = {
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
   switch (VecLib) {
-  case Accelerate: {
+  case VectorLibrary::Accelerate: {
     addVectorizableFunctions(VecFuncs_Accelerate);
     break;
   }
-  case DarwinLibSystemM: {
+  case VectorLibrary::DarwinLibSystemM: {
     addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
     break;
   }
-  case LIBMVEC: {
+  case VectorLibrary::LIBMVEC: {
     switch (TargetTriple.getArch()) {
     default:
       break;
@@ -1386,15 +1369,15 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     }
     break;
   }
-  case MASSV: {
+  case VectorLibrary::MASSV: {
     addVectorizableFunctions(VecFuncs_MASSV);
     break;
   }
-  case SVML: {
+  case VectorLibrary::SVML: {
     addVectorizableFunctions(VecFuncs_SVML);
     break;
   }
-  case SLEEFGNUABI: {
+  case VectorLibrary::SLEEFGNUABI: {
     switch (TargetTriple.getArch()) {
     default:
       break;
@@ -1410,7 +1393,7 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     }
     break;
   }
-  case ArmPL: {
+  case VectorLibrary::ArmPL: {
     switch (TargetTriple.getArch()) {
     default:
       break;
@@ -1421,11 +1404,11 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     }
     break;
   }
-  case AMDLIBM: {
+  case VectorLibrary::AMDLIBM: {
     addVectorizableFunctions(VecFuncs_AMDLIBM);
     break;
   }
-  case NoLibrary:
+  case VectorLibrary::NoLibrary:
     break;
   }
 }
@@ -1476,7 +1459,7 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
   if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
       M.getModuleFlag("wchar_size")))
     return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
-  return 0;
+  return Triple(M.getTargetTriple()).getDefaultWCharSize();
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {

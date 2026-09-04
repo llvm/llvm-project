@@ -4,10 +4,8 @@
 
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<10x10xf32>
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.private.init"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<10x10xf32>>
+! CHECK:   acc.yield %[[ALLOCA]] : !fir.ref<!fir.array<10x10xf32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%arg0: !fir.ref<!fir.array<10x10xf32>>, %arg1: !fir.ref<!fir.array<10x10xf32>>):
 ! CHECK:   acc.terminator
@@ -15,9 +13,8 @@
 
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
-! CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
-! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.private.init"} : (!fir.ref<!fir.array<10x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>)
-! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<10x10xf32>>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<10x10xf32>
+! CHECK:   acc.yield %[[ALLOCA]] : !fir.ref<!fir.array<10x10xf32>>
 ! CHECK: }
 
 ! CHECK-LABEL: func.func @_QPacc_serial()
@@ -148,7 +145,7 @@ subroutine acc_serial
 
 ! CHECK:      acc.serial {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {selfAttr}
+! CHECK-NEXT: } selfAttr
 
   !$acc serial self(ifCondition)
   !$acc end serial
@@ -161,99 +158,99 @@ subroutine acc_serial
   !$acc serial copy(a, b, c)
   !$acc end serial
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
-! CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "c"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[COPYIN_A]], %[[COPYIN_B]], %[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "c"}
+! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("a")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("b")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("c")
 
   !$acc serial copy(a) copy(b) copy(c)
   !$acc end serial
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
-! CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "c"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[COPYIN_A]], %[[COPYIN_B]], %[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "c"}
+! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("a")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("b")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copy) name("c")
 
   !$acc serial copyin(a) copyin(readonly: b, c)
   !$acc end serial
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
-! CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copyin_readonly>, name = "c"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyin_readonly) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyin_readonly) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[COPYIN_A]], %[[COPYIN_B]], %[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK: acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copyin>, name = "a"}
-! CHECK: acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
-! CHECK: acc.delete accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "c"}
+! CHECK: acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyin) name("a")
+! CHECK: acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyin_readonly) name("b")
+! CHECK: acc.delete accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyin_readonly) name("c")
 
   !$acc serial copyout(a) copyout(zero: b) copyout(c)
   !$acc end serial
 
-! CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a"}
-! CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "b"}
-! CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "c"}
+! CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyout) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyout_zero) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyout) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK: acc.copyout accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "a"}
-! CHECK: acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "b"}
-! CHECK: acc.copyout accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) {name = "c"}
+! CHECK: acc.copyout accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("a")
+! CHECK: acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_copyout_zero) name("b")
+! CHECK: acc.copyout accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) to varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("c")
 
   !$acc serial create(a, b) create(zero: c)
   !$acc end serial
 
-! CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
-! CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "b"}
-! CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_create_zero>, name = "c"}
+! CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_create_zero) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK: acc.delete accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_create>, name = "a"}
-! CHECK: acc.delete accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_create>, name = "b"}
-! CHECK: acc.delete accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "c"}
+! CHECK: acc.delete accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_create) name("a")
+! CHECK: acc.delete accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_create) name("b")
+! CHECK: acc.delete accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_create_zero) name("c")
 
   !$acc serial no_create(a, b) create(zero: c)
   !$acc end serial
 
-! CHECK: %[[NO_CREATE_A:.*]] = acc.nocreate varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
-! CHECK: %[[NO_CREATE_B:.*]] = acc.nocreate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "b"}
-! CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_create_zero>, name = "c"}
+! CHECK: %[[NO_CREATE_A:.*]] = acc.nocreate varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[NO_CREATE_B:.*]] = acc.nocreate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_create_zero) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[NO_CREATE_A]], %[[NO_CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK: acc.delete accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "c"}
-! CHECK: acc.delete accPtr(%[[NO_CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
-! CHECK: acc.delete accPtr(%[[NO_CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
+! CHECK: acc.delete accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_create_zero) name("c")
+! CHECK: acc.delete accPtr(%[[NO_CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_no_create) name("a")
+! CHECK: acc.delete accPtr(%[[NO_CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_no_create) name("b")
 
   !$acc serial present(a, b, c)
   !$acc end serial
 
-! CHECK: %[[PRESENT_A:.*]] = acc.present varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
-! CHECK: %[[PRESENT_B:.*]] = acc.present varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "b"}
-! CHECK: %[[PRESENT_C:.*]] = acc.present varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
+! CHECK: %[[PRESENT_A:.*]] = acc.present varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[PRESENT_B:.*]] = acc.present varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[PRESENT_C:.*]] = acc.present varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[PRESENT_A]], %[[PRESENT_B]], %[[PRESENT_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK: acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
-! CHECK: acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
-! CHECK: acc.delete accPtr(%[[PRESENT_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "c"}
+! CHECK: acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_present) name("a")
+! CHECK: acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_present) name("b")
+! CHECK: acc.delete accPtr(%[[PRESENT_C]] : !fir.ref<!fir.array<10x10xf32>>) dataClause(acc_present) name("c")
 
   !$acc serial deviceptr(a) deviceptr(c)
   !$acc end serial
 
-! CHECK: %[[DEVICEPTR_A:.*]] = acc.deviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
-! CHECK: %[[DEVICEPTR_C:.*]] = acc.deviceptr varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
+! CHECK: %[[DEVICEPTR_A:.*]] = acc.deviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK: %[[DEVICEPTR_C:.*]] = acc.deviceptr varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) name("c") -> !fir.ref<!fir.array<10x10xf32>>
 ! CHECK:      acc.serial dataOperands(%[[DEVICEPTR_A]], %[[DEVICEPTR_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
@@ -261,28 +258,30 @@ subroutine acc_serial
   !$acc serial attach(d, e)
   !$acc end serial
 
-! CHECK: %[[ATTACH_D:.*]] = acc.attach varPtr(%[[DECLD]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>> {name = "d"}
-! CHECK: %[[ATTACH_E:.*]] = acc.attach varPtr(%[[DECLE]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>> {name = "e"}
+! CHECK: %[[ATTACH_D:.*]] = acc.attach varPtr(%[[DECLD]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) name("d") -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK: %[[ATTACH_E:.*]] = acc.attach varPtr(%[[DECLE]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) name("e") -> !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:      acc.serial dataOperands(%[[ATTACH_D]], %[[ATTACH_E]] : !fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
-! CHECK: acc.detach accPtr(%[[ATTACH_D]] : !fir.ref<!fir.box<!fir.ptr<f32>>>) {dataClause = #acc<data_clause acc_attach>, name = "d"}
-! CHECK: acc.detach accPtr(%[[ATTACH_E]] : !fir.ref<!fir.box<!fir.ptr<f32>>>) {dataClause = #acc<data_clause acc_attach>, name = "e"}
+! CHECK: acc.detach accPtr(%[[ATTACH_D]] : !fir.ref<!fir.box<!fir.ptr<f32>>>) dataClause(acc_attach) name("d")
+! CHECK: acc.detach accPtr(%[[ATTACH_E]] : !fir.ref<!fir.box<!fir.ptr<f32>>>) dataClause(acc_attach) name("e")
 
   !$acc serial private(a) firstprivate(b) private(c)
   !$acc end serial
 
-! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a"}
-! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "b"}
-! CHECK:      %[[ACC_PRIVATE_C:.*]] = acc.private varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "c"}
-! CHECK:      acc.serial firstprivate(@firstprivatization_ref_10x10xf32 -> %[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10x10xf32>>) private(@privatization_ref_10x10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %[[ACC_PRIVATE_C]] : !fir.ref<!fir.array<10x10xf32>>) {
+! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) name("a") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10x10xf32>>) recipe(@firstprivatization_ref_10x10xf32) name("b") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      %[[ACC_PRIVATE_C:.*]] = acc.private varPtr(%[[DECLC]]#0 : !fir.ref<!fir.array<10x10xf32>>) recipe(@privatization_ref_10x10xf32) name("c") -> !fir.ref<!fir.array<10x10xf32>>
+! CHECK:      acc.serial firstprivate(%[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10x10xf32>>) private(%[[ACC_PRIVATE_A]], %[[ACC_PRIVATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
 !$acc serial reduction(+:reduction_r) reduction(*:reduction_i)
 !$acc end serial
 
-! CHECK:      acc.serial reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>) {
+! CHECK:      %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) name("reduction_r") -> !fir.ref<f32>
+! CHECK:      %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) name("reduction_i") -> !fir.ref<i32>
+! CHECK:      acc.serial reduction(%[[REDUCTION_R]], %[[REDUCTION_I]] : !fir.ref<f32>, !fir.ref<i32>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -290,12 +289,12 @@ subroutine acc_serial
 !$acc end serial
 
 ! CHECK: acc.serial {
-! CHECK: } attributes {defaultAttr = #acc<defaultvalue none>}
+! CHECK: } defaultAttr(none)
 
 !$acc serial default(present)
 !$acc end serial
 
 ! CHECK: acc.serial {
-! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
+! CHECK: } defaultAttr(present)
 
 end subroutine

@@ -67,6 +67,29 @@ define ptr addrspace(2) @combine_addrspacecast_bitcast_2(ptr addrspace(1) %x) no
   ret ptr addrspace(2) %y
 }
 
+define b64 @do_not_combine_addrspacecast_bitcast_to_byte(ptr addrspace(1) %x) nounwind {
+; CHECK-LABEL: @do_not_combine_addrspacecast_bitcast_to_byte(
+; CHECK-NEXT:    [[Y:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr
+; CHECK-NEXT:    [[Z:%.*]] = bitcast ptr [[Y]] to b64
+; CHECK-NEXT:    ret b64 [[Z]]
+;
+  %y = addrspacecast ptr addrspace(1) %x to ptr
+  %z = bitcast ptr %y to b64
+  ret b64 %z
+}
+
+define ptr addrspace(1) @do_not_combine_bitcast_from_byte_addrspacecast(b64 %x) nounwind {
+; CHECK-LABEL: @do_not_combine_bitcast_from_byte_addrspacecast(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast b64 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[Z:%.*]] = addrspacecast ptr [[Y]] to ptr addrspace(1)
+; CHECK-NEXT:    ret ptr addrspace(1) [[Z]]
+;
+  %y = bitcast b64 %x to ptr
+  %z = addrspacecast ptr %y to ptr addrspace(1)
+  ret ptr addrspace(1) %z
+}
+
+
 define ptr addrspace(2) @combine_bitcast_addrspacecast_1(ptr addrspace(1) %x) nounwind {
 ; CHECK-LABEL: @combine_bitcast_addrspacecast_1(
 ; CHECK-NEXT:    [[Z:%.*]] = addrspacecast ptr addrspace(1) [[X:%.*]] to ptr addrspace(2)
@@ -217,4 +240,44 @@ define void @constant_fold_gep_inttoptr() #0 {
   %cast = addrspacecast ptr addrspace(3) %gep to ptr addrspace(4)
   store i32 7, ptr addrspace(4) %cast
   ret void
+}
+
+; Collapsing a cast-of-cast keeps the innermost source (%p in
+; addrspace(3)).  Only nonnull on the innermost cast refers to that
+; source. Here the flag is on the outer cast (asserting the
+; addrspace(0) intermediate), so it cannot carry over to the merged
+; addrspace(3) -> addrspace(1) cast.
+define ptr addrspace(1) @collapsed_castcast_outer_nonnull(ptr addrspace(3) %p) {
+; CHECK-LABEL: @collapsed_castcast_outer_nonnull(
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[P:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    ret ptr addrspace(1) [[B]]
+;
+  %a = addrspacecast ptr addrspace(3) %p to ptr
+  %b = addrspacecast nonnull ptr %a to ptr addrspace(1)
+  ret ptr addrspace(1) %b
+}
+
+; The innermost cast's nonnull asserts %p (addrspace(3)) is non-null,
+; which is exactly the source of the merged cast.
+; TODO: preserve nonnull on the merged cast.
+define ptr addrspace(1) @collapsed_castcast_inner_nonnull(ptr addrspace(3) %p) {
+; CHECK-LABEL: @collapsed_castcast_inner_nonnull(
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[P:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    ret ptr addrspace(1) [[B]]
+;
+  %a = addrspacecast nonnull ptr addrspace(3) %p to ptr
+  %b = addrspacecast ptr %a to ptr addrspace(1)
+  ret ptr addrspace(1) %b
+}
+
+; Same as @collapsed_castcast_inner_nonnull with vectors of pointers.
+; TODO: preserve nonnull on the merged cast.
+define <2 x ptr addrspace(1)> @collapsed_castcast_inner_nonnull_vec(<2 x ptr addrspace(3)> %p) {
+; CHECK-LABEL: @collapsed_castcast_inner_nonnull_vec(
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast <2 x ptr addrspace(3)> [[P:%.*]] to <2 x ptr addrspace(1)>
+; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[B]]
+;
+  %a = addrspacecast nonnull <2 x ptr addrspace(3)> %p to <2 x ptr>
+  %b = addrspacecast <2 x ptr> %a to <2 x ptr addrspace(1)>
+  ret <2 x ptr addrspace(1)> %b
 }

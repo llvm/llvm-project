@@ -48,15 +48,15 @@
 // MACROS-NEXT: -DBLARG
 // MACROS-NEXT: -DWIBBLE=WOBBLE
 // CHECK: Input file: {{.*}}module.modulemap
-// CHECK-NEXT: Input file: {{.*}}module.private.modulemap
-// CHECK-NEXT: Input file: {{.*}}DependsOnModule.h
-// CHECK-NEXT: Input file: {{.*}}module.modulemap
-// CHECK-NEXT: Input file: {{.*}}other.h
-// CHECK-NEXT: Input file: {{.*}}not_cxx.h
-// CHECK-NEXT: Input file: {{.*}}not_coroutines.h
-// CHECK-NEXT: Input file: {{.*}}SubFramework.h
-// CHECK-NEXT: Input file: {{.*}}Other.h
-// CHECK-NEXT: Input file: {{.*}}DependsOnModulePrivate.h
+// CHECK: Input file: {{.*}}module.private.modulemap
+// CHECK: Input file: {{.*}}DependsOnModule.h
+// CHECK: Input file: {{.*}}module.modulemap
+// CHECK: Input file: {{.*}}other.h
+// CHECK: Input file: {{.*}}not_cxx.h
+// CHECK: Input file: {{.*}}not_coroutines.h
+// CHECK: Input file: {{.*}}SubFramework.h
+// CHECK: Input file: {{.*}}Other.h
+// CHECK: Input file: {{.*}}DependsOnModulePrivate.h
 
 // CHECK: Diagnostic options:
 // CHECK:   IgnoreWarnings: Yes

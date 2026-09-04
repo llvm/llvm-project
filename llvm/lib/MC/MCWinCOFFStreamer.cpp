@@ -30,7 +30,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
@@ -126,8 +125,7 @@ MCWinCOFFStreamer::MCWinCOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCObjectWriter> OW)
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW), std::move(CE)),
       CurSymbol(nullptr) {
-  auto *TO = Context.getTargetOptions();
-  if (TO && TO->MCIncrementalLinkerCompatible)
+  if (Context.getTargetOptions().MCIncrementalLinkerCompatible)
     getWriter().setIncrementalLinkerCompatible(true);
 }
 
@@ -135,19 +133,18 @@ WinCOFFObjectWriter &MCWinCOFFStreamer::getWriter() {
   return static_cast<WinCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCWinCOFFStreamer::initSections(bool NoExecStack,
-                                     const MCSubtargetInfo &STI) {
+void MCWinCOFFStreamer::initSections(const MCSubtargetInfo &STI) {
   // FIXME: this is identical to the ELF one.
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.
   switchSection(getContext().getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(Align(4), &STI);
+  emitCodeAlignment(Align(4), STI);
 
   switchSection(getContext().getObjectFileInfo()->getDataSection());
-  emitCodeAlignment(Align(4), &STI);
+  emitCodeAlignment(Align(4), STI);
 
   switchSection(getContext().getObjectFileInfo()->getBSSSection());
-  emitCodeAlignment(Align(4), &STI);
+  emitCodeAlignment(Align(4), STI);
 
   switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
@@ -157,18 +154,19 @@ void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // Ensure that the first and the second symbols relative to the section are
   // the section symbol and the COMDAT symbol.
   getAssembler().registerSymbol(*Section->getBeginSymbol());
-  if (auto *Sym = cast<MCSectionCOFF>(Section)->getCOMDATSymbol())
+  if (auto *Sym =
+          static_cast<const MCSectionCOFF *>(Section)->getCOMDATSymbol())
     getAssembler().registerSymbol(*Sym);
 }
 
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 }
 
 bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
@@ -198,11 +196,10 @@ void MCWinCOFFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCWinCOFFStreamer::beginCOFFSymbolDef(MCSymbol const *S) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
   if (CurSymbol)
     Error("starting a new symbol definition without completing the "
           "previous one");
-  CurSymbol = Symbol;
+  CurSymbol = static_cast<MCSymbolCOFF *>(const_cast<MCSymbol *>(S));
 }
 
 void MCWinCOFFStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
@@ -218,7 +215,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
   }
 
   getAssembler().registerSymbol(*CurSymbol);
-  cast<MCSymbolCOFF>(CurSymbol)->setClass((uint16_t)StorageClass);
+  static_cast<MCSymbolCOFF *>(CurSymbol)->setClass((uint16_t)StorageClass);
 }
 
 void MCWinCOFFStreamer::emitCOFFSymbolType(int Type) {
@@ -233,7 +230,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolType(int Type) {
   }
 
   getAssembler().registerSymbol(*CurSymbol);
-  cast<MCSymbolCOFF>(CurSymbol)->setType((uint16_t)Type);
+  static_cast<const MCSymbolCOFF *>(CurSymbol)->setType((uint16_t)Type);
 }
 
 void MCWinCOFFStreamer::endCOFFSymbolDef() {
@@ -248,7 +245,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   if (getContext().getTargetTriple().getArch() != Triple::x86)
     return;
 
-  const MCSymbolCOFF *CSymbol = cast<MCSymbolCOFF>(Symbol);
+  auto *CSymbol = static_cast<const MCSymbolCOFF *>(Symbol);
   if (CSymbol->isSafeSEH())
     return;
 
@@ -257,7 +254,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   switchSection(SXData);
   SXData->ensureMinAlignment(Align(4));
 
-  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
+  newSpecialFragment<MCSymbolIdFragment>(Symbol);
   getAssembler().registerSymbol(*Symbol);
   CSymbol->setIsSafeSEH();
 
@@ -272,13 +269,14 @@ void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
   MCSection *Sec = getCurrentSectionOnly();
   Sec->ensureMinAlignment(Align(4));
 
-  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
+  newSpecialFragment<MCSymbolIdFragment>(Symbol);
   getAssembler().registerSymbol(*Symbol);
 }
 
 void MCWinCOFFStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
   visitUsedSymbol(*Symbol);
   const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
+  ensureHeadroom(2);
   addFixup(SRE, FK_SecRel_2);
   appendContents(2, 0);
 }
@@ -292,6 +290,7 @@ void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
   if (Offset)
     MCE = MCBinaryExpr::createAdd(
         MCE, MCConstantExpr::create(Offset, getContext()), getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_SecRel_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
@@ -307,6 +306,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
   if (Offset)
     MCE = MCBinaryExpr::createAdd(
         MCE, MCConstantExpr::create(Offset, getContext()), getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
@@ -317,6 +317,7 @@ void MCWinCOFFStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
   // Create Symbol for section number.
   const MCExpr *MCE = MCCOFFSectionNumberTargetExpr::create(
       *Symbol, this->getWriter(), getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
@@ -327,6 +328,7 @@ void MCWinCOFFStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
   // Create Symbol for section offset.
   const MCExpr *MCE =
       MCCOFFSectionOffsetTargetExpr::create(*Symbol, getContext());
+  ensureHeadroom(4);
   addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
   appendContents(4, 0);
@@ -334,7 +336,7 @@ void MCWinCOFFStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
 
 void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                          Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
 
   const Triple &T = getContext().getTargetTriple();
   if (T.isWindowsMSVCEnvironment()) {
@@ -366,7 +368,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 
 void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                               Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   pushSection();
@@ -381,7 +383,7 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 // Hack: Used by llvm-ml to implement the alias directive.
 void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,
                                           const MCSymbol *Symbol) {
-  auto *Alias = cast<MCSymbolCOFF>(AliasS);
+  auto *Alias = static_cast<MCSymbolCOFF *>(AliasS);
   emitSymbolAttribute(Alias, MCSA_Weak);
   Alias->setIsWeakExternal(true);
 
@@ -409,7 +411,7 @@ void MCWinCOFFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
 void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
   const MCSymbol *S = &SRE->getSymbol();
   if (getAssembler().registerSymbol(*S))
-    cast<MCSymbolCOFF>(S)->setExternal(true);
+    static_cast<const MCSymbolCOFF *>(S)->setExternal(true);
 }
 
 void MCWinCOFFStreamer::finishImpl() {

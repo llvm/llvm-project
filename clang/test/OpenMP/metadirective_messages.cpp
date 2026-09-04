@@ -47,6 +47,10 @@ void foo() {
       ;
     #pragma omp metadirective when(device = {arch(nvptx)} : parallel) xyz() //expected-error {{expected at least one clause on '#pragma omp metadirective' directive}} 
       ;
+    int a = 0;
+    int b = 1;
+    #pragma omp metadirective when(user={condition(a)}: parallel for simd) when(user={condition(b)}: target teams distribute parallel for simd)
+      for (int i = 0; i < 10; ++i) {}
   #endif
   }
 

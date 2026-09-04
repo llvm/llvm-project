@@ -39,10 +39,10 @@ TEST(Local, RecursivelyDeleteDeadPHINodes) {
 
   builder.SetInsertPoint(bb0);
   PHINode    *phi = builder.CreatePHI(Type::getInt32Ty(C), 2);
-  BranchInst *br0 = builder.CreateCondBr(builder.getTrue(), bb0, bb1);
+  CondBrInst *br0 = builder.CreateCondBr(builder.getTrue(), bb0, bb1);
 
   builder.SetInsertPoint(bb1);
-  BranchInst *br1 = builder.CreateBr(bb0);
+  UncondBrInst *br1 = builder.CreateBr(bb0);
 
   phi->addIncoming(phi, bb0);
   phi->addIncoming(phi, bb1);
@@ -80,7 +80,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
                        GlobalValue::ExternalLinkage, "F"));
   BasicBlock *Entry(BasicBlock::Create(C, "", F.get()));
   BasicBlock *BB(BasicBlock::Create(C, "", F.get()));
-  BranchInst::Create(BB, Entry);
+  UncondBrInst::Create(BB, Entry);
 
   B.SetInsertPoint(BB);
 
@@ -100,7 +100,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
 
   P1->addIncoming(P3, BB);
   P2->addIncoming(P4, BB);
-  BranchInst::Create(BB, BB);
+  UncondBrInst::Create(BB, BB);
 
   // Verify that we can eliminate PHIs that become duplicates after chaning PHIs
   // downstream.
@@ -183,7 +183,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
   auto resetIR = [&]() {
     M = parseIR(C,
                 R"(
-      define i32 @f(i8* %str) {
+      define i32 @f(ptr %str) {
       entry:
         br label %bb2.i
       bb2.i:                                            ; preds = %bb4.i, %entry
@@ -219,8 +219,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
       BasicBlock *SinglePred = BB->getSinglePredecessor();
       if (!SinglePred || SinglePred == BB || BB->hasAddressTaken())
         continue;
-      BranchInst *Term = dyn_cast<BranchInst>(SinglePred->getTerminator());
-      if (Term && !Term->isConditional())
+      if (isa<UncondBrInst>(SinglePred->getTerminator()))
         MergeBasicBlockIntoOnlyPred(BB, &DTU);
     }
     if (DTU.hasDomTree()) {
@@ -411,7 +410,7 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
+        indirectbr ptr blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
       bb0:
         ret void
       bb1:
@@ -420,14 +419,14 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr_repeated() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
+        indirectbr ptr blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
       bb0:
         ret void
       }
 
       define void @indirectbr_unreachable() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
+        indirectbr ptr blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
       bb0:
         ret void
       bb1:
@@ -679,12 +678,79 @@ TEST(Local, FindDbgRecords) {
   findDbgUsers(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 
-  SmallVector<DbgValueInst *> Vals;
   Records.clear();
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
   // only 1 pointer to it rather than 2.
   findDbgValues(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
+}
+
+TEST(Local, SalvageDbgAssignAddress) {
+  // Salvage rewrites a dbg_assign's address through the address expression,
+  // which is separate from the expression on the variable location. Giving the
+  // record a constant value keeps salvage off the variable location, so the
+  // address is the only thing that moves.
+  //
+  // The GEP index is a constant since a constant offset needs no extra location
+  // operands, and that's what makes salvage keep the salvaged address rather
+  // than kill it.
+  //
+  // assignment-tracking/salvage-value.ll also covers this path end to end.
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx,
+                                      R"(
+  define dso_local void @fun(ptr %a) !dbg !11 {
+  entry:
+    %arrayidx = getelementptr inbounds i32, ptr %a, i64 1
+      #dbg_assign(i32 0, !16, !DIExpression(), !15, ptr %arrayidx, !DIExpression(), !19)
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !9}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !11 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{null}
+  !14 = !{}
+  !15 = distinct !DIAssignID()
+  !16 = !DILocalVariable(name: "x", scope: !11, file: !1, line: 2, type: !18)
+  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !19 = !DILocation(line: 0, scope: !11)
+  )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+
+  Function &Fun = *cast<Function>(M->getNamedValue("fun"));
+  Value *Arg = Fun.getArg(0);
+  Instruction &GEP = *Fun.getEntryBlock().getFirstNonPHIOrDbg();
+
+  SmallVector<DbgVariableRecord *> Records;
+  findDbgUsers(&GEP, Records);
+  ASSERT_EQ(Records.size(), 1u);
+  DbgVariableRecord *Assign = Records[0];
+  ASSERT_TRUE(Assign->isDbgAssign());
+  ASSERT_EQ(Assign->getAddress(), &GEP);
+
+  salvageDebugInfo(GEP);
+
+  // The address points at the GEP's pointer operand and the constant offset
+  // moved into the address expression. i32 at index 1 is 4 bytes in.
+  EXPECT_EQ(Assign->getAddress(), Arg);
+  EXPECT_EQ(Assign->getAddressExpression()->getNumElements(), 2u);
+  EXPECT_EQ(Assign->getAddressExpression()->getElement(0),
+            dwarf::DW_OP_plus_uconst);
+  EXPECT_EQ(Assign->getAddressExpression()->getElement(1), 4u);
+  // The variable location is a constant, so salvage left it alone.
+  EXPECT_EQ(Assign->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(isa<ConstantInt>(Assign->getVariableLocationOp(0)));
 }
 
 TEST(Local, ReplaceAllDbgUsesWith) {
@@ -925,7 +991,7 @@ TEST(Local, RemoveUnreachableBlocks) {
 
       declare i32 @__gxx_personality_v0(...)
 
-      define void @invoke_terminator() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+      define void @invoke_terminator() personality ptr @__gxx_personality_v0 {
       entry:
         br i1 undef, label %invoke.block, label %exit
 
@@ -943,8 +1009,8 @@ TEST(Local, RemoveUnreachableBlocks) {
         unreachable
 
       lpad.block:
-        %lp = landingpad { i8*, i32 }
-                catch i8* null
+        %lp = landingpad { ptr, i32 }
+                catch ptr null
         br label %exit
 
       exit:
@@ -1057,6 +1123,14 @@ TEST(Local, SimplifyCFGWithNullAC) {
                           RequireAndPreserveDomTree ? &DTU : nullptr, Options));
 }
 
+TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
+  LLVMContext Ctx;
+  SmallVector<unsigned, 3> Ints = {};
+  auto *TT = llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {}, Ints);
+
+  EXPECT_TRUE(TT->hasProperty(TargetExtType::Property::IsTokenLike));
+}
+
 TEST(Local, CanReplaceOperandWithVariable) {
   LLVMContext Ctx;
   Module M("test_module", Ctx);
@@ -1108,7 +1182,7 @@ TEST(Local, CanReplaceOperandWithVariable) {
   // immarg.
   Type *PtrPtr = B.getPtrTy(0);
   Value *Alloca = B.CreateAlloca(PtrPtr, (unsigned)0);
-  CallInst *GCRoot = B.CreateIntrinsic(
+  CallInst *GCRoot = B.CreateIntrinsicWithoutFolding(
       Intrinsic::gcroot, {Alloca, Constant::getNullValue(PtrPtr)});
   EXPECT_TRUE(canReplaceOperandWithVariable(GCRoot, 0)); // Alloca
   EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 1));
@@ -1145,7 +1219,7 @@ TEST(Local, ExpressionForConstant) {
   IntegerType *Int1Ty = Type::getInt1Ty(Context);
   Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
+  EXPECT_EQ(Expr->getElement(1), 1U);
 
   Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);

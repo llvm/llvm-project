@@ -20,7 +20,7 @@ config.name = "flang-rt"
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -62,25 +62,31 @@ config.test_source_root = os.path.dirname(__file__)
 # lit writes a '.lit_test_times.txt' file into this directory.
 config.test_exec_root = config.flang_rt_binary_test_dir
 
-# On MacOS, -isysroot is needed to build binaries.
+# On MacOS, some tests need -isysroot to build binaries.
 isysroot_flag = []
 if config.osx_sysroot:
     isysroot_flag = ["-isysroot", config.osx_sysroot]
+config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
+
+flang_args = []
+if not config.llvm_tree_available:
+    flang_args.append(
+        f"-fintrinsic-modules-path={config.flang_rt_output_resource_mod_dir}"
+    )
 
 tools = [
     ToolSubst(
         "%flang",
         command=config.flang,
-        extra_args=isysroot_flag,
+        extra_args=flang_args,
         unresolved="fatal",
     ),
     ToolSubst(
         "%clang",
         command=FindTool("clang"),
-        extra_args=isysroot_flag,
         unresolved="fatal",
     ),
-    ToolSubst("%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"),
+    ToolSubst("%cc", command=config.cc, unresolved="fatal"),
 ]
 llvm_config.add_tool_substitutions(tools)
 
@@ -98,3 +104,10 @@ config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir)
 # For CUDA offloading, additional steps (device linking) and libraries (cudart) are needed.
 if config.flang_rt_experimental_offload_support == "CUDA":
     config.available_features.add("offload-cuda")
+
+if config.flang_rt_fortran_modules:
+    config.available_features.add("fortran-modules")
+
+# Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
+if "system-aix" in config.available_features:
+    config.environment["OBJECT_MODE"] = "64"

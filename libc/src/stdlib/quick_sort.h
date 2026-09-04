@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 #define LLVM_LIBC_SRC_STDLIB_QUICK_SORT_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_pivot.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

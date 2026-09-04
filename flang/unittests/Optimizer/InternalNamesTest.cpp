@@ -154,9 +154,7 @@ TEST(InternalNamesTest, doNamelistGroup) {
 TEST(InternalNamesTest, deconstructTest) {
   std::pair actual = NameUniquer::deconstruct("_QChello");
   auto expectedNameKind = NameUniquer::NameKind::COMMON;
-  struct DeconstructedName expectedComponents {
-    {}, {}, 0, "hello", {}
-  };
+  struct DeconstructedName expectedComponents{{}, {}, 0, "hello", {}};
   validateDeconstructedName(actual, expectedNameKind, expectedComponents);
 }
 
@@ -218,6 +216,23 @@ TEST(InternalNamesTest, needExternalNameMangling) {
   ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QCa"));
 }
 
+TEST(InternalNamesTest, isModuleScopeDataUniquedName) {
+  // True cases: module-scope variable, constant, common block
+  ASSERT_TRUE(NameUniquer::isModuleScopeDataUniquedName("_QMmodEintvar"));
+  ASSERT_TRUE(NameUniquer::isModuleScopeDataUniquedName("_QMmodECpi"));
+  ASSERT_TRUE(NameUniquer::isModuleScopeDataUniquedName("_QMmodSsubEvar"));
+  // False cases (in order): module procedure, derived type, unqualified common
+  // block (no module), saved variable local to a procedure (nested blocks),
+  // external name, empty name, non-module-scope name.
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QMmodPsub"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QMmodTmytype"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QCblk"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QFsubB2Ex"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("someExternalName"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName(""));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QMmFfooEx"));
+}
+
 TEST(InternalNamesTest, isExternalFacingUniquedName) {
   std::pair result = NameUniquer::deconstruct("_QMmodSs1modSs2modFsubPfun");
 
@@ -253,6 +268,33 @@ TEST(InternalNamesTest, getTypeDescriptorBindingTableName) {
       fir::NameUniquer::getTypeDescriptorBindingTableName(derivedTypeName));
   ASSERT_EQ("",
       fir::NameUniquer::getTypeDescriptorBindingTableName("_QMdispatch1Pp1"));
+}
+
+TEST(InternalNamesTest, isCompilerGenerated) {
+  // Test normal compiler genereated names
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.n.member"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.n.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.c.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFE.dt.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.n.member"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.n.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.c.struct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1E.dt.struct"));
+  // Test names after CompilerGeneratedNamesConversionPass has run
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXnXmember"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXnXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXcXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QFEXdtXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXnXmember"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXnXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXcXstruct"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QMmod1EXdtXstruct"));
+  // Test false cases
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1Eintvar"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1Epi"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1Emytype"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1EmytypeK4KN6"));
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QMmod1EmytypeK4KN6"));
 }
 
 // main() from gtest_main

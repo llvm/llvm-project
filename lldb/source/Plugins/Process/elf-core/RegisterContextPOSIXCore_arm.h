@@ -48,6 +48,7 @@ protected:
 private:
   lldb::DataBufferSP m_gpr_buffer;
   lldb_private::DataExtractor m_gpr;
+  lldb_private::DataExtractor m_fpr;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM_H

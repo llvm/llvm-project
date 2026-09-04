@@ -46,6 +46,7 @@ protected:
   void SetOpaque(const lldb::ThreadCollectionSP &threads);
 
 private:
+  friend class SBTarget;
   friend class SBProcess;
   friend class SBThread;
   friend class SBSaveCoreOptions;

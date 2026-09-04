@@ -22,16 +22,16 @@ tls1:
 # RUN: wasm-ld --no-gc-sections --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-# RUN: wasm-ld --experimental-pic -shared -o %t.so %t.o
+# RUN: wasm-ld -shared -o %t.so %t.o
 # RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
 
 #      CHECK:  - Type:            DATA
 # CHECK-NEXT:    Segments:
-# CHECK-NEXT:      - SectionOffset:   7
+# CHECK-NEXT:      - SectionOffset:   8
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1024
+# CHECK-NEXT:          Value:           65536
 # CHECK-NEXT:        Content:         2B000000
 # CHECK-NEXT:  - Type:            CUSTOM
 # CHECK-NOT:   - Type:            IMPORT

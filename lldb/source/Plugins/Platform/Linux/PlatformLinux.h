@@ -52,7 +52,7 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
-  lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const llvm::Triple &triple,
+  lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
                                               ConstString name) override;
 
   MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,

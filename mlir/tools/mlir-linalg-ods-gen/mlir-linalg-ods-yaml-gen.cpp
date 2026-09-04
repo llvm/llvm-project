@@ -449,7 +449,7 @@ static bool isAttribute(LinalgOperandDefKind kind) {
 }
 
 // Get the enum name for the given operand kind.
-std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
+static std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
   switch (kind) {
   case LinalgOperandDefKind::UnaryFnAttr:
     return std::string("UnaryFn");
@@ -466,7 +466,7 @@ std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
 }
 
 // Get the enum name for the given function kind.
-std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
+static std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
   switch (kind) {
   case ScalarFnKind::Unary:
     return std::string("UnaryFn");
@@ -505,7 +505,7 @@ static const char bannerFormat[] = R"FMT(
 // {3}: documentation (summary + description)
 // {4}: op attribute list
 // {5}: builder methods taking standalone attribute parameters
-// {6}: additional method defintions
+// {6}: additional method definitions
 // {7}: additional methods for attributes used by indexing maps
 static const char structuredOpOdsHeaderFormat[] = R"FMT(
 //===----------------------------------------------------------------------===//
@@ -623,7 +623,8 @@ SmallVector<utils::IteratorType> {0}::getIteratorTypesArray() {{
 static const char structuredOpIndexingMapsFormat[] = R"FMT(
 ArrayAttr {0}::getIndexingMaps() {{
   static const char memoizeAttr[] = "linalg.memoized_indexing_maps";
-  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(memoizeAttr);
+  ArrayAttr cached =
+      getOperation()->getDiscardableAttrOfType<ArrayAttr>(memoizeAttr);
   if (cached)
     return cached;
 
@@ -632,7 +633,7 @@ ArrayAttr {0}::getIndexingMaps() {{
   SmallVector<AffineMap> maps;
   {1}
   cached = Builder(context).getAffineMapArrayAttr(maps);
-  getOperation()->setAttr(memoizeAttr, cached);
+  getOperation()->setDiscardableAttr(memoizeAttr, cached);
   return cached;
 }
 )FMT";
@@ -976,7 +977,7 @@ std::string {0}::getLibraryCallName() {{
       // {0}: Attribute name
       // {1}: Attribute size
       static const char attrFmt[] = R"FMT(
-if (auto attr = op->getAttrOfType<DenseElementsAttr>("{0}")) {{
+if (auto attr = op->getInherentAttrOfType<DenseElementsAttr>("{0}")) {{
   if (!attr.getType().getElementType().isInteger(64))
     return op->emitError("incorrect element type for index attribute '{0}'");
   if (attr.getType().getShape() != ArrayRef<int64_t>{{ {1} })

@@ -37,15 +37,15 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK64-NEXT:  // %bb.0: // %entry
 ; CHECK64-NEXT:    sub sp, sp, #192
 ; CHECK64-NEXT:    .seh_stackalloc 192
-; CHECK64-NEXT:    str x23, [sp, #80] // 8-byte Folded Spill
+; CHECK64-NEXT:    str x23, [sp, #80] // 8-byte Spill
 ; CHECK64-NEXT:    .seh_save_reg x23, 80
-; CHECK64-NEXT:    str x29, [sp, #88] // 8-byte Folded Spill
+; CHECK64-NEXT:    str x29, [sp, #88] // 8-byte Spill
 ; CHECK64-NEXT:    .seh_save_reg x29, 88
-; CHECK64-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
+; CHECK64-NEXT:    str x30, [sp, #96] // 8-byte Spill
 ; CHECK64-NEXT:    .seh_save_reg x30, 96
-; CHECK64-NEXT:    str d9, [sp, #168] // 8-byte Folded Spill
+; CHECK64-NEXT:    str d9, [sp, #168] // 8-byte Spill
 ; CHECK64-NEXT:    .seh_save_freg d9, 168
-; CHECK64-NEXT:    str d10, [sp, #176] // 8-byte Folded Spill
+; CHECK64-NEXT:    str d10, [sp, #176] // 8-byte Spill
 ; CHECK64-NEXT:    .seh_save_freg d10, 176
 ; CHECK64-NEXT:    add x29, sp, #88
 ; CHECK64-NEXT:    .seh_add_fp 88
@@ -55,15 +55,15 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK64-NEXT:    //NO_APP
 ; CHECK64-NEXT:    stur d0, [x29, #-16]
 ; CHECK64-NEXT:    .seh_startepilogue
-; CHECK64-NEXT:    ldr d10, [sp, #176] // 8-byte Folded Reload
+; CHECK64-NEXT:    ldr d10, [sp, #176] // 8-byte Reload
 ; CHECK64-NEXT:    .seh_save_freg d10, 176
-; CHECK64-NEXT:    ldr d9, [sp, #168] // 8-byte Folded Reload
+; CHECK64-NEXT:    ldr d9, [sp, #168] // 8-byte Reload
 ; CHECK64-NEXT:    .seh_save_freg d9, 168
-; CHECK64-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
+; CHECK64-NEXT:    ldr x30, [sp, #96] // 8-byte Reload
 ; CHECK64-NEXT:    .seh_save_reg x30, 96
-; CHECK64-NEXT:    ldr x29, [sp, #88] // 8-byte Folded Reload
+; CHECK64-NEXT:    ldr x29, [sp, #88] // 8-byte Reload
 ; CHECK64-NEXT:    .seh_save_reg x29, 88
-; CHECK64-NEXT:    ldr x23, [sp, #80] // 8-byte Folded Reload
+; CHECK64-NEXT:    ldr x23, [sp, #80] // 8-byte Reload
 ; CHECK64-NEXT:    .seh_save_reg x23, 80
 ; CHECK64-NEXT:    add sp, sp, #192
 ; CHECK64-NEXT:    .seh_stackalloc 192
@@ -77,15 +77,15 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK1024-NEXT:  // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1072
 ; CHECK1024-NEXT:    .seh_stackalloc 1072
-; CHECK1024-NEXT:    str x23, [sp] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x23, [sp] // 8-byte Spill
 ; CHECK1024-NEXT:    .seh_save_reg x23, 0
-; CHECK1024-NEXT:    str x29, [sp, #8] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x29, [sp, #8] // 8-byte Spill
 ; CHECK1024-NEXT:    .seh_save_reg x29, 8
-; CHECK1024-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK1024-NEXT:    .seh_save_reg x30, 16
-; CHECK1024-NEXT:    str d9, [sp, #1048] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str d9, [sp, #1048] // 8-byte Spill
 ; CHECK1024-NEXT:    .seh_save_freg d9, 1048
-; CHECK1024-NEXT:    str d10, [sp, #1056] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str d10, [sp, #1056] // 8-byte Spill
 ; CHECK1024-NEXT:    .seh_save_freg d10, 1056
 ; CHECK1024-NEXT:    add x29, sp, #8
 ; CHECK1024-NEXT:    .seh_add_fp 8
@@ -98,15 +98,15 @@ define i32 @fpr_csr_stackobj(double %x) "aarch64_pstate_sm_compatible" "frame-po
 ; CHECK1024-NEXT:    .seh_startepilogue
 ; CHECK1024-NEXT:    add sp, sp, #1040
 ; CHECK1024-NEXT:    .seh_stackalloc 1040
-; CHECK1024-NEXT:    ldr d10, [sp, #1056] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr d10, [sp, #1056] // 8-byte Reload
 ; CHECK1024-NEXT:    .seh_save_freg d10, 1056
-; CHECK1024-NEXT:    ldr d9, [sp, #1048] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr d9, [sp, #1048] // 8-byte Reload
 ; CHECK1024-NEXT:    .seh_save_freg d9, 1048
-; CHECK1024-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK1024-NEXT:    .seh_save_reg x30, 16
-; CHECK1024-NEXT:    ldr x29, [sp, #8] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x29, [sp, #8] // 8-byte Reload
 ; CHECK1024-NEXT:    .seh_save_reg x29, 8
-; CHECK1024-NEXT:    ldr x23, [sp] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x23, [sp] // 8-byte Reload
 ; CHECK1024-NEXT:    .seh_save_reg x23, 0
 ; CHECK1024-NEXT:    add sp, sp, #1072
 ; CHECK1024-NEXT:    .seh_stackalloc 1072

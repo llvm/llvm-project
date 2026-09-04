@@ -11,7 +11,8 @@ MAX_SOCKET_PATH_LENGTH = 104
 
 
 class MCPUnixSocketCommandTestCase(TestBase):
-    @skipIfWindows
+    @requirePOSIX
+    @requireSocketPermission
     @skipIfRemote
     @no_debug_info_test
     def test_unix_socket(self):
@@ -31,4 +32,17 @@ class MCPUnixSocketCommandTestCase(TestBase):
             f"protocol-server start MCP accept://{socket_file}",
             startstr="MCP server started with connection listeners:",
             substrs=[f"unix-connect://{socket_file}"],
+        )
+
+        self.expect(
+            "protocol-server get MCP",
+            startstr="MCP server connection listeners:",
+            substrs=[f"unix-connect://{socket_file}"],
+        )
+
+        self.runCmd("protocol-server stop MCP", check=False)
+        self.expect(
+            "protocol-server get MCP",
+            error=True,
+            substrs=["MCP server is not running"],
         )

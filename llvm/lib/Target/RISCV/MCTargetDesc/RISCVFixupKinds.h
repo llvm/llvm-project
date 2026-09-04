@@ -11,7 +11,6 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCFixup.h"
-#include <utility>
 
 #undef RISCV
 
@@ -60,6 +59,9 @@ enum Fixups {
   // 32-bit fixup for symbol references in the 48-bit qc.j/qc.jal instructions
   fixup_riscv_qc_e_call_plt,
 
+  fixup_qc_access_16,
+  fixup_qc_access_32,
+
   // Andes specific fixups
   // 10-bit fixup for symbol references in the xandesperf branch instruction
   fixup_riscv_nds_branch_10,
@@ -68,27 +70,6 @@ enum Fixups {
   fixup_riscv_invalid,
   NumTargetFixupKinds = fixup_riscv_invalid - FirstTargetFixupKind
 };
-
-static inline std::pair<MCFixupKind, MCFixupKind>
-getRelocPairForSize(unsigned Size) {
-  switch (Size) {
-  default:
-    llvm_unreachable("unsupported fixup size");
-  case 1:
-    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD8,
-                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB8);
-  case 2:
-    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD16,
-                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB16);
-  case 4:
-    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD32,
-                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB32);
-  case 8:
-    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD64,
-                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB64);
-  }
-}
-
 } // end namespace llvm::RISCV
 
 #endif
