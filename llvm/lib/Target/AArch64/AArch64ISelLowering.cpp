@@ -41,6 +41,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -33839,6 +33840,14 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
     }
   }
+
+  // The !mem.cache_hint metadata is not supported by GISel and will be dropped.
+  // TODO: Remove this and handle atomic store hints in GISel once supported.
+  if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
+    if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
+      return true;
+  }
+
   return false;
 }
 

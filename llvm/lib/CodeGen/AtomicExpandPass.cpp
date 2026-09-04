@@ -244,6 +244,7 @@ static void copyMetadataForAtomic(Instruction &Dest,
     case LLVMContext::MD_tbaa:
     case LLVMContext::MD_tbaa_struct:
     case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_access_group:
@@ -713,6 +714,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *Addr = SI->getPointerOperand();
 
   StoreInst *NewSI = Builder.CreateStore(NewVal, Addr, SI->getProperties());
+  copyMetadataForAtomic(*NewSI, *SI);
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;

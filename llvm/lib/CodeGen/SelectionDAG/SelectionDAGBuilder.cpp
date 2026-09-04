@@ -5417,10 +5417,10 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
     report_fatal_error("Cannot generate unaligned atomic store");
 
   auto Flags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
-
-  MachineFunction &MF = DAG.getMachineFunction();
   const MDNode *MemCacheHint =
       getMemCacheHintMetadata(I, I.getPointerOperandIndex());
+
+  MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
