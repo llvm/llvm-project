@@ -381,7 +381,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
   return ("." + Str).str();
 }
 
-void llvm::externalize(GlobalValue &GV) {
+void llvm::externalizeGlobal(GlobalValue &GV) {
   if (GV.hasLocalLinkage()) {
     GV.setLinkage(GlobalValue::ExternalLinkage);
     GV.setVisibility(GlobalValue::HiddenVisibility);

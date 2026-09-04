@@ -142,7 +142,7 @@ LLVM_ABI std::string getUniqueModuleId(Module *M);
 ///
 /// Used by module splitting utilities (SplitModule, AMDGPUSplitModule, ...)
 /// to prepare a module for partitioning.
-LLVM_ABI void externalize(GlobalValue &GV);
+LLVM_ABI void externalizeGlobal(GlobalValue &GV);
 
 /// Embed the memory buffer \p Buf into the module \p M as a global using the
 /// specified section name. Also provide a metadata entry to identify it in the

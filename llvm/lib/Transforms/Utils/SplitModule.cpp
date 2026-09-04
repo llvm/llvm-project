@@ -231,13 +231,13 @@ void llvm::SplitModule(
     bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
-      externalize(F);
+      externalizeGlobal(F);
     for (GlobalVariable &GV : M.globals())
-      externalize(GV);
+      externalizeGlobal(GV);
     for (GlobalAlias &GA : M.aliases())
-      externalize(GA);
+      externalizeGlobal(GA);
     for (GlobalIFunc &GIF : M.ifuncs())
-      externalize(GIF);
+      externalizeGlobal(GIF);
   }
 
   // This performs splitting without a need for externalization, which might not

@@ -1385,7 +1385,7 @@ static void splitAMDGPUModule(
       if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
                    dbgs() << " because its address is taken\n");
-        externalize(Fn);
+        externalizeGlobal(Fn);
       }
     }
   }
@@ -1396,14 +1396,14 @@ static void splitAMDGPUModule(
     for (auto &GV : M.globals()) {
       if (GV.hasLocalLinkage())
         LLVM_DEBUG(dbgs() << "[externalize] GV " << GV.getName() << '\n');
-      externalize(GV);
+      externalizeGlobal(GV);
     }
   }
 
   for (auto &GA : M.aliases()) {
     if (GA.hasLocalLinkage()) {
       LLVM_DEBUG(dbgs() << "[externalize] alias " << GA.getName() << '\n');
-      externalize(GA);
+      externalizeGlobal(GA);
     }
   }
 
