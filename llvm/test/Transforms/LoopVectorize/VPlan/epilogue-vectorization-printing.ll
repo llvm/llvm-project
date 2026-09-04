@@ -1,5 +1,5 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=8 -enable-epilogue-vectorization \
-; RUN:     -epilogue-vectorization-force-VF=4 -vplan-print-metadata=false -disable-output \
+; RUN:     -epilogue-vectorization-force-VF=4 -disable-output \
 ; RUN:     -vplan-print-after=printFinalVPlan %s 2>&1 | FileCheck %s
 
 ; Check how plans for epilogue vectorization are represented in VPlan.
