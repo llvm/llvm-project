@@ -320,6 +320,11 @@ private:
   bool GlobalOpt;
 };
 
+struct AMDGPUPromoteUniformArgsPass
+    : OptionalPassInfoMixin<AMDGPUPromoteUniformArgsPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 void initializeAMDGPULowerExecSyncLegacyPass(PassRegistry &);
 extern char &AMDGPULowerExecSyncLegacyPassID;
 ModulePass *createAMDGPULowerExecSyncLegacyPass();
