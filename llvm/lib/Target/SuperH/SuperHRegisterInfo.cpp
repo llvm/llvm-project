@@ -107,6 +107,27 @@ static int64_t getLoadStoreBaseOffset(unsigned Opcode) {
   }
 }
 
+/// getLoadBaseOffset - Gets the neccesary bit shift amount for the
+/// load/store indexing
+static int64_t getLoadStoreOffsetShift(unsigned Opcode) {
+  switch(Opcode) {
+  case SH::MOVBL4:
+  case SH::MOVBS4:
+    return 0;
+
+  case SH::MOVWL4:
+  case SH::MOVWS4:
+    return 1;
+
+  case SH::MOVLS4:
+  case SH::MOVLL4:
+    return 2;
+
+  default:
+    return 0;
+  }
+}
+
 static void replaceFI(const MachineFunction &MF, MachineBasicBlock::iterator II,
                       MachineInstr &MI, const DebugLoc &dl,
                       unsigned FIOperandNum, int Offset, Register FramePtr) {
@@ -129,14 +150,11 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetInstrInfo &TII = *TM.getSubtargetImpl(MF.getFunction())->getInstrInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
-  dbgs() << FrameIndex << " " << TII.getName(MI.getDesc().getOpcode()) << "\n";
-
   // Get the register offset to fetch.
   Register FrameReg;
   int64_t Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
-  Offset += MFI.getStackSize();
-
   int64_t ROff = getLoadStoreBaseOffset(MI.getOpcode());
+  int64_t Shift = getLoadStoreOffsetShift(MI.getOpcode());
 
   // Handle frame loads and stores.
   switch(MI.getOpcode()) {
@@ -145,9 +163,6 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   case SH::MOVBS4:
   case SH::MOVWS4: {
     Register SrcReg = MI.getOperand(0).getReg();
-
-    MI.dump();
-    dbgs() << "\n";
     
     // Expand sequence to
     // mov      <base reg>,r1
@@ -162,15 +177,12 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     BuildMI(*MI.getParent(), II, DL, TII.get(SH::MOV), SH::R0)
       .addReg(SrcReg);
 
-    Offset = ROff+Offset;
+    Offset = (ROff-Offset) >> Shift;
     FrameReg = SH::R1;
     break;
   }
   case SH::MOVLS4: {
 
-    MI.dump();
-    dbgs() << "\n";
-    
     // Expand sequence to
     // mov      <base reg>,r1
     // add      #-ROff,r1
@@ -180,7 +192,8 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     BuildMI(*MI.getParent(), II, DL, TII.get(SH::ADDI), SH::R1)
       .addReg(SH::R1)
       .addImm(-ROff);
-    Offset = ROff+Offset;
+
+    Offset = (ROff-Offset) >> Shift;
     FrameReg = SH::R1;
     break;
   }
@@ -206,7 +219,7 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       .addReg(SH::R0)
       .addImm(-ROff);
 
-    Offset = ROff+Offset;
+    Offset = (ROff-Offset) >> Shift;
     FrameReg = SH::R1;
     break;
   }
@@ -221,7 +234,8 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     BuildMI(*MI.getParent(), II, DL, TII.get(SH::ADDI), SH::R1)
       .addReg(SH::R1)
       .addImm(-ROff);
-    Offset = ROff+Offset;
+
+    Offset = (ROff-Offset) >> Shift;
     FrameReg = SH::R1;
     break;
   }

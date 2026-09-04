@@ -44,6 +44,8 @@ public:
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
+
+  void emitFrameAdjust(Register Base, MachineFunction &MF, MachineBasicBlock &MBB,  MachineBasicBlock::iterator MBBI, int32_t AdjValue) const;
   
 
   /// getFrameIndexReference - This method should return the base register
