@@ -1454,17 +1454,25 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   // Track template parameter depth.
   TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
 
-  // To restore the context after late parsing.
-  Sema::ContextRAII GlobalSavedContext(
-      Actions, Actions.Context.getTranslationUnitDecl());
-
   MultiParseScope Scopes(*this);
 
   // Get the list of DeclContexts to reenter.
   SmallVector<DeclContext*, 4> DeclContextsToReenter;
-  for (DeclContext *DC = FunD; DC && !DC->isTranslationUnit();
-       DC = DC->getLexicalParent())
+  DeclContext *LexicalTU = nullptr;
+  for (DeclContext *DC = FunD; DC; DC = DC->getLexicalParent()) {
+    if (DC->isTranslationUnit()) {
+      LexicalTU = DC;
+      break;
+    }
     DeclContextsToReenter.push_back(DC);
+  }
+
+  if (!LexicalTU) {
+    LexicalTU = Actions.Context.getTranslationUnitDecl();
+  }
+
+  // To restore the context after late parsing.
+  Sema::ContextRAII GlobalSavedContext(Actions, LexicalTU);
 
   // Reenter scopes from outermost to innermost.
   for (DeclContext *DC : reverse(DeclContextsToReenter)) {
