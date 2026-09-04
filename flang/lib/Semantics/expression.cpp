@@ -1085,6 +1085,19 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (context_.HasError(n.symbol)) { // includes case of no symbol
     return std::nullopt;
   } else {
+    // Name resolution gives array constructor and DATA implied-do indices
+    // their own scope.  Preserve that identity when an expression is analyzed
+    // by a fresh ExpressionAnalyzer without the active implied-do context.
+    // Other names referenced in an implied-do may have host-associated
+    // symbols owned by the same scope; only its local object is the index.
+    if (n.symbol->has<semantics::ObjectEntityDetails>() &&
+        semantics::IsImpliedDoIndex(*n.symbol)) {
+      if (std::optional<DynamicType> type{DynamicType::From(*n.symbol)};
+          type && type->category() == TypeCategory::Integer) {
+        return AsMaybeExpr(ConvertToKind<TypeCategory::Integer>(
+            type->kind(), AsExpr(ImpliedDoIndex{n.source})));
+      }
+    }
     const Symbol &ultimate{n.symbol->GetUltimate()};
     if (ultimate.has<semantics::TypeParamDetails>()) {
       // A bare reference to a derived type parameter within a parameterized
