@@ -77,8 +77,14 @@ enum E1 comma4(void) {
 // type, so a conditional between enumerators of the target type is fine in
 // C++ and must not be diagnosed here either.
 enum E1 comma5(int c) {
-  return ((void)0, c ? E1_One : E1_Zero);
+  return ((void)0, c ? E1_One : E1_Zero); // Okay, no conversion in C++
 }
+
+#ifdef __cplusplus
+// In C++ the enumerators already have the enumeration type, so the conditional
+// has type E1 and there is nothing to convert.
+static_assert(__is_same(decltype(true ? E1_One : E1_Zero), E1), "");
+#endif
 
 enum E1 comma6(int c) {
   return ((void)0, c ? E1_One : 2); // expected-warning {{implicit conversion from 'int' to enumeration type 'enum E1' is invalid in C++}} \
