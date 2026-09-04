@@ -301,10 +301,15 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   if (CallAttrs.requiresLazySave() || CallAttrs.requiresSMChange() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.requiresPreservingAllZAState()) {
-    // For always-inline functions we can ignore the SME attributes as we should
-    // be able to assume that the user knows what they're doing and that the
-    // front-end has given sufficient warning or error diagnostics to guard the
-    // user.
+    // For always-inline functions we don't check the SME attributes as
+    // otherwise it would block simple 'alwaysinline' utility functions in
+    // existing libraries from being inlined in streaming functions (e.g.
+    // std::max). Clang issues a warning diagnostic for this case to warn the
+    // user that always-inlining the function may not be safe. Unfortunately, it
+    // is difficult to comprehensively guard against this in Clang, as it would
+    // require analyzing the function bodies for all always-inline functions
+    // for each of their call-sites. The approach taken here is therefore a
+    // compromise between safety and usability.
     if (!Callee->hasFnAttribute(Attribute::AlwaysInline) &&
         hasPossibleIncompatibleOps(Callee, *getTLI()))
       return false;
