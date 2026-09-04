@@ -89,7 +89,7 @@ module attributes {
   // CHECK:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
   // CHECK:   cir.store %{{.+}}, %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:   %[[CAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>
-  // CHECK:   cir.call %[[CAST]](%[[SLOT]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s64i
+  // CHECK:   cir.call %[[CAST]](%[[SLOT]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
 
   // Indirect call returning a large struct: an sret pointer slot is prepended
   // and the callee is bitcast to the void-returning sret signature.

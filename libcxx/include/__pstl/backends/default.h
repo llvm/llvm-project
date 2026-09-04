@@ -60,6 +60,14 @@ namespace __pstl {
 //
 // This backend implements all the PSTL algorithms based on the following basis operations:
 //
+// find_end family
+// ------------------
+// No other algorithms based on find_end
+//
+// is_heap_until family
+// --------------
+// No other algorithms based on is_heap_until
+//
 // find_if family
 // --------------
 // - find
