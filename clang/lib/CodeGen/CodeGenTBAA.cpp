@@ -531,6 +531,15 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       // incomplete view for NewStructPathTBAA.
       if (CodeGenOpts.NewStructPathTBAA && CXXRD->getNumVBases() != 0)
         return nullptr;
+      // A polymorphic class holds a vtable pointer at offset 0 that is not part
+      // of the declared field list.
+      if (Layout.hasOwnVFPtr()) {
+        uint64_t PtrSize =
+            Context.getTypeSizeInChars(Context.VoidPtrTy).getQuantity();
+        Fields.push_back(llvm::MDBuilder::TBAAStructField(
+            0, PtrSize,
+            createScalarTypeNode("vtable pointer", getRoot(), PtrSize)));
+      }
       for (const CXXBaseSpecifier &B : CXXRD->bases()) {
         if (B.isVirtual())
           continue;
