@@ -745,6 +745,18 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
+    // We have to be careful to prevent trying to fold into the first source
+    // operand of instructions that apply DPP to the second source operand.
+    // This could be directly, or when folding into an instruction that will
+    // get commuted into one.
+    int FoldedOp =
+        (Use == Src0) ? static_cast<int>(OrigOp) : TII->commuteOpcode(OrigOp);
+    if (FoldedOp < 0 || TII->isSrc1DPPRevOpcode(*ST, FoldedOp)) {
+      LLVM_DEBUG(
+          dbgs() << "  failed: Use operand cannot have DPP applied to it\n");
+      break;
+    }
+
     if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP) &&
         AMDGPU::isDPALU_DPP32BitOpc(OrigOp)) {
       LLVM_DEBUG(dbgs() << "  " << OrigMI
