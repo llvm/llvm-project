@@ -1092,6 +1092,22 @@ things to go wrong. They are also unstable across LLVM versions.
     *CMAKE_INSTALL_PREFIX*. Only matters if *LLVM_INSTALL_UTILS* is enabled.
     Defaults to *LLVM_TOOLS_INSTALL_DIR*.
 
+## Uninstalling
+
+Once you have installed LLVM (e.g. via `ninja install`), you can remove the
+installed files again with the `uninstall` target:
+
+``` console
+$ ninja uninstall
+```
+
+This works by replaying `install_manifest.txt` (written into the build
+directory by CMake as part of `install`) and removing each file it lists, so
+it only ever removes files that were actually installed -- it won't touch
+anything you created by hand in the install prefix. It also means it can
+only be run from the same build directory `install` was run from, and only
+after at least one successful `install`.
+
 ## CMake Caches
 
 Recently, LLVM and Clang have been adding some more complicated build system
