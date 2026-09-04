@@ -13,12 +13,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Out of standard streams only stdin supports ungetc,
-// because stdin is readable - ungetc on stdout/stderr is undefined.
-// Only one value is required by the C standard to be stored by ungetc.
-// This minimal implementation only handles stdin and returns error on all
-// other streams.
-// TODO: Shall we have an embedding API for ungetc?
+// The fallback handles stdin only because it is the only readable standard
+// stream. The C standard requires only one byte of pushback. Applications that
+// need pushback for other streams or integrate it with their input buffering
+// can provide __llvm_libc_stdio_ungetc instead.
 
 static cpp::optional<unsigned char> ungetc_state_stdin;
 
@@ -37,6 +35,9 @@ bool pop_ungetc_value(::FILE *stream, unsigned char &out) {
 int push_ungetc_value(::FILE *stream, int c) {
   if (c == EOF || stream == nullptr)
     return EOF;
+
+  if (__llvm_libc_stdio_ungetc != nullptr)
+    return __llvm_libc_stdio_ungetc(stream, c);
 
   if (stream != stdin)
     return EOF;

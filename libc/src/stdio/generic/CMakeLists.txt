@@ -11,6 +11,32 @@ function(add_generic_entrypoint_object name)
 endfunction()
 
 add_generic_entrypoint_object(
+  setbuf
+  SRCS
+    ../setbuf.cpp
+  HDRS
+    ../setbuf.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.hdr.types.off_t
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_generic_entrypoint_object(
+  setvbuf
+  SRCS
+    ../setvbuf.cpp
+  HDRS
+    ../setvbuf.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.hdr.types.FILE
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_generic_entrypoint_object(
   clearerr
   SRCS
     clearerr.cpp
