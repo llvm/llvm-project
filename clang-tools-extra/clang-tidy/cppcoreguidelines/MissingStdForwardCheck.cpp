@@ -28,9 +28,7 @@ AST_MATCHER_P(QualType, possiblyPackExpansionOf,
 AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
   const ast_matchers::internal::Matcher<QualType> Inner =
       possiblyPackExpansionOf(
-          qualType(rValueReferenceType(),
-                   references(templateTypeParmType(
-                       hasDeclaration(templateTypeParmDecl()))),
+          qualType(rValueReferenceType(), references(templateTypeParmType()),
                    unless(references(qualType(isConstQualified())))));
   if (!Inner.matches(Node.getType(), Finder, Builder))
     return false;

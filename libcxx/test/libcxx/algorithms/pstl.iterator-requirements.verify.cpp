@@ -34,6 +34,7 @@
 
 using non_forward_iterator       = cpp17_input_iterator<int*>;
 using non_bidirectional_iterator = forward_iterator<int*>;
+using non_randomaccess_iterator  = bidirectional_iterator<int*>;
 struct non_output_iterator : forward_iterator<int*> {
   constexpr int const& operator*() const; // prevent it from being an output iterator
 };
@@ -41,6 +42,7 @@ struct non_output_iterator : forward_iterator<int*> {
 void f(non_forward_iterator non_fwd,
        non_output_iterator non_output,
        non_bidirectional_iterator non_bidir,
+       non_randomaccess_iterator non_random,
        std::execution::sequenced_policy pol) {
   auto pred     = [](auto&&...) -> bool { return true; };
   auto func     = [](auto&&...) -> int { return 1; };
@@ -153,6 +155,13 @@ void f(non_forward_iterator non_fwd,
   {
     (void)std::is_partitioned(
         pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_partitioned}}
+  }
+
+  {
+    (void)std::is_heap_until(
+        pol, non_random, non_random); // expected-error@*:* {{static assertion failed: is_heap_until}}
+    (void)std::is_heap_until(
+        pol, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: is_heap_until}}
   }
 
   {
