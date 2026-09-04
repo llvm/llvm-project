@@ -9,3 +9,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.elf.dynamic
 )
+
+add_libc_test(
+  hash_test
+  SUITE
+    libc-support-tests
+  SRCS
+    hash_test.cpp
+  DEPENDS
+    libc.src.__support.elf.hash
+)
