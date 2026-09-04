@@ -29,13 +29,10 @@ using namespace mlir::abi;
 // non-trivial copy constructor, move constructor, or destructor, so the ABI
 // passes it through a pointer instead of in registers.
 //
-// For byval (ArgClassification::byVal == true) the callee gets
-// llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal == false)
-// the callee gets llvm.byref without the ownership attrs.  At the call site
-// byval copies into a fresh alloca while byref forwards the caller's storage.
-// At the callee, byval loads the incoming pointer (a local copy), while
-// byref rewires the CIRGen param-slot alloca to the incoming pointer so
-// the body mutates the caller's storage in place.
+// At the call site byval copies into a fresh alloca while byref forwards
+// the caller's storage.  At the callee, byval loads the incoming pointer
+// (a local copy), while byref rewires the CIRGen param-slot alloca to the
+// incoming pointer so the body mutates the caller's storage in place.
 //
 // For Expand, the single struct argument is replaced by N scalar arguments
 // (one per field).  At the callee, the N field block arguments are stored
@@ -223,15 +220,12 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       // type T (the pre-rewrite arg type); T is recorded explicitly because
       // it cannot be recovered from the opaque LLVM pointer after lowering.
       //
-      // For byval, two additional attributes match classic CodeGen:
-      //   llvm.noundef -- the copy is always fully defined (the caller's
-      //     original must be defined or UB has already occurred, and the
-      //     copy inherits that property).
-      //   llvm.noalias -- the copy is a fresh caller-allocated alloca that
-      //     no other pointer in the function can alias.  Classic CodeGen
-      //     emits this when -fpass-by-value-is-noalias is set; here we
-      //     emit it unconditionally because the byval call-site rewrite
-      //     always produces a fresh alloca+store.
+      // byval also gets llvm.noundef: the caller's original must be defined
+      // or UB has already occurred, and the copy inherits that.
+      //
+      // byval does not get llvm.noalias.  Classic adds it only under
+      // -fpass-by-value-is-noalias for a record that can pass in registers,
+      // and that option is not plumbed into CIR.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       StringRef ownershipAttr =
           ac.byVal ? mlir::LLVM::LLVMDialect::getByValAttrName()
@@ -240,12 +234,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 builder.getI64IntegerAttr(ac.indirectAlign.value()));
       attrs.set(ownershipAttr, mlir::TypeAttr::get(pointeeTy));
-      if (ac.byVal) {
-        attrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
-                  builder.getUnitAttr());
+      if (ac.byVal)
         attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                   builder.getUnitAttr());
-      }
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
       newArgAttrs.push_back(existing);

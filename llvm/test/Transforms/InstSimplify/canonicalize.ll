@@ -379,7 +379,7 @@ define double @canonicalize_inf_f64() {
 ; CHECK-LABEL: @canonicalize_inf_f64(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %ret = call double @llvm.canonicalize.f64(double 0x7FF0000000000000)
+  %ret = call double @llvm.canonicalize.f64(double +inf)
   ret double %ret
 }
 
@@ -387,7 +387,7 @@ define double @canonicalize_ninf_f64() {
 ; CHECK-LABEL: @canonicalize_ninf_f64(
 ; CHECK-NEXT:    ret double -inf
 ;
-  %ret = call double @llvm.canonicalize.f64(double 0xFFF0000000000000)
+  %ret = call double @llvm.canonicalize.f64(double -inf)
   ret double %ret
 }
 

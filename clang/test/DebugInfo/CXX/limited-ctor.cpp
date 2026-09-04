@@ -27,6 +27,19 @@ struct E {
   constexpr E(){};
 } TestE;
 
+// Declared but not defined constexpr constructor should not emit full debug info..
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DeclaredConstexpr"{{.*}}flags: DIFlagFwdDecl
+struct DeclaredConstexpr {
+  constexpr DeclaredConstexpr();
+} TestDeclaredConstexpr;
+
+// Defined out-of-line constexpr constructor should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "OutOfLineConstexpr"{{.*}}DIFlagTypePassByValue
+struct OutOfLineConstexpr {
+  constexpr OutOfLineConstexpr();
+} TestOutOfLineConstexpr;
+constexpr OutOfLineConstexpr::OutOfLineConstexpr() {}
+
 // Defined delegating constructor where delegated constructor is not defined
 // should not emit full debug info.
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "Delegating"{{.*}}flags: DIFlagFwdDecl
@@ -102,6 +115,25 @@ struct DelegatingToMoveCtor {
 };
 void TestDelegatingToMoveCtor(DelegatingToMoveCtor) {}
 
+// Defined delegating constexpr constructor where delegated constructor is also
+// defined should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingConstexpr"{{.*}}DIFlagTypePassByValue
+struct DelegatingConstexpr {
+  constexpr DelegatingConstexpr() : DelegatingConstexpr(42) {}
+  constexpr DelegatingConstexpr(int) {}
+} TestDelegatingConstexpr;
+
+// Defined out-of-line delegating constexpr constructor where delegated
+// constructor is also defined out-of-line should emit full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DelegatingConstexprOutOfLine"{{.*}}DIFlagTypePassByValue
+struct DelegatingConstexprOutOfLine {
+  constexpr DelegatingConstexprOutOfLine();
+  constexpr DelegatingConstexprOutOfLine(int);
+} TestDelegatingConstexprOutOfLine;
+constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine()
+    : DelegatingConstexprOutOfLine(42) {}
+constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine(int) {}
+
 // Test for trivial constructor.
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "F"{{.*}}DIFlagTypePassByValue
 struct F {
@@ -149,6 +181,7 @@ struct NonTrivial {
 };
 struct DeletedCtors {
   DeletedCtors() = delete;
+  constexpr DeletedCtors(int) = delete;
   DeletedCtors(const DeletedCtors &) = default;
   void f1();
   NonTrivial t;

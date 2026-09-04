@@ -315,7 +315,7 @@ define double @test_fabs_select2(double %a) {
 ; CHECK-NEXT:    ret double [[ABS2]]
 ;
   %abs1 = call double @llvm.fabs.f64(double %a)
-  %cmp = fcmp oeq double %abs1, 0x7FF0000000000000
+  %cmp = fcmp oeq double %abs1, +inf
   %sel = select i1 %cmp, double -0.000000e+00, double %abs1
   %abs2 = call double @llvm.fabs.f64(double %sel)
   ret double %abs2

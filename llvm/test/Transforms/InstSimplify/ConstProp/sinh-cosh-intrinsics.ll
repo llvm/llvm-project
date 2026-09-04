@@ -73,7 +73,7 @@ define double @test_sinh_pos_inf() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double +inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.sinh.f64(double 0x7ff0000000000000)
+  %res = call double @llvm.sinh.f64(double +inf)
   ret double %res
 }
 
@@ -82,7 +82,7 @@ define double @test_sinh_neg_inf() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double -inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.sinh.f64(double 0xfff0000000000000)
+  %res = call double @llvm.sinh.f64(double -inf)
   ret double %res
 }
 
@@ -158,7 +158,7 @@ define double @test_cosh_pos_inf() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double +inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.cosh.f64(double 0x7ff0000000000000)
+  %res = call double @llvm.cosh.f64(double +inf)
   ret double %res
 }
 
@@ -167,6 +167,6 @@ define double @test_cosh_neg_inf() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double -inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.cosh.f64(double 0xfff0000000000000)
+  %res = call double @llvm.cosh.f64(double -inf)
   ret double %res
 }

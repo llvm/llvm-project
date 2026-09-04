@@ -201,7 +201,7 @@ define double @negnan_f64() {
 ; CHECK-NEXT: f64.const $push[[NUM:[0-9]+]]=, infinity{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @inf_f64() {
-  ret double 0x7FF0000000000000
+  ret double +inf
 }
 
 ; CHECK-LABEL: neginf_f64:
@@ -209,7 +209,7 @@ define double @inf_f64() {
 ; CHECK-NEXT: f64.const $push[[NUM:[0-9]+]]=, -infinity{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @neginf_f64() {
-  ret double 0xFFF0000000000000
+  ret double -inf
 }
 
 ;; Custom NaN playloads are currently not always preserved because of the use of

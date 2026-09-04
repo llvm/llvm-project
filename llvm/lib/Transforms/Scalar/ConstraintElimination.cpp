@@ -574,7 +574,7 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
         V = Op0;
     }
 
-    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
+    if (match(V, m_NSWAddLike(m_Value(Op0), m_Value(Op1)))) {
       if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
         return *Decomp;
       return V;
@@ -649,7 +649,7 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
 
   Value *Op1;
   ConstantInt *CI;
-  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
+  if (match(V, m_NUWAddLike(m_Value(Op0), m_Value(Op1)))) {
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
       return *Decomp;
     return V;
@@ -676,13 +676,6 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       return V;
 
     if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-      return *Decomp;
-    return V;
-  }
-
-  // Decompose or as an add if there are no common bits between the operands.
-  if (match(V, m_DisjointOr(m_Value(Op0), m_ConstantInt(CI)))) {
-    if (auto Decomp = MergeResults(Op0, CI, IsSigned))
       return *Decomp;
     return V;
   }

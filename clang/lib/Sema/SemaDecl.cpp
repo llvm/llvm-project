@@ -1658,6 +1658,17 @@ bool Sema::isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
   return IdResolver.isDeclInScope(D, Ctx, S, AllowInlineNamespace);
 }
 
+bool Sema::isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
+                                     bool AllowInlineNamespace) const {
+  if (isDeclInScope(D, Ctx, S, AllowInlineNamespace))
+    return true;
+
+  if (auto *Shadow = dyn_cast<UsingShadowDecl>(D))
+    return isDeclInScope(Shadow->getTargetDecl(), Ctx, S, AllowInlineNamespace);
+
+  return false;
+}
+
 Scope *Sema::getScopeForDeclContext(Scope *S, DeclContext *DC) {
   DeclContext *TargetDC = DC->getPrimaryContext();
   do {
@@ -18647,8 +18658,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // in the same scope (so that the definition/declaration completes or
       // rementions the tag), reuse the decl.
       if (TUK == TagUseKind::Reference || TUK == TagUseKind::Friend ||
-          isDeclInScope(DirectPrevDecl, SearchDC, S,
-                        SS.isNotEmpty() || isMemberSpecialization)) {
+          isTagRedeclarationInScope(DirectPrevDecl, SearchDC, S,
+                                    SS.isNotEmpty() ||
+                                        isMemberSpecialization)) {
 
         if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
             RD && RD->isInjectedClassName()) {

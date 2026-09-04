@@ -37,7 +37,7 @@ entry:
   store double 1.000000e+00, ptr %l, align 8
   store double 8.000000e+00, ptr %m, align 8
   store double 0x7FF8000000000000, ptr %n, align 8
-  store double 0x7FF0000000000000, ptr %o, align 8
+  store double +inf, ptr %o, align 8
 
   ret i32 0
 }

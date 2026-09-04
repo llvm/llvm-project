@@ -1487,7 +1487,7 @@ define nofpclass(inf) float @ret_nofpclass_noinfs__assumed_isinf__select_pinf_lh
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %x.is.inf = fcmp oeq float %fabs.x, 0x7FF0000000000000
+  %x.is.inf = fcmp oeq float %fabs.x, +inf
   call void @llvm.assume(i1 %x.is.inf)
   %select = select i1 %cond, float %x, float %y
   ret float %select
@@ -1705,7 +1705,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__select_assumed_call_result_only_
 ;
   %must.be.inf = call float @extern()
   %fabs = call float @llvm.fabs.f32(float %must.be.inf)
-  %is.inf = fcmp oeq float %fabs, 0x7FF0000000000000
+  %is.inf = fcmp oeq float %fabs, +inf
   call void @llvm.assume(i1 %is.inf)
   %select = select i1 %cond, float %must.be.inf, float %y
   ret float %select
@@ -1728,7 +1728,7 @@ bb0:
   br label %ret
 
 ret:
-  %phi = phi float [ 0x7FF0000000000000, %entry ], [ %x, %bb0 ]
+  %phi = phi float [ +inf, %entry ], [ %x, %bb0 ]
   ret float %phi
 }
 
@@ -1756,7 +1756,7 @@ entry:
   br i1 %cond0, label %loop, label %ret
 
 loop:
-  %phi.loop = phi float [ 0x7FF0000000000000, %entry ], [ %loop.func, %loop ]
+  %phi.loop = phi float [ +inf, %entry ], [ %loop.func, %loop ]
   %loop.func = call nofpclass(nan) float @loop.func()
   %loop.cond = call i1 @loop.cond()
   br i1 %loop.cond, label %ret, label %loop
@@ -1782,7 +1782,7 @@ entry:
   br i1 %cond0, label %loop, label %ret
 
 loop:
-  %phi.loop = phi float [ 0x7FF0000000000000, %entry ], [ %phi.loop, %loop ]
+  %phi.loop = phi float [ +inf, %entry ], [ %phi.loop, %loop ]
   %loop.cond = call i1 @loop.cond()
   br i1 %loop.cond, label %ret, label %loop
 
@@ -1807,12 +1807,12 @@ entry:
   br i1 %cond0, label %loop, label %ret
 
 loop:
-  %phi.loop = phi float [ 0x7FF0000000000000, %entry ], [ %phi.loop, %loop ]
+  %phi.loop = phi float [ +inf, %entry ], [ %phi.loop, %loop ]
   %loop.cond = call i1 @loop.cond()
   br i1 %loop.cond, label %ret, label %loop
 
 ret:
-  %phi.ret = phi float [ 0x7FF0000000000000, %entry ], [ %phi.loop, %loop ]
+  %phi.ret = phi float [ +inf, %entry ], [ %phi.loop, %loop ]
   ret float %phi.ret
 }
 
@@ -1839,7 +1839,7 @@ entry:
   ]
 
 loop:
-  %phi.loop = phi float [ 0x7FF0000000000000, %entry ], [ 0x7FF0000000000000, %entry ], [ %unknown, %loop ]
+  %phi.loop = phi float [ +inf, %entry ], [ +inf, %entry ], [ %unknown, %loop ]
   %loop.cond = call i1 @loop.cond()
   br i1 %loop.cond, label %ret, label %loop
 

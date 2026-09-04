@@ -69,7 +69,7 @@ define double @erf_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @erf(double 0x7FF0000000000000)
+  %r = call double @erf(double +inf)
   ret double %r
 }
 
@@ -87,7 +87,7 @@ define double @erf_inf_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double +inf) #[[ATTR2]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @erf(double 0x7FF0000000000000) readnone
+  %r = call double @erf(double +inf) readnone
   ret double %r
 }
 
@@ -105,7 +105,7 @@ define double @erf_neg_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double -inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @erf(double 0xFFF0000000000000)
+  %r = call double @erf(double -inf)
   ret double %r
 }
 
@@ -123,7 +123,7 @@ define double @erf_neg_inf_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @erf(double -inf) #[[ATTR2]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @erf(double 0xFFF0000000000000) readnone
+  %r = call double @erf(double -inf) readnone
   ret double %r
 }
 

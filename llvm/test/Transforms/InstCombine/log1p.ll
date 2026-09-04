@@ -159,7 +159,7 @@ define double @log1p_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double +inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @log1p(double 0x7FF0000000000000)
+  %r = call double @log1p(double +inf)
   ret double %r
 }
 
@@ -177,7 +177,7 @@ define double @log1p_inf_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double +inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @log1p(double 0x7FF0000000000000) readnone
+  %r = call double @log1p(double +inf) readnone
   ret double %r
 }
 
@@ -195,7 +195,7 @@ define double @log1p_neg_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -inf)
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @log1p(double 0xFFF0000000000000)
+  %r = call double @log1p(double -inf)
   ret double %r
 }
 
@@ -213,7 +213,7 @@ define double @log1p_neg_inf_memory_none() {
 ; CHECK-NEXT:    [[R:%.*]] = call double @log1p(double -inf) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @log1p(double 0xFFF0000000000000) readnone
+  %r = call double @log1p(double -inf) readnone
   ret double %r
 }
 

@@ -48,6 +48,7 @@ set(ORC_RT_POSIX_SOURCES
   sys/posix/DynamicLibrary.cpp
   sys/posix/Errno.cpp
   sys/posix/Memory.cpp
+  sys/posix/PageSize.cpp
 )
 
 set(ORC_RT_DARWIN_SOURCES

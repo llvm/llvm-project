@@ -116,9 +116,9 @@ define void @test_f64(ptr %p) {
   store volatile double %ptiny, ptr %p
   %ntiny = call double @llvm.amdgcn.fract.f64(double -2.0e-308) ; -min normal
   store volatile double %ntiny, ptr %p
-  %pinf = call double @llvm.amdgcn.fract.f64(double 0x7FF0000000000000) ; +inf
+  %pinf = call double @llvm.amdgcn.fract.f64(double +inf) ; +inf
   store volatile double %pinf, ptr %p
-  %ninf = call double @llvm.amdgcn.fract.f64(double 0xFFF0000000000000) ; -inf
+  %ninf = call double @llvm.amdgcn.fract.f64(double -inf) ; -inf
   store volatile double %ninf, ptr %p
   %nan = call double @llvm.amdgcn.fract.f64(double 0x7FF8000000000000) ; nan
   store volatile double %nan, ptr %p

@@ -441,6 +441,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nice
+  SRCS
+    nice.cpp
+  HDRS
+    ../nice.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.sys_resource_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpriority
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setpriority
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math_extras
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   pathconf
   SRCS
     pathconf.cpp

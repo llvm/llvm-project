@@ -115,6 +115,11 @@ static cl::opt<unsigned>
              cl::desc("DAG combiner limit number of steps when searching DAG "
                       "for predecessor nodes"));
 
+static cl::opt<int> VScaleUnrollLimit(
+    "vscale-unroll-limit",
+    cl::desc("Maximum vscale for which vector unrolling is allowed."),
+    cl::Hidden, cl::init(64));
+
 static void NewSDValueDbgMsg(SDValue V, StringRef Msg, SelectionDAG *G) {
   LLVM_DEBUG(dbgs() << Msg; V.getNode()->dump(G););
 }
@@ -14275,8 +14280,12 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
 SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
-  unsigned NE = VT.getVectorNumElements();
+  unsigned NE = getMaxRuntimeNumElements(VT);
 
+  if (VT.isScalableVector() && (NE == 0 || ResNE != 0))
+    reportFatalUsageError("Cannot unroll scalable vector!");
+
+  assert(NE && "Nothing to unroll!");
   SDLoc dl(N);
 
   // If ResNE is 0, fully unroll the vector op.
@@ -14312,10 +14321,12 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
       Scalars1.push_back(getUNDEF(EltVT1));
     }
 
-    EVT VecVT = EVT::getVectorVT(*getContext(), EltVT, ResNE);
-    EVT VecVT1 = EVT::getVectorVT(*getContext(), EltVT1, ResNE);
-    SDValue Vec0 = getBuildVector(VecVT, dl, Scalars0);
-    SDValue Vec1 = getBuildVector(VecVT1, dl, Scalars1);
+    ElementCount ResEC = VT.isScalableVector() ? VT.getVectorElementCount()
+                                               : ElementCount::getFixed(ResNE);
+    EVT VecVT = EVT::getVectorVT(*getContext(), EltVT, ResEC);
+    EVT VecVT1 = EVT::getVectorVT(*getContext(), EltVT1, ResEC);
+    SDValue Vec0 = buildVectorFromUnrolledParts(VecVT, dl, Scalars0);
+    SDValue Vec1 = buildVectorFromUnrolledParts(VecVT1, dl, Scalars1);
     return getMergeValues({Vec0, Vec1}, dl);
   }
 
@@ -14379,8 +14390,10 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
   for (; i < ResNE; ++i)
     Scalars.push_back(getUNDEF(EltVT));
 
-  EVT VecVT = EVT::getVectorVT(*getContext(), EltVT, ResNE);
-  return getBuildVector(VecVT, dl, Scalars);
+  EVT VecVT = VT.isScalableVector()
+                  ? VT
+                  : EVT::getVectorVT(*getContext(), EltVT, ResNE);
+  return buildVectorFromUnrolledParts(VecVT, dl, Scalars);
 }
 
 std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
@@ -14433,30 +14446,44 @@ std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
                         getBuildVector(NewOvVT, dl, OvScalars));
 }
 
+static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
+                                                   LSBaseSDNode *Base,
+                                                   unsigned Bytes, int Dist,
+                                                   const SelectionDAG &DAG) {
+  if (LS->isVolatile() || Base->isVolatile())
+    return false;
+  // TODO: probably too restrictive for atomics, revisit
+  if (!LS->isSimple())
+    return false;
+  if (LS->isIndexed() || Base->isIndexed())
+    return false;
+  if (LS->getChain() != Base->getChain())
+    return false;
+  EVT VT = LS->getMemoryVT();
+  if (VT.getSizeInBits() / 8 != Bytes)
+    return false;
+
+  auto BaseLocDecomp = BaseIndexOffset::match(Base, DAG);
+  auto LocDecomp = BaseIndexOffset::match(LS, DAG);
+
+  int64_t Offset = 0;
+  if (BaseLocDecomp.equalBaseIndex(LocDecomp, DAG, Offset))
+    return (Dist * (int64_t)Bytes == Offset);
+  return false;
+}
+
 bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
                                                   LoadSDNode *Base,
                                                   unsigned Bytes,
                                                   int Dist) const {
-  if (LD->isVolatile() || Base->isVolatile())
-    return false;
-  // TODO: probably too restrictive for atomics, revisit
-  if (!LD->isSimple())
-    return false;
-  if (LD->isIndexed() || Base->isIndexed())
-    return false;
-  if (LD->getChain() != Base->getChain())
-    return false;
-  EVT VT = LD->getMemoryVT();
-  if (VT.getSizeInBits() / 8 != Bytes)
-    return false;
+  return areNonVolatileConsecutiveLoadsOrStores(LD, Base, Bytes, Dist, *this);
+}
 
-  auto BaseLocDecomp = BaseIndexOffset::match(Base, *this);
-  auto LocDecomp = BaseIndexOffset::match(LD, *this);
-
-  int64_t Offset = 0;
-  if (BaseLocDecomp.equalBaseIndex(LocDecomp, *this, Offset))
-    return (Dist * (int64_t)Bytes == Offset);
-  return false;
+bool SelectionDAG::areNonVolatileConsecutiveStores(StoreSDNode *ST,
+                                                   StoreSDNode *Base,
+                                                   unsigned Bytes,
+                                                   int Dist) const {
+  return areNonVolatileConsecutiveLoadsOrStores(ST, Base, Bytes, Dist, *this);
 }
 
 /// InferPtrAlignment - Infer alignment of a load / store address. Return
@@ -15323,6 +15350,43 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
   assert(false && "From subgraph too complex - increase max. MaxDepth?");
   // Best-effort fallback if assertions disabled.
   SDEI[To] = std::move(NEI);
+}
+
+unsigned SelectionDAG::getMaxRuntimeNumElements(EVT VT) const {
+  assert(VT.isVector() && "Can only unroll vector types!");
+  if (VT.isFixedLengthVector())
+    return VT.getVectorNumElements();
+
+  const MachineFunction &MF = getMachineFunction();
+  const Function &F = MF.getFunction();
+
+  APInt MaxVScale = getVScaleRange(&F, sizeof(unsigned) * 8).getUnsignedMax();
+  if (MaxVScale.ugt(VScaleUnrollLimit))
+    return 0;
+
+  bool Overflow;
+  APInt MinNElts(sizeof(unsigned) * 8, VT.getVectorMinNumElements());
+  APInt MaxNElts = MinNElts.umul_ov(MaxVScale, Overflow);
+  if (Overflow)
+    return 0;
+
+  return MaxNElts.getZExtValue();
+}
+
+SDValue SelectionDAG::buildVectorFromUnrolledParts(EVT VT, const SDLoc &DL,
+                                                   ArrayRef<SDValue> Scalars) {
+  assert(Scalars.size() == getMaxRuntimeNumElements(VT) &&
+         "Element count mismatch!");
+  if (VT.isFixedLengthVector())
+    return getBuildVector(VT, DL, Scalars);
+
+  SDValue Vec = getPOISON(VT);
+  // Iterate in reverse so result remains poison until we encounter a lane that
+  // exists, after which all lower-numbered lanes must also exist.
+  for (unsigned IdxVal : reverse(seq(Scalars.size())))
+    Vec = getInsertVectorElt(DL, Vec, Scalars[IdxVal], IdxVal);
+
+  return Vec;
 }
 
 #ifndef NDEBUG

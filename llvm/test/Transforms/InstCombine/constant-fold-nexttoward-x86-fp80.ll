@@ -14,11 +14,11 @@
 @dbl_pos_min_subnormal = constant double 4.940660e-324, align 8
 @dbl_pos_min_normal = constant double 0x10000000000000, align 8
 @dbl_pos_max = constant double 0x7FEFFFFFFFFFFFFF, align 8
-@dbl_pos_infinity = constant double 0x7FF0000000000000, align 8
+@dbl_pos_infinity = constant double +inf, align 8
 @dbl_neg_min_subnormal = constant double -4.940660e-324, align 8
 @dbl_neg_min_normal = constant double 0x8010000000000000, align 8
 @dbl_neg_max = constant double 0xFFEFFFFFFFFFFFFF, align 8
-@dbl_neg_infinity = constant double 0xFFF0000000000000, align 8
+@dbl_neg_infinity = constant double -inf, align 8
 
 define double @nexttoward_up_direction() {
 ; CHECK-LABEL: define double @nexttoward_up_direction() {

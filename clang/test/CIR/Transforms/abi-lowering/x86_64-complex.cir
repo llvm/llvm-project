@@ -72,4 +72,4 @@ module attributes {
 // LLVM: define { double, double } @cdouble(double %{{.+}}, double %{{.+}})
 // LLVM: define i32 @cshort(i32 %{{.+}})
 // LLVM: define i64 @cint(i64 %{{.+}})
-// LLVM: define { x86_fp80, x86_fp80 } @clongdouble(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
+// LLVM: define { x86_fp80, x86_fp80 } @clongdouble(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
