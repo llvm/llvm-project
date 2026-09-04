@@ -30,13 +30,11 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PEI.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -283,6 +281,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   // inserted.
   if (TRI->requiresRegisterScavenging(MF) && FrameIndexVirtualScavenging)
     scavengeFrameVirtualRegs(MF, *RS);
+
+  insertZeroCallUsedRegs(MF);
 
   // Warn on stack size when we exceeds the given limit.
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1174,9 +1174,6 @@ void PEIImpl::insertPrologEpilogCode(MachineFunction &MF) {
   // Add epilogue to restore the callee-save registers in each exiting block.
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(MF, *RestoreBlock);
-
-  // Zero call used registers before restoring callee-saved registers.
-  insertZeroCallUsedRegs(MF);
 
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.inlineStackProbe(MF, *SaveBlock);

@@ -116,7 +116,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>} : (i1, i32) -> ()
 
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (i1, i32) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>, proc_bind_kind = #omp.procbindkind<spread>} : (i1, i32) -> ()
 
   // CHECK: omp.parallel
   omp.parallel {
@@ -484,7 +484,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp<schedulekind static>,
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp.schedulekind<static>,
      linear_var_types = [i32]} : (memref<i32>, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32, %{{.*}} : memref<i32> = %{{.*}} : i32) linear_var_types([i32, i32]) schedule(static) {
@@ -493,7 +493,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp<schedulekind static>,
+  }) {operandSegmentSizes = array<i32: 0,0,2,2,0,0,0>, schedule_kind = #omp.schedulekind<static>,
      linear_var_types = [i32,i32]} :
     (memref<i32>, memref<i32>, i32, i32) -> ()
 
@@ -503,7 +503,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp<schedulekind dynamic>, ordered = 2,
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,1>, schedule_kind = #omp.schedulekind<dynamic>, ordered = 2,
      linear_var_types = [i32]} : (memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop nowait schedule(auto) {
@@ -512,7 +512,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, nowait, schedule_kind = #omp<schedulekind auto>} :
+  }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, nowait, schedule_kind = #omp.schedulekind<auto>} :
     () -> ()
 
   // CHECK: omp.wsloop {
@@ -895,7 +895,7 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
     "omp.target"(%device, %if_cond, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {kernel_type = #omp<kernel_type(generic)>, nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,1,0,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
+    }) {kernel_type = #omp.kernel_type<generic>, nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,1,0,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) name("") -> memref<?xi32>
@@ -3204,16 +3204,16 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
 }
 
 // CHECK: func.func @omp_requires_one
-// CHECK-SAME: omp.requires = #omp<clause_requires reverse_offload>
+// CHECK-SAME: omp.requires = #omp.clause_requires<reverse_offload>
 func.func @omp_requires_one() -> ()
-    attributes {omp.requires = #omp<clause_requires reverse_offload>} {
+    attributes {omp.requires = #omp.clause_requires<reverse_offload>} {
   return
 }
 
 // CHECK: func.func @omp_requires_multiple
-// CHECK-SAME: omp.requires = #omp<clause_requires unified_address|dynamic_allocators>
+// CHECK-SAME: omp.requires = #omp.clause_requires<unified_address|dynamic_allocators>
 func.func @omp_requires_multiple() -> ()
-    attributes {omp.requires = #omp<clause_requires unified_address|dynamic_allocators>} {
+    attributes {omp.requires = #omp.clause_requires<unified_address|dynamic_allocators>} {
   return
 }
 
@@ -3292,29 +3292,29 @@ combiner {
 // CHECK-LABEL: omp_targets_with_map_bounds
 // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
 func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () {
-  // CHECK: %[[C_00:.*]] = llvm.mlir.constant(4 : index) : i64
-  // CHECK: %[[C_01:.*]] = llvm.mlir.constant(1 : index) : i64
-  // CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : index) : i64
-  // CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : index) : i64
+  // CHECK: %[[C_00:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK: %[[C_01:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : i64) : i64
   // CHECK: %[[BOUNDS0:.*]] = omp.map.bounds   lower_bound(%[[C_01]] : i64) upper_bound(%[[C_00]] : i64) stride(%[[C_02]] : i64) start_idx(%[[C_03]] : i64)
   // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) name("") -> !llvm.ptr
-    %0 = llvm.mlir.constant(4 : index) : i64
-    %1 = llvm.mlir.constant(1 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
-    %3 = llvm.mlir.constant(1 : index) : i64
+    %0 = llvm.mlir.constant(4 : i64) : i64
+    %1 = llvm.mlir.constant(1 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.mlir.constant(1 : i64) : i64
     %4 = omp.map.bounds   lower_bound(%1 : i64) upper_bound(%0 : i64) stride(%2 : i64) start_idx(%3 : i64)
 
     %mapv1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%4) name("") -> !llvm.ptr
-  // CHECK: %[[C_10:.*]] = llvm.mlir.constant(9 : index) : i64
-  // CHECK: %[[C_11:.*]] = llvm.mlir.constant(1 : index) : i64
-  // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : index) : i64
-  // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : index) : i64
+  // CHECK: %[[C_10:.*]] = llvm.mlir.constant(9 : i64) : i64
+  // CHECK: %[[C_11:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : i64) : i64
   // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_11]] : i64) upper_bound(%[[C_10]] : i64) stride(%[[C_12]] : i64) start_idx(%[[C_13]] : i64)
   // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(storage) capture(ByCopy) mapper(@my_mapper) bounds(%[[BOUNDS1]]) name("") -> !llvm.ptr
-    %6 = llvm.mlir.constant(9 : index) : i64
-    %7 = llvm.mlir.constant(1 : index) : i64
-    %8 = llvm.mlir.constant(2 : index) : i64
-    %9 = llvm.mlir.constant(2 : index) : i64
+    %6 = llvm.mlir.constant(9 : i64) : i64
+    %7 = llvm.mlir.constant(1 : i64) : i64
+    %8 = llvm.mlir.constant(2 : i64) : i64
+    %9 = llvm.mlir.constant(2 : i64) : i64
     %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%8 : i64) start_idx(%9 : i64)
     %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(storage) capture(ByCopy) mapper(@my_mapper) bounds(%10) name("") -> !llvm.ptr
 
@@ -4425,14 +4425,14 @@ func.func @omp_target_map_iterated(%lb : index, %ub : index, %step : index,
 
 // CHECK-LABEL: func.func @omp_interop_init
 func.func @omp_interop_init(%obj : !llvm.ptr, %device : i32) -> () {
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(target)>])
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(target)>])
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<target>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<target>])
 
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<targetsync>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<targetsync>])
 
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%{{.*}} : i32) nowait
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%device : i32) nowait
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<targetsync>, #omp.interop_type<target>]) prefer_type([1, 6]) device(%{{.*}} : i32) nowait
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<targetsync>, #omp.interop_type<target>]) prefer_type([1, 6]) device(%device : i32) nowait
   return
 }
 
@@ -4464,8 +4464,8 @@ func.func @omp_interop_destroy(%obj : !llvm.ptr, %device : i32) -> () {
 
 // CHECK-LABEL: func.func @omp_interop_depend
 func.func @omp_interop_depend(%obj : !llvm.ptr, %dep : !llvm.ptr) -> () {
-  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %{{.*}} : !llvm.ptr)
-  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %dep : !llvm.ptr)
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp.interop_type<targetsync>]) depend(taskdependinout -> %{{.*}} : !llvm.ptr)
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp.interop_type<targetsync>]) depend(taskdependinout -> %dep : !llvm.ptr)
 
   // CHECK: omp.interop.use %{{.*}} : !llvm.ptr depend(taskdependin -> %{{.*}} : !llvm.ptr)
   omp.interop.use %obj : !llvm.ptr depend(taskdependin -> %dep : !llvm.ptr)

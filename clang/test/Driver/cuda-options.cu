@@ -141,7 +141,13 @@
 
 
 // Verify that --[no-]cuda-include-ptx arguments are handled correctly.
-// a) by default we're not including PTX for all GPUs.
+// a) by default we're not including PTX for any GPU.
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc \
+// RUN:   --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
+// RUN:   -c %s 2>&1 \
+// RUN: | FileCheck -check-prefixes FATBIN-COMMON,NOPTX-SM60,NOPTX-SM52 %s
+
+// a2) --cuda-include-ptx=all includes PTX for all GPUs.
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -nogpuinc \
 // RUN:   --cuda-include-ptx=all --cuda-gpu-arch=sm_60 --cuda-gpu-arch=sm_52 \
 // RUN:   -c %s 2>&1 \

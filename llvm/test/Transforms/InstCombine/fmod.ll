@@ -16,7 +16,7 @@ define float @test_inf_const(float %f) {
 ;
 entry:
   %abs = tail call float @llvm.fabs.f32(float %f)
-  %isinf = fcmp oeq float %abs, 0x7FF0000000000000
+  %isinf = fcmp oeq float %abs, +inf
   br i1 %isinf, label %return, label %if.end
 
 if.end:

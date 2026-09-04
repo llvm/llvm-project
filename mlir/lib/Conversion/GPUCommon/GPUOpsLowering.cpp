@@ -601,7 +601,7 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   Type structType =
       LLVM::LLVMStructType::getLiteral(gpuPrintfOp.getContext(), types);
   Value one = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(),
-                                       rewriter.getIndexAttr(1));
+                                       rewriter.getI64IntegerAttr(1));
   Value tempAlloc =
       LLVM::AllocaOp::create(rewriter, loc, ptrType, structType, one,
                              /*alignment=*/0);
@@ -630,7 +630,6 @@ static Value scalarizeVectorOpHelper(Operation *op, ValueRange operands,
   Location loc = op->getLoc();
   Value result = LLVM::PoisonOp::create(rewriter, loc, vectorType);
   Type indexType = converter.convertType(rewriter.getIndexType());
-  StringAttr name = op->getName().getIdentifier();
   Type elementType = vectorType.getElementType();
 
   for (int64_t i = 0; i < vectorType.getNumElements(); ++i) {
@@ -641,8 +640,10 @@ static Value scalarizeVectorOpHelper(Operation *op, ValueRange operands,
       return LLVM::ExtractElementOp::create(rewriter, loc, operand, index);
     };
     auto scalarOperands = llvm::map_to_vector(operands, extractElement);
-    Operation *scalarOp =
-        rewriter.create(loc, name, scalarOperands, elementType, op->getAttrs());
+    OperationState state(loc, op->getName(), scalarOperands, elementType,
+                         op->getDiscardableAttrDictionary().getValue());
+    state.propertiesAttr = op->getPropertiesAsAttribute();
+    Operation *scalarOp = rewriter.create(state);
     result = LLVM::InsertElementOp::create(rewriter, loc, result,
                                            scalarOp->getResult(0), index);
   }
@@ -808,7 +809,8 @@ LogicalResult GPUReturnOpLowering::matchAndRewrite(
   // If ReturnOp has 0 or 1 operand, create it and return immediately.
   if (numArguments <= 1) {
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-        op, TypeRange(), updatedOperands, op->getAttrs());
+        op, TypeRange(), updatedOperands,
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 
@@ -824,8 +826,8 @@ LogicalResult GPUReturnOpLowering::matchAndRewrite(
   for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
     packed = LLVM::InsertValueOp::create(rewriter, loc, packed, operand, idx);
   }
-  rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
-                                              op->getAttrs());
+  rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
+      op, TypeRange(), packed, op->getDiscardableAttrDictionary().getValue());
   return success();
 }
 

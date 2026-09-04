@@ -84,7 +84,8 @@ void TrailingCommaCheck::registerMatchers(MatchFinder *Finder) {
           .bind("enum"),
       this);
 
-  Finder->addMatcher(initListExpr(unless(isEmptyInitList()), unless(isMacro()))
+  Finder->addMatcher(initListExpr(unless(isEmptyInitList()), unless(isMacro()),
+                                  unless(isImplicit()))
                          .bind("initlist"),
                      this);
 }
@@ -121,9 +122,11 @@ void TrailingCommaCheck::checkEnumDecl(const EnumDecl *Enum,
 void TrailingCommaCheck::checkInitListExpr(
     const InitListExpr *InitList, const MatchFinder::MatchResult &Result) {
   // We need to use non-empty syntactic form for correct source locations.
-  if (const InitListExpr *SynInitInitList = InitList->getSyntacticForm();
-      SynInitInitList && SynInitInitList->getNumInits() > 0)
+  if (const InitListExpr *SynInitInitList = InitList->getSyntacticForm()) {
+    if (SynInitInitList->getNumInits() == 0)
+      return;
     InitList = SynInitInitList;
+  }
 
   const bool IsSingleLine = isSingleLine(
       {InitList->getBeginLoc(), InitList->getEndLoc()}, *Result.SourceManager);

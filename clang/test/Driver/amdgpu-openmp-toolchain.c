@@ -7,7 +7,8 @@
 
 // verify the tools invocations
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
-// CHECK: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-flto=full" "-flto-unit"{{.*}}"-target-cpu" "gfx906"
+// CHECK: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-flto=full" "-flto-unit"
+// CHECK-NOT: "-target-cpu"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
 // CHECK: clang-linker-wrapper{{.*}}"--device-compiler=amdgpu-amd-amdhsa=-flto=full"{{.*}} "-o" "a.out"
 
@@ -63,7 +64,8 @@
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:sramecc-:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
-// CHECK-TARGET-ID: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-mxnack" "-mno-sramecc"
+// CHECK-TARGET-ID: "-cc1" "-triple" "amdgpu9.0a-amd-amdhsa" {{.*}} "-mxnack" "-mno-sramecc"
+// CHECK-TARGET-ID-NOT: "-target-cpu"
 // CHECK-TARGET-ID: llvm-offload-binary{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp
 
 // RUN: not %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a,gfx90a:xnack+ \

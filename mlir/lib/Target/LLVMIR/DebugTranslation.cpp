@@ -139,11 +139,17 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
 }
 
 static llvm::DISourceLanguageName getSourceLanguage(DICompileUnitAttr attr) {
-  // DISourceLanguageName represents "no source-language dialect" as 0; the
-  // LLVM IR printer omits the `dialect:` field for that value.
+  DISourceLanguageNameAttr sourceLanguage = attr.getSourceLanguage();
+  // A DW_LNAME value selects the versioned source-language representation;
+  // otherwise, the value is an unversioned DW_LANG value.
+  if (sourceLanguage.getName())
+    return llvm::DISourceLanguageName(
+        static_cast<uint16_t>(sourceLanguage.getName()),
+        *sourceLanguage.getVersion(),
+        static_cast<uint16_t>(sourceLanguage.getDialect()));
   return llvm::DISourceLanguageName(
-      static_cast<uint16_t>(attr.getSourceLanguage()),
-      static_cast<uint16_t>(attr.getSourceLanguageDialect()));
+      static_cast<uint16_t>(sourceLanguage.getLanguage()),
+      static_cast<uint16_t>(sourceLanguage.getDialect()));
 }
 
 llvm::TempDICompileUnit

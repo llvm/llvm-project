@@ -343,3 +343,15 @@ func.func @scalable_zero_extent_alloca() {
   %alloca = memref.alloca(%size) : memref<?xf32>
   return
 }
+
+// -----
+
+// Make sure mem2reg does not crash on an alloca whose element count overflows
+// int64. https://github.com/llvm/llvm-project/issues/204297
+
+// CHECK-LABEL: func.func @alloca_element_count_overflow
+func.func @alloca_element_count_overflow() {
+  // CHECK: memref.alloca() : memref<9223372036854775807x3xi32>
+  %alloca = memref.alloca() : memref<9223372036854775807x3xi32>
+  return
+}
