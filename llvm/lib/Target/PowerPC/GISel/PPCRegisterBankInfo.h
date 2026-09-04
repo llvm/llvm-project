@@ -26,20 +26,8 @@ class TargetRegisterInfo;
 
 class PPCGenRegisterBankInfo : public RegisterBankInfo {
 protected:
-  enum PartialMappingIdx {
-    PMI_None = -1,
-    PMI_GPR32 = 1,
-    PMI_GPR64 = 2,
-    PMI_FPR32 = 3,
-    PMI_FPR64 = 4,
-    PMI_VEC128 = 5,
-    PMI_CR = 6,
-    PMI_Min = PMI_GPR32,
-  };
-
-  static const RegisterBankInfo::PartialMapping PartMappings[];
   static const RegisterBankInfo::ValueMapping ValMappings[];
-  static const PartialMappingIdx BankIDToCopyMapIdx[];
+  static const PPC::PartialMappingIdx BankIDToCopyMapIdx[];
 
   /// Get the pointer to the ValueMapping representing the RegisterBank
   /// at \p RBIdx.
@@ -49,7 +37,7 @@ protected:
   ///
   /// \pre \p RBIdx != PartialMappingIdx::None
   static const RegisterBankInfo::ValueMapping *
-  getValueMapping(PartialMappingIdx RBIdx);
+  getValueMapping(PPC::PartialMappingIdx RBIdx);
 
   /// Get the pointer to the ValueMapping of the operands of a copy
   /// instruction from the \p SrcBankID register bank to the \p DstBankID
