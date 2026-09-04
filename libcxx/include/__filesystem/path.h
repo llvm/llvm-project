@@ -29,6 +29,7 @@
 #include <string_view>
 
 #if _LIBCPP_HAS_LOCALIZATION
+#  include <__locale_dir/utf8_conversions.h>
 #  include <iomanip> // for quoted
 #endif
 

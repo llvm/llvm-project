@@ -1138,6 +1138,11 @@ public:
   /// object.
   LLVM_ABI ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
+  ExecutionSession(const ExecutionSession &) = delete;
+  ExecutionSession &operator=(const ExecutionSession &) = delete;
+  ExecutionSession(ExecutionSession &&) = delete;
+  ExecutionSession &operator=(ExecutionSession &&) = delete;
+
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.
   LLVM_ABI ~ExecutionSession();

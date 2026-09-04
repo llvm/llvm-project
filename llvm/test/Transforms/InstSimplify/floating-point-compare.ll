@@ -1749,7 +1749,7 @@ define <2 x i1> @is_infinite_neg(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x42 = fadd ninf <2 x float> %x, <float 42.0, float 42.0>
-  %r = fcmp oeq <2 x float> %x42, <float 0xFFF0000000000000, float 0xFFF0000000000000>
+  %r = fcmp oeq <2 x float> %x42, <float -inf, float -inf>
   ret <2 x i1> %r
 }
 
@@ -1794,7 +1794,7 @@ define <2 x i1> @is_infinite_neg_or_nan(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x42 = fadd nnan ninf <2 x float> %x, <float 42.0, float 42.0>
-  %r = fcmp ueq <2 x float> %x42, <float 0xFFF0000000000000, float 0xFFF0000000000000>
+  %r = fcmp ueq <2 x float> %x42, <float -inf, float -inf>
   ret <2 x i1> %r
 }
 
@@ -1813,7 +1813,7 @@ define <2 x i1> @is_finite_or_nan_commute(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cast = uitofp <2 x i8> %x to <2 x float>
-  %r = fcmp une <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
+  %r = fcmp une <2 x float> <float +inf, float +inf>, %cast
   ret <2 x i1> %r
 }
 
@@ -1860,7 +1860,7 @@ define <2 x i1> @is_finite_commute(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cast = uitofp <2 x i8> %x to <2 x float>
-  %r = fcmp one <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
+  %r = fcmp one <2 x float> <float +inf, float +inf>, %cast
   ret <2 x i1> %r
 }
 
@@ -1918,7 +1918,7 @@ define i1 @ogt_zero_fabs_select_negone_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %select = select i1 %cond, float -1.0, float 0x7FF0000000000000
+  %select = select i1 %cond, float -1.0, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp ogt float %fabs, 0.0
   ret i1 %one
@@ -1930,7 +1930,7 @@ define i1 @ogt_zero_fabs_select_one_or_ninf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %select = select i1 %cond, float 1.0, float 0xFFF0000000000000
+  %select = select i1 %cond, float 1.0, float -inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp ogt float %fabs, 0.0
   ret i1 %one

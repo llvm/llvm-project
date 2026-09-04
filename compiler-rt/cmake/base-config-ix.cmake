@@ -41,13 +41,13 @@ endif()
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)
 add_custom_target(install-compiler-rt-stripped)
-set_property(TARGET compiler-rt PROPERTY FOLDER "Compiler-RT/Metatargets")
+set_property(TARGET compiler-rt PROPERTY FOLDER "compiler-rt/Metatargets")
 set_property(
   TARGET
     install-compiler-rt
     install-compiler-rt-stripped
   PROPERTY
-    FOLDER "Compiler-RT/Installation"
+    FOLDER "compiler-rt/Installation"
 )
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can

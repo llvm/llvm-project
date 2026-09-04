@@ -15,7 +15,7 @@ entry:
 
 ; Cortex-R52 model describes it as dual-issue with two integer ALUs
 ; It should be able to issue the two additions in the same cycle.
-; CHECK-R52: MI Scheduling
+; CHECK-R52: Current Schedule Region
 ; CHECK-R52: Cycle: 14
 ; CHECK-R52: Scheduling SU(5) %5:gpr = nsw ADDrr %3:gpr, %2:gpr, 14, $noreg, $noreg
 ; CHECK-R52: Scheduling SU(4) %4:gpr = nsw ADDrr %1:gpr, %0:gpr, 14, $noreg, $noreg

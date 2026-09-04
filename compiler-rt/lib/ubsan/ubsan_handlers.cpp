@@ -883,11 +883,19 @@ static SymbolizedStack *removeArtificialFiles(SymbolizedStack *FS) {
 
 static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                               ReportOptions Opts) {
-  if (Data->CheckKind != CFITCK_ICall && Data->CheckKind != CFITCK_NVMFCall)
+  ErrorType ET;
+  switch (Data->CheckKind) {
+  case CFITCK_ICall:
+    ET = ErrorType::CFIICall;
+    break;
+  case CFITCK_NVMFCall:
+    ET = ErrorType::CFIMFCall;
+    break;
+  default:
     Die();
+  }
 
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::CFIBadType;
 
   if (ignoreReport(Loc, Opts, ET))
     return;

@@ -1124,6 +1124,22 @@ public:
   }
 };
 
+/// RAII class that temporarily sets the "ignore all warnings" state on a
+/// DiagnosticsEngine and restores the previous state on destruction.  Use it to
+/// silence warnings around a self-contained region of diagnostics, such as a
+/// compiler-synthesized call whose arguments are known to be correct.
+class IgnoreAllWarningDiagRAII {
+  DiagnosticsEngine &Diag;
+  bool OldValue;
+
+public:
+  explicit IgnoreAllWarningDiagRAII(DiagnosticsEngine &Diag)
+      : Diag(Diag), OldValue(Diag.getIgnoreAllWarnings()) {
+    Diag.setIgnoreAllWarnings(true);
+  }
+  ~IgnoreAllWarningDiagRAII() { Diag.setIgnoreAllWarnings(OldValue); }
+};
+
 /// The streaming interface shared between DiagnosticBuilder and
 /// PartialDiagnostic. This class is not intended to be constructed directly
 /// but only as base class of DiagnosticBuilder and PartialDiagnostic builder.

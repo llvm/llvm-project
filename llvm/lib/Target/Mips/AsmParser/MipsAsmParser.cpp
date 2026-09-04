@@ -31,6 +31,7 @@
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -2958,11 +2959,11 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     }
 
     bool IsPtr64 = ABI.ArePtrs64bit();
-    bool IsLocalSym =
-        Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
-        (getContext().isELF() &&
-         static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
-             ELF::STB_LOCAL);
+    bool IsLocalSym = Res.getAddSym()->isTemporary() ||
+                      (getContext().isELF()
+                           ? static_cast<const MCSymbolELF *>(Res.getAddSym())
+                                     ->getBinding() == ELF::STB_LOCAL
+                           : Res.getAddSym()->isInSection());
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (InternalSymbolPrefix is "$"). Recognize ".L"
     // manually.

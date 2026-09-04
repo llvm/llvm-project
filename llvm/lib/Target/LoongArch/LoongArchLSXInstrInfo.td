@@ -2328,6 +2328,19 @@ def : Pat<(loongarch_movfr2gr_s_la64 (f32 (vector_extract v4f32:$vj, uimm2:$imm)
 def : Pat<(i64 (bitconvert (f64 (vector_extract v2f64:$vj, uimm1:$imm)))),
           (VPICKVE2GR_D v2f64:$vj, uimm1:$imm)>;
 
+
+// Vector extraction with zero extension and constant index.
+def : Pat<(GRLenVT (and (vector_extract v16i8:$vj, uimm4:$imm), 255)),
+          (VPICKVE2GR_BU v16i8:$vj, uimm4:$imm)>;
+def : Pat<(GRLenVT (and (vector_extract v8i16:$vj, uimm3:$imm), 65535)),
+          (VPICKVE2GR_HU v8i16:$vj, uimm3:$imm)>;
+def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v8i16:$vj, uimm3:$imm),
+                                       (GRLenVT 15), (GRLenVT 0))),
+          (VPICKVE2GR_HU v8i16:$vj, uimm3:$imm)>;
+def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v4i32:$vj, uimm2:$imm),
+                                       (GRLenVT 31), (GRLenVT 0))),
+          (VPICKVE2GR_WU v4i32:$vj, uimm2:$imm)>;
+
 // Vector extraction with constant index.
 def : Pat<(GRLenVT (vector_extract v16i8:$vj, uimm4:$imm)),
           (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;

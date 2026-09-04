@@ -352,19 +352,43 @@ def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
 def TestArrayOfInts : ArrayOfAttr<Test_Dialect, "ArrayOfInts",
     "array_of_ints", "int32_t">;
 
-def TestSimpleEnum8Attr : EnumAttr<Test_Dialect, TestSimpleEnum8, "simple_enum_8"> {
-  let assemblyFormat = "`` $value";
-}
+def TestSimpleEnum8Attr
+    : EnumAttr<Test_Dialect, TestSimpleEnum8, "simple_enum_8">;
 
-def TestSimpleEnum16Attr : EnumAttr<Test_Dialect, TestSimpleEnum16, "simple_enum_16"> {
-  let assemblyFormat = "`` $value";
-}
+def TestSimpleEnum16Attr
+    : EnumAttr<Test_Dialect, TestSimpleEnum16, "simple_enum_16">;
 // An array of enum attributes.
-def TestSimpleEnumAttr : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum"> {
-  let assemblyFormat = "`` $value";
-}
+def TestSimpleEnumAttr
+    : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum">;
 def TestArrayOfEnums : ArrayOfAttr<Test_Dialect, "ArrayOfEnums",
     "array_of_enums", "SimpleEnumAttr">;
+
+def TestStructEnumAttr
+    : EnumAttr<Test_Dialect, TestStructEnum, "struct_enum_value">;
+
+def TestAttrEnumAttrStruct : Test_Attr<"TestAttrEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<TestStructEnumAttr>:$required,
+    OptionalEnumAttrParameter<TestStructEnumAttr>:$optional,
+    DefaultValuedEnumAttrParameter<
+      TestStructEnumAttr,
+      "TestStructEnumAttr::get($_ctxt, TestStructEnum::First)">:$defaulted
+  );
+  let mnemonic = "enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def TestStructBitEnumAttr
+    : EnumAttr<Test_Dialect, TestStructBitEnum, "struct_bit_enum_value">;
+
+def TestAttrBitEnumAttrStruct : Test_Attr<"TestAttrBitEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<TestStructBitEnumAttr>:$flags,
+    "int64_t":$count
+  );
+  let mnemonic = "bit_enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 // Test custom directive as optional group anchor.
 def TestCustomAnchor : Test_Attr<"TestCustomAnchor"> {
@@ -374,9 +398,7 @@ def TestCustomAnchor : Test_Attr<"TestCustomAnchor"> {
 }
 
 def Test_IteratorTypeEnum
-    : EnumAttr<Test_Dialect, IteratorType, "iterator_type"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<Test_Dialect, IteratorType, "iterator_type">;
 
 def Test_IteratorTypeArrayAttr
     : TypedArrayAttrBase<Test_IteratorTypeEnum,

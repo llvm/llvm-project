@@ -13,6 +13,7 @@
 // The constructor is now `private` (exposition-only) per P3059R2.
 
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 

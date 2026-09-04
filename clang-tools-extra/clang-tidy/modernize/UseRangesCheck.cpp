@@ -102,7 +102,7 @@ static constexpr const char *SinglePivotRangeBeginResultNames[] = {"rotate"};
 namespace {
 class StdReplacer : public utils::UseRangesCheck::Replacer {
 public:
-  using ResultUsePolicy = utils::UseRangesCheck::Replacer::ResultUsePolicy;
+  using utils::UseRangesCheck::Replacer::ResultUsePolicy;
 
   explicit StdReplacer(SmallVector<UseRangesCheck::Signature> Signatures,
                        ResultUsePolicy ResultPolicy = {})

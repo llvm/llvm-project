@@ -146,31 +146,19 @@ struct MemOp {
     return false;
   }
   bool isMemcmp(TargetLibraryInfo &TLI) {
-    LibFunc Func;
-    if (asMI() == nullptr && TLI.getLibFunc(*asCI(), Func) &&
-        Func == LibFunc_memcmp) {
-      return true;
-    }
-    return false;
+    return asMI() == nullptr && TLI.getLibFunc(*asCI()) == LibFunc_memcmp;
   }
   bool isBcmp(TargetLibraryInfo &TLI) {
-    LibFunc Func;
-    if (asMI() == nullptr && TLI.getLibFunc(*asCI(), Func) &&
-        Func == LibFunc_bcmp) {
-      return true;
-    }
-    return false;
+    return asMI() == nullptr && TLI.getLibFunc(*asCI()) == LibFunc_bcmp;
   }
   const char *getName(TargetLibraryInfo &TLI) {
     if (auto MI = asMI())
       return getMIName(MI);
-    LibFunc Func;
-    if (TLI.getLibFunc(*asCI(), Func)) {
-      if (Func == LibFunc_memcmp)
-        return "memcmp";
-      if (Func == LibFunc_bcmp)
-        return "bcmp";
-    }
+    LibFunc Func = TLI.getLibFunc(*asCI());
+    if (Func == LibFunc_memcmp)
+      return "memcmp";
+    if (Func == LibFunc_bcmp)
+      return "bcmp";
     llvm_unreachable("Must be MemIntrinsic or memcmp/bcmp CallInst");
     return nullptr;
   }
@@ -207,9 +195,8 @@ public:
   }
 
   void visitCallInst(CallInst &CI) {
-    LibFunc Func;
-    if (TLI.getLibFunc(CI, Func) &&
-        (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
+    LibFunc Func = TLI.getLibFunc(CI);
+    if ((Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
         !isa<ConstantInt>(CI.getArgOperand(2))) {
       WorkList.push_back(MemOp(&CI));
     }

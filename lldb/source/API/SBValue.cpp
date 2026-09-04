@@ -313,12 +313,19 @@ bool SBValue::SetValueFromCString(const char *value_str, lldb::SBError &error) {
 bool SBValue::CanSetValue() {
   LLDB_INSTRUMENT_VA(this);
 
+  return CanSet().Success();
+}
+
+lldb::SBError SBValue::CanSet() {
+  LLDB_INSTRUMENT_VA(this);
+
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp)
-    return false;
+    return SBError(Status::FromErrorStringWithFormat(
+        "Could not get value: %s", locker.GetError().AsCString()));
 
-  return value_sp->CanSetValue();
+  return SBError(Status::FromError(value_sp->CanSetValue()));
 }
 
 lldb::SBTypeFormat SBValue::GetTypeFormat() {
@@ -999,9 +1006,9 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   // IsValid means that the SBValue has a value in it.  But that's not the
   // only time that ValueObjects are useful.  We also want to return the value
   // if there's an error state in it.
-  if (!m_opaque_sp || (!m_opaque_sp->IsValid()
-      && (m_opaque_sp->GetRootSP()
-          && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid() &&
+                       (m_opaque_sp->GetRootSP() &&
+                        !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError() = Status::FromErrorString("No value");
     return ValueObjectSP();
   }
@@ -1131,7 +1138,6 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp) {
@@ -1143,7 +1149,8 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
   ExecutionContext exe_ctx(target_sp.get());
 
   StackFrame *frame = exe_ctx.GetFramePtr();

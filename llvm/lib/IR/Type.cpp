@@ -908,14 +908,6 @@ ScalableVectorType *ScalableVectorType::get(Type *ElementType,
 //                         PointerType Implementation
 //===----------------------------------------------------------------------===//
 
-PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
-  assert(EltTy && "Can't get a pointer to <null> type!");
-  assert(isValidElementType(EltTy) && "Invalid type for pointer element!");
-
-  // Automatically convert typed pointers to opaque pointers.
-  return get(EltTy->getContext(), AddressSpace);
-}
-
 PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = C.pImpl;
 
@@ -931,10 +923,6 @@ PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
 PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
     : Type(C, PointerTyID) {
   setSubclassData(AddrSpace);
-}
-
-PointerType *Type::getPointerTo(unsigned AddrSpace) const {
-  return PointerType::get(getContext(), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {
@@ -1082,10 +1070,16 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(
         ArrayType::get(Type::getInt8Ty(C), Ty->getIntParameter(0)),
         TargetExtType::CanBeGlobal);
-  if (Name.starts_with("spirv."))
+  if (Name.starts_with("spirv.")) {
+    if (Name.ends_with("TypedPointerType"))
+      return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
+                            TargetExtType::CanBeGlobal,
+                            TargetExtType::CanBeLocal,
+                            TargetExtType::CanBeVectorElement);
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal);
+  }
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")

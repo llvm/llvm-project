@@ -40,19 +40,12 @@ struct PickAlignment {
 
 namespace endian {
 
+/// Swap the bytes of value to match the given endianness.
 template <typename value_type>
 [[nodiscard]] inline value_type byte_swap(value_type value, endianness endian) {
   if (endian != llvm::endianness::native)
     sys::swapByteOrder(value);
   return value;
-}
-
-/// Swap the bytes of value to match the given endianness.
-template <typename value_type, endianness endian>
-[[nodiscard]]
-LLVM_DEPRECATED("Pass endian as a function argument instead",
-                "byte_swap") inline value_type byte_swap(value_type value) {
-  return byte_swap(value, endian);
 }
 
 /// Read a value of a particular endianness from memory.
@@ -65,13 +58,6 @@ template <typename value_type, std::size_t alignment = unaligned>
              memory, (detail::PickAlignment<value_type, alignment>::value)),
          sizeof(value_type));
   return byte_swap<value_type>(ret, endian);
-}
-
-template <typename value_type, endianness endian, std::size_t alignment>
-[[nodiscard]] LLVM_DEPRECATED("Pass endian as a function argument instead",
-                              "read") inline value_type
-    read(const void *memory) {
-  return read<value_type, alignment>(memory, endian);
 }
 
 /// Read a value of a particular endianness from a buffer, and increment the
@@ -98,12 +84,6 @@ inline void write(void *memory, value_type value, endianness endian) {
   memcpy(LLVM_ASSUME_ALIGNED(
              memory, (detail::PickAlignment<value_type, alignment>::value)),
          &value, sizeof(value_type));
-}
-
-template <typename value_type, endianness endian, std::size_t alignment>
-LLVM_DEPRECATED("Pass endian as a function argument instead", "write")
-inline void write(void *memory, value_type value) {
-  write<value_type, alignment>(memory, value, endian);
 }
 
 /// Write a value of a particular endianness, and increment the buffer past that

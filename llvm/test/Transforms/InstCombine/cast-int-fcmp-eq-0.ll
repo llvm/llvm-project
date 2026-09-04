@@ -564,6 +564,6 @@ define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_inf_sitofp(<2 x i32> %i) {
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %f = sitofp <2 x i32> %i to <2 x float>
-  %cmp = fcmp oeq <2 x float> %f, <float 0x7FF0000000000000, float 0x7FF0000000000000>
+  %cmp = fcmp oeq <2 x float> %f, <float +inf, float +inf>
   ret <2 x i1> %cmp
 }

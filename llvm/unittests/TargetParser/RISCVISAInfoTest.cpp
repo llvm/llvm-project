@@ -1243,6 +1243,27 @@ TEST(ParseArchString, RVYFeatureImplicationC) {
   EXPECT_FALSE((*MaybeISAInfo)->hasExtension("zcd"));
 }
 
+static StringRef GetABIFromFeatures(unsigned XLen,
+                                    std::vector<std::string> Features) {
+  auto ISAInfo = RISCVISAInfo::parseFeatures(XLen, Features);
+  EXPECT_THAT_EXPECTED(ISAInfo, Succeeded());
+  return (*ISAInfo)->computeDefaultABI();
+}
+
+TEST(ComputeDefaultABI, SelectsExpectedABI) {
+  EXPECT_EQ(GetABIFromFeatures(32, {}), "ilp32");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+f"}), "ilp32f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+f", "+d"}), "ilp32d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+e"}), "ilp32e");
+  EXPECT_EQ(GetABIFromFeatures(64, {}), "lp64");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+f"}), "lp64f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
+
+  // CHERIoT always selects the cheriot ABI by default.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
+}
+
 TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   // Test Zca+Zcb+Zcmp+Zcmt implies Zce behavior.
 
@@ -1394,6 +1415,7 @@ R"(All available -march extensions for RISC-V
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
+    zicfiss              1.0
     zicntr               2.0
     zicond               1.0
     zicsr                2.0
@@ -1504,6 +1526,7 @@ R"(All available -march extensions for RISC-V
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
+    smpmpdeleg           1.0
     smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
@@ -1516,6 +1539,8 @@ R"(All available -march extensions for RISC-V
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
+    sspmp                1.0
+    sspmpen              1.0
     ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
@@ -1617,9 +1642,8 @@ Experimental extensions
     y                    0.98
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
-    zicfiss              1.0
     zilx                 0.1
-    zvabd                0.7
+    zvabd                0.9
     zvbc32e              0.7
     zvdot4a8i            0.1
     zvfbdota32f          0.2
@@ -1639,8 +1663,16 @@ Experimental extensions
     zvvmtls              0.1
     zvvmttls             0.1
     zvzip                0.1
+    smcsps               0.20
+    smehv                0.20
+    smijt                0.20
+    smip                 0.20
     smpmpmt              0.6
-    svukte               0.3
+    sscsps               0.20
+    ssehv                0.20
+    ssijt                0.20
+    ssip                 0.20
+    svukte               1.0
     xqccmt               0.1
     xsfmclic             0.1
     xsfsclic             0.1

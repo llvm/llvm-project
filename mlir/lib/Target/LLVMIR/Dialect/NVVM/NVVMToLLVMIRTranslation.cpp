@@ -22,6 +22,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/NVVMAttributes.h"
+#include <cmath>
 
 using namespace mlir;
 using namespace mlir::LLVM;

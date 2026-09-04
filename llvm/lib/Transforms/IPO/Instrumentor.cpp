@@ -61,7 +61,6 @@
 #include <iterator>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <type_traits>
 
 using namespace llvm;
@@ -957,7 +956,7 @@ static Value *createValuePack(const Range &R, InstrumentationConfig &IConf,
                             IConf.getRTName("", "value_pack"));
 
   auto *AI = IIRB.getAlloca(Fn, STy);
-  IIRB.IRB.CreateMemCpy(AI, AI->getAlign(), GV, MaybeAlign(GV->getAlignment()),
+  IIRB.IRB.CreateMemCpy(AI, AI->getAlign(), GV, GV->getAlign(),
                         IIRB.DL.getTypeAllocSize(STy));
   for (auto [Param, Idx] : Values) {
     auto *Ptr = IIRB.IRB.CreateStructGEP(STy, AI, Idx);
@@ -1174,7 +1173,7 @@ Value *AllocaIO::getSize(Value &V, Type &Ty, InstrumentationConfig &IO,
   auto &AI = cast<AllocaInst>(V);
   const DataLayout &DL = AI.getDataLayout();
   Value *SizeValue = nullptr;
-  TypeSize TypeSize = DL.getTypeAllocSize(AI.getAllocatedType());
+  TypeSize TypeSize = AI.getAllocationBaseSize(DL);
   if (TypeSize.isFixed()) {
     SizeValue = getCI(&Ty, TypeSize.getFixedValue());
   } else {
@@ -1721,7 +1720,8 @@ Value *GlobalVarIO::getAlignment(Value &V, Type &Ty,
                                  InstrumentationConfig &IConf,
                                  InstrumentorIRBuilderTy &IIRB) {
   GlobalVariable &GV = cast<GlobalVariable>(V);
-  return getCI(&Ty, GV.getAlignment());
+  MaybeAlign Alignment = GV.getAlign();
+  return getCI(&Ty, Alignment ? Alignment->value() : 0);
 }
 Value *GlobalVarIO::getDeclaredSize(Value &V, Type &Ty,
                                     InstrumentationConfig &IConf,
