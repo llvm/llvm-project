@@ -87,7 +87,7 @@ define i32 @ilogb_inf() {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double +inf)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogb(double 0x7FF0000000000000)
+  %r = call i32 @ilogb(double +inf)
   ret i32 %r
 }
 
@@ -159,7 +159,7 @@ define i32 @ilogb_inf_readnone() {
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double +inf) #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %r = call i32 @ilogb(double 0x7FF0000000000000) readnone
+  %r = call i32 @ilogb(double +inf) readnone
   ret i32 %r
 }
 

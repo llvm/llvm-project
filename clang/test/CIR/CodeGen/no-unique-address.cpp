@@ -220,7 +220,8 @@ struct OuterUnionBitPad {
 
 OuterUnionBitPad oubp;
 
-// No variant holds data and one is a unit, so the stand-in is an empty unit.
+// Both variants are unnamed bit-field storage, which holds data for the ABI,
+// so the stand-in holds data even though no variant is named.
 struct alignas(8) EmptyBitsTail {
   EmptyBitsTail();
 
@@ -261,8 +262,8 @@ OuterOnlyBitData oobd;
 // CIR-NUA-DAG: cir.global external @oobd = #cir.zero : !rec_OuterOnlyBitData
 // CIR-NUA-DAG: !rec_UnionBitAndWide2Ebase = !cir.struct<"UnionBitAndWide.base" packed {bitfield !cir.double, pad !u8i}>
 // CIR-NUA-DAG: !rec_OuterUnionBitPad = !cir.struct<"OuterUnionBitPad" {data !rec_UnionBitAndWide2Ebase, data !cir.bool, pad !cir.array<!u8i x 6>}>
-// CIR-NUA-DAG: !rec_UnionAllEmptyBits2Ebase = !cir.struct<"UnionAllEmptyBits.base" {empty !cir.array<!u8i x 3>}>
-// CIR-NUA-DAG: !rec_OuterAllEmptyBits = !cir.struct<"OuterAllEmptyBits" {empty !rec_UnionAllEmptyBits2Ebase, data !cir.bool, pad !cir.array<!u8i x 4>}>
+// CIR-NUA-DAG: !rec_UnionAllEmptyBits2Ebase = !cir.struct<"UnionAllEmptyBits.base" {data !cir.array<!u8i x 3>}>
+// CIR-NUA-DAG: !rec_OuterAllEmptyBits = !cir.struct<"OuterAllEmptyBits" {data !rec_UnionAllEmptyBits2Ebase, data !cir.bool, pad !cir.array<!u8i x 4>}>
 // CIR-NUA-DAG: cir.global external @oubp = #cir.zero : !rec_OuterUnionBitPad
 // CIR-NUA-DAG: cir.global external @oaeb = #cir.zero : !rec_OuterAllEmptyBits
 

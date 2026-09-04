@@ -36,7 +36,7 @@ define float @fma_not_fmaxnm_maybe_nan(i32 %i1, i32 %i2, i32 %i3) #0 {
   %f2 = uitofp i32 %i2 to float
   %f3 = uitofp i32 %i2 to float
   %fma = tail call float @llvm.fma.f32(float %f2, float %f1, float -inf)
-  %cmp = fcmp ugt float %fma, 0xfff0000000000000
+  %cmp = fcmp ugt float %fma, -inf
   %val = select i1 %cmp, float %fma, float -inf
   ret float %val
 }

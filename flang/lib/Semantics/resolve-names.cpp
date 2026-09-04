@@ -10914,16 +10914,17 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
         if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+                common::LanguageFeature::CUDA)) {
+          if (context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaManaged))
+            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+          // Implicitly treat allocatable arrays as pinned when feature is
+          // enabled.
+          else if (IsAllocatable(symbol) &&
+              context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaPinned))
+            object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+        }
       }
     }
   }
