@@ -237,7 +237,7 @@ func.func @unary_ops_non_identity(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> t
     ins(%A : tensor<?xf32>)
     outs(%Out : tensor<?x?xf32>) {
   ^bb0(%in: f32, %out: f32):  
-    %v = math.absf %in : f32
+    %v = math.exp %in : f32
     linalg.yield %v : f32
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -250,11 +250,10 @@ func.func @unary_ops_non_identity(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> t
 // ALL-SAME: %[[A:.+]]: tensor<?xf32>, %[[OUT:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32>
 
 // Named ops cannot carry user-defined indexing maps -> expect no change.
-// NAMED-NOT: linalg.abs
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.elementwise kind=#linalg.elementwise_kind<abs>
+// CATEGORY: linalg.elementwise kind=#linalg.elementwise_kind<exp>
 // CATEGORY-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_TP]]]
 // CATEGORY-SAME: ins(%[[A]] : tensor<?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>

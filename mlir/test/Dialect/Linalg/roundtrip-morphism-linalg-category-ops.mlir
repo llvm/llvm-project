@@ -6,6 +6,8 @@
 // RUN: | FileCheck %s
 
 func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
+  linalg.elementwise kind=#linalg.elementwise_kind<exp>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.elementwise kind=#linalg.elementwise_kind<log>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.elementwise kind=#linalg.elementwise_kind<abs>
@@ -59,6 +61,10 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
 
 // CHECK-LABEL: unary_ops
 // CHECK-SAME: %[[A:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<log>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
