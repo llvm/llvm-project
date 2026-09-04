@@ -200,7 +200,7 @@ void use(double*);
 // CHECK-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 72), !nosanitize [[META6]]
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
 // CHECK:       [[BB4]]:
@@ -219,7 +219,7 @@ void use(double*);
 // TR-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR8:[0-9]+]]
 // TR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // TR-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
-// TR-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META6]]
+// TR-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 72), !nosanitize [[META6]]
 // TR-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
 // TR-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
 // TR:       [[BB4]]:
@@ -227,7 +227,7 @@ void use(double*);
 // TR-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA10:![0-9]+]]
 // TR-NEXT:    ret double [[TMP5]]
 // TR:       [[TRAP]]:
-// TR-NEXT:    call void @llvm.ubsantrap(i8 71) #[[ATTR7]], !nosanitize [[META6]]
+// TR-NEXT:    call void @llvm.ubsantrap(i8 72) #[[ATTR7]], !nosanitize [[META6]]
 // TR-NEXT:    unreachable, !nosanitize [[META6]]
 //
 // REC-LABEL: define dso_local double @lbounds(
@@ -238,7 +238,7 @@ void use(double*);
 // REC-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR5:[0-9]+]]
 // REC-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // REC-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
-// REC-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META6]]
+// REC-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 72), !nosanitize [[META6]]
 // REC-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
 // REC-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
 // REC:       [[BB4]]:

@@ -208,6 +208,15 @@ struct PointerOverflowData {
 RECOVERABLE(pointer_overflow, PointerOverflowData *Data, ValueHandle Base,
             ValueHandle Result)
 
+struct UnalignedPointerSubtractionData {
+  SourceLocation Loc;
+  const TypeDescriptor &Type;
+};
+
+RECOVERABLE(unaligned_pointer_subtraction,
+            UnalignedPointerSubtractionData *Data, ValueHandle Diff,
+            ValueHandle EltSize)
+
 /// \brief Known CFI check kinds.
 /// Keep in sync with the enum of the same name in CodeGenFunction.h
 enum CFITypeCheckKind : unsigned char {

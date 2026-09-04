@@ -113,6 +113,7 @@ SANITIZER("shift-base", ShiftBase)
 SANITIZER("shift-exponent", ShiftExponent)
 SANITIZER_GROUP("shift", Shift, ShiftBase | ShiftExponent)
 SANITIZER("signed-integer-overflow", SignedIntegerOverflow)
+SANITIZER("unaligned-pointer-subtraction", UnalignedPointerSubtraction)
 SANITIZER("unreachable", Unreachable)
 SANITIZER("vla-bound", VLABound)
 SANITIZER("vptr", Vptr)
@@ -152,7 +153,8 @@ SANITIZER_GROUP("undefined", Undefined,
                     FloatCastOverflow |
                     IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
                     PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
-                    SignedIntegerOverflow | Unreachable | VLABound | Function)
+                    SignedIntegerOverflow | Unreachable | VLABound | Function |
+                    UnalignedPointerSubtraction)
 
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)

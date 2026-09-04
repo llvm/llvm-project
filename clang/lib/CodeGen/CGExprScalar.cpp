@@ -20,6 +20,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "SanitizerHandler.h"
 #include "TargetInfo.h"
 #include "TrapReasonBuilder.h"
 #include "clang/AST/ASTContext.h"
@@ -5054,6 +5055,26 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
   if (CGF.getLangOpts().StablePointerSubtraction)
     return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
+
+  // If the unaligned-pointer-subtraction sanitizer is on, verify at runtime
+  // that the byte distance is an exact multiple of the element size.
+  if (CGF.SanOpts.has(SanitizerKind::UnalignedPointerSubtraction)) {
+    auto checkOrdinal = SanitizerKind::SO_UnalignedPointerSubtraction;
+    auto CheckHandler = SanitizerHandler::UnalignedPointerSubtraction;
+    SanitizerDebugLocation SanScope(&CGF, {checkOrdinal}, CheckHandler);
+
+    llvm::Value *Zero = llvm::ConstantInt::get(CGF.PtrDiffTy, 0);
+    llvm::Value *Rem = Builder.CreateSRem(diffInChars, divisor, "sub.ptr.rem");
+    llvm::Value *IsExact = Builder.CreateICmpEQ(Rem, Zero, "sub.ptr.exact");
+
+    llvm::Constant *StaticArgs[] = {
+        CGF.EmitCheckSourceLocation(op.E->getExprLoc()),
+        CGF.EmitCheckTypeDescriptor(op.E->getType())};
+    llvm::Value *DynamicArgs[] = {diffInChars, divisor};
+    CGF.EmitCheck({{IsExact, checkOrdinal}}, CheckHandler, StaticArgs,
+                  DynamicArgs);
+  }
+
   // Otherwise, do a full sdiv. This uses the "exact" form of sdiv, since
   // pointer difference in C is only defined in the case where both operands
   // are pointing to elements of an array.
