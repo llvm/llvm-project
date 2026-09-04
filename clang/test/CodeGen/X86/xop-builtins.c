@@ -394,16 +394,20 @@ __m256 test_mm256_permute2_ps(__m256 a, __m256 b, __m256i c) {
   return _mm256_permute2_ps(a, b, c, 0);
 }
 
-__m128 test_mm_frcz_ss(__m128 a) {
+__m128 test_mm_frcz_ss(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_frcz_ss
   // CHECK: call {{.*}}<4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> %{{.*}})
-  return _mm_frcz_ss(a);
+  // CHECK: extractelement <4 x float> {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 0
+  return _mm_frcz_ss(a, b);
 }
 
-__m128d test_mm_frcz_sd(__m128d a) {
+__m128d test_mm_frcz_sd(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_frcz_sd
   // CHECK: call {{.*}}<2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> %{{.*}})
-  return _mm_frcz_sd(a);
+  // CHECK: extractelement <2 x double> {{.*}}, i32 0
+  // CHECK: insertelement <2 x double> {{.*}}, double {{.*}}, i32 0
+  return _mm_frcz_sd(a, b);
 }
 
 __m128 test_mm_frcz_ps(__m128 a) {
