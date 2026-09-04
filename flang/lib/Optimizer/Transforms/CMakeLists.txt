@@ -43,6 +43,7 @@ add_flang_library(FIRTransforms
   PolymorphicOpConversion.cpp
   FunctionAttr.cpp
   GenRuntimeCallsForTest.cpp
+  LiftSCFWhileToSCFFor.cpp
   LoopInvariantCodeMotion.cpp
   LoopVersioning.cpp
   SelectOpsConversion.cpp
