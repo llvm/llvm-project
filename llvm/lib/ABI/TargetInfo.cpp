@@ -11,6 +11,10 @@
 using namespace llvm::abi;
 
 bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
+  // Atomic values use the evaluation kind of their underlying value type.
+  if (const auto *AT = dyn_cast<AtomicType>(Ty))
+    return isAggregateTypeForABI(AT->getValueType());
+
   // Check for fundamental scalar types.
   if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
     return false;

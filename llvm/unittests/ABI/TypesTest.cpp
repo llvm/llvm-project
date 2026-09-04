@@ -1,4 +1,4 @@
-//===- TypesTest.cpp - ABI type emptiness unit tests ----------------------===//
+//===- TypesTest.cpp - ABI type unit tests --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,7 @@
 
 using llvm::Align;
 using llvm::TypeSize;
+using llvm::abi::AtomicType;
 using llvm::abi::FieldInfo;
 using llvm::abi::RecordFlags;
 using llvm::abi::RecordType;
@@ -39,6 +40,19 @@ protected:
                             StructPacking::Default, Bases, VBases, Flags);
   }
 };
+
+TEST_F(ABITypesTest, AtomicTypeProperties) {
+  const llvm::abi::Type *Value =
+      TB.getIntegerType(24, Align(1), /*Signed=*/false);
+  const AtomicType *Atomic = TB.getAtomicType(Value, 32, Align(4));
+
+  EXPECT_TRUE(Atomic->isAtomic());
+  EXPECT_EQ(Atomic->getKind(), llvm::abi::TypeKind::Atomic);
+  EXPECT_EQ(Atomic->getValueType(), Value);
+  EXPECT_EQ(Atomic->getSizeInBits(), TypeSize::getFixed(32));
+  EXPECT_EQ(Atomic->getAlignment(), Align(4));
+  EXPECT_TRUE(llvm::isa<AtomicType>(Atomic));
+}
 
 TEST_F(ABITypesTest, EmptyCRecord) {
   const RecordType *Empty = makeRecord({}, 0, RecordFlags::CanPassInRegisters);

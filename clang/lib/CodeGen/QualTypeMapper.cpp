@@ -97,8 +97,11 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
     return convertEnumType(cast<EnumType>(QT));
   case Type::Complex:
     return convertComplexType(cast<ComplexType>(QT));
-  case Type::Atomic:
-    return convertType(cast<AtomicType>(QT)->getValueType());
+  case Type::Atomic: {
+    const auto *AT = cast<AtomicType>(QT);
+    return Builder.getAtomicType(convertType(AT->getValueType()),
+                                 ASTCtx.getTypeSize(QT), getTypeAlign(QT));
+  }
   case Type::BlockPointer:
   case Type::Pipe:
     return createPointerTypeForPointee(ASTCtx.VoidPtrTy);

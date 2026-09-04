@@ -30,6 +30,9 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Void:
     Result = llvm::Type::getVoidTy(Context);
     break;
+  case abi::TypeKind::Atomic:
+    Result = convertAtomicType(cast<abi::AtomicType>(ABIType));
+    break;
   case abi::TypeKind::Integer: {
     const auto *IT = cast<abi::IntegerType>(ABIType);
     Result =
@@ -65,6 +68,20 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
 
   TypeCache[ABIType] = Result;
   return Result;
+}
+
+llvm::Type *IRTypeMapper::convertAtomicType(const abi::AtomicType *AT) {
+  llvm::Type *ValueType = convertType(AT->getValueType());
+  uint64_t ValueSize = AT->getValueType()->getSizeInBits().getFixedValue();
+  uint64_t AtomicSize = AT->getSizeInBits().getFixedValue();
+  if (ValueSize == AtomicSize)
+    return ValueType;
+
+  assert(ValueSize < AtomicSize && "atomic type cannot shrink its value type");
+  llvm::Type *Fields[] = {ValueType,
+                          llvm::ArrayType::get(llvm::Type::getInt8Ty(Context),
+                                               (AtomicSize - ValueSize) / 8)};
+  return llvm::StructType::get(Context, Fields, /*isPacked=*/false);
 }
 
 llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {

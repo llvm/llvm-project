@@ -27,6 +27,7 @@ namespace abi {
 
 enum class TypeKind {
   Void,
+  Atomic,
   MemberPointer,
   Complex,
   Integer,
@@ -73,6 +74,7 @@ public:
   }
 
   bool isVoid() const { return Kind == TypeKind::Void; }
+  bool isAtomic() const { return Kind == TypeKind::Atomic; }
   bool isInteger() const { return Kind == TypeKind::Integer; }
   bool isFloat() const { return Kind == TypeKind::Float; }
   bool isPointer() const { return Kind == TypeKind::Pointer; }
@@ -89,6 +91,22 @@ public:
   VoidType() : Type(TypeKind::Void, TypeSize::getFixed(0), Align(1)) {}
 
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Void; }
+};
+
+class AtomicType : public Type {
+public:
+  AtomicType(const Type *ValueType, uint64_t SizeInBits, Align Alignment)
+      : Type(TypeKind::Atomic, TypeSize::getFixed(SizeInBits), Alignment),
+        ValueType(ValueType) {}
+
+  const Type *getValueType() const { return ValueType; }
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Atomic;
+  }
+
+private:
+  const Type *ValueType;
 };
 
 class ComplexType : public Type {
@@ -343,6 +361,12 @@ public:
 
   const VoidType *getVoidType() {
     return new (Allocator.Allocate<VoidType>()) VoidType();
+  }
+
+  const AtomicType *getAtomicType(const Type *ValueType, uint64_t SizeInBits,
+                                  Align Align) {
+    return new (Allocator.Allocate<AtomicType>())
+        AtomicType(ValueType, SizeInBits, Align);
   }
 
   const IntegerType *getIntegerType(uint64_t BitWidth, Align Align, bool Signed,
