@@ -24,6 +24,7 @@ struct EmptySecond { long a; Empty e; };
 struct EmptySSE { double a; Empty e; };
 struct FloatEmpty { float a; Empty e; };
 struct FloatEmptyFirst { Empty e; float a; };
+struct HiWord { Empty e; long hi; };
 struct alignas(32) Big32 {};
 union UBits { unsigned : 3; };
 union UNone {};
@@ -146,6 +147,36 @@ float takeFloatEmptyFirst(FloatEmptyFirst v) { return v.a; }
 
 // CIR: cir.func {{.*}}@_Z19takeFloatEmptyFirst15FloatEmptyFirst(%arg0: !cir.double {{.*}}) -> (!cir.float
 // LLVM: define dso_local noundef float @_Z19takeFloatEmptyFirst15FloatEmptyFirst(double %{{[^,]+}})
+
+// Here the empty member owns eightbyte 0 rather than eightbyte 1, so NoClass
+// cannot just be dropped: the coercion has to start at byte 8.
+long takeHiWord(HiWord v) { return v.hi; }
+
+// CIR: cir.func {{.*}}@_Z10takeHiWord6HiWord(%arg0: !s64i {{.*}}) -> (!s64i
+// LLVM: define dso_local noundef i64 @_Z10takeHiWord6HiWord(i64 %{{[^,]+}})
+// LLVM:   %{{.+}} = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   store i64 %{{.+}}, ptr %{{.+}}, align 8
+
+// The same offset on the return side.
+HiWord giveHiWord(long hi) {
+  HiWord w;
+  w.hi = hi;
+  return w;
+}
+
+// CIR: cir.func {{.*}}@_Z10giveHiWordl(%arg0: !s64i {llvm.noundef} {{.*}}) -> !s64i
+// LLVM: define dso_local i64 @_Z10giveHiWordl(i64 noundef %{{[^,]+}})
+// LLVM:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
+// LLVM:   ret i64 %[[RVAL]]
+
+// The caller's own signature is unaffected by the callee's coercion.
+long callerHiWord(long hi) {
+  return takeHiWord(giveHiWord(hi));
+}
+
+// CIR: cir.func {{.*}}@_Z12callerHiWordl(%arg0: !s64i {{.*}}) -> (!s64i
+// LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,]+}})
 
 // Past two eightbytes SysV says memory whatever the content, so an empty class
 // this size is passed indirectly at its declared alignment.

@@ -302,14 +302,21 @@ static uint64_t coercionByteSize(mlir::Type ty, const mlir::DataLayout &dl) {
 /// dominate every use of the coerced value and must be a block that ends up
 /// inside the enclosing function's entry block after any later outlining.
 ///
+/// \p offset is where the coerced value sits within the larger of the two
+/// types, non-zero when the ABI passes a value in a register read from
+/// partway into its storage.  The coerced type must be the smaller of the
+/// two, so one that can exceed the value it coerces, such as a multi-field
+/// register tuple, must not be given an offset.
+///
 /// Any operations the helper creates are appended to \p createdOps so the
 /// caller can pass them to replaceAllUsesExcept and avoid clobbering the
 /// store's value operand when later rewiring the source value.
-mlir::Value
-emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
-                     mlir::Type dstTy, mlir::Value src, mlir::Block *slotBlock,
-                     const mlir::DataLayout &dl,
-                     SmallPtrSetImpl<mlir::Operation *> &createdOps) {
+mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
+                                 mlir::Type dstTy, mlir::Value src,
+                                 mlir::Block *slotBlock,
+                                 const mlir::DataLayout &dl,
+                                 SmallPtrSetImpl<mlir::Operation *> &createdOps,
+                                 unsigned offset) {
   mlir::Type srcTy = src.getType();
   assert(srcTy != dstTy &&
          "emitCoercion callers must pre-check that the types differ");
@@ -320,6 +327,19 @@ emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
   mlir::Type slotTy = coercionByteSize(srcTy, dl) >= coercionByteSize(dstTy, dl)
                           ? srcTy
                           : dstTy;
+
+  // Sizes are compared two ways on purpose: relative size in
+  // coercionByteSize terms, which is how slotTy was picked, and capacity in
+  // getTypeSize terms, which is what the alloca is given.
+  [[maybe_unused]] mlir::Type coercedTy = ((slotTy == srcTy) ? dstTy : srcTy);
+  assert((offset == 0 ||
+          coercionByteSize(coercedTy, dl) < coercionByteSize(slotTy, dl)) &&
+         "a direct offset must land on the coerced side, the smaller one");
+  assert((offset == 0 ||
+          offset + dl.getTypeSize(coercedTy) <= dl.getTypeSize(slotTy)) &&
+         "coerce slot too small for offset access");
+  assert((offset == 0 || offset % dl.getTypeABIAlignment(coercedTy) == 0) &&
+         "a direct offset must be aligned for the coerced access");
 
   auto slotPtrTy = cir::PointerType::get(slotTy);
   auto srcPtrTy = cir::PointerType::get(srcTy);
@@ -335,25 +355,42 @@ emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
   }
   createdOps.insert(alloca);
 
+  // The alloca already has slotTy, so asking for that type returns it
+  // unchanged.  Any other type is reached by a bitcast, preceded by a byte
+  // stride when the coerced value lives at an offset.
+  auto slotView = [&](mlir::Type wantTy,
+                      cir::PointerType wantPtrTy) -> mlir::Value {
+    if (wantTy == slotTy)
+      return alloca;
+    mlir::Value base = alloca;
+    if (offset != 0) {
+      auto u8Ty =
+          cir::IntType::get(builder.getContext(), 8, /*isSigned=*/false);
+      auto u8PtrTy = cir::PointerType::get(u8Ty);
+      auto u8Base = cir::CastOp::create(builder, loc, u8PtrTy,
+                                        cir::CastKind::bitcast, alloca);
+      createdOps.insert(u8Base);
+      auto strideTy =
+          cir::IntType::get(builder.getContext(), 64, /*isSigned=*/true);
+      auto strideVal = cir::ConstantOp::create(
+          builder, loc, cir::IntAttr::get(strideTy, offset));
+      createdOps.insert(strideVal);
+      base = cir::PtrStrideOp::create(builder, loc, u8PtrTy, u8Base, strideVal);
+      createdOps.insert(base.getDefiningOp());
+    }
+    auto cast = cir::CastOp::create(builder, loc, wantPtrTy,
+                                    cir::CastKind::bitcast, base);
+    createdOps.insert(cast);
+    return cast;
+  };
+
   // Store through a source-typed view of the slot.
-  mlir::Value srcSlot = alloca;
-  if (slotTy != srcTy) {
-    auto srcCast = cir::CastOp::create(builder, loc, srcPtrTy,
-                                       cir::CastKind::bitcast, alloca);
-    createdOps.insert(srcCast);
-    srcSlot = srcCast;
-  }
+  mlir::Value srcSlot = slotView(srcTy, srcPtrTy);
   auto store = cir::StoreOp::create(builder, loc, src, srcSlot);
   createdOps.insert(store);
 
   // Return a destination-typed view of the slot.
-  if (slotTy != dstTy) {
-    auto dstCast = cir::CastOp::create(builder, loc, dstPtrTy,
-                                       cir::CastKind::bitcast, alloca);
-    createdOps.insert(dstCast);
-    return dstCast;
-  }
-  return alloca;
+  return slotView(dstTy, dstPtrTy);
 }
 
 /// Coerce \p src to type \p dstTy by going through memory and load the whole
@@ -362,9 +399,10 @@ emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::Block *slotBlock, const mlir::DataLayout &dl,
-                         SmallPtrSetImpl<mlir::Operation *> &createdOps) {
-  mlir::Value dstSlot =
-      emitCoercionToMemory(builder, loc, dstTy, src, slotBlock, dl, createdOps);
+                         SmallPtrSetImpl<mlir::Operation *> &createdOps,
+                         unsigned offset) {
+  mlir::Value dstSlot = emitCoercionToMemory(builder, loc, dstTy, src,
+                                             slotBlock, dl, createdOps, offset);
   auto load = cir::LoadOp::create(builder, loc, dstSlot);
   createdOps.insert(load);
   return load;
@@ -374,9 +412,10 @@ mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
 /// (e.g. call-site coercion where we don't replaceAllUsesExcept).
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
-                         mlir::Block *slotBlock, const mlir::DataLayout &dl) {
+                         mlir::Block *slotBlock, const mlir::DataLayout &dl,
+                         unsigned offset) {
   SmallPtrSet<mlir::Operation *, 4> ignored;
-  return emitCoercion(builder, loc, dstTy, src, slotBlock, dl, ignored);
+  return emitCoercion(builder, loc, dstTy, src, slotBlock, dl, ignored, offset);
 }
 
 /// The block a coercion slot's alloca belongs at the start of.
@@ -405,8 +444,8 @@ mlir::Block *coercionSlotBlock(mlir::Operation *op) {
 /// new (coerced) return type.
 void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
                           mlir::Type origRetTy, mlir::Type coercedRetTy,
-                          mlir::OpBuilder &builder,
-                          const mlir::DataLayout &dl) {
+                          mlir::OpBuilder &builder, const mlir::DataLayout &dl,
+                          unsigned offset) {
   SmallVector<cir::ReturnOp> returns;
   funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
   for (cir::ReturnOp r : returns) {
@@ -418,7 +457,7 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
     builder.setInsertionPoint(r);
     mlir::Value coerced =
         emitCoercion(builder, r.getLoc(), coercedRetTy, origVal,
-                     &funcOp->getRegion(0).front(), dl);
+                     &funcOp->getRegion(0).front(), dl, offset);
     r->setOperand(0, coerced);
   }
 }
@@ -641,8 +680,11 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
       Value finalVal = flatLoaded;
       if (origTy != flatTy) {
         SmallPtrSet<Operation *, 4> coercionOps;
+        assert(!ac.directOffset &&
+               "each field is read from slot offset 0 here, so a flattened "
+               "coercion cannot honor a direct offset");
         finalVal = emitCoercion(builder, loc, origTy, flatLoaded, &entry, dl,
-                                coercionOps);
+                                coercionOps, /*offset=*/0);
         flattenOps.insert(coercionOps.begin(), coercionOps.end());
       }
 
@@ -665,8 +707,9 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
 
       builder.setInsertionPointToStart(&entry);
       SmallPtrSet<mlir::Operation *, 4> coercionOps;
-      mlir::Value adapted = emitCoercion(builder, funcOp.getLoc(), oldArgTy,
-                                         blockArg, &entry, dl, coercionOps);
+      mlir::Value adapted =
+          emitCoercion(builder, funcOp.getLoc(), oldArgTy, blockArg, &entry, dl,
+                       coercionOps, ac.directOffset);
 
       // Replace blockArg uses with the adapted value, except inside the
       // helper ops we just created.  This is critical: the StoreOp's value
@@ -1053,7 +1096,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       if (fc.returnInfo.kind == ArgKind::Direct && fc.returnInfo.coercedType &&
           !oldResultTypes.empty() && fc.returnInfo.coercedType != origRetTy)
         insertReturnCoercion(funcOp, origRetTy, fc.returnInfo.coercedType,
-                             builder, dl);
+                             builder, dl, fc.returnInfo.directOffset);
 
       mlir::Block &entry = body.front();
 
@@ -1215,8 +1258,12 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // alloca when possible).
       if (arg.getType() != flatTy) {
         SmallPtrSet<mlir::Operation *, 4> coercionOps;
-        mlir::Value coercedPtr = emitCoercionToMemory(
-            builder, call.getLoc(), flatTy, arg, slotBlock, dl, coercionOps);
+        assert(!ac.directOffset &&
+               "each field is read from slot offset 0 here, so a flattened "
+               "coercion cannot honor a direct offset");
+        mlir::Value coercedPtr =
+            emitCoercionToMemory(builder, call.getLoc(), flatTy, arg, slotBlock,
+                                 dl, coercionOps, /*offset=*/0);
         for (auto [f, fieldTy] : llvm::enumerate(flatTy.getMembers())) {
           mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
           auto fieldPtr =
@@ -1240,7 +1287,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
                arg.getType() != ac.coercedType) {
       arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg, slotBlock,
-                         dl);
+                         dl, ac.directOffset);
       newArgs.push_back(arg);
     } else if (ac.kind == ArgKind::Indirect) {
       // byval hands the callee its own copy.  byref must name the caller's
@@ -1308,8 +1355,9 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // emit a coercion back to the original type for the call's existing uses.
   if (returnNeedsCoercion) {
     builder.setInsertionPointAfter(newCall);
-    mlir::Value coercedBack = emitCoercion(builder, call.getLoc(), origRetTy,
-                                           newCall.getResult(), slotBlock, dl);
+    mlir::Value coercedBack =
+        emitCoercion(builder, call.getLoc(), origRetTy, newCall.getResult(),
+                     slotBlock, dl, fc.returnInfo.directOffset);
     call.getResult().replaceAllUsesWith(coercedBack);
   }
 

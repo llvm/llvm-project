@@ -1,9 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class and padded, packed, and
-// over-aligned record shapes.
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-unknown -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -44,9 +41,17 @@ struct s3_0 {};
 struct s3_1 { struct s3_0 a; long b; };
 void f3(struct s3_1 x) {}
 
+// The empty member owns eightbyte 0, so the live long is the second eightbyte
+// and the coercion starts at byte 8.
 // CIR-LABEL: cir.func {{.*}} @_Z2f34s3_1
-// LLVM-LABEL: define {{.*}} void @_Z2f34s3_1(
+// LLVM-LABEL: define {{.*}} void @_Z2f34s3_1(i64 %{{[^,)]+}})
+// LLVM:         %[[SLOT:.+]] = alloca %struct.s3_1, align 8
+// LLVM:         %[[HI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
+// LLVM:         store i64 %{{.+}}, ptr %[[HI]], align 8
 // OGCG-LABEL: define {{.*}} void @_Z2f34s3_1(i64 %x.coerce)
+// OGCG:        %[[SLOT:.+]] = alloca %struct.s3_1, align 8
+// OGCG:        %[[HI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
+// OGCG:        store i64 %x.coerce, ptr %[[HI]], align 8
 
 // Member data pointer and member function pointer.
 struct s4 {};
@@ -121,9 +126,16 @@ namespace PR5179 {
   const void *bar(B2 b2) { return b2.b1.pa; }
 }
 
+// The empty base owns eightbyte 0, so the pointer is read from byte 8.
 // CIR-LABEL: cir.func {{.*}} @_ZN6PR51793barENS_2B2E
-// LLVM-LABEL: define {{.*}} @_ZN6PR51793barENS_2B2E(
+// LLVM-LABEL: define {{.*}} ptr @_ZN6PR51793barENS_2B2E(ptr %{{[^,)]+}})
+// LLVM:         %[[SLOT:.+]] = alloca %"struct.PR5179::B2", align 8
+// LLVM:         %[[PA:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
+// LLVM:         store ptr %{{.+}}, ptr %[[PA]], align 8
 // OGCG-LABEL: define {{.*}} ptr @_ZN6PR51793barENS_2B2E(ptr %b2.coerce)
+// OGCG:        %[[SLOT:.+]] = alloca %"struct.PR5179::B2", align 8
+// OGCG:        %[[PA:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
+// OGCG:        store ptr %b2.coerce, ptr %[[PA]], align 8
 
 namespace test5 {
   struct Xbase { };

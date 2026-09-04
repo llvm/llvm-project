@@ -484,14 +484,16 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// CIRABIRewriteContext.
 ///
 /// Direct: the value passes in register(s).  A coercion is forwarded in the
-/// three cases where the value has to be rebuilt on the wire: an aggregate
+/// four cases where the value has to be rebuilt on the wire: an aggregate
 /// unpacked into the register(s) holding it, a scalar too wide for one register
-/// split into a tuple of them, and a scalar the classifier widens to fill its
-/// eightbyte.  getDirect keeps canFlatten set so the rewriter can split a
-/// multi-field coerced struct into individual wire arguments.  Any other scalar
-/// passes in its natural CIR type, which a null coercion denotes.  A coercion
-/// this bridge cannot represent yields std::nullopt so the caller reports NYI
-/// rather than silently passing the value unchanged.
+/// split into a tuple of them, a scalar the classifier widens to fill its
+/// eightbyte, and a value whose live bytes start partway into its storage
+/// because a leading eightbyte holds no field (getDirectOffset).  getDirect
+/// keeps canFlatten set so the rewriter can split a multi-field coerced
+/// struct into individual wire arguments.  Any other scalar passes in its
+/// natural CIR type, which a null coercion denotes.  A coercion this bridge
+/// cannot represent yields std::nullopt so the caller reports NYI rather than
+/// silently passing the value unchanged.
 ///
 /// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
 /// The x86_64 classifier (llvm/lib/ABI/Targets/X86.cpp) only returns Extend
@@ -506,11 +508,7 @@ static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {
   if (info.isDirect()) {
-    // The rewriter reads a coercion from the start of the value's storage, so a
-    // classification naming an offset into it has no representation here.  The
-    // classifier names one when the low eightbyte holds no field.
-    if (info.getDirectOffset())
-      return std::nullopt;
+    unsigned offset = info.getDirectOffset();
     // The classifier names a coerce type even where it matches the natural
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
@@ -521,6 +519,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
         coerceAbi && isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
     bool coerceIsRegisterTuple =
         isa_and_present<llvm::abi::RecordType>(coerceAbi);
+    // A tuple coercion cannot be read at an offset, so refuse the pair rather
+    // than emit a read of the wrong bytes.
+    if (offset && coerceIsRegisterTuple)
+      return std::nullopt;
     // Compare widths rather than identity: a coerce no wider than the natural
     // type carries the same value and needs no rewrite.
     auto origInt = dyn_cast_if_present<cir::IntType>(origTy);
@@ -531,19 +533,27 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
         coerceInt->getSizeInBits().getFixedValue() > origInt.getWidth();
     // Leaving the rest alone also avoids a lossy round trip: abiTypeToCIR
     // drops the LongDoubleType wrapper and a pointer's pointee, so comparing a
-    // scalar against its own coerce would report a difference that is not one.
-    if (!isAggregate && !comparesAgainstCoerce && !coerceIsRegisterTuple &&
-        !coerceWidensScalar)
-      return ArgClassification::getDirect(nullptr);
+    // scalar against its own coerce would report a difference that is not
+    // one.  Passing a value through reads it from byte 0, so one living at
+    // an offset cannot take this path.
+    if (!offset && !isAggregate && !comparesAgainstCoerce &&
+        !coerceIsRegisterTuple && !coerceWidensScalar)
+      return ArgClassification::getDirect();
     mlir::Type coerced = abiTypeToCIR(coerceAbi, ctx);
     if (!coerced)
+      return std::nullopt;
+    // An offset would be lost here, since a coercion to the value's own type
+    // is indistinguishable from no coercion at all.
+    if (offset && coerced == origTy)
       return std::nullopt;
     // Coercing a value to the type it already has would add a memory round
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
-      return ArgClassification::getDirect(nullptr);
-    return ArgClassification::getDirect(coerced);
+      return ArgClassification::getDirect();
+    return ArgClassification::getDirect(offset, coerced);
   }
+  // An extended value is always read from byte 0 of its own storage, so
+  // there is no offset to honor here.
   if (info.isExtend()) {
     if (isa_and_present<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());
