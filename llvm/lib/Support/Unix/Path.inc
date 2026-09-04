@@ -287,7 +287,13 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // Fall back to the classical detection.
   if (getprogpath(exe_path, argv0))
     return exe_path;
-#elif defined(__OpenBSD__) || defined(__HAIKU__)
+#elif defined(__OpenBSD__)
+  char exe_path[PATH_MAX];
+  if (getexecpath(exe_path, sizeof(exe_path)) == 0)
+    return exe_path;
+  if (getprogpath(exe_path, argv0) != NULL)
+    return exe_path;
+#elif defined(__HAIKU__)
   char exe_path[PATH_MAX];
   // argv[0] only
   if (getprogpath(exe_path, argv0) != NULL)
