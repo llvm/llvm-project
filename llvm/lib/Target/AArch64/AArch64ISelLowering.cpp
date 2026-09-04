@@ -27807,6 +27807,56 @@ static SDValue
 performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                SelectionDAG &DAG);
 
+// Rewrite store instructions that save constant <2 x i64> values as stp
+// instructions
+static SDValue splitStoreConstVector128(StoreSDNode *ST,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG,
+                                        const AArch64Subtarget *Subtarget) {
+  SDValue Value = ST->getValue();
+  SDLoc DL(ST);
+
+  // Only process constant <2 x i64> vector values.
+  auto *BVN = dyn_cast<BuildVectorSDNode>(Value.getNode());
+  if (Value.getValueType() != MVT::v2i64 || !BVN ||
+      Value.getNumOperands() != 2 || !BVN->isConstant())
+    return SDValue();
+
+  if (ST->isVolatile() || ST->isIndexed() || !Value.hasOneUse() ||
+      ISD::isBuildVectorAllZeros(Value.getNode()))
+    return SDValue();
+
+  // For SVE targets, skip this optimization if the types have been legalized.
+  // We want to avoid transforming split vector stores so that they can be
+  // recombined later.
+  if (Subtarget->isSVEorStreamingSVEAvailable() &&
+      DCI.getDAGCombineLevel() != BeforeLegalizeTypes)
+    return SDValue();
+
+  // If SVE is supported, we stop if the pair can be represented by a single
+  // index instruction with two imm5 values.
+  if (Subtarget->isSVEorStreamingSVEAvailable()) {
+    auto SeqInfo = BVN->isArithmeticSequence();
+    if (!SeqInfo ||
+        (SeqInfo->first.isSignedIntN(5) && SeqInfo->second.isSignedIntN(5)))
+      return SDValue();
+  }
+
+  // Continue if both values fit inside mov immediates.
+  if (!AArch64_AM::isAnyMOVWMovAlias(Value.getConstantOperandVal(0), 64) ||
+      !AArch64_AM::isAnyMOVWMovAlias(Value.getConstantOperandVal(1), 64)) {
+    return SDValue();
+  }
+
+  SDValue FV = Value.getOperand(0), SV = Value.getOperand(1);
+  if (DAG.getDataLayout().isBigEndian())
+    std::swap(FV, SV);
+
+  return DAG.getMemIntrinsicNode(AArch64ISD::STP, DL, DAG.getVTList(MVT::Other),
+                                 {ST->getChain(), FV, SV, ST->getBasePtr()},
+                                 ST->getMemoryVT(), ST->getMemOperand());
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -27899,6 +27949,9 @@ static SDValue performSTORECombine(SDNode *N,
                                MemVT, ST->getMemOperand());
     }
   }
+
+  if (auto Value = splitStoreConstVector128(ST, DCI, DAG, Subtarget))
+    return Value;
 
   // This is an integer vector_extract_elt followed by a (possibly truncating)
   // store. We may be able to replace this with a store of an FP subregister.
