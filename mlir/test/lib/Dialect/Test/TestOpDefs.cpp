@@ -58,6 +58,15 @@ SuccessorOperands TestBranchOp::getSuccessorOperands(unsigned index) {
   return SuccessorOperands(getTargetOperandsMutable());
 }
 
+LogicalResult TestBranchOp::fold(FoldAdaptor adaptor,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  if (!getFoldToLast())
+    return failure();
+  (*this)->setSuccessor(&(*this)->getParentRegion()->back(), 0);
+  removeFoldToLastAttr();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TestProducingBranchOp
 //===----------------------------------------------------------------------===//
