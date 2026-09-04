@@ -1,0 +1,74 @@
+## Test selecting the matching YAML profile from a multi-document input and
+## falling back to the first profile if none matches.
+
+# REQUIRES: system-linux
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+# RUN: cp %t.exe %t.so
+# RUN: llvm-bolt %t.so -o %t.so.bolt --data %t/profile.yaml \
+# RUN:   --profile-ignore-hash --print-cfg --print-only=main -v=1 \
+# RUN:   2>&1 | FileCheck %s --check-prefix=MATCH
+# RUN: cp %t.exe %t.nomatch
+# RUN: llvm-bolt %t.nomatch -o %t.nomatch.bolt --data %t/profile.yaml \
+# RUN:   --profile-ignore-hash --print-cfg --print-only=main -v=1 \
+# RUN:   2>&1 | FileCheck %s --check-prefix=FALLBACK
+
+# MATCH: BOLT-INFO: matched 1 functions with identical names
+# MATCH: Binary Function "main" after building cfg {
+# MATCH:   Exec Count  : 111
+# FALLBACK: BOLT-INFO: matched 1 functions with identical names
+# FALLBACK: Binary Function "main" after building cfg {
+# FALLBACK:   Exec Count  : 222
+
+#--- main.s
+  .globl main
+  .type main, %function
+main:
+  .cfi_startproc
+  cmpl $0x0, %eax
+  retq
+  .cfi_endproc
+.size main, .-main
+
+#--- profile.yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'yaml-multi-binary-selection.test.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+functions:
+  - name:          'main'
+    fid:           1
+    hash:          0x1
+    exec:          222
+    nblocks:       1
+    blocks:
+      - bid:       0
+        insns:     2
+        hash:      0x1
+...
+---
+header:
+  profile-version: 1
+  binary-name:     'yaml-multi-binary-selection.test.tmp.so'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+functions:
+  - name:          'main'
+    fid:           1
+    hash:          0x2
+    exec:          111
+    nblocks:       1
+    blocks:
+      - bid:       0
+        insns:     2
+        hash:      0x2
+...
