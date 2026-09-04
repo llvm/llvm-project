@@ -479,10 +479,12 @@ features cannot lower the translation-unit ABI level;
 
 - Class template argument deduction through an alias template now works when
   a template parameter of the alias only appears in the synthesized deduction
-  guide through default template arguments. Such a template parameter now gets a default
-  template argument deduced from the return type of the underlying deduction
-  guide (here `Key` becomes the iterator's value type), instead of being
-  undeducible.
+  guide through default template arguments, such as `Key` in
+  `template <class Key, class Hash = std::hash<Key>> using MySet = std::unordered_set<Key, Hash>;`
+  when deducing `MySet s(first, last);`. Such a template parameter now gets a
+  default template argument deduced from the return type of the underlying
+  deduction guide (here `Key` becomes the iterator's value type), instead of
+  being undeducible.
 
 - Fixed a crash in class template argument deduction through an alias template
   when the alias fixes a non-type template parameter of the underlying template

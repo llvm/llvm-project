@@ -730,6 +730,30 @@ template <class U> void h2(Iter b, Iter e) {
   static_assert(__is_same(decltype(s), CSet<int, hash<int>>));
 }
 template void h2<char>(Iter, Iter);
+
+// A template template parameter of the alias refers to another template
+// parameter of the alias in its own template parameter list, so it must follow
+// that one when the template parameters of the synthesized guide are reordered.
+template <auto> struct Def {};
+template <class Key, class Cmp = hash<Key>, template <Cmp> class TT = Def>
+struct TSet {
+  template <class It> TSet(It, It, Cmp);
+};
+template <class It, class Cmp, template <Cmp> class TT = Def>
+TSet(It, It, Cmp) -> TSet<typename iter_traits<It>::value_type, Cmp, TT>;
+template <class Key, class Cmp = hash<Key>, template <Cmp> class TT = Def>
+using MyTSet = TSet<Key, Cmp, TT>; // #MyTSet
+
+void t(Iter b, Iter e) {
+  MyTSet s1(b, e, hash<int>());
+  static_assert(__is_same(decltype(s1), TSet<int, hash<int>, Def>));
+
+  MyTSet s2(b, e, 1, 2); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'MyTSet'}}
+  // expected-note@#MyTSet {{implicit deduction guide declared as 'template <class It, class Key = typename iter_traits<It>::value_type, class Cmp = hash<Key>, template <Cmp> class TT = Def> requires __is_deducible(synthesized_default_args::MyTSet, TSet<typename iter_traits<It>::value_type, Cmp, TT>) MyTSet(It, It, Cmp) -> TSet<typename iter_traits<It>::value_type, Cmp, TT>'}}
+  // expected-note@#MyTSet 2 {{implicit deduction guide declared as}}
+  // expected-note@#MyTSet 2 {{requires 3 arguments, but 4 were provided}}
+  // expected-note@#MyTSet {{requires 1 argument, but 4 were provided}}
+}
 } // namespace synthesized_default_args
 
 namespace nttp_deduced_from_alias_in_nondeduced_param_type {
