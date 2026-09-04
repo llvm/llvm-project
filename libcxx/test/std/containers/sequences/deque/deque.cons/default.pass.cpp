@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class T, class Allocator>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   std::deque<T, Allocator> d;
   assert(d.size() == 0);
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
@@ -31,12 +31,20 @@ void test() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   test<int, std::allocator<int> >();
   test<NotConstructible, limited_allocator<NotConstructible, 1> >();
 #if TEST_STD_VER >= 11
   test<int, min_allocator<int> >();
   test<NotConstructible, min_allocator<NotConstructible> >();
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;

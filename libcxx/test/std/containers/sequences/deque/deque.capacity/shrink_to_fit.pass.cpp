@@ -8,17 +8,19 @@
 
 // <deque>
 
-// void shrink_to_fit();
+// void shrink_to_fit(); // constexpr since C++26
+
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <deque>
 
 #include "asan_testing.h"
-#include <deque>
-#include <cassert>
-
-#include "test_macros.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -37,7 +39,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(C& c1) {
+TEST_CONSTEXPR_CXX26 void test(C& c1) {
   C s = c1;
   c1.shrink_to_fit();
   assert(c1 == s);
@@ -45,12 +47,12 @@ void test(C& c1) {
 }
 
 template <class C>
-void testN(int start, int N) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   C c1 = make<C>(N, start);
   test(c1);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -73,6 +75,24 @@ int main(int, char**) {
       for (int j = 0; j < N; ++j)
         testN<std::deque<int, safe_allocator<int>> >(rng[i], rng[j]);
   }
+#endif
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  const int src_array[] = {1, 2, 3};
+
+  std::deque<int> d(std::begin(src_array), std::end(src_array));
+  d.shrink_to_fit();
+  assert(d.size() == 3);
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  test_constexpr();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;

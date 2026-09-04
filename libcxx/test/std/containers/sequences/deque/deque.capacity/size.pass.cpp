@@ -19,7 +19,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::deque<int> C;
     C c;
@@ -71,6 +71,22 @@ int main(int, char**) {
     assert(c.size() == 0);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
   }
+#endif
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d(3);
+  assert(d.size() == 3);
+  assert(d[0] == 0);
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  test_constexpr();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;

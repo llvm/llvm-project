@@ -8,7 +8,7 @@
 
 // <deque>
 
-// void pop_front()
+// void pop_front(); // constexpr since C++26
 
 //  Erasing items from the beginning or the end of a deque shall not invalidate iterators
 //  to items that were not erased.
@@ -20,7 +20,7 @@
 #include "test_macros.h"
 
 template <typename C>
-void test(C c) {
+TEST_CONSTEXPR_CXX26 void test(C c) {
   typename C::iterator it1 = c.begin() + 1;
   typename C::iterator it2 = c.end() - 1;
 
@@ -36,9 +36,14 @@ void test(C c) {
   assert(&*it2 == &*it4);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   std::deque<int> queue;
-  for (int i = 0; i < 4098; ++i)
+#if TEST_STD_VER >= 26
+  int bound = TEST_IS_CONSTANT_EVALUATED ? 200 : 4098;
+#else
+  int bound = 4098;
+#endif
+  for (int i = 0; i < bound; ++i)
     queue.push_back(i);
 
   while (queue.size() > 1) {
@@ -46,6 +51,14 @@ int main(int, char**) {
     queue.pop_back();
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(queue));
   }
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
+#endif
 
   return 0;
 }

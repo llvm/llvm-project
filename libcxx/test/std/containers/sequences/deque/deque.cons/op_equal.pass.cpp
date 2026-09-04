@@ -18,7 +18,7 @@
 #include "min_allocator.h"
 
 template <class C>
-void test(const C& x) {
+TEST_CONSTEXPR_CXX26 void test(const C& x) {
   C c;
   c = x;
   assert(c == x);
@@ -26,7 +26,7 @@ void test(const C& x) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(x));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
     int* an  = ab + sizeof(ab) / sizeof(ab[0]);
@@ -65,6 +65,14 @@ int main(int, char**) {
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l));
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l2));
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

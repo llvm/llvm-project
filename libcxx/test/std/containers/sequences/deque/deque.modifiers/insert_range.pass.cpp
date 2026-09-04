@@ -14,7 +14,7 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<container-compatible-range<T> R>
-//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23
+//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23, constexpr since C++26
 
 #include <deque>
 
@@ -26,7 +26,7 @@
 //   {empty/one-element/full} container at the {beginning/middle/end});
 // - inserting move-only elements;
 // - an exception is thrown when copying the elements or when allocating new elements.
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   static_assert(test_constraints_insert_range<std::deque, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
@@ -36,8 +36,28 @@ int main(int, char**) {
   });
   test_sequence_insert_range_move_only<std::deque>();
 
-  test_insert_range_exception_safety_throwing_copy<std::deque>();
-  test_insert_range_exception_safety_throwing_allocator<std::deque, int>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_insert_range_exception_safety_throwing_copy<std::deque>();
+    test_insert_range_exception_safety_throwing_allocator<std::deque, int>();
+  }
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  int input[]       = {2, 3};
+  std::deque<int> d = {1, 4};
+  auto it           = d.insert_range(d.begin() + 1, input);
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3, 4}));
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  test_constexpr();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
+#endif
 
   return 0;
 }

@@ -8,7 +8,7 @@
 
 // <deque>
 
-// iterator insert (const_iterator p, value_type&& v);
+// iterator insert (const_iterator p, value_type&& v); // constexpr since C++26
 
 // UNSUPPORTED: c++03
 
@@ -22,7 +22,7 @@
 #include "min_allocator.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -41,7 +41,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(int P, C& c1, int x) {
+TEST_CONSTEXPR_CXX26 void test(int P, C& c1, int x) {
   typedef typename C::const_iterator CI;
   std::size_t c1_osize = c1.size();
   CI i                 = c1.insert(c1.begin() + P, MoveOnly(x));
@@ -59,7 +59,7 @@ void test(int P, C& c1, int x) {
 }
 
 template <class C>
-void testN(int start, int N) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   for (int i = 0; i <= 3; ++i) {
     if (0 <= i && i <= N) {
       C c1 = make<C>(N, start);
@@ -80,7 +80,7 @@ void testN(int start, int N) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -102,6 +102,23 @@ int main(int, char**) {
       for (int j = 0; j < N; ++j)
         testN<std::deque<MoveOnly, safe_allocator<MoveOnly>> >(rng[i], rng[j]);
   }
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 3};
+  auto it           = d.insert(d.begin() + 1, 2);
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3}));
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+  test_constexpr();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
+#endif
 
   return 0;
 }
