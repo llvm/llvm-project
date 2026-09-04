@@ -13,9 +13,12 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "CIRGenOpenMPClause.h"
+#include "CIRGenOpenMPConstructDecomposition.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 using namespace clang;
 using namespace clang::CIRGen;
@@ -30,47 +33,100 @@ CIRGenFunction::emitOMPErrorDirective(const OMPErrorDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPErrorDirective");
   return mlir::failure();
 }
-mlir::LogicalResult
-CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
-  mlir::LogicalResult res = mlir::success();
-  mlir::Location begin = getLoc(s.getBeginLoc());
-  mlir::Location end = getLoc(s.getEndLoc());
 
-  mlir::omp::ParallelOperands clauseOps;
-  OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
+/// Report \p item's synthesized clauses as not-yet-implemented: having no AST
+/// node, they cannot go through the clause emitters.
+static mlir::LogicalResult
+checkSynthesizedClauses(CIRGenFunction &cgf, const OMPExecutableDirective &s,
+                        omp::ConstructQueue::const_iterator item) {
+  mlir::LogicalResult res = mlir::success();
+  for (llvm::omp::Clause synth : item->synthesized) {
+    cgf.getCIRGenModule().errorNYI(s.getSourceRange(),
+                                   (llvm::Twine("OpenMP synthesized '") +
+                                    llvm::omp::getOpenMPClauseName(synth) +
+                                    "' clause from construct decomposition")
+                                       .str());
+    res = mlir::failure();
+  }
+  return res;
+}
+
+static mlir::LogicalResult
+emitParallelClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
+                    CIRGenBuilderTy &builder, mlir::Location loc,
+                    llvm::ArrayRef<const OMPClause *> clauses,
+                    mlir::omp::ParallelOperands &clauseOps) {
+  OpenMPClauseEmitter ce(cgf, cgm, builder, loc, clauses);
   ce.emitProcBind(clauseOps);
-  ce.emitNYI</*supported=*/OMPProcBindClause>(
+  return ce.emitNYI</*supported=*/OMPProcBindClause>(
       /*nyi=*/OpenMPNYIClauseList<
           OMPAllocateClause, OMPCopyinClause, OMPDefaultClause,
           OMPFirstprivateClause, OMPIfClause, OMPNumThreadsClause,
           OMPPrivateClause, OMPReductionClause, OMPSharedClause>{},
       llvm::omp::Directive::OMPD_parallel);
+}
+
+template <typename DirectiveTy>
+static mlir::LogicalResult
+emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
+               const omp::ConstructQueue &queue,
+               omp::ConstructQueue::const_iterator item, mlir::Location begin,
+               mlir::Location end, const mlir::omp::ParallelOperands &clauseOps,
+               llvm::function_ref<mlir::LogicalResult()> emitBody) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  CIRGenModule &cgm = cgf.getCIRGenModule();
 
   auto parallelOp = mlir::omp::ParallelOp::create(builder, begin, clauseOps);
+  if (!omp::isLastItemInQueue(item, queue))
+    parallelOp.setCombined(true);
 
-  {
-    mlir::Block &block = parallelOp.getRegion().emplaceBlock();
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    builder.setInsertionPointToEnd(&block);
+  mlir::Block &block = parallelOp.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
 
-    LexicalScope ls{*this, begin, builder.getInsertionBlock()};
+  CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
 
-    if (s.hasCancel())
-      getCIRGenModule().errorNYI(s.getBeginLoc(),
-                                 "OpenMP Parallel with Cancel");
-    if (s.getTaskReductionRefExpr())
-      getCIRGenModule().errorNYI(s.getBeginLoc(),
-                                 "OpenMP Parallel with Task Reduction");
-    // Don't lower the captured statement directly since this will be
-    // special-cased depending on the kind of OpenMP directive that is the
-    // parent, also the non-OpenMP context captured statements lowering does
-    // not apply directly.
-    const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_parallel);
-    const Stmt *bodyStmt = cs->getCapturedStmt();
-    res = emitStmt(bodyStmt, /*useCurrentScope=*/true);
-    mlir::omp::TerminatorOp::create(builder, end);
+  if (s.hasCancel()) {
+    cgm.errorNYI(s.getBeginLoc(), "OpenMP Parallel with Cancel");
+    return mlir::failure();
   }
+  if (s.getTaskReductionRefExpr()) {
+    cgm.errorNYI(s.getBeginLoc(), "OpenMP Parallel with Task Reduction");
+    return mlir::failure();
+  }
+
+  mlir::LogicalResult res = emitBody();
+  mlir::omp::TerminatorOp::create(builder, end);
   return res;
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator item = queue.begin();
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, item)))
+    return mlir::failure();
+
+  mlir::omp::ParallelOperands clauseOps;
+  if (mlir::failed(emitParallelClauses(*this, getCIRGenModule(), builder, begin,
+                                       item->clauses, clauseOps)))
+    return mlir::failure();
+
+  return emitParallelOp(
+      *this, s, queue, item, begin, end, clauseOps,
+      [&]() -> mlir::LogicalResult {
+        // Don't lower the captured statement directly since this will be
+        // special-cased depending on the kind of OpenMP directive that is the
+        // parent, also the non-OpenMP context captured statements lowering does
+        // not apply directly.
+        const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_parallel);
+        return emitStmt(cs->getCapturedStmt(), /*useCurrentScope=*/true);
+      });
 }
 
 mlir::LogicalResult
@@ -224,25 +280,30 @@ CIRGenFunction::emitOMPAtomicDirective(const OMPAtomicDirective &s) {
 }
 
 /// Check for unsupported implicit captures in a target region.
-static void
-emitOMPTargetImplicitCaptures(CIRGenFunction &cgf, const OMPTargetDirective &s,
+static mlir::LogicalResult
+emitOMPTargetImplicitCaptures(CIRGenFunction &cgf,
+                              const OMPExecutableDirective &s,
                               llvm::ArrayRef<const VarDecl *> mapSyms) {
   const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_target);
+  mlir::LogicalResult res = mlir::success();
   for (const auto &capture : cs->captures()) {
     if (capture.capturesThis()) {
       cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
                                      "OpenMP target capture of 'this' pointer");
+      res = mlir::failure();
       continue;
     }
     if (capture.capturesVariableByCopy()) {
       cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
                                      "OpenMP target capture by copy");
+      res = mlir::failure();
       continue;
     }
     if (capture.capturesVariableArrayType()) {
       cgf.getCIRGenModule().errorNYI(
           s.getBeginLoc(),
           "OpenMP target capture of variable-length array type");
+      res = mlir::failure();
       continue;
     }
     if (capture.capturesVariable()) {
@@ -252,42 +313,70 @@ emitOMPTargetImplicitCaptures(CIRGenFunction &cgf, const OMPTargetDirective &s,
 
       cgf.getCIRGenModule().errorNYI(s.getBeginLoc(),
                                      "OpenMP target implicit by-ref capture");
+      res = mlir::failure();
     }
   }
+  return res;
 }
 
-/// Emit the body of an omp.target region, remapping mapped variables to the
-/// block arguments of the target op's region.
 static mlir::LogicalResult
-emitOMPTargetBody(CIRGenFunction &cgf, const OMPTargetDirective &s,
-                  mlir::omp::TargetOp targetOp,
-                  llvm::ArrayRef<mlir::Value> mapVars,
-                  llvm::ArrayRef<const VarDecl *> mappedVarDecls,
-                  mlir::Location begin, mlir::Location end) {
-  mlir::Block &block = targetOp.getRegion().emplaceBlock();
+emitTargetClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
+                  CIRGenBuilderTy &builder, mlir::Location loc,
+                  llvm::ArrayRef<const OMPClause *> clauses,
+                  mlir::omp::TargetExtOperands &clauseOps,
+                  llvm::SmallVectorImpl<const VarDecl *> &mapSyms) {
+  OpenMPClauseEmitter ce(cgf, cgm, builder, loc, clauses);
+  ce.emitMap(clauseOps, &mapSyms);
+  return ce.emitNYI</*supported=*/OMPMapClause>(
+      /*nyi=*/OpenMPNYIClauseList<
+          OMPAllocateClause, OMPDefaultClause, OMPDefaultmapClause,
+          OMPDependClause, OMPDeviceClause, OMPFirstprivateClause,
+          OMPHasDeviceAddrClause, OMPIfClause, OMPInReductionClause,
+          OMPIsDevicePtrClause, OMPNowaitClause, OMPPrivateClause,
+          OMPThreadLimitClause, OMPUsesAllocatorsClause, OMPXBareClause>{},
+      llvm::omp::Directive::OMPD_target);
+}
 
-  for (mlir::Value mapVar : mapVars)
+template <typename DirectiveTy>
+static mlir::LogicalResult
+emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s,
+             const omp::ConstructQueue &queue,
+             omp::ConstructQueue::const_iterator item, mlir::Location begin,
+             mlir::Location end, mlir::omp::TargetExtOperands &clauseOps,
+             llvm::ArrayRef<const VarDecl *> mapSyms,
+             llvm::function_ref<mlir::LogicalResult()> emitBody) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  if (mlir::failed(emitOMPTargetImplicitCaptures(cgf, s, mapSyms)))
+    return mlir::failure();
+
+  // Use generic for now.
+  clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
+      &cgf.getMLIRContext(), mlir::omp::TargetExecMode::generic);
+
+  auto targetOp = mlir::omp::TargetOp::create(builder, begin, clauseOps);
+  if (!omp::isLastItemInQueue(item, queue))
+    targetOp.setCombined(true);
+
+  mlir::Block &block = targetOp.getRegion().emplaceBlock();
+  for (mlir::Value mapVar : clauseOps.mapVars)
     block.addArgument(mapVar.getType(), begin);
 
-  mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
-  cgf.getBuilder().setInsertionPointToEnd(&block);
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
 
-  CIRGenFunction::LexicalScope ls{cgf, begin,
-                                  cgf.getBuilder().getInsertionBlock()};
+  CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
 
   llvm::SmallVector<std::pair<const VarDecl *, Address>> savedAddrs;
-  for (auto [idx, vd] : llvm::enumerate(mappedVarDecls)) {
+  for (auto [idx, vd] : llvm::enumerate(mapSyms)) {
     Address origAddr = cgf.getAddrOfLocalVar(vd);
     savedAddrs.push_back({vd, origAddr});
     mlir::Value blockArg = block.getArgument(idx);
     cgf.replaceAddrOfLocalVar(vd, Address(blockArg, origAddr.getAlignment()));
   }
 
-  const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_target);
-  mlir::LogicalResult res =
-      cgf.emitStmt(cs->getCapturedStmt(), /*useCurrentScope=*/true);
-
-  mlir::omp::TerminatorOp::create(cgf.getBuilder(), end);
+  mlir::LogicalResult res = emitBody();
+  mlir::omp::TerminatorOp::create(builder, end);
 
   for (auto &[vd, addr] : savedAddrs)
     cgf.replaceAddrOfLocalVar(vd, addr);
@@ -300,30 +389,26 @@ CIRGenFunction::emitOMPTargetDirective(const OMPTargetDirective &s) {
   mlir::Location begin = getLoc(s.getBeginLoc());
   mlir::Location end = getLoc(s.getEndLoc());
 
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator item = queue.begin();
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, item)))
+    return mlir::failure();
+
   mlir::omp::TargetExtOperands clauseOps;
   llvm::SmallVector<const VarDecl *> mapSyms;
+  if (mlir::failed(emitTargetClauses(*this, getCIRGenModule(), builder, begin,
+                                     item->clauses, clauseOps, mapSyms)))
+    return mlir::failure();
 
-  OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
-  ce.emitMap(clauseOps, &mapSyms);
-  ce.emitNYI</*supported=*/OMPMapClause>(
-      /*nyi=*/OpenMPNYIClauseList<
-          OMPAllocateClause, OMPDefaultClause, OMPDefaultmapClause,
-          OMPDependClause, OMPDeviceClause, OMPFirstprivateClause,
-          OMPHasDeviceAddrClause, OMPIfClause, OMPInReductionClause,
-          OMPIsDevicePtrClause, OMPNowaitClause, OMPPrivateClause,
-          OMPThreadLimitClause, OMPUsesAllocatorsClause, OMPXBareClause>{},
-      llvm::omp::Directive::OMPD_target);
-
-  emitOMPTargetImplicitCaptures(*this, s, mapSyms);
-
-  // Use generic for now.
-  clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
-      &getMLIRContext(), mlir::omp::TargetExecMode::generic);
-
-  auto targetOp = mlir::omp::TargetOp::create(builder, begin, clauseOps);
-
-  return emitOMPTargetBody(*this, s, targetOp, clauseOps.mapVars, mapSyms,
-                           begin, end);
+  return emitTargetOp(*this, s, queue, item, begin, end, clauseOps, mapSyms,
+                      [&]() -> mlir::LogicalResult {
+                        const CapturedStmt *cs =
+                            s.getCapturedStmt(llvm::omp::OMPD_target);
+                        return emitStmt(cs->getCapturedStmt(),
+                                        /*useCurrentScope=*/true);
+                      });
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPTeamsDirective(const OMPTeamsDirective &s) {
@@ -361,9 +446,50 @@ mlir::LogicalResult CIRGenFunction::emitOMPTargetExitDataDirective(
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTargetParallelDirective(
     const OMPTargetParallelDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPTargetParallelDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator targetItem = queue.begin();
+  assert(targetItem->id == llvm::omp::OMPD_target &&
+         "expected 'target' to be the outermost leaf");
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, targetItem)))
+    return mlir::failure();
+
+  mlir::omp::TargetExtOperands targetOps;
+  llvm::SmallVector<const VarDecl *> mapSyms;
+  if (mlir::failed(emitTargetClauses(*this, getCIRGenModule(), builder, begin,
+                                     targetItem->clauses, targetOps, mapSyms)))
+    return mlir::failure();
+
+  return emitTargetOp(
+      *this, s, queue, targetItem, begin, end, targetOps, mapSyms,
+      [&]() -> mlir::LogicalResult {
+        omp::ConstructQueue::const_iterator parallelItem =
+            std::next(targetItem);
+        assert(parallelItem != queue.end() &&
+               parallelItem->id == llvm::omp::OMPD_parallel &&
+               "expected a 'parallel' leaf nested in 'target'");
+
+        if (mlir::failed(checkSynthesizedClauses(*this, s, parallelItem)))
+          return mlir::failure();
+
+        mlir::omp::ParallelOperands parallelOps;
+        if (mlir::failed(emitParallelClauses(*this, getCIRGenModule(), builder,
+                                             begin, parallelItem->clauses,
+                                             parallelOps)))
+          return mlir::failure();
+
+        return emitParallelOp(*this, s, queue, parallelItem, begin, end,
+                              parallelOps, [&]() -> mlir::LogicalResult {
+                                const CapturedStmt *cs =
+                                    s.getCapturedStmt(llvm::omp::OMPD_parallel);
+                                return emitStmt(cs->getCapturedStmt(),
+                                                /*useCurrentScope=*/true);
+                              });
+      });
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTargetParallelForDirective(
     const OMPTargetParallelForDirective &s) {
