@@ -291,6 +291,35 @@ private:
   TargetMachine &TM;
 };
 
+// Buffer selected per-thread global memory through LDS to improve
+// performance in memory-bound kernels. This runs late and is separate
+// from alloca promotion.
+enum class AMDGPULDSBufferingMode { Buffer, ShadowLDS, IrrelevantLDS };
+
+struct AMDGPULDSBufferingOptions {
+  unsigned MaxBytes = 64;
+  unsigned MinAlignment = 16;
+  int OnlyCandidate = -1;
+  AMDGPULDSBufferingMode Mode = AMDGPULDSBufferingMode::Buffer;
+};
+
+struct AMDGPULDSBufferingPass : OptionalPassInfoMixin<AMDGPULDSBufferingPass> {
+  AMDGPULDSBufferingPass(
+      const AMDGPUTargetMachine &TM,
+      AMDGPULDSBufferingOptions Options = AMDGPULDSBufferingOptions())
+      : TM(TM), Options(Options) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  const AMDGPUTargetMachine &TM;
+  AMDGPULDSBufferingOptions Options;
+};
+
+// Legacy PM wrapper for LDS buffering
+FunctionPass *createAMDGPULDSBufferingLegacyPass(
+    AMDGPULDSBufferingOptions Options = AMDGPULDSBufferingOptions());
+void initializeAMDGPULDSBufferingLegacyPass(PassRegistry &);
+
 struct AMDGPUAtomicOptimizerPass
     : OptionalPassInfoMixin<AMDGPUAtomicOptimizerPass> {
   AMDGPUAtomicOptimizerPass(TargetMachine &TM, ScanOptions ScanImpl)

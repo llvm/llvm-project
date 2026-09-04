@@ -110,6 +110,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO.h"
@@ -596,6 +597,35 @@ static cl::opt<bool> EnableImageIntrinsicOptimizer(
     cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
     cl::Hidden);
 
+// Gate insertion of the AMDGPU LDS Buffering pass into the default pipeline.
+static cl::opt<bool> EnableLDSBuffering(
+    "amdgpu-enable-lds-buffering",
+    cl::desc("Enable AMDGPU LDS Buffering pass in the default pipeline"),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<unsigned> LDSBufferingMinAlignment(
+    "amdgpu-lds-buffering-min-align",
+    cl::desc("Minimum load/store alignment for AMDGPU LDS buffering"),
+    cl::init(16), cl::Hidden);
+
+static cl::opt<int> LDSBufferingOnlyCandidate(
+    "amdgpu-lds-buffering-only-candidate",
+    cl::desc("Transform only the selected zero-based LDS buffering candidate "
+             "(-1 transforms all candidates)"),
+    cl::init(-1), cl::Hidden);
+
+static cl::opt<AMDGPULDSBufferingMode> LDSBufferingMode(
+    "amdgpu-lds-buffering-mode",
+    cl::desc("Select AMDGPU LDS buffering experiment mode"),
+    cl::values(
+        clEnumValN(AMDGPULDSBufferingMode::Buffer, "buffer",
+                   "Buffer the candidate value through LDS"),
+        clEnumValN(AMDGPULDSBufferingMode::ShadowLDS, "shadow-lds",
+                   "Copy the candidate through LDS without replacing it"),
+        clEnumValN(AMDGPULDSBufferingMode::IrrelevantLDS, "irrelevant-lds",
+                   "Keep the candidate live and add unrelated LDS traffic")),
+    cl::init(AMDGPULDSBufferingMode::Buffer), cl::Hidden);
+
 static cl::opt<bool>
     EnableLoopPrefetch("amdgpu-loop-prefetch",
                        cl::desc("Enable loop data prefetch on AMDGPU"),
@@ -719,6 +749,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
+  initializeAMDGPULDSBufferingLegacyPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
@@ -989,6 +1020,81 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   if (Result)
     return *Result;
   return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
+}
+
+static Expected<AMDGPULDSBufferingOptions>
+parseAMDGPULDSBufferingOptions(StringRef Params) {
+  AMDGPULDSBufferingOptions Result;
+  while (!Params.empty()) {
+    StringRef Param;
+    std::tie(Param, Params) = Params.split(';');
+    if (Param.empty())
+      continue;
+    if (Param.consume_front("max-bytes=")) {
+      unsigned Parsed = 0;
+      if (Param.getAsInteger(10, Parsed)) {
+        return make_error<StringError>(
+            formatv("invalid AMDGPU LDS buffering max-bytes '{0}'", Param)
+                .str(),
+            inconvertibleErrorCode());
+      }
+      Result.MaxBytes = Parsed;
+      continue;
+    }
+    if (Param.consume_front("min-align=")) {
+      unsigned Parsed = 0;
+      if (Param.getAsInteger(10, Parsed) || !isPowerOf2_64(Parsed)) {
+        return make_error<StringError>(
+            formatv("invalid AMDGPU LDS buffering min-align '{0}'", Param)
+                .str(),
+            inconvertibleErrorCode());
+      }
+      Result.MinAlignment = Parsed;
+      continue;
+    }
+    if (Param.consume_front("only-candidate=")) {
+      int Parsed = 0;
+      if (Param.getAsInteger(10, Parsed) || Parsed < -1) {
+        return make_error<StringError>(
+            formatv("invalid AMDGPU LDS buffering only-candidate '{0}'", Param)
+                .str(),
+            inconvertibleErrorCode());
+      }
+      Result.OnlyCandidate = Parsed;
+      continue;
+    }
+    if (Param.consume_front("mode=")) {
+      if (Param == "buffer")
+        Result.Mode = AMDGPULDSBufferingMode::Buffer;
+      else if (Param == "shadow-lds")
+        Result.Mode = AMDGPULDSBufferingMode::ShadowLDS;
+      else if (Param == "irrelevant-lds")
+        Result.Mode = AMDGPULDSBufferingMode::IrrelevantLDS;
+      else
+        return make_error<StringError>(
+            formatv("invalid AMDGPU LDS buffering mode '{0}'", Param).str(),
+            inconvertibleErrorCode());
+      continue;
+    }
+    {
+      return make_error<StringError>(
+          formatv("invalid AMDGPU LDS buffering pass parameter '{0}'", Param)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+static AMDGPULDSBufferingOptions getPipelineLDSBufferingOptions() {
+  if (!isPowerOf2_64(LDSBufferingMinAlignment))
+    report_fatal_error("AMDGPU LDS buffering minimum alignment must be a "
+                       "nonzero power of two");
+  if (LDSBufferingOnlyCandidate < -1)
+    report_fatal_error(
+        "AMDGPU LDS buffering candidate index must be -1 or nonnegative");
+  return {/*MaxBytes=*/64, LDSBufferingMinAlignment, LDSBufferingOnlyCandidate,
+          LDSBufferingMode};
 }
 
 Expected<AMDGPUAttributorOptions>
@@ -1615,6 +1721,10 @@ void AMDGPUPassConfig::addIRPasses() {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createAMDGPUPromoteAlloca());
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    if (TM.getTargetTriple().isAMDGCN() && EnableLDSBuffering)
+      addPass(
+          createAMDGPULDSBufferingLegacyPass(getPipelineLDSBufferingOptions()));
 
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
@@ -2400,6 +2510,11 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
+    // Run per-thread LDS buffering after promote-alloca to use leftover LDS.
+    if (TM.getTargetTriple().isAMDGCN() && EnableLDSBuffering)
+      addFunctionPass(
+          AMDGPULDSBufferingPass(getTM(), getPipelineLDSBufferingOptions()),
+          PMW);
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses(PMW);
 
