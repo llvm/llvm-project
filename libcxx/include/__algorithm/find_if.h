@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter, class _Sent, class _Pred, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _Iter
 __find_if(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
-  std::__assume_valid_range(__first, __last);
+  // std::__assume_valid_range(__first, __last);
 
   for (; __first != __last; ++__first)
     if (std::__invoke(__pred, std::__invoke(__proj, *__first)))
