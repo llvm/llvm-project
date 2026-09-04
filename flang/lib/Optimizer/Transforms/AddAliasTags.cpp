@@ -359,14 +359,13 @@ void PassState::collectCrayPointerTargets(mlir::ModuleOp module) {
         targetSource.kind == fir::AliasAnalysis::SourceKind::Unknown)
       return;
 
-    if (mlir::func::FuncOp func =
-            store->getParentOfType<mlir::func::FuncOp>())
+    if (mlir::func::FuncOp func = store->getParentOfType<mlir::func::FuncOp>())
       crayPointerTargets[func].insert(targetDecl);
   });
 }
 
-bool PassState::isCrayPointerTarget(
-    const fir::AliasAnalysis::Source &source, mlir::func::FuncOp func) const {
+bool PassState::isCrayPointerTarget(const fir::AliasAnalysis::Source &source,
+                                    mlir::func::FuncOp func) const {
   mlir::Operation *decl = source.origin.instantiationPoint;
   auto funcIt = crayPointerTargets.find(func);
   return decl && funcIt != crayPointerTargets.end() &&
