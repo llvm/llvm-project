@@ -83,12 +83,22 @@ namespace LIBC_NAMESPACE_DECL {
 
 extern "C" int *__llvm_libc_errno() noexcept;
 
-struct Errno {
+// libm.so and libmvec.so must share libc.so's errno, so these cannot keep the
+// hidden visibility the surrounding namespace applies.
+#ifdef LIBC_COPT_SHARED_LIBRARY
+#define LIBC_ERRNO_VISIBILITY __attribute__((visibility("default")))
+#else
+#define LIBC_ERRNO_VISIBILITY
+#endif
+
+struct LIBC_ERRNO_VISIBILITY Errno {
   void operator=(int);
   operator int();
 };
 
-extern Errno libc_errno;
+extern LIBC_ERRNO_VISIBILITY Errno libc_errno;
+
+#undef LIBC_ERRNO_VISIBILITY
 
 } // namespace LIBC_NAMESPACE_DECL
 
