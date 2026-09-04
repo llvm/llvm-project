@@ -3320,6 +3320,12 @@ Value *LibCallSimplifier::optimizeDiv(CallInst *CI, IRBuilderBase &B) {
   if (!Callee || CI->getFunctionType() != Callee->getFunctionType())
     return nullptr;
 
+  // Only fold calls that reach a genuine libc declaration. A definition in
+  // this module with the same name may have unrelated semantics and side
+  // effects that folding would discard.
+  if (!Callee->isDeclaration())
+    return nullptr;
+
   bool UsesSRet = CI->getType()->isVoidTy();
   unsigned ArgOffset = UsesSRet ? 1 : 0;
   if (UsesSRet) {
