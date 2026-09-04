@@ -88,9 +88,9 @@ public:
         if (NameAttr)
           Global->addAttribute("wasm-import-name", NameAttr->getImportName());
       }
-        if (const auto *Attr = VD->getAttr<WebAssemblyExportNameAttr>()) {
-          Global->addAttribute("wasm-export-name", Attr->getExportName());
-        }
+      if (const auto *Attr = VD->getAttr<WebAssemblyExportNameAttr>()) {
+        Global->addAttribute("wasm-export-name", Attr->getExportName());
+      }
     } else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
       auto *Fn = cast<llvm::Function>(GV);
       const auto *ModuleAttr = FD->getAttr<WebAssemblyImportModuleAttr>();
