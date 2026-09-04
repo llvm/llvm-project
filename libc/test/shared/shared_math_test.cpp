@@ -583,7 +583,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
   Float128 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
-  Float128 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  Float128 min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::atan2f128(Float128(0.0), Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
@@ -704,7 +704,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(float128(0.0), setpayloadsigf128_res);
 
   float128 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
-  float128 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  float128 min_denormal = FPBits::min_subnormal(Sign::POS).get_val();
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
   EXPECT_FP_EQ(10.0f16, LIBC_NAMESPACE::shared::f16fmaf128(
