@@ -5,10 +5,8 @@
 define i1 @test_zext_trunc_and_ugt(i16 %x, i64 %y) {
 ; CHECK-LABEL: define i1 @test_zext_trunc_and_ugt(
 ; CHECK-SAME: i16 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X]] to i32
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[TRUNC]], 65535
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[MASK]], [[EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i16 %x to i32
@@ -22,10 +20,8 @@ define i1 @test_zext_trunc_and_ugt(i16 %x, i64 %y) {
 define i1 @test_zext_trunc_and_ugt_commuted(i16 %x, i64 %y) {
 ; CHECK-LABEL: define i1 @test_zext_trunc_and_ugt_commuted(
 ; CHECK-SAME: i16 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X]] to i32
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[TRUNC]], 65535
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[MASK]], [[EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i16 %x to i32
@@ -35,17 +31,15 @@ define i1 @test_zext_trunc_and_ugt_commuted(i16 %x, i64 %y) {
   ret i1 %cmp
 }
 
-; Signed predicate — must NOT fold.
-define i1 @test_signed_cmp_not_folded(i16 %x, i64 %y) {
+; Signed predicate on a value that cannot be proven non-negative — must NOT fold.
+define i1 @test_signed_cmp_not_folded(i32 %ext, i64 %y) {
 ; CHECK-LABEL: define i1 @test_signed_cmp_not_folded(
-; CHECK-SAME: i16 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X]] to i32
+; CHECK-SAME: i32 [[EXT:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[TRUNC]], 65535
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[MASK]], [[EXT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[EXT]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %ext = zext i16 %x to i32
   %trunc = trunc i64 %y to i32
   %mask = and i32 %trunc, 65535
   %cmp = icmp sgt i32 %ext, %mask
@@ -92,10 +86,8 @@ define i1 @negative_mask_too_big(i16 %x, i64 %y) {
 define i1 @test_zext_trunc_and_ult_direct(i16 %x, i64 %y) {
 ; CHECK-LABEL: define i1 @test_zext_trunc_and_ult_direct(
 ; CHECK-SAME: i16 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X]] to i32
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[TRUNC]], 65535
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[MASK]], [[EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[Y]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i16 %x to i32

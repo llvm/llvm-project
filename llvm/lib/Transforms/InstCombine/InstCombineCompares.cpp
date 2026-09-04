@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -6575,6 +6576,27 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
     return new ICmpInst(ICmp.getUnsignedPredicate(), X, Y);
   }
 
+  // Operand(0) is already known to be a zero extension of X
+  // check if operand(1) is an AND between a truncated Y and a constant mask
+  const APInt *Mask;
+  if (!IsSignedExt && !IsSignedCmp &&
+      match(ICmp.getOperand(1),
+            m_OneUse(m_c_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
+    // get the bit width of X.
+    Type *SmallType = X->getType();
+    unsigned SmallWidth = SmallType->getScalarSizeInBits();
+
+    // if the mask only uses bits that fit in X, the higher bits are zero
+    //  this means we can safely truncate Y to X's type
+    if (*Mask == APInt::getLowBitsSet(Mask->getBitWidth(), SmallWidth)) {
+      // truncate Y directly to type of X
+      Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
+      // use the unsigned predicate since both values now have the same width.
+
+      return new ICmpInst(ICmp.getUnsignedPredicate(), X, NewTrunc);
+    }
+  }
+
   // Below here, we are only folding a compare with constant.
   auto *C = dyn_cast<Constant>(ICmp.getOperand(1));
   if (!C)
@@ -6626,12 +6648,42 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
     return new ICmpInst(ICmp.getPredicate(),
                         SimplifiedOp0 ? SimplifiedOp0 : ICmp.getOperand(0),
                         SimplifiedOp1 ? SimplifiedOp1 : ICmp.getOperand(1));
+  // Catch the mirrored operand order: icmp Pred (and (trunc Y), Mask), (zext
+  // X). Canonicalization (like ugt -> ult) often swaps operands, pushing the
+  // zext to Operand 1. We need to handle this to avoid missing optimizations.
+  {
+    Value *X, *Y;
+    const APInt *Mask;
 
+    // Ensure we have an unsigned compare with a zext on the right side.
+    // Then look for our one use AND with a mask on the left.
+    if (match(ICmp.getOperand(1), m_ZExt(m_Value(X))) && !ICmp.isSigned() &&
+        match(ICmp.getOperand(0),
+              m_OneUse(m_c_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
+
+      Type *SmallType = X->getType();
+      unsigned SmallWidth = SmallType->getScalarSizeInBits();
+
+      // If the mask exactly covers the bits of the narrower type, the higher
+      // bits are already guaranteed to be zero. We can bypass the extension and
+      // compare the truncated values directly.
+      if (*Mask == APInt::getLowBitsSet(Mask->getBitWidth(), SmallWidth)) {
+        Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
+
+        // Preserve the original comparison logic by swapping the predicate back
+        // and comparing our newly truncated Y against X.
+
+        return new ICmpInst(ICmp.getUnsignedPredicate(), NewTrunc, X);
+      }
+    }
+  }
   auto *CastOp0 = dyn_cast<CastInst>(ICmp.getOperand(0));
   Value *Op1 = ICmp.getOperand(1);
   if (!CastOp0)
     return nullptr;
-  if (!isa<Constant>(ICmp.getOperand(1)) && !isa<CastInst>(ICmp.getOperand(1)))
+  if (!isa<Constant>(ICmp.getOperand(1)) &&
+      !isa<CastInst>(ICmp.getOperand(1)) &&
+      !isa<BinaryOperator>(ICmp.getOperand(1)))
     return nullptr;
 
   Value *Op0Src = CastOp0->getOperand(0);
