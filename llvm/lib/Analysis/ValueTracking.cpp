@@ -5182,13 +5182,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
 
   if (isa<ConstantAggregateZero>(V)) {
-    Known.KnownFPClasses = fcPosZero;
+    Known.setKnownFPClasses(fcPosZero);
     Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
-    Known.KnownFPClasses = fcNone;
+    Known.setKnownFPClasses(fcNone);
     Known.setSignBit(false);
     return;
   }
@@ -5197,7 +5197,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
   const Constant *CV = dyn_cast<Constant>(V);
   if (VFVTy && CV) {
-    Known.KnownFPClasses = fcNone;
+    Known.setKnownFPClasses(fcNone);
     bool SignBitAllZero = true;
     bool SignBitAllOne = true;
 
@@ -5221,7 +5221,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
 
       const APFloat &C = CElt->getValueAPF();
-      Known.KnownFPClasses |= C.classify();
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
       if (C.isNegative())
         SignBitAllZero = false;
       else
@@ -5233,7 +5233,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-    Known.KnownFPClasses = fcNone;
+    Known.setKnownFPClasses(fcNone);
     for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
       Known |= CDS->getElementAsAPFloat(I).classify();
     return;
@@ -5241,7 +5241,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
     // TODO: Handle complex aggregates
-    Known.KnownFPClasses = fcNone;
+    Known.setKnownFPClasses(fcNone);
     for (const Use &Op : CA->operands()) {
       auto *CFP = dyn_cast<ConstantFP>(Op.get());
       if (!CFP) {
@@ -5270,7 +5270,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
 
   KnownFPClass AssumedClasses = computeKnownFPClassFromContext(V, Q);
-  KnownNotFromFlags |= ~AssumedClasses.KnownFPClasses;
+  KnownNotFromFlags |= ~AssumedClasses.getKnownFPClasses();
 
   // We no longer need to find out about these bits from inputs if we can
   // assume this from flags/attributes.
@@ -5722,7 +5722,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       const Value *ExpArg = II->getArgOperand(1);
       ConstantRange ExpKnownRange =
-          ((KnownSrc.KnownFPClasses & ExpInfoMask) != fcNone)
+          ((KnownSrc.getKnownFPClasses() & ExpInfoMask) != fcNone)
               ? computeConstantRange(ExpArg, /*ForSigned=*/true, Q, Depth + 1)
               : ConstantRange::getFull(
                     ExpArg->getType()->getScalarSizeInBits());
@@ -6010,7 +6010,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
       // X / X is always exactly 1.0 or a NaN.
-      Known.KnownFPClasses = fcNan | fcPosNormal;
+      Known.setKnownFPClasses(fcNan | fcPosNormal);
 
       if (!WantNan)
         break;
@@ -6059,7 +6059,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
       // X % X is always exactly [+-]0.0 or a NaN.
-      Known.KnownFPClasses = fcNan | fcZero;
+      Known.setKnownFPClasses(fcNan | fcZero);
 
       if (!WantNan)
         break;
@@ -6212,7 +6212,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.KnownFPClasses = fcNone;
+      Known.setKnownFPClasses(fcNone);
     }
 
     // Do we need anymore elements from Vec?
@@ -6248,7 +6248,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.KnownFPClasses = fcNone;
+      Known.setKnownFPClasses(fcNone);
     }
 
     if (!!DemandedRHS) {
@@ -6335,7 +6335,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known |= KnownSrc;
         }
 
-        if (Known.KnownFPClasses == fcAllFlags)
+        if (Known.getKnownFPClasses() == fcAllFlags)
           break;
       }
     }
@@ -6450,9 +6450,9 @@ llvm::computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(V, DemandedElts, InterestedClasses, SQ, Depth);
 
   if (FMF.noNaNs())
-    Result.KnownFPClasses &= ~fcNan;
+    Result.setKnownFPClasses(Result.getKnownFPClasses() & ~fcNan);
   if (FMF.noInfs())
-    Result.KnownFPClasses &= ~fcInf;
+    Result.setKnownFPClasses(Result.getKnownFPClasses() & ~fcInf);
   return Result;
 }
 

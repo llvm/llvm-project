@@ -30,7 +30,7 @@ static void expectConstant(const char *SemanticsName, const char *ValueName,
       KnownFPClass::bitcast(Semantics, KnownBits::makeConstant(ValueBits));
   FPClassTest ExpectedClass =
       Negative ? llvm::fneg(PositiveClass) : PositiveClass;
-  EXPECT_EQ(ExpectedClass, Known.KnownFPClasses);
+  EXPECT_EQ(ExpectedClass, Known.getKnownFPClasses());
   EXPECT_EQ(Negative, Known.getSignBit());
 }
 
@@ -43,7 +43,8 @@ TEST(KnownFPClassTest, BitcastExhaustiveIEEEHalf) {
         KnownFPClass::bitcast(Semantics, KnownBits::makeConstant(ValueBits));
     KnownFPClass Expected(APFloat(Semantics, ValueBits));
 
-    ASSERT_EQ(Expected.KnownFPClasses, Known.KnownFPClasses) << RawBits;
+    ASSERT_EQ(Expected.getKnownFPClasses(), Known.getKnownFPClasses())
+        << RawBits;
     ASSERT_EQ(Expected.getSignBit(), Known.getSignBit()) << RawBits;
   }
 }
@@ -55,7 +56,7 @@ TEST(KnownFPClassTest, BitcastConflict) {
 
   ASSERT_TRUE(Bits.hasConflict());
   KnownFPClass Known = KnownFPClass::bitcast(Semantics, Bits);
-  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
@@ -67,7 +68,7 @@ TEST(KnownFPClassTest, BitcastPartialConflict) {
 
   ASSERT_TRUE(Bits.hasConflict());
   KnownFPClass Known = KnownFPClass::bitcast(Semantics, Bits);
-  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 

@@ -16958,16 +16958,16 @@ SDValue DAGCombiner::visitIS_FPCLASS(SDNode *N) {
   KnownFPClass Known = DAG.computeKnownFPClass(Src, Mask);
 
   // All possible classes are within the mask: result is always true.
-  if ((~Mask & Known.KnownFPClasses) == fcNone)
+  if ((~Mask & Known.getKnownFPClasses()) == fcNone)
     return DAG.getBoolConstant(true, DL, VT, Src.getValueType());
 
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
   // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
-  if ((Mask & Known.KnownFPClasses) != Mask) {
+  if ((Mask & Known.getKnownFPClasses()) != Mask) {
     return DAG.getNode(
         ISD::IS_FPCLASS, DL, VT, Src,
-        DAG.getTargetConstant(Mask & Known.KnownFPClasses, DL, MVT::i32),
+        DAG.getTargetConstant(Mask & Known.getKnownFPClasses(), DL, MVT::i32),
         N->getFlags());
   }
 

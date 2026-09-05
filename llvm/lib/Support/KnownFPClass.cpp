@@ -18,9 +18,8 @@
 
 using namespace llvm;
 
-KnownFPClass::KnownFPClass(const APFloat &C) : KnownFPClasses(C.classify()) {
-  setSignBit(C.isNegative());
-}
+KnownFPClass::KnownFPClass(const APFloat &C)
+    : KnownFPClass(C.classify(), C.isNegative()) {}
 
 /// Return true if it's possible to assume IEEE treatment of input denormals in
 /// \p F for \p Val.
@@ -68,7 +67,7 @@ bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
 
 void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
                                      DenormalMode Mode) {
-  KnownFPClasses = Src.KnownFPClasses;
+  setKnownFPClasses(Src.getKnownFPClasses());
   // If we aren't assuming the source can't be a zero, we don't have to check if
   // a denormal input could be flushed.
   if (!Src.isKnownNeverPosZero() && !Src.isKnownNeverNegZero())
@@ -79,17 +78,17 @@ void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
     return;
 
   if (!Src.isKnownNeverPosSubnormal() && Mode != DenormalMode::getIEEE())
-    KnownFPClasses |= fcPosZero;
+    setKnownFPClasses(getKnownFPClasses() | fcPosZero);
 
   if (!Src.isKnownNeverNegSubnormal() && Mode != DenormalMode::getIEEE()) {
     if (Mode != DenormalMode::getPositiveZero())
-      KnownFPClasses |= fcNegZero;
+      setKnownFPClasses(getKnownFPClasses() | fcNegZero);
 
     if (Mode.Input == DenormalMode::PositiveZero ||
         Mode.Output == DenormalMode::PositiveZero ||
         Mode.Input == DenormalMode::Dynamic ||
         Mode.Output == DenormalMode::Dynamic)
-      KnownFPClasses |= fcPosZero;
+      setKnownFPClasses(getKnownFPClasses() | fcPosZero);
   }
 }
 
@@ -110,20 +109,20 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
 
   if (Kind == MinMaxKind::maxnum || Kind == MinMaxKind::maximumnum) {
     if (KnownLHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyLess(KnownLHS.KnownFPClasses));
+      Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses()));
     if (KnownRHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyLess(KnownRHS.KnownFPClasses));
+      Known.knownNot(orderedStrictlyLess(KnownRHS.getKnownFPClasses()));
   } else if (Kind == MinMaxKind::maximum) {
-    Known.knownNot(orderedStrictlyLess(KnownLHS.KnownFPClasses) |
-                   orderedStrictlyLess(KnownRHS.KnownFPClasses));
+    Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses()) |
+                   orderedStrictlyLess(KnownRHS.getKnownFPClasses()));
   } else if (Kind == MinMaxKind::minnum || Kind == MinMaxKind::minimumnum) {
     if (KnownLHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyGreater(KnownLHS.KnownFPClasses));
+      Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses()));
     if (KnownRHS.isKnownNeverNaN())
-      Known.knownNot(orderedStrictlyGreater(KnownRHS.KnownFPClasses));
+      Known.knownNot(orderedStrictlyGreater(KnownRHS.getKnownFPClasses()));
   } else if (Kind == MinMaxKind::minimum) {
-    Known.knownNot(orderedStrictlyGreater(KnownLHS.KnownFPClasses) |
-                   orderedStrictlyGreater(KnownRHS.KnownFPClasses));
+    Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses()) |
+                   orderedStrictlyGreater(KnownRHS.getKnownFPClasses()));
   } else
     llvm_unreachable("unhandled intrinsic");
 
@@ -134,10 +133,10 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
   // subtargets on AMDGPU the min/max instructions would not flush the
   // output and return the original value.
   //
-  if ((Known.KnownFPClasses & fcZero) != fcNone &&
+  if ((Known.getKnownFPClasses() & fcZero) != fcNone &&
       !Known.isKnownNeverSubnormal()) {
     if (Mode != DenormalMode::getIEEE())
-      Known.KnownFPClasses |= fcZero;
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcZero);
   }
 
   if (Known.isKnownNeverNaN()) {
@@ -184,7 +183,7 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
 
   // Canonicalize may flush denormals to zero, so we have to consider the
   // denormal mode to preserve known-not-0 knowledge.
-  Known.KnownFPClasses = KnownSrc.KnownFPClasses | fcZero | fcQNan;
+  Known.setKnownFPClasses(KnownSrc.getKnownFPClasses() | fcZero | fcQNan);
 
   // Stronger version of propagateNaN
   // Canonicalize is guaranteed to quiet signaling nans.
@@ -297,7 +296,7 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
 
 KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
   KnownBits Known(FltSemantics.sizeInBits);
-  const FPClassTest FPClasses = KnownFPClasses;
+  const FPClassTest FPClasses = getKnownFPClasses();
 
   // Return unknown if poison.
   if (FPClasses == fcNone)
@@ -813,16 +812,18 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
 
   // All subnormal inputs should be in the normal range in the result type.
   if (APFloat::isRepresentableAsNormalIn(SrcTy, DstTy)) {
-    if (Known.KnownFPClasses & fcPosSubnormal)
-      Known.KnownFPClasses |= fcPosNormal;
-    if (Known.KnownFPClasses & fcNegSubnormal)
-      Known.KnownFPClasses |= fcNegNormal;
+    if (Known.getKnownFPClasses() & fcPosSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosNormal);
+    if (Known.getKnownFPClasses() & fcNegSubnormal)
+      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegNormal);
     Known.knownNot(fcSubnormal);
   }
 
   // Sign bit of a nan isn't guaranteed.
-  if (!Known.isKnownNeverNaN())
-    Known.setSignBit(std::nullopt);
+  if (Known.KnownFPMask & kfcSNan)
+    Known.KnownFPMask |= kfcSNan;
+  if (Known.KnownFPMask & kfcQNan)
+    Known.KnownFPMask |= kfcQNan;
 
   return Known;
 }
