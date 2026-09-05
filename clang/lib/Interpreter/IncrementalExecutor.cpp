@@ -54,6 +54,8 @@
 #include <string>
 #include <utility>
 
+#define DEBUG_TYPE "orc"
+
 #ifdef LLVM_ON_UNIX
 #include <netdb.h>
 #include <netinet/in.h>
@@ -413,6 +415,12 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
     if (!JB)
       return JB.takeError();
     JITBuilder = std::move(*JB);
+    if (!OrcRuntimePath.empty()) {
+      JITBuilder->setPlatformSetUp(
+          llvm::orc::ExecutorNativePlatform(OrcRuntimePath));
+    } else {
+      LLVM_DEBUG({ llvm::dbgs() << "OrcRuntime library not found.\n"; });
+    }
     // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
     // (which provides __emutls_get_address and supports the full TLS
     // lifecycle). That will also remove the in-process-only constraint below.
