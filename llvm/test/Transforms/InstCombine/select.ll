@@ -5800,3 +5800,165 @@ entry:
   call void @use_v2i64(<2 x i64> %neg)
   ret <2 x i64> %r
 }
+
+; Fold `select (icmp ne (and A, B), B), (or A, B), A` (and the equivalent `eq`
+; spelling) to `or A, B`: when (A & B) == B, A already equals A | B.
+
+define i32 @and_or_subset_ne(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_ne(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %b
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+define i32 @and_or_subset_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_eq(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp eq i32 %and, %b
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %a, i32 %or
+  ret i32 %sel
+}
+
+define i32 @and_or_subset_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_commuted(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %b, %a
+  %cmp = icmp ne i32 %and, %b
+  %or = or i32 %b, %a
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+define i32 @and_or_subset_swapped_cmp(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_swapped_cmp(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %b, %and
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+; Compare the 'and' against its other operand: subset arm is %b.
+define i32 @and_or_subset_other_operand(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_other_operand(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[B]], [[A]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %a
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %b
+  ret i32 %sel
+}
+
+define <2 x i32> @and_or_subset_vec(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: define <2 x i32> @and_or_subset_vec(
+; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or <2 x i32> [[A]], [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %and = and <2 x i32> %a, %b
+  %cmp = icmp ne <2 x i32> %and, %b
+  %or = or <2 x i32> %a, %b
+  %sel = select <2 x i1> %cmp, <2 x i32> %or, <2 x i32> %a
+  ret <2 x i32> %sel
+}
+
+; The matched 'or' is 'disjoint'. The result must be a flag-free 'or': on the
+; path where the false arm (%a) is chosen, `or disjoint %a, %b` may be poison
+; while %a is not, so reusing it would be a miscompile.
+define i32 @and_or_subset_disjoint(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_disjoint(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %b
+  %or = or disjoint i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+define i32 @and_or_subset_disjoint_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_disjoint_eq(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp eq i32 %and, %b
+  %or = or disjoint i32 %a, %b
+  %sel = select i1 %cmp, i32 %a, i32 %or
+  ret i32 %sel
+}
+
+; The 'or' has an extra use: still fold the select to a fresh 'or'.
+define i32 @and_or_subset_multiuse(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @and_or_subset_multiuse(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    call void @use_i32(i32 [[OR]])
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %b
+  %or = or i32 %a, %b
+  call void @use_i32(i32 %or)
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+; Negative: the compare is against an unrelated value, so no subset is proven.
+define i32 @and_or_subset_neg_wrong_cmp(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i32 @and_or_subset_neg_wrong_cmp(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP_NOT]], i32 0, i32 [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A]], [[OR]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %c
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %a
+  ret i32 %sel
+}
+
+; Negative: the non-'or' arm is not the superset operand.
+define i32 @and_or_subset_neg_wrong_arm(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i32 @and_or_subset_neg_wrong_arm(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[B]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP_NOT]], i32 [[C]], i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %and = and i32 %a, %b
+  %cmp = icmp ne i32 %and, %b
+  %or = or i32 %a, %b
+  %sel = select i1 %cmp, i32 %or, i32 %c
+  ret i32 %sel
+}
