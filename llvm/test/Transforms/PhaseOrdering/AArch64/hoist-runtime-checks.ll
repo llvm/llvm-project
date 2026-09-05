@@ -22,7 +22,6 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK11:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK11]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH1:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 12
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 4294967280
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -47,6 +46,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 12
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[BIN_RDX18:%.*]] = add <4 x i32> [[TMP10]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX19:%.*]] = add <4 x i32> [[TMP9]], [[BIN_RDX18]]
@@ -173,7 +173,6 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK9:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK9]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH1:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 12
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -16
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -198,6 +197,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 12
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[BIN_RDX16:%.*]] = add <4 x i32> [[TMP9]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX17:%.*]] = add <4 x i32> [[TMP8]], [[BIN_RDX16]]

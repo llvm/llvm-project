@@ -11,13 +11,13 @@ define i64 @count_then_convert(ptr %end) {
 ; CHECK-NEXT:    [[ISEMPTY:%.*]] = icmp eq ptr [[END]], null
 ; CHECK-NEXT:    br i1 [[ISEMPTY]], label %[[EXIT:.*]], label %[[BODY_PH:.*]]
 ; CHECK:       [[BODY_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[BODY]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CNT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP2]], %[[EXIT_LOOPEXIT]] ]
