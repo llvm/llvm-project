@@ -30,7 +30,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -792,7 +791,7 @@ bool AArch64RegisterInfo::requiresFrameIndexScavenging(
 bool
 AArch64RegisterInfo::cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
+  if (MF.disableFramePointerElim() && MFI.adjustsStack())
     return true;
   return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
 }
