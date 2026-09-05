@@ -443,34 +443,46 @@ bool TargetRegisterInfo::getRegAllocationHints(
   return false;
 }
 
+bool TargetRegisterInfo::isAntiHintedReg(
+    MCPhysReg Reg, const BitVector &AntiHintedRegUnits) const {
+  return llvm::any_of(regunits(Reg), [&](MCRegUnit Unit) {
+    return AntiHintedRegUnits.test(static_cast<unsigned>(Unit));
+  });
+}
+
 void TargetRegisterInfo::applyRegAllocationAntiHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
-    SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
-    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix) const {
 
-  if (AntiHints.empty() || !VRM)
+  if (AntiHintedRegUnits.none())
     return;
-
-  auto isAntiHinted = [&](MCPhysReg Reg) {
-    return llvm::any_of(AntiHints, [&](MCPhysReg AntiHint) {
-      return regsOverlap(Reg, AntiHint);
-    });
-  };
 
   HintsAndCustomOrder.truncate(NumHints);
   HintsAndCustomOrder.append(Order.begin(), Order.end());
 
-  // Partition non-anti-hinted register go first
+  // Custom reordering of the allocation order.
+  filterAndSortForAntiHintedRegs(
+      VirtReg,
+      MutableArrayRef<MCPhysReg>(HintsAndCustomOrder).drop_front(NumHints),
+      AntiHintedRegUnits, MF, Matrix);
+}
+
+void TargetRegisterInfo::filterAndSortForAntiHintedRegs(
+    Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix) const {
+
+  // Partition non-anti-hinted register go first.
   auto *PartitionPoint = std::stable_partition(
-      HintsAndCustomOrder.begin() + NumHints, HintsAndCustomOrder.end(),
-      [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
+      CustomOrder.begin(), CustomOrder.end(),
+      [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
 
   LLVM_DEBUG({
     size_t NonAntiHintedCount =
-        std::distance(HintsAndCustomOrder.begin() + NumHints, PartitionPoint);
-    size_t AntiHintedCount =
-        std::distance(PartitionPoint, HintsAndCustomOrder.end());
+        std::distance(CustomOrder.begin(), PartitionPoint);
+    size_t AntiHintedCount = std::distance(PartitionPoint, CustomOrder.end());
     dbgs() << "Added " << NonAntiHintedCount
            << " non-anti-hinted registers first\n"
            << "Added " << AntiHintedCount
