@@ -602,6 +602,51 @@ func.func @vector_constant_mask() -> vector<16x16xi1> {
 
 // -----
 
+func.func @vector_constant_mask_empty_tile() -> vector<16x16xi1> {
+  %0 = vector.constant_mask [4, 10] : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask_empty_tile
+//   CHECK-DAG:   arith.constant dense<false> : vector<16x16xi1>
+//   CHECK-DAG:   arith.constant dense<false> : vector<8x8xi1>
+//       CHECK:   vector.constant_mask [4, 8] : vector<8x8xi1>
+//       CHECK:   vector.constant_mask [4, 2] : vector<8x8xi1>
+// Negative check: no partially-zero tile is emitted.
+//   CHECK-NOT:   vector.constant_mask [0,
+
+// -----
+
+func.func @vector_create_mask_rank_mismatch(%size1: index) -> vector<2x8x8xi1> {
+  %c8 = arith.constant 8 : index
+  %0 = vector.create_mask %c8, %size1, %c8 : vector<2x8x8xi1>
+  return %0 : vector<2x8x8xi1>
+}
+
+// CHECK-LABEL: func @vector_create_mask_rank_mismatch
+//       CHECK:   vector.create_mask {{.*}} : vector<1x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   vector.create_mask {{.*}} : vector<1x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+
+// -----
+
+func.func @vector_constant_mask_rank_mismatch() -> vector<2x8x8xi1> {
+  %0 = vector.constant_mask [1, 4, 8] : vector<2x8x8xi1>
+  return %0 : vector<2x8x8xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask_rank_mismatch
+//   CHECK-DAG:   arith.constant dense<false> : vector<2x8x8xi1>
+//   CHECK-DAG:   arith.constant dense<false> : vector<1x8x8xi1>
+//       CHECK:   vector.constant_mask [1, 4, 8] : vector<1x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+// Negative check: no partially-zero tile is emitted.
+//   CHECK-NOT:   vector.constant_mask [0,
+
+// -----
+
 func.func @shape_cast_1D(%v: vector<16xf32>) -> vector<2x2x4xf32> {
   %0 = vector.shape_cast %v : vector<16xf32> to vector<2x2x4xf32>
   return %0 : vector<2x2x4xf32>
@@ -867,8 +912,6 @@ func.func @deinterleave_2d(%v: vector<4x8xi32>) -> (vector<4x4xi32>, vector<4x4x
 
 // -----
 
-// TargetShape [2, 2] has a lower rank than the reduced source <2x2x4>, so it
-// applies to the trailing dimensions and is padded to [1, 2, 2].
 func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: vector<2x2xf32>) -> vector<2x2xf32> {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [2] : vector<2x2x4xf32> to vector<2x2xf32>
   return %0 : vector<2x2xf32>
