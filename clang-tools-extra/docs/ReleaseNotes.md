@@ -215,6 +215,8 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 
+  - Fixed a crash when a class inherits from a forward-declared base class.
+
   - Fixed a crash when checking forward-declared classes with
     {option}`DefaultHungarianPrefix` enabled.
 
