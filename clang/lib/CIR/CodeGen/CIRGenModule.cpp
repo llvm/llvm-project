@@ -137,8 +137,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         cir::CIRDialect::getSourceLanguageAttrName(),
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   if (langOpts.OpenCL || (langOpts.CUDAIsDevice && getTriple().isSPIRV())) {
-    setOpenCLVersionAttr(cir::CIRDialect::getOpenCLVersionAttrName(),
-                         langOpts.getOpenCLCompatibleVersion());
+    // CUDA and HIP use OpenCL 2.0 metadata when targeting SPIR-V.
+    unsigned version =
+        langOpts.OpenCL ? langOpts.getOpenCLCompatibleVersion() : 200;
+    setOpenCLVersionAttr(cir::CIRDialect::getOpenCLVersionAttrName(), version);
     if (langOpts.OpenCLCPlusPlus)
       setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
                            langOpts.OpenCLCPlusPlusVersion);
