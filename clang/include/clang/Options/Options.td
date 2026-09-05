@@ -2454,6 +2454,9 @@ def fseh_exceptions : Flag<["-"], "fseh-exceptions">, Group<f_Group>,
   HelpText<"Use SEH style exceptions">;
 def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
   HelpText<"Use WebAssembly style exceptions">;
+def femscripten_exceptions : Flag<["-"], "femscripten-exceptions">,
+  Group<f_Group>,
+  HelpText<"Use Emscripten JavaScript-based C++ exceptions">;
 def exception_model : Separate<["-"], "exception-model">,
   Visibility<[CC1Option]>, HelpText<"The exception model">,
   Values<"dwarf,sjlj,seh,wasm,none">,
