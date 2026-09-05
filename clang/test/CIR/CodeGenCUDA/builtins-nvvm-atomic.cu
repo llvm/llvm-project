@@ -252,6 +252,76 @@ __device__ void test_atom_xchg_gen_ll(long long *p, long long val) {
   __nvvm_atom_xchg_gen_ll(p, val);
 }
 
+// CIR-LABEL: @_Z19test_atom_cas_gen_iPiii
+// CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed) syncscope(system) %{{.*}}, %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+// LLVM-LABEL: @_Z19test_atom_cas_gen_iPiii
+// LLVM: %[[CAS:.*]] = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} monotonic monotonic, align 4
+// LLVM: extractvalue { i32, i1 } %[[CAS]], 0
+__device__ int test_atom_cas_gen_i(int *p, int cmp, int val) {
+  return __nvvm_atom_cas_gen_i(p, cmp, val);
+}
+
+// CIR-LABEL: @_Z20test_atom_cas_gen_llPxxx
+// CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed) syncscope(system) %{{.*}}, %{{.*}}, %{{.*}} : (!cir.ptr<!s64i>, !s64i, !s64i) -> (!s64i, !cir.bool)
+// LLVM-LABEL: @_Z20test_atom_cas_gen_llPxxx
+// LLVM: %[[CAS:.*]] = cmpxchg ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}} monotonic monotonic, align 8
+// LLVM: extractvalue { i64, i1 } %[[CAS]], 0
+__device__ long long test_atom_cas_gen_ll(long long *p, long long cmp,
+                                          long long val) {
+  return __nvvm_atom_cas_gen_ll(p, cmp, val);
+}
+
+// CIR-LABEL: @_Z20test_atom_cas_gen_usPttt
+// CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed) syncscope(system) %{{.*}}, %{{.*}}, %{{.*}} : (!cir.ptr<!u16i>, !u16i, !u16i) -> (!u16i, !cir.bool)
+// LLVM-LABEL: @_Z20test_atom_cas_gen_usPttt
+// LLVM: %[[CAS:.*]] = cmpxchg ptr %{{.*}}, i16 %{{.*}}, i16 %{{.*}} monotonic monotonic, align 2
+// LLVM: extractvalue { i16, i1 } %[[CAS]], 0
+__device__ unsigned short test_atom_cas_gen_us(unsigned short *p,
+                                               unsigned short cmp,
+                                               unsigned short val) {
+  return __nvvm_atom_cas_gen_us(p, cmp, val);
+}
+
+// CIR-LABEL: @_Z23test_atom_cta_cas_gen_iPiii
+// CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed) syncscope(workgroup) %{{.*}}, %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+// LLVM-LABEL: @_Z23test_atom_cta_cas_gen_iPiii
+// LLVM: %[[CAS:.*]] = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} syncscope("block") monotonic monotonic, align 4
+// LLVM: extractvalue { i32, i1 } %[[CAS]], 0
+__device__ int test_atom_cta_cas_gen_i(int *p, int cmp, int val) {
+  return __nvvm_atom_cta_cas_gen_i(p, cmp, val);
+}
+
+// CIR-LABEL: @_Z23test_atom_sys_cas_gen_iPiii
+// CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed) syncscope(system) %{{.*}}, %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
+// LLVM-LABEL: @_Z23test_atom_sys_cas_gen_iPiii
+// LLVM: %[[CAS:.*]] = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} monotonic monotonic, align 4
+// LLVM: extractvalue { i32, i1 } %[[CAS]], 0
+__device__ int test_atom_sys_cas_gen_i(int *p, int cmp, int val) {
+  return __nvvm_atom_sys_cas_gen_i(p, cmp, val);
+}
+
+// CIR-LABEL: @_Z24test_atom_cta_cas_gen_usPttt
+// CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed) syncscope(workgroup) %{{.*}}, %{{.*}}, %{{.*}} : (!cir.ptr<!u16i>, !u16i, !u16i) -> (!u16i, !cir.bool)
+// LLVM-LABEL: @_Z24test_atom_cta_cas_gen_usPttt
+// LLVM: %[[CAS:.*]] = cmpxchg ptr %{{.*}}, i16 %{{.*}}, i16 %{{.*}} syncscope("block") monotonic monotonic, align 2
+// LLVM: extractvalue { i16, i1 } %[[CAS]], 0
+__device__ unsigned short test_atom_cta_cas_gen_us(unsigned short *p,
+                                                   unsigned short cmp,
+                                                   unsigned short val) {
+  return __nvvm_atom_cta_cas_gen_us(p, cmp, val);
+}
+
+// CIR-LABEL: @_Z24test_atom_sys_cas_gen_usPttt
+// CIR: cir.atomic.cmpxchg success(relaxed) failure(relaxed) syncscope(system) %{{.*}}, %{{.*}}, %{{.*}} : (!cir.ptr<!u16i>, !u16i, !u16i) -> (!u16i, !cir.bool)
+// LLVM-LABEL: @_Z24test_atom_sys_cas_gen_usPttt
+// LLVM: %[[CAS:.*]] = cmpxchg ptr %{{.*}}, i16 %{{.*}}, i16 %{{.*}} monotonic monotonic, align 2
+// LLVM: extractvalue { i16, i1 } %[[CAS]], 0
+__device__ unsigned short test_atom_sys_cas_gen_us(unsigned short *p,
+                                                   unsigned short cmp,
+                                                   unsigned short val) {
+  return __nvvm_atom_sys_cas_gen_us(p, cmp, val);
+}
+
 // CIR-LABEL: @_Z23test_atom_cta_add_gen_iPii
 // CIR: cir.atomic.fetch add relaxed syncscope(workgroup) fetch_first %{{.*}}, %{{.*}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 // LLVM-LABEL: @_Z23test_atom_cta_add_gen_iPii

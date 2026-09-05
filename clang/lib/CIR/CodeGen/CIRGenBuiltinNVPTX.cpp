@@ -171,11 +171,9 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-    // success flag.
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d:
     cgm.errorNYI(expr->getSourceRange(),
@@ -367,18 +365,16 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_cta_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::Workgroup);
   case NVPTX::BI__nvvm_atom_sys_cas_gen_us:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_i:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_l:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_match_all_sync_i32p:
   case NVPTX::BI__nvvm_match_all_sync_i64p:
     cgm.errorNYI(expr->getSourceRange(),
