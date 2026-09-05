@@ -249,14 +249,16 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir &&
            "Invalid architecture for 32-bit SPIR.");
-    // FIXME: Assert that a present host target's pointer types match the ones
-    // set below, once the driver diagnoses unsupported host/device combinations
-    // (until then such an assert would fire on existing tests).
-    PointerWidth = PointerAlign = 32;
-    const TargetInfo *HostTarget = getHostTarget();
-    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 32) {
+    if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+
+      assert(PointerWidth == 32);
+      assert(PointerAlign == 32);
+      assert(getTypeWidth(SizeType) == 32);
+      assert(getTypeWidth(PtrDiffType) == 32);
+      assert(getTypeWidth(IntPtrType) == 32);
     }
 
     // SPIR32 has support for atomic ops if atomic extension is enabled.
@@ -276,14 +278,15 @@ public:
       : SPIRTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spir64 &&
            "Invalid architecture for 64-bit SPIR.");
-    // FIXME: Assert that a present host target's pointer types match the ones
-    // set below, once the driver diagnoses unsupported host/device combinations
-    // (until then such an assert would fire on existing tests).
-    PointerWidth = PointerAlign = 64;
-    const TargetInfo *HostTarget = getHostTarget();
-    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 64) {
+    if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+      assert(PointerWidth == 64);
+      assert(PointerAlign == 64);
+      assert(getTypeWidth(SizeType) == 64);
+      assert(getTypeWidth(PtrDiffType) == 64);
+      assert(getTypeWidth(IntPtrType) == 64);
     }
 
     // SPIR64 has support for atomic ops if atomic extension is enabled.
@@ -374,15 +377,17 @@ public:
            "32-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
-    // FIXME: Assert that a present host target's pointer types match the ones
-    // set below, once the driver diagnoses unsupported host/device combinations
-    // (until then such an assert would fire on existing tests).
-    PointerWidth = PointerAlign = 32;
-    const TargetInfo *HostTarget = getHostTarget();
-    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 32) {
+    if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 32;
       SizeType = TargetInfo::UnsignedInt;
       PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+      assert(PointerWidth == 32);
+      assert(PointerAlign == 32);
+      assert(getTypeWidth(SizeType) == 32);
+      assert(getTypeWidth(PtrDiffType) == 32);
+      assert(getTypeWidth(IntPtrType) == 32);
     }
+
     // SPIR-V has core support for atomic ops, and Int32 is always available;
     // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
@@ -405,15 +410,17 @@ public:
            "64-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
-    // FIXME: Assert that a present host target's pointer types match the ones
-    // set below, once the driver diagnoses unsupported host/device combinations
-    // (until then such an assert would fire on existing tests).
-    PointerWidth = PointerAlign = 64;
-    const TargetInfo *HostTarget = getHostTarget();
-    if (!HostTarget || HostTarget->getPointerWidth(LangAS::Default) != 64) {
+    if (!getHostTarget()) {
+      PointerWidth = PointerAlign = 64;
       SizeType = TargetInfo::UnsignedLong;
       PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+      assert(PointerWidth == 64);
+      assert(PointerAlign == 64);
+      assert(getTypeWidth(SizeType) == 64);
+      assert(getTypeWidth(PtrDiffType) == 64);
+      assert(getTypeWidth(IntPtrType) == 64);
     }
+
     // SPIR-V has core support for atomic ops, and Int64 is always available;
     // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
@@ -459,6 +466,17 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+
+    // With a host target the widths above are the host's until setAuxTarget()
+    // replaces them, so only what this target sets itself is asserted.
+    if (!getHostTarget()) {
+      assert(PointerWidth == 64);
+      assert(PointerAlign == 64);
+      assert(getTypeWidth(SizeType) == 64);
+      assert(getTypeWidth(PtrDiffType) == 64);
+      assert(getTypeWidth(IntPtrType) == 64);
+    }
+
     AddrSpaceMap = &SPIRDefIsGenMap;
 
     resetDataLayout();

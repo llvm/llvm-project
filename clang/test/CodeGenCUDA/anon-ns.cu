@@ -11,12 +11,12 @@
 
 // RUN: echo "GPU binary" > %t.fatbin
 
-// RUN: %clang_cc1 -triple nvptx -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple nvptx64 -fcuda-is-device -cuid=abc \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - %s > %t.dev
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
-// RUN:   -aux-triple nvptx -std=c++17 -fgpu-rdc -fcuda-include-gpubinary %t.fatbin \
+// RUN:   -aux-triple nvptx64 -std=c++17 -fgpu-rdc -fcuda-include-gpubinary %t.fatbin \
 // RUN:   -emit-llvm -o - %s > %t.host
 
 // RUN: cat %t.dev %t.host | FileCheck -check-prefixes=CUDA,COMMON %s
