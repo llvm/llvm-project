@@ -293,5 +293,89 @@ void CustomSection::writeRelocations(raw_ostream &os) const {
     s->writeRelocations(os);
 }
 
+void CodeMetaDataOutputSection::writeTo(uint8_t *buf) {
+  log("writing " + toString(*this) + " offset=" + Twine(offset) +
+      " size=" + Twine(getSize()) + " chunks=" + Twine(inputSections.size()));
+
+  assert(offset);
+  buf += offset;
+
+  // Write section header
+  memcpy(buf, header.data(), header.size());
+  buf += header.size();
+  memcpy(buf, nameData.data(), nameData.size());
+  buf += nameData.size();
+  memcpy(buf, payload.data(), payload.size());
+}
+
+void CodeMetaDataOutputSection::finalizeContents() {
+  raw_string_ostream nameOs(nameData);
+  encodeULEB128(name.size(), nameOs);
+  nameOs << name;
+
+  std::string functionEntries;
+  raw_string_ostream entriesOs(functionEntries);
+  uint32_t numFunctionsTotal = 0;
+
+  for (InputChunk *section : inputSections) {
+    if (section->discarded)
+      continue;
+
+    const uint8_t *start = section->data().data();
+    const uint8_t *buf = start;
+    const uint8_t *end = buf + section->data().size();
+
+    auto readULEB = [&](StringRef desc) {
+      const char *err = nullptr;
+      uint32_t val = decodeULEB128AndInc(buf, end, &err);
+      if (err)
+        fatal("Failed to decode " + desc + " in " + name + ": " + err);
+      return val;
+    };
+
+    const unsigned numFunctions = readULEB("number of functions");
+    ArrayRef<WasmRelocation> relocs = section->getRelocations();
+    size_t relocIdx = 0;
+
+    for (unsigned i = 0; i < numFunctions; ++i) {
+      if (relocIdx >= relocs.size())
+        fatal("Missing relocation for function index in " + name);
+
+      const WasmRelocation &rel = relocs[relocIdx++];
+      assert(rel.Offset == static_cast<uint64_t>(buf - start));
+
+      // Advance past the un-relocated func_idx in the input buffer.
+      readULEB("function index");
+
+      const uint8_t *hintsStart = buf;
+      const unsigned numHints = readULEB("hint size");
+      for (unsigned j = 0; j < numHints; ++j) {
+        readULEB("hint opcode");
+        const unsigned hintSize = readULEB("hint operand");
+        buf += hintSize;
+      }
+
+      // Check if target function symbol is live.
+      Symbol *sym = section->file->getSymbols()[rel.Index];
+      if (!sym->isLive())
+        continue;
+
+      auto *funcSym = cast<FunctionSymbol>(sym);
+      encodeULEB128(funcSym->getFunctionIndex(), entriesOs);
+      entriesOs.write(reinterpret_cast<const char *>(hintsStart),
+                      buf - hintsStart);
+      numFunctionsTotal++;
+    }
+    assert(buf == end &&
+           "CodeMetaDataOutputSection: not all data was consumed");
+  }
+
+  raw_string_ostream payloadOs(payload);
+  encodeULEB128(numFunctionsTotal, payloadOs);
+  payloadOs << functionEntries;
+
+  payloadSize = payload.size();
+  createHeader(payloadSize + nameData.size());
+}
 } // namespace wasm
 } // namespace lld

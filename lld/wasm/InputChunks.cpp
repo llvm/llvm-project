@@ -210,10 +210,8 @@ void InputChunk::writeRelocations(raw_ostream &os) const {
 }
 
 uint64_t InputChunk::getTombstone() const {
-  if (const auto *s = dyn_cast<InputSection>(this)) {
+  if (const auto *s = dyn_cast<InputSection>(this))
     return s->tombstoneValue;
-  }
-
   return 0;
 }
 
@@ -608,10 +606,11 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // since 0 is a valid function index.
   if (name.starts_with("llvm.func_attr."))
     return UINT64_C(-1);
+  if (name.starts_with("metadata.code."))
+    return UINT64_C(-1);
   // Returning 0 means there is no tombstone value for this section, and
   // relocation will just use the addend.
   return 0;
 }
-
 } // namespace wasm
 } // namespace lld

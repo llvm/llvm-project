@@ -59,6 +59,9 @@ public:
   void writeTo(uint8_t *buf) const;
   void relocate(uint8_t *buf) const;
 
+  ArrayRef<uint8_t> data() const { return rawData; }
+  uint64_t getTombstone() const;
+
   ArrayRef<WasmRelocation> getRelocations() const { return relocations; }
   void setRelocations(ArrayRef<WasmRelocation> rs) { relocations = rs; }
 
@@ -119,8 +122,6 @@ protected:
              uint32_t flags = 0)
       : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
         live(!ctx.arg.gcSections), discarded(false) {}
-  ArrayRef<uint8_t> data() const { return rawData; }
-  uint64_t getTombstone() const;
 
   ArrayRef<WasmRelocation> relocations;
   ArrayRef<uint8_t> rawData;
@@ -382,7 +383,6 @@ protected:
   static uint64_t getTombstoneForSection(StringRef name);
   const WasmSection &section;
 };
-
 } // namespace wasm
 
 std::string toString(const wasm::InputChunk *);

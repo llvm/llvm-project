@@ -11,6 +11,7 @@
 
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/Analysis.h"
@@ -21,6 +22,8 @@
 namespace llvm {
 class WebAssemblyTargetStreamer;
 
+using BranchHintRecord = SmallVector<std::pair<MCSymbol *, uint8_t>, 0>;
+
 class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
 public:
   static char ID;
@@ -30,6 +33,9 @@ private:
   const MachineRegisterInfo *MRI;
   WebAssemblyFunctionInfo *MFI;
   bool signaturesEmitted = false;
+
+  // vec idx == local func_idx
+  MapVector<const MCSymbol *, BranchHintRecord> BranchHints;
 
 public:
   explicit WebAssemblyAsmPrinter(TargetMachine &TM,
@@ -62,6 +68,7 @@ public:
   void EmitProducerInfo(Module &M);
   void EmitTargetFeatures(Module &M);
   void EmitFunctionAttributes(Module &M);
+  void emitBranchHintSection() const;
   void emitSymbolType(const MCSymbolWasm *Sym);
   void emitGlobalVariable(const GlobalVariable *GV) override;
   void emitJumpTableInfo() override;
@@ -81,6 +88,7 @@ public:
                                        bool &InvokeDetected);
   MCSymbol *getOrCreateWasmSymbol(StringRef Name);
   void emitDecls(const Module &M);
+  void recordBranchHint(const MachineInstr *MI);
 };
 
 class WebAssemblyAsmPrinterBeginPass

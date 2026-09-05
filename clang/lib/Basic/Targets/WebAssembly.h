@@ -34,6 +34,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   } SIMDLevel = NoSIMD;
 
   bool HasAtomics = false;
+  bool HasBranchHinting = false;
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
