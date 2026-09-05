@@ -2001,9 +2001,8 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op->getOperand(2));
   case Intrinsic::mips_fadd_w:
   case Intrinsic::mips_fadd_d:
-    // TODO: If intrinsics have fast-math-flags, propagate them.
     return DAG.getNode(ISD::FADD, DL, Op->getValueType(0), Op->getOperand(1),
-                       Op->getOperand(2));
+                       Op->getOperand(2), Op->getFlags());
   // Don't lower mips_fcaf_[wd] since LLVM folds SETFALSE condcodes away
   case Intrinsic::mips_fceq_w:
   case Intrinsic::mips_fceq_d:
@@ -2087,9 +2086,8 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op->getOperand(1), Op->getOperand(2), Op->getOperand(3));
   case Intrinsic::mips_fmul_w:
   case Intrinsic::mips_fmul_d:
-    // TODO: If intrinsics have fast-math-flags, propagate them.
     return DAG.getNode(ISD::FMUL, DL, Op->getValueType(0), Op->getOperand(1),
-                       Op->getOperand(2));
+                       Op->getOperand(2), Op->getFlags());
   case Intrinsic::mips_fmsub_w:
   case Intrinsic::mips_fmsub_d: {
     // TODO: If intrinsics have fast-math-flags, propagate them.
@@ -2104,9 +2102,8 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::FSQRT, DL, Op->getValueType(0), Op->getOperand(1));
   case Intrinsic::mips_fsub_w:
   case Intrinsic::mips_fsub_d:
-    // TODO: If intrinsics have fast-math-flags, propagate them.
     return DAG.getNode(ISD::FSUB, DL, Op->getValueType(0), Op->getOperand(1),
-                       Op->getOperand(2));
+                       Op->getOperand(2), Op->getFlags());
   case Intrinsic::mips_ftrunc_u_w:
   case Intrinsic::mips_ftrunc_u_d:
     return DAG.getNode(ISD::FP_TO_UINT, DL, Op->getValueType(0),

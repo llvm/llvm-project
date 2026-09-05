@@ -31,14 +31,8 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK:       for.cond1.preheader.us:
 ; CHECK-NEXT:    [[J_020_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_SPLIT_US]] ], [ [[INC10_US:%.*]], [[FOR_COND_CLEANUP3_US:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY4_PREHEADER_US:%.*]]
-; CHECK:       for.cond.cleanup3.us:
-; CHECK-NEXT:    [[INC10_US]] = add nuw i32 [[J_020_US]], 1
-; CHECK-NEXT:    [[EXITCOND22_NOT_US:%.*]] = icmp eq i32 [[INC10_US]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT2_US:%.*]], label [[FOR_COND1_PREHEADER_US]], !prof [[PROF17]]
 ; CHECK:       for.body4.preheader.us:
 ; CHECK-NEXT:    br label [[FOR_BODY4_PREHEADER_SPLIT_US_US:%.*]]
-; CHECK:       for.cond.cleanup3.loopexit.us:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_US]]
 ; CHECK:       for.body4.preheader.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_US:%.*]]
 ; CHECK:       for.body4.us.us:
@@ -61,6 +55,12 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_US_US]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT_US_US:%.*]], label [[FOR_BODY4_US_US]], !prof [[PROF18]]
 ; CHECK:       for.cond.cleanup3.loopexit.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_LOOPEXIT_US:%.*]]
+; CHECK:       for.cond.cleanup3.loopexit.us:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_US]]
+; CHECK:       for.cond.cleanup3.us:
+; CHECK-NEXT:    [[INC10_US]] = add nuw i32 [[J_020_US]], 1
+; CHECK-NEXT:    [[EXITCOND22_NOT_US:%.*]] = icmp eq i32 [[INC10_US]], [[M]]
+; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT2_US:%.*]], label [[FOR_COND1_PREHEADER_US]], !prof [[PROF17]]
 ; CHECK:       for.cond.cleanup.loopexit.split2.us:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond1.preheader.lr.ph.split.split:

@@ -96,7 +96,7 @@ define float @ret_select_clamp_onlynans(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %not.nan = fcmp ord float %arg, 0.0
-  %select = select i1 %not.nan, float 0x7FF8000000000000, float %arg
+  %select = select i1 %not.nan, float +qnan, float %arg
   ret float %select
 }
 
@@ -162,7 +162,7 @@ define float @clamp_eq_inf_to_nan(float %arg) {
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
   %is.inf = fcmp oeq float %fabs, +inf
-  %select = select i1 %is.inf, float 0x7FF8000000000000, float %arg
+  %select = select i1 %is.inf, float +qnan, float %arg
   ret float %select
 }
 
@@ -324,7 +324,7 @@ define float @clamp_is_class_subnormal_or_inf_to_nan(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.subnormal.or.inf = call i1 @llvm.is.fpclass.f32(float %arg, i32 660)
-  %select = select i1 %is.subnormal.or.inf, float 0x7FF8000000000000, float %arg
+  %select = select i1 %is.subnormal.or.inf, float +qnan, float %arg
   ret float %select
 }
 
@@ -336,7 +336,7 @@ define float @clamp_is_class_subnormal_or_inf_to_nan_swap(float %arg) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %not.is.subnormal.or.inf = call i1 @llvm.is.fpclass.f32(float %arg, i32 363)
-  %select = select i1 %not.is.subnormal.or.inf, float %arg, float 0x7FF8000000000000
+  %select = select i1 %not.is.subnormal.or.inf, float %arg, float +qnan
   ret float %select
 }
 

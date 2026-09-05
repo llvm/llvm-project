@@ -3834,6 +3834,9 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
 
+  /// Returns the opcode of the widened load.
+  unsigned getOpcode() const { return Instruction::Load; }
+
   /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
 
@@ -3883,6 +3886,9 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadEVLSC)
+
+  /// Returns the opcode of the widened load.
+  unsigned getOpcode() const { return Instruction::Load; }
 
   /// Return the EVL operand.
   VPValue *getEVL() const { return getOperand(1); }
@@ -4377,6 +4383,17 @@ struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
     : public ConstStrippingForwardingCast<
           VPWidenMemoryRecipe, const VPRecipeBase *,
           CastInfo<VPWidenMemoryRecipe, VPRecipeBase *>> {};
+
+/// Support casting from VPSingleDefRecipe -> VPWidenMemoryRecipe (loads only).
+template <>
+struct CastInfo<VPWidenMemoryRecipe, VPSingleDefRecipe *>
+    : vpdetail::CastInfoMixinImpl<VPWidenMemoryRecipe, VPWidenLoadRecipe,
+                                  VPWidenLoadEVLRecipe> {};
+template <>
+struct CastInfo<VPWidenMemoryRecipe, const VPSingleDefRecipe *>
+    : public ConstStrippingForwardingCast<
+          VPWidenMemoryRecipe, const VPSingleDefRecipe *,
+          CastInfo<VPWidenMemoryRecipe, VPSingleDefRecipe *>> {};
 
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>

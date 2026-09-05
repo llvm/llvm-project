@@ -176,6 +176,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {save_reg_params} : () -> ()
   llvm.call @baz() {save_reg_params} : () -> ()
 
+// CHECK: llvm.call @baz() {uniform_work_group_size} : () -> ()
+  llvm.call @baz() {uniform_work_group_size} : () -> ()
+
 // CHECK: llvm.call @baz() {zero_call_used_regs = "all"} : () -> ()
   llvm.call @baz() {zero_call_used_regs="all"} : () -> ()
 
@@ -662,6 +665,17 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 // CHECK:   llvm.return %[[V0]] : i32
 ^bb7:
   llvm.return %0 : i32
+}
+
+// CHECK-LABEL: @invokeUniformWorkGroupSize
+llvm.func @invokeUniformWorkGroupSize() attributes { personality = @__gxx_personality_v0 } {
+  // CHECK: llvm.invoke @baz() to ^{{.*}} unwind ^{{.*}} {uniform_work_group_size}
+  llvm.invoke @baz() to ^bb1 unwind ^bb2 {uniform_work_group_size} : () -> ()
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
 }
 
 // CHECK-LABEL: @useFreezeOp

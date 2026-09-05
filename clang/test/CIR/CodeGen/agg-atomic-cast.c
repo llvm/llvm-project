@@ -101,3 +101,76 @@ struct T load_atomic_struct() {
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RET_ADDR]], ptr align 1 %[[RET_VAL_ADDR]], i64 3, i1 false)
 // OGCG: %[[TMP_RET:.*]] = load i24, ptr %[[RET_ADDR]], align 4
 // OGCG: ret i24 %[[TMP_RET]]
+
+void load_atomic_struct_to_atomic_struct() {
+  _Atomic(struct T) a;
+  _Atomic(struct T) b;
+  b = a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR: %[[AGG_TMP_ADDR:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR: %[[A_ADDR_U32:.*]] = cir.cast bitcast %[[A_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} atomic(seq_cst) %[[A_ADDR_U32]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[AGG_TMP_ADDR_U32:.*]] = cir.cast bitcast %[[AGG_TMP_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>
+// CIR: cir.store {{.*}} %[[TMP_A]], %[[AGG_TMP_ADDR_U32]] : !u32i, !cir.ptr<!u32i>
+// CIR: %[[AGG_TMP_ADDR_U32:.*]] = cir.cast bitcast %[[AGG_TMP_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>
+// CIR: %[[AGG_TMP:.*]] = cir.load {{.*}} %[[AGG_TMP_ADDR_U32]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[B_ADDR_U32:.*]] = cir.cast bitcast %[[B_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>
+// CIR: cir.store {{.*}} atomic(seq_cst) %[[AGG_TMP]], %[[B_ADDR_U32]] : !u32i, !cir.ptr<!u32i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// LLVM: %[[AGG_TMP_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// LLVM: %[[TMP_A:.*]] = load atomic i32, ptr %[[A_ADDR]] seq_cst, align 4
+// LLVM: store i32 %[[TMP_A]], ptr %[[AGG_TMP_ADDR]], align 4
+// LLVM: %[[AGG_TMP:.*]] = load i32, ptr %[[AGG_TMP_ADDR]], align 4
+// LLVM: store atomic i32 %[[AGG_TMP]], ptr %[[B_ADDR]] seq_cst, align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// OGCG: %[[AGG_TMP_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// OGCG: %[[TMP_A:.*]] = load atomic i32, ptr %[[A_ADDR]] seq_cst, align 4
+// OGCG: store i32 %[[TMP_A]], ptr %[[AGG_TMP_ADDR]], align 4
+// OGCG: %[[AGG_TMP:.*]] = load i32, ptr %[[AGG_TMP_ADDR]], align 4
+// OGCG: store atomic i32 %[[AGG_TMP]], ptr %[[B_ADDR]] seq_cst, align 4
+
+void load_struct_to_atomic_struct() {
+  struct T a;
+  _Atomic(struct T) b;
+  b = a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_T>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR: %[[AGG_TMP_ADDR:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR: %[[AGG_TMP_I8:.*]] = cir.cast bitcast %[[AGG_TMP_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u8i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
+// CIR: %[[AGG_TMP_VOID_PTR:.*]] = cir.cast bitcast %[[AGG_TMP_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR: cir.libc.memset %[[CONST_4]] bytes at %[[AGG_TMP_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
+// CIR: %[[AGG_TMP_PTR:.*]] = cir.get_member %[[AGG_TMP_ADDR]][0] {name = "value_addr"} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_T>
+// CIR: cir.copy %[[A_ADDR]] {{.*}} to %[[AGG_TMP_PTR]] {{.*}} : !cir.ptr<!rec_T>
+// CIR: %[[AGG_TMP_ADDR_U32:.*]] = cir.cast bitcast %[[AGG_TMP_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>
+// CIR: %[[AGG_TMP:.*]] = cir.load {{.*}} %[[AGG_TMP_ADDR_U32]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[B_ADDR_U32:.*]] = cir.cast bitcast %1 : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>
+// CIR: cir.store {{.*}} atomic(seq_cst) %[[AGG_TMP]], %[[B_ADDR_U32]] : !u32i, !cir.ptr<!u32i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.T, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// LLVM: %[[AGG_TMP_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// LLVM: call void @llvm.memset.p0.i64(ptr align 4 %[[AGG_TMP_ADDR]], i8 0, i64 4, i1 false)
+// LLVM: %[[AGG_TMP_PTR:.*]] = getelementptr inbounds nuw { %struct.T, [1 x i8] }, ptr %[[AGG_TMP_ADDR]], i32 0, i32 0
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[AGG_TMP_PTR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
+// LLVM: %[[AGG_TMP:.*]] = load i32, ptr %[[AGG_TMP_ADDR]], align 4
+// LLVM: store atomic i32 %[[AGG_TMP]], ptr %[[B_ADDR]] seq_cst, align 4
+ 
+// OGCG: %[[A_ADDR:.*]] = alloca %struct.T, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// OGCG: %[[AGG_TMP_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
+// OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[AGG_TMP_ADDR]], i8 0, i64 4, i1 false)
+// OGCG: %[[AGG_TMP_PTR:.*]] = getelementptr inbounds nuw { %struct.T, [1 x i8] }, ptr %[[AGG_TMP_ADDR]], i32 0, i32 0
+// OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[AGG_TMP_PTR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
+// OGCG: %[[AGG_TMP:.*]] = load i32, ptr %[[AGG_TMP_ADDR]], align 4
+// OGCG: store atomic i32 %[[AGG_TMP]], ptr %[[B_ADDR]] seq_cst, align 4

@@ -288,7 +288,7 @@ define double @test_fabs_select1(double %a) {
 ; CHECK-NEXT:    ret double [[SEL1]]
 ;
   %cond = fcmp uno double %a, 0.000000e+00
-  %sel1 = select i1 %cond, double 0x7FF8000000000000, double %a
+  %sel1 = select i1 %cond, double +qnan, double %a
   %fabs = call double @llvm.fabs.f64(double %sel1)
   %sel2 = select i1 %cond, double %fabs, double %a
   ret double %sel2
@@ -301,7 +301,7 @@ define <2 x double> @test_fabs_select1_vec(<2 x double> %a) {
 ; CHECK-NEXT:    ret <2 x double> [[SEL2]]
 ;
   %cond = fcmp uno <2 x double> %a, zeroinitializer
-  %sel1 = select <2 x i1> %cond, <2 x double> splat(double 0x7FF8000000000000), <2 x double> %a
+  %sel1 = select <2 x i1> %cond, <2 x double> splat(double +qnan), <2 x double> %a
   %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
   %sel2 = select <2 x i1> %cond, <2 x double> %fabs, <2 x double> %a
   ret <2 x double> %sel2

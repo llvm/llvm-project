@@ -1907,6 +1907,8 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
         convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
   if (StringAttr zcsr = func.getZeroCallUsedRegsAttr())
     llvmFunc->addFnAttr("zero-call-used-regs", zcsr.getValue());
+  if (func.getUniformWorkGroupSizeAttr())
+    llvmFunc->addFnAttr("uniform-work-group-size");
 
   if (ArrayAttr noBuiltins = func.getNobuiltinsAttr()) {
     if (noBuiltins.empty())

@@ -1537,6 +1537,124 @@ TEST_F(SortIncludesTest, IgnoreExtension) {
                     "input.h"));
 }
 
+TEST_F(SortIncludesTest, FilesBeforeFolders) {
+  FmtStyle.SortIncludes.FilesBeforeFolders = false;
+  verifyFormat("#include \"bar/alpha/e.h\"\n"
+               "#include \"bar/alpha/f.h\"\n"
+               "#include \"bar/beta/d.h\"\n"
+               "#include \"bar/g.h\"\n"
+               "#include \"bar/h.h\"\n"
+               "#include \"bar/i.h\"\n"
+               "#include \"foo/a.h\"\n"
+               "#include \"x.h\"\n"
+               "#include \"y.h\"\n"
+               "#include \"z.h\"",
+               sort("#include \"z.h\"\n"
+                    "#include \"bar/alpha/f.h\"\n"
+                    "#include \"foo/a.h\"\n"
+                    "#include \"bar/g.h\"\n"
+                    "#include \"x.h\"\n"
+                    "#include \"bar/beta/d.h\"\n"
+                    "#include \"bar/i.h\"\n"
+                    "#include \"y.h\"\n"
+                    "#include \"bar/h.h\"\n"
+                    "#include \"bar/alpha/e.h\"",
+                    "input.h"));
+
+  FmtStyle.SortIncludes.FilesBeforeFolders = true;
+  verifyFormat("#include \"x.h\"\n"
+               "#include \"y.h\"\n"
+               "#include \"z.h\"\n"
+               "#include \"bar/g.h\"\n"
+               "#include \"bar/h.h\"\n"
+               "#include \"bar/i.h\"\n"
+               "#include \"bar/alpha/e.h\"\n"
+               "#include \"bar/alpha/f.h\"\n"
+               "#include \"bar/beta/d.h\"\n"
+               "#include \"foo/a.h\"",
+               sort("#include \"z.h\"\n"
+                    "#include \"bar/alpha/f.h\"\n"
+                    "#include \"foo/a.h\"\n"
+                    "#include \"bar/g.h\"\n"
+                    "#include \"x.h\"\n"
+                    "#include \"bar/beta/d.h\"\n"
+                    "#include \"bar/i.h\"\n"
+                    "#include \"y.h\"\n"
+                    "#include \"bar/h.h\"\n"
+                    "#include \"bar/alpha/e.h\"",
+                    "input.h"));
+
+  verifyFormat("#include \"dir/a.h\"\n"
+               "#include \"dir/b.h\"\n"
+               "#include \"dir/sub/a.h\"\n"
+               "#include \"dir/sub/b.h\"",
+               sort("#include \"dir/sub/b.h\"\n"
+                    "#include \"dir/a.h\"\n"
+                    "#include \"dir/sub/a.h\"\n"
+                    "#include \"dir/b.h\"",
+                    "input.h"));
+
+  FmtStyle.SortIncludes.IgnoreCase = true;
+  verifyFormat("#include \"A.h\"\n"
+               "#include \"b.h\"\n"
+               "#include \"Bar/a.h\"\n"
+               "#include \"foo/B.h\"",
+               sort("#include \"foo/B.h\"\n"
+                    "#include \"Bar/a.h\"\n"
+                    "#include \"b.h\"\n"
+                    "#include \"A.h\"",
+                    "input.h"));
+  verifyFormat("#include \"Bar/a.h\"\n"
+               "#include \"bar/a.h\"",
+               sort("#include \"bar/a.h\"\n"
+                    "#include \"Bar/a.h\"",
+                    "input.h"));
+  FmtStyle.SortIncludes.IgnoreCase = false;
+
+  FmtStyle.SortIncludes.IgnoreExtension = true;
+  verifyFormat("#include \"a.h\"\n"
+               "#include \"a.inc\"\n"
+               "#include \"a-util.h\"\n"
+               "#include \"bar/a.h\"\n"
+               "#include \"bar/b.h\"",
+               sort("#include \"bar/b.h\"\n"
+                    "#include \"a-util.h\"\n"
+                    "#include \"bar/a.h\"\n"
+                    "#include \"a.inc\"\n"
+                    "#include \"a.h\"",
+                    "input.h"));
+  FmtStyle.SortIncludes.IgnoreExtension = false;
+
+  FmtStyle.IncludeStyle.IncludeCategories.clear();
+  FmtStyle.SortIncludes.FilesBeforeFolders = false;
+  verifyFormat("#include \"beta/x.hpp\"\n"
+               "#include <alpha.hpp>",
+               sort("#include <alpha.hpp>\n"
+                    "#include \"beta/x.hpp\"",
+                    "input.h"));
+  FmtStyle.SortIncludes.FilesBeforeFolders = true;
+  verifyFormat("#include <alpha.hpp>\n"
+               "#include \"beta/x.hpp\"",
+               sort("#include \"beta/x.hpp\"\n"
+                    "#include <alpha.hpp>",
+                    "input.h"));
+}
+
+TEST_F(SortIncludesTest, FilesBeforeFoldersWithPriority) {
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  Style.IncludeCategories = {{"^<", 1, 0, false}, {"^\"", 2, 0, false}};
+  FmtStyle.SortIncludes.FilesBeforeFolders = true;
+  verifyFormat("#include <stdio.h>\n"
+               "#include <sys/stat.h>\n"
+               "\n"
+               "#include \"utils.h\"\n"
+               "#include \"foo/bar.h\"",
+               sort("#include <sys/stat.h>\n"
+                    "#include \"foo/bar.h\"\n"
+                    "#include <stdio.h>\n"
+                    "#include \"utils.h\""));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

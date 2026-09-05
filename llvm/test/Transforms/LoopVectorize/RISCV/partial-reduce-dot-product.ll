@@ -6,7 +6,7 @@
 
 target triple = "riscv64-none-unknown-elf"
 
-define i32 @vdot4a(ptr %a, ptr %b) #0 {
+define i32 @vdot4a(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; V-LABEL: define i32 @vdot4a(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; V-NEXT:  entry:
@@ -144,7 +144,7 @@ for.exit:
 }
 
 
-define i32 @vdot4au(ptr %a, ptr %b) #0 {
+define i32 @vdot4au(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; V-LABEL: define i32 @vdot4au(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
@@ -282,7 +282,7 @@ for.exit:
 }
 
 
-define i32 @vdot4asu(ptr %a, ptr %b) #0 {
+define i32 @vdot4asu(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; V-LABEL: define i32 @vdot4asu(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:
@@ -419,7 +419,7 @@ for.exit:
   ret i32 %add
 }
 
-define i32 @vdot4asu2(ptr %a, ptr %b) #0 {
+define i32 @vdot4asu2(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; V-LABEL: define i32 @vdot4asu2(
 ; V-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; V-NEXT:  entry:

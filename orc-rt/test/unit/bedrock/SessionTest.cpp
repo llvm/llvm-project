@@ -107,7 +107,7 @@ private:
       if (MCA) {
         bool Notify;
         {
-          std::scoped_lock Lock(MCA->M);
+          std::scoped_lock<std::mutex> Lock(MCA->M);
           --MCA->Outstanding;
           Notify = MCA->Shutdown && MCA->Outstanding == 0;
         }
