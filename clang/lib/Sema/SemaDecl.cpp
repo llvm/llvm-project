@@ -4966,7 +4966,13 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     // [basic.def]p2 for details, but the basic idea is: if the old declaration
     // contains the extern specifier and doesn't have an initializer, it's fine
     // in C++.
-    if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
+    if (New->getTLSKind() != VarDecl::TLS_None && New->isThisDeclarationADefinition() == VarDecl::Definition) {
+      VarDecl* Def = Old->getDefinition();
+      if(Def && checkVarDeclRedefinition(Def, New)){
+        return;        
+      }
+    }
+    else if (Old->getStorageClass() != SC_Extern || Old->hasInit()) {
       Diag(New->getLocation(), diag::warn_cxx_compat_tentative_definition)
           << New;
       Diag(Old->getLocation(), diag::note_previous_declaration);

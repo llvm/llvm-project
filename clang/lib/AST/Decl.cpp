@@ -2316,7 +2316,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   //   and without a storage class specifier or the scs 'static', constitutes
   //   a tentative definition.
   // No such thing in C++.
-  if (!C.getLangOpts().CPlusPlus && isFileVarDecl())
+  if (!C.getLangOpts().CPlusPlus && isFileVarDecl() && getTLSKind() == TLS_None)
     return TentativeDefinition;
 
   // What's left is (in C, block-scope) declarations without initializers or
