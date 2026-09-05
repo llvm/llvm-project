@@ -69,3 +69,35 @@ func.func @broadcast_only(%x : tensor<2x16x32xf32>, %y:  tensor<2x32xf32>, %z : 
 // CHECK: %[[X_bc:.+]] = linalg.broadcast ins(%[[Y]] : tensor<2x32xf32>) outs(%[[E0]] : tensor<2x16x32xf32>) dimensions = [1]
 // CHECK: {{.*}} = linalg.div ins(%[[X]], %[[X_bc]] : tensor<2x16x32xf32>, tensor<2x16x32xf32>) outs(%arg2 : tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
 // CHECK-NOT: linalg.generic
+
+// -----
+
+// unsupported currently.
+
+func.func @no_decompose_on_scalar() -> tensor<2x2xi32> {
+  %a = arith.constant dense<2> : tensor<2x2xi32>
+  %b = arith.constant 42 : i32
+  %c = tensor.empty() : tensor<2x2xi32>
+  %res = linalg.generic
+    {
+      indexing_maps = [
+        affine_map<(i, j) -> (i, j)>, 
+        affine_map<(i, j) -> ()>,     
+        affine_map<(i, j) -> (i, j)>  
+      ],
+      iterator_types = ["parallel", "parallel"]
+    }
+    ins(%a, %b : tensor<2x2xi32>, i32)
+    outs(%c : tensor<2x2xi32>) {
+  ^bb0(%x: i32, %scalar: i32, %out: i32):
+    %sum = arith.addi %x, %scalar : i32
+    linalg.yield %sum : i32
+  } -> tensor<2x2xi32>
+  return %res : tensor<2x2xi32>
+}
+
+// CHECK-LABEL: no_decompose_on_scalar
+// CHECK-SAME: () -> tensor<2x2xi32> {
+// CHECK-DAG: %[[CST:.+]] = arith.constant dense<2> : tensor<2x2xi32>
+// CHECK-DAG: %[[C42:.+]] = arith.constant 42 : i32
+// CHECK: linalg.generic {{.*}} ins(%[[CST]], %[[C42]] : tensor<2x2xi32>, i32) outs(%0 : tensor<2x2xi32>) {
