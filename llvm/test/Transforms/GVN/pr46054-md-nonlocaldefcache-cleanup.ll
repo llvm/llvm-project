@@ -78,4 +78,27 @@ declare void @fn.ptr(ptr)
 
 declare noalias ptr @data.ptr()
 
+define i32 @test_non_pointer_load_deleted_as_cached_def(ptr %p, i1 %c) {
+; CHECK-LABEL: @test_non_pointer_load_deleted_as_cached_def(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[A:%.*]], label [[MID:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    br label [[MID]]
+; CHECK:       mid:
+; CHECK-NEXT:    [[Q:%.*]] = load atomic i32, ptr [[P:%.*]] unordered, align 4, !invariant.group !0
+; CHECK-NEXT:    ret i32 [[Q]]
+;
+entry:
+  %x = load i32, ptr %p, align 4, !invariant.group !0
+  br i1 %c, label %a, label %mid
+
+a:
+  br label %mid
+
+mid:
+  %q = load atomic i32, ptr %p unordered, align 4, !invariant.group !0
+  %d = add i32 %x, 0
+  ret i32 %q
+}
+
 !0 = distinct !{}
