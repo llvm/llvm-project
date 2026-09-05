@@ -1007,14 +1007,10 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     }
   }
 
-  // Bail out if an iteration argument of an enclosing loop is read anywhere
-  // other than as the init operand of the loop nested in it. Coalescing maps
-  // the iteration arguments of every loop in the band onto the ones of the
-  // outermost loop, which turns such a read into a read of the value carried by
-  // the coalesced loop. That value is updated on every iteration, whereas the
-  // one being read is fixed for a whole run of the inner loop. This covers both
-  // a read inside the inner loop's region and, in an imperfect nest, one from
-  // an operation sitting between the two loops.
+  // Conservatively decline if an iteration argument of an enclosing loop is
+  // read anywhere but as the init operand of the loop nested in it: coalescing
+  // would replace that value, fixed for a whole run of the inner loop, with the
+  // one carried by the coalesced loop, which changes on every iteration.
   for (unsigned i = 1, e = loops.size(); i < e; ++i) {
     Operation *innerLoop = loops[i].getOperation();
     for (BlockArgument iterArg : loops[i - 1].getRegionIterArgs()) {

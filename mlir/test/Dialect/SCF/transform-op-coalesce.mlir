@@ -417,10 +417,8 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// An operation sitting between the two loops of an imperfect nest and reading
-// the outer loop's iteration argument is unsound to coalesce for the same
-// reason as a read from inside the inner loop: after the merge it would see a
-// value updated on every iteration of the coalesced loop.
+// A read of the outer iteration argument between the two loops also blocks
+// coalescing.
 
 func.func @no_coalesce_outer_iter_arg_read_between_loops(%init: f32) -> f32 {
   %c0 = arith.constant 0 : index

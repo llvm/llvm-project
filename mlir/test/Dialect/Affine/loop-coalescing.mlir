@@ -492,10 +492,7 @@ func.func @inner_loop_yields_induction_var() -> index {
 
 // -----
 
-// Verify that coalescing is not attempted when the body of the inner loop reads
-// an iteration argument of the outer loop directly. That value is fixed for a
-// whole run of the inner loop, whereas the value carried by the coalesced loop
-// is updated on every iteration.
+// The inner loop reads an iteration argument of the outer loop: no coalescing.
 
 // CHECK-LABEL: @no_coalesce_outer_iter_arg_read_in_inner_loop
 // CHECK-SAME:    %[[INIT:[A-Za-z0-9]+]]: i64
