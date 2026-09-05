@@ -5037,6 +5037,108 @@ bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
   return pseudoToMCOpcode(Op32) != -1;
 }
 
+/// Return true if \p MI is a VALU comparison, i.e. an instruction that writes
+/// a lane mask with one bit per lane, and zeroes the bits of lanes that were
+/// inactive when it executed. The VOP3 (_e64) encodings are not themselves
+/// marked as VOPC, so also check the VOPC (_e32) equivalent.
+///
+/// TODO: Also handle the sdst result of V_ADD_CO_U32 and V_SUB_CO_U32 amd
+/// V_DIV_SCALE_F32.
+static bool isVCmp(const SIInstrInfo &TII, const MachineInstr &MI) {
+  if (TII.isVOPC(MI))
+    return true;
+  int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
+  return Op32 != -1 && TII.isVOPC(Op32);
+}
+
+/// Worker for SIInstrInfo::isMaskedByExec. Every definition the result depends
+/// on must be in \p MBB, and is added to \p Defs so that the caller can check
+/// that EXEC is not modified between it and the use. Definitions are removed
+/// again when a branch of the search fails, so that on success \p Defs only
+/// holds definitions the result really depends on.
+static bool isMaskedByExecImpl(const SIInstrInfo &TII,
+                               const AMDGPU::LaneMaskConstants &LMC,
+                               Register Reg, const MachineBasicBlock *MBB,
+                               SmallSetVector<const MachineInstr *, 8> &Defs,
+                               const MachineRegisterInfo &MRI, unsigned Depth) {
+  // EXEC itself is trivially masked by EXEC.
+  if (Reg == LMC.ExecReg)
+    return true;
+
+  if (Depth == 0 || !Reg.isVirtual())
+    return false;
+
+  // Only look at definitions that can execute under the same EXEC mask as the
+  // use. Note that this also rules out instructions that write EXEC
+  // themselves, such as V_CMPX, since those would be found by the caller's
+  // scan for writes to EXEC.
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (Def->getParent() != MBB)
+    return false;
+
+  size_t NumDefs = Defs.size();
+  Defs.insert(Def);
+
+  if (isVCmp(TII, *Def))
+    return true;
+
+  // Recurse into an operand, which must be a whole register to say anything
+  // about the whole lane mask. A failed call rolls back its own additions.
+  auto Recurse = [&](unsigned OpIdx) {
+    const MachineOperand &MO = Def->getOperand(OpIdx);
+    return MO.isReg() && !MO.getSubReg() &&
+           isMaskedByExecImpl(TII, LMC, MO.getReg(), MBB, Defs, MRI, Depth - 1);
+  };
+
+  unsigned Opc = Def->getOpcode();
+  if (Opc == AMDGPU::COPY && Recurse(1))
+    return true;
+  // AND only needs one masked operand, because a zero bit in either operand
+  // forces a zero bit in the result.
+  if (Opc == LMC.AndOpc && (Recurse(1) || Recurse(2)))
+    return true;
+  // Likewise ANDN2, but only for its first operand.
+  if (Opc == LMC.AndN2Opc && Recurse(1))
+    return true;
+  if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc) && Recurse(1) && Recurse(2))
+    return true;
+  // TODO: Sometimes we encounter "reg = S_CSELECT -1, 0". If Reg has no other
+  // uses this could be optimized to "reg = S_CSELECT $exec, 0".
+
+  // Roll back, so that a caller that succeeds by another route is not left
+  // depending on definitions it does not actually use.
+  while (Defs.size() > NumDefs)
+    Defs.pop_back();
+  return false;
+}
+
+bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
+                                 const MachineRegisterInfo &MRI) const {
+  assert(MRI.isSSA() && "isMaskedByExec requires SSA form");
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+  const MachineBasicBlock *MBB = Use.getParent();
+
+  // Maximum depth of the def-use walk.
+  constexpr unsigned MaxDepth = 6;
+  SmallSetVector<const MachineInstr *, 8> Defs;
+  if (!isMaskedByExecImpl(*this, LMC, Reg, MBB, Defs, MRI, MaxDepth))
+    return false;
+
+  // Walk back from Use, which every definition dominates, and check that all
+  // of them are reached before any write to EXEC. Otherwise the mask may have
+  // been computed under an EXEC that is not a subset of the one in effect at
+  // Use, and so may have bits set for lanes that are now inactive.
+  unsigned NumDefsToFind = Defs.size();
+  for (const MachineInstr &Prev : reverse(
+           make_range(MBB->begin(), MachineBasicBlock::const_iterator(Use)))) {
+    if (Prev.modifiesRegister(LMC.ExecReg, &RI))
+      return false;
+    if (Defs.contains(&Prev) && --NumDefsToFind == 0)
+      break;
+  }
+  return NumDefsToFind == 0;
+}
+
 bool SIInstrInfo::hasModifiers(unsigned Opcode) const {
   // The src0_modifier operand is present on all instructions
   // that have modifiers.
