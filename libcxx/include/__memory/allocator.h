@@ -96,7 +96,12 @@ public:
 #if _LIBCPP_STD_VER >= 23
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr allocation_result<_Tp*> allocate_at_least(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
-    return {allocate(__n), __n};
+    if consteval {
+      return {allocate(__n), __n};
+    } else {
+      auto [__ptr, __count] = std::__libcpp_allocate_at_least<_Tp>(__element_count(__n));
+      return {__ptr, __count};
+    }
   }
 #endif
 

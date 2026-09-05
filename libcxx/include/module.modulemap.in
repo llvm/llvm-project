@@ -1787,6 +1787,7 @@ module std {
       export std.utility.element_count // used as part of the API
       export * // TODO: Workaround for https://llvm.org/PR120108
     }
+    module allocation_result    { header "__new/allocation_result.h" }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
     module global_new_delete    {
@@ -1796,6 +1797,7 @@ module std {
     }
     module interference_size    { header "__new/interference_size.h" }
     module launder              { header "__new/launder.h" }
+    module new_at_least         { header "__new/new_at_least.h" }
     module new_handler          { header "__new/new_handler.h" }
     module nothrow_t            { header "__new/nothrow_t.h" }
     module placement_new_delete { header "__new/placement_new_delete.h" }
