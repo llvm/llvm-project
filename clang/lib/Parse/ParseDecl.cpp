@@ -5170,8 +5170,15 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   bool CanBeBitfield =
       getCurScope()->isClassScope() && ScopedEnumKWLoc.isInvalid() && Name;
 
+  auto IsCXXTypeAhead = [this]() {
+    RevertingTentativeParsingAction PA(*this);
+    ConsumeToken();
+    return Parser::isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous);
+  };
+
   // Parse the fixed underlying type.
-  if (Tok.is(tok::colon)) {
+  if (Tok.is(tok::colon) &&
+      (!ParsingGenericAssociationType || IsCXXTypeAhead())) {
     // This might be an enum-base or part of some unrelated enclosing context.
     //
     // 'enum E : base' is permitted in two circumstances:
