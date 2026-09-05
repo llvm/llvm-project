@@ -240,7 +240,7 @@ struct CurrentDeviceIdResource
 };
 
 template <typename ComputeOpT>
-static bool isGangWorkerVectorAllOne(ComputeOpT op) {
+bool isGangWorkerVectorAllOne(ComputeOpT op) {
   // Strip index_cast operations from a value before checking for a constant.
   auto stripIndexCasts = [](Value val) -> Value {
     while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())

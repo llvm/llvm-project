@@ -749,20 +749,6 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
                                  fmf);
 }
 
-/// Overloaded methods to lower a *predicated* reduction to an llvm intrinsic
-/// that requires a start value. This start value format spans across fp
-/// reductions without mask and all the masked reduction intrinsics.
-template <class LLVMVPRedIntrinOp, class ReductionNeutral>
-static Value
-lowerPredicatedReductionWithStartValue(ConversionPatternRewriter &rewriter,
-                                       Location loc, Type llvmType,
-                                       Value vectorOperand, Value accumulator) {
-  accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
-                                                         llvmType, accumulator);
-  return LLVMVPRedIntrinOp::create(rewriter, loc, llvmType,
-                                   /*startValue=*/accumulator, vectorOperand);
-}
-
 template <class LLVMVPRedIntrinOp, class ReductionNeutral>
 static Value lowerPredicatedReductionWithStartValue(
     ConversionPatternRewriter &rewriter, Location loc, Type llvmType,

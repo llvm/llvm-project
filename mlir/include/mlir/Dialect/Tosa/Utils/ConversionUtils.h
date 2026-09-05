@@ -85,8 +85,6 @@ LogicalResult EqualizeRanks(PatternRewriter &rewriter, Location loc,
 LogicalResult EqualizeRanks(ImplicitLocOpBuilder &builder, Value &input1,
                             Value &input2);
 
-namespace {
-
 // Creates a TOSA operation and performs shape inference on the individual
 // op. This allows shape inference when lowering down to TOSA.
 template <typename TosaOp, typename... Args>
@@ -136,8 +134,6 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   result.setType(newTy);
   return op;
 }
-
-} // namespace
 
 // Creates a TOSA operation by:
 //   - first equalize ranks for ops with SameOperandsAndResultRank trait

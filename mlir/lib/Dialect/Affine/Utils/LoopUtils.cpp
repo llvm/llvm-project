@@ -1572,20 +1572,6 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
   return innerLoops;
 }
 
-// Stripmines a `forOp` by `factor` and sinks it under a single `target`.
-// Returns the new AffineForOps, nested immediately under `target`.
-template <typename SizeType>
-static AffineForOp stripmineSink(AffineForOp forOp, SizeType factor,
-                                 AffineForOp target) {
-  // TODO: Use cheap structural assertions that targets are nested under
-  // forOp and that targets are not nested under each other when DominanceInfo
-  // exposes the capability. It seems overkill to construct a whole function
-  // dominance tree at this point.
-  auto res = stripmineSink(forOp, factor, ArrayRef<AffineForOp>(target));
-  assert(res.size() == 1 && "Expected 1 inner forOp");
-  return res[0];
-}
-
 SmallVector<SmallVector<AffineForOp, 8>, 8>
 mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
                    ArrayRef<AffineForOp> targets) {

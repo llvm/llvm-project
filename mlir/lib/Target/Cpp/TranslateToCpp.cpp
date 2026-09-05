@@ -54,13 +54,6 @@ interleaveWithError(ForwardIterator begin, ForwardIterator end,
   return success();
 }
 
-template <typename Container, typename UnaryFunctor, typename NullaryFunctor>
-static inline LogicalResult interleaveWithError(const Container &c,
-                                                UnaryFunctor eachFn,
-                                                NullaryFunctor betweenFn) {
-  return interleaveWithError(c.begin(), c.end(), eachFn, betweenFn);
-}
-
 template <typename Container, typename UnaryFunctor>
 static inline LogicalResult interleaveCommaWithError(const Container &c,
                                                      raw_ostream &os,
