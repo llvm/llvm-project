@@ -292,7 +292,7 @@ define i8 @test_vector_reduce_xor_v4i8(<4 x i8> %v) {
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: test_vector_reduce_xor_v4i8:
@@ -310,7 +310,7 @@ define i8 @test_vector_reduce_xor_v4i8(<4 x i8> %v) {
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX8-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_xor_v4i8:
@@ -328,7 +328,7 @@ define i8 @test_vector_reduce_xor_v4i8(<4 x i8> %v) {
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_xor_v4i8:
@@ -345,7 +345,7 @@ define i8 @test_vector_reduce_xor_v4i8(<4 x i8> %v) {
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX10-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
-; GFX10-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_xor_v4i8:
@@ -374,7 +374,7 @@ define i8 @test_vector_reduce_xor_v4i8(<4 x i8> %v) {
 ; GFX11-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
-; GFX11-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_xor_v4i8:
@@ -415,7 +415,7 @@ define i8 @test_vector_reduce_xor_v4i8(<4 x i8> %v) {
 ; GFX12-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
-; GFX12-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call i8 @llvm.vector.reduce.xor.v4i8(<4 x i8> %v)
@@ -446,7 +446,7 @@ define i8 @test_vector_reduce_xor_v8i8(<8 x i8> %v) {
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: test_vector_reduce_xor_v8i8:
@@ -472,7 +472,7 @@ define i8 @test_vector_reduce_xor_v8i8(<8 x i8> %v) {
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX8-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_xor_v8i8:
@@ -498,7 +498,7 @@ define i8 @test_vector_reduce_xor_v8i8(<8 x i8> %v) {
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_xor_v8i8:
@@ -522,7 +522,7 @@ define i8 @test_vector_reduce_xor_v8i8(<8 x i8> %v) {
 ; GFX10-GISEL-NEXT:    v_xor_b32_e32 v2, v2, v6
 ; GFX10-GISEL-NEXT:    v_xor3_b32 v1, v1, v5, v3
 ; GFX10-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
-; GFX10-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_xor_v8i8:
@@ -565,7 +565,7 @@ define i8 @test_vector_reduce_xor_v8i8(<8 x i8> %v) {
 ; GFX11-GISEL-NEXT:    v_xor3_b32 v1, v1, v5, v3
 ; GFX11-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_xor_v8i8:
@@ -620,7 +620,7 @@ define i8 @test_vector_reduce_xor_v8i8(<8 x i8> %v) {
 ; GFX12-GISEL-NEXT:    v_xor3_b32 v1, v1, v5, v3
 ; GFX12-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> %v)
@@ -667,7 +667,7 @@ define i8 @test_vector_reduce_xor_v16i8(<16 x i8> %v) {
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX7-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX7-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-SDAG-LABEL: test_vector_reduce_xor_v16i8:
@@ -709,7 +709,7 @@ define i8 @test_vector_reduce_xor_v16i8(<16 x i8> %v) {
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX8-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_xor_v16i8:
@@ -751,7 +751,7 @@ define i8 @test_vector_reduce_xor_v16i8(<16 x i8> %v) {
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: test_vector_reduce_xor_v16i8:
@@ -788,7 +788,7 @@ define i8 @test_vector_reduce_xor_v16i8(<16 x i8> %v) {
 ; GFX10-GISEL-NEXT:    v_xor3_b32 v2, v2, v10, v6
 ; GFX10-GISEL-NEXT:    v_xor3_b32 v1, v1, v5, v3
 ; GFX10-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
-; GFX10-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_vector_reduce_xor_v16i8:
@@ -855,7 +855,7 @@ define i8 @test_vector_reduce_xor_v16i8(<16 x i8> %v) {
 ; GFX11-GISEL-NEXT:    v_xor3_b32 v1, v1, v5, v3
 ; GFX11-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_vector_reduce_xor_v16i8:
@@ -934,7 +934,7 @@ define i8 @test_vector_reduce_xor_v16i8(<16 x i8> %v) {
 ; GFX12-GISEL-NEXT:    v_xor3_b32 v1, v1, v5, v3
 ; GFX12-GISEL-NEXT:    v_xor3_b32 v0, v0, v2, v1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 8
+; GFX12-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = call i8 @llvm.vector.reduce.xor.v16i8(<16 x i8> %v)

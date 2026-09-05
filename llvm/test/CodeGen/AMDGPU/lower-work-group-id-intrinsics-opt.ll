@@ -275,7 +275,7 @@ define void @test_workgroup_id_z_non_kernel(ptr addrspace(1) %out) {
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x40014
-; GFX1250-GISEL-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s1, ttmp7, 0x100010
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s2, ttmp6, 0x40008
 ; GFX1250-GISEL-NEXT:    s_mul_i32 s0, s1, s0
@@ -314,7 +314,7 @@ define void @test_workgroup_id_z_non_kernel_optimized_used(ptr addrspace(1) %out
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x40014
-; GFX1250-GISEL-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s1, ttmp7, 0x100010
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s2, ttmp6, 0x40008
 ; GFX1250-GISEL-NEXT:    s_mul_i32 s1, s1, s0
@@ -343,7 +343,7 @@ define void @test_workgroup_id_z_non_kernel_optimized_not_used(ptr addrspace(1) 
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    s_lshr_b32 s0, ttmp7, 16
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp7, 0x100010
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1250-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
@@ -371,7 +371,7 @@ define void @test_workgroup_id_z_non_kernel_optimized_fixed(ptr addrspace(1) %ou
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    s_lshr_b32 s0, ttmp7, 16
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp7, 0x100010
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s1, ttmp6, 0x40008
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_lshl1_add_u32 s0, s0, s1

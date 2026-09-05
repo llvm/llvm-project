@@ -41,7 +41,7 @@ define amdgpu_cs i32 @test_shl_and_3(i32 inreg %arg1) {
 define amdgpu_cs i32 @test_lshr_and_1(i32 inreg %arg1) {
 ; CHECK-LABEL: test_lshr_and_1:
 ; CHECK:       ; %bb.0: ; %.entry
-; CHECK-NEXT:    s_lshr_b32 s0, s0, 4
+; CHECK-NEXT:    s_bfe_u32 s0, s0, 0x1c0004
 ; CHECK-NEXT:    ; return to shader part epilog
 .entry:
   %z1 = lshr i32 %arg1, 2
@@ -66,7 +66,7 @@ define amdgpu_cs i32 @test_lshr_and_2(i32 inreg %arg1) {
 define amdgpu_cs i32 @test_lshr_and_3(i32 inreg %arg1) {
 ; CHECK-LABEL: test_lshr_and_3:
 ; CHECK:       ; %bb.0: ; %.entry
-; CHECK-NEXT:    s_lshr_b32 s0, s0, 5
+; CHECK-NEXT:    s_bfe_u32 s0, s0, 0x1b0005
 ; CHECK-NEXT:    ; return to shader part epilog
 .entry:
   %z1 = lshr i32 %arg1, 3
