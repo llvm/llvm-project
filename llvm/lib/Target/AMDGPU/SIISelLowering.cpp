@@ -2362,6 +2362,22 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
                                             Alignment, Flags, IsFast);
 }
 
+bool SITargetLowering::isAtomicAlignmentSupported(Align Alignment,
+                                                  uint64_t SizeInBytes,
+                                                  uint64_t ElementSizeInBytes,
+                                                  unsigned AddrSpace) const {
+  // Each naturally aligned dword is separately atomic. Only global and flat
+  // opt in: the LDS 4 byte rule in allowsMisalignedMemoryAccessesImpl assumes
+  // lowering to ds_read2_b32, which never happens for an atomic.
+  if (ElementSizeInBytes < SizeInBytes && ElementSizeInBytes >= 4 &&
+      (AMDGPU::isExtendedGlobalAddrSpace(AddrSpace) ||
+       AddrSpace == AMDGPUAS::FLAT_ADDRESS))
+    return Alignment.value() >= ElementSizeInBytes;
+
+  return TargetLoweringBase::isAtomicAlignmentSupported(
+      Alignment, SizeInBytes, ElementSizeInBytes, AddrSpace);
+}
+
 EVT SITargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
