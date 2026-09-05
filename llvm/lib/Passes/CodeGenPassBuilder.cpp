@@ -19,6 +19,7 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
+#include "llvm/CodeGen/BlockUniformityProfile.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
