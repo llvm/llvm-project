@@ -8,10 +8,12 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 
 namespace llvm::sandboxir {
@@ -91,6 +93,27 @@ VecUtils::getNextUserBundles(ArrayRef<Value *> Bndl, const InstrMaps &IMaps,
       Bundles.emplace_back(std::move(*NextUserBndl));
   }
   return Bundles;
+}
+
+void VecUtils::tryEraseDeadInstrs(
+    DenseSet<Instruction *> &DeadInstrCandidates) {
+  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
+  // The dead instrs could span BBs, so we need to collect and sort them per BB.
+  for (auto *DeadI : DeadInstrCandidates)
+    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
+  for (auto &Pair : SortedDeadInstrCandidates)
+    sort(Pair.second,
+         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
+  for (const auto &Pair : SortedDeadInstrCandidates) {
+    for (Instruction *I : reverse(Pair.second)) {
+      if (I->hasNUses(0)) {
+        // Erase the dead instructions bottom-to-top.
+        LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Erase dead: " << *I << "\n");
+        I->eraseFromParent();
+      }
+    }
+  }
+  DeadInstrCandidates.clear();
 }
 
 unsigned VecUtils::getFloorPowerOf2(unsigned Num) {
