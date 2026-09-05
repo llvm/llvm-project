@@ -932,7 +932,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (RC == &AMDGPU::VGPR_32RegClass) {
     assert(AMDGPU::VGPR_32RegClass.contains(SrcReg) ||
-           AMDGPU::SReg_32RegClass.contains(SrcReg) ||
+           AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg) ||
            AMDGPU::AGPR_32RegClass.contains(SrcReg));
     unsigned Opc = AMDGPU::AGPR_32RegClass.contains(SrcReg) ?
                      AMDGPU::V_ACCVGPR_READ_B32_e64 : AMDGPU::V_MOV_B32_e32;
@@ -950,7 +950,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
+    if (!AMDGPU::SReg_32_EncodableRegClass.contains(SrcReg)) {
       if (DestReg == AMDGPU::VCC_LO) {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
@@ -5216,8 +5216,8 @@ bool SIInstrInfo::physRegUsesConstantBus(const MachineOperand &RegOp) const {
     return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::M0;
 
   // SGPRs use the constant bus
-  return AMDGPU::SReg_32RegClass.contains(Reg) ||
-         AMDGPU::SReg_64RegClass.contains(Reg);
+  return AMDGPU::SReg_32_EncodableRegClass.contains(Reg) ||
+         AMDGPU::SReg_64_EncodableRegClass.contains(Reg);
 }
 
 bool SIInstrInfo::regUsesConstantBus(const MachineOperand &RegOp,
