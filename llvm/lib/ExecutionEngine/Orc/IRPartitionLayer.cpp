@@ -239,58 +239,57 @@ void IRPartitionLayer::emitPartition(
   //
   // FIXME: We apply this promotion once per partitioning. It's safe, but
   // overkill.
-  auto ExtractedTSM = TSM.withModuleDo([&](Module &M)
-                                           -> Expected<ThreadSafeModule> {
+  //
+  // Promote under the context lock, but call defineMaterializing outside it.
+  // Otherwise we take Session while holding Context, which inverts the lock
+  // order used by replace() (Session then ~ThreadSafeModule -> Context).
+  SymbolFlagsMap SymbolFlags;
+  TSM.withModuleDo([&](Module &M) {
     auto PromotedGlobals = PromoteSymbols(M);
-    if (!PromotedGlobals.empty()) {
-
-      MangleAndInterner Mangle(ES, M.getDataLayout());
-      SymbolFlagsMap SymbolFlags;
+    if (!PromotedGlobals.empty())
       IRSymbolMapper::add(ES, *getManglingOptions(), PromotedGlobals,
                           SymbolFlags);
+  });
 
-      if (auto Err = R->defineMaterializing(SymbolFlags))
-        return std::move(Err);
+  if (!SymbolFlags.empty()) {
+    if (auto Err = R->defineMaterializing(std::move(SymbolFlags))) {
+      ES.reportError(std::move(Err));
+      R->failMaterialization();
+      return;
     }
+  }
 
+  std::string SubModuleName;
+  TSM.withModuleDo([&](Module &M) {
     expandPartition(*GVsToExtract);
 
     // Submodule name is given by hashing the names of the globals.
-    std::string SubModuleName;
-    {
-      std::vector<const GlobalValue *> HashGVs;
-      HashGVs.reserve(GVsToExtract->size());
-      llvm::append_range(HashGVs, *GVsToExtract);
-      llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
-        return LHS->getName() < RHS->getName();
-      });
-      hash_code HC(0);
-      for (const auto *GV : HashGVs) {
-        assert(GV->hasName() && "All GVs to extract should be named by now");
-        auto GVName = GV->getName();
-        HC = hash_combine(HC, hash_combine_range(GVName));
-      }
-      raw_string_ostream(SubModuleName)
-          << ".submodule."
-          << formatv(sizeof(size_t) == 8 ? "{0:x16}" : "{0:x8}",
-                     static_cast<size_t>(HC))
-          << ".ll";
+    std::vector<const GlobalValue *> HashGVs;
+    HashGVs.reserve(GVsToExtract->size());
+    llvm::append_range(HashGVs, *GVsToExtract);
+    llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
+      return LHS->getName() < RHS->getName();
+    });
+    hash_code HC(0);
+    for (const auto *GV : HashGVs) {
+      assert(GV->hasName() && "All GVs to extract should be named by now");
+      auto GVName = GV->getName();
+      HC = hash_combine(HC, hash_combine_range(GVName));
     }
-
-    // Extract the requested partiton (plus any necessary aliases) and
-    // put the rest back into the impl dylib.
-    auto ShouldExtract = [&](const GlobalValue &GV) -> bool {
-      return GVsToExtract->count(&GV);
-    };
-
-    return extractSubModule(TSM, SubModuleName, ShouldExtract);
+    raw_string_ostream(SubModuleName)
+        << ".submodule."
+        << formatv(sizeof(size_t) == 8 ? "{0:x16}" : "{0:x8}",
+                   static_cast<size_t>(HC))
+        << ".ll";
   });
 
-  if (!ExtractedTSM) {
-    ES.reportError(ExtractedTSM.takeError());
-    R->failMaterialization();
-    return;
-  }
+  // Extract outside the source context lock. cloneToNewContext locks the
+  // source, unlocks, then locks the destination — nesting that under
+  // withModuleDo causes a Context->Context lock-order inversion.
+  auto ShouldExtract = [&](const GlobalValue &GV) -> bool {
+    return GVsToExtract->count(&GV);
+  };
+  auto ExtractedTSM = extractSubModule(TSM, SubModuleName, ShouldExtract);
 
   if (auto Err = R->replace(std::make_unique<PartitioningIRMaterializationUnit>(
           ES, *getManglingOptions(), std::move(TSM), *this))) {
@@ -298,5 +297,5 @@ void IRPartitionLayer::emitPartition(
     R->failMaterialization();
     return;
   }
-  BaseLayer.emit(std::move(R), std::move(*ExtractedTSM));
+  BaseLayer.emit(std::move(R), std::move(ExtractedTSM));
 }

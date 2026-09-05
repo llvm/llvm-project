@@ -45,6 +45,7 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include <mutex>
 #include <optional>
 
 using namespace llvm;
@@ -277,6 +278,10 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
         PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
                    /*MemoryProfile=*/"", PGOOptions::IRUse, PGOOptions::CSIRUse,
                    PGOOptions::ColdFuncOpt::Default, Conf.AddFSDiscriminator);
+    // ThinLTO backends run this concurrently and all share Conf; serialize
+    // the write into the global cl::opt.
+    static std::mutex NoPGOWarnMismatchMutex;
+    std::lock_guard<std::mutex> Lock(NoPGOWarnMismatchMutex);
     NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
     PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", PGOOptions::NoAction,

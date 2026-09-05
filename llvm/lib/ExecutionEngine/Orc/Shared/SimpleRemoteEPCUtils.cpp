@@ -98,7 +98,10 @@ FDSimpleRemoteEPCTransport::Create(SimpleRemoteEPCTransportClient &C, int InFD,
 
 FDSimpleRemoteEPCTransport::~FDSimpleRemoteEPCTransport() {
 #if LLVM_ENABLE_THREADS
-  ListenerThread.join();
+  // Ensure the listen thread is finished and FDs are closed before destruction.
+  disconnect();
+  if (ListenerThread.joinable())
+    ListenerThread.join();
 #endif
 }
 
@@ -136,34 +139,56 @@ Error FDSimpleRemoteEPCTransport::sendMessage(SimpleRemoteEPCOpcode OpC,
 }
 
 void FDSimpleRemoteEPCTransport::disconnect() {
-  if (Disconnected)
-    return; // Return if already disconnected.
-
-  Disconnected = true;
-  bool CloseOutFD = InFD != OutFD;
-
-#ifndef _WIN32
-  // We need to shutdown the socket to wake up (and terminate) any ongoing
-  // blocking read on this FD. If the FD is not a socket, shutdown will just
-  // complain through errno (instead of crashing).
-  // FIXME: what about Windows?
-  ::shutdown(InFD, CloseOutFD ? SHUT_RD : SHUT_RDWR);
-#endif
-  // Close InFD.
-  while (close(InFD) == -1) {
-    if (errno == EBADF)
-      break;
+  bool CloseFDs = false;
+  bool CloseOutFD = false;
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    if (!Disconnected) {
+      Disconnected = true;
+      CloseFDs = true;
+      CloseOutFD = InFD != OutFD;
+    }
   }
 
-  // Close OutFD.
-  if (CloseOutFD) {
 #ifndef _WIN32
-    // FIXME: what about Windows?
-    ::shutdown(OutFD, SHUT_WR);
+  // Wake any blocking read so the listen thread can exit before we close.
+  // If the FD is not a socket, shutdown will just complain through errno
+  // (instead of crashing).
+  // FIXME: what about Windows?
+  if (CloseFDs) {
+    ::shutdown(InFD, CloseOutFD ? SHUT_RD : SHUT_RDWR);
+    if (CloseOutFD)
+      ::shutdown(OutFD, SHUT_WR);
+  }
 #endif
-    while (close(OutFD) == -1) {
-      if (errno == EBADF)
-        break;
+
+#if LLVM_ENABLE_THREADS
+  // Join the listener before closing FDs when disconnect is called from
+  // another thread. Closing while listenLoop is still in read/write races
+  // with close (TSan). The listener itself calls disconnect at exit and must
+  // not join itself.
+  if (ListenerThread.joinable() &&
+      ListenerThread.get_id() != std::this_thread::get_id())
+    ListenerThread.join();
+#endif
+
+  // Close under the send mutex so we cannot close while sendMessage is mid
+  // write, and set FDs to -1 so a second disconnect is a no-op.
+  if (CloseFDs) {
+    std::lock_guard<std::mutex> Lock(M);
+    if (InFD != -1) {
+      while (close(InFD) == -1) {
+        if (errno == EBADF)
+          break;
+      }
+      InFD = -1;
+    }
+    if (CloseOutFD && OutFD != -1) {
+      while (close(OutFD) == -1) {
+        if (errno == EBADF)
+          break;
+      }
+      OutFD = -1;
     }
   }
 }
