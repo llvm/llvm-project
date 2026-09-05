@@ -56,19 +56,9 @@ public:
     return Func->getName();
   }
 
-  static void free(InterpFrame *F) {
-    if (!F->isBottomFrame()) {
-      F->~InterpFrame();
-      delete[] reinterpret_cast<char *>(F);
-    } else {
-      F->~InterpFrame();
-    }
-  }
-
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
-  void destroyScopes();
   void enableLocal(unsigned Idx);
   bool isLocalEnabled(unsigned Idx) const {
     return localInlineDesc(Idx)->IsActive;
@@ -143,10 +133,6 @@ public:
     return stackRef<Pointer>(0);
   }
 
-  /// Checks if the frame is a root frame - return should quit the interpreter.
-  bool isRoot() const { return !Func; }
-
-  /// Returns the return address of the frame.
   CodePtr getRetPC() const { return RetPC; }
   /// Returns the return address of the opcode in the caller frame.
   CodePtr getRetOpPC() const {

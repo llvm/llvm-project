@@ -289,41 +289,32 @@ PRESERVE_NONE bool Ret(InterpState &S) {
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current);
-
 #ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  InterpFrame *Caller = S.Current->Caller;
-
   // This only happens via Context::Run().
-  if (!Caller)
+  if (S.Current->isBottomFrame())
     return true;
 
   cleanupAfterFunctionCall(S, S.Current->getFunction());
-
   S.PC = S.Current->getRetPC();
-  InterpFrame::free(S.Current);
-  S.Current = Caller;
   S.Stk.push<T>(Ret);
   return true;
 }
 
 PRESERVE_NONE inline bool RetVoid(InterpState &S) {
+  assert(S.Current);
 #ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  InterpFrame *Caller = S.Current->Caller;
   // This only happens via Context::Run().
-  if (!Caller)
+  if (S.Current->isBottomFrame())
     return true;
 
   cleanupAfterFunctionCall(S, S.Current->getFunction());
-
   S.PC = S.Current->getRetPC();
-  InterpFrame::free(S.Current);
-  S.Current = Caller;
   return true;
 }
 
