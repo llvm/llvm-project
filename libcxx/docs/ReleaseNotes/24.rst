@@ -41,6 +41,7 @@ Implemented Papers
 - P3052R2: ``view_interface::at()`` (`Github <https://llvm.org/PR204395>`__)
 - P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
 - P3059R2: Making user-defined constructors of view iterators/sentinels private (`Github <https://github.com/llvm/llvm-project/issues/189599>`__)
+- P2869R4: Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26 (`Github <https://github.com/llvm/llvm-project/issues/105412>`__)
 - P0792R14: ``function_ref`` : a type-erased callable reference (`Github <https://llvm.org/PR105376>`__)
 - P3016R6: Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists
   (`Github <https://llvm.org/PR171271>`__)
@@ -56,6 +57,8 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS`` macro has been added to make the declarations in ``<memory>``
+  available.
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
 
 Deprecations and Removals
