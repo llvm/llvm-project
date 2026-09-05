@@ -711,6 +711,47 @@ exit:
   ret void
 }
 
+; Same as @latch_postdec_negative_step_folds, but the header is also to latch.
+define void @latch_postdec_negative_step_header_is_latch() {
+; CHECK-LABEL: define void @latch_postdec_negative_step_header_is_latch() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], 5
+; CHECK-NEXT:    call void @use(i1 [[ULE]])
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[SGT]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 5, %entry ], [ %iv.next, %loop ]
+  %ugt = icmp ugt i8 %iv, 2
+  call void @use(i1 %ugt)
+  %ule = icmp ule i8 %iv, 5
+  call void @use(i1 %ule)
+  %sgt = icmp sgt i8 %iv, 2
+  call void @use(i1 %sgt)
+  %sle = icmp sle i8 %iv, 5
+  call void @use(i1 %sle)
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, 2
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; B == StartValue for a latch post-decrement compare: %iv never reaches
 ; B + 1 == 6 before wrapping around the whole range, so nothing must be folded.
 ; The first iteration alone already has %iv == B.
