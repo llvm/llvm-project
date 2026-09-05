@@ -22,4 +22,5 @@ printf_behavior
 builtin_compatibility
 syscall_wrapper_refactor
 modular_format
+code_coverage
 ```
