@@ -296,6 +296,11 @@ static bool printCompactDWARFExpr(
 
   while (I != E) {
     const DWARFExpression::Operation &Op = *I;
+    if (Op.isOperandError()) {
+      OS << "<decoding error>";
+      return false;
+    }
+
     uint8_t Opcode = Op.getCode();
     switch (Opcode) {
     case dwarf::DW_OP_regx: {

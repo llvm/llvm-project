@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -158,9 +160,61 @@ static Desc getSubOpDesc(unsigned Opcode, unsigned SubOpcode) {
   return getDescImpl(Descriptions, SubOpcode);
 }
 
+static std::optional<uint64_t> finishLEB128(DataExtractor::Cursor &Cursor,
+                                            uint64_t &Offset, uint64_t Value) {
+  if (!Cursor) {
+    consumeError(Cursor.takeError());
+    return std::nullopt;
+  }
+  Offset = Cursor.tell();
+  return Value;
+}
+
+static std::optional<uint64_t> extractULEB128(const DataExtractor &Data,
+                                              uint64_t &Offset) {
+  DataExtractor::Cursor Cursor(Offset);
+  uint64_t Value = Data.getULEB128(Cursor);
+  return finishLEB128(Cursor, Offset, Value);
+}
+
+static std::optional<uint64_t> extractSLEB128(const DataExtractor &Data,
+                                              uint64_t &Offset) {
+  DataExtractor::Cursor Cursor(Offset);
+  uint64_t Value = static_cast<uint64_t>(Data.getSLEB128(Cursor));
+  return finishLEB128(Cursor, Offset, Value);
+}
+
+static std::optional<uint64_t>
+extractTruncatedGenericConstant(const DataExtractor &Data, uint64_t &Offset,
+                                uint8_t AddressSize) {
+  // Generic constants are truncated to the target's address-sized generic
+  // type. If the mathematical value does not fit the decoder's 64-bit return
+  // type, scan the complete operand while retaining only those low bits.
+  StringRef Bytes = Data.getData();
+  const unsigned BitSize = AddressSize * 8;
+  unsigned Shift = 0;
+  uint64_t Value = 0;
+  while (Offset < Bytes.size()) {
+    uint8_t Byte = static_cast<uint8_t>(Bytes[Offset++]);
+    if (Shift < BitSize) {
+      unsigned RemainingBits = BitSize - Shift;
+      uint64_t Slice = Byte & 0x7f;
+      if (RemainingBits < 7)
+        Slice &= (uint64_t(1) << RemainingBits) - 1;
+      Value |= Slice << Shift;
+    }
+    if ((Byte & 0x80) == 0)
+      return Value;
+    if (Shift < BitSize)
+      Shift += 7;
+  }
+  return std::nullopt;
+}
+
 bool DWARFExpression::Operation::extract(DataExtractor Data,
                                          uint8_t AddressSize, uint64_t Offset,
                                          std::optional<DwarfFormat> Format) {
+  OperandError = false;
   EndOffset = Offset;
   Opcode = Data.getU8(&Offset);
 
@@ -168,16 +222,33 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
   if (Desc.Version == Operation::DwarfNA)
     return false;
 
+  auto FailOperandDecode = [&] {
+    OperandError = true;
+    return false;
+  };
   Operands.resize(Desc.Op.size());
   OperandEndOffsets.resize(Desc.Op.size());
   for (unsigned Operand = 0; Operand < Desc.Op.size(); ++Operand) {
     unsigned Size = Desc.Op[Operand];
     unsigned Signed = Size & Operation::SignBit;
+    auto ExtractLEBOperand = [&](std::optional<uint64_t> Value) {
+      if (!Value)
+        return FailOperandDecode();
+      Operands[Operand] = *Value;
+      return true;
+    };
+    auto ExtractUnsignedLEBOperand = [&] {
+      return ExtractLEBOperand(extractULEB128(Data, Offset));
+    };
+    auto ExtractSignedLEBOperand = [&] {
+      return ExtractLEBOperand(extractSLEB128(Data, Offset));
+    };
 
     switch (Size & ~Operation::SignBit) {
     case Operation::SizeSubOpLEB:
       assert(Operand == 0 && "SubOp operand must be the first operand");
-      Operands[Operand] = Data.getULEB128(&Offset);
+      if (!ExtractUnsignedLEBOperand())
+        return false;
       Desc = getSubOpDesc(Opcode, Operands[Operand]);
       if (Desc.Version == Operation::DwarfNA)
         return false;
@@ -214,17 +285,31 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
           Data.getUnsigned(&Offset, dwarf::getDwarfOffsetByteSize(*Format));
       break;
     case Operation::SizeLEB:
-      if (Signed)
-        Operands[Operand] = Data.getSLEB128(&Offset);
-      else
-        Operands[Operand] = Data.getULEB128(&Offset);
+      if (Opcode == DW_OP_constu || Opcode == DW_OP_consts) {
+        std::optional<uint64_t> Value = Opcode == DW_OP_consts
+                                            ? extractSLEB128(Data, Offset)
+                                            : extractULEB128(Data, Offset);
+        if (!Value)
+          Value = extractTruncatedGenericConstant(Data, Offset, AddressSize);
+        if (!Value)
+          return FailOperandDecode();
+        Operands[Operand] = *Value;
+      } else if (Signed) {
+        if (!ExtractSignedLEBOperand())
+          return false;
+      } else {
+        if (!ExtractUnsignedLEBOperand())
+          return false;
+      }
       break;
     case Operation::BaseTypeRef:
-      Operands[Operand] = Data.getULEB128(&Offset);
+      if (!ExtractUnsignedLEBOperand())
+        return false;
       break;
     case Operation::NvidiaMuxArg:
       assert(Operand == 1);
-      Operands[Operand] = Data.getULEB128(&Offset);
+      if (!ExtractUnsignedLEBOperand())
+        return false;
       // The selector names an NVIDIA specific operation, and the number and
       // type of the operands that follow it are implied by that operation.
       // No NVIDIA operation is known here, so where this operation ends is
@@ -239,7 +324,8 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       case 1:
       case 2:
       case 4:
-        Operands[Operand] = Data.getULEB128(&Offset);
+        if (!ExtractUnsignedLEBOperand())
+          return false;
         break;
       case 3: // global as uint32
         Operands[Operand] = Data.getU32(&Offset);

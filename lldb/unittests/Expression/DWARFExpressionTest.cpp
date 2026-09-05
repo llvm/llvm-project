@@ -838,6 +838,78 @@ TEST(DWARFExpression, GenericBinaryOpsAllowDifferentSignedness) {
       ExpectScalar(4));
 }
 
+TEST(DWARFExpression, OversizedLEB128Constants) {
+  auto evaluate = [](uint8_t opcode, uint8_t low_byte,
+                     uint8_t expected_literal) {
+    std::vector<uint8_t> expr = {
+        opcode,
+        // These operands encode positive 2^64 plus the low seven bits.
+        low_byte, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02,
+        static_cast<uint8_t>(DW_OP_lit0 + expected_literal), DW_OP_eq,
+        DW_OP_stack_value};
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/8);
+    return DWARFExpression::Evaluate(
+        /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
+        /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+        /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
+  };
+
+  // Generic constants are address-sized, so the high 2^64 bit is discarded.
+  // The comparisons also verify that the complete LEB128 operands are consumed.
+  EXPECT_THAT_EXPECTED(evaluate(DW_OP_constu, 0x80, 0),
+                       ExpectScalar(64, 1, false));
+  EXPECT_THAT_EXPECTED(evaluate(DW_OP_consts, 0x80, 0),
+                       ExpectScalar(64, 1, false));
+  EXPECT_THAT_EXPECTED(evaluate(DW_OP_constu, 0x85, 5),
+                       ExpectScalar(64, 1, false));
+  EXPECT_THAT_EXPECTED(evaluate(DW_OP_consts, 0x85, 5),
+                       ExpectScalar(64, 1, false));
+}
+
+TEST(DWARFExpression, RejectsOversizedLEB128Operand) {
+  auto evaluate = [](llvm::ArrayRef<uint8_t> expr) {
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/8);
+    return DWARFExpression::Evaluate(
+        /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
+        /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+        /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
+  };
+
+  std::vector<uint8_t> oversized_uleb = {DW_OP_lit0,
+                                         DW_OP_plus_uconst,
+                                         0x80,
+                                         0x80,
+                                         0x80,
+                                         0x80,
+                                         0x80,
+                                         0x80,
+                                         0x80,
+                                         0x80,
+                                         0x80,
+                                         0x02,
+                                         DW_OP_stack_value};
+  EXPECT_THAT_EXPECTED(
+      evaluate(oversized_uleb),
+      llvm::FailedWithMessage(
+          "unable to decode operands for DW_OP_plus_uconst at offset 0x1"));
+
+  const uint8_t oversized_sleb[] = {DW_OP_breg0, 0x80, 0x80, 0x80,
+                                    0x80,        0x80, 0x80, 0x80,
+                                    0x80,        0x80, 0x02, DW_OP_stack_value};
+  EXPECT_THAT_EXPECTED(
+      evaluate(oversized_sleb),
+      llvm::FailedWithMessage(
+          "unable to decode operands for DW_OP_breg0 at offset 0x0"));
+
+  const uint8_t unterminated_constant[] = {DW_OP_constu, 0x80};
+  EXPECT_THAT_EXPECTED(
+      evaluate(unterminated_constant),
+      llvm::FailedWithMessage(
+          "unable to decode operands for DW_OP_constu at offset 0x0"));
+}
+
 TEST(DWARFExpression, RelationalOpsProduceGenericResult) {
   struct TestCase {
     uint8_t opcode;
