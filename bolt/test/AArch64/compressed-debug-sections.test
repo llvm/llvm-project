@@ -1,6 +1,7 @@
-// Checks that BOLT correctly errors out on compressed debug sections.
+// Checks that BOLT can error gracefully when given corrupted, zstd compressed DWARF
+// debug information.
 //
+// REQUIRES: zstd
 // RUN: yaml2obj %p/Inputs/compressed-debug-sections.yaml -o %t.exe
 // RUN: not llvm-bolt %t.exe -o %t.bolt --update-debug-sections 2>&1 | FileCheck %s
-//
-// CHECK: compressed debug section '.debug_info' detected. --update-debug-sections requires uncompressed debug info
+// CHECK: failed to decompress section '.debug_info': Src size is incorrect
