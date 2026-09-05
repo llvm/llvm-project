@@ -90,7 +90,7 @@ class SOP1_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseu
 
 // Only register input allowed.
 class SOP1_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs SReg_32:$sdst), (ins SReg_32:$src0),
+  opName, (outs SReg_32:$sdst), (ins SReg_32_Encodable:$src0),
   "$sdst, $src0", pattern>;
 
 // 32-bit input, no output.
@@ -112,7 +112,7 @@ class SOP1_64_movreld <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
 >;
 
 class SOP1_0_32R <string opName, list<dag> pattern = []> : SOP1_Pseudo <
-  opName, (outs), (ins SReg_32:$src0),
+  opName, (outs), (ins SReg_32_Encodable:$src0),
   "$src0", pattern> {
   let has_sdst = 0;
 }
