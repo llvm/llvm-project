@@ -2303,7 +2303,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
       RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, *MI);
     } else {
       // Adjust for missing dead-def flags.
-      RegOpers.detectDeadDefs(*MI, *DAG.LIS);
+      RegOpers.detectDeadDefs(*MI, *DAG.LIS, DAG.MRI);
     }
     LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
   }
