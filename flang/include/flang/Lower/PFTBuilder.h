@@ -852,7 +852,7 @@ private:
 /// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end
 /// statements.
 template <typename T>
-static parser::CharBlock stmtSourceLoc(const T &stmt) {
+parser::CharBlock stmtSourceLoc(const T &stmt) {
   return stmt.visit(common::visitors{[](const auto &x) { return x.source; }});
 }
 

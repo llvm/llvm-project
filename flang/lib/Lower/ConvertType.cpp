@@ -536,7 +536,8 @@ struct TypeBuilderImpl {
   }
 
   template <typename A>
-  Fortran::lower::LenParameterTy getCharacterLength(const A &expr) {
+  [[maybe_unused]] Fortran::lower::LenParameterTy
+  getCharacterLength(const A &expr) {
     return fir::SequenceType::getUnknownExtent();
   }
 

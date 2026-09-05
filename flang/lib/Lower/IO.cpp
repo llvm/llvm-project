@@ -126,14 +126,15 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
 
 /// Helper function to retrieve the name of the IO function given the key `A`
 template <typename A>
-static constexpr const char *getName() {
+[[maybe_unused]] static constexpr const char *getName() {
   return std::get<A>(Fortran::lower::newIOTable).name;
 }
 
 /// Helper function to retrieve the type model signature builder of the IO
 /// function as defined by the key `A`
 template <typename A>
-static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+[[maybe_unused]] static constexpr fir::runtime::FuncTypeBuilderFunc
+getTypeModel() {
   return std::get<A>(Fortran::lower::newIOTable).getTypeModel();
 }
 
