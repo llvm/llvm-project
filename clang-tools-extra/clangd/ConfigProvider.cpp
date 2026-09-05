@@ -10,10 +10,12 @@
 #include "Config.h"
 #include "ConfigFragment.h"
 #include "support/FileCache.h"
+#include "support/Logger.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
@@ -165,6 +167,40 @@ Provider::combine(std::vector<const Provider *> Providers) {
 
   return std::make_unique<CombinedProvider>(std::move(Providers));
 }
+
+Provider::OwningProvider
+Provider::combineOwned(std::vector<std::unique_ptr<Provider>> Sources) {
+  std::vector<const Provider *> Pointers;
+  Pointers.reserve(Sources.size());
+  for (const auto &P : Sources)
+    Pointers.push_back(P.get());
+  return {combine(std::move(Pointers)), std::move(Sources)};
+}
+
+std::vector<std::unique_ptr<Provider>>
+Provider::createDefaultProviders(const ThreadsafeFS &TFS) {
+  std::vector<std::unique_ptr<Provider>> Providers;
+  Providers.push_back(fromAncestorRelativeYAMLFiles(".clangd", TFS));
+  llvm::SmallString<256> UserConfig;
+  if (llvm::sys::path::user_config_directory(UserConfig)) {
+    llvm::sys::path::append(UserConfig, "clangd", "config.yaml");
+    vlog("User config file is {0}", UserConfig);
+    Providers.push_back(
+        fromYAMLFile(UserConfig, /*Directory=*/"", TFS, /*Trusted=*/true));
+  } else {
+    elog("Couldn't determine user config file, not loading");
+  }
+  return Providers;
+}
+
+const char *const Provider::EnableConfigFlagDesc =
+    "Read user and project configuration from YAML files.\n"
+    "Project config is from a .clangd file in the project directory.\n"
+    "User config is from clangd/config.yaml in the following directories:\n"
+    "\tWindows: %USERPROFILE%\\AppData\\Local\n"
+    "\tMac OS: ~/Library/Preferences/\n"
+    "\tOthers: $XDG_CONFIG_HOME, usually ~/.config\n"
+    "Configuration is documented at https://clangd.llvm.org/config.html";
 
 Config Provider::getConfig(const Params &P, DiagnosticCallback DC) const {
   trace::Span Tracer("getConfig");
