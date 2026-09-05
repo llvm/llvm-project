@@ -38,35 +38,32 @@ program test_default_mapper_no_pointer_map
 
 end program test_default_mapper_no_pointer_map
 
+! The implicit default mapper transfers the record's flat storage (trivial
+! members and descriptor bytes) via a single contiguous to/from parent map, and
+! only emits ref_ptee (pointee + attach) entries for allocatable components.
+! Trivial members (leaf_val, val, id) and pointer components get no member map.
+
 ! CHECK-LABEL: omp.declare_mapper @{{.*}}leaf_type_omp_default_mapper : !fir.type<_QFTleaf_type{
-! CHECK: %[[LEAF_VAL:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32){{.*}}map_clauses(implicit, tofrom)
-! CHECK: %[[LEAF_ARR_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom){{.*}}-> !fir.llvm_ptr
-! CHECK: %[[LEAF_ARR_DESC:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(always, implicit, to)
-! CHECK: %[[LEAF_ARR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptr, ref_ptee)
-! CHECK: %[[LEAF_PARENT:.*]] = omp.map.info var_ptr({{.*}}!fir.type<_QFTleaf_type{{.*}}>){{.*}}members(%[[LEAF_VAL]], %[[LEAF_ARR_DESC]], %[[LEAF_ARR_DATA]] : [0], [1], [1, 0] :
-! CHECK: omp.declare_mapper.info map_entries(%[[LEAF_PARENT]], %[[LEAF_VAL]], %[[LEAF_ARR_DESC]], %[[LEAF_ARR_ATTACH]], %[[LEAF_ARR_DATA]] :
+! CHECK: %[[LEAF_ARR_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom, ref_ptee){{.*}}-> !fir.llvm_ptr
+! CHECK: %[[LEAF_ARR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptee)
+! CHECK: %[[LEAF_PARENT:.*]] = omp.map.info var_ptr({{.*}}!fir.type<_QFTleaf_type{{.*}}>){{.*}}map_clauses(implicit, tofrom){{.*}}members(%[[LEAF_ARR_DATA]] : [1] :
+! CHECK: omp.declare_mapper.info map_entries(%[[LEAF_PARENT]], %[[LEAF_ARR_DATA]], %[[LEAF_ARR_ATTACH]] :
 
 ! CHECK-LABEL: omp.declare_mapper @{{.*}}inner_type_omp_default_mapper : !fir.type<_QFTinner_type{
-! CHECK: %[[INNER_VAL:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32){{.*}}map_clauses(implicit, tofrom)
-! CHECK: %[[INNER_ARR_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom){{.*}}name(""){{.*}}-> !fir.llvm_ptr
-! CHECK: %[[INNER_ARR_DESC:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(always, implicit, to){{.*}}name("")
-! CHECK: %[[INNER_ARR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptr, ref_ptee){{.*}}name("")
-! CHECK: %[[INNER_ALLOC_LEAF_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom){{.*}}mapper(@{{.*}}leaf_type_omp_default_mapper){{.*}}-> !fir.llvm_ptr
-! CHECK: %[[INNER_ALLOC_LEAF_DESC:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(always, implicit, to){{.*}}name("")
-! CHECK: %[[INNER_ALLOC_LEAF_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptr, ref_ptee){{.*}}name("")
-! CHECK: %[[INNER_PARENT:.*]] = omp.map.info var_ptr({{.*}}!fir.type<_QFTinner_type{{.*}}>){{.*}}members(%[[INNER_VAL]], %[[INNER_ARR_DESC]], %[[INNER_ARR_DATA]], %[[INNER_ALLOC_LEAF_DESC]], %[[INNER_ALLOC_LEAF_DATA]] : [0], [1], [1, 0], [3], [3, 0] :
-! CHECK: omp.declare_mapper.info map_entries(%[[INNER_PARENT]], %[[INNER_VAL]], %[[INNER_ARR_DESC]], %[[INNER_ALLOC_LEAF_DESC]], %[[INNER_ARR_ATTACH]], %[[INNER_ALLOC_LEAF_ATTACH]], %[[INNER_ARR_DATA]], %[[INNER_ALLOC_LEAF_DATA]] :
+! CHECK: %[[INNER_ARR_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom, ref_ptee){{.*}}name(""){{.*}}-> !fir.llvm_ptr
+! CHECK: %[[INNER_ARR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptee){{.*}}name("")
+! CHECK: %[[INNER_ALLOC_LEAF_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom, ref_ptee){{.*}}mapper(@{{.*}}leaf_type_omp_default_mapper){{.*}}name("")
+! CHECK: %[[INNER_ALLOC_LEAF_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptee){{.*}}name("")
+! CHECK: %[[INNER_PARENT:.*]] = omp.map.info var_ptr({{.*}}!fir.type<_QFTinner_type{{.*}}>){{.*}}map_clauses(implicit, tofrom){{.*}}members(%[[INNER_ARR_DATA]], %[[INNER_ALLOC_LEAF_DATA]] : [1], [3] :
+! CHECK: omp.declare_mapper.info map_entries(%[[INNER_PARENT]], %[[INNER_ARR_DATA]], %[[INNER_ALLOC_LEAF_DATA]], %[[INNER_ARR_ATTACH]], %[[INNER_ALLOC_LEAF_ATTACH]] :
 
 ! CHECK-LABEL: omp.declare_mapper @{{.*}}outer_type_omp_default_mapper : !fir.type<_QFTouter_type{
-! CHECK: %[[OUTER_ID:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32){{.*}}map_clauses(implicit, tofrom)
-! CHECK: %[[OUTER_ALLOC_INNER_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom){{.*}}mapper(@{{.*}}inner_type_omp_default_mapper){{.*}}-> !fir.llvm_ptr
-! CHECK: %[[OUTER_ALLOC_INNER_DESC:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(always, implicit, to){{.*}}name("")
-! CHECK: %[[OUTER_ALLOC_INNER_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptr, ref_ptee){{.*}}name("")
-! CHECK: %[[OUTER_ALLOC_ARR_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom){{.*}}name(""){{.*}}-> !fir.llvm_ptr
-! CHECK: %[[OUTER_ALLOC_ARR_DESC:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(always, implicit, to){{.*}}name("")
-! CHECK: %[[OUTER_ALLOC_ARR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptr, ref_ptee){{.*}}name("")
-! CHECK: %[[OUTER_PARENT:.*]] = omp.map.info var_ptr({{.*}}!fir.type<_QFTouter_type{{.*}}>){{.*}}members(%[[OUTER_ID]], %[[OUTER_ALLOC_INNER_DESC]], %[[OUTER_ALLOC_INNER_DATA]], %[[OUTER_ALLOC_ARR_DESC]], %[[OUTER_ALLOC_ARR_DATA]] : [0], [1], [1, 0], [3], [3, 0] :
-! CHECK: omp.declare_mapper.info map_entries(%[[OUTER_PARENT]], %[[OUTER_ID]], %[[OUTER_ALLOC_INNER_DESC]], %[[OUTER_ALLOC_ARR_DESC]], %[[OUTER_ALLOC_INNER_ATTACH]], %[[OUTER_ALLOC_ARR_ATTACH]], %[[OUTER_ALLOC_INNER_DATA]], %[[OUTER_ALLOC_ARR_DATA]] :
+! CHECK: %[[OUTER_ALLOC_INNER_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom, ref_ptee){{.*}}mapper(@{{.*}}inner_type_omp_default_mapper){{.*}}name("")
+! CHECK: %[[OUTER_ALLOC_INNER_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptee){{.*}}name("")
+! CHECK: %[[OUTER_ALLOC_ARR_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(implicit, tofrom, ref_ptee){{.*}}name(""){{.*}}-> !fir.llvm_ptr
+! CHECK: %[[OUTER_ALLOC_ARR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(attach, ref_ptee){{.*}}name("")
+! CHECK: %[[OUTER_PARENT:.*]] = omp.map.info var_ptr({{.*}}!fir.type<_QFTouter_type{{.*}}>){{.*}}map_clauses(implicit, tofrom){{.*}}members(%[[OUTER_ALLOC_INNER_DATA]], %[[OUTER_ALLOC_ARR_DATA]] : [1], [3] :
+! CHECK: omp.declare_mapper.info map_entries(%[[OUTER_PARENT]], %[[OUTER_ALLOC_INNER_DATA]], %[[OUTER_ALLOC_ARR_DATA]], %[[OUTER_ALLOC_INNER_ATTACH]], %[[OUTER_ALLOC_ARR_ATTACH]] :
 
 ! CHECK-LABEL: func.func @_QQmain
 ! CHECK: %[[PTR_SCALAR_DATA:.*]] = omp.map.info var_ptr(%{{.*}}){{.*}}map_clauses(tofrom){{.*}}-> !fir.llvm_ptr
