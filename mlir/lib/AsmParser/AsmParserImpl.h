@@ -283,10 +283,9 @@ public:
     return success();
   }
 
-  /// Parse a floating point value with given semantics from the stream. Since
-  /// this implementation parses the string as double precision and only
-  /// afterwards converts the value to the requested semantic, precision may be
-  /// lost.
+  /// Parse a floating point value with given semantics from the stream. The
+  /// literal is parsed directly using the requested semantics, avoiding range
+  /// or precision loss from an intermediate double conversion.
   ParseResult parseFloat(const llvm::fltSemantics &semantics,
                          APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);

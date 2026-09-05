@@ -1140,6 +1140,37 @@ func.func @f80_special_values() {
   return
 }
 
+// Literals are parsed with the semantics of the target type, so f80 and f128
+// keep the range and precision that would be lost by going through a double.
+// CHECK-LABEL: @wide_float_literals
+func.func @wide_float_literals() {
+  // CHECK: arith.constant 9.99999999999999999986E+308 : f80
+  %0 = arith.constant 1.0E+309 : f80
+  // CHECK: arith.constant -9.99999999999999999986E+308 : f80
+  %1 = arith.constant -1.0E+309 : f80
+  // CHECK: arith.constant 1.000000e+400 : f128
+  %2 = arith.constant 1.0E+400 : f128
+
+  // CHECK: arith.constant 1.100000e+00 : f80
+  %3 = arith.constant 1.1 : f80
+  // CHECK: arith.constant 1.000000e-01 : f128
+  %4 = arith.constant 0.1 : f128
+
+  // CHECK: arith.constant 1.000000e-320 : f80
+  %5 = arith.constant 1.0E-320 : f80
+
+  // Out of range for the target type: still infinity.
+  // CHECK: arith.constant 0x7FFF8000000000000000 : f80
+  %6 = arith.constant 1.0E+5000 : f80
+  // CHECK: arith.constant 0x7FF0000000000000 : f64
+  %7 = arith.constant 1.0E+400 : f64
+
+  // CHECK: arith.constant dense<[1.100000e+00, 9.99999999999999999986E+308]> : tensor<2xf80>
+  %8 = arith.constant dense<[1.1, 1.0E+309]> : tensor<2xf80>
+
+  return
+}
+
 // We want to print floats in exponential notation with 6 significant digits,
 // but it may lead to precision loss when parsing back, in which case we print
 // the decimal form instead.

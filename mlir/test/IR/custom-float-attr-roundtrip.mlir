@@ -14,6 +14,11 @@ func.func @test_enum_attr_roundtrip() -> () {
   "test.op"() {attr = #test.custom_float<"double" : 0x7FF0000001000000>} : () -> ()
   // CHECK: attr = #test.custom_float<"fp80" : 0x7FFFC000000000100000>
   "test.op"() {attr = #test.custom_float<"fp80" : 0x7FFFC000000000100000>} : () -> ()
+
+  // CHECK: attr = #test.custom_float<"fp80" : 9.99999999999999999986E+308>
+  "test.op"() {attr = #test.custom_float<"fp80" : 1.0E+309>} : () -> ()
+  // CHECK: attr = #test.custom_float<"fp80" : 1.100000e+00>
+  "test.op"() {attr = #test.custom_float<"fp80" : 1.1>} : () -> ()
   return
 }
 
