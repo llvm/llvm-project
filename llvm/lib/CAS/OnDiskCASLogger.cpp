@@ -26,6 +26,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mutex>
 #ifdef __APPLE__
 #include <sys/time.h>
 #endif
@@ -105,6 +106,7 @@ namespace {
 /// Helper to log a single line that adds the timestamp, pid, and tid. The line
 /// is buffered and written in a single call to write() so that if the
 /// underlying OS syscall is handled atomically so is this log message.
+/// raw_fd_ostream itself is not thread-safe, so serialize concurrent writers.
 class TextLogLine : public raw_svector_ostream {
 public:
   TextLogLine(raw_ostream &LogOS) : raw_svector_ostream(Buffer), LogOS(LogOS) {
@@ -113,6 +115,8 @@ public:
 
   ~TextLogLine() {
     finishLogMsg(*this);
+    static std::mutex WriteMutex;
+    std::lock_guard<std::mutex> Lock(WriteMutex);
     LogOS.write(Buffer.data(), Buffer.size());
   }
 
