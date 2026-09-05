@@ -2,7 +2,7 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
 
 ; Check that the head sample count for ticker is 0.
-; CHECK: _Z6tickeri:1566:0
+; CHECK: _Z6tickeri:1798:0
 ; CHECK-NOT: _Z6tickeri.resume
 
 
@@ -14,14 +14,14 @@
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
-#include <experimental/coroutine>
+#include <coroutine>
 #include <iostream>
 
 struct task {
   struct promise_type {
     task get_return_object() { return {}; }
-    std::experimental::suspend_never initial_suspend() { return {}; }
-    std::experimental::suspend_never final_suspend() noexcept { return {}; }
+    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_never final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception() {}
   };
@@ -30,18 +30,18 @@ struct task {
 template <typename T>
 struct generator {
   struct promise_type;
-  using handle = std::experimental::coroutine_handle<promise_type>;
+  using handle = std::coroutine_handle<promise_type>;
   struct promise_type {
     int current_value;
     static auto get_return_object_on_allocation_failure() { return generator{nullptr}; }
     auto get_return_object() { return generator{handle::from_promise(*this)}; }
-    auto initial_suspend() { return std::experimental::suspend_always{}; }
-    auto final_suspend() { return std::experimental::suspend_always{}; }
+    auto initial_suspend() { return std::suspend_always{}; }
+    auto final_suspend() noexcept { return std::suspend_always{}; }
     void unhandled_exception() { std::terminate(); }
     void return_void() {}
     auto yield_value(int value) {
       current_value = value;
-      return std::experimental::suspend_always{};
+      return std::suspend_always{};
     }
   };
   bool move_next() { return coro ? (coro.resume(), !coro.done()) : false; }
