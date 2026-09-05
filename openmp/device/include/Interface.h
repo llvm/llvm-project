@@ -217,6 +217,13 @@ uint32_t __kmpc_get_hardware_num_threads_in_block();
 /// External interface to get the warp size.
 uint32_t __kmpc_get_warp_size();
 
+/// External interface to get the number of a block's threads that can execute a
+/// team's parallel region. This is not the block size: in generic mode the
+/// threads hosting the main thread are not available to the team. How many
+/// those are is the runtime's to decide, so callers must ask rather than
+/// subtract for themselves.
+uint32_t __kmpc_get_max_team_threads();
+
 /// Kernel
 ///
 ///{
