@@ -98,6 +98,17 @@ private:
   SymbolTableCollection *symbolTables = nullptr;
 };
 
+struct AssumeOpLowering : public ConvertOpToLLVMPattern<cf::AssumeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(cf::AssumeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::AssumeOp>(op, adaptor.getArg());
+    return success();
+  }
+};
+
 /// Helper function for converting branch ops. This function converts the
 /// signature of the given block. If the new block signature is different from
 /// `expectedTypes`, returns "failure".
@@ -250,6 +261,7 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
+      AssumeOpLowering,
       BranchOpLowering,
       CondBranchOpLowering,
       SwitchOpLowering>(converter);
