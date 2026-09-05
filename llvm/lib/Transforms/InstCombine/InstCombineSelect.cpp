@@ -4589,6 +4589,65 @@ static bool isSelectZeroSignInsignificant(SelectInst &SI) {
   return true;
 }
 
+static Instruction *foldSelectExtractEl(SelectInst &SI,
+                                        InstCombiner::BuilderTy &Builder) {
+  //       select (extractelement (icmp Pred X, Y), C1)
+  //              (extractelement (icmp Pred X, Y) C2), 0
+  //              ->
+  //              icmp eq (bitcast (freeze (icmp Pred X, Y)) to iN), C3
+  Value *X;
+  Value *Y;
+  CmpPredicate Pred1, Pred2;
+  const APInt *C1, *C2;
+  if (match(&SI,
+            m_Select(m_ExtractElt(m_ICmp(Pred1, m_Value(X), m_Value(Y)),
+                                  m_APInt(C1)),
+                     m_ExtractElt(m_ICmp(Pred2, m_Deferred(X), m_Deferred(Y)),
+                                  m_APInt(C2)),
+                     m_Zero()))
+
+  ) {
+    // Make sure we're operating on the same comparison
+    auto MatchedPred = CmpPredicate::getMatching(Pred1, Pred2);
+    if (!MatchedPred)
+      return nullptr;
+
+    // Extract values and check if we're operating on the same predicate
+    auto *Ext0 = cast<ExtractElementInst>(SI.getCondition());
+    auto *Ext1 = cast<ExtractElementInst>(SI.getTrueValue());
+    Value *Cmp = Ext0->getVectorOperand();
+    if (Ext1->getVectorOperand() != Cmp)
+      return nullptr;
+
+    auto *VecTy = dyn_cast_or_null<FixedVectorType>(Cmp->getType());
+    if (!VecTy)
+      return nullptr;
+    unsigned NumElts = VecTy->getNumElements();
+    if (NumElts > IntegerType::MAX_INT_BITS)
+      return nullptr;
+
+    // Check range bounds and redundant case where indices are equal
+    uint64_t Idx1 = C1->getZExtValue();
+    uint64_t Idx2 = C2->getZExtValue();
+    if (Idx1 == Idx2 || Idx1 >= NumElts || Idx2 >= NumElts)
+      return nullptr;
+
+    // Build a mask (C3) with only tested lanes set
+    APInt C3 = APInt::getZero(NumElts);
+    C3.setBit(Idx1);
+    C3.setBit(Idx2);
+
+    Value *Frozen = Builder.CreateFreeze(Cmp);
+    Value *BC = Builder.CreateBitCast(Frozen, Builder.getIntNTy(NumElts));
+    Value *Masked = Builder.CreateAnd(BC, ConstantInt::get(BC->getType(), C3));
+
+    return new ICmpInst(ICmpInst::ICMP_EQ, Masked,
+                        ConstantInt::get(BC->getType(), C3));
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4643,6 +4702,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
 
   if (Instruction *R = foldSelectOfBools(SI))
+    return R;
+
+  if (Instruction *R = foldSelectExtractEl(SI, Builder))
     return R;
 
   // Selecting between two integer or vector splat integer constants?
