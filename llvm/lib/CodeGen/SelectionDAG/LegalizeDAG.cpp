@@ -4142,8 +4142,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
     EVT VT = LHS.getValueType();
-    unsigned MULHOpcode =
-        Node->getOpcode() == ISD::UMUL_LOHI ? ISD::MULHU : ISD::MULHS;
+    bool IsSigned = Node->getOpcode() == ISD::SMUL_LOHI;
+    unsigned MULHOpcode = IsSigned ? ISD::MULHS : ISD::MULHU;
 
     if (TLI.isOperationLegalOrCustom(MULHOpcode, VT)) {
       Results.push_back(DAG.getNode(ISD::MUL, dl, VT, LHS, RHS));
@@ -4153,8 +4153,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     SmallVector<SDValue, 4> Halves;
     EVT HalfType = VT.getHalfSizedIntegerVT(*DAG.getContext());
-    assert(TLI.isTypeLegal(HalfType));
-    if (TLI.expandMUL_LOHI(Node->getOpcode(), VT, dl, LHS, RHS, Halves,
+    if (TLI.isTypeLegal(HalfType) &&
+        TLI.expandMUL_LOHI(Node->getOpcode(), VT, dl, LHS, RHS, Halves,
                            HalfType, DAG,
                            TargetLowering::MulExpansionKind::Always)) {
       for (unsigned i = 0; i < 2; ++i) {
@@ -4167,6 +4167,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       }
       break;
     }
+
+    SDValue Lo, Hi;
+    TLI.forceExpandWideMUL(DAG, dl, IsSigned, LHS, RHS, Lo, Hi);
+    Results.push_back(Lo);
+    Results.push_back(Hi);
     break;
   }
   case ISD::MUL: {

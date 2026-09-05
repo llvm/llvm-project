@@ -7529,6 +7529,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
     return;
   }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    auto Opc = Intrinsic == Intrinsic::smulh ? ISD::MULHS : ISD::MULHU;
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(Opc, sdl, X.getValueType(), X, Y));
+    return;
+  }
   case Intrinsic::sadd_sat: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));

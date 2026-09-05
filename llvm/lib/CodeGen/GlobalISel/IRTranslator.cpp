@@ -2750,6 +2750,10 @@ unsigned IRTranslatorImpl::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FCOSH;
     case Intrinsic::ctpop:
       return TargetOpcode::G_CTPOP;
+    case Intrinsic::smulh:
+      return TargetOpcode::G_SMULH;
+    case Intrinsic::umulh:
+      return TargetOpcode::G_UMULH;
     case Intrinsic::exp:
       return TargetOpcode::G_FEXP;
     case Intrinsic::exp2:

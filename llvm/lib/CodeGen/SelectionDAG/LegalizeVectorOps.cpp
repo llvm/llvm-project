@@ -1161,6 +1161,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::SMULO:
     ExpandMULO(Node, Results);
     return;
+  case ISD::MULHS:
+  case ISD::MULHU:
+    if (SDValue Expanded = TLI.expandMULH(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::USUBSAT:
   case ISD::SSUBSAT:
   case ISD::UADDSAT:

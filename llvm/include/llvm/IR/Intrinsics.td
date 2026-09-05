@@ -1647,6 +1647,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_pdep : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_smulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_umulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in {

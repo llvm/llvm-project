@@ -13061,6 +13061,41 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
   return true;
 }
 
+SDValue TargetLowering::expandMULH(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  bool IsSigned = Node->getOpcode() == ISD::MULHS;
+
+  // Use MUL_LOHI if legal/custom for the original type.
+  unsigned LoHiOp = IsSigned ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
+  if (isOperationLegalOrCustom(LoHiOp, VT))
+    return DAG.getNode(LoHiOp, dl, DAG.getVTList(VT, VT), LHS, RHS).getValue(1);
+
+  // Use a wide multiply if available.
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
+  if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    unsigned BW = VT.getScalarSizeInBits();
+    LHS = DAG.getExtOrTrunc(IsSigned, LHS, dl, WideVT);
+    RHS = DAG.getExtOrTrunc(IsSigned, RHS, dl, WideVT);
+    return DAG.getNode(ISD::TRUNCATE, dl, VT,
+                       DAG.getNode(ISD::SRL, dl, WideVT,
+                                   DAG.getNode(ISD::MUL, dl, WideVT, LHS, RHS),
+                                   DAG.getShiftAmountConstant(BW, WideVT, dl)));
+  }
+
+  // Let fixed-length vectors be scalarised by the caller.
+  // Expand everything else with a wide multiply.
+  if (!VT.isFixedLengthVector()) {
+    SDValue Lo, Hi;
+    forceExpandWideMUL(DAG, dl, IsSigned, LHS, RHS, Lo, Hi);
+    return Hi;
+  }
+
+  return SDValue();
+}
+
 SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   ISD::NodeType BaseOpcode = ISD::getVecReduceBaseOpcode(Node->getOpcode());
