@@ -929,6 +929,19 @@ void atomic_exchange_n(int *ptr, int value) {
   // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
+int atomic_exchange_n_volatile(volatile int *ptr, int value) {
+  // CIR-LABEL: @atomic_exchange_n_volatile
+  // LLVM-LABEL: @atomic_exchange_n_volatile
+  // OGCG-LABEL: @atomic_exchange_n_volatile
+
+  return __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst syncscope(system) volatile %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+  // LLVM: %{{.+}} = atomicrmw volatile xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+
+  // OGCG: %{{.+}} = atomicrmw volatile xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+}
+
 void test_and_set(void *p) {
   // CIR-LABEL: @test_and_set
   // LLVM-LABEL: @test_and_set
@@ -1054,6 +1067,21 @@ int atomic_fetch_add(int *ptr, int value) {
   // LLVM-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 
   // OGCG:      %[[RES:.+]] = atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+}
+
+int atomic_fetch_add_volatile(volatile int *ptr, int value) {
+  // CIR-LABEL: @atomic_fetch_add_volatile
+  // LLVM-LABEL: @atomic_fetch_add_volatile
+  // OGCG-LABEL: @atomic_fetch_add_volatile
+
+  return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} volatile : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+  // LLVM:      %[[RES:.+]] = atomicrmw volatile add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
+
+  // OGCG:      %[[RES:.+]] = atomicrmw volatile add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }
 
