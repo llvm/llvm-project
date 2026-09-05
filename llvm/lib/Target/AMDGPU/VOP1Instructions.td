@@ -1642,6 +1642,11 @@ multiclass VOP1_Real_vi <bits<10> op> {
       VOP_DPP_Real<!cast<VOP1_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.VI>,
       VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")> {
         let AssemblerPredicate = isGFX8GFX9;
+        // The override above drops the pseudo HasDPALU_DPP AssemblerPredicate.
+        let OtherPredicates = !listconcat(
+            !cast<VOP1_DPP_Pseudo>(NAME#"_dpp").OtherPredicates,
+            !if(!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExt64BitDPP,
+                [HasDPALU_DPP], []));
       }
 }
 
