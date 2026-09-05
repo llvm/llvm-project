@@ -2666,7 +2666,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
   assert(Tok.is(tok::l_paren) && "Not a paren expr!");
   ColonProtectionRAIIObject ColonProtection(*this, false);
   GenericAssociationTypeRAIIObject NotParsingGenericAssociationType(*this,
-                                                                    false);
+                                                                    /*Value=*/false);
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.consumeOpen())
