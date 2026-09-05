@@ -1016,7 +1016,12 @@ std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HI.Name = A->getSpelling();
   if (A->hasScope())
     HI.LocalScope = A->getScopeName()->getName().str();
-  {
+  // Skip pretty-printing HLSL RootSignature attributes: printPretty()
+  // reconstructs the attribute using the compiler-generated internal
+  // identifier for the expanded macro (__hlsl_rootsig_decl_<hash>) instead
+  // of the original source text, leaking an implementation detail into the
+  // hover tooltip.
+  if (!AST.getLangOpts().HLSL || !llvm::isa<RootSignatureAttr>(A)) {
     llvm::raw_string_ostream OS(HI.Definition);
     A->printPretty(OS, AST.getASTContext().getPrintingPolicy());
   }
