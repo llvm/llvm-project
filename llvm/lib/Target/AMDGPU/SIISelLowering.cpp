@@ -18392,8 +18392,10 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
     SDValue Vec4 = FMAOp2.getOperand(0);
     SDValue Idx2 = FMAOp1.getOperand(1);
 
-    if (Idx1 != Op2.getOperand(1) || Idx2 != FMAOp2.getOperand(1) ||
-        // Idx1 and Idx2 cannot be the same.
+    if (Idx1 != Op2.getOperand(1) || Idx2 != FMAOp2.getOperand(1))
+      return SDValue();
+
+    if (!isa<ConstantSDNode>(Idx1) || !isa<ConstantSDNode>(Idx2) ||
         Idx1 == Idx2)
       return SDValue();
 
