@@ -5024,20 +5024,21 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
   }
 
   IRBuilder<> Builder(OldTerm);
-  Builder.SetCurrentDebugLocation(OldTerm->getDebugLoc());
 
   // Insert an appropriate new terminator.
+  Instruction *NewTerm = nullptr;
   if (!KeepEdge1 && !KeepEdge2) {
     if (TrueBB == FalseBB) {
       // We were only looking for one successor, and it was present.
       // Create an unconditional branch to it.
-      Builder.CreateBr(TrueBB);
+      NewTerm = Builder.CreateBr(TrueBB, OldTerm);
     } else {
       // We found both of the successors we were looking for.
       // Create a conditional branch sharing the condition of the select.
-      CondBrInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
+      CondBrInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB, OldTerm);
       setBranchWeights(*NewBI, {TrueWeight, FalseWeight},
                        /*IsExpected=*/false, /*ElideAllZero=*/true);
+      NewTerm = NewBI;
     }
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
@@ -5049,13 +5050,15 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
     // the edge to the one that wasn't must be unreachable.
     if (!KeepEdge1) {
       // Only TrueBB was found.
-      Builder.CreateBr(TrueBB);
+      NewTerm = Builder.CreateBr(TrueBB, OldTerm);
     } else {
       // Only FalseBB was found.
-      Builder.CreateBr(FalseBB);
+      NewTerm = Builder.CreateBr(FalseBB, OldTerm);
     }
   }
-
+  // If no successor block was removed, any loop backedge is preserved
+  if (NewTerm && RemovedSuccessors.empty())
+    NewTerm->copyMetadata(*OldTerm, {LLVMContext::MD_loop});
   eraseTerminatorAndDCECond(OldTerm);
 
   if (DTU) {
@@ -6224,21 +6227,30 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   if (NumCases->isOneValue()) {
     assert(Max->getValue() == Min->getValue());
     Value *Cmp = Builder.CreateICmpEQ(SI->getCondition(), Min);
-    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
+    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest, SI);
   }
   // If NumCases overflowed, then all possible values jump to the successor.
   else if (NumCases->isNullValue() && !Cases->empty()) {
-    NewBI = Builder.CreateBr(Dest);
+    NewBI = Builder.CreateBr(Dest, SI);
   } else {
     Value *Sub = SI->getCondition();
     if (!Offset->isNullValue())
       Sub = Builder.CreateAdd(Sub, Offset, Sub->getName() + ".off");
     Value *Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
-    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
+    NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest, SI);
+  }
+
+  CondBrInst *NewCondBr = dyn_cast<CondBrInst>(NewBI);
+  if (NewCondBr) {
+    // The new branch preserves both non-unreachable switch destinations.
+    NewCondBr->copyMetadata(*SI, {LLVMContext::MD_loop});
+    // The switch weights do not map directly to the new branch and are
+    // recomputed below.
+    NewCondBr->setMetadata(LLVMContext::MD_prof, nullptr);
   }
 
   // Update weight for the newly-created conditional branch.
-  if (hasBranchWeightMD(*SI) && isa<CondBrInst>(NewBI)) {
+  if (hasBranchWeightMD(*SI) && NewCondBr) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
@@ -6254,7 +6266,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
         TrueWeight /= 2;
         FalseWeight /= 2;
       }
-      setFittedBranchWeights(*NewBI, {TrueWeight, FalseWeight},
+      setFittedBranchWeights(*NewCondBr, {TrueWeight, FalseWeight},
                              /*IsExpected=*/false, /*ElideAllZero=*/true);
     }
   }
