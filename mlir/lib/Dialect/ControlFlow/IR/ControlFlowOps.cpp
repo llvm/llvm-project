@@ -647,10 +647,10 @@ static ParseResult parseSwitchOpCases(
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
   while (succeeded(parser.parseOptionalComma())) {
-    int64_t value = 0;
+    APInt value;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
+    values.push_back(value.sextOrTrunc(bitWidth));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -693,7 +693,7 @@ static void printSwitchOpCases(
     p << ',';
     p.printNewline();
     p << "  ";
-    p << it.value().getLimitedValue();
+    p << it.value();
     p << ": ";
     p.printSuccessorAndUseList(caseDestinations[it.index()],
                                caseOperands[it.index()]);
