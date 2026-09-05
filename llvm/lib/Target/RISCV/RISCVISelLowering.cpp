@@ -27073,12 +27073,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
     if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
-    const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-    if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      Func.getContext().diagnose(DiagnosticInfoUnsupported{
-          Func,
-          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
-          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
