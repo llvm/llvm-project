@@ -14019,28 +14019,35 @@ libc_math_function(
 
 libc_math_function(
     name = "canonicalizebf16",
-    specializations = [":canonicalizebf16_type_delegate"],
+    additional_deps = [
+        ":__support_math_canonicalizebf16",
+    ],
 )
-
 
 libc_math_function(
     name = "getpayloadbf16",
-
-    specializations = [":getpayloadbf16_type_delegate"],
+    additional_deps = [
+        ":__support_math_getpayloadbf16",
+    ],
 )
 
 libc_math_function(
     name = "setpayloadbf16",
-
-    specializations = [":setpayloadbf16_type_delegate"],
+    additional_deps = [
+        ":__support_math_setpayloadbf16",
+    ],
 )
-
-
 
 libc_math_function(
     name = "setpayloadsigbf16",
-    specializations = [":setpayloadsigbf16_type_delegate"],
+    additional_deps = [
+        ":__support_math_setpayloadsigbf16",
+    ],
 )
+
+
+
+
 
 ############################## inttypes targets ##############################
 
