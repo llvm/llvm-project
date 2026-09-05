@@ -8431,8 +8431,33 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
     }
 
-    EVT VecTy = EVT::getVectorVT(*DAG.getContext(), ElementVT,
-                                 CCVT.getVectorElementCount());
+    EVT VecTy =
+        TLI.getGetActiveLaneMaskExpansionVT(*DAG.getContext(), CCVT, ElementVT);
+
+    // A scalable vector whose element type is wider than anything the target
+    // can hold in a vector register can neither be split, widened, nor
+    // scalarized, so the expansion below would abort in the type legalizer.
+    // getGetActiveLaneMaskExpansionVT() picks a narrower element type for
+    // those; rewrite the mask as the equivalent
+    // "lane index <u usubsat(%n, %base)", which does not need the operand type.
+    if (VecTy.getVectorElementType() != ElementVT) {
+      EVT NarrowEltVT = VecTy.getVectorElementType();
+      // The lane index never exceeds what the narrower element type can hold,
+      // so clamping the count to that maximum does not change the result.
+      SDValue Count =
+          DAG.getNode(ISD::USUBSAT, sdl, ElementVT, TripCount, Index);
+      Count = DAG.getNode(
+          ISD::UMIN, sdl, ElementVT, Count,
+          DAG.getConstant(APInt::getMaxValue(NarrowEltVT.getSizeInBits())
+                              .zext(ElementVT.getSizeInBits()),
+                          sdl, ElementVT));
+      SDValue NarrowCount = DAG.getNode(ISD::TRUNCATE, sdl, NarrowEltVT, Count);
+      SDValue VectorStep = DAG.getStepVector(sdl, VecTy);
+      SDValue VectorCount = DAG.getSplat(VecTy, sdl, NarrowCount);
+      setValue(&I, DAG.getSetCC(sdl, CCVT, VectorStep, VectorCount,
+                                ISD::CondCode::SETULT));
+      return;
+    }
 
     SDValue VectorIndex = DAG.getSplat(VecTy, sdl, Index);
     SDValue VectorTripCount = DAG.getSplat(VecTy, sdl, TripCount);

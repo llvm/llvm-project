@@ -1680,6 +1680,54 @@ EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
   return getPointerTy(DL).SimpleTy;
 }
 
+EVT TargetLoweringBase::getGetActiveLaneMaskExpansionVT(LLVMContext &Context,
+                                                        EVT ResVT,
+                                                        EVT OpVT) const {
+  EVT VecVT = EVT::getVectorVT(Context, OpVT, ResVT.getVectorElementCount());
+  if (!VecVT.isScalableVector())
+    return VecVT;
+
+  // Returns true if legalizing \p VT eventually reaches a scalable vector that
+  // can only be scalarized, which the type legalizer cannot do.
+  //
+  // The first action alone does not tell us that. A vector is split in half
+  // until it no longer can be, so the problem is only reported by the last
+  // step. With ELEN=32 a mask built at i64 takes three steps to get there:
+  //
+  //   nxv4i64  -> TypeSplitVector             -> nxv2i64
+  //   nxv2i64  -> TypeSplitVector             -> nxv1i64
+  //   nxv1i64  -> TypeScalarizeScalableVector -> dead end
+  //
+  // So walk the whole chain instead of asking getTypeAction() once. The
+  // LK.second == VT test is only there to stop an action that leaves the type
+  // alone from spinning forever.
+  auto NeedsScalarization = [&](EVT VT) {
+    while (true) {
+      LegalizeKind LK = getTypeConversion(Context, VT);
+      if (LK.first == TypeScalarizeScalableVector)
+        return true;
+      if (LK.first == TypeLegal || LK.second == VT)
+        return false;
+      VT = LK.second;
+    }
+  };
+
+  if (!NeedsScalarization(VecVT))
+    return VecVT;
+
+  // The expansion cannot use the operand type here, so it rewrites the mask as
+  // "lane index <u usubsat(%n, %base)" and builds the vectors at the widest
+  // element type that can be legalized instead.
+  unsigned EltBits = OpVT.getSizeInBits();
+  EVT NarrowVecVT = VecVT;
+  do {
+    EltBits /= 2;
+    NarrowVecVT = VecVT.changeVectorElementType(
+        Context, EVT::getIntegerVT(Context, EltBits));
+  } while (EltBits > 8 && NeedsScalarization(NarrowVecVT));
+  return NarrowVecVT;
+}
+
 /// getVectorTypeBreakdown - Vector types are broken down into some number of
 /// legal first class types.  For example, MVT::v8f32 maps to 2 MVT::v4f32
 /// with Altivec or SSE1, or 8 promoted MVT::f64 values with the X86 FP stack.

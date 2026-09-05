@@ -516,6 +516,15 @@ public:
     return true;
   }
 
+  /// Return the vector type that the generic expansion of
+  /// @llvm.get.active.lane.mask in SelectionDAGBuilder builds its step and
+  /// splat vectors at, for a mask of type \p ResVT and scalar operands of type
+  /// \p OpVT. This is a vector of \p OpVT, except when that vector is a
+  /// scalable vector the type legalizer would have to scalarize, in which case
+  /// the expansion falls back to a narrower element type.
+  EVT getGetActiveLaneMaskExpansionVT(LLVMContext &Context, EVT ResVT,
+                                      EVT OpVT) const;
+
   virtual bool shouldExpandGetVectorLength(EVT CountVT, unsigned VF,
                                            bool IsScalable) const {
     return true;
