@@ -4117,12 +4117,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
     unsigned ICEArguments = (1 << 1) | (1 << 2);
-    // FIXME: Technically these constants should of type 'int', yes?
     RW = (E->getNumArgs() > 1) ? EmitScalarOrConstFoldImmArg(ICEArguments, 1, E)
                                : llvm::ConstantInt::get(Int32Ty, 0);
+    RW = Builder.CreateZExtOrTrunc(RW, Int32Ty);
     Locality = (E->getNumArgs() > 2)
                    ? EmitScalarOrConstFoldImmArg(ICEArguments, 2, E)
                    : llvm::ConstantInt::get(Int32Ty, 3);
+    Locality = Builder.CreateZExtOrTrunc(Locality, Int32Ty);
     Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
     Builder.CreateCall(F, {Address, RW, Locality, Data});
@@ -5135,6 +5136,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_return_address: {
     Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
                                                    getContext().UnsignedIntTy);
+    Depth = Builder.CreateZExtOrTrunc(Depth, Int32Ty);
     Function *F =
         CGM.getIntrinsic(Intrinsic::returnaddress, {CGM.ProgramPtrTy});
     return RValue::get(Builder.CreateCall(F, Depth));
@@ -5147,6 +5149,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_frame_address: {
     Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
                                                    getContext().UnsignedIntTy);
+    Depth = Builder.CreateZExtOrTrunc(Depth, Int32Ty);
     Function *F = CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
