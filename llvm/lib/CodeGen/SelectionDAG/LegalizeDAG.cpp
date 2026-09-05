@@ -3240,6 +3240,16 @@ SDValue SelectionDAGLegalize::PromoteReduction(SDNode *Node) {
                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
 }
 
+// Always expand bf16 to f32 casts, they lower to ext + shift. The operand can
+// be bf16 or an integer type in case bf16 is not supported on the target and
+// was softened.
+static SDValue expandBF16ToF32(SelectionDAG &DAG, const SDLoc &dl, SDValue Op) {
+  Op = DAG.getBitcastedAnyExtOrTrunc(Op, dl, MVT::i32);
+  Op = DAG.getNode(ISD::SHL, dl, MVT::i32, Op,
+                   DAG.getShiftAmountConstant(16, MVT::i32, dl));
+  return DAG.getNode(ISD::BITCAST, dl, MVT::f32, Op);
+}
+
 bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Trying to expand node\n");
   SmallVector<SDValue, 8> Results;
@@ -3523,20 +3533,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::BF16_TO_FP: {
-    // Always expand bf16 to f32 casts, they lower to ext + shift.
-    //
-    // Note that the operand of this code can be bf16 or an integer type in case
-    // bf16 is not supported on the target and was softened.
-    SDValue Op = Node->getOperand(0);
-    if (Op.getValueType() == MVT::bf16) {
-      Op = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32,
-                       DAG.getNode(ISD::BITCAST, dl, MVT::i16, Op));
-    } else {
-      Op = DAG.getAnyExtOrTrunc(Op, dl, MVT::i32);
-    }
-    Op = DAG.getNode(ISD::SHL, dl, MVT::i32, Op,
-                     DAG.getShiftAmountConstant(16, MVT::i32, dl));
-    Op = DAG.getNode(ISD::BITCAST, dl, MVT::f32, Op);
+    SDValue Op = expandBF16ToF32(DAG, dl, Node->getOperand(0));
     // Add fp_extend in case the output is bigger than f32.
     if (Node->getValueType(0) != MVT::f32)
       Op = DAG.getNode(ISD::FP_EXTEND, dl, Node->getValueType(0), Op);
@@ -4041,6 +4038,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   case ISD::STRICT_BF16_TO_FP:
+    // When strict mode is enforced we can't do expansion because it does not
+    // raise the invalid exception on a signaling NaN. Only libcall is allowed.
+    if (Node->getValueType(0) == MVT::f32 && !TLI.isStrictFPEnabled()) {
+      Results.push_back(expandBF16ToF32(DAG, dl, Node->getOperand(1)));
+      Results.push_back(Node->getOperand(0));
+      break;
+    }
+    [[fallthrough]];
   case ISD::STRICT_FP16_TO_FP:
     if (Node->getValueType(0) != MVT::f32) {
       // We can extend to types bigger than f32 in two steps without changing

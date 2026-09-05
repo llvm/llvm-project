@@ -585,7 +585,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::FSIN, ISD::FCOS, ISD::FDIV}, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f64, Custom);
 
-  setOperationAction(ISD::BF16_TO_FP, {MVT::i16, MVT::f32, MVT::f64}, Expand);
+  setOperationAction({ISD::BF16_TO_FP, ISD::STRICT_BF16_TO_FP},
+                     {MVT::i16, MVT::f32, MVT::f64}, Expand);
   setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f32, MVT::f64}, Expand);
 
   setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, MVT::i32,
@@ -5015,7 +5016,8 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
   EVT DstVT = Op.getValueType();
   if (IsStrict)
-    llvm_unreachable("Need STRICT_BF16_TO_FP");
+    return DAG.getNode(ISD::STRICT_BF16_TO_FP, SL, Op->getVTList(),
+                       {Op.getOperand(0), BitCast});
 
   return DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
 }
