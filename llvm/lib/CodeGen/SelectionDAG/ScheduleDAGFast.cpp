@@ -232,6 +232,11 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     SDNode *LoadNode = NewNodes[0];
     unsigned NumVals = N->getNumValues();
     unsigned OldNumVals = SU->getNode()->getNumValues();
+    // Fix up SUnits whose nodes get deleted by the replacements below.
+    SelectionDAG::DAGNodeDeletedListener Listener(
+        *DAG, [&](SDNode *DeadNode, SDNode *NewNode) {
+          RedirectMergedNode(DeadNode, NewNode);
+        });
     for (unsigned i = 0; i != NumVals; ++i)
       DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
     DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals-1),

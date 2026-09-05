@@ -105,6 +105,16 @@ SUnit *ScheduleDAGSDNodes::Clone(SUnit *Old) {
   return SU;
 }
 
+void ScheduleDAGSDNodes::RedirectMergedNode(SDNode *DeadNode, SDNode *NewNode) {
+  int Id = DeadNode->getNodeId();
+  if (Id == -1 || unsigned(Id) >= SUnits.size() ||
+      SUnits[Id].getNode() != DeadNode)
+    return;
+  SUnits[Id].setNode(NewNode);
+  if (NewNode->getNodeId() == -1)
+    NewNode->setNodeId(Id);
+}
+
 /// CheckForPhysRegDependency - Check if the dependency between def and use of
 /// a specified operand is a physical register dependency. If so, returns the
 /// register and the cost of copying the register.
