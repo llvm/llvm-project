@@ -198,7 +198,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    if (XLen == 32 && ST.hasStdExtD()) {
+    if (XLen == 32 && (ST.hasStdExtD() || ST.hasStdExtZilsd())) {
       MergeUnmergeActions.legalIf(
           all(typeIs(BigTyIdx, s64), typeIs(LitTyIdx, s32)));
     }
@@ -359,7 +359,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
          {s64, p0, s64, getScalarMemAlign(64)}});
     ExtLoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s32, getScalarMemAlign(32)}});
-  } else if (ST.hasStdExtD()) {
+  } else if (ST.hasStdExtD() || ST.hasStdExtZilsd()) {
+    // RV32: s64 is legal for f64 (D/Zdinx) or i64 (Zilsd).
+    // FIXME: Under -mzilsd-word-align SDAG allows 4-byte alignment for i64
+    // (getZilsdAlign()); we require 8-byte and fall back to two s32
+    // accesses. LLT cannot distinguish i64 from f64, so a single rule
+    // applies to both.
     LoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s64, getScalarMemAlign(64)}});
     StoreActions.legalForTypesWithMemDesc(

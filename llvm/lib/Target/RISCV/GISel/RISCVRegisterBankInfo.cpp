@@ -343,9 +343,16 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (cast<GLoad>(MI).isAtomic())
       break;
 
-    // Use FPR64 for s64 loads on rv32.
+    // RV32 s64 loads: f64 (D) uses FPR64; i64 (Zilsd) uses a GPRPair.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      if (ST.hasStdExtZilsd() &&
+          !anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI)) {
+        // i64 load: map the 64-bit result to a GPRPair.
+        OpdsMapping[0] = &RISCV::ValueMappings[RISCV::GPRB64Idx];
+        break;
+      }
+      assert(ST.hasStdExtD() && "s64 load without D or Zilsd");
       OpdsMapping[0] = getFPValueMapping(Size);
       break;
     }
@@ -381,9 +388,16 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (cast<GStore>(MI).isAtomic())
       break;
 
-    // Use FPR64 for s64 stores on rv32.
+    // RV32 s64 stores: f64 (D) uses FPR64; i64 (Zilsd) uses a GPRPair.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(0).getReg());
+      if (ST.hasStdExtZilsd() && !(DefMI && onlyDefinesFP(*DefMI, MRI, TRI))) {
+        // i64 store: map the 64-bit source to a GPRPair.
+        OpdsMapping[0] = &RISCV::ValueMappings[RISCV::GPRB64Idx];
+        break;
+      }
+      assert(ST.hasStdExtD() && "s64 store without D or Zilsd");
       OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
     }
@@ -489,24 +503,40 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_MERGE_VALUES: {
-    // Use FPR64 for s64 merge on rv32.
+    // RV32 s64: f64 (D) uses FPR64; i64 (Zilsd) uses a GPRPair.
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
-      OpdsMapping[1] = GPRValueMapping;
-      OpdsMapping[2] = GPRValueMapping;
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      if (ST.hasStdExtZilsd() &&
+          !anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI)) {
+        OpdsMapping[0] = &RISCV::ValueMappings[RISCV::GPRB64Idx];
+        OpdsMapping[1] = GPRValueMapping;
+        OpdsMapping[2] = GPRValueMapping;
+      } else {
+        assert(ST.hasStdExtD());
+        OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+        OpdsMapping[1] = GPRValueMapping;
+        OpdsMapping[2] = GPRValueMapping;
+      }
     }
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {
-    // Use FPR64 for s64 unmerge on rv32.
+    // RV32 s64: f64 (D) uses FPR64; i64 (Zilsd) uses a GPRPair.
     LLT Ty = MRI.getType(MI.getOperand(2).getReg());
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
-      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[0] = GPRValueMapping;
-      OpdsMapping[1] = GPRValueMapping;
-      OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
+      const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+      MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+      if (ST.hasStdExtZilsd() && !(DefMI && onlyDefinesFP(*DefMI, MRI, TRI))) {
+        OpdsMapping[0] = GPRValueMapping;
+        OpdsMapping[1] = GPRValueMapping;
+        OpdsMapping[2] = &RISCV::ValueMappings[RISCV::GPRB64Idx];
+      } else {
+        assert(ST.hasStdExtD());
+        OpdsMapping[0] = GPRValueMapping;
+        OpdsMapping[1] = GPRValueMapping;
+        OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
+      }
     }
     break;
   }
