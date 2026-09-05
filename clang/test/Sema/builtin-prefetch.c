@@ -6,7 +6,7 @@ void foo(void) {
   __builtin_prefetch(&a, 1);
   __builtin_prefetch(&a, 1, 2);
   __builtin_prefetch(&a, 1, 9, 3); // expected-error{{too many arguments to function}}
-  __builtin_prefetch(&a, "hello", 2); // expected-error{{argument to '__builtin_prefetch' must be a constant integer}}
+  __builtin_prefetch(&a, "hello", 2); // expected-error{{incompatible pointer to integer conversion passing 'char *' to parameter of type 'int'}} expected-error{{argument to '__builtin_prefetch' must be a constant integer}}
   __builtin_prefetch(&a, a, 2); // expected-error{{argument to '__builtin_prefetch' must be a constant integer}}
   __builtin_prefetch(&a, 2); // expected-error{{argument value 2 is outside the valid range [0, 1]}}
   __builtin_prefetch(&a, 0, 4); // expected-error{{argument value 4 is outside the valid range [0, 3]}}

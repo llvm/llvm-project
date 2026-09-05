@@ -23,6 +23,16 @@ void foo(const int *p) {
   __builtin_prefetch(p, 3U % 2U, 3U % 1U);
 }
 
+// CHECK-LABEL: define{{.*}} void @prefetch_non_int_constant_types
+// CHECK: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 3, i32 1)
+// CHECK: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0, i32 0, i32 1)
+// CHECK: call void @llvm.prefetch.p0(ptr {{.*}}, i32 1, i32 3, i32 1)
+void prefetch_non_int_constant_types(const int *p) {
+  __builtin_prefetch(p, 0 * sizeof(int));
+  __builtin_prefetch(p, 0, 0 * sizeof(int));
+  __builtin_prefetch(p, 1ULL, 3ULL);
+}
+
 // CHECK-LABEL: define{{.*}} void @ub_constant_arithmetic
 void ub_constant_arithmetic(void) {
   // Check that we still instrument unsafe arithmetic, even if it is known to
