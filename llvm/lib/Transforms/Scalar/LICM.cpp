@@ -3009,9 +3009,22 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
     Flags.mergeFlags(*BO);
     Flags.mergeFlags(*BO0);
     // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<Instruction>(Inv))
-      Flags.applyFlags(*I);
+    auto *InvI = dyn_cast<Instruction>(Inv);
+    if (InvI)
+      Flags.applyFlags(*InvI);
     Flags.applyFlags(*NewBO);
+
+    // The original nsw flags guarantee that LV + C1 + C2 is representable.
+    // If C1 + C2 is representable too, both reassociated adds keep nsw.
+    SimplifyQuery SQ(L.getHeader()->getDataLayout(), DT, AC,
+                     Preheader->getTerminator());
+    if (Opcode == Instruction::Add && Flags.HasNSW && !Flags.HasNUW &&
+        computeOverflowForSignedAdd(C1, C2, SQ) ==
+            OverflowResult::NeverOverflows) {
+      if (InvI)
+        InvI->setHasNoSignedWrap();
+      NewBO->setHasNoSignedWrap();
+    }
   }
 
   BO->replaceAllUsesWith(NewBO);

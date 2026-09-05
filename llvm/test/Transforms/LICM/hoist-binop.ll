@@ -347,7 +347,7 @@ loop:
   br label %loop
 }
 
-; Hoist ADD but don't copy NSW even if both ops have it.
+; Hoist ADD but don't copy NSW when the invariant operands may overflow.
 define void @add_no_nsw_2(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @add_no_nsw_2(
 ; CHECK-NEXT:  entry:
@@ -426,6 +426,152 @@ loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
   %step.add = add nsw i64 %index, %c1
   %index.next = add nuw nsw i64 %step.add, %c2
+  br label %loop
+}
+
+; Preserve NSW for constant invariant operands and enable hoistAdd().
+define void @add_nsw_constant_operands(i32 %start) {
+; CHECK-LABEL: @add_nsw_constant_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CONDITION:%.*]] = icmp sgt i32 [[IV]], -13
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CONDITION]])
+; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %next, %loop ]
+  %add1 = add nsw i32 %iv, 2
+  %add2 = add nsw i32 %add1, 4
+  %condition = icmp sgt i32 %add2, -7
+  call void @llvm.assume(i1 %condition)
+  %next = add i32 %iv, 1
+  br label %loop
+}
+
+; Preserve NSW when KnownBits proves nonconstant invariant operands safe.
+define void @add_nsw_nonconstant_operands(i32 %start, i16 %c1, i16 %c2) {
+; CHECK-LABEL: @add_nsw_nonconstant_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C1_EXT:%.*]] = zext i16 [[C1:%.*]] to i32
+; CHECK-NEXT:    [[C2_EXT:%.*]] = zext i16 [[C2:%.*]] to i32
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nsw i32 [[C1_EXT]], [[C2_EXT]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add nsw i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    call void @use(i32 [[ADD2_REASS]])
+; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %c1.ext = zext i16 %c1 to i32
+  %c2.ext = zext i16 %c2 to i32
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %next, %loop ]
+  %add1 = add nsw i32 %iv, %c1.ext
+  %add2 = add nsw i32 %add1, %c2.ext
+  call void @use(i32 %add2)
+  %next = add i32 %iv, 1
+  br label %loop
+}
+
+; Preserve NSW for vector invariant operands.
+define void @add_nsw_vector_operands(<2 x i32> %start, <2 x i16> %c1, <2 x i16> %c2) {
+; CHECK-LABEL: @add_nsw_vector_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C1_EXT:%.*]] = zext <2 x i16> [[C1:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C2_EXT:%.*]] = zext <2 x i16> [[C2:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nsw <2 x i32> [[C1_EXT]], [[C2_EXT]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi <2 x i32> [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add nsw <2 x i32> [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    call void @use(<2 x i32> [[ADD2_REASS]])
+; CHECK-NEXT:    [[NEXT]] = add <2 x i32> [[IV]], splat (i32 1)
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %c1.ext = zext <2 x i16> %c1 to <2 x i32>
+  %c2.ext = zext <2 x i16> %c2 to <2 x i32>
+  br label %loop
+
+loop:
+  %iv = phi <2 x i32> [ %start, %entry ], [ %next, %loop ]
+  %add1 = add nsw <2 x i32> %iv, %c1.ext
+  %add2 = add nsw <2 x i32> %add1, %c2.ext
+  call void @use(<2 x i32> %add2)
+  %next = add <2 x i32> %iv, <i32 1, i32 1>
+  br label %loop
+}
+
+; Preserve NSW when dominating assumptions prove invariant operands safe.
+define void @add_nsw_assumed_operands(i32 %start, i32 %c1, i32 %c2) {
+; CHECK-LABEL: @add_nsw_assumed_operands(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C1_OK:%.*]] = icmp ult i32 [[C1:%.*]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C1_OK]])
+; CHECK-NEXT:    [[C2_OK:%.*]] = icmp ult i32 [[C2:%.*]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2_OK]])
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nsw i32 [[C1]], [[C2]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add nsw i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    call void @use(i32 [[ADD2_REASS]])
+; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %c1.ok = icmp ult i32 %c1, 100
+  call void @llvm.assume(i1 %c1.ok)
+  %c2.ok = icmp ult i32 %c2, 100
+  call void @llvm.assume(i1 %c2.ok)
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %next, %loop ]
+  %add1 = add nsw i32 %iv, %c1
+  %add2 = add nsw i32 %add1, %c2
+  call void @use(i32 %add2)
+  %next = add i32 %iv, 1
+  br label %loop
+}
+
+; Don't preserve NSW if only the outer add has it, even when the invariant
+; operands cannot overflow.
+define void @add_only_outer_nsw(i32 %start, i16 %c1, i16 %c2) {
+; CHECK-LABEL: @add_only_outer_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C1_EXT:%.*]] = zext i16 [[C1:%.*]] to i32
+; CHECK-NEXT:    [[C2_EXT:%.*]] = zext i16 [[C2:%.*]] to i32
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i32 [[C1_EXT]], [[C2_EXT]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADD2_REASS:%.*]] = add i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    call void @use(i32 [[ADD2_REASS]])
+; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %c1.ext = zext i16 %c1 to i32
+  %c2.ext = zext i16 %c2 to i32
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %next, %loop ]
+  %add1 = add i32 %iv, %c1.ext
+  %add2 = add nsw i32 %add1, %c2.ext
+  call void @use(i32 %add2)
+  %next = add i32 %iv, 1
   br label %loop
 }
 
@@ -1078,4 +1224,5 @@ loop:
   br label %loop
 }
 
+declare void @llvm.assume(i1)
 declare void @use()
