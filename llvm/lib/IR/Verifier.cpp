@@ -6947,6 +6947,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::vector_shuffle: {
+    // The vector operand and the result share a type via LLVMMatchType and the
+    // mask is constrained to a vector of integers, so only the element count of
+    // the independently-overloaded mask type needs checking.
+    auto *RetTy = cast<VectorType>(Call.getType());
+    auto *MaskTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+
+    Check(MaskTy->getElementCount() == RetTy->getElementCount(),
+          "Mask and return type must have the same number of elements.", &Call);
+    break;
+  }
   case Intrinsic::vector_insert: {
     Value *Vec = Call.getArgOperand(0);
     Value *SubVec = Call.getArgOperand(1);

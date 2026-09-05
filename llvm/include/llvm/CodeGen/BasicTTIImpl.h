@@ -2593,6 +2593,25 @@ public:
       return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
                                      cast<VectorType>(ICA.getArgTypes()[0]),
                                      CostKind, {}, 0, cast<VectorType>(RetTy));
+    case Intrinsic::vector_shuffle: {
+      // Without a native lowering the shuffle expands to a stack round-trip:
+      // the source is spilled once and every result lane is reloaded through
+      // its own variable index.
+      auto *FixedVecTy = dyn_cast<FixedVectorType>(RetTy);
+      if (!FixedVecTy)
+        return InstructionCost::getInvalid();
+
+      Type *EltTy = FixedVecTy->getElementType();
+      InstructionCost Cost = thisT()->getMemoryOpCost(
+          Instruction::Store, RetTy, DL.getABITypeAlign(RetTy), 0, CostKind);
+      Cost += FixedVecTy->getNumElements() *
+              thisT()->getMemoryOpCost(Instruction::Load, EltTy,
+                                       DL.getABITypeAlign(EltTy), 0, CostKind);
+      // Reading each index out of the mask and rebuilding the result vector.
+      Cost +=
+          getScalarizationOverhead(FixedVecTy, ICA.getArgs(), Tys, CostKind);
+      return Cost;
+    }
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
