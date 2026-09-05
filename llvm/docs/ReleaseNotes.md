@@ -252,6 +252,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 * llvm-mca no longer defaults -mcpu to "native"
 
+* llvm-cov now supports an opt-in `-respect-lcov-exclusion-markers` option for
+  excluding coverage associated with `LCOV_EXCL_LINE` and
+  `LCOV_EXCL_START`/`LCOV_EXCL_STOP` source markers.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm

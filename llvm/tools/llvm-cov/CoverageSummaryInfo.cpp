@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageSummaryInfo.h"
+#include "CoverageExclusions.h"
 
 using namespace llvm;
 using namespace coverage;
@@ -38,12 +39,14 @@ static auto sumBranches(const ArrayRef<CountedRegion> &Branches) {
 
 static BranchCoverageInfo
 sumBranchExpansions(const CoverageMapping &CM,
-                    ArrayRef<ExpansionRecord> Expansions) {
+                    ArrayRef<ExpansionRecord> Expansions,
+                    const CoverageExclusions *Exclusions) {
   BranchCoverageInfo BranchCoverage;
   for (const auto &Expansion : Expansions) {
-    auto CE = CM.getCoverageForExpansion(Expansion);
+    auto CE = applyCoverageExclusions(Exclusions,
+                                      CM.getCoverageForExpansion(Expansion));
     BranchCoverage += sumBranches(CE.getBranches());
-    BranchCoverage += sumBranchExpansions(CM, CE.getExpansions());
+    BranchCoverage += sumBranchExpansions(CM, CE.getExpansions(), Exclusions);
   }
   return BranchCoverage;
 }
@@ -98,16 +101,23 @@ CoverageDataSummary::CoverageDataSummary(const CoverageData &CD,
 
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
-                             const coverage::FunctionRecord &Function) {
-  CoverageData CD = CM.getCoverageForFunction(Function);
+                             const coverage::FunctionRecord &Function,
+                             const CoverageExclusions *Exclusions) {
+  CoverageData CD =
+      applyCoverageExclusions(Exclusions, CM.getCoverageForFunction(Function));
+
+  SmallVector<CountedRegion> CodeRegions;
+  llvm::copy_if(Function.CountedRegions, std::back_inserter(CodeRegions),
+                [&](const CountedRegion &Region) {
+                  return !Exclusions ||
+                         !Exclusions->isRegionExcluded(Function, Region);
+                });
 
   auto Summary =
       FunctionCoverageSummary(Function.Name, Function.ExecutionCount);
-
-  Summary += CoverageDataSummary(CD, Function.CountedRegions);
-
-  // Compute the branch coverage, including branches from expansions.
-  Summary.BranchCoverage += sumBranchExpansions(CM, CD.getExpansions());
+  Summary += CoverageDataSummary(CD, CodeRegions);
+  Summary.BranchCoverage +=
+      sumBranchExpansions(CM, CD.getExpansions(), Exclusions);
 
   return Summary;
 }

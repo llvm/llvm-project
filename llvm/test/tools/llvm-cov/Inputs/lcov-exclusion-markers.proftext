@@ -1,0 +1,60 @@
+_Z13excluded_linei
+# Func Hash:
+1549
+# Num Counters:
+2
+# Counter Values:
+1
+0
+_Z24partially_excluded_blocki
+# Func Hash:
+172590168
+# Num Counters:
+2
+# Counter Values:
+1
+0
+
+_Z27partially_excluded_templateIiET_S0_
+# Func Hash:
+1549
+# Num Counters:
+2
+# Counter Values:
+1
+0
+
+_Z27partially_excluded_templateIlET_S0_
+# Func Hash:
+1549
+# Num Counters:
+2
+# Counter Values:
+1
+0
+
+_Z8includedi
+# Func Hash:
+172590168
+# Num Counters:
+2
+# Counter Values:
+1
+0
+
+lcov-exclusion-markers.cpp:_ZL17excluded_functioni
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+1
+
+main
+# Func Hash:
+1549
+# Num Counters:
+2
+# Counter Values:
+1
+0

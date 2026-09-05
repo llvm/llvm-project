@@ -1,0 +1,268 @@
+# RUN: yaml2obj %S/Inputs/lcov-exclusion-markers.yaml -o %t.o
+# RUN: llvm-profdata merge %S/Inputs/lcov-exclusion-markers.proftext -o %t.profdata
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=DEFAULT-SHOW
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   > %t.show
+# RUN: FileCheck %s --check-prefix=FILTERED-SHOW < %t.show
+# RUN: not grep -E '23\| +[1-9]' %t.show
+
+# DEFAULT-SHOW: 1|      1|#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LCOV_EXCL_LINE
+# DEFAULT-SHOW: 4|      1|  return x ? 1 : 0; // LCOV_EXCL_LINE
+# DEFAULT-SHOW: 7|      1|int partially_excluded_block(int x) {
+# DEFAULT-SHOW: 9|      1|  if (x)
+# DEFAULT-SHOW: 10|      0|    return 1;
+# DEFAULT-SHOW: 11|      1|  return 0; // LCOV_EXCL_STOP
+# FILTERED-SHOW: 1|       |#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LCOV_EXCL_LINE
+# FILTERED-SHOW: 3|      1|int excluded_line(int x) {
+# FILTERED-SHOW-NEXT: 4|       |  return x ? 1 : 0; // LCOV_EXCL_LINE
+# FILTERED-SHOW: 8|       |  // LCOV_EXCL_START
+# FILTERED-SHOW-NEXT: 9|       |  if (x)
+# FILTERED-SHOW-NEXT: 10|       |    return 1;
+# FILTERED-SHOW-NEXT: 11|      1|  return 0; // LCOV_EXCL_STOP
+# FILTERED-SHOW: 14|       |static int excluded_function(int x) { return x; } // LCOV_EXCL_LINE
+# FILTERED-SHOW: 17|      1|  if (x)
+# FILTERED-SHOW: 23|       |  return x ? 1 : 0; // LCOV_EXCL_LINE
+
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   --name=excluded_function %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | count 0
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   --line-coverage-lt=90 %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=FILTERED-THRESHOLD
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   --region-coverage-lt=90 %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=FILTERED-THRESHOLD
+# RUN: rm -rf %t.filtered-dir
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   --line-coverage-lt=90 -output-dir=%t.filtered-dir \
+# RUN:   %S/Inputs/lcov-exclusion-markers.cpp
+# RUN: FileCheck %s --check-prefix=FILTERED-INDEX \
+# RUN:   --input-file=%t.filtered-dir/index.txt
+
+# FILTERED-THRESHOLD-NOT: _Z24partially_excluded_blocki:
+# FILTERED-THRESHOLD: _Z8includedi:
+# FILTERED-INDEX: {{/|\\}}tmp{{/|\\}}lcov-exclusion-markers.cpp{{ +}}4{{ +}}1{{ +}}75.00%{{ +}}1{{ +}}0{{ +}}100.00%{{ +}}5{{ +}}1{{ +}}80.00%
+
+# RUN: llvm-cov report %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs \
+# RUN:   --show-branch-summary %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=DEFAULT-REPORT
+# RUN: llvm-cov report %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   --show-branch-summary \
+# RUN:   %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=FILTERED-REPORT
+# RUN: llvm-cov report %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   --show-functions --show-branch-summary \
+# RUN:   %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=FILTERED-FUNCTIONS
+
+# DEFAULT-REPORT: TOTAL{{ +}}22{{ +}}5{{ +}}77.27%{{ +}}6{{ +}}0{{ +}}100.00%{{ +}}22{{ +}}2{{ +}}90.91%{{ +}}9{{ +}}4{{ +}}55.56%
+# FILTERED-REPORT: TOTAL{{ +}}9{{ +}}1{{ +}}88.89%{{ +}}5{{ +}}0{{ +}}100.00%{{ +}}17{{ +}}1{{ +}}94.12%{{ +}}2{{ +}}1{{ +}}50.00%
+# FILTERED-FUNCTIONS: _Z13excluded_linei{{ +}}1{{ +}}0{{ +}}100.00%{{ +}}2{{ +}}0{{ +}}100.00%{{ +}}0{{ +}}0{{ +}}0.00%
+# FILTERED-FUNCTIONS-NOT: excluded_function
+# FILTERED-FUNCTIONS: _Z24partially_excluded_blocki{{ +}}2{{ +}}0{{ +}}100.00%{{ +}}3{{ +}}0{{ +}}100.00%{{ +}}0{{ +}}0{{ +}}0.00%
+# FILTERED-FUNCTIONS: _Z27partially_excluded_templateIiET_S0_{{ +}}1{{ +}}0{{ +}}100.00%{{ +}}2{{ +}}0{{ +}}100.00%{{ +}}0{{ +}}0{{ +}}0.00%
+
+# RUN: llvm-cov export %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   %S/Inputs/lcov-exclusion-markers.cpp > %t.json
+# RUN: FileCheck %s --check-prefix=JSON < %t.json
+# RUN: not grep 'excluded_function' %t.json
+
+# JSON: "branches":{{\[\[}}17,7,17,8,0,1,0,0,4
+# JSON: "summary":{"lines":{"count":17,"covered":16
+# JSON: "functions":{"count":5,"covered":5
+# JSON: "regions":{"count":9,"covered":8,"notcovered":1
+# JSON: "branches":{"count":2,"covered":1,"notcovered":1
+# JSON: "name":"_Z13excluded_linei","regions":{{\[\[}}3,26,5,2,1,0,0,0
+# JSON: "name":"_Z24partially_excluded_blocki","regions":{{\[\[}}7,37,12,2,1,0,0,0{{.*}}11,3,11,11,1,0,0,0
+# JSON: "name":"_Z27partially_excluded_templateIiET_S0_"
+
+# RUN: llvm-cov export -format=lcov %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-lcov-exclusion-markers \
+# RUN:   %S/Inputs/lcov-exclusion-markers.cpp > %t.lcov
+# RUN: FileCheck %s --check-prefix=LCOV < %t.lcov
+# RUN: not grep -E '^(DA:1,|DA:4,|DA:[89],|DA:10,|DA:14,|DA:23,|BRDA:1,|BRDA:4,|BRDA:9,|BRDA:23,|FN:14,|FNDA:.*excluded_function)' %t.lcov
+
+# LCOV: FN:3,_Z13excluded_linei
+# LCOV: FN:7,_Z24partially_excluded_blocki
+# LCOV: FN:16,_Z8includedi
+# LCOV: FN:22,_Z27partially_excluded_templateIiET_S0_
+# LCOV: FNF:5
+# LCOV-NEXT: FNH:5
+# LCOV: DA:3,1
+# LCOV: DA:11,1
+# LCOV: DA:16,1
+# LCOV: BRDA:17,0,0,0
+# LCOV-NEXT: BRDA:17,0,1,1
+# LCOV-NEXT: BRF:2
+# LCOV-NEXT: BRH:1
+# LCOV-NEXT: LF:17
+# LCOV-NEXT: LH:16
+
+# RUN: split-file %s %t.sources
+# RUN: not llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/unmatched \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %t.sources/unmatched/lcov-exclusion-markers.cpp 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=UNMATCHED
+# RUN: not llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/orphan \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %t.sources/orphan/lcov-exclusion-markers.cpp 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ORPHAN
+# RUN: not llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/overlap \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %t.sources/overlap/lcov-exclusion-markers.cpp 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=OVERLAP
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/stop-line \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %t.sources/stop-line/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=STOP-LINE
+# RUN: llvm-cov report %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/missing \
+# RUN:   | FileCheck %s --check-prefix=DEFAULT-REPORT
+# RUN: not llvm-cov report %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/missing \
+# RUN:   --respect-lcov-exclusion-markers 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MISSING
+
+# RUN: rm -rf %t.selected-source
+# RUN: mkdir -p %t.selected-source
+# RUN: cp %S/Inputs/prevent_false_instantiations.cpp %t.selected-source/
+# RUN: llvm-profdata merge %S/Inputs/prevent_false_instantiations.proftext \
+# RUN:   -o %t.selected-source.profdata
+# RUN: llvm-cov show %S/Inputs/prevent_false_instantiations.covmapping \
+# RUN:   -instr-profile=%t.selected-source.profdata \
+# RUN:   -path-equivalence=/tmp/false_instantiations/./,%t.selected-source/ \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %t.selected-source/prevent_false_instantiations.cpp > /dev/null
+# RUN: llvm-cov show %S/Inputs/prevent_false_instantiations.covmapping \
+# RUN:   -instr-profile=%t.selected-source.profdata \
+# RUN:   -path-equivalence=/tmp/false_instantiations/./,%t.selected-source/ \
+# RUN:   --respect-lcov-exclusion-markers --name=func1 \
+# RUN:   %t.selected-source/prevent_false_instantiations.cpp > /dev/null
+# RUN: llvm-cov export -format=lcov \
+# RUN:   %S/Inputs/prevent_false_instantiations.covmapping \
+# RUN:   -instr-profile=%t.selected-source.profdata \
+# RUN:   -path-equivalence=/tmp/false_instantiations/./,%t.selected-source/ \
+# RUN:   --respect-lcov-exclusion-markers --skip-branches \
+# RUN:   %t.selected-source/prevent_false_instantiations.cpp > /dev/null
+# RUN: not llvm-cov show %S/Inputs/prevent_false_instantiations.covmapping \
+# RUN:   -instr-profile=%t.selected-source.profdata \
+# RUN:   -path-equivalence=/tmp/false_instantiations/./,%t.selected-source/ \
+# RUN:   --respect-lcov-exclusion-markers --show-expansions \
+# RUN:   %t.selected-source/prevent_false_instantiations.cpp 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MISSING-REFERENCE
+# RUN: llvm-cov report %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/missing \
+# RUN:   -ignore-filename-regex='lcov-exclusion-markers\.cpp$' \
+# RUN:   --respect-lcov-exclusion-markers > /dev/null
+# RUN: llvm-cov export -format=lcov %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/missing \
+# RUN:   -ignore-filename-regex='lcov-exclusion-markers\.cpp$' \
+# RUN:   --respect-lcov-exclusion-markers > /dev/null
+# RUN: llvm-cov export %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/missing \
+# RUN:   -ignore-filename-regex='lcov-exclusion-markers\.cpp$' \
+# RUN:   --respect-lcov-exclusion-markers --skip-functions > /dev/null
+# RUN: llvm-cov export %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/missing \
+# RUN:   -ignore-filename-regex='lcov-exclusion-markers\.cpp$' \
+# RUN:   --respect-lcov-exclusion-markers --summary-only > /dev/null
+# RUN: not llvm-cov export %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/missing \
+# RUN:   -ignore-filename-regex='lcov-exclusion-markers\.cpp$' \
+# RUN:   --respect-lcov-exclusion-markers 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MISSING
+
+# RUN: yaml2obj %S/Inputs/lcov-exclusion-boundaries.yaml -o %t.boundaries.o
+# RUN: llvm-cov show %t.boundaries.o --empty-profile \
+# RUN:   -path-equivalence=/src/llvm/test/tools/llvm-cov/Inputs,%S/Inputs \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %S/Inputs/lcov-exclusion-boundaries.cpp \
+# RUN:   | FileCheck %s --check-prefix=BOUNDARY-SHOW
+# RUN: llvm-cov export -format=lcov %t.boundaries.o --empty-profile \
+# RUN:   -path-equivalence=/src/llvm/test/tools/llvm-cov/Inputs,%S/Inputs \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %S/Inputs/lcov-exclusion-boundaries.cpp \
+# RUN:   | FileCheck %s --check-prefix=BOUNDARY-LCOV
+# RUN: llvm-cov export %t.boundaries.o --empty-profile \
+# RUN:   -path-equivalence=/src/llvm/test/tools/llvm-cov/Inputs,%S/Inputs \
+# RUN:   --respect-lcov-exclusion-markers \
+# RUN:   %S/Inputs/lcov-exclusion-boundaries.cpp \
+# RUN:   | FileCheck %s --check-prefix=BOUNDARY-JSON
+
+# UNMATCHED: LCOV_EXCL_START at line 1 has no matching LCOV_EXCL_STOP
+# ORPHAN: LCOV_EXCL_STOP at line 1 has no matching LCOV_EXCL_START
+# OVERLAP: overlapping LCOV_EXCL_START at line 2; previous block started at line 1
+# STOP-LINE: 11|       |  return 0; // LCOV_EXCL_STOP LCOV_EXCL_LINE
+# MISSING: error: {{.*}}lcov-exclusion-markers.cpp: {{[Nn]o}} such file or directory
+# MISSING-REFERENCE: error: {{.*}}prevent_false_instantiations.h: {{[Nn]o}} such file or directory
+
+# BOUNDARY-SHOW: 4|       |  int x = 0; // LCOV_EXCL_LINE
+# BOUNDARY-SHOW-NEXT: 5|      0|  return x;
+# BOUNDARY-SHOW: 8|       |int partially_excluded_function() { // LCOV_EXCL_LINE
+# BOUNDARY-SHOW-NEXT: 9|      0|  return 1;
+
+# BOUNDARY-LCOV: FN:3,_Z27resumes_after_excluded_linev
+# BOUNDARY-LCOV: FN:8,_Z27partially_excluded_functionv
+# BOUNDARY-LCOV-NOT: excluded_header_function
+# BOUNDARY-LCOV: DA:5,0
+# BOUNDARY-LCOV: DA:9,0
+# BOUNDARY-LCOV: LF:9
+
+# BOUNDARY-JSON-NOT: excluded_header_function
+
+#--- unmatched/lcov-exclusion-markers.cpp
+// LCOV_EXCL_START
+#--- orphan/lcov-exclusion-markers.cpp
+// LCOV_EXCL_STOP
+#--- overlap/lcov-exclusion-markers.cpp
+// LCOV_EXCL_START
+// LCOV_EXCL_START
+// LCOV_EXCL_STOP
+#--- stop-line/lcov-exclusion-markers.cpp
+#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LCOV_EXCL_LINE
+
+int excluded_line(int x) {
+  return x ? 1 : 0; // LCOV_EXCL_LINE
+}
+
+int partially_excluded_block(int x) {
+  // LCOV_EXCL_START
+  if (x)
+    return 1;
+  return 0; // LCOV_EXCL_STOP LCOV_EXCL_LINE
+}
+
+static int excluded_function(int x) { return x; } // LCOV_EXCL_LINE
+
+int included(int x) {
+  if (x)
+    return 1;
+  return 0;
+}
+
+template <typename T> T partially_excluded_template(T x) {
+  return x ? 1 : 0; // LCOV_EXCL_LINE
+}
+
+int main() {
+  return excluded_line(0) + partially_excluded_block(0) +
+         excluded_function(0) + included(0) + EXCLUDED_MACRO(0) +
+         partially_excluded_template(0) + partially_excluded_template(0L);
+}
+#--- missing/placeholder
