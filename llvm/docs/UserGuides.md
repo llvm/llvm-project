@@ -72,6 +72,7 @@ RISCV/RISCVVCIX
 SandboxIR
 Telemetry
 LFI
+WinCall
 AdminTasks
 Benchmarking
 CMakePrimer
@@ -402,3 +403,8 @@ yaml2obj
 - {doc}`LFI <LFI>`
 
   This document describes the Lightweight Fault Isolation (LFI) target in LLVM.
+
+- {doc}`WinCall <WinCall>`
+
+  This document describes the WinCall calling convention for Windows x86-64
+  (APX), including the `x86_64apx` sub-architecture.

@@ -9036,6 +9036,11 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
       ArchSupported = Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64;
       DCCFlag = "-fdefault-calling-conv=regcall";
       break;
+      break;
+    case options::OPT__SLASH_Gwincall:
+      ArchSupported = Arch == llvm::Triple::x86_64;
+      DCCFlag = "-fdefault-calling-conv=wincall";
+      break;
     }
 
     // MSVC doesn't warn if /Gr or /Gz is used on x64, so we don't either.

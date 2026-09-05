@@ -76,6 +76,7 @@ enum CCMangling {
   CCM_RegCall,
   CCM_Vector,
   CCM_Std,
+  CCM_WinCall,
   CCM_WasmMainArgcArgv
 };
 
@@ -123,6 +124,8 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
     return CCM_Std;
   case CC_X86VectorCall:
     return CCM_Vector;
+  case CC_WinCall:
+    return CCM_WinCall;
   }
 }
 
@@ -327,6 +330,13 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   const FunctionProtoType *Proto = dyn_cast<FunctionProtoType>(FT);
   if (CC == CCM_Vector)
     Out << '@';
+  if (CC == CCM_WinCall) {
+    // wincall symbols get a @win suffix so the linker can catch calling
+    // convention mismatches, like the @N parameter-size suffix does for
+    // stdcall on i386.
+    Out << "@win";
+    return;
+  }
   Out << '@';
   if (!Proto) {
     Out << '0';

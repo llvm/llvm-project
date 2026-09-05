@@ -798,6 +798,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
       case CC_X86ThisCall: POut << "__thiscall "; break;
       case CC_X86VectorCall: POut << "__vectorcall "; break;
       case CC_X86RegCall: POut << "__regcall "; break;
+      case CC_WinCall:
+        POut << "__wincall ";
+        break;
       // Only bother printing the conventions that MSVC knows about.
       default: break;
       }

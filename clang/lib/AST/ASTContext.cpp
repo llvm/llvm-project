@@ -13501,6 +13501,10 @@ CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
     if (getTargetInfo().hasFeature("sse2") && !IsVariadic)
       return CC_X86FastCall;
     break;
+  case LangOptions::DCC_WinCall:
+    if (!IsVariadic)
+      return CC_WinCall;
+    break;
   case LangOptions::DCC_StdCall:
     if (!IsVariadic)
       return CC_X86StdCall;

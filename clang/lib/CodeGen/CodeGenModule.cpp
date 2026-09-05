@@ -1780,7 +1780,7 @@ void CodeGenModule::Release() {
 
   auto UnwindMode = CodeGenOpts.getWinX64EHUnwind();
   if (UnwindMode == llvm::WinX64EHUnwindMode::Default) {
-    if (T.isOSWindows() && T.isX86_64() &&
+    if (T.isOSWindowsOrUEFI() && T.isX86_64() &&
         Context.getTargetInfo().hasFeature("egpr"))
       UnwindMode = llvm::WinX64EHUnwindMode::V3;
     else

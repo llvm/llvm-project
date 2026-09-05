@@ -157,6 +157,18 @@ bool X86TargetInfo::initFeatureMap(
   if (getTriple().getArch() == llvm::Triple::x86_64)
     setFeatureEnabled(Features, "sse2", true);
 
+  // x86_64apx enables the APX features by default. LLVM's X86 backend models
+  // APX as the individual egpr/push2pop2/ppx/ndd/ccmp/nf/zu/jmpabs features
+  // (there is no single "apxf" feature), so enable each of them.
+  if (getTriple().isX86_64APX()) {
+    for (const char *Sub :
+         {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
+      setFeatureEnabled(Features, Sub, true);
+    // APX (EVEX) implies AVX-512, and WinCall expects every instruction to be
+    // EVEX-encoded so that no vzeroupper is needed at WinCall boundaries.
+    setFeatureEnabled(Features, "avx512f", true);
+  }
+
   using namespace llvm::X86;
 
   SmallVector<StringRef, 16> CPUFeatures;
@@ -532,6 +544,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     if (getTriple().getArchName() == "x86_64h") {
       Builder.defineMacro("__x86_64h");
       Builder.defineMacro("__x86_64h__");
+    }
+    if (getTriple().isX86_64APX()) {
+      Builder.defineMacro("__x86_64apx__");
     }
   } else {
     DefineStd(Builder, "i386", Opts);

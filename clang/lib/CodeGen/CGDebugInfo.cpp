@@ -1811,6 +1811,10 @@ static unsigned getDwarfCC(CallingConv CC, const llvm::Triple &T) {
     return llvm::dwarf::DW_CC_BORLAND_pascal;
   case CC_Win64:
     return llvm::dwarf::DW_CC_LLVM_Win64;
+  case CC_WinCall:
+    // WinCall is the wincall convention on Windows x86-64; model it with the
+    // Win64 DWARF calling convention code.
+    return llvm::dwarf::DW_CC_LLVM_Win64;
   case CC_X86_64SysV:
     return llvm::dwarf::DW_CC_LLVM_X86_64SysV;
   case CC_AAPCS:

@@ -757,6 +757,7 @@ public:
     case CC_X86VectorCall:
     case CC_IntelOclBicc:
     case CC_Win64:
+    case CC_WinCall:
     case CC_PreserveMost:
     case CC_PreserveAll:
     case CC_PreserveNone:
@@ -770,6 +771,9 @@ public:
   }
 
   CallingConv getDefaultCallingConv() const override {
+    // x86_64apx targets default to the wincall calling convention.
+    if (getTriple().isWindowsAPX())
+      return CC_WinCall;
     return CC_C;
   }
 
@@ -874,6 +878,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Win64:
+    case CC_WinCall:
     case CC_X86_64SysV:
       return CCCR_OK;
     default:
@@ -923,6 +928,7 @@ public:
     case CC_SwiftAsync:
     case CC_X86RegCall:
     case CC_DeviceKernel:
+    case CC_WinCall:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -973,6 +979,14 @@ class LLVM_LIBRARY_VISIBILITY MinGWX86_64TargetInfo
 public:
   MinGWX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : WindowsX86_64TargetInfo(Triple, Opts) {
+    if (Triple.isX86_64APX()) {
+      // WinCall unifies long double to f64 (like the MSVC ABI) so that the
+      // WinCall ABI never needs x87.
+      LongDoubleWidth = LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+      HasFloat128 = true;
+      return;
+    }
     // Mingw64 rounds long double size and alignment up to 16 bytes, but sticks
     // with x86 FP ops. Weird.
     LongDoubleWidth = LongDoubleAlign = 128;
@@ -1020,6 +1034,7 @@ public:
     case CC_SwiftAsync:
     case CC_X86RegCall:
     case CC_DeviceKernel:
+    case CC_WinCall:
       return CCCR_OK;
     default:
       return CCCR_Warning;

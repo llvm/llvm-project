@@ -951,7 +951,8 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
       // '(' abstract-declarator ')'
       if (Tok.isOneOf(tok::kw___attribute, tok::kw___declspec, tok::kw___cdecl,
                       tok::kw___stdcall, tok::kw___fastcall, tok::kw___thiscall,
-                      tok::kw___regcall, tok::kw___vectorcall))
+                      tok::kw___regcall, tok::kw___vectorcall,
+                      tok::kw___wincall))
         return TPResult::True; // attributes indicate declaration
       TPResult TPR = TryParseDeclarator(mayBeAbstract, mayHaveIdentifier);
       if (TPR != TPResult::Ambiguous)
@@ -1281,6 +1282,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw___thiscall:
   case tok::kw___regcall:
   case tok::kw___vectorcall:
+  case tok::kw___wincall:
   case tok::kw___w64:
   case tok::kw___sptr:
   case tok::kw___uptr:

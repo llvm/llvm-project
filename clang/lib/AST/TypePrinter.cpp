@@ -1154,6 +1154,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_X86Pascal:
       OS << " __attribute__((pascal))";
       break;
+    case CC_WinCall:
+      OS << " __attribute__((wincall))";
+      break;
     case CC_AAPCS:
       OS << " __attribute__((pcs(\"aapcs\")))";
       break;
@@ -2113,6 +2116,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::MSABI: OS << "ms_abi"; break;
   case attr::SysVABI: OS << "sysv_abi"; break;
   case attr::RegCall: OS << "regcall"; break;
+  case attr::WinCall:
+    OS << "wincall";
+    break;
   case attr::Pcs: {
     OS << "pcs(";
    QualType t = T->getEquivalentType();

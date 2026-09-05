@@ -630,8 +630,9 @@ void X86PassConfig::addPreEmitPass2() {
   }));
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
-  // after all real instructions have been added to the epilog.
-  if (TT.isOSWindows() && TT.isX86_64()) {
+  // after all real instructions have been added to the epilog. UEFI also uses
+  // WinCFI (.seh_proc), so it needs the same V2/V3 unwind handling as Windows.
+  if (TT.isOSWindowsOrUEFI() && TT.isX86_64()) {
     addPass(createX86WinEHUnwindV2LegacyPass());
     addPass(createX86WinEHUnwindV3Pass());
   }

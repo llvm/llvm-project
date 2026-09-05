@@ -18930,12 +18930,13 @@ static bool funcHasParameterSizeMangling(Sema &S, FunctionDecl *FD) {
   if (S.getLangOpts().CPlusPlus && !FD->isExternC())
     return false;
 
-  // Stdcall, fastcall, and vectorcall need this special treatment.
+  // Stdcall, fastcall, vectorcall and wincall need this special treatment.
   CallingConv CC = FD->getType()->castAs<FunctionType>()->getCallConv();
   switch (CC) {
   case CC_X86StdCall:
   case CC_X86FastCall:
   case CC_X86VectorCall:
+  case CC_WinCall:
     return true;
   default:
     break;

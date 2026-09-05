@@ -75,6 +75,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::X86_RegCall;
   case CC_X86ThisCall:
     return llvm::CallingConv::X86_ThisCall;
+  case CC_WinCall:
+    return llvm::CallingConv::X86_WinCall;
   case CC_Win64:
     return llvm::CallingConv::Win64;
   case CC_X86_64SysV:

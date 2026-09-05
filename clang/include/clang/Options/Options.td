@@ -9038,9 +9038,9 @@ def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and
   ImpliedByAnyOf<[open_cl.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
-  Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
+  Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall,wincall">,
   NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall", "DCC_RtdCall"]>,
+  NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall", "DCC_RtdCall", "DCC_WinCall"]>,
   MarshallingInfoEnum<LangOpts<"DefaultCallingConv">, "DCC_None">;
 
 // These options cannot be marshalled, because they are used to set up the LangOptions defaults.
@@ -9769,6 +9769,8 @@ def _SLASH_Gz : CLFlag<"Gz">,
   HelpText<"Set __stdcall as a default calling convention">;
 def _SLASH_Gv : CLFlag<"Gv">,
   HelpText<"Set __vectorcall as a default calling convention">;
+def _SLASH_Gwincall : CLFlag<"Gwincall">,
+  HelpText<"Set __wincall as a default calling convention">;
 def _SLASH_Gregcall : CLFlag<"Gregcall">,
   HelpText<"Set __regcall as a default calling convention">;
 def _SLASH_Gregcall4 : CLFlag<"Gregcall4">,

@@ -292,6 +292,12 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // following the i386 psABI, while on Illumos it is always 16 bytes.
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
+  else if (isWindowsAPX())
+    // WinCall (x86_64apx-windows) guarantees a 64-byte stack alignment so that
+    // AVX-512 (ZMM) spills and aligned moves can always be used without
+    // dynamic stack realignment (GCC still cannot support AVX-512 on Windows
+    // correctly because the classic ABI only aligns the stack to 16 bytes).
+    stackAlignment = Align(64);
   else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() ||
            isTargetHurd() || Is64Bit)
     stackAlignment = Align(16);

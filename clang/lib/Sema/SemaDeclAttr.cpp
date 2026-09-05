@@ -5547,6 +5547,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_CDecl:
     D->addAttr(::new (S.Context) CDeclAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_WinCall:
+    D->addAttr(::new (S.Context) WinCallAttr(S.Context, AL));
+    return;
   case ParsedAttr::AT_Pascal:
     D->addAttr(::new (S.Context) PascalAttr(S.Context, AL));
     return;
@@ -5821,6 +5824,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_ThisCall:
     CC = CC_X86ThisCall;
     break;
+  case ParsedAttr::AT_WinCall:
+    CC = CC_WinCall;
+    break;
   case ParsedAttr::AT_Pascal:
     CC = CC_X86Pascal;
     break;
@@ -5843,7 +5849,13 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
-    CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
+    // On x86_64apx the MS ABI is WinCall (the APX-aware Microsoft convention),
+    // so msabi implies wincall there. Elsewhere msabi stays the classic MS x64
+    // convention, unless it is combined with an explicit wincall attribute.
+    if (Context.getTargetInfo().getTriple().isX86_64APX())
+      CC = CC_WinCall;
+    else
+      CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
     break;
   case ParsedAttr::AT_SysVABI:
     CC = IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
@@ -8125,6 +8137,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_CDecl:
   case ParsedAttr::AT_FastCall:
   case ParsedAttr::AT_ThisCall:
+  case ParsedAttr::AT_WinCall:
   case ParsedAttr::AT_Pascal:
   case ParsedAttr::AT_RegCall:
   case ParsedAttr::AT_SwiftCall:
