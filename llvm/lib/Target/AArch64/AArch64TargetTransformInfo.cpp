@@ -82,6 +82,13 @@ static cl::opt<int> Aarch64ForceUnrollThreshold(
     "aarch64-force-unroll-threshold", cl::init(0), cl::Hidden,
     cl::desc("Threshold for forced unrolling of small loops in AArch64"));
 
+// Overrides the subtarget-dependent default budget (7 for Apple-M-like cores,
+// 5 otherwise), which cannot be expressed via cl::init as the subtarget is
+// only known per-function.
+static cl::opt<unsigned> MultiExitUnrollSizeBudget(
+    "aarch64-multi-exit-unroll-size-budget", cl::Hidden,
+    cl::desc("Loop size budget for unrolling small multi-exit loops"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -5943,7 +5950,8 @@ static bool isLoopSizeWithinBudget(Loop *L, const AArch64TTIImpl &TTI,
 }
 
 static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
-                                      const AArch64TTIImpl &TTI) {
+                                      const AArch64TTIImpl &TTI,
+                                      const unsigned SizeBudget) {
   // Only consider loops with unknown trip counts for which we can determine
   // a symbolic expression. Multi-exit loops with small known trip counts will
   // likely be unrolled anyway.
@@ -5957,8 +5965,8 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
   if (MaxTC > 0 && MaxTC <= 32)
     return false;
 
-  // Make sure the loop size is <= 5.
-  if (!isLoopSizeWithinBudget(L, TTI, 5, nullptr))
+  // Make sure the loop size is small.
+  if (!isLoopSizeWithinBudget(L, TTI, SizeBudget, nullptr))
     return false;
 
   // Small search loops with multiple exits can be highly beneficial to unroll.
@@ -6194,7 +6202,12 @@ void AArch64TTIImpl::getUnrollingPreferences(
 
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.
-  if (!L->getExitBlock() && shouldUnrollMultiExitLoop(L, SE, *this)) {
+  // Apple CPUs tolerate a slightly larger loop body than the generic default.
+  unsigned SizeBudget = MultiExitUnrollSizeBudget.getNumOccurrences()
+                            ? MultiExitUnrollSizeBudget
+                            : (ST->isAppleMLike() ? 7 : 5);
+  if (!L->getExitBlock() &&
+      shouldUnrollMultiExitLoop(L, SE, *this, SizeBudget)) {
     UP.RuntimeUnrollMultiExit = true;
     UP.Runtime = true;
     // Limit unroll count.
