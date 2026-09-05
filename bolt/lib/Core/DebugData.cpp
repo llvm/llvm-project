@@ -1021,7 +1021,8 @@ static void emitDwarfSetLineAddrAbs(MCStreamer &OS,
 static inline void emitBinaryDwarfLineTable(
     MCStreamer *MCOS, MCDwarfLineTableParams Params,
     const DWARFDebugLine::LineTable *Table,
-    const std::vector<DwarfLineTable::RowSequence> &InputSequences) {
+    const std::vector<DwarfLineTable::RowSequence> &InputSequences,
+    const DwarfLineTable &OutputTable) {
   if (InputSequences.empty())
     return;
 
@@ -1063,8 +1064,9 @@ static inline void emitBinaryDwarfLineTable(
       int64_t LineDelta = static_cast<int64_t>(Row.Line) - LastLine;
       const uint64_t Address = Row.Address.Address;
 
-      if (FileNum != Row.File) {
-        FileNum = Row.File;
+      const unsigned OutputFile = OutputTable.translateFileIndex(Row.File);
+      if (FileNum != OutputFile) {
+        FileNum = OutputFile;
         MCOS->emitInt8(dwarf::DW_LNS_set_file);
         MCOS->emitULEB128IntValue(FileNum);
       }
@@ -1224,7 +1226,7 @@ void DwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
     emitDwarfLineTable(MCOS, LineSec.first, LineSec.second);
 
   // Emit line tables for the original code.
-  emitBinaryDwarfLineTable(MCOS, Params, InputTable, InputSequences);
+  emitBinaryDwarfLineTable(MCOS, Params, InputTable, InputSequences, *this);
 
   // This is the end of the section, so set the value of the symbol at the end
   // of this section (that was used in a previous expression).
