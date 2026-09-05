@@ -1352,13 +1352,17 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
-  // On architectures that support direct loads to LDS, emit an unknown waitcnt
-  // at workgroup-scoped release operations that specify the LDS address space.
-  // SIInsertWaitcnts will later replace this with a vmcnt().
+  // On architectures that support direct loads to LDS, emit ordering waitcnts
+  // at release operations that specify the LDS address space. SIInsertWaitcnts
+  // replaces workgroup-scoped S_WAITCNT_lds_direct with a vmcnt(), and replaces
+  // WAIT_LDS_RELEASE_MARK with a DS_CNT drain.
   if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
-      Scope == SIAtomicScope::WORKGROUP &&
       (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::WAIT_LDS_RELEASE_MARK));
+
+    if (Scope == SIAtomicScope::WORKGROUP)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+
     Changed = true;
   }
 
@@ -1761,13 +1765,17 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
-  // On architectures that support direct loads to LDS, emit an unknown waitcnt
-  // at workgroup-scoped release operations that specify the LDS address space.
-  // SIInsertWaitcnts will later replace this with a vmcnt().
+  // On architectures that support direct loads to LDS, emit ordering waitcnts
+  // at release operations that specify the LDS address space. SIInsertWaitcnts
+  // replaces workgroup-scoped S_WAITCNT_lds_direct with a vmcnt(), and replaces
+  // WAIT_LDS_RELEASE_MARK with a DS_CNT drain.
   if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
-      Scope == SIAtomicScope::WORKGROUP &&
       (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::WAIT_LDS_RELEASE_MARK));
+
+    if (Scope == SIAtomicScope::WORKGROUP)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+
     Changed = true;
   }
 
@@ -2005,6 +2013,15 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   if (DSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT_soft)).addImm(0);
+    Changed = true;
+  }
+
+  // On architectures that support async loads to LDS, emit ordering waitcnts at
+  // release operations that specify the LDS address space. SIInsertWaitcnts
+  // replaces WAIT_LDS_RELEASE_MARK with a DS_CNT drain.
+  if (ST.hasAsyncMark() && isReleaseOrStronger(Order) &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::WAIT_LDS_RELEASE_MARK));
     Changed = true;
   }
 

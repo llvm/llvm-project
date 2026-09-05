@@ -11,8 +11,8 @@ define i32 @lds_then_dma.global.singlethread(ptr addrspace(1) %g, ptr addrspace(
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    ds_read_b32 v2, v2
-; CHECK-NEXT:    global_load_lds_dword v[0:1], off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_lds_dword v[0:1], off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -29,8 +29,8 @@ define i32 @lds_then_dma.global.wave(ptr addrspace(1) %g, ptr addrspace(3) inreg
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    ds_read_b32 v2, v2
-; CHECK-NEXT:    global_load_lds_dword v[0:1], off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_lds_dword v[0:1], off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -103,6 +103,7 @@ define i32 @lds_then_dma.global.singlethread.partial(ptr addrspace(1) %g, ptr ad
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    ds_read_b32 v2, v2
 ; CHECK-NEXT:    ds_read_b32 v3, v3
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
 ; CHECK-NEXT:    global_load_lds_dword v[0:1], off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_add_u32_e32 v0, v2, v3
@@ -125,6 +126,7 @@ define i32 @lds_then_dma.global.wave.partial(ptr addrspace(1) %g, ptr addrspace(
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-NEXT:    ds_read_b32 v2, v2
 ; CHECK-NEXT:    ds_read_b32 v3, v3
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
 ; CHECK-NEXT:    global_load_lds_dword v[0:1], off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_add_u32_e32 v0, v2, v3
@@ -214,8 +216,9 @@ define i32 @lds_then_dma.buffer.singlethread(<4 x i32> inreg %rsrc, ptr addrspac
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s16
 ; CHECK-NEXT:    s_mov_b32 m0, s16
 ; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("singlethread") release, !mmra !0
@@ -230,8 +233,9 @@ define i32 @lds_then_dma.buffer.wave(<4 x i32> inreg %rsrc, ptr addrspace(3) inr
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s16
 ; CHECK-NEXT:    s_mov_b32 m0, s16
 ; CHECK-NEXT:    ds_read_b32 v0, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("wavefront") release, !mmra !0
@@ -299,6 +303,7 @@ define i32 @lds_then_dma.buffer.singlethread.partial(<4 x i32> inreg %rsrc, ptr 
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s17
 ; CHECK-NEXT:    ds_read_b32 v0, v0
 ; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
 ; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_add_u32_e32 v0, v0, v1
@@ -321,6 +326,7 @@ define i32 @lds_then_dma.buffer.wave.partial(<4 x i32> inreg %rsrc, ptr addrspac
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s17
 ; CHECK-NEXT:    ds_read_b32 v0, v0
 ; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
 ; CHECK-NEXT:    buffer_load_dword off, s[0:3], 0 lds
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_add_u32_e32 v0, v0, v1

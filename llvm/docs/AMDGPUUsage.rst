@@ -8140,8 +8140,20 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                              is being released.
 
                                                          2. buffer/global/flat_atomic
-     fence        release      - singlethread *none*     *none*
+     fence        release      - singlethread *none*     1. s_waitcnt lgkmcnt(0)
                                - wavefront
+
+                                                           - Emit only on GFX9,
+                                                             before
+                                                             :ref:`LDS DMA writes<amdgpu-dma-operations>`
+                                                             that are preceded
+                                                             by an ordinary
+                                                             LDS operation.
+                                                           - Ensures the wave's
+                                                             preceding LDS
+                                                             operations complete
+                                                             before the LDS DMA
+                                                             write.
      fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0)
 
                                                            - If OpenCL and
@@ -9948,8 +9960,19 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              released.
 
                                                          3. buffer/global/flat_atomic
-     fence        release      - singlethread *none*     *none*
+     fence        release      - singlethread *none*     1. s_waitcnt lgkmcnt(0)
                                - wavefront
+
+                                                           - Emit only before
+                                                             :ref:`LDS DMA writes<amdgpu-dma-operations>`
+                                                             that are preceded
+                                                             by an ordinary
+                                                             LDS operation.
+                                                           - Ensures the wave's
+                                                             preceding LDS
+                                                             operations complete
+                                                             before the LDS DMA
+                                                             write.
      fence        release      - workgroup    *none*     1. s_waitcnt lgkm/vmcnt(0)
 
                                                            - Use lgkmcnt(0) if not
@@ -12271,8 +12294,19 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
 
                                                          3. buffer/global/flat_atomic
                                                             sc0=1 sc1=1
-     fence        release      - singlethread *none*     *none*
+     fence        release      - singlethread *none*     1. s_waitcnt lgkmcnt(0)
                                - wavefront
+
+                                                           - Emit only before
+                                                             :ref:`LDS DMA writes<amdgpu-dma-operations>`
+                                                             that are preceded
+                                                             by an ordinary
+                                                             LDS operation.
+                                                           - Ensures the wave's
+                                                             preceding LDS
+                                                             operations complete
+                                                             before the LDS DMA
+                                                             write.
      fence        release      - workgroup    *none*     1. s_waitcnt lgkm/vmcnt(0)
 
                                                            - Use lgkmcnt(0) if not
@@ -14443,8 +14477,20 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              is being released.
 
                                                          2. buffer/global/flat_atomic
-     fence        release      - singlethread *none*     *none*
+     fence        release      - singlethread *none*     1. s_waitcnt lgkmcnt(0)
                                - wavefront
+
+                                                           - Emit only on GFX10,
+                                                             before
+                                                             :ref:`LDS DMA writes<amdgpu-dma-operations>`
+                                                             that are preceded
+                                                             by an ordinary
+                                                             LDS operation.
+                                                           - Ensures the wave's
+                                                             preceding LDS
+                                                             operations complete
+                                                             before the LDS DMA
+                                                             write.
      fence        release      - workgroup    *none*     1. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0) & vscnt(0)
 
@@ -18897,8 +18943,19 @@ the instruction in the code sequence that references the table.
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
-     fence        release      - singlethread *none*     *none*
+     fence        release      - singlethread *none*     1. ``s_wait_dscnt 0x0``
                                - wavefront
+
+                                                           - Emit only before
+                                                             :ref:`LDS DMA writes<amdgpu-dma-operations>`
+                                                             that are preceded
+                                                             by an ordinary
+                                                             LDS operation.
+                                                           - Ensures the wave's
+                                                             preceding LDS
+                                                             operations complete
+                                                             before the LDS DMA
+                                                             write.
      fence        release      - workgroup    *none*     1. | ``s_wait_storecnt 0x0``
                                - cluster                    | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``

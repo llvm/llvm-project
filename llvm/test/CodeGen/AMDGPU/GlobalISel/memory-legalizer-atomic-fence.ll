@@ -73,12 +73,14 @@ define amdgpu_kernel void @system_one_as_release() #0 {
   ; GFX10WGP-LABEL: name: system_one_as_release
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_one_as_release
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
@@ -114,6 +116,7 @@ define amdgpu_kernel void @system_one_as_acq_rel() #0 {
   ; GFX10WGP-LABEL: name: system_one_as_acq_rel
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -122,6 +125,7 @@ define amdgpu_kernel void @system_one_as_acq_rel() #0 {
   ; GFX10CU-LABEL: name: system_one_as_acq_rel
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -163,6 +167,7 @@ define amdgpu_kernel void @system_one_as_seq_cst() #0 {
   ; GFX10WGP-LABEL: name: system_one_as_seq_cst
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -171,6 +176,7 @@ define amdgpu_kernel void @system_one_as_seq_cst() #0 {
   ; GFX10CU-LABEL: name: system_one_as_seq_cst
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -236,10 +242,12 @@ define amdgpu_kernel void @singlethread_one_as_release() #0 {
   ;
   ; GFX10WGP-LABEL: name: singlethread_one_as_release
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: singlethread_one_as_release
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: singlethread_one_as_release
@@ -265,10 +273,12 @@ define amdgpu_kernel void @singlethread_one_as_acq_rel() #0 {
   ;
   ; GFX10WGP-LABEL: name: singlethread_one_as_acq_rel
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: singlethread_one_as_acq_rel
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: singlethread_one_as_acq_rel
@@ -294,10 +304,12 @@ define amdgpu_kernel void @singlethread_one_as_seq_cst() #0 {
   ;
   ; GFX10WGP-LABEL: name: singlethread_one_as_seq_cst
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: singlethread_one_as_seq_cst
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: singlethread_one_as_seq_cst
@@ -375,12 +387,14 @@ define amdgpu_kernel void @agent_one_as_release() #0 {
   ; GFX10WGP-LABEL: name: agent_one_as_release
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_one_as_release
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
@@ -416,6 +430,7 @@ define amdgpu_kernel void @agent_one_as_acq_rel() #0 {
   ; GFX10WGP-LABEL: name: agent_one_as_acq_rel
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -424,6 +439,7 @@ define amdgpu_kernel void @agent_one_as_acq_rel() #0 {
   ; GFX10CU-LABEL: name: agent_one_as_acq_rel
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -465,6 +481,7 @@ define amdgpu_kernel void @agent_one_as_seq_cst() #0 {
   ; GFX10WGP-LABEL: name: agent_one_as_seq_cst
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -473,6 +490,7 @@ define amdgpu_kernel void @agent_one_as_seq_cst() #0 {
   ; GFX10CU-LABEL: name: agent_one_as_seq_cst
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -545,6 +563,7 @@ define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ; GFX10WGP-LABEL: name: workgroup_one_as_release
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
@@ -552,6 +571,7 @@ define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ; GFX10CU-LABEL: name: workgroup_one_as_release
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
@@ -584,6 +604,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ; GFX10WGP-LABEL: name: workgroup_one_as_acq_rel
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -592,6 +613,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ; GFX10CU-LABEL: name: workgroup_one_as_acq_rel
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
@@ -625,6 +647,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ; GFX10WGP-LABEL: name: workgroup_one_as_seq_cst
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -633,6 +656,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ; GFX10CU-LABEL: name: workgroup_one_as_seq_cst
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
@@ -694,10 +718,12 @@ define amdgpu_kernel void @wavefront_one_as_release() #0 {
   ;
   ; GFX10WGP-LABEL: name: wavefront_one_as_release
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: wavefront_one_as_release
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: wavefront_one_as_release
@@ -723,10 +749,12 @@ define amdgpu_kernel void @wavefront_one_as_acq_rel() #0 {
   ;
   ; GFX10WGP-LABEL: name: wavefront_one_as_acq_rel
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: wavefront_one_as_acq_rel
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: wavefront_one_as_acq_rel
@@ -752,10 +780,12 @@ define amdgpu_kernel void @wavefront_one_as_seq_cst() #0 {
   ;
   ; GFX10WGP-LABEL: name: wavefront_one_as_seq_cst
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: wavefront_one_as_seq_cst
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: wavefront_one_as_seq_cst
@@ -833,12 +863,14 @@ define amdgpu_kernel void @system_release() #0 {
   ; GFX10WGP-LABEL: name: system_release
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: system_release
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
@@ -874,6 +906,7 @@ define amdgpu_kernel void @system_acq_rel() #0 {
   ; GFX10WGP-LABEL: name: system_acq_rel
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -882,6 +915,7 @@ define amdgpu_kernel void @system_acq_rel() #0 {
   ; GFX10CU-LABEL: name: system_acq_rel
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -923,6 +957,7 @@ define amdgpu_kernel void @system_seq_cst() #0 {
   ; GFX10WGP-LABEL: name: system_seq_cst
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -931,6 +966,7 @@ define amdgpu_kernel void @system_seq_cst() #0 {
   ; GFX10CU-LABEL: name: system_seq_cst
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -996,10 +1032,12 @@ define amdgpu_kernel void @singlethread_release() #0 {
   ;
   ; GFX10WGP-LABEL: name: singlethread_release
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: singlethread_release
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: singlethread_release
@@ -1025,10 +1063,12 @@ define amdgpu_kernel void @singlethread_acq_rel() #0 {
   ;
   ; GFX10WGP-LABEL: name: singlethread_acq_rel
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: singlethread_acq_rel
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: singlethread_acq_rel
@@ -1054,10 +1094,12 @@ define amdgpu_kernel void @singlethread_seq_cst() #0 {
   ;
   ; GFX10WGP-LABEL: name: singlethread_seq_cst
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: singlethread_seq_cst
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: singlethread_seq_cst
@@ -1135,12 +1177,14 @@ define amdgpu_kernel void @agent_release() #0 {
   ; GFX10WGP-LABEL: name: agent_release
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: agent_release
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
@@ -1176,6 +1220,7 @@ define amdgpu_kernel void @agent_acq_rel() #0 {
   ; GFX10WGP-LABEL: name: agent_acq_rel
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -1184,6 +1229,7 @@ define amdgpu_kernel void @agent_acq_rel() #0 {
   ; GFX10CU-LABEL: name: agent_acq_rel
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -1225,6 +1271,7 @@ define amdgpu_kernel void @agent_seq_cst() #0 {
   ; GFX10WGP-LABEL: name: agent_seq_cst
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -1233,6 +1280,7 @@ define amdgpu_kernel void @agent_seq_cst() #0 {
   ; GFX10CU-LABEL: name: agent_seq_cst
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   BUFFER_GL1_INV implicit $exec
   ; GFX10CU-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -1311,6 +1359,7 @@ define amdgpu_kernel void @workgroup_release() #0 {
   ; GFX10WGP-LABEL: name: workgroup_release
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
@@ -1318,6 +1367,7 @@ define amdgpu_kernel void @workgroup_release() #0 {
   ; GFX10CU-LABEL: name: workgroup_release
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
@@ -1352,6 +1402,7 @@ define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ; GFX10WGP-LABEL: name: workgroup_acq_rel
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -1360,6 +1411,7 @@ define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ; GFX10CU-LABEL: name: workgroup_acq_rel
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
@@ -1395,6 +1447,7 @@ define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ; GFX10WGP-LABEL: name: workgroup_seq_cst
   ; GFX10WGP: bb.0.entry:
   ; GFX10WGP-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
@@ -1403,6 +1456,7 @@ define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ; GFX10CU-LABEL: name: workgroup_seq_cst
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
@@ -1464,10 +1518,12 @@ define amdgpu_kernel void @wavefront_release() #0 {
   ;
   ; GFX10WGP-LABEL: name: wavefront_release
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: wavefront_release
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: wavefront_release
@@ -1493,10 +1549,12 @@ define amdgpu_kernel void @wavefront_acq_rel() #0 {
   ;
   ; GFX10WGP-LABEL: name: wavefront_acq_rel
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: wavefront_acq_rel
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: wavefront_acq_rel
@@ -1522,10 +1580,12 @@ define amdgpu_kernel void @wavefront_seq_cst() #0 {
   ;
   ; GFX10WGP-LABEL: name: wavefront_seq_cst
   ; GFX10WGP: bb.0.entry:
+  ; GFX10WGP-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
   ; GFX10CU-LABEL: name: wavefront_seq_cst
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   WAIT_LDS_RELEASE_MARK
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: wavefront_seq_cst
