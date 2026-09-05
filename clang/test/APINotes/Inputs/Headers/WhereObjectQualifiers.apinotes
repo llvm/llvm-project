@@ -1,0 +1,130 @@
+---
+Name: WhereObjectQualifiers
+Tags:
+- Name: ObjectBuilder
+  Methods:
+  - Name: buildRef
+    Where:
+      Object:
+        Ref: lvalue
+    SwiftName: buildFromLValue()
+  - Name: buildRef
+    Where:
+      Parameters: []
+      Object:
+        Ref: rvalue
+    SwiftName: buildFromRValue()
+  - Name: buildConst
+    Where:
+      Parameters: []
+      Object:
+        Const: false
+        Ref: lvalue
+    SwiftName: buildMutableLValue()
+  - Name: buildConst
+    Where:
+      Parameters: []
+      Object:
+        Const: true
+        Ref: lvalue
+    SwiftName: buildConstLValue()
+  - Name: buildVolatile
+    Where:
+      Parameters: []
+      Object:
+        Volatile: false
+    SwiftName: buildNonVolatile()
+  - Name: buildVolatile
+    Where:
+      Parameters: []
+      Object:
+        Volatile: true
+    SwiftName: buildVolatile()
+  - Name: buildNone
+    Where:
+      Parameters: []
+      Object:
+        Ref: none
+    SwiftName: buildUnqualified()
+  - Name: buildCombined
+    Where:
+      Parameters: []
+      Object:
+        Const: true
+        Volatile: true
+        Ref: lvalue
+    SwiftName: buildConstVolatileLValue()
+  - Name: buildConstRValue
+    Where:
+      Parameters: []
+      Object:
+        Const: true
+        Ref: rvalue
+    SwiftName: buildConstRValue()
+  - Name: buildVolatileRValue
+    Where:
+      Parameters: []
+      Object:
+        Volatile: true
+        Ref: rvalue
+    SwiftName: buildVolatileRValue()
+  - Name: buildObjectOnly
+    Where:
+      Object:
+        Ref: lvalue
+    SwiftName: buildObjectOnlyLValue(_:)
+  - Name: buildTwoObjectNotes
+    Where:
+      Object:
+        Const: false
+    SwiftPrivate: true
+  - Name: buildTwoObjectNotes
+    Where:
+      Object:
+        Ref: lvalue
+    SwiftName: buildTwoObjectNotesLValue()
+  - Name: buildObjectAndParameter
+    Where:
+      Object:
+        Const: true
+    SwiftPrivate: true
+  - Name: buildObjectAndParameter
+    Where:
+      Parameters:
+      - int
+    SwiftName: buildObjectAndParameterInt(_:)
+  - Name: buildStatic
+    Where:
+      Parameters: []
+      Object:
+        Ref: none
+    SwiftName: shouldNotApplyToStatic()
+  - Name: buildStaticObjectOnly
+    Where:
+      Object:
+        Ref: none
+    SwiftName: shouldNotApplyToStaticObjectOnly()
+  - Name: consume
+    Where:
+      Parameters:
+      - 'ObjectBuffer &'
+    SwiftName: consumeBorrowed(_:)
+  - Name: consume
+    Where:
+      Parameters:
+      - 'ObjectBuffer &&'
+    SwiftName: consumeOwned(_:)
+
+- Name: ExplicitObjectBuilder
+  Methods:
+  - Name: buildExplicitConst
+    Where:
+      Object:
+        Const: false
+        Ref: none
+    SwiftName: shouldNotApplyToExplicitConst()
+  - Name: buildExplicitLValue
+    Where:
+      Object:
+        Ref: lvalue
+    SwiftName: shouldNotApplyToExplicitLValue()

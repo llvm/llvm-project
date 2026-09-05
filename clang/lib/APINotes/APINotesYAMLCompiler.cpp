@@ -18,7 +18,6 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -347,6 +346,7 @@ typedef std::vector<StringRef> WhereParamsSeq;
 
 struct FunctionWhere {
   std::optional<WhereParamsSeq> Parameters;
+  std::optional<api_notes::FunctionObjectSelector> Object;
 };
 
 struct Function {
@@ -373,9 +373,26 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 
 namespace llvm {
 namespace yaml {
+template <> struct ScalarEnumerationTraits<clang::RefQualifierKind> {
+  static void enumeration(IO &IO, clang::RefQualifierKind &Ref) {
+    IO.enumCase(Ref, "none", clang::RQ_None);
+    IO.enumCase(Ref, "lvalue", clang::RQ_LValue);
+    IO.enumCase(Ref, "rvalue", clang::RQ_RValue);
+  }
+};
+
+template <> struct MappingTraits<api_notes::FunctionObjectSelector> {
+  static void mapping(IO &IO, api_notes::FunctionObjectSelector &O) {
+    IO.mapOptional("Const", O.Const);
+    IO.mapOptional("Volatile", O.Volatile);
+    IO.mapOptional("Ref", O.Ref);
+  }
+};
+
 template <> struct MappingTraits<FunctionWhere> {
   static void mapping(IO &IO, FunctionWhere &W) {
     IO.mapOptional("Parameters", W.Parameters);
+    IO.mapOptional("Object", W.Object);
   }
 };
 
@@ -793,19 +810,19 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
 namespace {
 using namespace api_notes;
 
+static void appendDuplicateKeyPart(llvm::raw_ostream &OS,
+                                   llvm::StringRef Part) {
+  OS << Part.size() << ':' << Part;
+}
+
 static std::string
-getFunctionSelectorKey(llvm::StringRef Name,
-                       llvm::ArrayRef<llvm::StringRef> Parameters) {
+getFunctionSelectorDuplicateKey(llvm::StringRef Name,
+                                const FunctionSelector &Selector) {
   llvm::SmallString<64> Key;
   llvm::raw_svector_ostream OS(Key);
-  auto AppendKeyPart = [&OS](llvm::StringRef Part) {
-    OS << Part.size() << ':' << Part;
-  };
-
-  AppendKeyPart(Name);
-  OS << ';';
-  for (llvm::StringRef Parameter : Parameters)
-    AppendKeyPart(Parameter);
+  appendDuplicateKeyPart(OS, Name);
+  std::string SelectorText = Selector.format();
+  appendDuplicateKeyPart(OS, SelectorText);
   return Key.str().str();
 }
 
@@ -1064,16 +1081,38 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
-  std::pair<bool, std::optional<llvm::ArrayRef<llvm::StringRef>>>
-  getWhereParameters(const Function &Function) {
+  std::optional<FunctionSelector> getWhereSelector(const Function &Function,
+                                                   bool AllowObject) {
     if (!Function.Where)
-      return {true, std::nullopt};
+      return FunctionSelector{};
 
-    if (!Function.Where->Parameters) {
-      emitError("'Where' requires 'Parameters'");
-      return {false, std::nullopt};
+    if (!Function.Where->Parameters && !Function.Where->Object) {
+      emitError("'Where' requires 'Parameters' or 'Object'");
+      return std::nullopt;
     }
-    return {true, llvm::ArrayRef<llvm::StringRef>(*Function.Where->Parameters)};
+
+    FunctionSelector Selector;
+    if (Function.Where->Parameters) {
+      Selector.Parameters.emplace();
+      Selector.Parameters->reserve(Function.Where->Parameters->size());
+      for (llvm::StringRef Parameter : *Function.Where->Parameters)
+        Selector.Parameters->push_back(Parameter.str());
+    }
+
+    if (Function.Where->Object) {
+      if (!AllowObject) {
+        emitError("'Object' is only supported on C++ methods");
+        return std::nullopt;
+      }
+      if (!Function.Where->Object->Const && !Function.Where->Object->Volatile &&
+          !Function.Where->Object->Ref) {
+        emitError("'Object' requires at least one field");
+        return std::nullopt;
+      }
+      Selector.Object = Function.Where->Object;
+    }
+
+    return Selector;
   }
 
   template <typename FuncOrMethodInfo>
@@ -1185,29 +1224,24 @@ public:
 
     llvm::StringSet<> KnownMethodSelectors;
     for (const auto &CXXMethod : T.Methods) {
-      auto WhereParameters = getWhereParameters(CXXMethod);
-      if (!WhereParameters.first)
+      auto WhereSelector = getWhereSelector(CXXMethod, /*AllowObject=*/true);
+      if (!WhereSelector)
         continue;
 
-      if (WhereParameters.second) {
-        if (!KnownMethodSelectors
-                 .insert(getFunctionSelectorKey(CXXMethod.Name,
-                                                *WhereParameters.second))
-                 .second) {
+      if (WhereSelector->Parameters || WhereSelector->Object) {
+        std::string DuplicateKey =
+            getFunctionSelectorDuplicateKey(CXXMethod.Name, *WhereSelector);
+        if (!KnownMethodSelectors.insert(DuplicateKey).second) {
           emitError(llvm::Twine("multiple API notes entries for C++ method '") +
-                    CXXMethod.Name + "' with Where.Parameters " +
-                    formatAPINotesParameterSelector(*WhereParameters.second));
+                    CXXMethod.Name + "' with " + WhereSelector->format());
           continue;
         }
       }
 
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      if (WhereParameters.second)
-        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters.second,
-                            MI, SwiftVersion);
-      else
-        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion,
+                          *WhereSelector);
     }
 
     // Convert nested tags.
@@ -1279,25 +1313,23 @@ public:
     llvm::StringSet<> KnownNameOnlyFunctions;
     llvm::StringSet<> KnownFunctionSelectors;
     for (const auto &Function : TLItems.Functions) {
-      auto WhereParameters = getWhereParameters(Function);
-      if (!WhereParameters.first)
+      auto WhereSelector = getWhereSelector(Function, /*AllowObject=*/false);
+      if (!WhereSelector)
         continue;
 
-      if (WhereParameters.second) {
-        if (!KnownFunctionSelectors
-                 .insert(getFunctionSelectorKey(Function.Name,
-                                                *WhereParameters.second))
-                 .second) {
+      if (WhereSelector->Parameters) {
+        std::string DuplicateKey =
+            getFunctionSelectorDuplicateKey(Function.Name, *WhereSelector);
+        if (!KnownFunctionSelectors.insert(DuplicateKey).second) {
           emitError(
               llvm::Twine("multiple API notes entries for global function '") +
-              Function.Name + "' with Where.Parameters " +
-              formatAPINotesParameterSelector(*WhereParameters.second));
+              Function.Name + "' with " + WhereSelector->format());
           continue;
         }
       }
 
       // Check for duplicate name-only global functions.
-      if (!WhereParameters.second &&
+      if (!WhereSelector->Parameters &&
           !KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +
                   Function.Name + "'");
@@ -1306,11 +1338,8 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      if (WhereParameters.second)
-        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters.second,
-                                 GFI, SwiftVersion);
-      else
-        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
+      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion,
+                               *WhereSelector);
     }
 
     // Write all enumerators.

@@ -1085,7 +1085,7 @@ APINotesSelectorDiagnosticState::getOrCreateReaderState(
     return State;
 
   SmallVector<api_notes::APINotesFunctionSelectorKey, 4> Selectors;
-  Reader.collectExactFunctionParameterSelectors(Selectors);
+  Reader.collectFunctionSelectorsForDiagnostics(Selectors);
   State.addSelectors(Selectors);
   return State;
 }
@@ -1109,6 +1109,38 @@ void APINotesSelectorDiagnosticReaderState::markCandidatesUsed(
   if (Candidates.Desugared) {
     if (auto Key = GetSelectorKey(Candidates.Desugared->Parameters))
       markUsed(*Key);
+  }
+}
+
+static api_notes::FunctionObjectSelector
+getAPINotesObjectSelector(const CXXMethodDecl *Method) {
+  api_notes::FunctionObjectSelector Selector;
+  Selector.Const = Method->isConst();
+  Selector.Volatile = Method->isVolatile();
+  Selector.Ref = Method->getRefQualifier();
+  return Selector;
+}
+
+static void getAPINotesObjectSelectorSubsets(
+    api_notes::FunctionObjectSelector ObjectSelector,
+    SmallVectorImpl<api_notes::FunctionObjectSelector> &Subsets) {
+  enum ObjectSelectorField : unsigned {
+    ConstField = 1u << 0,
+    VolatileField = 1u << 1,
+    RefQualifierField = 1u << 2,
+  };
+
+  // Enumerate every non-empty subset of the method's object properties.
+  constexpr unsigned AllFields = ConstField | VolatileField | RefQualifierField;
+  for (unsigned Mask = 1; Mask <= AllFields; ++Mask) {
+    api_notes::FunctionObjectSelector Subset;
+    if (Mask & ConstField)
+      Subset.Const = ObjectSelector.Const;
+    if (Mask & VolatileField)
+      Subset.Volatile = ObjectSelector.Volatile;
+    if (Mask & RefQualifierField)
+      Subset.Ref = ObjectSelector.Ref;
+    Subsets.push_back(Subset);
   }
 }
 
@@ -1397,27 +1429,56 @@ void Sema::ProcessAPINotes(Decl *D) {
             auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
 
-            if (ParameterSelectorCandidates)
-              processExactAPINotes<api_notes::CXXMethodInfo>(
-                  *this, CXXMethod, *ParameterSelectorCandidates,
-                  [&](ArrayRef<std::string> Parameters) {
-                    return Reader->lookupCXXMethod(Context->id, MethodName,
-                                                   Parameters);
-                  });
+            auto &DiagnosticState =
+                getAPINotesSelectorDiagnosticState(*this, Reader);
+            if (auto NameOnlyKey =
+                    Reader->getCXXMethodSelectorKey(Context->id, MethodName))
+              DiagnosticState.noteSeenDeclaration(*NameOnlyKey, MethodName,
+                                                  CXXMethod->getLocation());
 
-            if (ParameterSelectorCandidates) {
-              auto &DiagnosticState =
-                  getAPINotesSelectorDiagnosticState(*this, Reader);
-              if (auto BroadKey =
-                      Reader->getCXXMethodSelectorKey(Context->id, MethodName))
-                DiagnosticState.noteSeenDeclaration(*BroadKey, MethodName,
-                                                    CXXMethod->getLocation());
-              DiagnosticState.markCandidatesUsed(
-                  [&](ArrayRef<std::string> Parameters) {
-                    return Reader->getCXXMethodSelectorKey(
-                        Context->id, MethodName, Parameters);
-                  },
-                  *ParameterSelectorCandidates);
+            SmallVector<api_notes::FunctionSelector, 8> BaseSelectors;
+            BaseSelectors.emplace_back();
+            if (CXXMethod->isImplicitObjectMemberFunction()) {
+              SmallVector<api_notes::FunctionObjectSelector, 7> ObjectSelectors;
+              getAPINotesObjectSelectorSubsets(
+                  getAPINotesObjectSelector(CXXMethod), ObjectSelectors);
+              for (api_notes::FunctionObjectSelector ObjectSelector :
+                   ObjectSelectors) {
+                api_notes::FunctionSelector Selector;
+                Selector.Object = ObjectSelector;
+                BaseSelectors.push_back(std::move(Selector));
+              }
+            }
+
+            for (const api_notes::FunctionSelector &BaseSelector :
+                 BaseSelectors) {
+              if (BaseSelector.Object) {
+                auto ObjectInfo = Reader->lookupCXXMethod(
+                    Context->id, MethodName, BaseSelector);
+                ProcessVersionedAPINotes(*this, CXXMethod, ObjectInfo);
+                if (auto ObjectKey = Reader->getCXXMethodSelectorKey(
+                        Context->id, MethodName, BaseSelector))
+                  DiagnosticState.markUsed(*ObjectKey);
+              }
+
+              if (ParameterSelectorCandidates) {
+                processExactAPINotes<api_notes::CXXMethodInfo>(
+                    *this, CXXMethod, *ParameterSelectorCandidates,
+                    [&](ArrayRef<std::string> Parameters) {
+                      api_notes::FunctionSelector Selector = BaseSelector;
+                      Selector.setParameters(Parameters);
+                      return Reader->lookupCXXMethod(Context->id, MethodName,
+                                                     Selector);
+                    });
+                DiagnosticState.markCandidatesUsed(
+                    [&](ArrayRef<std::string> Parameters) {
+                      api_notes::FunctionSelector Selector = BaseSelector;
+                      Selector.setParameters(Parameters);
+                      return Reader->getCXXMethodSelectorKey(
+                          Context->id, MethodName, Selector);
+                    },
+                    *ParameterSelectorCandidates);
+              }
             }
           }
         }
@@ -1452,20 +1513,26 @@ void APINotesSelectorDiagnosticReaderState::diagnoseUnused(
     if (Selector.second)
       continue;
 
-    auto SeenName =
-        SeenNames.find(Selector.first.getWithoutParameterSelector());
+    auto SeenName = SeenNames.find(Selector.first.getNameOnlyKey());
     if (SeenName == SeenNames.end())
       continue;
 
-    std::optional<SmallVector<std::string, 4>> ParameterSpellings =
-        Reader.getParameterSelectorSpellingsForDiagnostics(Selector.first);
-    if (!ParameterSpellings)
-      continue;
+    std::optional<SmallVector<std::string, 4>> ParameterSpellings;
+    if (Selector.first.Key.Selector.Parameters) {
+      ParameterSpellings =
+          Reader.getParameterSelectorSpellingsForDiagnostics(Selector.first);
+      if (!ParameterSpellings)
+        continue;
+    }
+
+    api_notes::FunctionSelector FunctionSelector;
+    if (ParameterSpellings)
+      FunctionSelector.Parameters = *ParameterSpellings;
+    FunctionSelector.Object = Selector.first.Key.Selector.Object;
 
     S.Diag(SeenName->second.Loc, diag::warn_apinotes_message)
         << (llvm::Twine("API notes entry for '") + SeenName->second.Name +
-            "' has unmatched Where.Parameters " +
-            api_notes::formatAPINotesParameterSelector(*ParameterSpellings))
+            "' has unmatched " + FunctionSelector.format())
                .str();
   }
 }

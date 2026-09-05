@@ -153,32 +153,23 @@ public:
   /// \returns information about the field, if known.
   VersionedInfo<FieldInfo> lookupField(ContextID CtxID, llvm::StringRef Name);
 
-  /// Look for information regarding the given C++ method in the given C++ tag
-  /// context.
+  /// Look for information regarding the given C++ method with a composed
+  /// selector in the given C++ tag context.
   ///
   /// \param CtxID The ID that references the parent context, i.e. a C++ tag.
   /// \param Name The name of the C++ method we're looking for.
   ///
+  /// Omitted selector components use the broad name-based key.
+  ///
   /// \returns Information about the method, if known.
-  VersionedInfo<CXXMethodInfo> lookupCXXMethod(ContextID CtxID,
-                                               llvm::StringRef Name);
-
-  /// Look for information regarding the given C++ method with an exact
-  /// parameter selector. An empty parameter list uses an exact zero-parameter
-  /// key, and a non-empty list uses an exact ordered parameter key.
   VersionedInfo<CXXMethodInfo>
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                  llvm::ArrayRef<std::string> Parameters);
+                  const FunctionSelector &Selector = FunctionSelector());
 
-  /// Build the selector key for the given C++ method.
-  std::optional<APINotesFunctionSelectorKey>
-  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name);
-
-  /// Build the selector key for the given C++ method with an exact parameter
-  /// selector.
-  std::optional<APINotesFunctionSelectorKey>
-  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name,
-                          llvm::ArrayRef<std::string> Parameters);
+  /// Build the selector key for the given C++ method with a composed selector.
+  std::optional<APINotesFunctionSelectorKey> getCXXMethodSelectorKey(
+      ContextID CtxID, llvm::StringRef Name,
+      const FunctionSelector &Selector = FunctionSelector());
 
   /// Look for information regarding the given global variable.
   ///
@@ -218,8 +209,9 @@ public:
                                llvm::ArrayRef<std::string> Parameters,
                                std::optional<Context> Ctx = std::nullopt);
 
-  /// Collect exact parameter selector keys stored by this reader.
-  void collectExactFunctionParameterSelectors(
+  /// Collect selector keys stored by this reader that should be diagnosed if
+  /// unmatched.
+  void collectFunctionSelectorsForDiagnostics(
       llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
 
   /// Reconstruct parameter selector strings for a stored exact selector key.
@@ -273,20 +265,13 @@ public:
                     std::optional<ContextID> ParentNamespaceID = std::nullopt);
 
 private:
-  VersionedInfo<CXXMethodInfo> lookupCXXMethodImpl(ContextID CtxID,
-                                                   llvm::StringRef Name);
-  template <typename ParameterT>
   VersionedInfo<CXXMethodInfo>
   lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
-                      llvm::ArrayRef<ParameterT> Parameters);
+                      const FunctionSelector &Selector);
 
   VersionedInfo<GlobalFunctionInfo>
-  lookupGlobalFunctionImpl(llvm::StringRef Name, std::optional<Context> Ctx);
-  template <typename ParameterT>
-  VersionedInfo<GlobalFunctionInfo>
-  lookupGlobalFunctionImpl(llvm::StringRef Name,
-                           llvm::ArrayRef<ParameterT> Parameters,
-                           std::optional<Context> Ctx);
+  lookupGlobalFunctionImpl(llvm::StringRef Name, std::optional<Context> Ctx,
+                           const FunctionSelector &Selector);
 };
 
 } // end namespace api_notes

@@ -12,10 +12,12 @@
 #include "clang/APINotes/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitcodeConvenience.h"
 
 #include <optional>
+#include <utility>
 
 namespace clang {
 namespace api_notes {
@@ -28,9 +30,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 41; // 39 for BoundsSafety;
-                                   // 40 for UnsafeBufferUsageAttr
-                                   // 41 for FunctionTableKey parameters
+const uint16_t VERSION_MINOR = 42; // 42 for FunctionTableKey object selectors
 
 const uint8_t kSwiftConforms = 1;
 const uint8_t kSwiftDoesNotConform = 2;
@@ -359,41 +359,48 @@ inline bool operator==(const SingleDeclTableKey &lhs,
 }
 
 /// A stored C or C++ function declaration, represented by the ID of its parent
-/// context, the name of the declaration, and optional exact parameter types.
+/// context, the name of the declaration, and optional exact parameter/object
+/// selector data.
 constexpr uint8_t FunctionKeyHasParameterSelector = 0x01;
+constexpr uint8_t FunctionKeyObjectConstPresent = 0x02;
+constexpr uint8_t FunctionKeyObjectConstValue = 0x04;
+constexpr uint8_t FunctionKeyObjectVolatilePresent = 0x08;
+constexpr uint8_t FunctionKeyObjectVolatileValue = 0x10;
+constexpr uint8_t FunctionKeyObjectRefPresent = 0x20;
+constexpr uint8_t FunctionKeyObjectRefLValue = 0x40;
+constexpr uint8_t FunctionKeyObjectRefRValue = 0x80;
+constexpr uint8_t FunctionKeyObjectSelectorMask =
+    FunctionKeyObjectConstPresent | FunctionKeyObjectConstValue |
+    FunctionKeyObjectVolatilePresent | FunctionKeyObjectVolatileValue |
+    FunctionKeyObjectRefPresent | FunctionKeyObjectRefLValue |
+    FunctionKeyObjectRefRValue;
 constexpr unsigned FunctionTableKeyBaseLength =
     sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t);
 
-template <typename GetIdentifierFn>
-std::optional<FunctionTableKey>
-getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
-                   GetIdentifierFn GetIdentifier) {
+inline std::optional<FunctionTableKey> getFunctionKeyImpl(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    const FunctionSelector &Selector,
+    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
+        GetIdentifier) {
   std::optional<IdentifierID> NameID = GetIdentifier(Name);
   if (!NameID)
     return std::nullopt;
 
-  return FunctionTableKey(ParentContextID, *NameID);
-}
-
-template <typename ParameterT, typename GetIdentifierFn>
-std::optional<FunctionTableKey>
-getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
-                   llvm::ArrayRef<ParameterT> Parameters,
-                   GetIdentifierFn GetIdentifier) {
-  std::optional<IdentifierID> NameID = GetIdentifier(Name);
-  if (!NameID)
-    return std::nullopt;
-
-  llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
-  ParameterTypeIDs.reserve(Parameters.size());
-  for (const ParameterT &Parameter : Parameters) {
-    std::optional<IdentifierID> ParameterID =
-        GetIdentifier(llvm::StringRef(Parameter));
-    if (!ParameterID)
-      return std::nullopt;
-    ParameterTypeIDs.push_back(*ParameterID);
+  FunctionTableSelectorKey KeySelector;
+  if (Selector.Parameters) {
+    llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
+    ParameterTypeIDs.reserve(Selector.Parameters->size());
+    for (const std::string &Parameter : *Selector.Parameters) {
+      std::optional<IdentifierID> ParameterID = GetIdentifier(Parameter);
+      if (!ParameterID)
+        return std::nullopt;
+      ParameterTypeIDs.push_back(*ParameterID);
+    }
+    KeySelector.Parameters.emplace(ParameterTypeIDs.begin(),
+                                   ParameterTypeIDs.end());
   }
-  return FunctionTableKey(ParentContextID, *NameID, ParameterTypeIDs);
+  KeySelector.Object = Selector.Object;
+  return FunctionTableKey(ParentContextID, *NameID, std::move(KeySelector));
 }
 
 } // namespace api_notes

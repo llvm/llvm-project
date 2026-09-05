@@ -1,0 +1,46 @@
+---
+Name: WhereObjectQualifiers
+Functions:
+- Name: invalidGlobal
+  Where:
+    Parameters: []
+    Object:
+      Ref: none
+  SwiftName: invalidGlobal()
+Tags:
+- Name: ObjectDiagBuilder
+  Methods:
+  - Name: objectOnly
+    Where:
+      Object:
+        Ref: none
+    SwiftName: objectOnly()
+  - Name: emptyObject
+    Where:
+      Parameters: []
+      Object: {}
+    SwiftName: emptyObject()
+  - Name: duplicate
+    Where:
+      Parameters: []
+      Object:
+        Ref: lvalue
+    SwiftName: duplicateOne()
+  - Name: duplicate
+    Where:
+      Parameters: []
+      Object:
+        Ref: lvalue
+    SwiftName: duplicateTwo()
+  - Name: acceptedDifferentRef
+    Where:
+      Parameters: []
+      Object:
+        Ref: lvalue
+    SwiftName: acceptedLValue()
+  - Name: acceptedDifferentRef
+    Where:
+      Parameters: []
+      Object:
+        Ref: rvalue
+    SwiftName: acceptedRValue()
