@@ -450,6 +450,14 @@ class AttributeSelfTypeParameter<string desc,
                          "::mlir::NoneType::get($_ctxt)", typeBuilder);
 }
 
+// Used to indicate the presence of a keyword in asm. Should be used within
+// optional parens in the declarative assembly format.
+def UnitParameter : AttrOrTypeParameter<"::mlir::UnitAttr", "boolean flag"> {
+  let printer = "";
+  let parser = "::mlir::UnitAttr::get($_parser.getContext())";
+  let defaultValue = "::mlir::UnitAttr()";
+}
+
 //===----------------------------------------------------------------------===//
 // ArrayOfAttr
 //===----------------------------------------------------------------------===//
