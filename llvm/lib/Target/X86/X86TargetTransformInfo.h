@@ -271,10 +271,29 @@ private:
   bool supportsGather() const;
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                   Type *DataTy, const Value *Ptr,
-                                  Align Alignment, unsigned AddressSpace) const;
+                                  bool VariableMask, Align Alignment,
+                                  unsigned AddressSpace) const;
+  InstructionCost getZenGSVectorCost(unsigned Opcode,
+                                     TTI::TargetCostKind CostKind, Type *DataTy,
+                                     const Value *Ptr, bool VariableMask,
+                                     Align Alignment,
+                                     unsigned AddressSpace) const;
 
   int getGatherOverhead() const;
   int getScatterOverhead() const;
+  // Per-shape vectorize-vs-scalarize break-even TOTAL for AMD znver4+
+  // gather/scatter, as calibrated. The profitability premium is this minus the
+  // schedule-model body from getModeledGSInstrCost.
+  std::optional<unsigned> getZenGSCalibratedTotal(bool IsLoad,
+                                                  Type *SrcVTy) const;
+  // Hardware body cost of a single (non-split) masked gather/scatter, read
+  // live from this subtarget's schedule model, or nullopt to fall back.
+  // WidenWithoutVLX prices the wider instruction CodeGen emits for a narrow
+  // shape when AVX512VL is absent; clear it to ask for the shape as written.
+  std::optional<unsigned>
+  getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
+                        TTI::TargetCostKind CostKind,
+                        bool WidenWithoutVLX = true) const;
 
   /// @}
 };

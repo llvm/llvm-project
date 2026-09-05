@@ -303,6 +303,11 @@ Makes programs 10x faster by doing Special New Thing.
 * Added assembler and code generation support for the `AVX10_V2_AUX`
   instruction set.
 
+* The cost model now uses per-shape masked gather/scatter costs measured on
+  AMD Zen hardware for `znver4`, `znver5`, and `znver6` (enabled via the
+  `prefer-gs-cost-table` tuning feature), replacing the flat AVX-512 overhead
+  for those targets.
+
 ### Changes to the OCaml bindings
 
 * Removed the `size_of` and `align_of` functions. Create a constant based on
