@@ -62,6 +62,9 @@ Improvements and New Features
 - The ``std::ranges::fold_left_with_iter`` algorithm has been optimized for
   segmented iterators, resulting in a performance improvement of up to 1.38x
   for ``std::deque<int>`` iterators.
+- ``std::is_permutation`` and its ``std::ranges`` counterpart have been optimized
+  by using ``std::mismatch`` to skip a common prefix, resulting in a performance
+  improvement of up to 4x for ``std::vector<int>``.
 - ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
   of up to 25x.
 - A lot of transitive includes have been removed, resulting in significant compile time improvements.
