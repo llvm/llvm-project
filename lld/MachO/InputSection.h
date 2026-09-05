@@ -381,6 +381,8 @@ constexpr const char unwindInfo[] = "__unwind_info";
 constexpr const char weakBinding[] = "__weak_binding";
 constexpr const char zeroFill[] = "__zerofill";
 constexpr const char addrSig[] = "__llvm_addrsig";
+constexpr const char extRelocs[] = "__ext_relocs";
+constexpr const char localRelocs[] = "__local_relocs";
 
 } // namespace section_names
 
