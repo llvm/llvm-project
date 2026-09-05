@@ -11975,6 +11975,37 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
+// PPCTargetLowering::expandIS_FPCLASS is PPC-specific pre-legalization
+// override.
+//
+// SelectionDAGBuilder calls this early (before type legalization) whenever
+// IS_FPCLASS is not Legal or Custom for the operand type.
+//
+// We replace fcNan/~fcNan on f32/f64
+// with a floating-point self-comparison (SETUO / SETO), producing
+// cleaner code on all PPC scalar FP targets.  All other masks are delegated to
+// the generic expander.
+SDValue PPCTargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
+                                            FPClassTest Test, SDNodeFlags Flags,
+                                            const SDLoc &Dl,
+                                            SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  FPClassTest NotNan = static_cast<FPClassTest>(~fcNan);
+
+  // Only intercept fcNan / ~fcNan on scalar f32/f64 for non-P9 targets.
+  if ((VT != MVT::f32 && VT != MVT::f64) || (Test != fcNan && Test != NotNan))
+    return TargetLowering::expandIS_FPCLASS(ResultVT, Op, Test, Flags, Dl, DAG);
+
+  // SelectCC(Op, Op, 1, 0, SETUO) -> 1 if NaN,     0 otherwise  (fcNan)
+  // SelectCC(Op, Op, 1, 0, SETO)  -> 1 if not NaN, 0 otherwise  (~fcNan)
+  // This is pre-legalization: ResultVT (i1 or i32) will be type-legalized
+  // normally, so no need to branch on useCRBits() here. P9 targets also go here
+  // when useCRBits() is false, as custom lowering is disabled.
+  ISD::CondCode CC = (Test == fcNan) ? ISD::SETUO : ISD::SETO;
+  return DAG.getSelectCC(Dl, Op, Op, DAG.getConstant(1, Dl, ResultVT),
+                         DAG.getConstant(0, Dl, ResultVT), CC);
+}
+
 // Adjust the length value for a load/store with length to account for the
 // instructions requiring a left justified length, and for non-byte element
 // types requiring scaling by element size.

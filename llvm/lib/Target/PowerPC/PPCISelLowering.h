@@ -741,6 +741,9 @@ namespace llvm {
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue expandIS_FPCLASS(EVT ResultVT, SDValue Op, FPClassTest Test,
+                             SDNodeFlags Flags, const SDLoc &DL,
+                             SelectionDAG &DAG) const override;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerABDU(SDValue Op, SelectionDAG &DAG) const;
