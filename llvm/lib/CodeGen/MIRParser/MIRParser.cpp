@@ -774,7 +774,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
     }
     if (!VReg.AntiHints.empty() && Info.Kind != VRegInfo::NORMAL)
       return error(VReg.AntiHints.front().SourceRange.Start,
-                   Twine("anti-hints can only be set for normal vregs"));
+                   "anti-hints can only be set for normal vregs");
 
     for (const auto &AntiHintValue : VReg.AntiHints) {
       Register AntiHintReg;
