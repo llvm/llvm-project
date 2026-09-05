@@ -232,9 +232,10 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
     // so a plain mapOptional with an empty default would still emit the keys
     // and change every existing test's output.
     // Skip the call on output when empty to keep them off entirely.
-    if (!YamlIO.outputting() || !Reg.AntiHints.empty())
+    if (!YamlIO.outputting() || !Reg.AntiHints.empty()) {
       YamlIO.mapOptional("anti-hints", Reg.AntiHints,
                          std::vector<FlowStringValue>());
+    }
     if (!YamlIO.outputting() || !Reg.SplitFrom.Value.empty())
       YamlIO.mapOptional("split-from", Reg.SplitFrom, StringValue());
     if (!YamlIO.outputting() || !Reg.AssignedPhys.Value.empty())
