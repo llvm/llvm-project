@@ -254,7 +254,10 @@ struct OffloadContext;
 // This pointer is non-null if and only if the context is valid and fully
 // initialized
 static std::atomic<OffloadContext *> OffloadContextVal;
-std::mutex OffloadContextValMutex;
+static std::mutex &getOffloadContextMutex() {
+  static std::mutex Mutex;
+  return Mutex;
+}
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
   OffloadContext(OffloadContext &&) = delete;
@@ -341,7 +344,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
 }
 
 Error olInit_impl(const ol_init_args_t *InitArgs) {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
 
   if (isOffloadInitialized()) {
     OffloadContext::get().RefCount++;
@@ -368,7 +371,7 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
 }
 
 Error olShutDown_impl() {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
 
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
