@@ -1151,6 +1151,21 @@ bool ASTStructuralEquivalence::isEquivalent(
     break;
   }
 
+  case Type::CooperativeMatrix: {
+    const CooperativeMatrixType *Mat1 = cast<CooperativeMatrixType>(T1);
+    const CooperativeMatrixType *Mat2 = cast<CooperativeMatrixType>(T2);
+    // The element types must be structurally equivalent and the number of rows
+    // and columns must match.
+    if (!IsStructurallyEquivalent(Context, Mat1->getElementType(),
+                                  Mat2->getElementType()) ||
+        Mat1->getScope() != Mat2->getScope() ||
+        Mat1->getNumRows() != Mat2->getNumRows() ||
+        Mat1->getNumColumns() != Mat2->getNumColumns() ||
+        Mat1->getUse() != Mat2->getUse())
+      return false;
+    break;
+  }
+
   case Type::FunctionProto: {
     const auto *Proto1 = cast<FunctionProtoType>(T1);
     const auto *Proto2 = cast<FunctionProtoType>(T2);

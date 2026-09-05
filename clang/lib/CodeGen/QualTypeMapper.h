@@ -47,6 +47,7 @@ private:
   const llvm::abi::Type *
   convertMemberPointerType(const clang::MemberPointerType *MPT);
   const llvm::abi::Type *convertMatrixType(const ConstantMatrixType *MT);
+  const llvm::abi::Type *convertMatrixType(const CooperativeMatrixType *CMT);
 
   const llvm::abi::RecordType *convertStructType(const clang::RecordDecl *RD);
   const llvm::abi::RecordType *convertUnionType(const clang::RecordDecl *RD);

@@ -3876,6 +3876,33 @@ llvm::DIType *CGDebugInfo::CreateType(const ConstantMatrixType *Ty,
   return DBuilder.createArrayType(Size, Align, ElementTy, SubscriptArray);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const CooperativeMatrixType *Ty,
+                                      llvm::DIFile *Unit) {
+  // FIXME: Create another debug type for matrices
+  // For the time being, it treats it like a nested ArrayType.
+
+  llvm::DIType *ElementTy = getOrCreateType(Ty->getElementType(), Unit);
+  uint64_t Size = CGM.getContext().getTypeSize(Ty);
+  uint32_t Align = getTypeAlignIfRequired(Ty, CGM.getContext());
+
+  // Create ranges for both dimensions.
+  llvm::SmallVector<llvm::Metadata *, 2> Subscripts;
+  auto *ColumnCountNode =
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()), Ty->getNumColumns()));
+  auto *RowCountNode =
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()), Ty->getNumRows()));
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(
+      ColumnCountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+      nullptr /*stride*/));
+  Subscripts.push_back(DBuilder.getOrCreateSubrange(
+      RowCountNode /*count*/, nullptr /*lowerBound*/, nullptr /*upperBound*/,
+      nullptr /*stride*/));
+  llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscripts);
+  return DBuilder.createArrayType(Size, Align, ElementTy, SubscriptArray);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
   uint64_t Size;
   uint32_t Align;
@@ -4335,6 +4362,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<VectorType>(Ty), Unit);
   case Type::ConstantMatrix:
     return CreateType(cast<ConstantMatrixType>(Ty), Unit);
+  case Type::CooperativeMatrix:
+    return CreateType(cast<CooperativeMatrixType>(Ty), Unit);
   case Type::ObjCObjectPointer:
     return CreateType(cast<ObjCObjectPointerType>(Ty), Unit);
   case Type::ObjCObject:

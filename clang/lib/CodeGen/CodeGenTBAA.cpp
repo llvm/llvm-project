@@ -331,7 +331,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
 
   // Accesses to matrix types are accesses to objects of their element types.
   if (const auto *MTy = dyn_cast<MatrixType>(Ty)) {
-    assert(isa<ConstantMatrixType>(Ty) &&
+    assert((isa<ConstantMatrixType>(Ty) || isa<CooperativeMatrixType>(Ty)) &&
            "only ConstantMatrixType should reach CodeGen");
     return getTypeInfo(MTy->getElementType());
   }

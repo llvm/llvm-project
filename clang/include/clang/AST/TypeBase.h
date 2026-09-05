@@ -2708,6 +2708,7 @@ public:
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
+  bool isCooperativeMatrixType() const;         // Cooperative matrix type.
   bool isOverflowBehaviorType() const;          // Overflow behavior type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
@@ -4493,6 +4494,7 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ConstantMatrix ||
+           T->getTypeClass() == CooperativeMatrix ||
            T->getTypeClass() == DependentSizedMatrix;
   }
 };
@@ -4579,6 +4581,90 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ConstantMatrix;
+  }
+};
+
+/// Represents a cooperative matrix type.
+class CooperativeMatrixType final : public MatrixType {
+protected:
+  friend class ASTContext;
+
+  /// Number of rows and columns.
+  unsigned NumRows;
+  unsigned NumColumns;
+
+  /// Scope and use
+  unsigned Scope;
+  unsigned Use;
+
+  static constexpr unsigned MaxElementsPerDimension = (1 << 20) - 1;
+
+  CooperativeMatrixType(QualType MatrixElementType, unsigned Scope,
+                        unsigned NRows, unsigned NColumns, unsigned Use,
+                        QualType CanonElementType);
+
+  CooperativeMatrixType(TypeClass typeClass, QualType MatrixType,
+                        unsigned Scope, unsigned NRows, unsigned NColumns,
+                        unsigned Use, QualType CanonElementType);
+
+public:
+  /// Returns the number of rows in the matrix.
+  unsigned getNumRows() const { return NumRows; }
+
+  /// Returns the number of columns in the matrix.
+  unsigned getNumColumns() const { return NumColumns; }
+
+  /// Returns the scope of the matrix.
+  unsigned getScope() const { return Scope; }
+
+  /// Returns the use of the matrix.
+  unsigned getUse() const { return Use; }
+
+  /// Returns the number of elements required to embed the matrix into a vector.
+  unsigned getNumElementsFlattened() const {
+    return getNumRows() * getNumColumns();
+  }
+
+  /// Returns true if \p NumElements is a valid matrix dimension.
+  static constexpr bool isDimensionValid(size_t NumElements) {
+    return NumElements > 0 && NumElements <= MaxElementsPerDimension;
+  }
+
+  /// Return true if \p Scope is valid
+  static constexpr bool isScopeValid(size_t Scope) {
+    return Scope == 3 /* CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP */;
+  }
+
+  /// Return true if \p Use is valid
+  static constexpr bool isUseValid(size_t Use) {
+    return Use == 0 /* CLK_COOPERATIVE_MATRIX_A */ ||
+           Use == 1 /* CLK_COOPERATIVE_MATRIX_B */ ||
+           Use == 2 /* CLK_COOPERATIVE_MATRIX_ACCUMULATOR */;
+  }
+
+  /// Returns the maximum number of elements per dimension.
+  static constexpr unsigned getMaxElementsPerDimension() {
+    return MaxElementsPerDimension;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getElementType(), getNumRows(), getNumColumns(), getScope(),
+            getUse(), getTypeClass());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
+                      unsigned NumRows, unsigned NumColumns, unsigned Scope,
+                      unsigned Use, TypeClass TypeClass) {
+    ID.AddPointer(ElementType.getAsOpaquePtr());
+    ID.AddInteger(NumRows);
+    ID.AddInteger(NumColumns);
+    ID.AddInteger(Scope);
+    ID.AddInteger(Use);
+    ID.AddInteger(TypeClass);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == CooperativeMatrix;
   }
 };
 
@@ -8904,6 +8990,10 @@ inline bool Type::isMatrixType() const {
 
 inline bool Type::isConstantMatrixType() const {
   return isa<ConstantMatrixType>(CanonicalType);
+}
+
+inline bool Type::isCooperativeMatrixType() const {
+  return isa<CooperativeMatrixType>(CanonicalType);
 }
 
 inline bool Type::isOverflowBehaviorType() const {

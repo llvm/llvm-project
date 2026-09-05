@@ -3898,6 +3898,14 @@ def MatrixType : TypeAttr {
   let PragmaAttributeSupport = 0;
 }
 
+def CoopMatrixType : TypeAttr {
+  let Spellings = [Clang<"coop_mat">];
+  let Subjects = SubjectList<[TypedefName, Var, ParmVar, Field]>;
+  let Args = [UnsignedArgument<"CoopMatScope">, UnsignedArgument<"NumRows">,
+              UnsignedArgument<"NumColumns">, UnsignedArgument<"CoopMatUse">];
+  let Documentation = [Undocumented];
+}
+
 def Visibility : InheritableAttr {
   let Clone = 0;
   let Spellings = [GCC<"visibility">];

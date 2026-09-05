@@ -11947,6 +11947,60 @@ def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
 def err_openclcxx_placement_new : Error<
   "use of placement new requires explicit declaration">;
 
+// OpenCL C Cooperative Matrix.
+def err_invalid_coopmat_attr
+    : Error<"invalid argument of cooperative matrix attribute">;
+
+def err_coop_mat_not_primitive
+    : Error<"cooperative matrix attribute only supported for integer and "
+            "floating-point types">;
+
+def err_coop_mat_rol_col_size
+    : Error<"cooperative matrix row and column must have power-of-two size">;
+
+def err_coop_mem_layout_enum
+    : Error<"memory layout for cooperative matrix should be "
+            "CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR or "
+            "CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR">;
+
+def err_coop_element_and_pointer_type
+    : Error<"inconsistent between cooperative matrix element type and buffer "
+            "pointer type">;
+
+def err_coop_matrix_arg
+    : Error<"argument must be a valid cooperative matrix type">;
+
+def err_coop_matrix_assignment
+    : Error<"builtin return value should be assigned to cooperative matrix "
+            "type variable">;
+
+def err_coop_matrix_useA : Error<"argument of cooperative matrix must be "
+                                 "CLK_COOPERATIVE_MATRIX_A">;
+
+def err_coop_matrix_useB : Error<"argument of cooperative matrix must be "
+                                 "CLK_COOPERATIVE_MATRIX_B">;
+
+def err_coop_matrix_useACC : Error<"argument of cooperative matrix must be "
+                                   "CLK_COOPERATIVE_MATRIX_ACCUMULATOR">;
+
+def err_coop_matrix_element_type
+    : Error<"inconsistent cooperative matrix element type">;
+
+def err_coop_matrix_row_or_col_mismatch
+    : Error<"mismatch of cooperative matrix row or column">;
+
+def err_coop_matrix_use_type
+    : Error<"inconsistent cooperative matrix use type">;
+
+def err_unsupported_coopmat_binary_operator
+    : Error<"unsupported cooperative matrix binary operator">;
+
+def err_unsupported_coopmat_scalar_operator
+    : Error<"unsupported cooperative matrix scalar operator">;
+
+def err_ref_coopmat_var
+    : Error<"invalid reference of cooperative matrix variable">;
+
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
   "'mig_server_routine' attribute only applies to routines that return a kern_return_t">,

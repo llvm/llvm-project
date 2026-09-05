@@ -2481,6 +2481,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Vector:
   case Type::ExtVector:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::DependentSizedMatrix:
   case Type::FunctionProto:
   case Type::FunctionNoProto:
@@ -4435,6 +4436,31 @@ void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
   llvm::APSInt Columns(BitWidth);
   Columns = T->getNumColumns();
   mangleIntegerLiteral(ASTCtx.getSizeType(), Columns);
+  mangleType(T->getElementType());
+  Out << "E";
+}
+
+void CXXNameMangler::mangleType(const CooperativeMatrixType *T) {
+  // Mangle cooperative matrix types as a vendor extended type:
+  // u<Len>coop_matI<Scope><Rows><Columns><Use><element type>E
+
+  mangleVendorType("coop_mat");
+
+  Out << "I";
+  auto &ASTCtx = getASTContext();
+  unsigned BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
+  llvm::APSInt Scope(BitWidth);
+  Scope = T->getScope();
+  mangleIntegerLiteral(ASTCtx.getSizeType(), Scope);
+  llvm::APSInt Rows(BitWidth);
+  Rows = T->getNumRows();
+  mangleIntegerLiteral(ASTCtx.getSizeType(), Rows);
+  llvm::APSInt Columns(BitWidth);
+  Columns = T->getNumColumns();
+  mangleIntegerLiteral(ASTCtx.getSizeType(), Columns);
+  llvm::APSInt Use(BitWidth);
+  Use = T->getUse();
+  mangleIntegerLiteral(ASTCtx.getSizeType(), Use);
   mangleType(T->getElementType());
   Out << "E";
 }

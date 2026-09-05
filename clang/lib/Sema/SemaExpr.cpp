@@ -4635,6 +4635,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::Vector:
     case Type::ExtVector:
     case Type::ConstantMatrix:
+    case Type::CooperativeMatrix:
     case Type::Record:
     case Type::Enum:
     case Type::TemplateSpecialization:
@@ -7950,6 +7951,16 @@ bool Sema::isValidSveBitcast(QualType srcTy, QualType destTy) {
 bool Sema::areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy) {
   if (!destTy->isMatrixType() || !srcTy->isMatrixType())
     return false;
+
+  if (srcTy->isCooperativeMatrixType()) {
+    const CooperativeMatrixType *matSrcType =
+        srcTy->getAs<CooperativeMatrixType>();
+    const CooperativeMatrixType *matDestType =
+        destTy->getAs<CooperativeMatrixType>();
+
+    return matSrcType->getNumRows() == matDestType->getNumRows() &&
+           matSrcType->getNumColumns() == matDestType->getNumColumns();
+  }
 
   const ConstantMatrixType *matSrcType = srcTy->getAs<ConstantMatrixType>();
   const ConstantMatrixType *matDestType = destTy->getAs<ConstantMatrixType>();
@@ -11293,12 +11304,13 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
-  if (!IsDiv &&
-      (LHSTy->isConstantMatrixType() || RHSTy->isConstantMatrixType()))
+  if (!IsDiv && (LHSTy->isMatrixType() || RHSTy->isMatrixType()))
     return CheckMatrixMultiplyOperands(LHS, RHS, Loc, IsCompAssign);
   // For division, only matrix-by-scalar is supported. Other combinations with
   // matrix types are invalid.
   if (IsDiv && LHSTy->isConstantMatrixType() && RHSTy->isArithmeticType())
+    return CheckMatrixElementwiseOperands(LHS, RHS, Loc, IsCompAssign);
+  if (IsDiv && LHSTy->isCooperativeMatrixType() && RHSTy->isArithmeticType())
     return CheckMatrixElementwiseOperands(LHS, RHS, Loc, IsCompAssign);
 
   QualType compType = UsualArithmeticConversions(
@@ -11701,6 +11713,15 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
     return compType;
   }
 
+  if (LHS.get()->getType()->isCooperativeMatrixType() ||
+      RHS.get()->getType()->isCooperativeMatrixType()) {
+    QualType compType =
+        CheckMatrixElementwiseOperands(LHS, RHS, Loc, CompLHSTy);
+    if (CompLHSTy)
+      *CompLHSTy = compType;
+    return compType;
+  }
+
   QualType compType = UsualArithmeticConversions(
       LHS, RHS, Loc,
       CompLHSTy ? ArithConvKind::CompAssign : ArithConvKind::Arithmetic);
@@ -11841,6 +11862,15 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (LHS.get()->getType()->isConstantMatrixType() ||
       RHS.get()->getType()->isConstantMatrixType()) {
+    QualType compType =
+        CheckMatrixElementwiseOperands(LHS, RHS, Loc, CompLHSTy);
+    if (CompLHSTy)
+      *CompLHSTy = compType;
+    return compType;
+  }
+
+  if (LHS.get()->getType()->isCooperativeMatrixType() ||
+      RHS.get()->getType()->isCooperativeMatrixType()) {
     QualType compType =
         CheckMatrixElementwiseOperands(LHS, RHS, Loc, CompLHSTy);
     if (CompLHSTy)
@@ -13873,6 +13903,33 @@ QualType Sema::CheckMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
   if (RHS.isInvalid())
     return QualType();
 
+  if (LHS.get()->getType()->isCooperativeMatrixType() ||
+      RHS.get()->getType()->isCooperativeMatrixType()) {
+    auto *LHSMatType = LHS.get()->getType()->getAs<CooperativeMatrixType>();
+    auto *RHSMatType = RHS.get()->getType()->getAs<CooperativeMatrixType>();
+    assert((LHSMatType || RHSMatType) &&
+           "At least one operand must be a matrix");
+    if (LHSMatType && RHSMatType) {
+      if (LHSMatType->getNumColumns() != RHSMatType->getNumRows())
+        return InvalidOperands(Loc, LHS, RHS);
+
+      if (Context.hasSameType(LHSMatType, RHSMatType))
+        return Context.getCommonSugaredType(
+            LHS.get()->getType().getUnqualifiedType(),
+            RHS.get()->getType().getUnqualifiedType());
+
+      QualType LHSELTy = LHSMatType->getElementType(),
+               RHSELTy = RHSMatType->getElementType();
+      if (!Context.hasSameType(LHSELTy, RHSELTy))
+        return InvalidOperands(Loc, LHS, RHS);
+
+      return Context.getCooperativeMatrixType(
+          Context.getCommonSugaredType(LHSELTy, RHSELTy),
+          LHSMatType->getScope(), LHSMatType->getNumRows(),
+          RHSMatType->getNumColumns(), LHSMatType->getUse());
+    }
+  }
+
   auto *LHSMatType = LHS.get()->getType()->getAs<ConstantMatrixType>();
   auto *RHSMatType = RHS.get()->getType()->getAs<ConstantMatrixType>();
   assert((LHSMatType || RHSMatType) && "At least one operand must be a matrix");
@@ -15592,6 +15649,42 @@ static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
   return HasVectorOfHalfType(E0) && (!E1 || HasVectorOfHalfType(E1));
 }
 
+ExprResult Sema::CreateCoopMatBinOp(SourceLocation OpLoc,
+                                    BinaryOperatorKind Opc, Expr *LHSExpr,
+                                    Expr *RHSExpr) {
+  SmallVector<Expr *, 2> Args;
+  Args.push_back(LHSExpr);
+  Args.push_back(RHSExpr);
+  switch (Opc) {
+  case BO_Add:
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_add, Args);
+  case BO_Sub:
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_sub, Args);
+  case BO_Mul:
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_mul, Args);
+  case BO_Div:
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_binary_div, Args);
+  default:
+    break;
+  }
+  return ExprError(Diag(OpLoc, diag::err_unsupported_coopmat_binary_operator));
+}
+
+ExprResult Sema::CreateCoopMatScalarOp(SourceLocation OpLoc,
+                                       BinaryOperatorKind Opc, Expr *LHSExpr,
+                                       Expr *RHSExpr) {
+  SmallVector<Expr *, 2> Args;
+  Args.push_back(LHSExpr);
+  Args.push_back(RHSExpr);
+  switch (Opc) {
+  case BO_Mul:
+    return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_scalar_mul, Args);
+  default:
+    break;
+  }
+  return ExprError(Diag(OpLoc, diag::err_unsupported_coopmat_scalar_operator));
+}
+
 ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
                                     BinaryOperatorKind Opc, Expr *LHSExpr,
                                     Expr *RHSExpr, bool ForFoldExpression) {
@@ -15628,6 +15721,17 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   if (getLangOpts().OpenCL) {
     QualType LHSTy = LHSExpr->getType();
     QualType RHSTy = RHSExpr->getType();
+    // Cooperative matrix support
+    if (LHSTy->isMatrixType() && RHSTy->isMatrixType()) {
+      // Check matrix types for assignment.
+      if (BO_Assign == Opc) {
+        if (CheckCoopMatrixTypes(LHSTy, LHSExpr->getBeginLoc(), RHSTy,
+                                 RHSExpr->getBeginLoc()))
+          return ExprError();
+      } else
+        return CreateCoopMatBinOp(OpLoc, Opc, LHSExpr, RHSExpr);
+    } else if (LHSTy->isMatrixType() && RHSTy->isScalarType())
+      return CreateCoopMatScalarOp(OpLoc, Opc, LHSExpr, RHSExpr);
     // OpenCLC v2.0 s6.13.11.1 allows atomic variables to be initialized by
     // the ATOMIC_VAR_INIT macro.
     if (LHSTy->isAtomicType() || RHSTy->isAtomicType()) {
@@ -15655,6 +15759,18 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   switch (Opc) {
   case BO_Assign:
+    if (getLangOpts().OpenCL && IsCoopMatrixBuiltin(RHSExpr)) {
+      if (!LHSExpr->getType()->isMatrixType()) {
+        Diag(LHSExpr->getBeginLoc(), diag::err_coop_matrix_assignment);
+        return ExprError();
+      }
+      auto call = dyn_cast<CallExpr>(RHSExpr);
+      assert(call);
+      call->setType(LHSExpr->getType());
+      CheckCoopMatrixLoadElementType(LHSExpr->getType(), LHSExpr->getBeginLoc(),
+                                     call);
+      CheckCoopMatrixMatMulOutput(call);
+    }
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);
     if (getLangOpts().CPlusPlus &&
         LHS.get()->getObjectKind() != OK_ObjCProperty) {
@@ -16314,6 +16430,10 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   bool ConvertHalfVec = false;
   if (getLangOpts().OpenCL) {
     QualType Ty = InputExpr->getType();
+    if (Opc == UO_Minus && Ty->isMatrixType()) {
+      return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_scalar_neg,
+                                  {InputExpr});
+    }
     // The only legal unary operation for atomics is '&'.
     if ((Opc != UO_AddrOf && Ty->isAtomicType()) ||
     // OpenCL special types - image, sampler, pipe, and blocks are to be used
@@ -16392,7 +16512,9 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
                Opc == UO_Plus && resultType->isPointerType())
         break;
-
+      else if (getLangOpts().OpenCL && Opc == UO_Minus &&
+               resultType->isCooperativeMatrixType())
+        break;
       return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                        << resultType << Input.get()->getSourceRange());
 

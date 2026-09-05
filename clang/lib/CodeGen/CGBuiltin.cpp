@@ -2756,6 +2756,110 @@ static void ClearPadding(CodeGenFunction &CGF, Address Src,
   }
 }
 
+static std::string getSPIRVBuiltinName(unsigned BuiltinID,
+                                       bool IsFloat = false) {
+  switch (BuiltinID) {
+  case Builtin::BIcoop_mat_load:
+    return "__spirv_CooperativeMatrixLoadKHR";
+  case Builtin::BIcoop_mat_store:
+    return "__spirv_CooperativeMatrixStoreKHR";
+  case Builtin::BIcoop_mat_mulAdd:
+    return "__spirv_CooperativeMatrixMulAddKHR";
+  case Builtin::BIcoop_mat_binary_add:
+    return (IsFloat) ? "__spirv_CooperativeMatrixFAdd" : "__spirv_IAdd";
+  case Builtin::BIcoop_mat_binary_sub:
+    return (IsFloat) ? "__spirv_CooperativeMatrixFSub" : "__spirv_ISub";
+  case Builtin::BIcoop_mat_binary_mul:
+    return (IsFloat) ? "__spirv_CooperativeMatrixFMul" : "__spirv_IMul";
+  case Builtin::BIcoop_mat_binary_div:
+    return (IsFloat) ? "__spirv_CooperativeMatrixFDiv" : "__spirv_IDiv";
+  case Builtin::BIcoop_mat_scalar_mul:
+    return "__spirv_CooperativeMatrixScalarMulKHR";
+  case Builtin::BIcoop_mat_scalar_neg:
+    return "__spirv_CooperativeMatrixScalarNeg";
+  case Builtin::BIcoop_mat_init:
+    return "__spirv_CompositeConstruct";
+  case Builtin::BIcoop_mat_length:
+    return "__spirv_CooperativeMatrixLengthKHR";
+  }
+  assert(0 && "Unexpected Builtin");
+  return "";
+}
+
+static llvm::TargetExtType *getTargetExtType(CodeGenFunction &CGF,
+                                             CodeGenModule &CGM,
+                                             const CooperativeMatrixType *MTy) {
+  llvm::Type *ElTy = CGF.ConvertType(MTy->getElementType());
+  // Type arguments for TargetExtType
+  llvm::Type *Tys[] = {ElTy};
+  // Unsigned arguments for TargetExtType
+  unsigned Ints[] = {MTy->getScope(), MTy->getNumRows(), MTy->getNumColumns(),
+                     MTy->getUse()};
+  // Create a TargetExtType to represent the coop matrix type
+  llvm::TargetExtType *RetType = llvm::TargetExtType::get(
+      CGM.getLLVMContext(), "spirv.CooperativeMatrixKHR",
+      llvm::ArrayRef<llvm::Type *>(Tys), llvm::ArrayRef<unsigned>(Ints));
+  return RetType;
+}
+
+/// Returns a suffix encoding ALL parameters of a spirv.CooperativeMatrixKHR
+/// TargetExtType: element type + scope + rows + cols + use.
+/// E.g. target("spirv.CooperativeMatrixKHR", float, 3, 16, 16, 2) ->
+/// "_f32_sc3_16x16_u2"
+static std::string getCoopMatFullSuffix(llvm::Type *Ty) {
+  auto *TET = cast<llvm::TargetExtType>(Ty);
+  llvm::Type *ElemTy = TET->getTypeParameter(0);
+
+  // Element type string
+  std::string ElemStr;
+  if (ElemTy->isFloatTy())
+    ElemStr = "f32";
+  else if (ElemTy->isHalfTy())
+    ElemStr = "f16";
+  else if (ElemTy->isDoubleTy())
+    ElemStr = "f64";
+  else if (auto *IntTy = dyn_cast<llvm::IntegerType>(ElemTy))
+    ElemStr = "i" + std::to_string(IntTy->getBitWidth());
+  else
+    llvm_unreachable("Unsupported cooperative matrix element type");
+
+  // Integer parameters: scope, rows, cols, use
+  unsigned Scope = TET->getIntParameter(0);
+  unsigned Rows = TET->getIntParameter(1);
+  unsigned Cols = TET->getIntParameter(2);
+  unsigned Use = TET->getIntParameter(3);
+
+  return "_" + ElemStr + "_sc" + std::to_string(Scope) + "_" +
+         std::to_string(Rows) + "x" + std::to_string(Cols) + "_u" +
+         std::to_string(Use);
+}
+
+/// Returns a name suffix encoding the address space of a pointer type,
+/// matching OpenCL/SPIR-V address space conventions.
+/// E.g.  ptr addrspace(1) -> "_global"
+///        ptr addrspace(3) -> "_local"
+///        ptr addrspace(0) -> "_private"
+///        ptr addrspace(4) -> "_generic"
+static std::string getPtrAddrSpaceSuffix(llvm::Type *PtrTy) {
+  unsigned AS = cast<llvm::PointerType>(PtrTy)->getAddressSpace();
+  switch (AS) {
+  case 0:
+    return "_private";
+  case 1:
+    return "_global";
+  case 2:
+    return "_constant";
+  case 3:
+    return "_local";
+  case 4:
+    return "_generic";
+  default:
+    return "_as" + std::to_string(AS);
+  }
+}
+
+} // namespace
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -4606,6 +4710,264 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         MatrixTy->getNumRows(), MatrixTy->getNumColumns());
     addInstToNewSourceAtom(cast<Instruction>(Result), Matrix);
     return RValue::get(Result);
+  }
+
+  case Builtin::BIcoop_mat_load: {
+    auto *PtrTy = E->getArg(0)->getType()->getAs<PointerType>();
+    assert(PtrTy && "arg0 must be of pointer type");
+
+    Address SrcAddr = EmitPointerWithAlignment(E->getArg(0));
+    EmitNonNullArgCheck(SrcAddr, E->getArg(0)->getType(),
+                        E->getArg(0)->getExprLoc(), FD, 0);
+    const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
+    if (!MTy)
+      CGM.ErrorUnsupported(E, "coop_mat_load without coop_mat output operand");
+
+    auto Ptr = EmitScalarExpr(E->getArg(0));
+    auto Layout = EmitScalarExpr(E->getArg(1));
+    auto Stride = EmitScalarExpr(E->getArg(2));
+    // Create a TargetExtType to represent the coop matrix type
+    llvm::TargetExtType *RetType = getTargetExtType(*this, CGM, MTy);
+
+    // Set function type.
+    llvm::FunctionType *FTy = llvm::FunctionType::get(
+        RetType, {Ptr->getType(), Layout->getType(), Stride->getType()}, false);
+    // Function name mangling.
+    std::string Name =
+        getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+        getPtrAddrSpaceSuffix(ConvertType(E->getArg(0)->getType())) +
+        getCoopMatFullSuffix(ConvertType(E->getType()));
+
+    llvm::FunctionCallee LoadFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(LoadFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(LoadFn, {Ptr, Layout, Stride});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
+  }
+
+  case Builtin::BIcoop_mat_store: {
+    auto *PtrTy = E->getArg(0)->getType()->getAs<PointerType>();
+    assert(PtrTy && "arg0 must be of pointer type");
+
+    Address Dst = EmitPointerWithAlignment(E->getArg(0));
+    EmitNonNullArgCheck(Dst, E->getArg(0)->getType(),
+                        E->getArg(0)->getExprLoc(), FD, 0);
+    const auto *MTy = E->getArg(1)->getType()->getAs<CooperativeMatrixType>();
+    if (!MTy)
+      CGM.ErrorUnsupported(E, "coop_mat_store without coop_mat input operand");
+
+    auto Ptr = EmitScalarExpr(E->getArg(0));
+    auto Arg0 = EmitScalarExpr(E->getArg(1));
+    auto Layout = EmitScalarExpr(E->getArg(2));
+    auto Stride = EmitScalarExpr(E->getArg(3));
+    // Create a TargetExtType to represent the coop matrix type
+    llvm::TargetExtType *ArgType = getTargetExtType(*this, CGM, MTy);
+    // Set function type.
+    llvm::FunctionType *FTy = llvm::FunctionType::get(
+        VoidTy, {Ptr->getType(), ArgType, Layout->getType(), Stride->getType()},
+        false);
+    // Function name mangling.
+    std::string Name =
+        getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+        getPtrAddrSpaceSuffix(ConvertType(E->getArg(0)->getType())) +
+        getCoopMatFullSuffix(ConvertType(E->getArg(1)->getType()));
+
+    llvm::FunctionCallee StoreFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(StoreFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(StoreFn, {Ptr, Arg0, Layout, Stride});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
+  }
+
+  case Builtin::BIcoop_mat_mulAdd: {
+    const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
+    if (!MTy)
+      CGM.ErrorUnsupported(E,
+                           "coop_mat_mulAdd without coop_mat output operand");
+
+    auto Arg0 = E->getArg(0);
+    auto Arg1 = E->getArg(1);
+    auto Arg2 = E->getArg(2);
+    auto MA = EmitScalarExpr(Arg0);
+    auto MB = EmitScalarExpr(Arg1);
+    auto MC = EmitScalarExpr(Arg2);
+    const auto *MATy = Arg0->getType()->getAs<CooperativeMatrixType>();
+    const auto *MBTy = Arg1->getType()->getAs<CooperativeMatrixType>();
+    const auto *MCTy = Arg2->getType()->getAs<CooperativeMatrixType>();
+
+    // Check if the data is signed/unsigned
+    QualType QT = MATy->getElementType();
+    bool isSigned = false;
+    if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
+      isSigned = BT->isSignedInteger();
+    }
+    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
+    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
+    auto *RetType = getTargetExtType(*this, CGM, MTy);
+    auto *AType = getTargetExtType(*this, CGM, MATy);
+    auto *BType = getTargetExtType(*this, CGM, MBTy);
+    auto *CType = getTargetExtType(*this, CGM, MCTy);
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, BType, CType, Int1Ty}, false);
+
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(Arg0->getType())) +
+                       getCoopMatFullSuffix(ConvertType(Arg1->getType())) +
+                       getCoopMatFullSuffix(ConvertType(Arg2->getType()));
+    llvm::FunctionCallee MatMulFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(MatMulFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(MatMulFn, {MA, MB, MC, isDataSigned});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
+  }
+
+  case Builtin::BIcoop_mat_binary_add:
+  case Builtin::BIcoop_mat_binary_sub:
+  case Builtin::BIcoop_mat_binary_mul:
+  case Builtin::BIcoop_mat_binary_div: {
+    auto Arg0 = EmitScalarExpr(E->getArg(0));
+    auto Arg1 = EmitScalarExpr(E->getArg(1));
+
+    const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
+    const auto *MATy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
+    const auto *MBTy = E->getArg(1)->getType()->getAs<CooperativeMatrixType>();
+    auto *RetType = getTargetExtType(*this, CGM, MTy);
+    auto *AType = getTargetExtType(*this, CGM, MATy);
+    auto *BType = getTargetExtType(*this, CGM, MBTy);
+    llvm::Type *ElTy = ConvertType(MTy->getElementType());
+    // Check if the data is signed/unsigned
+    QualType QT = MTy->getElementType();
+    bool isSigned = false;
+    if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
+      isSigned = BT->isSignedInteger();
+    }
+    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
+    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
+
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, BType, Int1Ty}, false);
+
+    std::string Name =
+        (ElTy->isIntegerTy())
+            ? getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel)
+            : getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel, /*IsFloat*/ true);
+    // Function name mangling.
+    Name = Name + getCoopMatFullSuffix(ConvertType(E->getType()));
+    llvm::FunctionCallee BinaryFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(BinaryFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(BinaryFn, {Arg0, Arg1, isDataSigned});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
+  }
+
+  case Builtin::BIcoop_mat_scalar_mul: {
+    auto Arg0 = EmitScalarExpr(E->getArg(0));
+    auto Arg1 = EmitScalarExpr(E->getArg(1));
+    const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
+    const auto *MATy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
+    auto *RetType = getTargetExtType(*this, CGM, MTy);
+    auto *AType = getTargetExtType(*this, CGM, MATy);
+    auto *BType = Arg1->getType();
+
+    // Check if the data is signed/unsigned
+    QualType QT = MTy->getElementType();
+    bool isSigned = false;
+    if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
+      isSigned = BT->isSignedInteger();
+    }
+    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
+    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
+
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, BType, Int1Ty}, false);
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(E->getType()));
+    llvm::FunctionCallee ScalarMulFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(ScalarMulFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(ScalarMulFn, {Arg0, Arg1, isDataSigned});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
+  }
+
+  case Builtin::BIcoop_mat_scalar_neg: {
+    auto Arg0 = EmitScalarExpr(E->getArg(0));
+    const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
+    const auto *MATy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
+    auto *RetType = getTargetExtType(*this, CGM, MTy);
+    auto *AType = getTargetExtType(*this, CGM, MATy);
+
+    // Check if the data is signed/unsigned
+    QualType QT = MTy->getElementType();
+    bool isSigned = false;
+    if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
+      isSigned = BT->isSignedInteger();
+    }
+    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
+    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
+
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {AType, Int1Ty}, false);
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(E->getType()));
+    llvm::FunctionCallee ScalarNegFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(ScalarNegFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(ScalarNegFn, {Arg0, isDataSigned});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
+  }
+
+  case Builtin::BIcoop_mat_init: {
+    const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
+    auto Init = EmitScalarExpr(E->getArg(0));
+    auto *RetType = getTargetExtType(*this, CGM, MTy);
+    // Set function type.
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(RetType, {Init->getType()}, false);
+    // Function name mangling.
+    std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+                       getCoopMatFullSuffix(ConvertType(E->getType()));
+    llvm::FunctionCallee InitFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(InitFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(InitFn, {Init});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
+  }
+
+  case Builtin::BIcoop_mat_length: {
+    const auto *MTy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
+    auto *AType = getTargetExtType(*this, CGM, MTy);
+    auto Arg0 = EmitScalarExpr(E->getArg(0));
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(ConvertType(E->getType()), {AType}, false);
+
+    // Function name mangling.
+    std::string Name =
+        getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
+        getCoopMatFullSuffix(ConvertType(E->getArg(0)->getType()));
+    llvm::FunctionCallee LengthFn =
+        CGM.getModule().getOrInsertFunction(Name, FTy);
+    if (auto *F = llvm::dyn_cast<llvm::Function>(LengthFn.getCallee()))
+      F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    auto *NewCall = Builder.CreateCall(LengthFn, {Arg0});
+    NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
+    return RValue::get(NewCall);
   }
 
   case Builtin::BI__builtin_masked_load:

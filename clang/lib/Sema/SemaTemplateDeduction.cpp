@@ -2450,6 +2450,30 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
     //     (clang extension)
     //
+    //     T __attribute__((coop_mat_type(<integral constant>,
+    //                                    <integral constant>,
+    //                                    <integral constant>,
+    //                                    <integral constant>)))
+    case Type::CooperativeMatrix: {
+      const auto *MP = P->castAs<CooperativeMatrixType>(),
+                 *MA = A->getAs<CooperativeMatrixType>();
+      if (!MA)
+        return TemplateDeductionResult::NonDeducedMismatch;
+
+      // Check that the dimensions are the same
+      if (MP->getNumRows() != MA->getNumRows() ||
+          MP->getNumColumns() != MA->getNumColumns()) {
+        return TemplateDeductionResult::NonDeducedMismatch;
+      }
+      // Perform deduction on element types.
+      return DeduceTemplateArgumentsByTypeMatch(
+          S, TemplateParams, MP->getElementType(), MA->getElementType(), Info,
+          Deduced, TDF, degradeCallPartialOrderingKind(POK),
+          /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
+    }
+
+    //     (clang extension)
+    //
     //     T __attribute__(((address_space(N))))
     case Type::DependentAddressSpace: {
       const auto *ASP = P->castAs<DependentAddressSpaceType>();
@@ -7070,6 +7094,13 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
 
   case Type::ConstantMatrix: {
     const ConstantMatrixType *MatType = cast<ConstantMatrixType>(T);
+    MarkUsedTemplateParameters(Ctx, MatType->getElementType(), OnlyDeduced,
+                               Depth, Used);
+    break;
+  }
+
+  case Type::CooperativeMatrix: {
+    const CooperativeMatrixType *MatType = cast<CooperativeMatrixType>(T);
     MarkUsedTemplateParameters(Ctx, MatType->getElementType(), OnlyDeduced,
                                Depth, Used);
     break;
