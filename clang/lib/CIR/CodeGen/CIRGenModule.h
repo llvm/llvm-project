@@ -735,11 +735,11 @@ public:
   std::optional<llvm::SmallVector<int32_t>>
   buildMemberPath(const CXXRecordDecl *destClass, const ValueDecl *decl);
 
-  /// Returns true if \p field is an empty field that isn't laid out in the CIR
-  /// record (e.g. a [[no_unique_address]] empty member). Such fields have no
-  /// CIR field index, so a pointer-to-data-member to them is represented by an
-  /// explicit byte offset (#cir.data_member_offset) rather than a field-index
-  /// path.
+  /// Returns true if \p field is a potentially-overlapping field with no CIR
+  /// field index (e.g. a [[no_unique_address]] member that is empty for both
+  /// layout and the ABI). Such fields have no entry in the CIR record, so a
+  /// pointer-to-data-member to them is represented by an explicit byte offset
+  /// (#cir.data_member_offset) rather than a field-index path.
   bool isEmptyFieldForMemberPointer(const FieldDecl *field);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);

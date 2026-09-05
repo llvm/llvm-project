@@ -1032,7 +1032,7 @@ define i1 @not_inf_fabs_select_pzero_or_ninf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float 0.000000e+00, float 0xFFF0000000000000
+  %select = select i1 %cond, float 0.000000e+00, float -inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp one float %fabs, 0x7FF0000000000000
   ret i1 %one
@@ -1048,7 +1048,7 @@ define i1 @not_inf_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp one float %fabs, 0x7FF0000000000000
   ret i1 %one
@@ -1061,7 +1061,7 @@ define i1 @not_ninf_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp one float %fabs, 0xFFF0000000000000
   ret i1 %one
@@ -1078,7 +1078,7 @@ define i1 @not_ninf_fneg_fabs_select_nzero_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 [[ONE]]
 ;
 entry:
-  %select = select i1 %cond, float -0.000000e+00, float 0x7FF0000000000000
+  %select = select i1 %cond, float -0.000000e+00, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %fneg.fabs = fneg float %fabs
   %one = fcmp one float %fneg.fabs, 0xFFF0000000000000

@@ -2,46 +2,46 @@
 
 // --offload-device-only is always set --- testing interactions with -S and -fgpu-rdc
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend --offload-device-only -S -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-TEXTUAL
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend --offload-device-only -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BINARY
 
 // The new driver's behavior is to emit LLVM IR for --offload-device-only and -fgpu-rdc (independently of SPIR-V).
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -### -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -S -fgpu-rdc -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-LL,CHECK-FGPU-RDC
 
 // The new driver's behavior is to emit LLVM IR for --offload-device-only and -fgpu-rdc (independently of SPIR-V).
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend --offload-device-only -fgpu-rdc -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BC,CHECK-FGPU-RDC
 
 // --offload-device-only is always unset --- testing interactions with -S and -fgpu-rdc
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend -S -fgpu-rdc -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BC,CHECK-FGPU-RDC
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend -S -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BC
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend -fgpu-rdc -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BC,CHECK-CLANG-LINKER-WRAPPER
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -### -x hip %s -save-temps  \
 // RUN:         -use-spirv-backend -no-canonical-prefixes \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BC,CHECK-CLANG-LINKER-WRAPPER

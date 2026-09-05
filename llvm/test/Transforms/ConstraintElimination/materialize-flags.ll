@@ -541,7 +541,7 @@ define i64 @mul_nuw_from_nsw_and_non_negative(i64 %x, i64 %y, i64 %z) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i64 [[Y]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
 entry:
@@ -585,7 +585,7 @@ define i64 @shl_nuw_from_nsw_and_non_negative(i64 %x, i64 %s, i64 %z) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i64 [[Z]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 [[X]], [[S]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[X]], [[S]]
 ; CHECK-NEXT:    ret i64 [[SHL]]
 ;
 entry:

@@ -178,7 +178,7 @@ define <4 x i1> @abs_isinfv4f32(<4 x float> %x) {
 ; P9-NEXT:    blr
 entry:
   %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %x)
-  %cmpinf = fcmp oeq <4 x float> %0, <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+  %cmpinf = fcmp oeq <4 x float> %0, <float +inf, float +inf, float +inf, float +inf>
   ret <4 x i1> %cmpinf
 }
 

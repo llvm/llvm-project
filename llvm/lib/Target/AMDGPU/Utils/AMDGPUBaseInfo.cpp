@@ -1253,8 +1253,6 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                     getNumWorkGroupSIMDs(isFullSIMDMode(STI)));
 }
 
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }
-
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize) {
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
@@ -2685,6 +2683,10 @@ bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
   const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
          Reg == AMDGPU::SCC;
+}
+
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getRegClass(AMDGPU::RsrcReg32RegClassID).contains(Reg);
 }
 
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {

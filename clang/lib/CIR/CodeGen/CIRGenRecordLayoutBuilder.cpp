@@ -693,16 +693,14 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       // not a horrifyingly problematic issue.
       assert(!cir::MissingFeatures::noUniqueAddressLayout());
       // Dropping the field leaves no member to mark, so its bytes read as
-      // padding.  That is only sound when the field carries no ABI data
-      // either, which isEmptyFieldForLayout does not guarantee.  Report the
-      // gap rather than claim an emptiness the record does not have.  The base
-      // subobject lowering sees the same field, so only the complete object
-      // reports it.
-      if (!nonVirtualBaseType && !isEmptyFieldForABI(astContext, *field))
-        cirGenTypes.getCGModule().errorNYI(
-            field->getSourceRange(),
-            "[[no_unique_address]] field that is empty for layout but holds "
-            "data for the ABI");
+      // padding.  That is only sound when the field carries no ABI data, so
+      // make sure we add a member for it. if it does.
+      if (!isEmptyFieldForABI(astContext, *field))
+        members.push_back(
+            MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
+                       MemberInfo::InfoKind::Field,
+                       getStorageType(field->getType()->getAsCXXRecordDecl()),
+                       getFieldMemberKind(*field), *field));
       ++field;
     } else {
       // Use base subobject layout for potentially-overlapping fields,

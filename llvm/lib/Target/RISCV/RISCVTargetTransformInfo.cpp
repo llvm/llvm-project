@@ -3786,21 +3786,36 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // only the VLMAX upper bound is sound.
     ConstantRange VLRange = VLMAXRange;
     if (HasAVL) {
-      APInt MaxVL = VLMAXRange.getUnsignedMax();
+      // vl ≤ VLMAX
+      VLRange =
+          ConstantRange::makeAllowedICmpRegion(CmpInst::ICMP_ULE, VLMAXRange);
+
       Value *AVL = II.getArgOperand(0);
+      ConstantRange AVLRange = computeConstantRangeIncludingKnownBits(
+          AVL, /*ForSigned=*/false,
+          IC.getSimplifyQuery().getWithInstruction(&II));
+
+      // vl = AVL if AVL ≤ VLMAX
+      if (AVLRange.icmp(CmpInst::ICMP_ULE, VLMAXRange))
+        return IC.replaceInstUsesWith(II, AVL);
+
+      // vl ≤ AVL
+      VLRange = VLRange.umin(AVLRange.getUnsignedMax());
+
       // vl > 0 if AVL > 0
-      APInt MinVL = APInt(BitWidth, isKnownNonZero(AVL, DL) ? 1 : 0);
-      if (auto *AVLC = dyn_cast<ConstantInt>(AVL)) {
-        const APInt &C = AVLC->getValue();
-        // A constant AVL not exceeding the smallest possible VLMAX means vl is
-        // exactly AVL, so replace the intrinsic with that constant.
-        if (C.ule(VLMAXRange.getUnsignedMin()))
-          return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), C));
-        VLRange =
-            ConstantRange::getNonEmpty(MinVL, APIntOps::umin(C, MaxVL) + 1);
-      } else {
-        VLRange = ConstantRange::getNonEmpty(MinVL, MaxVL + 1);
-      }
+      if (AVLRange.icmp(CmpInst::ICMP_UGT, APInt::getZero(BitWidth)))
+        VLRange = VLRange.umax(APInt(BitWidth, 1));
+
+      // vl = VLMAX if AVL ≥ (2 * VLMAX)
+      ConstantRange TwoVLMAX = VLMAXRange.multiply(APInt(BitWidth, 2));
+      if (AVLRange.icmp(CmpInst::ICMP_UGE, TwoVLMAX))
+        VLRange = VLRange.intersectWith(VLMAXRange);
+
+      // ceil(AVL / 2) ≤ vl ≤ VLMAX if AVL < (2 * VLMAX)
+      if (AVLRange.icmp(CmpInst::ICMP_ULT, TwoVLMAX))
+        VLRange = VLRange.umax(APIntOps::RoundingUDiv(AVLRange.getUnsignedMin(),
+                                                      APInt(BitWidth, 2),
+                                                      APInt::Rounding::UP));
     }
 
     ConstantRange OldRange =

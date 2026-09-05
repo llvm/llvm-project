@@ -28,26 +28,5 @@ def VT_MASKC : VTMaskedMove<0b110, "vt.maskc">,
 def VT_MASKCN : VTMaskedMove<0b111, "vt.maskcn">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
-let Predicates = [HasVendorXVentanaCondOps] in {
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
-          (VT_MASKC GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
-          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
-
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
-          (VT_MASKC GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
-          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
-          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
-def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
-          (VT_MASKC GPR:$rs1, GPR:$rc)>;
-
-// (and (setcc a, b, ne), c) -> (vt.maskc c, (xor a, b))
-// (and (setcc a, b, eq), c) -> (vt.maskcn c, (xor a, b))
-// where c is known to be 0 or 1.
-def : Pat<(XLenVT (and (riscv_setne_oneuse (XLenVT GPR:$rs1)), zero_or_one:$rc)),
-          (VT_MASKC GPR:$rc, GPR:$rs1)>;
-def : Pat<(XLenVT (and (riscv_seteq_oneuse (XLenVT GPR:$rs1)), zero_or_one:$rc)),
-          (VT_MASKCN GPR:$rc, GPR:$rs1)>;
-} // Predicates = [HasVendorXVentanaCondOps]
+let Predicates = [HasVendorXVentanaCondOps] in
+defm : CondOpsPat<VT_MASKC, VT_MASKCN>;

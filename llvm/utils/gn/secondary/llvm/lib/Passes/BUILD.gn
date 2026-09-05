@@ -27,5 +27,6 @@ static_library("Passes") {
     "PassBuilderBindings.cpp",
     "PassBuilderPipelines.cpp",
     "StandardInstrumentations.cpp",
+    "TriggerCrashPasses.cpp",
   ]
 }

@@ -107,6 +107,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`modernize-use-to-underlying
+  <clang-tidy/checks/modernize/use-to-underlying>` check.
+
+  Finds casts from a scoped enumeration (`enum class`) to an integer type and
+  replaces them with a call to `std::to_underlying` (introduced in C++23).
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
@@ -206,6 +212,11 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Added the {option}`TypedefInheritAnonTagConfig`, which checks a
+    typedef or type alias that provides the only name of an otherwise unnamed
+    tag, such as `typedef enum {} MyEnum;`, against the style configured for
+    that tag kind instead of the typedef or type alias style.
+    
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.

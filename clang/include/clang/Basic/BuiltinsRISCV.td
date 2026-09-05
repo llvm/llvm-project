@@ -291,6 +291,47 @@ def pmhaccsu_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, i
 def pmhraccsu_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>, _Vector<4, unsigned short>)">;
 def pmhraccsu_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<2, unsigned int>)">;
 
+// Packed Multiplication with Horizontal Addition (32-bit)
+def pm4add_i8x4 : RISCVBuiltin<"int(_Vector<4, signed char>, _Vector<4, signed char>)">;
+def pm2add_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pm2add_x_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pm4addu_u8x4 : RISCVBuiltin<"unsigned int(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
+def pm2addu_u16x2 : RISCVBuiltin<"unsigned int(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
+def pmq2add_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pmqr2add_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pm2sadd_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pm2sadd_x_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pm2sub_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pm2sub_x_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
+def pm4addsu_i8x4 : RISCVBuiltin<"int(_Vector<4, signed char>, _Vector<4, unsigned char>)">;
+def pm2addsu_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, unsigned short>)">;
+
+// Packed Multiplication with Horizontal Addition (64-bit)
+def pm4add_i8x8 : RISCVBuiltin<"_Vector<2, int>(_Vector<8, signed char>, _Vector<8, signed char>)">;
+def pm2add_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pm2add_x_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pm4addu_u8x8 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
+def pm2addu_u16x4 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pmq2add_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pmqr2add_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pm2sadd_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pm2sadd_x_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pm2sub_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pm2sub_x_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, short>)">;
+def pm4addsu_i8x8 : RISCVBuiltin<"_Vector<2, int>(_Vector<8, signed char>, _Vector<8, unsigned char>)">;
+def pm2addsu_i16x4 : RISCVBuiltin<"_Vector<2, int>(_Vector<4, short>, _Vector<4, unsigned short>)">;
+def pm2add_i32x2 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def pm2add_x_i32x2 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def pm2addu_u32x2 : RISCVBuiltin<"uint64_t(_Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
+def pmq2add_i32x2 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def pm2sub_i32x2 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def pm2sub_x_i32x2 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def pm2addsu_i32x2 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, unsigned int>)">;
+def pmqr2add_i32x2 : RISCVBuiltin<"int64_t(_Vector<2, int>, _Vector<2, int>)">;
+def pm4add_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, short>)">;
+def pm4addu_u16x4 : RISCVBuiltin<"uint64_t(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
+def pm4addsu_i16x4 : RISCVBuiltin<"int64_t(_Vector<4, short>, _Vector<4, unsigned short>)">;
+
 // Packed Absolute Difference Sum (32-bit)
 def pabdsumu_u8x4_u32 : RISCVBuiltin<"unsigned int(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
 def pabdsumau_u8x4_u32 : RISCVBuiltin<"unsigned int(unsigned int, _Vector<4, unsigned char>, _Vector<4, unsigned char>)">;

@@ -9023,9 +9023,9 @@ public:
           const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
           FunctionTemplateDecl *CallOpTemplate =
               LambdaCallOp->getDescribedFunctionTemplate();
-          void *InsertPos = nullptr;
+          llvm::FoldingSetInsertToken InsertToken;
           FunctionDecl *CorrespondingCallOpSpecialization =
-              CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
+              CallOpTemplate->findSpecialization(TAL->asArray(), InsertToken);
           assert(CorrespondingCallOpSpecialization &&
                  "We must always have a function call operator specialization "
                  "that corresponds to our static invoker specialization");
@@ -16562,7 +16562,7 @@ static QualType getObjectType(APValue::LValueBase B) {
 /// Ex. For E = `(short*)((char*)(&foo))`, returns `&foo`
 ///
 /// Always returns an RValue with a pointer representation.
-static const Expr *ignorePointerCastsAndParens(const Expr *E) {
+const Expr *ignorePointerCastsAndParens(const Expr *E) {
   assert(E->isPRValue() && E->getType()->hasPointerRepresentation());
 
   const Expr *NoParens = E->IgnoreParens();
@@ -23112,7 +23112,10 @@ std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type);
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(
+        Info, this, Type,
+        /*IsDynamic=*/false);
+
   return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 

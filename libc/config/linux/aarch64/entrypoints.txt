@@ -299,8 +299,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.random.getrandom
 
     # sys/resource.h entrypoints
+    libc.src.sys.resource.getpriority
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.getrusage
+    libc.src.sys.resource.setpriority
     libc.src.sys.resource.setrlimit
 
     # sys/sendfile.h entrypoints
@@ -393,6 +395,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.chroot
     libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
@@ -407,10 +410,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
+    libc.src.unistd.getegid
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
     libc.src.unistd.gethostname
     libc.src.unistd.getpagesize
+    libc.src.unistd.getpgid
+    libc.src.unistd.getpgrp
     libc.src.unistd.getpid
     libc.src.unistd.getppid
     libc.src.unistd.getsid
@@ -430,11 +436,18 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
+    libc.src.unistd.setgid
+    libc.src.unistd.setpgid
+    libc.src.unistd.setregid
+    libc.src.unistd.setreuid
     libc.src.unistd.setsid
+    libc.src.unistd.setuid
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
     libc.src.unistd.sysconf
+    libc.src.unistd.tcgetpgrp
+    libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
@@ -545,6 +558,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf128
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
@@ -569,6 +583,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsf128
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -597,6 +612,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_numf
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximumf
+    libc.src.math.fmaximumf128
     libc.src.math.fmaximuml
     libc.src.math.fmaxl
     libc.src.math.fmin
@@ -613,6 +629,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_numf
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
+    libc.src.math.fminimumf128
     libc.src.math.fminimuml
     libc.src.math.fminl
     libc.src.math.fmod
@@ -909,14 +926,12 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
-    libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
     libc.src.math.dmulf128
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
-    libc.src.math.fabsf128
     libc.src.math.faddf128
     libc.src.math.fdimf128
     libc.src.math.fdivf128
@@ -924,11 +939,9 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_magf128
     libc.src.math.fmaximum_numf128
-    libc.src.math.fmaximumf128
     libc.src.math.fminimum_mag_numf128
     libc.src.math.fminimum_magf128
     libc.src.math.fminimum_numf128
-    libc.src.math.fminimumf128
     libc.src.math.fmodf128
     libc.src.math.fmulf128
     libc.src.math.frexpf128

@@ -308,6 +308,7 @@ set(files
   __compare/strong_order.h
   __compare/synth_three_way.h
   __compare/three_way_comparable.h
+  __compare/type_order.h
   __compare/weak_order.h
   __concepts/arithmetic.h
   __concepts/assignable.h
@@ -695,6 +696,7 @@ set(files
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
   __pstl/cpu_algos/fill.h
+  __pstl/cpu_algos/find_end.h
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/merge.h

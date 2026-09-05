@@ -687,6 +687,32 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
   }
 }
 
+/// If R is a phi-like recipe starting a dead cycle of recipes, erase all
+/// reachable recipes of the dead cycle.
+static void tryToRemoveDeadCycle(VPRecipeBase *R) {
+  auto *PhiR = dyn_cast<VPSingleDefRecipe>(R);
+  if (!PhiR || !isa<VPPhi, VPReductionPHIRecipe>(R))
+    return;
+
+  // The transitive users of PhiR are closed under users, so the cycle is dead
+  // if every one of them can be erased.
+  for (VPUser *U : vputils::collectUsersRecursively(PhiR)) {
+    auto *R = cast<VPRecipeBase>(U);
+    // Bail out if a user must be retained, or if it is a phi-like recipe other
+    // than PhiR;
+    if (R->mayHaveSideEffects() || (R != PhiR && isa<VPPhiAccessors>(R)))
+      return;
+  }
+
+  // Break the cycle by replacing PhiR with its first incoming value, which is
+  // defined outside the cycle. That leaves the rest of the cycle dead.
+  PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+  SmallVector<VPValue *> Incoming(PhiR->operands());
+  PhiR->eraseFromParent();
+  for (VPValue *Op : Incoming)
+    vputils::recursivelyDeleteDeadRecipes(Op);
+}
+
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
@@ -699,20 +725,9 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Check if R is a dead VPPhi <-> update cycle and remove it.
-      VPValue *Start, *Incoming;
-      if (!match(&R, m_VPPhi(m_VPValue(Start), m_VPValue(Incoming))))
-        continue;
-      auto *PhiR = cast<VPPhi>(&R);
-      VPUser *PhiUser = PhiR->getSingleUser();
-      if (!PhiUser)
-        continue;
-      if (PhiUser != Incoming->getDefiningRecipe() ||
-          Incoming->getNumUsers() != 1)
-        continue;
-      PhiR->replaceAllUsesWith(Start);
-      PhiR->eraseFromParent();
-      Incoming->getDefiningRecipe()->eraseFromParent();
+      // If R is a phi-like recipe starting a dead cycle of recipes, erase the
+      // whole cycle.
+      tryToRemoveDeadCycle(&R);
     }
   }
 }
@@ -920,7 +935,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
 
   if (!match(WideIV, m_CanonicalWidenIV())) {
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPIRValue *Start = WideIV->getStartValue();
+    VPValue *Start = WideIV->getStartValue();
     VPValue *Step = WideIV->getStepValue();
     EndValue = B.createDerivedIV(
         ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -941,7 +956,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
   if (WideIntOrFp && WideIntOrFp->getTruncInst())
     return nullptr;
 
-  VPIRValue *Start = WideIV->getStartValue();
+  VPValue *Start = WideIV->getStartValue();
   VPValue *Step = WideIV->getStepValue();
   const InductionDescriptor &ID = WideIV->getInductionDescriptor();
   VPValue *EndValue = VectorTC;
@@ -1052,7 +1067,7 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   // Compute end values for all inductions.
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
-  VPBuilder VectorPHBuilder(VectorPH, VectorPH->begin());
+  VPBuilder VectorPHBuilder(VectorPH, VectorPH->getFirstNonPhi());
   DenseMap<VPValue *, VPValue *> EndValues;
   VPValue *ResumeTC =
       Plan.hasTailFolded() ? Plan.getTripCount() : &Plan.getVectorTripCount();
@@ -1195,6 +1210,13 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return X;
 
+  // (x && y) | !x -> !x || y
+  if (CanCreateNewRecipe &&
+      match(Def,
+            m_c_BinaryOr(m_OneUse(m_LogicalAnd(m_VPValue(X), m_VPValue(Y))),
+                         m_VPValue(Z, m_Not(m_Deferred(X))))))
+    return Builder.createLogicalOr(Z, Y);
+
   // select c, false, true -> not c
   VPValue *C;
   if (CanCreateNewRecipe &&
@@ -1280,6 +1302,12 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
       !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
 
   VPValue *A, *Z;
+
+  // A bitcast to the same type is a no-op.
+  if (match(Def, m_BitCast(m_VPValue(A))) &&
+      Def->getScalarType() == A->getScalarType())
+    return A;
+
   if (match(Def, m_Trunc(m_VPValue(Z, m_ZExtOrSExt(m_VPValue(A)))))) {
     Type *TruncTy = Def->getScalarType();
     Type *ATy = A->getScalarType();
@@ -2058,12 +2086,17 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
+  VPValue *Offset = nullptr;
   auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
   // Check if the branch condition compares the canonical IV increment (for main
   // loop), or the canonical IV increment plus an offset (for epilog loop).
-  if (match(Term, m_BranchOnCount(
-                      m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_LiveIn())),
-                      m_VPValue())) ||
+  bool MatchedCanIVInc =
+      match(Term,
+            m_BranchOnCount(
+                m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_VPValue(Offset))),
+                m_VPValue())) &&
+      (!Offset || Offset->isDefinedOutsideLoopRegions());
+  if (MatchedCanIVInc ||
       match(Term,
             m_BranchOnCond(m_Not(m_ExtractVectorForPart(
                 m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
@@ -2603,8 +2636,7 @@ void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,
 
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
-    const DenseMap<Value *, const SCEV *> &StridesMap,
-    const VPDominatorTree &VPDT) {
+    const SymbolicStrideMap &StridesMap, const VPDominatorTree &VPDT) {
   // Replace VPValues for known constant strides guaranteed by predicated scalar
   // evolution that are guaranteed to be guarded by the runtime checks; that is,
   // blocks dominated by the vector header.
@@ -2621,8 +2653,8 @@ void VPlanTransforms::replaceSymbolicStrides(
     return VPDT.dominates(Header, R->getParent());
   };
   ValueToSCEVMapTy RewriteMap;
-  for (const SCEV *Stride : StridesMap.values()) {
-    Value *StrideV = cast<SCEVUnknown>(Stride)->getValue();
+  for (const SCEVUnknown *Stride : StridesMap.values()) {
+    Value *StrideV = Stride->getValue();
     const APInt *StrideConst;
     const SCEV *StrideExpr = PSE.getSCEV(StrideV);
     if (!match(StrideExpr, m_scev_APInt(StrideConst)))
@@ -4214,7 +4246,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   VPInstruction *CanIVInc = vputils::findCanonicalIVIncrement(Plan);
   Type *CanIVTy = VectorLoop->getCanonicalIVType();
   VPBasicBlock *VectorPH = Plan.getVectorPreheader();
-  VPBuilder PHBuilder(VectorPH, VectorPH->begin());
+  VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
 
   VPValue *UF = &Plan.getUF();
   VPValue *Step;

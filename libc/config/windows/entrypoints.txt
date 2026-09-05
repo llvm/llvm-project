@@ -164,6 +164,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtbf16
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf128
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
@@ -187,6 +188,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsf128
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -214,6 +216,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaxl
     libc.src.math.fmaximum
     libc.src.math.fmaximumf
+    libc.src.math.fmaximumf128
     libc.src.math.fmaximuml
     libc.src.math.fmaximum_num
     libc.src.math.fmaximum_numf
@@ -226,6 +229,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_mag_numl
     libc.src.math.fminimum
     libc.src.math.fminimumf
+    libc.src.math.fminimumf128
     libc.src.math.fminimuml
     libc.src.math.fminimum_num
     libc.src.math.fminimum_numf

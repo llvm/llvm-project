@@ -890,7 +890,8 @@ define i64 @concat_icmp_v64i8_v32i8(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpcmpltb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpleb %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kmovq %k0, %rax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

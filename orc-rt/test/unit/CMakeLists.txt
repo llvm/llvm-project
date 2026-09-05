@@ -14,6 +14,7 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   support/AllocActionTest.cpp
   support/BitmaskEnumTest.cpp
+  support/CAPICompileTest.c
   support/CCallbackTest.cpp
   support/CallableTraitsHelperTest.cpp
   support/CompilerTest.cpp
@@ -66,7 +67,10 @@ add_orc_rt_unittest(CoreTests
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
   bedrock/sps/SimpleRemoteCATest.cpp
 
-  utils/CommandLineTest.cpp
+  bedrock/sys/CPUFeaturesTest.cpp
+  bedrock/sys/TargetTripleTest.cpp
+
+  tools/OptionParserTest.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )

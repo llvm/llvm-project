@@ -206,24 +206,14 @@ man_page_authors = "Maintained by the Clang / LLVM Team (<http://clang.llvm.org>
 command_guide_subpath = "CommandGuide"
 command_guide_path = os.path.join(basedir, command_guide_subpath)
 for name in os.listdir(command_guide_path):
-    # Ignore non-ReST files and the index page.
-    if not name.endswith(".rst") or name in ("index.rst",):
+    # Ignore non-Markdown files and the index page.
+    if not name.endswith(".md") or name in ("index.md",):
         continue
 
     # Otherwise, automatically extract the description.
     file_subpath = os.path.join(command_guide_subpath, name)
     with open(os.path.join(command_guide_path, name)) as f:
-        title = f.readline().rstrip("\n")
-        header = f.readline().rstrip("\n")
-
-        if len(header) != len(title):
-            print(
-                (
-                    "error: invalid header in %r (does not match title)"
-                    % (file_subpath,)
-                ),
-                file=sys.stderr,
-            )
+        title = f.readline().removeprefix("# ").rstrip("\n")
         if " - " not in title:
             print(
                 (
@@ -239,7 +229,7 @@ for name in os.listdir(command_guide_path):
         # Split the name out of the title.
         name, description = title.split(" - ", 1)
         man_pages.append(
-            (file_subpath.replace(".rst", ""), name, description, man_page_authors, 1)
+            (file_subpath.removesuffix(".md"), name, description, man_page_authors, 1)
         )
 
 
@@ -272,3 +262,8 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+# Pygments lexers are sometimes out of date or fail on custom/new Clang C++
+# attributes (e.g. [[clang::...]]). Suppress the warning so the build
+# doesn't abort under -W.
+suppress_warnings = ["misc.highlighting_failure"]

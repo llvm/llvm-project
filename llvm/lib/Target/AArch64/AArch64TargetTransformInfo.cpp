@@ -5750,12 +5750,16 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
-  // Scalable VFs will emit vector.[de]interleave intrinsics, and currently we
-  // only have lowering for power-of-2 factors.
-  // TODO: Add lowering for vector.[de]interleave3 intrinsics and support in
-  // InterleavedAccessPass for ld3/st3
-  if (VecTy->isScalableTy() && !isPowerOf2_32(Factor))
-    return InstructionCost::getInvalid();
+  // Scalable VFs emit vector.[de]interleave intrinsics, for which the target
+  // supports factors up to the maximum supported interleave factor.
+  if (VecTy->isScalableTy()) {
+    if (Factor > TLI->getMaxSupportedInterleaveFactor())
+      return InstructionCost::getInvalid();
+
+    if (Factor == 3 &&
+        DL.getTypeSizeInBits(VecTy).getKnownMinValue() != (3 * 128))
+      return InstructionCost::getInvalid();
+  }
 
   // Vectorization for masked interleaved accesses is only enabled for scalable
   // VF.
@@ -7230,7 +7234,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE,
                                        const DominatorTree &DT) {
-  const auto &Strides = DenseMap<Value *, const SCEV *>();
+  const auto &Strides = SymbolicStrideMap();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
     // consecutive and decreasing.

@@ -94,3 +94,27 @@ gpu.module @entry_kernel {
     gpu.return
   }
 }
+
+// -----
+// scf.while's "after" region argument is tied to no init operand, so its layout
+// is only recoverable when the before region forwards a region argument
+// unchanged. Here scf.condition forwards a freshly loaded value instead, so
+// there is nowhere to attribute the layout the after argument requires.
+gpu.module @test {
+  func.func @while_after_arg_not_pass_through(%src: memref<256x128xf32>, %cond: i1) {
+    %cst = arith.constant dense<0.000000e+00> : vector<256x128xf32>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
+    %0 = scf.while (%before = %cst) : (vector<256x128xf32>) -> vector<256x128xf32> {
+      %loaded = xegpu.load_nd %tdesc[0, 0] : !xegpu.tensor_desc<256x128xf32> -> vector<256x128xf32>
+      // expected-error@+2 {{unsupported region structure: the successor argument it feeds is not tied to an init operand, so its value must be passed through from predecessor region argument.}}
+      // expected-error@+1 {{Failed to update operation with the layout.}}
+      scf.condition(%cond) %loaded : vector<256x128xf32>
+    } do {
+    ^bb0(%after: vector<256x128xf32>):
+      xegpu.store_nd %after, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>}>
+        : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32>
+      scf.yield %after : vector<256x128xf32>
+    }
+    return
+  }
+}

@@ -52,8 +52,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"

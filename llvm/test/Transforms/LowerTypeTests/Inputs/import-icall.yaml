@@ -16,6 +16,10 @@ CfiFunctionDefs:
   GUID: 3388953113786086079
 - Name: does_not_exist
   GUID: 3974636296533007648
+- Name: imported_a
+  GUID: 3911367325508726226
+- Name: imported_b
+  GUID: 6352548445926811250
 CfiFunctionDecls:
 - Name: external
   GUID: 5224464028922159466

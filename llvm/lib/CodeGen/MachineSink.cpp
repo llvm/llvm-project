@@ -356,7 +356,8 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
         continue;
       if (MO.isUse()) {
         if (Reg.isPhysical() &&
-            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
+            (TII->isIgnorableUse(MI, MI.getOperandNo(&MO)) ||
+             (MRI && MRI->isConstantPhysReg(Reg))))
           continue;
         if (PI->modifiesRegister(Reg, TRI))
           return true;
@@ -462,7 +463,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     }
 
     if (Reg.isPhysical() && MO.isUse() &&
-        (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
+        (MRI->isConstantPhysReg(Reg) ||
+         TII->isIgnorableUse(MI, MI.getOperandNo(&MO))))
       continue;
 
     return false;
@@ -1327,7 +1329,7 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
     if (Reg.isPhysical()) {
       // Don't handle non-constant and non-ignorable physical register uses.
       if (MO.isUse() && !MRI->isConstantPhysReg(Reg) &&
-          !TII->isIgnorableUse(MO))
+          !TII->isIgnorableUse(MI, MI.getOperandNo(&MO)))
         return false;
       continue;
     }
@@ -1438,7 +1440,8 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
         // it could get allocated to something with a def during allocation.
-        if (!MRI->isConstantPhysReg(Reg) && !TII->isIgnorableUse(MO))
+        if (!MRI->isConstantPhysReg(Reg) &&
+            !TII->isIgnorableUse(MI, MI.getOperandNo(&MO)))
           return nullptr;
       } else if (!MO.isDead()) {
         // A def that isn't dead. We can't move it.

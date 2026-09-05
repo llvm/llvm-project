@@ -52,7 +52,7 @@ struct once_flag {
   once_flag(const once_flag&)            = delete;
   once_flag& operator=(const once_flag&) = delete;
 
-#if defined(_LIBCPP_ABI_MICROSOFT)
+#ifdef _WIN32
   typedef uintptr_t _State_type;
 #else
   typedef unsigned long _State_type;

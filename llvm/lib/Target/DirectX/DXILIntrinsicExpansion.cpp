@@ -714,8 +714,7 @@ static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
 
   IRBuilder<> Builder(Orig);
 
-  unsigned BitWidth = Ty->getScalarSizeInBits();
-  assert(llvm::isPowerOf2_32(BitWidth) &&
+  assert(llvm::isPowerOf2_32(Ty->getScalarSizeInBits()) &&
          "Can't use Mask to compute modulo and inverse");
 
   // Note: if (Shift % BitWidth) == 0 then (BitWidth - Shift) == BitWidth,

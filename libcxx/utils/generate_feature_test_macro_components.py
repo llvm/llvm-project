@@ -1561,6 +1561,13 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_type_order",
+            "values": {"c++26": 202506},
+            "headers": ["compare"],
+            "test_suite_guard": "__has_builtin(__builtin_type_order)",
+            "libcxx_guard": "__has_builtin(__builtin_type_order)",
+        },
+        {
             "name": "__cpp_lib_type_trait_variable_templates",
             "values": {"c++17": 201510},
             "headers": ["type_traits"],
@@ -1605,7 +1612,6 @@ feature_test_macros = [
                 "c++29": 202606,  # P3052R2 view_interface::at()
             },
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_void_t",

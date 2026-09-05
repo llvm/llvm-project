@@ -923,7 +923,7 @@ define float @test_simplify9(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float +inf
 ;
-  %retval = call float @llvm.pow.f32(float 0xFFF0000000000000, float 0.5)
+  %retval = call float @llvm.pow.f32(float -inf, float 0.5)
   ret float %retval
 }
 

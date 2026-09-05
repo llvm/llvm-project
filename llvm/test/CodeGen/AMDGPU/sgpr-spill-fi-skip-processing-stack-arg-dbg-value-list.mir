@@ -40,8 +40,11 @@ machineFunctionInfo:
     privateSegmentWaveByteOffset: { reg: '$sgpr9' }
 body:             |
   ; CHECK-LABEL: name: test
+  ; CHECK: machineMetadataNodes:
+  ; CHECK-DAG: '![[SP:[0-9]+]] = distinct !DISubprogram
+  ; CHECK-DAG: '![[VAR:[0-9]+]] = !DILocalVariable(name: "a", scope: ![[SP]],
   ; CHECK: bb.0:
-  ; CHECK:   DBG_VALUE_LIST <{{.*}}>, !DIExpression(), $noreg, 0, debug-location !DILocation(line: 10, column: 9, scope: <{{.*}}>)
+  ; CHECK:   DBG_VALUE_LIST ![[VAR]], !DIExpression(), $noreg, 0, debug-location !DILocation(line: 10, column: 9, scope: ![[SP]])
 
   bb.0:
     renamable $sgpr10 = IMPLICIT_DEF

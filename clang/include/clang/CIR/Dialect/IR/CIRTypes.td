@@ -402,6 +402,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CUDADeviceTextureType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceTextureType :
+    CIR_Type<"CUDADeviceTexture", "cuda_texture"> {
+  let summary = "CUDA device texture reference type";
+  let description = [{
+    `!cir.cuda_texture` represents a CUDA built-in texture reference in CIR.
+    The type preserves texture semantics at the CIR level and is lowered to
+    the target device representation during lowering to LLVM IR.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BoolType
 //===----------------------------------------------------------------------===//
 
@@ -1048,7 +1062,8 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType,
-  CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;
 

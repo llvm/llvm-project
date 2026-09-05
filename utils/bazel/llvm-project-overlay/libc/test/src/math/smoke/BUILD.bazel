@@ -150,6 +150,9 @@ math_test(
 math_test(
     name = "copysignf128",
     hdrs = ["CopySignTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -402,6 +405,9 @@ math_test(
 math_test(
     name = "fabsf128",
     hdrs = ["FAbsTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -568,6 +574,9 @@ math_test(
 math_test(
     name = "fmaximumf128",
     hdrs = ["FMaximumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -696,6 +705,9 @@ math_test(
 math_test(
     name = "fminimumf128",
     hdrs = ["FMinimumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

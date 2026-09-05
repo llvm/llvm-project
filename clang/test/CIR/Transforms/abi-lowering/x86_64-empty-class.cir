@@ -225,8 +225,8 @@ module attributes {
     cir.return %arg1 : !s32i
   }
 
-  // CHECK: cir.func{{.*}} @take_empty_big(%arg0: !cir.ptr<!rec_EBig> {llvm.align = 32 : i64, llvm.byval = !rec_EBig, llvm.noalias, llvm.noundef}, %arg1: !s32i) -> !s32i
-  // LLVM: define i32 @take_empty_big(ptr noalias noundef byval(%struct.EBig) align 32 %{{.*}}, i32 %{{.*}})
+  // CHECK: cir.func{{.*}} @take_empty_big(%arg0: !cir.ptr<!rec_EBig> {llvm.align = 32 : i64, llvm.byval = !rec_EBig, llvm.noundef}, %arg1: !s32i) -> !s32i
+  // LLVM: define i32 @take_empty_big(ptr noundef byval(%struct.EBig) align 32 %{{.*}}, i32 %{{.*}})
 
   // The same record returned uses sret at that alignment.
   cir.func @ret_empty_big() -> !rec_EBig {
