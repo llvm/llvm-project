@@ -138,9 +138,10 @@ bool mlir::omp::opInSharedDeviceContext(Operation &op) {
       return false;
   } else {
     auto declTargetIface = op.getParentOfType<omp::DeclareTargetInterface>();
-    if (!declTargetIface || !declTargetIface.isDeclareTarget() ||
-        declTargetIface.getDeclareTargetDeviceType() ==
-            omp::DeclareTargetDeviceType::host)
+    omp::DeclareTargetAttr declTargetAttr =
+        declTargetIface ? declTargetIface.getDeclareTarget() : nullptr;
+    if (!declTargetAttr ||
+        declTargetAttr.getDeviceType() == omp::DeclareTargetDeviceType::host)
       return false;
   }
   return true;

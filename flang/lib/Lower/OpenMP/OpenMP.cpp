@@ -1764,10 +1764,12 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       }
     }
 
-    if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
-      if (declareTargetOp.getDeclareTargetCaptureClause() ==
+    mlir::omp::DeclareTargetAttr declareTargetAttr =
+        declareTargetOp ? declareTargetOp.getDeclareTarget() : nullptr;
+    if (declareTargetAttr) {
+      if (declareTargetAttr.getCaptureClause() ==
               mlir::omp::DeclareTargetCaptureClause::link &&
-          declareTargetOp.getDeclareTargetDeviceType() !=
+          declareTargetAttr.getDeviceType() !=
               mlir::omp::DeclareTargetDeviceType::nohost) {
         mapFlag |= mlir::omp::ClauseMapFlags::to;
         mapFlag |= mlir::omp::ClauseMapFlags::from;
@@ -1847,8 +1849,9 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   // likely through implicit capture (usage in another declare target
   // function/subroutine). It should be marked as any if it has been assigned
   // both host and nohost, else we skip, as there is no change
-  if (declareTargetOp.isDeclareTarget()) {
-    if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
+  if (mlir::omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetOp.getDeclareTarget()) {
+    if (declareTargetAttr.getDeviceType() != deviceType)
       declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
                                        captureClause, automap,
                                        /*implicit=*/false);
