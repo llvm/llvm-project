@@ -117,6 +117,10 @@ public:
 
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+  // Whether this is a call that needs unimp. Populates \p StructSize with
+  // the size of the returned struct.
+  bool needsUnimp(const MachineInstr &MI, unsigned &StructSize) const;
 };
 
 }
