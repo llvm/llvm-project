@@ -8690,13 +8690,6 @@ private:
     return isCXXTypeId(Context, isAmbiguous);
   }
 
-  bool isNextCXXTypeId(TentativeCXXTypeIdContext Context, bool &IsAmbiguous);
-
-  bool isNextCXXTypeId(TentativeCXXTypeIdContext Context) {
-    bool IsAmbiguous;
-    return isNextCXXTypeId(Context, IsAmbiguous);
-  }
-
   /// TPResult - Used as the result value for functions whose purpose is to
   /// disambiguate C++ constructs by "tentatively parsing" them.
   enum class TPResult { True, False, Ambiguous, Error };
