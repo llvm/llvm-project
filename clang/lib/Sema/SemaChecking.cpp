@@ -6590,8 +6590,17 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     // with mask.  If so, verify that RHS is an integer vector type with the
     // same number of elts as lhs.
     if (NumArgs == 2) {
-      if (!RHSType->hasIntegerRepresentation() ||
-          RHSType->castAs<VectorType>()->getNumElements() != NumElements)
+      auto *RHSVecType = RHSType->castAs<VectorType>();
+      if (RHSVecType->getElementType()->isBooleanType() ||
+          !RHSVecType->getElementType()->isIntegerType()) {
+        return ExprError(Diag(TheCall->getBeginLoc(),
+                              diag::err_shufflevector_incompatible_mask)
+                         << RHSType
+                         << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                                        TheCall->getArg(1)->getEndLoc()));
+      }
+
+      if (RHSVecType->getNumElements() != NumElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
                               diag::err_vec_builtin_incompatible_vector)
                          << TheCall->getDirectCallee()

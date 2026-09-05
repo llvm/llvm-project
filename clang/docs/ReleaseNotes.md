@@ -483,7 +483,8 @@ features cannot lower the translation-unit ABI level;
   `int vla[n][0]`. (#GH28328)
 
 - Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
-  (#GH181730)
+
+- Clang now diagnoses passing wrong vector type as a mask to `__builtin_shufflevector`. (#GH218132)
 
 ### Improvements to Clang's time-trace
 
