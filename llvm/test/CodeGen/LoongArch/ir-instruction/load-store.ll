@@ -306,8 +306,8 @@ define i64 @ld_w(ptr %a) nounwind {
 define i64 @ld_d(ptr %a) nounwind {
 ; LA32RNOPIC-LABEL: ld_d:
 ; LA32RNOPIC:       # %bb.0:
-; LA32RNOPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32RNOPIC-NEXT:    ld.w $a2, $a0, 24
+; LA32RNOPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32RNOPIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32RNOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32RNOPIC-NEXT:    move $a0, $a2
@@ -315,8 +315,8 @@ define i64 @ld_d(ptr %a) nounwind {
 ;
 ; LA32SNOPIC-LABEL: ld_d:
 ; LA32SNOPIC:       # %bb.0:
-; LA32SNOPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32SNOPIC-NEXT:    ld.w $a2, $a0, 24
+; LA32SNOPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32SNOPIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32SNOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32SNOPIC-NEXT:    move $a0, $a2
@@ -324,8 +324,8 @@ define i64 @ld_d(ptr %a) nounwind {
 ;
 ; LA32RPIC-LABEL: ld_d:
 ; LA32RPIC:       # %bb.0:
-; LA32RPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32RPIC-NEXT:    ld.w $a2, $a0, 24
+; LA32RPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32RPIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32RPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32RPIC-NEXT:    move $a0, $a2
@@ -333,8 +333,8 @@ define i64 @ld_d(ptr %a) nounwind {
 ;
 ; LA32SPIC-LABEL: ld_d:
 ; LA32SPIC:       # %bb.0:
-; LA32SPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32SPIC-NEXT:    ld.w $a2, $a0, 24
+; LA32SPIC-NEXT:    ld.w $a1, $a0, 28
 ; LA32SPIC-NEXT:    ld.w $zero, $a0, 4
 ; LA32SPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32SPIC-NEXT:    move $a0, $a2
@@ -1219,8 +1219,8 @@ define i64 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 ; LA32RNOPIC:       # %bb.0:
 ; LA32RNOPIC-NEXT:    ld.bu $a1, $a0, 1
 ; LA32RNOPIC-NEXT:    ld.bu $a3, $a0, 2
-; LA32RNOPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32RNOPIC-NEXT:    ld.b $zero, $a0, 0
+; LA32RNOPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32RNOPIC-NEXT:    sltu $a0, $a3, $a1
 ; LA32RNOPIC-NEXT:    sub.w $a1, $zero, $a0
 ; LA32RNOPIC-NEXT:    move $a0, $a2
@@ -1230,8 +1230,8 @@ define i64 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 ; LA32SNOPIC:       # %bb.0:
 ; LA32SNOPIC-NEXT:    ld.bu $a1, $a0, 1
 ; LA32SNOPIC-NEXT:    ld.bu $a3, $a0, 2
-; LA32SNOPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32SNOPIC-NEXT:    ld.b $zero, $a0, 0
+; LA32SNOPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32SNOPIC-NEXT:    sltu $a0, $a3, $a1
 ; LA32SNOPIC-NEXT:    sub.w $a1, $zero, $a0
 ; LA32SNOPIC-NEXT:    move $a0, $a2
@@ -1241,8 +1241,8 @@ define i64 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 ; LA32RPIC:       # %bb.0:
 ; LA32RPIC-NEXT:    ld.bu $a1, $a0, 1
 ; LA32RPIC-NEXT:    ld.bu $a3, $a0, 2
-; LA32RPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32RPIC-NEXT:    ld.b $zero, $a0, 0
+; LA32RPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32RPIC-NEXT:    sltu $a0, $a3, $a1
 ; LA32RPIC-NEXT:    sub.w $a1, $zero, $a0
 ; LA32RPIC-NEXT:    move $a0, $a2
@@ -1252,8 +1252,8 @@ define i64 @load_sext_zext_anyext_i1(ptr %a) nounwind {
 ; LA32SPIC:       # %bb.0:
 ; LA32SPIC-NEXT:    ld.bu $a1, $a0, 1
 ; LA32SPIC-NEXT:    ld.bu $a3, $a0, 2
-; LA32SPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32SPIC-NEXT:    ld.b $zero, $a0, 0
+; LA32SPIC-NEXT:    sub.w $a2, $a3, $a1
 ; LA32SPIC-NEXT:    sltu $a0, $a3, $a1
 ; LA32SPIC-NEXT:    sub.w $a1, $zero, $a0
 ; LA32SPIC-NEXT:    move $a0, $a2
@@ -1354,8 +1354,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA32RNOPIC:       # %bb.0:
 ; LA32RNOPIC-NEXT:    lu12i.w $a3, -136485
 ; LA32RNOPIC-NEXT:    ori $a4, $a3, 3823
-; LA32RNOPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32RNOPIC-NEXT:    ori $a5, $a3, 3827
+; LA32RNOPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32RNOPIC-NEXT:    ld.w $a3, $a5, 0
 ; LA32RNOPIC-NEXT:    st.w $a0, $a4, 0
 ; LA32RNOPIC-NEXT:    st.w $a1, $a5, 0
@@ -1367,8 +1367,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA32SNOPIC:       # %bb.0:
 ; LA32SNOPIC-NEXT:    lu12i.w $a3, -136485
 ; LA32SNOPIC-NEXT:    ori $a4, $a3, 3823
-; LA32SNOPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32SNOPIC-NEXT:    ori $a5, $a3, 3827
+; LA32SNOPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32SNOPIC-NEXT:    ld.w $a3, $a5, 0
 ; LA32SNOPIC-NEXT:    st.w $a0, $a4, 0
 ; LA32SNOPIC-NEXT:    st.w $a1, $a5, 0
@@ -1380,8 +1380,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA32RPIC:       # %bb.0:
 ; LA32RPIC-NEXT:    lu12i.w $a3, -136485
 ; LA32RPIC-NEXT:    ori $a4, $a3, 3823
-; LA32RPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32RPIC-NEXT:    ori $a5, $a3, 3827
+; LA32RPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32RPIC-NEXT:    ld.w $a3, $a5, 0
 ; LA32RPIC-NEXT:    st.w $a0, $a4, 0
 ; LA32RPIC-NEXT:    st.w $a1, $a5, 0
@@ -1393,8 +1393,8 @@ define i64 @ld_sd_constant(i64 %a) nounwind {
 ; LA32SPIC:       # %bb.0:
 ; LA32SPIC-NEXT:    lu12i.w $a3, -136485
 ; LA32SPIC-NEXT:    ori $a4, $a3, 3823
-; LA32SPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32SPIC-NEXT:    ori $a5, $a3, 3827
+; LA32SPIC-NEXT:    ld.w $a2, $a4, 0
 ; LA32SPIC-NEXT:    ld.w $a3, $a5, 0
 ; LA32SPIC-NEXT:    st.w $a0, $a4, 0
 ; LA32SPIC-NEXT:    st.w $a1, $a5, 0

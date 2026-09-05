@@ -70,16 +70,16 @@ define i16 @test_ctlz_i16(i16 %a) nounwind {
 ; LA32R-NEXT:    srli.w $a2, $a2, 2
 ; LA32R-NEXT:    or $a0, $a0, $a2
 ; LA32R-NEXT:    ori $a2, $a1, 4080
+; LA32R-NEXT:    ori $a1, $a1, 3840
 ; LA32R-NEXT:    and $a2, $a0, $a2
 ; LA32R-NEXT:    srli.w $a2, $a2, 4
 ; LA32R-NEXT:    or $a0, $a0, $a2
-; LA32R-NEXT:    ori $a1, $a1, 3840
+; LA32R-NEXT:    lu12i.w $a2, 5
 ; LA32R-NEXT:    and $a1, $a0, $a1
+; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    srli.w $a1, $a1, 8
 ; LA32R-NEXT:    nor $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
-; LA32R-NEXT:    lu12i.w $a2, 5
-; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
 ; LA32R-NEXT:    lu12i.w $a1, 3
@@ -117,7 +117,9 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ; LA32R-LABEL: test_ctlz_i32:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
+; LA32R-NEXT:    lu12i.w $a2, 349525
 ; LA32R-NEXT:    or $a0, $a0, $a1
+; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    srli.w $a1, $a0, 2
 ; LA32R-NEXT:    or $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 4
@@ -127,8 +129,6 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ; LA32R-NEXT:    srli.w $a1, $a0, 16
 ; LA32R-NEXT:    nor $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
-; LA32R-NEXT:    lu12i.w $a2, 349525
-; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
 ; LA32R-NEXT:    lu12i.w $a1, 209715
@@ -165,13 +165,13 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_ctlz_i64:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 349525
+; LA32R-NEXT:    lu12i.w $a3, 4112
 ; LA32R-NEXT:    ori $a5, $a2, 1365
 ; LA32R-NEXT:    lu12i.w $a2, 209715
+; LA32R-NEXT:    ori $a3, $a3, 257
 ; LA32R-NEXT:    ori $a4, $a2, 819
 ; LA32R-NEXT:    lu12i.w $a2, 61680
 ; LA32R-NEXT:    ori $a2, $a2, 3855
-; LA32R-NEXT:    lu12i.w $a3, 4112
-; LA32R-NEXT:    ori $a3, $a3, 257
 ; LA32R-NEXT:    bne $a1, $zero, .LBB3_2
 ; LA32R-NEXT:  # %bb.1:
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
@@ -193,11 +193,11 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    add.w $a0, $a0, $a1
+; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    and $a0, $a0, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a3
 ; LA32R-NEXT:    srli.w $a0, $a0, 24
 ; LA32R-NEXT:    addi.w $a0, $a0, 32
-; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB3_2:
 ; LA32R-NEXT:    srli.w $a0, $a1, 1
@@ -219,19 +219,19 @@ define i64 @test_ctlz_i64(i64 %a) nounwind {
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    add.w $a0, $a0, $a1
+; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    and $a0, $a0, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a3
 ; LA32R-NEXT:    srli.w $a0, $a0, 24
-; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: test_ctlz_i64:
 ; LA32S:       # %bb.0:
+; LA32S-NEXT:    clz.w $a0, $a0
 ; LA32S-NEXT:    sltu $a2, $zero, $a1
 ; LA32S-NEXT:    clz.w $a1, $a1
-; LA32S-NEXT:    maskeqz $a1, $a1, $a2
-; LA32S-NEXT:    clz.w $a0, $a0
 ; LA32S-NEXT:    addi.w $a0, $a0, 32
+; LA32S-NEXT:    maskeqz $a1, $a1, $a2
 ; LA32S-NEXT:    masknez $a0, $a0, $a2
 ; LA32S-NEXT:    or $a0, $a1, $a0
 ; LA32S-NEXT:    move $a1, $zero
@@ -299,16 +299,16 @@ define i16 @test_not_ctlz_i16(i16 %a) nounwind {
 ; LA32R-NEXT:    srli.w $a2, $a2, 2
 ; LA32R-NEXT:    or $a0, $a0, $a2
 ; LA32R-NEXT:    ori $a2, $a1, 4080
+; LA32R-NEXT:    ori $a1, $a1, 3840
 ; LA32R-NEXT:    and $a2, $a0, $a2
 ; LA32R-NEXT:    srli.w $a2, $a2, 4
 ; LA32R-NEXT:    or $a0, $a0, $a2
-; LA32R-NEXT:    ori $a1, $a1, 3840
+; LA32R-NEXT:    lu12i.w $a2, 5
 ; LA32R-NEXT:    and $a1, $a0, $a1
+; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    srli.w $a1, $a1, 8
 ; LA32R-NEXT:    nor $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
-; LA32R-NEXT:    lu12i.w $a2, 5
-; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
 ; LA32R-NEXT:    lu12i.w $a1, 3
@@ -345,7 +345,9 @@ define i32 @test_not_ctlz_i32(i32 %a) nounwind {
 ; LA32R-LABEL: test_not_ctlz_i32:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    nor $a1, $a0, $zero
+; LA32R-NEXT:    lu12i.w $a2, 349525
 ; LA32R-NEXT:    srli.w $a1, $a1, 1
+; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    orn $a0, $a1, $a0
 ; LA32R-NEXT:    srli.w $a1, $a0, 2
 ; LA32R-NEXT:    or $a0, $a0, $a1
@@ -356,8 +358,6 @@ define i32 @test_not_ctlz_i32(i32 %a) nounwind {
 ; LA32R-NEXT:    srli.w $a1, $a0, 16
 ; LA32R-NEXT:    nor $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
-; LA32R-NEXT:    lu12i.w $a2, 349525
-; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
 ; LA32R-NEXT:    lu12i.w $a1, 209715
@@ -394,15 +394,15 @@ define i32 @test_not_ctlz_i32(i32 %a) nounwind {
 define i64 @test_not_ctlz_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_not_ctlz_i64:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    nor $a6, $a1, $zero
 ; LA32R-NEXT:    lu12i.w $a2, 349525
+; LA32R-NEXT:    lu12i.w $a3, 4112
+; LA32R-NEXT:    nor $a6, $a1, $zero
 ; LA32R-NEXT:    ori $a5, $a2, 1365
 ; LA32R-NEXT:    lu12i.w $a2, 209715
+; LA32R-NEXT:    ori $a3, $a3, 257
 ; LA32R-NEXT:    ori $a4, $a2, 819
 ; LA32R-NEXT:    lu12i.w $a2, 61680
 ; LA32R-NEXT:    ori $a2, $a2, 3855
-; LA32R-NEXT:    lu12i.w $a3, 4112
-; LA32R-NEXT:    ori $a3, $a3, 257
 ; LA32R-NEXT:    bne $a6, $zero, .LBB7_2
 ; LA32R-NEXT:  # %bb.1:
 ; LA32R-NEXT:    nor $a1, $a0, $zero
@@ -425,11 +425,11 @@ define i64 @test_not_ctlz_i64(i64 %a) nounwind {
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    add.w $a0, $a0, $a1
+; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    and $a0, $a0, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a3
 ; LA32R-NEXT:    srli.w $a0, $a0, 24
 ; LA32R-NEXT:    addi.w $a0, $a0, 32
-; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB7_2:
 ; LA32R-NEXT:    srli.w $a0, $a6, 1
@@ -451,20 +451,20 @@ define i64 @test_not_ctlz_i64(i64 %a) nounwind {
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    add.w $a0, $a0, $a1
+; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    and $a0, $a0, $a2
 ; LA32R-NEXT:    mul.w $a0, $a0, $a3
 ; LA32R-NEXT:    srli.w $a0, $a0, 24
-; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: test_not_ctlz_i64:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    nor $a2, $a1, $zero
-; LA32S-NEXT:    sltu $a2, $zero, $a2
 ; LA32S-NEXT:    clo.w $a0, $a0
+; LA32S-NEXT:    clo.w $a1, $a1
+; LA32S-NEXT:    sltu $a2, $zero, $a2
 ; LA32S-NEXT:    addi.w $a0, $a0, 32
 ; LA32S-NEXT:    masknez $a0, $a0, $a2
-; LA32S-NEXT:    clo.w $a1, $a1
 ; LA32S-NEXT:    maskeqz $a1, $a1, $a2
 ; LA32S-NEXT:    or $a0, $a1, $a0
 ; LA32S-NEXT:    move $a1, $zero
@@ -521,8 +521,8 @@ define i8 @test_ctpop_i8(i8 %a) nounwind {
 define i16 @test_ctpop_i16(i16 %a) nounwind {
 ; LA32R-LABEL: test_ctpop_i16:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 5
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
@@ -542,8 +542,8 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 ;
 ; LA32S-LABEL: test_ctpop_i16:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    srli.w $a1, $a0, 1
 ; LA32S-NEXT:    lu12i.w $a2, 5
+; LA32S-NEXT:    srli.w $a1, $a0, 1
 ; LA32S-NEXT:    ori $a2, $a2, 1365
 ; LA32S-NEXT:    and $a1, $a1, $a2
 ; LA32S-NEXT:    sub.w $a0, $a0, $a1
@@ -573,8 +573,8 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 define i32 @test_ctpop_i32(i32 %a) nounwind {
 ; LA32R-LABEL: test_ctpop_i32:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 349525
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    ori $a2, $a2, 1365
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
@@ -597,8 +597,8 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ;
 ; LA32S-LABEL: test_ctpop_i32:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    srli.w $a1, $a0, 1
 ; LA32S-NEXT:    lu12i.w $a2, 349525
+; LA32S-NEXT:    srli.w $a1, $a0, 1
 ; LA32S-NEXT:    ori $a2, $a2, 1365
 ; LA32S-NEXT:    and $a1, $a1, $a2
 ; LA32S-NEXT:    sub.w $a0, $a0, $a1
@@ -632,37 +632,37 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 define i64 @test_ctpop_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_ctpop_i64:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a2, $a1, 1
 ; LA32R-NEXT:    lu12i.w $a3, 349525
+; LA32R-NEXT:    srli.w $a2, $a1, 1
+; LA32R-NEXT:    srli.w $a6, $a0, 1
+; LA32R-NEXT:    lu12i.w $a5, 4112
 ; LA32R-NEXT:    ori $a3, $a3, 1365
+; LA32R-NEXT:    ori $a5, $a5, 257
 ; LA32R-NEXT:    and $a2, $a2, $a3
+; LA32R-NEXT:    and $a3, $a6, $a3
 ; LA32R-NEXT:    sub.w $a1, $a1, $a2
 ; LA32R-NEXT:    lu12i.w $a2, 209715
+; LA32R-NEXT:    sub.w $a0, $a0, $a3
 ; LA32R-NEXT:    ori $a2, $a2, 819
 ; LA32R-NEXT:    and $a4, $a1, $a2
 ; LA32R-NEXT:    srli.w $a1, $a1, 2
-; LA32R-NEXT:    and $a1, $a1, $a2
-; LA32R-NEXT:    add.w $a1, $a4, $a1
-; LA32R-NEXT:    srli.w $a4, $a1, 4
-; LA32R-NEXT:    add.w $a1, $a1, $a4
-; LA32R-NEXT:    lu12i.w $a4, 61680
-; LA32R-NEXT:    ori $a4, $a4, 3855
-; LA32R-NEXT:    and $a1, $a1, $a4
-; LA32R-NEXT:    lu12i.w $a5, 4112
-; LA32R-NEXT:    ori $a5, $a5, 257
-; LA32R-NEXT:    mul.w $a1, $a1, $a5
-; LA32R-NEXT:    srli.w $a1, $a1, 24
-; LA32R-NEXT:    srli.w $a6, $a0, 1
-; LA32R-NEXT:    and $a3, $a6, $a3
-; LA32R-NEXT:    sub.w $a0, $a0, $a3
 ; LA32R-NEXT:    and $a3, $a0, $a2
 ; LA32R-NEXT:    srli.w $a0, $a0, 2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    add.w $a1, $a4, $a1
 ; LA32R-NEXT:    add.w $a0, $a3, $a0
+; LA32R-NEXT:    srli.w $a4, $a1, 4
 ; LA32R-NEXT:    srli.w $a2, $a0, 4
+; LA32R-NEXT:    add.w $a1, $a1, $a4
+; LA32R-NEXT:    lu12i.w $a4, 61680
 ; LA32R-NEXT:    add.w $a0, $a0, $a2
+; LA32R-NEXT:    ori $a4, $a4, 3855
+; LA32R-NEXT:    and $a1, $a1, $a4
 ; LA32R-NEXT:    and $a0, $a0, $a4
+; LA32R-NEXT:    mul.w $a1, $a1, $a5
 ; LA32R-NEXT:    mul.w $a0, $a0, $a5
+; LA32R-NEXT:    srli.w $a1, $a1, 24
 ; LA32R-NEXT:    srli.w $a0, $a0, 24
 ; LA32R-NEXT:    add.w $a0, $a0, $a1
 ; LA32R-NEXT:    move $a1, $zero
@@ -670,37 +670,37 @@ define i64 @test_ctpop_i64(i64 %a) nounwind {
 ;
 ; LA32S-LABEL: test_ctpop_i64:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    srli.w $a2, $a1, 1
 ; LA32S-NEXT:    lu12i.w $a3, 349525
+; LA32S-NEXT:    srli.w $a2, $a1, 1
+; LA32S-NEXT:    srli.w $a6, $a0, 1
+; LA32S-NEXT:    lu12i.w $a5, 4112
 ; LA32S-NEXT:    ori $a3, $a3, 1365
+; LA32S-NEXT:    ori $a5, $a5, 257
 ; LA32S-NEXT:    and $a2, $a2, $a3
+; LA32S-NEXT:    and $a3, $a6, $a3
 ; LA32S-NEXT:    sub.w $a1, $a1, $a2
 ; LA32S-NEXT:    lu12i.w $a2, 209715
+; LA32S-NEXT:    sub.w $a0, $a0, $a3
 ; LA32S-NEXT:    ori $a2, $a2, 819
 ; LA32S-NEXT:    and $a4, $a1, $a2
 ; LA32S-NEXT:    srli.w $a1, $a1, 2
-; LA32S-NEXT:    and $a1, $a1, $a2
-; LA32S-NEXT:    add.w $a1, $a4, $a1
-; LA32S-NEXT:    srli.w $a4, $a1, 4
-; LA32S-NEXT:    add.w $a1, $a1, $a4
-; LA32S-NEXT:    lu12i.w $a4, 61680
-; LA32S-NEXT:    ori $a4, $a4, 3855
-; LA32S-NEXT:    and $a1, $a1, $a4
-; LA32S-NEXT:    lu12i.w $a5, 4112
-; LA32S-NEXT:    ori $a5, $a5, 257
-; LA32S-NEXT:    mul.w $a1, $a1, $a5
-; LA32S-NEXT:    srli.w $a1, $a1, 24
-; LA32S-NEXT:    srli.w $a6, $a0, 1
-; LA32S-NEXT:    and $a3, $a6, $a3
-; LA32S-NEXT:    sub.w $a0, $a0, $a3
 ; LA32S-NEXT:    and $a3, $a0, $a2
 ; LA32S-NEXT:    srli.w $a0, $a0, 2
+; LA32S-NEXT:    and $a1, $a1, $a2
 ; LA32S-NEXT:    and $a0, $a0, $a2
+; LA32S-NEXT:    add.w $a1, $a4, $a1
 ; LA32S-NEXT:    add.w $a0, $a3, $a0
+; LA32S-NEXT:    srli.w $a4, $a1, 4
 ; LA32S-NEXT:    srli.w $a2, $a0, 4
+; LA32S-NEXT:    add.w $a1, $a1, $a4
+; LA32S-NEXT:    lu12i.w $a4, 61680
 ; LA32S-NEXT:    add.w $a0, $a0, $a2
+; LA32S-NEXT:    ori $a4, $a4, 3855
+; LA32S-NEXT:    and $a1, $a1, $a4
 ; LA32S-NEXT:    and $a0, $a0, $a4
+; LA32S-NEXT:    mul.w $a1, $a1, $a5
 ; LA32S-NEXT:    mul.w $a0, $a0, $a5
+; LA32S-NEXT:    srli.w $a1, $a1, 24
 ; LA32S-NEXT:    srli.w $a0, $a0, 24
 ; LA32S-NEXT:    add.w $a0, $a0, $a1
 ; LA32S-NEXT:    move $a1, $zero
@@ -752,10 +752,10 @@ define i16 @test_cttz_i16(i16 %a) nounwind {
 ; LA32R-LABEL: test_cttz_i16:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    addi.w $a1, $a0, -1
-; LA32R-NEXT:    andn $a0, $a1, $a0
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 5
+; LA32R-NEXT:    andn $a0, $a1, $a0
 ; LA32R-NEXT:    ori $a2, $a2, 1365
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
 ; LA32R-NEXT:    lu12i.w $a1, 3
@@ -802,9 +802,9 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
 ; LA32R-NEXT:    lu12i.w $a1, 30667
 ; LA32R-NEXT:    ori $a1, $a1, 1329
 ; LA32R-NEXT:    mul.w $a0, $a0, $a1
-; LA32R-NEXT:    srli.w $a0, $a0, 27
 ; LA32R-NEXT:  .Lpcadd_hi0:
 ; LA32R-NEXT:    pcaddu12i $a1, %pcadd_hi20(.LCPI14_0)
+; LA32R-NEXT:    srli.w $a0, $a0, 27
 ; LA32R-NEXT:    addi.w $a1, $a1, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    ld.bu $a0, $a0, 0
@@ -827,9 +827,9 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_cttz_i64:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 30667
-; LA32R-NEXT:    ori $a2, $a2, 1329
 ; LA32R-NEXT:  .Lpcadd_hi1:
 ; LA32R-NEXT:    pcaddu12i $a3, %pcadd_hi20(.LCPI15_0)
+; LA32R-NEXT:    ori $a2, $a2, 1329
 ; LA32R-NEXT:    addi.w $a3, $a3, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32R-NEXT:    bne $a1, $zero, .LBB15_3
 ; LA32R-NEXT:  # %bb.1:
@@ -838,11 +838,11 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; LA32R-NEXT:  .LBB15_2:
 ; LA32R-NEXT:    sub.w $a1, $zero, $a0
 ; LA32R-NEXT:    and $a0, $a0, $a1
+; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    mul.w $a0, $a0, $a2
 ; LA32R-NEXT:    srli.w $a0, $a0, 27
 ; LA32R-NEXT:    add.w $a0, $a3, $a0
 ; LA32R-NEXT:    ld.bu $a0, $a0, 0
-; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB15_3:
 ; LA32R-NEXT:    sub.w $a4, $zero, $a1
@@ -859,11 +859,11 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ;
 ; LA32S-LABEL: test_cttz_i64:
 ; LA32S:       # %bb.0:
+; LA32S-NEXT:    ctz.w $a1, $a1
 ; LA32S-NEXT:    sltu $a2, $zero, $a0
 ; LA32S-NEXT:    ctz.w $a0, $a0
-; LA32S-NEXT:    maskeqz $a0, $a0, $a2
-; LA32S-NEXT:    ctz.w $a1, $a1
 ; LA32S-NEXT:    addi.w $a1, $a1, 32
+; LA32S-NEXT:    maskeqz $a0, $a0, $a2
 ; LA32S-NEXT:    masknez $a1, $a1, $a2
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    move $a1, $zero
@@ -914,10 +914,10 @@ define i16 @test_not_cttz_i16(i16 %a) nounwind {
 ; LA32R-LABEL: test_not_cttz_i16:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    addi.w $a1, $a0, 1
-; LA32R-NEXT:    andn $a0, $a0, $a1
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 5
+; LA32R-NEXT:    andn $a0, $a0, $a1
 ; LA32R-NEXT:    ori $a2, $a2, 1365
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
 ; LA32R-NEXT:    lu12i.w $a1, 3
@@ -964,9 +964,9 @@ define i32 @test_not_cttz_i32(i32 %a) nounwind {
 ; LA32R-NEXT:    lu12i.w $a1, 30667
 ; LA32R-NEXT:    ori $a1, $a1, 1329
 ; LA32R-NEXT:    mul.w $a0, $a0, $a1
-; LA32R-NEXT:    srli.w $a0, $a0, 27
 ; LA32R-NEXT:  .Lpcadd_hi2:
 ; LA32R-NEXT:    pcaddu12i $a1, %pcadd_hi20(.LCPI18_0)
+; LA32R-NEXT:    srli.w $a0, $a0, 27
 ; LA32R-NEXT:    addi.w $a1, $a1, %pcadd_lo12(.Lpcadd_hi2)
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    ld.bu $a0, $a0, 0
@@ -989,12 +989,12 @@ define i32 @test_not_cttz_i32(i32 %a) nounwind {
 define i64 @test_not_cttz_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_not_cttz_i64:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    nor $a5, $a1, $zero
-; LA32R-NEXT:    nor $a2, $a0, $zero
 ; LA32R-NEXT:    lu12i.w $a3, 30667
-; LA32R-NEXT:    ori $a3, $a3, 1329
 ; LA32R-NEXT:  .Lpcadd_hi3:
 ; LA32R-NEXT:    pcaddu12i $a4, %pcadd_hi20(.LCPI19_0)
+; LA32R-NEXT:    nor $a5, $a1, $zero
+; LA32R-NEXT:    nor $a2, $a0, $zero
+; LA32R-NEXT:    ori $a3, $a3, 1329
 ; LA32R-NEXT:    addi.w $a4, $a4, %pcadd_lo12(.Lpcadd_hi3)
 ; LA32R-NEXT:    bne $a5, $zero, .LBB19_3
 ; LA32R-NEXT:  # %bb.1:
@@ -1003,11 +1003,11 @@ define i64 @test_not_cttz_i64(i64 %a) nounwind {
 ; LA32R-NEXT:  .LBB19_2:
 ; LA32R-NEXT:    sub.w $a1, $zero, $a2
 ; LA32R-NEXT:    andn $a0, $a1, $a0
+; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    mul.w $a0, $a0, $a3
 ; LA32R-NEXT:    srli.w $a0, $a0, 27
 ; LA32R-NEXT:    add.w $a0, $a4, $a0
 ; LA32R-NEXT:    ld.bu $a0, $a0, 0
-; LA32R-NEXT:    move $a1, $zero
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB19_3:
 ; LA32R-NEXT:    sub.w $a5, $zero, $a5
@@ -1025,11 +1025,11 @@ define i64 @test_not_cttz_i64(i64 %a) nounwind {
 ; LA32S-LABEL: test_not_cttz_i64:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    nor $a2, $a0, $zero
-; LA32S-NEXT:    sltu $a2, $zero, $a2
 ; LA32S-NEXT:    cto.w $a1, $a1
+; LA32S-NEXT:    cto.w $a0, $a0
+; LA32S-NEXT:    sltu $a2, $zero, $a2
 ; LA32S-NEXT:    addi.w $a1, $a1, 32
 ; LA32S-NEXT:    masknez $a1, $a1, $a2
-; LA32S-NEXT:    cto.w $a0, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a0, $a2
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    move $a1, $zero

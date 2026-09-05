@@ -95,34 +95,34 @@ define i64 @lshr_i64(i64 %x, i64 %y) {
 ; LA32R-NEXT:    srl.w $a0, $a1, $a3
 ; LA32R-NEXT:    b .LBB4_3
 ; LA32R-NEXT:  .LBB4_2:
-; LA32R-NEXT:    srl.w $a0, $a0, $a2
 ; LA32R-NEXT:    xori $a4, $a2, 31
 ; LA32R-NEXT:    slli.w $a5, $a1, 1
+; LA32R-NEXT:    srl.w $a0, $a0, $a2
 ; LA32R-NEXT:    sll.w $a4, $a5, $a4
 ; LA32R-NEXT:    or $a0, $a0, $a4
 ; LA32R-NEXT:  .LBB4_3:
 ; LA32R-NEXT:    slti $a3, $a3, 0
-; LA32R-NEXT:    sub.w $a3, $zero, $a3
 ; LA32R-NEXT:    srl.w $a1, $a1, $a2
+; LA32R-NEXT:    sub.w $a3, $zero, $a3
 ; LA32R-NEXT:    and $a1, $a3, $a1
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: lshr_i64:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    srl.w $a0, $a0, $a2
 ; LA32S-NEXT:    xori $a3, $a2, 31
 ; LA32S-NEXT:    slli.w $a4, $a1, 1
+; LA32S-NEXT:    srl.w $a0, $a0, $a2
 ; LA32S-NEXT:    sll.w $a3, $a4, $a3
 ; LA32S-NEXT:    or $a0, $a0, $a3
 ; LA32S-NEXT:    addi.w $a3, $a2, -32
 ; LA32S-NEXT:    slti $a4, $a3, 0
-; LA32S-NEXT:    maskeqz $a0, $a0, $a4
 ; LA32S-NEXT:    srl.w $a5, $a1, $a3
-; LA32S-NEXT:    masknez $a4, $a5, $a4
-; LA32S-NEXT:    or $a0, $a0, $a4
 ; LA32S-NEXT:    srl.w $a1, $a1, $a2
 ; LA32S-NEXT:    srai.w $a2, $a3, 31
+; LA32S-NEXT:    maskeqz $a0, $a0, $a4
+; LA32S-NEXT:    masknez $a4, $a5, $a4
 ; LA32S-NEXT:    and $a1, $a2, $a1
+; LA32S-NEXT:    or $a0, $a0, $a4
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: lshr_i64:
@@ -215,16 +215,16 @@ define i64 @lshr_i64_3(i64 %x) {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    slli.w $a2, $a1, 29
 ; LA32R-NEXT:    srli.w $a0, $a0, 3
-; LA32R-NEXT:    or $a0, $a0, $a2
 ; LA32R-NEXT:    srli.w $a1, $a1, 3
+; LA32R-NEXT:    or $a0, $a0, $a2
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: lshr_i64_3:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    slli.w $a2, $a1, 29
 ; LA32S-NEXT:    srli.w $a0, $a0, 3
-; LA32S-NEXT:    or $a0, $a0, $a2
 ; LA32S-NEXT:    srli.w $a1, $a1, 3
+; LA32S-NEXT:    or $a0, $a0, $a2
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: lshr_i64_3:

@@ -7,8 +7,8 @@ define <32 x i8> @test_i8(<32 x i8> %shuffle) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vrepli.b $vr2, -85
 ; CHECK-NEXT:    vmuh.bu $vr0, $vr0, $vr2
-; CHECK-NEXT:    vsrli.b $vr0, $vr0, 1
 ; CHECK-NEXT:    vmuh.bu $vr1, $vr1, $vr2
+; CHECK-NEXT:    vsrli.b $vr0, $vr0, 1
 ; CHECK-NEXT:    vsrli.b $vr1, $vr1, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -23,8 +23,8 @@ define <16 x i16> @test_i16(<16 x i16> %shuffle) {
 ; CHECK-NEXT:    ori $a0, $a0, 2731
 ; CHECK-NEXT:    vreplgr2vr.h $vr2, $a0
 ; CHECK-NEXT:    vmuh.hu $vr0, $vr0, $vr2
-; CHECK-NEXT:    vsrli.h $vr0, $vr0, 1
 ; CHECK-NEXT:    vmuh.hu $vr1, $vr1, $vr2
+; CHECK-NEXT:    vsrli.h $vr0, $vr0, 1
 ; CHECK-NEXT:    vsrli.h $vr1, $vr1, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -39,8 +39,8 @@ define <8 x i32> @test_i32(<8 x i32> %shuffle) {
 ; CHECK-NEXT:    ori $a0, $a0, 2731
 ; CHECK-NEXT:    vreplgr2vr.w $vr2, $a0
 ; CHECK-NEXT:    vmuh.wu $vr0, $vr0, $vr2
-; CHECK-NEXT:    vsrli.w $vr0, $vr0, 1
 ; CHECK-NEXT:    vmuh.wu $vr1, $vr1, $vr2
+; CHECK-NEXT:    vsrli.w $vr0, $vr0, 1
 ; CHECK-NEXT:    vsrli.w $vr1, $vr1, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -54,8 +54,8 @@ define <4 x i64> @test_i64(<4 x i64> %shuffle) {
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
 ; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI3_0)
 ; LA32-NEXT:    vmuh.du $vr0, $vr0, $vr2
-; LA32-NEXT:    vsrli.d $vr0, $vr0, 1
 ; LA32-NEXT:    vmuh.du $vr1, $vr1, $vr2
+; LA32-NEXT:    vsrli.d $vr0, $vr0, 1
 ; LA32-NEXT:    vsrli.d $vr1, $vr1, 1
 ; LA32-NEXT:    ret
 ;
@@ -67,8 +67,8 @@ define <4 x i64> @test_i64(<4 x i64> %shuffle) {
 ; LA64-NEXT:    lu52i.d $a0, $a0, -1366
 ; LA64-NEXT:    vreplgr2vr.d $vr2, $a0
 ; LA64-NEXT:    vmuh.du $vr0, $vr0, $vr2
-; LA64-NEXT:    vsrli.d $vr0, $vr0, 1
 ; LA64-NEXT:    vmuh.du $vr1, $vr1, $vr2
+; LA64-NEXT:    vsrli.d $vr0, $vr0, 1
 ; LA64-NEXT:    vsrli.d $vr1, $vr1, 1
 ; LA64-NEXT:    ret
 entry:

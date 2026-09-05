@@ -209,15 +209,15 @@ define void @vec_reduce_smin_v2i64(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_smin_v2i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 0
 ; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 3
 ; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 1
-; LA32-NEXT:    slt $a5, $a4, $a3
+; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
+; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 0
 ; LA32-NEXT:    xor $a6, $a4, $a3
+; LA32-NEXT:    slt $a5, $a4, $a3
+; LA32-NEXT:    sltu $a7, $a2, $a0
 ; LA32-NEXT:    sltui $a6, $a6, 1
 ; LA32-NEXT:    masknez $a5, $a5, $a6
-; LA32-NEXT:    sltu $a7, $a2, $a0
 ; LA32-NEXT:    maskeqz $a6, $a7, $a6
 ; LA32-NEXT:    or $a5, $a6, $a5
 ; LA32-NEXT:    masknez $a0, $a0, $a5
@@ -226,8 +226,8 @@ define void @vec_reduce_smin_v2i64(ptr %src, ptr %dst) nounwind {
 ; LA32-NEXT:    masknez $a2, $a3, $a5
 ; LA32-NEXT:    maskeqz $a3, $a4, $a5
 ; LA32-NEXT:    or $a2, $a3, $a2
-; LA32-NEXT:    st.w $a2, $a1, 4
 ; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    st.w $a2, $a1, 4
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vec_reduce_smin_v2i64:

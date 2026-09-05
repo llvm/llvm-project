@@ -6,8 +6,8 @@ define <32 x i8> @shuffle_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI0_0)
 ; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 78
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI0_0)
 ; CHECK-NEXT:    xvshuf.h $xr1, $xr2, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
@@ -99,8 +99,8 @@ define <8 x float> @shuffle_v8f32_same_lane(<8 x float> %a) {
 ; CHECK-LABEL: shuffle_v8f32_same_lane:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI9_0)
-; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI9_0)
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI9_0)
 ; CHECK-NEXT:    xvshuf.w $xr1, $xr0, $xr0
 ; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret

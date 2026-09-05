@@ -96,8 +96,8 @@ define void @conditional_alloca(i32 %n) nounwind {
 ; SHRINKW-NEXT:    pcaddu18i $ra, %call36(notdead)
 ; SHRINKW-NEXT:    jirl $ra, $ra, 0
 ; SHRINKW-NEXT:    addi.d $sp, $fp, -16
-; SHRINKW-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; SHRINKW-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; SHRINKW-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; SHRINKW-NEXT:    addi.d $sp, $sp, 16
 ; SHRINKW-NEXT:  .LBB1_2: # %if.end
 ; SHRINKW-NEXT:    ret

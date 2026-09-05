@@ -17,22 +17,22 @@ define i16 @test_bswap_bitreverse_i16(i16 %a) nounwind {
 ; LA32R-LABEL: test_bswap_bitreverse_i16:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    andi $a1, $a0, 3855
-; LA32R-NEXT:    slli.w $a1, $a1, 4
 ; LA32R-NEXT:    srli.w $a0, $a0, 4
+; LA32R-NEXT:    lu12i.w $a2, 3
+; LA32R-NEXT:    slli.w $a1, $a1, 4
 ; LA32R-NEXT:    andi $a0, $a0, 3855
+; LA32R-NEXT:    ori $a2, $a2, 819
 ; LA32R-NEXT:    or $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 2
-; LA32R-NEXT:    lu12i.w $a2, 3
-; LA32R-NEXT:    ori $a2, $a2, 819
-; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 2
-; LA32R-NEXT:    or $a0, $a1, $a0
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 5
+; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ori $a2, $a2, 1365
-; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 1
 ; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ret
@@ -58,25 +58,25 @@ define i16 @test_bswap_bitreverse_i16(i16 %a) nounwind {
 define i32 @test_bswap_bitreverse_i32(i32 %a) nounwind {
 ; LA32R-LABEL: test_bswap_bitreverse_i32:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    lu12i.w $a2, 61680
+; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    ori $a2, $a2, 3855
-; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    lu12i.w $a2, 209715
 ; LA32R-NEXT:    slli.w $a0, $a0, 4
+; LA32R-NEXT:    ori $a2, $a2, 819
 ; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    srli.w $a1, $a0, 2
-; LA32R-NEXT:    lu12i.w $a2, 209715
-; LA32R-NEXT:    ori $a2, $a2, 819
-; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 2
-; LA32R-NEXT:    or $a0, $a1, $a0
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 349525
+; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ori $a2, $a2, 1365
-; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 1
 ; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ret
@@ -98,40 +98,40 @@ define i32 @test_bswap_bitreverse_i32(i32 %a) nounwind {
 define i64 @test_bswap_bitreverse_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_bswap_bitreverse_i64:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a2, $a0, 4
 ; LA32R-NEXT:    lu12i.w $a3, 61680
+; LA32R-NEXT:    srli.w $a2, $a0, 4
+; LA32R-NEXT:    lu12i.w $a4, 209715
+; LA32R-NEXT:    lu12i.w $a5, 349525
 ; LA32R-NEXT:    ori $a3, $a3, 3855
-; LA32R-NEXT:    and $a2, $a2, $a3
+; LA32R-NEXT:    ori $a4, $a4, 819
+; LA32R-NEXT:    ori $a5, $a5, 1365
 ; LA32R-NEXT:    and $a0, $a0, $a3
+; LA32R-NEXT:    and $a2, $a2, $a3
 ; LA32R-NEXT:    slli.w $a0, $a0, 4
 ; LA32R-NEXT:    or $a0, $a2, $a0
 ; LA32R-NEXT:    srli.w $a2, $a0, 2
-; LA32R-NEXT:    lu12i.w $a4, 209715
-; LA32R-NEXT:    ori $a4, $a4, 819
-; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    and $a0, $a0, $a4
+; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    slli.w $a0, $a0, 2
 ; LA32R-NEXT:    or $a0, $a2, $a0
 ; LA32R-NEXT:    srli.w $a2, $a0, 1
-; LA32R-NEXT:    lu12i.w $a5, 349525
-; LA32R-NEXT:    ori $a5, $a5, 1365
-; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    and $a0, $a0, $a5
+; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    slli.w $a0, $a0, 1
 ; LA32R-NEXT:    or $a0, $a2, $a0
 ; LA32R-NEXT:    srli.w $a2, $a1, 4
-; LA32R-NEXT:    and $a2, $a2, $a3
 ; LA32R-NEXT:    and $a1, $a1, $a3
+; LA32R-NEXT:    and $a2, $a2, $a3
 ; LA32R-NEXT:    slli.w $a1, $a1, 4
 ; LA32R-NEXT:    or $a1, $a2, $a1
 ; LA32R-NEXT:    srli.w $a2, $a1, 2
-; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    and $a1, $a1, $a4
+; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    slli.w $a1, $a1, 2
 ; LA32R-NEXT:    or $a1, $a2, $a1
 ; LA32R-NEXT:    srli.w $a2, $a1, 1
-; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    and $a1, $a1, $a5
+; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    slli.w $a1, $a1, 1
 ; LA32R-NEXT:    or $a1, $a2, $a1
 ; LA32R-NEXT:    ret
@@ -155,22 +155,22 @@ define i16 @test_bitreverse_bswap_i16(i16 %a) nounwind {
 ; LA32R-LABEL: test_bitreverse_bswap_i16:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    andi $a1, $a0, 3855
-; LA32R-NEXT:    slli.w $a1, $a1, 4
 ; LA32R-NEXT:    srli.w $a0, $a0, 4
+; LA32R-NEXT:    lu12i.w $a2, 3
+; LA32R-NEXT:    slli.w $a1, $a1, 4
 ; LA32R-NEXT:    andi $a0, $a0, 3855
+; LA32R-NEXT:    ori $a2, $a2, 819
 ; LA32R-NEXT:    or $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 2
-; LA32R-NEXT:    lu12i.w $a2, 3
-; LA32R-NEXT:    ori $a2, $a2, 819
-; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 2
-; LA32R-NEXT:    or $a0, $a1, $a0
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 5
+; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ori $a2, $a2, 1365
-; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 1
 ; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ret
@@ -196,25 +196,25 @@ define i16 @test_bitreverse_bswap_i16(i16 %a) nounwind {
 define i32 @test_bitreverse_bswap_i32(i32 %a) nounwind {
 ; LA32R-LABEL: test_bitreverse_bswap_i32:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    lu12i.w $a2, 61680
+; LA32R-NEXT:    srli.w $a1, $a0, 4
 ; LA32R-NEXT:    ori $a2, $a2, 3855
-; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    lu12i.w $a2, 209715
 ; LA32R-NEXT:    slli.w $a0, $a0, 4
+; LA32R-NEXT:    ori $a2, $a2, 819
 ; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    srli.w $a1, $a0, 2
-; LA32R-NEXT:    lu12i.w $a2, 209715
-; LA32R-NEXT:    ori $a2, $a2, 819
-; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 2
-; LA32R-NEXT:    or $a0, $a1, $a0
-; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 349525
+; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ori $a2, $a2, 1365
-; LA32R-NEXT:    and $a1, $a1, $a2
+; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    and $a0, $a0, $a2
+; LA32R-NEXT:    and $a1, $a1, $a2
 ; LA32R-NEXT:    slli.w $a0, $a0, 1
 ; LA32R-NEXT:    or $a0, $a1, $a0
 ; LA32R-NEXT:    ret
@@ -236,40 +236,40 @@ define i32 @test_bitreverse_bswap_i32(i32 %a) nounwind {
 define i64 @test_bitreverse_bswap_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_bitreverse_bswap_i64:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a2, $a0, 4
 ; LA32R-NEXT:    lu12i.w $a3, 61680
+; LA32R-NEXT:    srli.w $a2, $a0, 4
+; LA32R-NEXT:    lu12i.w $a4, 209715
+; LA32R-NEXT:    lu12i.w $a5, 349525
 ; LA32R-NEXT:    ori $a3, $a3, 3855
-; LA32R-NEXT:    and $a2, $a2, $a3
+; LA32R-NEXT:    ori $a4, $a4, 819
+; LA32R-NEXT:    ori $a5, $a5, 1365
 ; LA32R-NEXT:    and $a0, $a0, $a3
+; LA32R-NEXT:    and $a2, $a2, $a3
 ; LA32R-NEXT:    slli.w $a0, $a0, 4
 ; LA32R-NEXT:    or $a0, $a2, $a0
 ; LA32R-NEXT:    srli.w $a2, $a0, 2
-; LA32R-NEXT:    lu12i.w $a4, 209715
-; LA32R-NEXT:    ori $a4, $a4, 819
-; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    and $a0, $a0, $a4
+; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    slli.w $a0, $a0, 2
 ; LA32R-NEXT:    or $a0, $a2, $a0
 ; LA32R-NEXT:    srli.w $a2, $a0, 1
-; LA32R-NEXT:    lu12i.w $a5, 349525
-; LA32R-NEXT:    ori $a5, $a5, 1365
-; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    and $a0, $a0, $a5
+; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    slli.w $a0, $a0, 1
 ; LA32R-NEXT:    or $a0, $a2, $a0
 ; LA32R-NEXT:    srli.w $a2, $a1, 4
-; LA32R-NEXT:    and $a2, $a2, $a3
 ; LA32R-NEXT:    and $a1, $a1, $a3
+; LA32R-NEXT:    and $a2, $a2, $a3
 ; LA32R-NEXT:    slli.w $a1, $a1, 4
 ; LA32R-NEXT:    or $a1, $a2, $a1
 ; LA32R-NEXT:    srli.w $a2, $a1, 2
-; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    and $a1, $a1, $a4
+; LA32R-NEXT:    and $a2, $a2, $a4
 ; LA32R-NEXT:    slli.w $a1, $a1, 2
 ; LA32R-NEXT:    or $a1, $a2, $a1
 ; LA32R-NEXT:    srli.w $a2, $a1, 1
-; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    and $a1, $a1, $a5
+; LA32R-NEXT:    and $a2, $a2, $a5
 ; LA32R-NEXT:    slli.w $a1, $a1, 1
 ; LA32R-NEXT:    or $a1, $a2, $a1
 ; LA32R-NEXT:    ret

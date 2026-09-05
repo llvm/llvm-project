@@ -81,9 +81,9 @@ define i64 @bittest_7_i64(i64 %a) nounwind {
 ; LA32-LABEL: bittest_7_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
+; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    srli.w $a0, $a0, 7
 ; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bittest_7_i64:
@@ -101,9 +101,9 @@ define i64 @bittest_10_i64(i64 %a) nounwind {
 ; LA32-LABEL: bittest_10_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
+; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    srli.w $a0, $a0, 10
 ; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bittest_10_i64:
@@ -121,9 +121,9 @@ define i64 @bittest_11_i64(i64 %a) nounwind {
 ; LA32-LABEL: bittest_11_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
+; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    srli.w $a0, $a0, 11
 ; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bittest_11_i64:
@@ -141,8 +141,8 @@ define i64 @bittest_31_i64(i64 %a) nounwind {
 ; LA32-LABEL: bittest_31_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
-; LA32-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NEXT:    move $a1, $zero
+; LA32-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bittest_31_i64:
@@ -179,8 +179,8 @@ define i64 @bittest_63_i64(i64 %a) nounwind {
 ; LA32-LABEL: bittest_63_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a1, $zero
-; LA32-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NEXT:    move $a1, $zero
+; LA32-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bittest_63_i64:
@@ -252,10 +252,10 @@ define i1 @bittest_constant_by_var_shl_i64(i64 %b) nounwind {
 ; LA32-LABEL: bittest_constant_by_var_shl_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $a1, $a0, -32
-; LA32-NEXT:    slti $a1, $a1, 0
-; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    ori $a2, $zero, 1
+; LA32-NEXT:    slti $a1, $a1, 0
 ; LA32-NEXT:    sll.w $a0, $a2, $a0
+; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    and $a0, $a1, $a0
 ; LA32-NEXT:    lu12i.w $a1, 301408
 ; LA32-NEXT:    ori $a1, $a1, 722
@@ -558,8 +558,8 @@ define i64 @bit_10_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA32-LABEL: bit_10_nz_select_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    srli.w $a0, $a0, 10
-; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a1, $a3
+; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    bne $a6, $zero, .LBB24_2
 ; LA32-NEXT:  # %bb.1:
@@ -612,8 +612,8 @@ define i64 @bit_11_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA32-LABEL: bit_11_nz_select_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    srli.w $a0, $a0, 11
-; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a1, $a3
+; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    bne $a6, $zero, .LBB26_2
 ; LA32-NEXT:  # %bb.1:
@@ -667,8 +667,8 @@ define i64 @bit_20_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA32-LABEL: bit_20_nz_select_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    srli.w $a0, $a0, 20
-; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a1, $a3
+; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    bne $a6, $zero, .LBB28_2
 ; LA32-NEXT:  # %bb.1:
@@ -831,8 +831,8 @@ define i64 @bit_55_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ; LA32-LABEL: bit_55_nz_select_i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    srli.w $a0, $a1, 23
-; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a1, $a3
+; LA32-NEXT:    andi $a6, $a0, 1
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    bne $a6, $zero, .LBB34_2
 ; LA32-NEXT:  # %bb.1:

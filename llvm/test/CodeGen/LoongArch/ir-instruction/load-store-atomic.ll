@@ -92,15 +92,15 @@ define float @load_acquire_float(ptr %ptr) {
 ; LA32-LABEL: load_acquire_float:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    dbar 20
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_acquire_float:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.w $a0, $a0, 0
-; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    dbar 20
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    ret
   %val = load atomic float, ptr %ptr acquire, align 8
   ret float %val
@@ -115,17 +115,17 @@ define double @load_acquire_double(ptr %ptr) {
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a1, $zero, 2
 ; LA32-NEXT:    bl __atomic_load_8
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    movgr2frh.w $fa0, $a1
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_acquire_double:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    movgr2fr.d $fa0, $a0
 ; LA64-NEXT:    dbar 20
+; LA64-NEXT:    movgr2fr.d $fa0, $a0
 ; LA64-NEXT:    ret
   %val = load atomic double, ptr %ptr acquire, align 8
   ret double %val
@@ -233,9 +233,9 @@ define double @load_unordered_double(ptr %ptr) {
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    bl __atomic_load_8
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    movgr2frh.w $fa0, $a1
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
@@ -350,9 +350,9 @@ define double @load_monotonic_double(ptr %ptr) {
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    bl __atomic_load_8
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    movgr2frh.w $fa0, $a1
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
@@ -455,15 +455,15 @@ define float @load_seq_cst_float(ptr %ptr) {
 ; LA32-LABEL: load_seq_cst_float:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    dbar 16
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_seq_cst_float:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.w $a0, $a0, 0
-; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    dbar 16
+; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    ret
   %val = load atomic float, ptr %ptr seq_cst, align 8
   ret float %val
@@ -478,17 +478,17 @@ define double @load_seq_cst_double(ptr %ptr) {
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a1, $zero, 5
 ; LA32-NEXT:    bl __atomic_load_8
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    movgr2frh.w $fa0, $a1
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_seq_cst_double:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    movgr2fr.d $fa0, $a0
 ; LA64-NEXT:    dbar 16
+; LA64-NEXT:    movgr2fr.d $fa0, $a0
 ; LA64-NEXT:    ret
   %val = load atomic double, ptr %ptr seq_cst, align 8
   ret double %val

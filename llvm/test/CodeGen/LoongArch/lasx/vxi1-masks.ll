@@ -8,12 +8,12 @@ define void @xor_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
+; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    xvpickev.w $xr0, $xr0, $xr0
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
-; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vxor.v $vr0, $vr0, $vr1
-; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvrepli.d $xr1, 1
+; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -25,8 +25,8 @@ define void @xor_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
 ; LA64-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI0_0)
 ; LA64-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
-; LA64-NEXT:    xvxor.v $xr0, $xr0, $xr2
 ; LA64-NEXT:    xvrepli.d $xr1, 1
+; LA64-NEXT:    xvxor.v $xr0, $xr0, $xr2
 ; LA64-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
@@ -88,9 +88,9 @@ define void @xor_sext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
+; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    xvpickev.w $xr0, $xr0, $xr0
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
-; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vxor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vext2xv.d.w $xr0, $xr0
 ; LA32-NEXT:    xvst $xr0, $a0, 0
@@ -166,12 +166,12 @@ define void @or_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
+; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    xvpickev.w $xr0, $xr0, $xr0
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
-; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
-; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvrepli.d $xr1, 1
+; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -183,8 +183,8 @@ define void @or_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI6_0)
 ; LA64-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI6_0)
 ; LA64-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
-; LA64-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; LA64-NEXT:    xvrepli.d $xr1, 1
+; LA64-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; LA64-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
@@ -246,9 +246,9 @@ define void @or_sext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
+; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    xvpickev.w $xr0, $xr0, $xr0
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
-; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vext2xv.d.w $xr0, $xr0
 ; LA32-NEXT:    xvst $xr0, $a0, 0
@@ -321,12 +321,12 @@ define void @and_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
+; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    xvpickev.w $xr0, $xr0, $xr0
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
-; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vand.v $vr0, $vr0, $vr1
-; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvrepli.d $xr1, 1
+; LA32-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -395,9 +395,9 @@ define void @and_sext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
+; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    xvpickev.w $xr0, $xr0, $xr0
 ; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
-; LA32-NEXT:    vldi $vr1, -1777
 ; LA32-NEXT:    vand.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vext2xv.d.w $xr0, $xr0
 ; LA32-NEXT:    xvst $xr0, $a0, 0

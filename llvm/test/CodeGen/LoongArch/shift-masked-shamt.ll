@@ -167,15 +167,15 @@ define i64 @sll_redundant_mask_zeros_i64(i64 %a, i64 %b) {
 ; LA32-NEXT:    sll.w $a1, $a0, $a3
 ; LA32-NEXT:    b .LBB9_3
 ; LA32-NEXT:  .LBB9_2:
-; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    srli.w $a5, $a0, 1
 ; LA32-NEXT:    xori $a4, $a4, 31
+; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    srl.w $a4, $a5, $a4
 ; LA32-NEXT:    or $a1, $a1, $a4
 ; LA32-NEXT:  .LBB9_3:
 ; LA32-NEXT:    slti $a3, $a3, 0
-; LA32-NEXT:    sub.w $a3, $zero, $a3
 ; LA32-NEXT:    sll.w $a0, $a0, $a2
+; LA32-NEXT:    sub.w $a3, $zero, $a3
 ; LA32-NEXT:    and $a0, $a3, $a0
 ; LA32-NEXT:    ret
 ;
@@ -201,15 +201,15 @@ define i64 @srl_redundant_mask_zeros_i64(i64 %a, i64 %b) {
 ; LA32-NEXT:    srl.w $a0, $a1, $a3
 ; LA32-NEXT:    b .LBB10_3
 ; LA32-NEXT:  .LBB10_2:
-; LA32-NEXT:    srl.w $a0, $a0, $a2
 ; LA32-NEXT:    slli.w $a5, $a1, 1
 ; LA32-NEXT:    xori $a4, $a4, 31
+; LA32-NEXT:    srl.w $a0, $a0, $a2
 ; LA32-NEXT:    sll.w $a4, $a5, $a4
 ; LA32-NEXT:    or $a0, $a0, $a4
 ; LA32-NEXT:  .LBB10_3:
 ; LA32-NEXT:    slti $a3, $a3, 0
-; LA32-NEXT:    sub.w $a3, $zero, $a3
 ; LA32-NEXT:    srl.w $a1, $a1, $a2
+; LA32-NEXT:    sub.w $a3, $zero, $a3
 ; LA32-NEXT:    and $a1, $a3, $a1
 ; LA32-NEXT:    ret
 ;
@@ -236,12 +236,12 @@ define i64 @sra_redundant_mask_zeros_i64(i64 %a, i64 %b) {
 ; LA32-NEXT:    srai.w $a1, $a1, 31
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB11_2:
-; LA32-NEXT:    srl.w $a0, $a0, $a2
 ; LA32-NEXT:    slli.w $a4, $a1, 1
 ; LA32-NEXT:    xori $a3, $a3, 31
+; LA32-NEXT:    srl.w $a0, $a0, $a2
+; LA32-NEXT:    sra.w $a1, $a1, $a2
 ; LA32-NEXT:    sll.w $a3, $a4, $a3
 ; LA32-NEXT:    or $a0, $a0, $a3
-; LA32-NEXT:    sra.w $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: sra_redundant_mask_zeros_i64:

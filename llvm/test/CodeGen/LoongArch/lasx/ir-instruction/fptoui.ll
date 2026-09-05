@@ -49,9 +49,9 @@ define void @fptoui_v8f64_v8i32(ptr %res, ptr %in){
 ; CHECK-NEXT:    xvld $xr0, $a1, 32
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
 ; CHECK-NEXT:    xvftintrz.lu.d $xr0, $xr0
+; CHECK-NEXT:    xvftintrz.lu.d $xr1, $xr1
 ; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 238
 ; CHECK-NEXT:    xvpickev.w $xr0, $xr2, $xr0
-; CHECK-NEXT:    xvftintrz.lu.d $xr1, $xr1
 ; CHECK-NEXT:    xvpermi.d $xr2, $xr1, 238
 ; CHECK-NEXT:    xvpickev.w $xr1, $xr2, $xr1
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 2

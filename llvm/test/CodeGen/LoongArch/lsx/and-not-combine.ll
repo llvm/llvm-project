@@ -198,8 +198,8 @@ define void @pre_not_and_not_combine_v2i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA32-LABEL: pre_not_and_not_combine_v2i64:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
-; LA32-NEXT:    nor $a1, $a3, $zero
 ; LA32-NEXT:    nor $a2, $a2, $zero
+; LA32-NEXT:    nor $a1, $a3, $zero
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
 ; LA32-NEXT:    vreplvei.d $vr1, $vr1, 0

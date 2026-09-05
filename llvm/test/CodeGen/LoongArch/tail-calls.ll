@@ -21,9 +21,9 @@ define void @caller_extern(ptr %src) optsize {
 ; CHECK-LABEL: caller_extern:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(dest)
-; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(dest)
-; CHECK-NEXT:    ori $a2, $zero, 33
 ; CHECK-NEXT:    move $a3, $a0
+; CHECK-NEXT:    ori $a2, $zero, 33
+; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(dest)
 ; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    move $a1, $a3
 ; CHECK-NEXT:    pcaddu18i $t8, %call36(memcpy)
@@ -40,10 +40,10 @@ define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-LABEL: caller_indirect_tail:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(callee_indirect2)
-; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(callee_indirect2)
 ; CHECK-NEXT:    pcalau12i $a2, %got_pc_hi20(callee_indirect1)
-; CHECK-NEXT:    ld.d $a2, $a2, %got_pc_lo12(callee_indirect1)
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(callee_indirect2)
+; CHECK-NEXT:    ld.d $a2, $a2, %got_pc_lo12(callee_indirect1)
 ; CHECK-NEXT:    sltui $a0, $a0, 1
 ; CHECK-NEXT:    masknez $a1, $a1, $a0
 ; CHECK-NEXT:    maskeqz $a0, $a2, $a0
@@ -63,13 +63,13 @@ define void @caller_varargs(i32 %a, i32 %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $a0, $sp, 0
 ; CHECK-NEXT:    move $a2, $a1
 ; CHECK-NEXT:    move $a3, $a0
 ; CHECK-NEXT:    move $a4, $a0
 ; CHECK-NEXT:    move $a5, $a1
 ; CHECK-NEXT:    move $a6, $a1
 ; CHECK-NEXT:    move $a7, $a0
+; CHECK-NEXT:    st.d $a0, $sp, 0
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_varargs)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -106,11 +106,11 @@ define void @caller_indirect_args() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -48
 ; CHECK-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $zero, $sp, 24
 ; CHECK-NEXT:    vrepli.b $vr0, 0
-; CHECK-NEXT:    vst $vr0, $sp, 8
-; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    ori $a1, $zero, 1
+; CHECK-NEXT:    st.d $zero, $sp, 24
+; CHECK-NEXT:    vst $vr0, $sp, 8
 ; CHECK-NEXT:    st.d $a1, $sp, 0
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_indirect_args)
 ; CHECK-NEXT:    jirl $ra, $ra, 0

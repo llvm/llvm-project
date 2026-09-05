@@ -12,9 +12,9 @@ define i32 @fptosi_i32_fp128(fp128 %X) nounwind {
 ; LA32-NEXT:    ld.w $a3, $a0, 8
 ; LA32-NEXT:    ld.w $a0, $a0, 12
 ; LA32-NEXT:    st.w $a0, $sp, 20
+; LA32-NEXT:    addi.w $a0, $sp, 8
 ; LA32-NEXT:    st.w $a3, $sp, 16
 ; LA32-NEXT:    st.w $a2, $sp, 12
-; LA32-NEXT:    addi.w $a0, $sp, 8
 ; LA32-NEXT:    st.w $a1, $sp, 8
 ; LA32-NEXT:    bl __fixtfsi
 ; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
@@ -90,9 +90,9 @@ define i64 @fptosi_i64_fp128(fp128 %X) nounwind {
 ; LA32-NEXT:    ld.w $a3, $a0, 8
 ; LA32-NEXT:    ld.w $a0, $a0, 12
 ; LA32-NEXT:    st.w $a0, $sp, 12
+; LA32-NEXT:    addi.w $a0, $sp, 0
 ; LA32-NEXT:    st.w $a3, $sp, 8
 ; LA32-NEXT:    st.w $a2, $sp, 4
-; LA32-NEXT:    addi.w $a0, $sp, 0
 ; LA32-NEXT:    st.w $a1, $sp, 0
 ; LA32-NEXT:    bl __fixtfdi
 ; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload

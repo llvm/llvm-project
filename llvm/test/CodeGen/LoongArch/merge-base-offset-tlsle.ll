@@ -50,16 +50,16 @@ define dso_local void @tlsle_store_i8() nounwind {
 ; LA32-LABEL: tlsle_store_i8:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_i8)
-; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_i8)
 ; LA32-NEXT:    ori $a1, $zero, 1
+; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_i8)
 ; LA32-NEXT:    st.b $a1, $a0, %le_lo12_r(g_i8)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_i8:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_i8)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i8)
 ; LA64-NEXT:    ori $a1, $zero, 1
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i8)
 ; LA64-NEXT:    st.b $a1, $a0, %le_lo12_r(g_i8)
 ; LA64-NEXT:    ret
 entry:
@@ -114,16 +114,16 @@ define dso_local void @tlsle_store_i16() nounwind {
 ; LA32-LABEL: tlsle_store_i16:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_i16)
-; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_i16)
 ; LA32-NEXT:    ori $a1, $zero, 1
+; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_i16)
 ; LA32-NEXT:    st.h $a1, $a0, %le_lo12_r(g_i16)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_i16:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_i16)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i16)
 ; LA64-NEXT:    ori $a1, $zero, 1
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i16)
 ; LA64-NEXT:    st.h $a1, $a0, %le_lo12_r(g_i16)
 ; LA64-NEXT:    ret
 entry:
@@ -178,16 +178,16 @@ define dso_local void @tlsle_store_i32() nounwind {
 ; LA32-LABEL: tlsle_store_i32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_i32)
-; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_i32)
 ; LA32-NEXT:    ori $a1, $zero, 1
+; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_i32)
 ; LA32-NEXT:    st.w $a1, $a0, %le_lo12_r(g_i32)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_i32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_i32)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i32)
 ; LA64-NEXT:    ori $a1, $zero, 1
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i32)
 ; LA64-NEXT:    st.w $a1, $a0, %le_lo12_r(g_i32)
 ; LA64-NEXT:    ret
 entry:
@@ -224,18 +224,18 @@ define dso_local void @tlsle_store_i64() nounwind {
 ; LA32-LABEL: tlsle_store_i64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_i64)
+; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_i64)
 ; LA32-NEXT:    addi.w $a0, $a0, %le_lo12_r(g_i64)
 ; LA32-NEXT:    st.w $zero, $a0, 4
-; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_i64:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_i64)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i64)
 ; LA64-NEXT:    ori $a1, $zero, 1
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_i64)
 ; LA64-NEXT:    st.d $a1, $a0, %le_lo12_r(g_i64)
 ; LA64-NEXT:    ret
 entry:
@@ -270,16 +270,16 @@ define dso_local void @tlsle_store_f32() nounwind {
 ; LA32-LABEL: tlsle_store_f32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_f32)
-; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_f32)
 ; LA32-NEXT:    lu12i.w $a1, 260096
+; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_f32)
 ; LA32-NEXT:    st.w $a1, $a0, %le_lo12_r(g_f32)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_f32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_f32)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_f32)
 ; LA64-NEXT:    lu12i.w $a1, 260096
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_f32)
 ; LA64-NEXT:    st.w $a1, $a0, %le_lo12_r(g_f32)
 ; LA64-NEXT:    ret
 entry:
@@ -314,16 +314,16 @@ define dso_local void @tlsle_store_f64() nounwind {
 ; LA32-LABEL: tlsle_store_f64:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_f64)
-; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_f64)
 ; LA32-NEXT:    vldi $vr0, -912
+; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_f64)
 ; LA32-NEXT:    fst.d $fa0, $a0, %le_lo12_r(g_f64)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_f64:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_f64)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_f64)
 ; LA64-NEXT:    lu52i.d $a1, $zero, 1023
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_f64)
 ; LA64-NEXT:    st.d $a1, $a0, %le_lo12_r(g_f64)
 ; LA64-NEXT:    ret
 entry:
@@ -338,21 +338,21 @@ define dso_local void @tlsle_store_multi() nounwind {
 ; LA32-LABEL: tlsle_store_multi:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_m64)
+; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_m64)
 ; LA32-NEXT:    addi.w $a0, $a0, %le_lo12_r(g_m64)
 ; LA32-NEXT:    st.w $zero, $a0, 4
-; LA32-NEXT:    ori $a1, $zero, 1
 ; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    st.w $zero, $a0, 4
 ; LA32-NEXT:    ori $a1, $zero, 2
+; LA32-NEXT:    st.w $zero, $a0, 4
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_multi:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_m64)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_m64)
 ; LA64-NEXT:    ori $a1, $zero, 1
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_m64)
 ; LA64-NEXT:    st.d $a1, $a0, %le_lo12_r(g_m64)
 ; LA64-NEXT:    ori $a1, $zero, 2
 ; LA64-NEXT:    st.d $a1, $a0, %le_lo12_r(g_m64)
@@ -548,8 +548,8 @@ define dso_local void @tlsle_rmw() nounwind {
 ; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    addi.w $a1, $a1, 1
 ; LA32-NEXT:    sltui $a3, $a1, 1
-; LA32-NEXT:    add.w $a2, $a2, $a3
 ; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    add.w $a2, $a2, $a3
 ; LA32-NEXT:    st.w $a2, $a0, 4
 ; LA32-NEXT:    ret
 ;
@@ -575,16 +575,16 @@ define dso_local void @tlsle_store_a32() nounwind {
 ; LA32-LABEL: tlsle_store_a32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_a32+4096)
-; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_a32+4096)
 ; LA32-NEXT:    ori $a1, $zero, 1
+; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_a32+4096)
 ; LA32-NEXT:    st.w $a1, $a0, %le_lo12_r(g_a32+4096)
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_a32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a32+4096)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a32+4096)
 ; LA64-NEXT:    ori $a1, $zero, 1
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a32+4096)
 ; LA64-NEXT:    st.w $a1, $a0, %le_lo12_r(g_a32+4096)
 ; LA64-NEXT:    ret
 entry:
@@ -596,24 +596,24 @@ define dso_local void @tlsle_store_a32_2() nounwind {
 ; LA32-LABEL: tlsle_store_a32_2:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    lu12i.w $a0, %le_hi20_r(g_a32)
+; LA32-NEXT:    lu12i.w $a1, 1
+; LA32-NEXT:    ori $a3, $zero, 1
 ; LA32-NEXT:    add.w $a0, $a0, $tp, %le_add_r(g_a32)
 ; LA32-NEXT:    addi.w $a0, $a0, %le_lo12_r(g_a32)
-; LA32-NEXT:    lu12i.w $a1, 1
 ; LA32-NEXT:    add.w $a2, $a0, $a1
-; LA32-NEXT:    ori $a3, $zero, 1
-; LA32-NEXT:    st.w $a3, $a2, 0
 ; LA32-NEXT:    ori $a1, $a1, 8
 ; LA32-NEXT:    add.w $a0, $a0, $a1
 ; LA32-NEXT:    ori $a1, $zero, 2
+; LA32-NEXT:    st.w $a3, $a2, 0
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: tlsle_store_a32_2:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a32)
+; LA64-NEXT:    ori $a1, $zero, 1
 ; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a32)
 ; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a32)
-; LA64-NEXT:    ori $a1, $zero, 1
 ; LA64-NEXT:    stptr.w $a1, $a0, 4096
 ; LA64-NEXT:    ori $a1, $zero, 2
 ; LA64-NEXT:    stptr.w $a1, $a0, 4104
@@ -782,10 +782,10 @@ define dso_local ptr @tlsle_load_addr_offset_281474439839744() nounwind {
 ; LA64-LABEL: tlsle_load_addr_offset_281474439839744:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a64)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
-; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    ori $a1, $zero, 0
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
 ; LA64-NEXT:    lu32i.d $a1, 524287
+; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
@@ -803,10 +803,10 @@ define dso_local ptr @tlsle_load_addr_offset_248792680471040() nounwind {
 ; LA64-LABEL: tlsle_load_addr_offset_248792680471040:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a64)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
-; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    lu12i.w $a1, 502733
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
 ; LA64-NEXT:    lu32i.d $a1, 463412
+; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
@@ -824,10 +824,10 @@ define dso_local ptr @tlsle_load_addr_offset_9380351707272() nounwind {
 ; LA64-LABEL: tlsle_load_addr_offset_9380351707272:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a64)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
-; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    lu12i.w $a1, 279556
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
 ; LA64-NEXT:    ori $a1, $a1, 1088
+; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    lu32i.d $a1, 17472
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -846,9 +846,9 @@ define dso_local ptr @tlsle_load_addr_offset_562949953421312() nounwind {
 ; LA64-LABEL: tlsle_load_addr_offset_562949953421312:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a64)
+; LA64-NEXT:    lu52i.d $a1, $zero, 1
 ; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
 ; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
-; LA64-NEXT:    lu52i.d $a1, $zero, 1
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
@@ -865,12 +865,12 @@ define dso_local ptr @tlsle_load_addr_offset_614749556925924693() nounwind {
 ;
 ; LA64-LABEL: tlsle_load_addr_offset_614749556925924693:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a64)
-; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
-; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    lu12i.w $a1, 209666
+; LA64-NEXT:    lu12i.w $a0, %le_hi20_r(g_a64)
 ; LA64-NEXT:    ori $a1, $a1, 2728
+; LA64-NEXT:    add.d $a0, $a0, $tp, %le_add_r(g_a64)
 ; LA64-NEXT:    lu32i.d $a1, 15288
+; LA64-NEXT:    addi.d $a0, $a0, %le_lo12_r(g_a64)
 ; LA64-NEXT:    lu52i.d $a1, $a1, 1092
 ; LA64-NEXT:    add.d $a0, $a0, $a1
 ; LA64-NEXT:    ret

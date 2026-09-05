@@ -44,8 +44,8 @@ define void @fdiv_v2f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a2, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vfrecipe.d $vr2, $vr0
 ; CHECK-NEXT:    vldi $vr3, -784
+; CHECK-NEXT:    vfrecipe.d $vr2, $vr0
 ; CHECK-NEXT:    vfmadd.d $vr3, $vr0, $vr2, $vr3
 ; CHECK-NEXT:    vfnmsub.d $vr2, $vr3, $vr2, $vr2
 ; CHECK-NEXT:    vfmul.d $vr3, $vr1, $vr2
@@ -73,8 +73,8 @@ define void @one_fdiv_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: one_fdiv_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vfrecipe.s $vr1, $vr0
 ; CHECK-NEXT:    vldi $vr2, -1296
+; CHECK-NEXT:    vfrecipe.s $vr1, $vr0
 ; CHECK-NEXT:    vfmadd.s $vr0, $vr0, $vr1, $vr2
 ; CHECK-NEXT:    vfnmsub.s $vr0, $vr0, $vr1, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -98,8 +98,8 @@ define void @one_fdiv_v2f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: one_fdiv_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vfrecipe.d $vr1, $vr0
 ; CHECK-NEXT:    vldi $vr2, -912
+; CHECK-NEXT:    vfrecipe.d $vr1, $vr0
 ; CHECK-NEXT:    vfnmsub.d $vr3, $vr0, $vr1, $vr2
 ; CHECK-NEXT:    vfmadd.d $vr1, $vr1, $vr3, $vr1
 ; CHECK-NEXT:    vfnmsub.d $vr0, $vr0, $vr1, $vr2

@@ -21,14 +21,14 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; LA32-NEXT:    bl __truncsfhf2
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    lu12i.w $a1, -16
+; LA32-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
+; LA32-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
+; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
 ; LA32-NEXT:    or $a0, $fp, $a1
-; LA32-NEXT:    movgr2fr.w $fa1, $a0
-; LA32-NEXT:    fld.d $fs1, $sp, 8 # 8-byte Folded Reload
-; LA32-NEXT:    fld.d $fs0, $sp, 16 # 8-byte Folded Reload
 ; LA32-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
-; LA32-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
+; LA32-NEXT:    movgr2fr.w $fa1, $a0
 ; LA32-NEXT:    addi.w $sp, $sp, 32
 ; LA32-NEXT:    ret
 ;
@@ -55,14 +55,14 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    lu12i.w $a1, -16
+; LA64-NEXT:    fld.d $fs1, $sp, 0 # 8-byte Folded Reload
+; LA64-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    movgr2fr.w $fa0, $a0
 ; LA64-NEXT:    or $a0, $fp, $a1
-; LA64-NEXT:    movgr2fr.w $fa1, $a0
-; LA64-NEXT:    fld.d $fs1, $sp, 0 # 8-byte Folded Reload
-; LA64-NEXT:    fld.d $fs0, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
+; LA64-NEXT:    movgr2fr.w $fa1, $a0
 ; LA64-NEXT:    addi.d $sp, $sp, 32
 ; LA64-NEXT:    ret
   %result = call { half, half } @llvm.sincos.f16(half %a)
@@ -77,11 +77,11 @@ define half @test_sincos_f16_only_use_sin(half %a) #0 {
 ; LA32-NEXT:    bl __extendhfsf2
 ; LA32-NEXT:    bl sinf
 ; LA32-NEXT:    bl __truncsfhf2
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    lu12i.w $a1, -16
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
@@ -95,11 +95,11 @@ define half @test_sincos_f16_only_use_sin(half %a) #0 {
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__truncsfhf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    lu12i.w $a1, -16
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    movgr2fr.w $fa0, $a0
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
   %result = call { half, half } @llvm.sincos.f16(half %a)
@@ -115,11 +115,11 @@ define half @test_sincos_f16_only_use_cos(half %a) #0 {
 ; LA32-NEXT:    bl __extendhfsf2
 ; LA32-NEXT:    bl cosf
 ; LA32-NEXT:    bl __truncsfhf2
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    lu12i.w $a1, -16
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
@@ -133,11 +133,11 @@ define half @test_sincos_f16_only_use_cos(half %a) #0 {
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__truncsfhf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    lu12i.w $a1, -16
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    movgr2fr.w $fa0, $a0
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
   %result = call { half, half } @llvm.sincos.f16(half %a)
@@ -158,9 +158,9 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
 ; LA32-NEXT:    fst.d $fs1, $sp, 24 # 8-byte Folded Spill
 ; LA32-NEXT:    fst.d $fs2, $sp, 16 # 8-byte Folded Spill
 ; LA32-NEXT:    fst.d $fs3, $sp, 8 # 8-byte Folded Spill
+; LA32-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32-NEXT:    move $fp, $a0
 ; LA32-NEXT:    movgr2fr.w $fs0, $a2
-; LA32-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32-NEXT:    bl __extendhfsf2
 ; LA32-NEXT:    fmov.s $fs1, $fa0
 ; LA32-NEXT:    bl cosf
@@ -211,9 +211,9 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
 ; LA64-NEXT:    fst.d $fs1, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    fst.d $fs2, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    fst.d $fs3, $sp, 8 # 8-byte Folded Spill
+; LA64-NEXT:    movgr2fr.w $fa0, $a1
 ; LA64-NEXT:    move $s0, $a2
 ; LA64-NEXT:    move $fp, $a0
-; LA64-NEXT:    movgr2fr.w $fa0, $a1
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__extendhfsf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    fmov.s $fs0, $fa0
@@ -363,8 +363,8 @@ define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) #0 {
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
@@ -379,9 +379,9 @@ define { <2 x float>, <2 x float> } @test_sincos_v2f32(<2 x float> %a) #0 {
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    fmov.s $fa1, $fa0
 ; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; LA64-NEXT:    vextrins.w $vr1, $vr0, 16
 ; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 80
 ; LA64-NEXT:    ret
   %result = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %a)
@@ -455,8 +455,8 @@ define { <3 x float>, <3 x float> } @test_sincos_v3f32(<3 x float> %a) #0 {
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 64 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    vst $vr0, $sp, 64 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
@@ -465,12 +465,12 @@ define { <3 x float>, <3 x float> } @test_sincos_v3f32(<3 x float> %a) #0 {
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sinf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 64 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vextrins.w $vr1, $vr0, 32
-; LA64-NEXT:    vst $vr1, $sp, 64 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
+; LA64-NEXT:    vst $vr1, $sp, 64 # 16-byte Folded Spill
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
@@ -479,19 +479,19 @@ define { <3 x float>, <3 x float> } @test_sincos_v3f32(<3 x float> %a) #0 {
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cosf)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; LA64-NEXT:    vextrins.w $vr1, $vr0, 32
 ; LA64-NEXT:    vld $vr0, $sp, 64 # 16-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 96
 ; LA64-NEXT:    ret
   %result = call { <3 x float>, <3 x float> } @llvm.sincos.v3f32(<3 x float> %a)
@@ -596,8 +596,8 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sin)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
@@ -612,9 +612,9 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    fmov.d $fa1, $fa0
 ; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; LA64-NEXT:    vextrins.d $vr1, $vr0, 16
 ; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 80
 ; LA64-NEXT:    ret
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)

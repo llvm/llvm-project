@@ -381,62 +381,62 @@ define void @buildvector_v32i8(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; LA32-LABEL: buildvector_v32i8:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ld.b $t0, $sp, 36
-; LA32-NEXT:    ld.b $t1, $sp, 92
 ; LA32-NEXT:    ld.b $t2, $sp, 40
 ; LA32-NEXT:    ld.b $t3, $sp, 44
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 0
+; LA32-NEXT:    ld.b $t1, $sp, 92
+; LA32-NEXT:    ld.b $a1, $sp, 28
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 1
+; LA32-NEXT:    ld.b $a2, $sp, 0
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 2
+; LA32-NEXT:    ld.b $a3, $sp, 4
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a4, 3
+; LA32-NEXT:    ld.b $a4, $sp, 8
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t0, 0
 ; LA32-NEXT:    ld.b $t0, $sp, 48
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a5, 4
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t2, 1
 ; LA32-NEXT:    ld.b $t2, $sp, 52
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a6, 5
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t3, 2
 ; LA32-NEXT:    ld.b $t3, $sp, 56
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a7, 6
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 7
+; LA32-NEXT:    ld.b $a2, $sp, 12
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t0, 3
 ; LA32-NEXT:    ld.b $t0, $sp, 60
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 8
+; LA32-NEXT:    ld.b $a3, $sp, 16
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t2, 4
 ; LA32-NEXT:    ld.b $t2, $sp, 64
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a4, 9
+; LA32-NEXT:    ld.b $a4, $sp, 20
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t3, 5
 ; LA32-NEXT:    ld.b $t3, $sp, 68
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 10
+; LA32-NEXT:    ld.b $a2, $sp, 24
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t0, 6
 ; LA32-NEXT:    ld.b $t0, $sp, 72
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 11
+; LA32-NEXT:    ld.b $a3, $sp, 32
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t2, 7
 ; LA32-NEXT:    ld.b $t2, $sp, 76
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a4, 12
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t3, 8
 ; LA32-NEXT:    ld.b $t3, $sp, 80
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 13
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t0, 9
 ; LA32-NEXT:    ld.b $t0, $sp, 84
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 14
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t2, 10
 ; LA32-NEXT:    ld.b $t2, $sp, 88
+; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 15
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t3, 11
 ; LA32-NEXT:    ld.b $t3, $sp, 96
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t0, 12
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t2, 13
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t1, 14
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $t3, 15
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 0
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 1
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 2
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a4, 3
-; LA32-NEXT:    ld.b $a1, $sp, 28
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a5, 4
-; LA32-NEXT:    ld.b $a2, $sp, 0
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a6, 5
-; LA32-NEXT:    ld.b $a3, $sp, 4
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a7, 6
-; LA32-NEXT:    ld.b $a4, $sp, 8
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 7
-; LA32-NEXT:    ld.b $a2, $sp, 12
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 8
-; LA32-NEXT:    ld.b $a3, $sp, 16
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a4, 9
-; LA32-NEXT:    ld.b $a4, $sp, 20
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 10
-; LA32-NEXT:    ld.b $a2, $sp, 24
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 11
-; LA32-NEXT:    ld.b $a3, $sp, 32
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a4, 12
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a2, 13
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 14
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a3, 15
 ; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; LA32-NEXT:    xvst $xr1, $a0, 0
 ; LA32-NEXT:    ret
@@ -444,62 +444,62 @@ define void @buildvector_v32i8(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; LA64-LABEL: buildvector_v32i8:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.b $t0, $sp, 72
-; LA64-NEXT:    ld.b $t1, $sp, 184
 ; LA64-NEXT:    ld.b $t2, $sp, 80
 ; LA64-NEXT:    ld.b $t3, $sp, 88
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 0
+; LA64-NEXT:    ld.b $t1, $sp, 184
+; LA64-NEXT:    ld.b $a1, $sp, 56
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 1
+; LA64-NEXT:    ld.b $a2, $sp, 0
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 2
+; LA64-NEXT:    ld.b $a3, $sp, 8
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a4, 3
+; LA64-NEXT:    ld.b $a4, $sp, 16
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t0, 0
 ; LA64-NEXT:    ld.b $t0, $sp, 96
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a5, 4
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t2, 1
 ; LA64-NEXT:    ld.b $t2, $sp, 104
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a6, 5
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t3, 2
 ; LA64-NEXT:    ld.b $t3, $sp, 112
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a7, 6
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 7
+; LA64-NEXT:    ld.b $a2, $sp, 24
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t0, 3
 ; LA64-NEXT:    ld.b $t0, $sp, 120
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 8
+; LA64-NEXT:    ld.b $a3, $sp, 32
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t2, 4
 ; LA64-NEXT:    ld.b $t2, $sp, 128
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a4, 9
+; LA64-NEXT:    ld.b $a4, $sp, 40
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t3, 5
 ; LA64-NEXT:    ld.b $t3, $sp, 136
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 10
+; LA64-NEXT:    ld.b $a2, $sp, 48
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t0, 6
 ; LA64-NEXT:    ld.b $t0, $sp, 144
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 11
+; LA64-NEXT:    ld.b $a3, $sp, 64
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t2, 7
 ; LA64-NEXT:    ld.b $t2, $sp, 152
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a4, 12
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t3, 8
 ; LA64-NEXT:    ld.b $t3, $sp, 160
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 13
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t0, 9
 ; LA64-NEXT:    ld.b $t0, $sp, 168
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 14
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t2, 10
 ; LA64-NEXT:    ld.b $t2, $sp, 176
+; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 15
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t3, 11
 ; LA64-NEXT:    ld.b $t3, $sp, 192
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t0, 12
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t2, 13
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t1, 14
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $t3, 15
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 0
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 1
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 2
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a4, 3
-; LA64-NEXT:    ld.b $a1, $sp, 56
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a5, 4
-; LA64-NEXT:    ld.b $a2, $sp, 0
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a6, 5
-; LA64-NEXT:    ld.b $a3, $sp, 8
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a7, 6
-; LA64-NEXT:    ld.b $a4, $sp, 16
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 7
-; LA64-NEXT:    ld.b $a2, $sp, 24
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 8
-; LA64-NEXT:    ld.b $a3, $sp, 32
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a4, 9
-; LA64-NEXT:    ld.b $a4, $sp, 40
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 10
-; LA64-NEXT:    ld.b $a2, $sp, 48
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 11
-; LA64-NEXT:    ld.b $a3, $sp, 64
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a4, 12
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a2, 13
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 14
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a3, 15
 ; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; LA64-NEXT:    xvst $xr1, $a0, 0
 ; LA64-NEXT:    ret
@@ -543,24 +543,24 @@ entry:
 define void @buildvector_v32i8_partial(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a5, i8 %a7, i8 %a8, i8 %a15, i8 %a17, i8 %a18, i8 %a20, i8 %a22, i8 %a23, i8 %a27, i8 %a28, i8 %a31) nounwind {
 ; LA32-LABEL: buildvector_v32i8_partial:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.b $t0, $sp, 28
-; LA32-NEXT:    ld.b $t1, $sp, 24
-; LA32-NEXT:    ld.b $t2, $sp, 20
-; LA32-NEXT:    ld.b $t3, $sp, 16
-; LA32-NEXT:    ld.b $t4, $sp, 12
-; LA32-NEXT:    ld.b $t5, $sp, 8
-; LA32-NEXT:    ld.b $t6, $sp, 4
 ; LA32-NEXT:    ld.b $t7, $sp, 0
+; LA32-NEXT:    ld.b $t6, $sp, 4
+; LA32-NEXT:    ld.b $t5, $sp, 8
+; LA32-NEXT:    ld.b $t4, $sp, 12
+; LA32-NEXT:    ld.b $t3, $sp, 16
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a1, 0
+; LA32-NEXT:    ld.b $t2, $sp, 20
+; LA32-NEXT:    ld.b $t1, $sp, 24
+; LA32-NEXT:    ld.b $t0, $sp, 28
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a2, 1
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a3, 2
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a4, 5
-; LA32-NEXT:    vinsgr2vr.b $vr0, $a5, 7
-; LA32-NEXT:    vinsgr2vr.b $vr0, $a6, 8
-; LA32-NEXT:    vinsgr2vr.b $vr0, $a7, 15
 ; LA32-NEXT:    vinsgr2vr.b $vr1, $t7, 1
+; LA32-NEXT:    vinsgr2vr.b $vr0, $a5, 7
 ; LA32-NEXT:    vinsgr2vr.b $vr1, $t6, 2
+; LA32-NEXT:    vinsgr2vr.b $vr0, $a6, 8
 ; LA32-NEXT:    vinsgr2vr.b $vr1, $t5, 4
+; LA32-NEXT:    vinsgr2vr.b $vr0, $a7, 15
 ; LA32-NEXT:    vinsgr2vr.b $vr1, $t4, 6
 ; LA32-NEXT:    vinsgr2vr.b $vr1, $t3, 7
 ; LA32-NEXT:    vinsgr2vr.b $vr1, $t2, 11
@@ -572,24 +572,24 @@ define void @buildvector_v32i8_partial(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a5,
 ;
 ; LA64-LABEL: buildvector_v32i8_partial:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.b $t0, $sp, 56
-; LA64-NEXT:    ld.b $t1, $sp, 48
-; LA64-NEXT:    ld.b $t2, $sp, 40
-; LA64-NEXT:    ld.b $t3, $sp, 32
-; LA64-NEXT:    ld.b $t4, $sp, 24
-; LA64-NEXT:    ld.b $t5, $sp, 16
-; LA64-NEXT:    ld.b $t6, $sp, 8
 ; LA64-NEXT:    ld.b $t7, $sp, 0
+; LA64-NEXT:    ld.b $t6, $sp, 8
+; LA64-NEXT:    ld.b $t5, $sp, 16
+; LA64-NEXT:    ld.b $t4, $sp, 24
+; LA64-NEXT:    ld.b $t3, $sp, 32
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a1, 0
+; LA64-NEXT:    ld.b $t2, $sp, 40
+; LA64-NEXT:    ld.b $t1, $sp, 48
+; LA64-NEXT:    ld.b $t0, $sp, 56
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a2, 1
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a3, 2
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a4, 5
-; LA64-NEXT:    vinsgr2vr.b $vr0, $a5, 7
-; LA64-NEXT:    vinsgr2vr.b $vr0, $a6, 8
-; LA64-NEXT:    vinsgr2vr.b $vr0, $a7, 15
 ; LA64-NEXT:    vinsgr2vr.b $vr1, $t7, 1
+; LA64-NEXT:    vinsgr2vr.b $vr0, $a5, 7
 ; LA64-NEXT:    vinsgr2vr.b $vr1, $t6, 2
+; LA64-NEXT:    vinsgr2vr.b $vr0, $a6, 8
 ; LA64-NEXT:    vinsgr2vr.b $vr1, $t5, 4
+; LA64-NEXT:    vinsgr2vr.b $vr0, $a7, 15
 ; LA64-NEXT:    vinsgr2vr.b $vr1, $t4, 6
 ; LA64-NEXT:    vinsgr2vr.b $vr1, $t3, 7
 ; LA64-NEXT:    vinsgr2vr.b $vr1, $t2, 11
@@ -638,16 +638,16 @@ entry:
 define void @buildvector_v32i8_with_constant(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a5, i8 %a8, i8 %a9, i8 %a15, i8 %a17, i8 %a18, i8 %a20, i8 %a22, i8 %a23, i8 %a27, i8 %a28, i8 %a31) nounwind {
 ; LA32-LABEL: buildvector_v32i8_with_constant:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.b $t0, $sp, 28
-; LA32-NEXT:    ld.b $t1, $sp, 24
-; LA32-NEXT:    ld.b $t2, $sp, 20
-; LA32-NEXT:    ld.b $t3, $sp, 16
-; LA32-NEXT:    ld.b $t4, $sp, 12
-; LA32-NEXT:    ld.b $t5, $sp, 8
-; LA32-NEXT:    ld.b $t6, $sp, 4
-; LA32-NEXT:    ld.b $t7, $sp, 0
 ; LA32-NEXT:    xvrepli.b $xr0, 0
 ; LA32-NEXT:    xvreplgr2vr.b $xr1, $a1
+; LA32-NEXT:    ld.b $t7, $sp, 0
+; LA32-NEXT:    ld.b $t6, $sp, 4
+; LA32-NEXT:    ld.b $t5, $sp, 8
+; LA32-NEXT:    ld.b $t4, $sp, 12
+; LA32-NEXT:    ld.b $t3, $sp, 16
+; LA32-NEXT:    ld.b $t2, $sp, 20
+; LA32-NEXT:    ld.b $t1, $sp, 24
+; LA32-NEXT:    ld.b $t0, $sp, 28
 ; LA32-NEXT:    xvpermi.q $xr1, $xr0, 18
 ; LA32-NEXT:    xvextrins.b $xr0, $xr1, 0
 ; LA32-NEXT:    xvreplgr2vr.b $xr1, $a2
@@ -697,16 +697,16 @@ define void @buildvector_v32i8_with_constant(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i
 ;
 ; LA64-LABEL: buildvector_v32i8_with_constant:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.b $t0, $sp, 56
-; LA64-NEXT:    ld.b $t1, $sp, 48
-; LA64-NEXT:    ld.b $t2, $sp, 40
-; LA64-NEXT:    ld.b $t3, $sp, 32
-; LA64-NEXT:    ld.b $t4, $sp, 24
-; LA64-NEXT:    ld.b $t5, $sp, 16
-; LA64-NEXT:    ld.b $t6, $sp, 8
-; LA64-NEXT:    ld.b $t7, $sp, 0
 ; LA64-NEXT:    xvrepli.b $xr0, 0
 ; LA64-NEXT:    xvreplgr2vr.b $xr1, $a1
+; LA64-NEXT:    ld.b $t7, $sp, 0
+; LA64-NEXT:    ld.b $t6, $sp, 8
+; LA64-NEXT:    ld.b $t5, $sp, 16
+; LA64-NEXT:    ld.b $t4, $sp, 24
+; LA64-NEXT:    ld.b $t3, $sp, 32
+; LA64-NEXT:    ld.b $t2, $sp, 40
+; LA64-NEXT:    ld.b $t1, $sp, 48
+; LA64-NEXT:    ld.b $t0, $sp, 56
 ; LA64-NEXT:    xvpermi.q $xr1, $xr0, 18
 ; LA64-NEXT:    xvextrins.b $xr0, $xr1, 0
 ; LA64-NEXT:    xvreplgr2vr.b $xr1, $a2
@@ -793,16 +793,16 @@ entry:
 define void @buildvector_v32i8_subseq_2(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7, i8 %a8, i8 %a9, i8 %a10, i8 %a11, i8 %a12, i8 %a13, i8 %a14, i8 %a15) nounwind {
 ; LA32-LABEL: buildvector_v32i8_subseq_2:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.b $t0, $sp, 32
-; LA32-NEXT:    ld.b $t1, $sp, 28
-; LA32-NEXT:    ld.b $t2, $sp, 24
-; LA32-NEXT:    ld.b $t3, $sp, 20
-; LA32-NEXT:    ld.b $t4, $sp, 16
-; LA32-NEXT:    ld.b $t5, $sp, 12
-; LA32-NEXT:    ld.b $t6, $sp, 8
-; LA32-NEXT:    ld.b $t7, $sp, 4
-; LA32-NEXT:    ld.b $t8, $sp, 0
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a1, 0
+; LA32-NEXT:    ld.b $t8, $sp, 0
+; LA32-NEXT:    ld.b $t7, $sp, 4
+; LA32-NEXT:    ld.b $t6, $sp, 8
+; LA32-NEXT:    ld.b $t5, $sp, 12
+; LA32-NEXT:    ld.b $t4, $sp, 16
+; LA32-NEXT:    ld.b $t3, $sp, 20
+; LA32-NEXT:    ld.b $t2, $sp, 24
+; LA32-NEXT:    ld.b $t1, $sp, 28
+; LA32-NEXT:    ld.b $t0, $sp, 32
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a2, 1
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a3, 2
 ; LA32-NEXT:    vinsgr2vr.b $vr0, $a4, 3
@@ -824,16 +824,16 @@ define void @buildvector_v32i8_subseq_2(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3
 ;
 ; LA64-LABEL: buildvector_v32i8_subseq_2:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.b $t0, $sp, 64
-; LA64-NEXT:    ld.b $t1, $sp, 56
-; LA64-NEXT:    ld.b $t2, $sp, 48
-; LA64-NEXT:    ld.b $t3, $sp, 40
-; LA64-NEXT:    ld.b $t4, $sp, 32
-; LA64-NEXT:    ld.b $t5, $sp, 24
-; LA64-NEXT:    ld.b $t6, $sp, 16
-; LA64-NEXT:    ld.b $t7, $sp, 8
-; LA64-NEXT:    ld.b $t8, $sp, 0
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a1, 0
+; LA64-NEXT:    ld.b $t8, $sp, 0
+; LA64-NEXT:    ld.b $t7, $sp, 8
+; LA64-NEXT:    ld.b $t6, $sp, 16
+; LA64-NEXT:    ld.b $t5, $sp, 24
+; LA64-NEXT:    ld.b $t4, $sp, 32
+; LA64-NEXT:    ld.b $t3, $sp, 40
+; LA64-NEXT:    ld.b $t2, $sp, 48
+; LA64-NEXT:    ld.b $t1, $sp, 56
+; LA64-NEXT:    ld.b $t0, $sp, 64
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a2, 1
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a3, 2
 ; LA64-NEXT:    vinsgr2vr.b $vr0, $a4, 3
@@ -892,8 +892,8 @@ entry:
 define void @buildvector_v32i8_subseq_4(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a5, i8 %a6, i8 %a7) nounwind {
 ; CHECK-LABEL: buildvector_v32i8_subseq_4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld.b $t0, $sp, 0
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 0
+; CHECK-NEXT:    ld.b $t0, $sp, 0
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 1
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a3, 2
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a4, 3
@@ -1036,62 +1036,62 @@ entry:
 define void @buildvector_v16i16(ptr %dst, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7, i16 %a8, i16 %a9, i16 %a10, i16 %a11, i16 %a12, i16 %a13, i16 %a14, i16 %a15) nounwind {
 ; LA32-LABEL: buildvector_v16i16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.h $t0, $sp, 0
-; LA32-NEXT:    ld.h $t1, $sp, 32
-; LA32-NEXT:    ld.h $t2, $sp, 28
-; LA32-NEXT:    ld.h $t3, $sp, 24
-; LA32-NEXT:    ld.h $t4, $sp, 20
 ; LA32-NEXT:    ld.h $t5, $sp, 4
 ; LA32-NEXT:    ld.h $t6, $sp, 8
 ; LA32-NEXT:    ld.h $t7, $sp, 12
 ; LA32-NEXT:    ld.h $t8, $sp, 16
+; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 0
+; LA32-NEXT:    ld.h $t4, $sp, 20
+; LA32-NEXT:    ld.h $t3, $sp, 24
+; LA32-NEXT:    ld.h $t2, $sp, 28
+; LA32-NEXT:    ld.h $t0, $sp, 0
+; LA32-NEXT:    ld.h $t1, $sp, 32
+; LA32-NEXT:    vinsgr2vr.h $vr1, $a2, 1
+; LA32-NEXT:    vinsgr2vr.h $vr1, $a3, 2
+; LA32-NEXT:    vinsgr2vr.h $vr1, $a4, 3
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t5, 0
+; LA32-NEXT:    vinsgr2vr.h $vr1, $a5, 4
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t6, 1
+; LA32-NEXT:    vinsgr2vr.h $vr1, $a6, 5
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t7, 2
+; LA32-NEXT:    vinsgr2vr.h $vr1, $a7, 6
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t8, 3
+; LA32-NEXT:    vinsgr2vr.h $vr1, $t0, 7
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t4, 4
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t3, 5
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t2, 6
 ; LA32-NEXT:    vinsgr2vr.h $vr0, $t1, 7
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a2, 1
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a3, 2
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a4, 3
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a5, 4
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a6, 5
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a7, 6
-; LA32-NEXT:    vinsgr2vr.h $vr1, $t0, 7
 ; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; LA32-NEXT:    xvst $xr1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: buildvector_v16i16:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.h $t0, $sp, 0
-; LA64-NEXT:    ld.h $t1, $sp, 64
-; LA64-NEXT:    ld.h $t2, $sp, 56
-; LA64-NEXT:    ld.h $t3, $sp, 48
-; LA64-NEXT:    ld.h $t4, $sp, 40
 ; LA64-NEXT:    ld.h $t5, $sp, 8
 ; LA64-NEXT:    ld.h $t6, $sp, 16
 ; LA64-NEXT:    ld.h $t7, $sp, 24
 ; LA64-NEXT:    ld.h $t8, $sp, 32
+; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 0
+; LA64-NEXT:    ld.h $t4, $sp, 40
+; LA64-NEXT:    ld.h $t3, $sp, 48
+; LA64-NEXT:    ld.h $t2, $sp, 56
+; LA64-NEXT:    ld.h $t0, $sp, 0
+; LA64-NEXT:    ld.h $t1, $sp, 64
+; LA64-NEXT:    vinsgr2vr.h $vr1, $a2, 1
+; LA64-NEXT:    vinsgr2vr.h $vr1, $a3, 2
+; LA64-NEXT:    vinsgr2vr.h $vr1, $a4, 3
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t5, 0
+; LA64-NEXT:    vinsgr2vr.h $vr1, $a5, 4
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t6, 1
+; LA64-NEXT:    vinsgr2vr.h $vr1, $a6, 5
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t7, 2
+; LA64-NEXT:    vinsgr2vr.h $vr1, $a7, 6
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t8, 3
+; LA64-NEXT:    vinsgr2vr.h $vr1, $t0, 7
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t4, 4
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t3, 5
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t2, 6
 ; LA64-NEXT:    vinsgr2vr.h $vr0, $t1, 7
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a2, 1
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a3, 2
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a4, 3
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a5, 4
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a6, 5
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a7, 6
-; LA64-NEXT:    vinsgr2vr.h $vr1, $t0, 7
 ; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; LA64-NEXT:    xvst $xr1, $a0, 0
 ; LA64-NEXT:    ret
@@ -1119,10 +1119,10 @@ entry:
 define void @buildvector_v16i16_partial(ptr %dst, i16 %a0, i16 %a2, i16 %a5, i16 %a6, i16 %a7, i16 %a12, i16 %a13) nounwind {
 ; CHECK-LABEL: buildvector_v16i16_partial:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a6, 4
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a7, 5
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a6, 4
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a2, 2
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a7, 5
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a3, 5
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a4, 6
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a5, 7
@@ -1201,8 +1201,8 @@ entry:
 define void @buildvector_v16i16_subseq_2(ptr %dst, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7) nounwind {
 ; CHECK-LABEL: buildvector_v16i16_subseq_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld.h $t0, $sp, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
+; CHECK-NEXT:    ld.h $t0, $sp, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 1
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a3, 2
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a4, 3
@@ -1299,13 +1299,13 @@ define void @buildvector_v8i32(ptr %dst, i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld.w $t0, $sp, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a5, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a6, 1
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a7, 2
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $t0, 3
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a1, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a6, 1
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 1
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a7, 2
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a3, 2
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a4, 3
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $t0, 3
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
@@ -1325,8 +1325,8 @@ entry:
 define void @buildvector_v8i32_partial(ptr %dst, i32 %a2, i32 %a4, i32 %a5, i32 %a6) nounwind {
 ; CHECK-LABEL: buildvector_v8i32_partial:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 2
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 2
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a3, 1
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a4, 2
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
@@ -1417,13 +1417,13 @@ define void @buildvector_v4i64(ptr %dst, i64 %a0, i64 %a1, i64 %a2, i64 %a3) nou
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    ld.w $t0, $sp, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a5, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 2
-; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 3
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a6, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 1
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a7, 2
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 2
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 3
+; LA32-NEXT:    vinsgr2vr.w $vr0, $t0, 3
 ; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; LA32-NEXT:    xvst $xr1, $a0, 0
 ; LA32-NEXT:    ret
@@ -1431,8 +1431,8 @@ define void @buildvector_v4i64(ptr %dst, i64 %a0, i64 %a1, i64 %a2, i64 %a3) nou
 ; LA64-LABEL: buildvector_v4i64:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a3, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 1
 ; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a4, 1
 ; LA64-NEXT:    vinsgr2vr.d $vr1, $a2, 1
 ; LA64-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; LA64-NEXT:    xvst $xr1, $a0, 0
@@ -1450,8 +1450,8 @@ define void @buildvector_v4i64_partial(ptr %dst, i64 %a1, i64 %a2) nounwind {
 ; LA32-LABEL: buildvector_v4i64_partial:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 3
 ; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
 ; LA32-NEXT:    xvst $xr1, $a0, 0
@@ -1529,19 +1529,19 @@ entry:
 define void @buildvector_v8f32(ptr %dst, float %a0, float %a1, float %a2, float %a3, float %a4, float %a5, float %a6, float %a7) nounwind {
 ; CHECK-LABEL: buildvector_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f7 killed $f7 def $vr7
-; CHECK-NEXT:    # kill: def $f6 killed $f6 def $vr6
-; CHECK-NEXT:    # kill: def $f5 killed $f5 def $vr5
 ; CHECK-NEXT:    # kill: def $f4 killed $f4 def $xr4
-; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
-; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; CHECK-NEXT:    # kill: def $f5 killed $f5 def $vr5
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
+; CHECK-NEXT:    # kill: def $f6 killed $f6 def $vr6
+; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
+; CHECK-NEXT:    # kill: def $f7 killed $f7 def $vr7
+; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
 ; CHECK-NEXT:    vextrins.w $vr4, $vr5, 16
-; CHECK-NEXT:    vextrins.w $vr4, $vr6, 32
-; CHECK-NEXT:    vextrins.w $vr4, $vr7, 48
 ; CHECK-NEXT:    vextrins.w $vr0, $vr1, 16
+; CHECK-NEXT:    vextrins.w $vr4, $vr6, 32
 ; CHECK-NEXT:    vextrins.w $vr0, $vr2, 32
+; CHECK-NEXT:    vextrins.w $vr4, $vr7, 48
 ; CHECK-NEXT:    vextrins.w $vr0, $vr3, 48
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr4, 2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -1562,13 +1562,13 @@ entry:
 define void @buildvector_v8f32_partial(ptr %dst, float %a1, float %a2, float %a5, float %a7) nounwind {
 ; CHECK-LABEL: buildvector_v8f32_partial:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
 ; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    vextrins.w $vr2, $vr2, 16
-; CHECK-NEXT:    vextrins.w $vr2, $vr3, 48
 ; CHECK-NEXT:    vextrins.w $vr0, $vr0, 16
+; CHECK-NEXT:    vextrins.w $vr2, $vr3, 48
 ; CHECK-NEXT:    vextrins.w $vr0, $vr1, 32
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -1589,11 +1589,11 @@ entry:
 define void @buildvector_v8f32_with_constant(ptr %dst, float %a1, float %a2, float %a5, float %a7) nounwind {
 ; CHECK-LABEL: buildvector_v8f32_with_constant:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f3 killed $f3 def $xr3
-; CHECK-NEXT:    # kill: def $f2 killed $f2 def $xr2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $xr1
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
 ; CHECK-NEXT:    xvldi $xr4, -3264
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $xr1
+; CHECK-NEXT:    # kill: def $f2 killed $f2 def $xr2
+; CHECK-NEXT:    # kill: def $f3 killed $f3 def $xr3
 ; CHECK-NEXT:    xvinsve0.w $xr4, $xr0, 1
 ; CHECK-NEXT:    xvinsve0.w $xr4, $xr1, 2
 ; CHECK-NEXT:    xvinsve0.w $xr4, $xr2, 5
@@ -1616,10 +1616,10 @@ entry:
 define void @buildvector_v8f32_subseq_2(ptr %dst, float %a0, float %a1, float %a2, float %a3) nounwind {
 ; CHECK-LABEL: buildvector_v8f32_subseq_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
-; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
+; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
+; CHECK-NEXT:    # kill: def $f3 killed $f3 def $vr3
 ; CHECK-NEXT:    vextrins.w $vr0, $vr1, 16
 ; CHECK-NEXT:    vextrins.w $vr0, $vr2, 32
 ; CHECK-NEXT:    vextrins.w $vr0, $vr3, 48
@@ -1642,8 +1642,8 @@ entry:
 define void @buildvector_v8f32_subseq_4(ptr %dst, float %a0, float %a1) nounwind {
 ; CHECK-LABEL: buildvector_v8f32_subseq_4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    vextrins.w $vr0, $vr1, 16
 ; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -1664,10 +1664,10 @@ entry:
 define void @buildvector_v4f64(ptr %dst, double %a0, double %a1, double %a2, double %a3) nounwind {
 ; CHECK-LABEL: buildvector_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f3_64 killed $f3_64 def $vr3
 ; CHECK-NEXT:    # kill: def $f2_64 killed $f2_64 def $xr2
-; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $vr1
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; CHECK-NEXT:    # kill: def $f3_64 killed $f3_64 def $vr3
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $vr1
 ; CHECK-NEXT:    vextrins.d $vr2, $vr3, 16
 ; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
@@ -1685,8 +1685,8 @@ entry:
 define void @buildvector_v4f64_partial(ptr %dst, double %a0, double %a3) nounwind {
 ; CHECK-LABEL: buildvector_v4f64_partial:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $xr1
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $xr1
 ; CHECK-NEXT:    xvinsve0.d $xr0, $xr1, 3
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
@@ -1702,9 +1702,9 @@ entry:
 define void @buildvector_v4f64_with_constant(ptr %dst, double %a0, double %a3) nounwind {
 ; CHECK-LABEL: buildvector_v4f64_with_constant:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $xr1
-; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
 ; CHECK-NEXT:    xvrepli.b $xr2, 0
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $xr1
 ; CHECK-NEXT:    xvinsve0.d $xr2, $xr0, 0
 ; CHECK-NEXT:    xvinsve0.d $xr2, $xr1, 3
 ; CHECK-NEXT:    xvst $xr2, $a0, 0
@@ -1721,8 +1721,8 @@ entry:
 define void @buildvector_v4f64_subseq_2(ptr %dst, double %a0, double %a1) nounwind {
 ; CHECK-LABEL: buildvector_v4f64_subseq_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $vr1
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $vr1
 ; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    xvreplve0.q $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0

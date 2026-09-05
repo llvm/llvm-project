@@ -575,10 +575,10 @@ define i8 @xvmsk_sgt_or_sgt_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x
 define i8 @xvmsk_sgt_or_slt_and_eq_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d, <8 x i32> %e, <8 x i32> %f) {
 ; LA32-LABEL: xvmsk_sgt_or_slt_and_eq_v8i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    xvslt.w $xr2, $xr2, $xr3
 ; LA32-NEXT:    xvslt.w $xr0, $xr1, $xr0
-; LA32-NEXT:    xvor.v $xr0, $xr0, $xr2
+; LA32-NEXT:    xvslt.w $xr2, $xr2, $xr3
 ; LA32-NEXT:    xvseq.w $xr1, $xr4, $xr5
+; LA32-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvmskltz.w $xr0, $xr0
 ; LA32-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
@@ -588,10 +588,10 @@ define i8 @xvmsk_sgt_or_slt_and_eq_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %
 ;
 ; LA64-LABEL: xvmsk_sgt_or_slt_and_eq_v8i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    xvslt.w $xr2, $xr2, $xr3
 ; LA64-NEXT:    xvslt.w $xr0, $xr1, $xr0
-; LA64-NEXT:    xvor.v $xr0, $xr0, $xr2
+; LA64-NEXT:    xvslt.w $xr2, $xr2, $xr3
 ; LA64-NEXT:    xvseq.w $xr1, $xr4, $xr5
+; LA64-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; LA64-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvmskltz.w $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
@@ -638,13 +638,13 @@ define i8 @xvmsk_sel_eq_or_eq_or_slt_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 ; LA32-LABEL: xvmsk_sel_eq_or_eq_or_slt_v8i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andi $a0, $a0, 1
-; LA32-NEXT:    xvseq.w $xr2, $xr0, $xr2
 ; LA32-NEXT:    addi.w $a1, $zero, -1
+; LA32-NEXT:    xvseq.w $xr2, $xr0, $xr2
+; LA32-NEXT:    xvseq.w $xr0, $xr0, $xr1
 ; LA32-NEXT:    maskeqz $a0, $a1, $a0
+; LA32-NEXT:    xvor.v $xr0, $xr3, $xr0
 ; LA32-NEXT:    xvreplgr2vr.w $xr4, $a0
 ; LA32-NEXT:    xvand.v $xr2, $xr2, $xr4
-; LA32-NEXT:    xvseq.w $xr0, $xr0, $xr1
-; LA32-NEXT:    xvor.v $xr0, $xr3, $xr0
 ; LA32-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; LA32-NEXT:    xvmskltz.w $xr0, $xr0
 ; LA32-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
@@ -655,13 +655,13 @@ define i8 @xvmsk_sel_eq_or_eq_or_slt_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 ; LA64-LABEL: xvmsk_sel_eq_or_eq_or_slt_v8i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andi $a0, $a0, 1
-; LA64-NEXT:    xvseq.w $xr2, $xr0, $xr2
 ; LA64-NEXT:    addi.d $a1, $zero, -1
+; LA64-NEXT:    xvseq.w $xr2, $xr0, $xr2
+; LA64-NEXT:    xvseq.w $xr0, $xr0, $xr1
 ; LA64-NEXT:    maskeqz $a0, $a1, $a0
+; LA64-NEXT:    xvor.v $xr0, $xr3, $xr0
 ; LA64-NEXT:    xvreplgr2vr.w $xr4, $a0
 ; LA64-NEXT:    xvand.v $xr2, $xr2, $xr4
-; LA64-NEXT:    xvseq.w $xr0, $xr0, $xr1
-; LA64-NEXT:    xvor.v $xr0, $xr3, $xr0
 ; LA64-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; LA64-NEXT:    xvmskltz.w $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
@@ -739,10 +739,10 @@ define i8 @xvmsk_sgt_xor_sgt_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %
 define i8 @xvmsk_ugt_xor_ueq_and_ogt_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d, <8 x float> %e, <8 x float> %f) {
 ; LA32-LABEL: xvmsk_ugt_xor_ueq_and_ogt_v8f32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    xvfcmp.cueq.s $xr2, $xr2, $xr3
 ; LA32-NEXT:    xvfcmp.cult.s $xr0, $xr1, $xr0
-; LA32-NEXT:    xvxor.v $xr0, $xr0, $xr2
+; LA32-NEXT:    xvfcmp.cueq.s $xr2, $xr2, $xr3
 ; LA32-NEXT:    xvfcmp.clt.s $xr1, $xr5, $xr4
+; LA32-NEXT:    xvxor.v $xr0, $xr0, $xr2
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvmskltz.w $xr0, $xr0
 ; LA32-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
@@ -752,10 +752,10 @@ define i8 @xvmsk_ugt_xor_ueq_and_ogt_v8f32(<8 x float> %a, <8 x float> %b, <8 x 
 ;
 ; LA64-LABEL: xvmsk_ugt_xor_ueq_and_ogt_v8f32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    xvfcmp.cueq.s $xr2, $xr2, $xr3
 ; LA64-NEXT:    xvfcmp.cult.s $xr0, $xr1, $xr0
-; LA64-NEXT:    xvxor.v $xr0, $xr0, $xr2
+; LA64-NEXT:    xvfcmp.cueq.s $xr2, $xr2, $xr3
 ; LA64-NEXT:    xvfcmp.clt.s $xr1, $xr5, $xr4
+; LA64-NEXT:    xvxor.v $xr0, $xr0, $xr2
 ; LA64-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvmskltz.w $xr0, $xr0
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0

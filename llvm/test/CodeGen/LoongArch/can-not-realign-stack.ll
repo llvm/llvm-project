@@ -18,24 +18,25 @@ define dso_local noundef signext i32 @main() nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 280 # 8-byte Folded Spill
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
 ; CHECK-NEXT:    xvld $xr0, $a0, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    xvst $xr0, $sp, 112 # 32-byte Folded Spill
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_1)
 ; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI0_1)
-; CHECK-NEXT:    xvst $xr1, $sp, 80 # 32-byte Folded Spill
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_2)
 ; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI0_2)
-; CHECK-NEXT:    xvst $xr2, $sp, 48 # 32-byte Folded Spill
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_3)
 ; CHECK-NEXT:    xvld $xr3, $a0, %pc_lo12(.LCPI0_3)
-; CHECK-NEXT:    xvst $xr3, $sp, 16 # 32-byte Folded Spill
-; CHECK-NEXT:    xvst $xr0, $sp, 152
-; CHECK-NEXT:    xvst $xr1, $sp, 184
-; CHECK-NEXT:    xvst $xr2, $sp, 216
-; CHECK-NEXT:    xvst $xr3, $sp, 248
 ; CHECK-NEXT:    addi.d $a0, $sp, 152
+; CHECK-NEXT:    xvst $xr0, $sp, 112 # 32-byte Folded Spill
+; CHECK-NEXT:    xvst $xr0, $sp, 152
+; CHECK-NEXT:    xvst $xr1, $sp, 80 # 32-byte Folded Spill
+; CHECK-NEXT:    xvst $xr1, $sp, 184
+; CHECK-NEXT:    xvst $xr2, $sp, 48 # 32-byte Folded Spill
+; CHECK-NEXT:    xvst $xr2, $sp, 216
+; CHECK-NEXT:    xvst $xr3, $sp, 16 # 32-byte Folded Spill
+; CHECK-NEXT:    xvst $xr3, $sp, 248
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    xvld $xr0, $sp, 112 # 32-byte Folded Reload
+; CHECK-NEXT:    addi.d $a0, $sp, 152
 ; CHECK-NEXT:    xvst $xr0, $sp, 152
 ; CHECK-NEXT:    xvld $xr0, $sp, 80 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvst $xr0, $sp, 184
@@ -43,11 +44,10 @@ define dso_local noundef signext i32 @main() nounwind {
 ; CHECK-NEXT:    xvst $xr0, $sp, 216
 ; CHECK-NEXT:    xvld $xr0, $sp, 16 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvst $xr0, $sp, 248
-; CHECK-NEXT:    addi.d $a0, $sp, 152
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.d $ra, $sp, 280 # 8-byte Folded Reload
+; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    addi.d $sp, $sp, 288
 ; CHECK-NEXT:    ret
 entry:

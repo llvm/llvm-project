@@ -143,8 +143,8 @@ define void @load_zext_16i8_to_16i32(ptr %ptr, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
 ; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    xvst $xr1, $a1, 32
 ; CHECK-NEXT:    ret
@@ -161,15 +161,15 @@ define void @load_zext_16i8_to_16i64(ptr %ptr, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 1
-; CHECK-NEXT:    vext2xv.du.wu $xr2, $xr2
 ; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
+; CHECK-NEXT:    vext2xv.wu.hu $xr1, $xr1
 ; CHECK-NEXT:    xvpermi.q $xr3, $xr0, 1
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 1
 ; CHECK-NEXT:    vext2xv.du.wu $xr3, $xr3
 ; CHECK-NEXT:    vext2xv.du.wu $xr1, $xr1
-; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    vext2xv.du.wu $xr2, $xr2
 ; CHECK-NEXT:    xvst $xr1, $a1, 64
 ; CHECK-NEXT:    xvst $xr3, $a1, 32
 ; CHECK-NEXT:    xvst $xr2, $a1, 96
@@ -201,8 +201,8 @@ define void @load_zext_8i16_to_8i64(ptr %ptr, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vext2xv.du.wu $xr1, $xr1
 ; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    vext2xv.du.wu $xr1, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    xvst $xr1, $a1, 32
 ; CHECK-NEXT:    ret

@@ -12,14 +12,14 @@ define i32 @test() nounwind {
 ; NOLSX:       # %bb.0:
 ; NOLSX-NEXT:    addi.d $sp, $sp, -32
 ; NOLSX-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
+; NOLSX-NEXT:    addi.d $a0, $sp, 4
 ; NOLSX-NEXT:    st.w $zero, $sp, 16
 ; NOLSX-NEXT:    st.d $zero, $sp, 8
 ; NOLSX-NEXT:    st.d $zero, $sp, 0
-; NOLSX-NEXT:    addi.d $a0, $sp, 4
 ; NOLSX-NEXT:    pcaddu18i $ra, %call36(test1)
 ; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    move $a0, $zero
 ; NOLSX-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
+; NOLSX-NEXT:    move $a0, $zero
 ; NOLSX-NEXT:    addi.d $sp, $sp, 32
 ; NOLSX-NEXT:    ret
 ;
@@ -27,14 +27,14 @@ define i32 @test() nounwind {
 ; LSX:       # %bb.0:
 ; LSX-NEXT:    addi.d $sp, $sp, -32
 ; LSX-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
-; LSX-NEXT:    st.w $zero, $sp, 16
 ; LSX-NEXT:    vrepli.b $vr0, 0
-; LSX-NEXT:    vst $vr0, $sp, 0
 ; LSX-NEXT:    addi.d $a0, $sp, 4
+; LSX-NEXT:    st.w $zero, $sp, 16
+; LSX-NEXT:    vst $vr0, $sp, 0
 ; LSX-NEXT:    pcaddu18i $ra, %call36(test1)
 ; LSX-NEXT:    jirl $ra, $ra, 0
-; LSX-NEXT:    move $a0, $zero
 ; LSX-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
+; LSX-NEXT:    move $a0, $zero
 ; LSX-NEXT:    addi.d $sp, $sp, 32
 ; LSX-NEXT:    ret
   %key = alloca %struct.key_t, align 4

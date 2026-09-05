@@ -213,8 +213,8 @@ define i64 @sub_clamp_zero_i64(i64 signext %x, i64 signext %y) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sltu $a4, $a0, $a2
 ; LA32-NEXT:    sub.w $a1, $a1, $a3
-; LA32-NEXT:    sub.w $a1, $a1, $a4
 ; LA32-NEXT:    sub.w $a0, $a0, $a2
+; LA32-NEXT:    sub.w $a1, $a1, $a4
 ; LA32-NEXT:    srai.w $a2, $a1, 31
 ; LA32-NEXT:    andn $a1, $a1, $a2
 ; LA32-NEXT:    andn $a0, $a0, $a2
