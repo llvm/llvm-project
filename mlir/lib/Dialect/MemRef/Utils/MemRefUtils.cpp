@@ -353,16 +353,17 @@ bool hasNegativeStaticStride(MemRefType memRefTy) {
 }
 
 namespace {
-// TODO: This static footprint modelling and its logic overlap with
+// TODO: This footprint modelling and its logic overlap with
 // `SubsetOpInterface`, which is unfortunately tensor-only today; if it gains
 // memref support, look into unifying with it to improve code reuse.
 //
-/// Static footprint of a memref value relative to a `root` memref reached
-/// through a chain of rank-preserving, unit-stride `memref.subview` ops: per
-/// `root` dimension, the `[offset, offset + size)` interval the value covers.
-/// The root is the buffer if the whole chain is static, otherwise the source
-/// of the first subview that cannot be modelled statically. Two footprints are
-/// therefore comparable only when they resolve to the *same* root value.
+/// Footprint of a memref value relative to a `root` memref reached through a
+/// chain of rank-preserving, unit-stride `memref.subview` ops: per `root`
+/// dimension, the `[offset, offset + size)` interval the value covers (a `size`
+/// may be dynamic). The root is the underlying buffer if the whole chain
+/// composes, otherwise the result of the first subview (walking toward the
+/// root) that cannot be composed. Two footprints are therefore comparable only
+/// when they resolve to the *same* root value.
 struct SubviewFootprint {
   Value root;
   SmallVector<int64_t> offsets;
@@ -370,15 +371,16 @@ struct SubviewFootprint {
 };
 } // namespace
 
-/// Resolve `base` through a `memref.subview` chain to a static footprint, or
+/// Resolve `base` through a `memref.subview` chain to a footprint, or
 /// `std::nullopt` if it cannot be modelled. Composition stops at the first
-/// subview with a dynamic offset/size, a non-unit stride, or a rank reduction;
-/// that subview's own result becomes the footprint root. This keeps two slices
-/// that share a common (possibly dynamically-offset) base comparable through
-/// their static offsets relative to that base.
+/// subview with a dynamic offset, a non-unit stride, or a rank reduction; that
+/// subview's own result becomes the footprint root. This keeps two slices that
+/// share a common (possibly dynamically-offset) base comparable through their
+/// static offsets relative to that base. Sizes may be dynamic:
+/// such dimensions simply cannot be used to prove disjointness.
 static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
   auto baseTy = dyn_cast<MemRefType>(base.getType());
-  if (!baseTy || llvm::any_of(baseTy.getShape(), ShapedType::isDynamic))
+  if (!baseTy)
     return std::nullopt;
   SubviewFootprint footprint;
   // Size is fixed by `base` itself; offset accumulates the static offsets of
@@ -411,12 +413,15 @@ static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
 }
 
 /// True if two footprints provably cover disjoint memory: they must share the
-/// same root and be separated along at least one dimension.
+/// same root and be separated along at least one statically-sized dimension.
 static bool areFootprintDisjoint(const SubviewFootprint &a,
                                  const SubviewFootprint &b) {
   if (a.root != b.root)
     return false;
   for (unsigned d = 0, e = a.offsets.size(); d < e; ++d) {
+    // A dimension can prove disjointness only when both extents are static.
+    if (ShapedType::isDynamic(a.sizes[d]) || ShapedType::isDynamic(b.sizes[d]))
+      continue;
     int64_t aHi = a.offsets[d] + a.sizes[d];
     int64_t bHi = b.offsets[d] + b.sizes[d];
     if (aHi <= b.offsets[d] || bHi <= a.offsets[d])
@@ -432,7 +437,7 @@ bool hasNoAliasingAccessInScope(Value base, Operation *scope,
   if (!baseMemref)
     return false;
   Value buffer = skipViewLikeOps(baseMemref);
-  // Static footprint of `base`, if modellable; enables the disjointness escape.
+  // Footprint of `base`, if modellable; enables the disjointness escape.
   std::optional<SubviewFootprint> baseFp = resolveSubviewFootprint(base);
 
   // Visit the transitive users of the buffer, following views.
