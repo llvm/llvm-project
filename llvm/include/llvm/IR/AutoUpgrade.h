@@ -85,6 +85,10 @@ namespace llvm {
   /// Otherwise return the \p TBAANode itself.
   LLVM_ABI MDNode *UpgradeTBAANode(MDNode &TBAANode);
 
+  /// Upgrade instruction-level metadata (e.g. legacy
+  /// amdgpu.ignore.denormal.mode).
+  LLVM_ABI void UpgradeInstructionMetadata(Instruction &I);
+
   /// This is an auto-upgrade for bitcast between pointers with different
   /// address spaces: the instruction is replaced by a pair ptrtoint+inttoptr.
   LLVM_ABI Instruction *UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,

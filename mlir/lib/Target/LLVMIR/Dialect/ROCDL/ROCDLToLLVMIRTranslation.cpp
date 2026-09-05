@@ -19,6 +19,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
@@ -241,7 +242,7 @@ public:
     if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
         attribute.getName()) {
       for (llvm::Instruction *i : instructions)
-        i->setMetadata("amdgpu.ignore.denormal.mode",
+        i->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
                        llvm::MDNode::get(llvmContext, {}));
     }
 

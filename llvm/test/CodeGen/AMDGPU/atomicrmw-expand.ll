@@ -114,7 +114,7 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
-  %res = atomicrmw fadd ptr %addr, float %val seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr %addr, float %val seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret float %res
 }
 
@@ -217,7 +217,7 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
-  %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret float %res
 }
 
@@ -351,7 +351,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1200-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1200-NEXT:    s_setpc_b64 s[30:31]
-  %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void
 }
 

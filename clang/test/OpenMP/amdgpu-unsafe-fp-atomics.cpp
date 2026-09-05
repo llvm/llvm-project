@@ -20,7 +20,7 @@ double dv, dx;
 // UNSAFE-FP-ATOMICS-SAME: ) #[[ATTR0:[0-9]+]] {
 // UNSAFE-FP-ATOMICS-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[TMP0:%.*]] = load float, ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
-// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !atomic.ignore.denormal.mode [[META4:![0-9]+]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP0]]
 // UNSAFE-FP-ATOMICS-NEXT:    store float [[ADD]], ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
 // UNSAFE-FP-ATOMICS-NEXT:    ret void
