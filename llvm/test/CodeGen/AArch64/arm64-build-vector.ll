@@ -26,7 +26,7 @@ define <8 x i16> @build_all_zero(<8 x i16> %a) #1 {
 ; CHECK-SD-LABEL: build_all_zero:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #44672 // =0xae80
-; CHECK-SD-NEXT:    fmov s1, w8
+; CHECK-SD-NEXT:    dup v1.8h, w8
 ; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    ret
 ;
