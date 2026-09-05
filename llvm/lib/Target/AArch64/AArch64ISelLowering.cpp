@@ -15894,6 +15894,27 @@ static unsigned getDUPLANEOp(EVT EltType) {
   llvm_unreachable("Invalid vector element type?");
 }
 
+static SDValue extendPromotedExtractForDup(SDValue Value, EVT DupVT, SDLoc DL,
+                                           SelectionDAG &DAG) {
+  if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return Value;
+
+  EVT ValueVT = Value.getValueType();
+  EVT ExtractVT = Value.getOperand(0).getValueType().getVectorElementType();
+  EVT DupEltVT = DupVT.getVectorElementType();
+  if (!ValueVT.isInteger() || !ExtractVT.isInteger() || !DupEltVT.isInteger() ||
+      !ExtractVT.bitsLT(ValueVT) || !ExtractVT.bitsLT(DupEltVT) ||
+      !DupEltVT.bitsLE(ValueVT))
+    return Value;
+
+  // EXTRACT_VECTOR_ELT may return a type wider than the vector element type
+  // with undefined high bits. A scalar-fed DUP with wider lanes consumes those
+  // bits, so use sign-extension as a legal concretization. This preserves
+  // all-ones masks across widening and lets instruction selection use SMOV.
+  return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Value.getValueType(), Value,
+                     DAG.getValueType(ExtractVT));
+}
+
 static SDValue constructDup(SDValue V, int Lane, SDLoc DL, EVT VT,
                             unsigned Opcode, SelectionDAG &DAG) {
   // Try to eliminate a bitcasted extract subvector before a DUPLANE.
@@ -16135,12 +16156,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
     if (Lane == 0 && V1.getOpcode() == ISD::SCALAR_TO_VECTOR)
       return DAG.getNode(AArch64ISD::DUP, DL, V1.getValueType(),
-                         V1.getOperand(0));
+                         extendPromotedExtractForDup(
+                             V1.getOperand(0), V1.getValueType(), DL, DAG));
     // Test if V1 is a BUILD_VECTOR and the lane being referenced is a non-
     // constant. If so, we can just reference the lane's definition directly.
     if (V1.getOpcode() == ISD::BUILD_VECTOR &&
         !isa<ConstantSDNode>(V1.getOperand(Lane)))
-      return DAG.getNode(AArch64ISD::DUP, DL, VT, V1.getOperand(Lane));
+      return DAG.getNode(
+          AArch64ISD::DUP, DL, VT,
+          extendPromotedExtractForDup(V1.getOperand(Lane), VT, DL, DAG));
 
     // Otherwise, duplicate from the lane of the input vector.
     unsigned Opcode = getDUPLANEOp(V1.getValueType().getVectorElementType());
@@ -17294,7 +17318,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     SDValue LoHalf =
         LaneVT.getSizeInBits() == 64
             ? DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, HalfVT, LowHalfFirstVal)
-            : DAG.getNode(AArch64ISD::DUP, DL, HalfVT, LowHalfFirstVal);
+            : DAG.getNode(AArch64ISD::DUP, DL, HalfVT,
+                          extendPromotedExtractForDup(LowHalfFirstVal, HalfVT,
+                                                      DL, DAG));
 
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoHalf, HiZero);
   }
@@ -17362,6 +17388,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // i32 and try again.
   if (usesOnlyOneValue) {
     if (!isConstant) {
+      Value = extendPromotedExtractForDup(Value, VT, DL, DAG);
       if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
           Value.getValueType() != VT) {
         LLVM_DEBUG(

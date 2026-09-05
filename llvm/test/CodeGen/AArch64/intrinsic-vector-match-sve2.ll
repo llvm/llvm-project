@@ -491,15 +491,15 @@ define <3 x i1> @match_v3i8_v3i1(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask) #
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[1]
-; CHECK-NEXT:    umov w9, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w12, v0.b[4]
-; CHECK-NEXT:    umov w13, v0.b[5]
+; CHECK-NEXT:    smov w8, v0.b[1]
+; CHECK-NEXT:    smov w9, v0.b[0]
+; CHECK-NEXT:    smov w10, v0.b[2]
+; CHECK-NEXT:    smov w11, v0.b[3]
+; CHECK-NEXT:    smov w12, v0.b[4]
+; CHECK-NEXT:    smov w13, v0.b[5]
 ; CHECK-NEXT:    mov v1.h[1], w1
 ; CHECK-NEXT:    dup v2.4h, w8
-; CHECK-NEXT:    umov w8, v0.b[6]
+; CHECK-NEXT:    smov w8, v0.b[6]
 ; CHECK-NEXT:    dup v3.4h, w9
 ; CHECK-NEXT:    dup v4.4h, w10
 ; CHECK-NEXT:    dup v5.4h, w11
@@ -513,7 +513,7 @@ define <3 x i1> @match_v3i8_v3i1(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask) #
 ; CHECK-NEXT:    bic v5.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v6.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v7.4h, #255, lsl #8
-; CHECK-NEXT:    umov w8, v0.b[7]
+; CHECK-NEXT:    smov w8, v0.b[7]
 ; CHECK-NEXT:    bic v1.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v16.4h, #255, lsl #8
 ; CHECK-NEXT:    cmeq v0.4h, v1.4h, v2.4h
