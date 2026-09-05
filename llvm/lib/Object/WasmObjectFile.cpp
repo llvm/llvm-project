@@ -91,6 +91,12 @@ ObjectFile::createWasmObjectFile(MemoryBufferRef Buffer) {
       return E;                                                                \
   } while (false)
 
+#define UNWRAP_OR_RETURN(Name, Expr)                                           \
+  auto Name##OrErr = (Expr);                                                   \
+  if (!Name##OrErr)                                                            \
+    return Name##OrErr.takeError();                                            \
+  auto Name = *Name##OrErr
+
 static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg, object_error::parse_failed);
 }
@@ -148,30 +154,24 @@ static Expected<int64_t> readLEB128(WasmObjectFile::ReadContext &Ctx) {
 }
 
 static Expected<uint8_t> readVaruint1(WasmObjectFile::ReadContext &Ctx) {
-  Expected<int64_t> Value = readLEB128(Ctx);
-  if (!Value)
-    return Value.takeError();
-  if (*Value > VARUINT1_MAX || *Value < 0)
+  UNWRAP_OR_RETURN(Value, readLEB128(Ctx));
+  if (Value > VARUINT1_MAX || Value < 0)
     return parseFailed("LEB is outside Varuint1 range");
-  return *Value;
+  return Value;
 }
 
 static Expected<int32_t> readVarint32(WasmObjectFile::ReadContext &Ctx) {
-  Expected<int64_t> Value = readLEB128(Ctx);
-  if (!Value)
-    return Value.takeError();
-  if (*Value > INT32_MAX || *Value < INT32_MIN)
+  UNWRAP_OR_RETURN(Value, readLEB128(Ctx));
+  if (Value > INT32_MAX || Value < INT32_MIN)
     return parseFailed("LEB is outside Varint32 range");
-  return *Value;
+  return Value;
 }
 
 static Expected<uint32_t> readVaruint32(WasmObjectFile::ReadContext &Ctx) {
-  Expected<uint64_t> Value = readULEB128(Ctx);
-  if (!Value)
-    return Value.takeError();
-  if (*Value > UINT32_MAX)
+  UNWRAP_OR_RETURN(Value, readULEB128(Ctx));
+  if (Value > UINT32_MAX)
     return parseFailed("LEB is outside Varuint32 range");
-  return *Value;
+  return Value;
 }
 
 static Expected<int64_t> readVarint64(WasmObjectFile::ReadContext &Ctx) {
@@ -183,14 +183,12 @@ static Expected<uint64_t> readVaruint64(WasmObjectFile::ReadContext &Ctx) {
 }
 
 static Expected<StringRef> readString(WasmObjectFile::ReadContext &Ctx) {
-  Expected<uint32_t> StringLen = readVaruint32(Ctx);
-  if (!StringLen)
-    return StringLen.takeError();
-  if (*StringLen > static_cast<uint64_t>(Ctx.End - Ctx.Ptr))
+  UNWRAP_OR_RETURN(StringLen, readVaruint32(Ctx));
+  if (StringLen > static_cast<uint64_t>(Ctx.End - Ctx.Ptr))
     return parseFailed("EOF while reading string");
 
-  StringRef Result(reinterpret_cast<const char *>(Ctx.Ptr), *StringLen);
-  Ctx.Ptr += *StringLen;
+  StringRef Result(reinterpret_cast<const char *>(Ctx.Ptr), StringLen);
+  Ctx.Ptr += StringLen;
   return Result;
 }
 
@@ -214,9 +212,7 @@ static Expected<wasm::ValType> parseValType(WasmObjectFile::ReadContext &Ctx,
     return wasm::ValType(Code);
   }
   if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
-    Expected<int64_t> HeapType = readVarint64(Ctx);
-    if (!HeapType)
-      return HeapType.takeError();
+    RETURN_IF_ERROR(readVarint64(Ctx).takeError());
   }
   return wasm::ValType(wasm::ValType::OTHERREF);
 }
@@ -255,8 +251,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   case wasm::WASM_OPCODE_REF_NULL: {
     uint32_t TypeCode;
     RETURN_IF_ERROR(readVaruint32(Ctx).moveInto(TypeCode));
-    if (Expected<wasm::ValType> Type = parseValType(Ctx, TypeCode); !Type)
-      return Type.takeError();
+    RETURN_IF_ERROR(parseValType(Ctx, TypeCode).takeError());
     break;
   }
   default:
@@ -281,18 +276,15 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
       case wasm::WASM_OPCODE_REF_NULL:
       case wasm::WASM_OPCODE_REF_FUNC:
       case wasm::WASM_OPCODE_I64_CONST: {
-        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
-          return Value.takeError();
+        RETURN_IF_ERROR(readULEB128(Ctx).takeError());
         break;
       }
       case wasm::WASM_OPCODE_F32_CONST: {
-        if (Expected<int32_t> Value = readFloat32(Ctx); !Value)
-          return Value.takeError();
+        RETURN_IF_ERROR(readFloat32(Ctx).takeError());
         break;
       }
       case wasm::WASM_OPCODE_F64_CONST: {
-        if (Expected<int64_t> Value = readFloat64(Ctx); !Value)
-          return Value.takeError();
+        RETURN_IF_ERROR(readFloat64(Ctx).takeError());
         break;
       }
       case wasm::WASM_OPCODE_I32_ADD:
@@ -311,15 +303,12 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
       case wasm::WASM_OPCODE_STRUCT_NEW_DEFAULT:
       case wasm::WASM_OPCODE_ARRAY_NEW:
       case wasm::WASM_OPCODE_ARRAY_NEW_DEFAULT: {
-        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
-          return Value.takeError();
+        RETURN_IF_ERROR(readULEB128(Ctx).takeError());
         break;
       }
       case wasm::WASM_OPCODE_ARRAY_NEW_FIXED: {
-        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
-          return Value.takeError();
-        if (Expected<uint64_t> Value = readULEB128(Ctx); !Value)
-          return Value.takeError();
+        RETURN_IF_ERROR(readULEB128(Ctx).takeError());
+        RETURN_IF_ERROR(readULEB128(Ctx).takeError());
         break;
       }
       case wasm::WASM_OPCODE_REF_I31:
@@ -340,50 +329,34 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
 
 static Expected<wasm::WasmLimits> readLimits(WasmObjectFile::ReadContext &Ctx) {
   wasm::WasmLimits Result;
-  Expected<uint32_t> Flags = readVaruint32(Ctx);
-  if (!Flags)
-    return Flags.takeError();
-  Result.Flags = *Flags;
+  UNWRAP_OR_RETURN(Flags, readVaruint32(Ctx));
+  Result.Flags = Flags;
 
-  Expected<uint64_t> Minimum = readVaruint64(Ctx);
-  if (!Minimum)
-    return Minimum.takeError();
-  Result.Minimum = *Minimum;
+  UNWRAP_OR_RETURN(Minimum, readVaruint64(Ctx));
+  Result.Minimum = Minimum;
 
   if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX) {
-    Expected<uint64_t> Maximum = readVaruint64(Ctx);
-    if (!Maximum)
-      return Maximum.takeError();
-    Result.Maximum = *Maximum;
+    UNWRAP_OR_RETURN(Maximum, readVaruint64(Ctx));
+    Result.Maximum = Maximum;
   }
   if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_PAGE_SIZE) {
-    Expected<uint32_t> PageSizeLog2 = readVaruint32(Ctx);
-    if (!PageSizeLog2)
-      return PageSizeLog2.takeError();
-    if (*PageSizeLog2 >= 32)
+    UNWRAP_OR_RETURN(PageSizeLog2, readVaruint32(Ctx));
+    if (PageSizeLog2 >= 32)
       return parseFailed("log2(wasm page size) too large");
-    Result.PageSize = 1U << *PageSizeLog2;
+    Result.PageSize = 1U << PageSizeLog2;
   }
   return Result;
 }
 
 static Expected<wasm::WasmTableType>
 readTableType(WasmObjectFile::ReadContext &Ctx) {
-  Expected<uint32_t> ElemTypeCode = readVaruint32(Ctx);
-  if (!ElemTypeCode)
-    return ElemTypeCode.takeError();
-
-  Expected<wasm::ValType> ElemType = parseValType(Ctx, *ElemTypeCode);
-  if (!ElemType)
-    return ElemType.takeError();
-
-  Expected<wasm::WasmLimits> Limits = readLimits(Ctx);
-  if (!Limits)
-    return Limits.takeError();
+  UNWRAP_OR_RETURN(ElemTypeCode, readVaruint32(Ctx));
+  UNWRAP_OR_RETURN(ElemType, parseValType(Ctx, ElemTypeCode));
+  UNWRAP_OR_RETURN(Limits, readLimits(Ctx));
 
   wasm::WasmTableType TableType;
-  TableType.ElemType = *ElemType;
-  TableType.Limits = *Limits;
+  TableType.ElemType = ElemType;
+  TableType.Limits = Limits;
   return TableType;
 }
 
@@ -1378,10 +1351,8 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
   auto parseFieldDef = [&]() -> Error {
     uint32_t TypeCode;
     RETURN_IF_ERROR(readVaruint32(Ctx).moveInto(TypeCode));
-    if (Expected<wasm::ValType> Type = parseValType(Ctx, TypeCode); !Type)
-      return Type.takeError();
-    if (Expected<uint32_t> Mutability = readVaruint32(Ctx); !Mutability)
-      return Mutability.takeError();
+    RETURN_IF_ERROR(parseValType(Ctx, TypeCode).takeError());
+    RETURN_IF_ERROR(readVaruint32(Ctx).takeError());
     return Error::success();
   };
 
@@ -1418,8 +1389,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
           if (Supers != 1)
             return make_error<GenericBinaryError>(
                 "Invalid number of supertypes", object_error::parse_failed);
-          if (Expected<uint32_t> Supertype = readVaruint32(Ctx); !Supertype)
-            return Supertype.takeError();
+          RETURN_IF_ERROR(readVaruint32(Ctx).takeError());
         }
         uint32_t FormVal;
         RETURN_IF_ERROR(readVaruint32(Ctx).moveInto(FormVal));
@@ -2138,10 +2108,8 @@ Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   auto &Sym = getWasmSymbol(Symb);
   if (!Sym.isDefined())
     return 0;
-  Expected<section_iterator> Sec = getSymbolSection(Symb);
-  if (!Sec)
-    return Sec.takeError();
-  uint32_t SectionAddress = getSectionAddress(Sec.get()->getRawDataRefImpl());
+  UNWRAP_OR_RETURN(Sec, getSymbolSection(Symb));
+  uint32_t SectionAddress = getSectionAddress(Sec->getRawDataRefImpl());
   if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION &&
       isDefinedFunctionIndex(Sym.Info.ElementIndex)) {
     return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset +

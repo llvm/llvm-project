@@ -7,7 +7,7 @@
 FileHeader:
   Version:         0x00000001
 
-# CHECK-LEB-DECODE: malformed uleb128, extends past end
+# CHECK-LEB-DECODE: llvm-objdump: error: '{{.*}}.wasm': malformed uleb128, extends past end
 
 # RUN: echo -en "\x99hello" >> %t.wasm
 # Append a section size that extends beyond the end of the file
