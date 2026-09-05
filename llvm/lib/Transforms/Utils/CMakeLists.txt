@@ -91,6 +91,7 @@ add_llvm_component_library(LLVMTransformUtils
   SizeOpts.cpp
   SplitModule.cpp
   SplitModuleByCategory.cpp
+  SplitModuleCG.cpp
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
   UnifyLoopExits.cpp
