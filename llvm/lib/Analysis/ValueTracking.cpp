@@ -9901,6 +9901,8 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   if (!LHSIsTrue)
     LPred = ICmpInst::getInverseCmpPredicate(LPred);
 
+  SimplifyQuery SQ(DL);
+
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.
   if (L0 == R1) {
@@ -9929,7 +9931,6 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
     // further constraint the constant ranges. At the moment this leads to
     // several regressions related to not transforming `multi_use(A + C0) eq/ne
     // C1` (see discussion: D58633).
-    SimplifyQuery SQ(DL);
     ConstantRange LCR = computeConstantRange(L1, ICmpInst::isSigned(LPred), SQ,
                                              MaxAnalysisRecursionDepth - 1);
     ConstantRange RCR = computeConstantRange(R1, ICmpInst::isSigned(RPred), SQ,
@@ -9986,6 +9987,15 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
         match(B, m_PtrToIntOrAddr(m_Specific(R0)))))) {
     return RPred.dropSameSign() == ICmpInst::ICMP_NE;
   }
+
+  // L0 u>= L1 with L0 = L1 + Addend and Addend != 0 implies L0 != 0:
+  // If L0 == 0 then L1 u<= 0, i.e. L1 == 0, and then L0 == Addend != 0.
+  const Value *Addend;
+  if (LPred == ICmpInst::ICMP_UGE && L0 == R0 && ICmpInst::isEquality(RPred) &&
+      match(R1, m_Zero()) &&
+      match(L0, m_c_Add(m_Specific(L1), m_Value(Addend))) &&
+      isKnownNonZero(Addend, SQ, MaxAnalysisRecursionDepth - 1))
+    return RPred.dropSameSign() == ICmpInst::ICMP_NE;
 
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
   if (L0 == R0 &&
@@ -10116,6 +10126,27 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
   // Match not
   if (match(LHS, m_Not(m_Value(LHS))))
     LHSIsTrue = !LHSIsTrue;
+
+  // A umin with an operand known non-zero is zero iff the other operand is,
+  // so for an equality against zero it is enough to look at that operand.
+  // Fall through with the original operands otherwise, e.g. when LHS is
+  // about the umin itself.
+  const Value *X, *Y;
+  if (ICmpInst::isEquality(RHSPred) && match(RHSOp1, m_Zero()) &&
+      match(RHSOp0, m_UMin(m_Value(X), m_Value(Y)))) {
+    SimplifyQuery SQ(DL);
+    // Test Y before X, as a constant operand is canonicalized to the right
+    // hand side, and test each operand at most once.
+    const Value *DecidingOp = nullptr;
+    if (isKnownNonZero(Y, SQ, MaxAnalysisRecursionDepth - 1))
+      DecidingOp = X;
+    else if (isKnownNonZero(X, SQ, MaxAnalysisRecursionDepth - 1))
+      DecidingOp = Y;
+    if (DecidingOp)
+      if (std::optional<bool> Res = isImpliedCondition(
+              LHS, RHSPred, DecidingOp, RHSOp1, DL, LHSIsTrue, Depth + 1))
+        return Res;
+  }
 
   // Both LHS and RHS are icmps.
   if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
