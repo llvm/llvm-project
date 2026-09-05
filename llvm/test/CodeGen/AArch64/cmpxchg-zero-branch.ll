@@ -10,8 +10,7 @@ define void @cas_zero_branch_64(ptr %p, i64 %new) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    casal x8, x1, [x0]
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    b.ne .LBB0_2
+; CHECK-NEXT:    cbnz x8, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %yes
 ; CHECK-NEXT:    b g
 ; CHECK-NEXT:  .LBB0_2: // %common.ret
@@ -32,8 +31,7 @@ define void @cas_zero_branch_32(ptr %p, i32 %new) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    casal w8, w1, [x0]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    b.ne .LBB1_2
+; CHECK-NEXT:    cbnz w8, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %yes
 ; CHECK-NEXT:    b g
 ; CHECK-NEXT:  .LBB1_2: // %common.ret
