@@ -855,16 +855,51 @@ public:
   uint16_t SectionIdOfExceptionHandler = 0;
   FrameProcedureOptions Flags = FrameProcedureOptions::None;
 
+  FrameProcedureOptions getFlags() const {
+    return Flags & ~FrameProcedureOptions::EncodedPointersMask;
+  }
+
+  void setFlags(FrameProcedureOptions O) {
+    Flags = (Flags & FrameProcedureOptions::EncodedPointersMask) |
+            (O & ~FrameProcedureOptions::EncodedPointersMask);
+  }
+
+  void setEncodedLocalFramePtrReg(EncodedFramePtrReg R) {
+    FrameProcedureOptions RegFlags{(static_cast<uint32_t>(R) & 3U) << 14U};
+    Flags = (Flags & ~FrameProcedureOptions::EncodedLocalBasePointerMask) |
+            RegFlags;
+  }
+
+  void setLocalFramePtrReg(RegisterId Reg, CPUType CPU) {
+    setEncodedLocalFramePtrReg(encodeFramePtrReg(Reg, CPU));
+  }
+
+  void setEncodedParamFramePtrReg(EncodedFramePtrReg R) {
+    FrameProcedureOptions RegFlags{(static_cast<uint32_t>(R) & 3U) << 16U};
+    Flags = (Flags & ~FrameProcedureOptions::EncodedParamBasePointerMask) |
+            RegFlags;
+  }
+
+  void setParamFramePtrReg(RegisterId Reg, CPUType CPU) {
+    setEncodedParamFramePtrReg(encodeFramePtrReg(Reg, CPU));
+  }
+
+  EncodedFramePtrReg getEncodedLocalFramePtrReg() const {
+    return EncodedFramePtrReg((uint32_t(Flags) >> 14U) & 0x3U);
+  }
+
   /// Extract the register this frame uses to refer to local variables.
   RegisterId getLocalFramePtrReg(CPUType CPU) const {
-    return decodeFramePtrReg(
-        EncodedFramePtrReg((uint32_t(Flags) >> 14U) & 0x3U), CPU);
+    return decodeFramePtrReg(getEncodedLocalFramePtrReg(), CPU);
+  }
+
+  EncodedFramePtrReg getEncodedParamFramePtrReg() const {
+    return EncodedFramePtrReg((uint32_t(Flags) >> 16U) & 0x3U);
   }
 
   /// Extract the register this frame uses to refer to parameters.
   RegisterId getParamFramePtrReg(CPUType CPU) const {
-    return decodeFramePtrReg(
-        EncodedFramePtrReg((uint32_t(Flags) >> 16U) & 0x3U), CPU);
+    return decodeFramePtrReg(getEncodedParamFramePtrReg(), CPU);
   }
 
   uint32_t RecordOffset = 0;

@@ -34,6 +34,7 @@ LLVM_ABI EnumStrings<uint32_t, 1> getFrameProcSymFlagNames();
 LLVM_ABI EnumStrings<uint16_t, 1> getExportSymFlagNames();
 LLVM_ABI EnumStrings<uint32_t, 1> getModuleSubstreamKindNames();
 LLVM_ABI EnumStrings<uint8_t, 1> getThunkOrdinalNames();
+LLVM_ABI EnumStrings<uint8_t, 1> getEncodedFramePtrRegNames();
 LLVM_ABI EnumStrings<uint16_t, 1> getTrampolineNames();
 LLVM_ABI EnumStrings<COFF::SectionCharacteristics, 1>
 getImageSectionCharacteristicNames();
