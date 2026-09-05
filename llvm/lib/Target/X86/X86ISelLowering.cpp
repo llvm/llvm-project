@@ -53632,11 +53632,20 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
 
   X86::CondCode CC;
   SDValue EFLAGS;
+  bool InvertCC = false;
+  if (Y.getOpcode() == ISD::XOR && isOneConstant(Y.getOperand(1)) &&
+      Y.hasOneUse()) {
+    InvertCC = true;
+    Y = Y.getOperand(0);
+  }
+
   if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
     CC = (X86::CondCode)Y.getConstantOperandVal(0);
+    if (InvertCC)
+      CC = X86::GetOppositeBranchCondition(CC);
     EFLAGS = Y.getOperand(1);
-  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1)) &&
-             Y.hasOneUse()) {
+  } else if (!InvertCC && Y.getOpcode() == ISD::AND &&
+             isOneConstant(Y.getOperand(1)) && Y.hasOneUse()) {
     EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
   }
 
@@ -53683,10 +53692,12 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                        DAG.getVTList(VT, MVT::i32), X,
                        DAG.getConstant(0, DL, VT), EFLAGS);
   }
-  if (!IsSub && CC == X86::COND_O && !FlagsUsed &&
+  if (((!IsSub && CC == X86::COND_O) || (IsSub && CC == X86::COND_NO)) &&
+      !FlagsUsed &&
       (VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
       DAG.getSubtarget<X86Subtarget>().hasADX()) {
     // X + (overflow_from_OF ? 1 : 0) --> adox X, 0
+    // X - (!overflow_from_OF ? 1 : 0) --> adox X, -1
     // NOTE: For i8/i16, ADOX32's OF output does not match the original iN
     // overflow. This is safe because this ADOX replaces an ISD::ADD, so its OF
     // output is natively dead. Its ANY_EXTEND operands ensure future transforms
@@ -53695,7 +53706,9 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     SDValue AdoxX = DAG.getAnyExtOrTrunc(X, DL, AdoxVT);
     SDValue Adox =
         DAG.getNode(X86ISD::ADOX, DL, DAG.getVTList(AdoxVT, MVT::i32), AdoxX,
-                    DAG.getConstant(0, DL, AdoxVT), EFLAGS);
+                    IsSub ? DAG.getAllOnesConstant(DL, AdoxVT)
+                          : DAG.getConstant(0, DL, AdoxVT),
+                    EFLAGS);
     return DAG.getAnyExtOrTrunc(Adox, DL, VT);
   }
 
