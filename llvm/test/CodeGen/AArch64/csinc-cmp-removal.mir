@@ -6,19 +6,23 @@ name:            remove_subswr_after_csincwr
 body:             |
   ; CHECK-LABEL: name: remove_subswr_after_csincwr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-  ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $x1
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -43,19 +47,23 @@ name:            remove_subsxr_after_csincxr_invertcc
 body:             |
   ; CHECK-LABEL: name: remove_subsxr_after_csincxr_invertcc
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
-  ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-  ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $x1
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -80,18 +88,22 @@ name:            cflags_alive_in_succs
 body:             |
   ; CHECK-LABEL: name: cflags_alive_in_succs
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri [[CSINCXr]], 0, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri [[CSINCXr]], 0, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -114,17 +126,21 @@ name:            nz_used_after_cmp
 body:             |
   ; CHECK-LABEL: name: nz_used_after_cmp
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-  ; CHECK:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri [[CSINCXr]], 0, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 4, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri [[CSINCXr]], 0, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 4, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -146,16 +162,20 @@ name:            remove_addswr_after_csincwr_invertcc
 body:             |
   ; CHECK-LABEL: name: remove_addswr_after_csincwr_invertcc
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-  ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -177,17 +197,21 @@ name:            cv_used_after_cmp
 body:             |
   ; CHECK-LABEL: name: cv_used_after_cmp
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 0, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 2, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 0, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 2, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -209,17 +233,21 @@ name:            csinc_add0
 body:             |
   ; CHECK-LABEL: name: csinc_add0
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 4, implicit $nzcv
-  ; CHECK:   [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri [[CSINCWr]], 0, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 4, implicit $nzcv
+  ; CHECK-NEXT:   [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri [[CSINCWr]], 0, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -241,16 +269,20 @@ name:            remove_subs1_after_csincN_invertcc
 body:             |
   ; CHECK-LABEL: name: remove_subs1_after_csincN_invertcc
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 5, implicit $nzcv
-  ; CHECK:   Bcc 5, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 5, implicit $nzcv
+  ; CHECK-NEXT:   Bcc 5, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -272,17 +304,21 @@ name:            csinc_wrong_cc
 body:             |
   ; CHECK-LABEL: name: csinc_wrong_cc
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $nzcv
-  ; CHECK:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 2, implicit $nzcv
-  ; CHECK:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[CSINCXr]], 1, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[CSINCXr:%[0-9]+]]:gpr64common = CSINCXr $xzr, $xzr, 2, implicit $nzcv
+  ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[CSINCXr]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 0, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $nzcv
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -304,20 +340,24 @@ name:            subswr_wrong_cmp_value
 body:             |
   ; CHECK-LABEL: name: subswr_wrong_cmp_value
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $x1
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-  ; CHECK:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 3, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 1, %bb.2, implicit $nzcv
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr [[DEF]], [[COPY]], implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 3, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 1, %bb.2, implicit $nzcv
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.0:
     liveins: $x1
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
