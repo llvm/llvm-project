@@ -97,5 +97,11 @@ ENUM_LOWERINGOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, 0)
 /// 0 means no trapping. Bit values match IEEE_FLAG_TYPE encoding.
 ENUM_LOWERINGOPT(FPExceptionTraps, unsigned, 8, 0)
 
+/// Initialization mode for automatic variables that have no explicit or
+/// default initialization (-finit-local= / -finit-local-zero).
+/// Off by default.
+ENUM_LOWERINGOPT(InitLocalMode, Fortran::lower::InitLocalKind, 3,
+                 Fortran::lower::InitLocalKind::Off)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

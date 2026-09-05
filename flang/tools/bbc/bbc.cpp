@@ -276,6 +276,20 @@ static llvm::cl::opt<bool> initGlobalZero(
     llvm::cl::desc("Zero initialize globals without default initialization"),
     llvm::cl::init(true));
 
+static llvm::cl::opt<std::string>
+    initLocalMode("finit-local",
+                  llvm::cl::desc("Initialize local variables without explicit "
+                                 "or default initialization. "
+                                 "Accepts: zero or 0x<hex-byte>."),
+                  llvm::cl::init(""));
+
+static llvm::cl::opt<bool> initLocalZero(
+    "finit-local-zero",
+    llvm::cl::desc(
+        "Zero-initialize local variables without explicit or default "
+        "initialization (alias for -finit-local=zero)"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
     reallocateLHS("frealloc-lhs",
                   llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
@@ -506,6 +520,36 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
+  // -finit-local= and -finit-local-zero: last occurrence on the command
+  // line wins. Determine the winner by position before validating so that
+  // sequences like "-finit-local=bogus -finit-local-zero" accept zero
+  // rather than failing on the overridden invalid value.
+  bool zeroWins = initLocalZero &&
+                  initLocalZero.getPosition() > initLocalMode.getPosition();
+  if (zeroWins) {
+    loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+  } else if (initLocalMode.getNumOccurrences() > 0) {
+    llvm::StringRef val = initLocalMode;
+    if (val.empty()) {
+      llvm::errs() << "bbc: invalid -finit-local= value: (empty)\n";
+      return mlir::failure();
+    }
+    if (val == "zero") {
+      loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+    } else if (val.starts_with("0x") || val.starts_with("0X")) {
+      unsigned long long hexVal = 0;
+      if (!val.drop_front(2).getAsInteger(16, hexVal) && hexVal <= 0xFF) {
+        loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Hex);
+        loweringOptions.setInitLocalPattern(static_cast<uint8_t>(hexVal));
+      } else {
+        llvm::errs() << "bbc: invalid -finit-local= value: " << val << "\n";
+        return mlir::failure();
+      }
+    } else {
+      llvm::errs() << "bbc: invalid -finit-local= value: " << val << "\n";
+      return mlir::failure();
+    }
+  }
   loweringOptions.setReallocateLHS(reallocateLHS);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);

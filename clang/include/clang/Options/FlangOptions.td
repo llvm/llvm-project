@@ -58,7 +58,6 @@ defm dump_parse_tree : BooleanFFlag<"dump-parse-tree">, Group<gfortran_Group>;
 defm external_blas : BooleanFFlag<"external-blas">, Group<gfortran_Group>;
 defm f2c : BooleanFFlag<"f2c">, Group<gfortran_Group>;
 defm frontend_optimize : BooleanFFlag<"frontend-optimize">, Group<gfortran_Group>;
-defm init_local_zero : BooleanFFlag<"init-local-zero">, Group<gfortran_Group>;
 defm integer_4_integer_8 : BooleanFFlag<"integer-4-integer-8">, Group<gfortran_Group>;
 defm max_identifier_length : BooleanFFlag<"max-identifier-length">, Group<gfortran_Group>;
 defm module_private : BooleanFFlag<"module-private">, Group<gfortran_Group>;
@@ -399,6 +398,19 @@ Notes:
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
   NegFlag<SetFalse, [], [], "Do not zero initialize globals without default initialization">>;
+
+def finit_local_EQ : Joined<["-"], "finit-local=">,
+  Group<f_Group>,
+  Visibility<[FC1Option, FlangOption]>,
+  HelpText<"Initialize local variables without explicit or default initialization. "
+           "Accepts: zero or 0x<hex-byte>.">;
+
+def finit_local_zero : Flag<["-"], "finit-local-zero">,
+  Group<f_Group>,
+  Visibility<[FC1Option, FlangOption]>,
+  HelpText<"Zero-initialize local variables without explicit or default initialization "
+           "(alias for -finit-local=zero, GFortran compatibility)">,
+  Alias<finit_local_EQ>, AliasArgs<["zero"]>;
 
 def fno_realloc_lhs : Flag<["-"], "fno-realloc-lhs">, Group<f_Group>,
   HelpText<"An allocatable left-hand side of an intrinsic assignment is assumed to be allocated and match the shape/type of the right-hand side">;

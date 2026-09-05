@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/OpenACC.h"
@@ -45,7 +46,9 @@
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1271,6 +1274,524 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
   return attrs.empty() ? mlir::ArrayAttr{} : builder.getArrayAttr(attrs);
 }
 
+//===----------------------------------------------------------------------===//
+// -finit-local= helpers
+//===----------------------------------------------------------------------===//
+
+/// Returns true if \p derived or any of its components (recursively) is a
+/// PowerPC vector type. fir::VectorType does not implement
+/// DataLayoutTypeInterface. Two pre-fix failure modes existed:
+///   - Direct vector local: silently initialized to zero regardless of mode
+///     (historical behavior); at the current head genByteSplatInit would
+///     hit llvm_unreachable instead.
+///   - Derived-type local with a vector component: crashed in record-size
+///     calculation when DataLayoutTypeInterface was queried.
+/// Excluding both cases at eligibility time avoids both failure modes.
+static bool
+containsVectorComponent(const Fortran::semantics::DerivedTypeSpec &derived) {
+  if (derived.IsVectorType())
+    return true;
+  const Fortran::semantics::Scope *scope = derived.GetScope();
+  if (!scope)
+    return false;
+  const Fortran::semantics::Symbol &typeSym = derived.typeSymbol();
+  const auto *details =
+      typeSym.detailsIf<Fortran::semantics::DerivedTypeDetails>();
+  if (!details)
+    return false;
+  for (const Fortran::semantics::SourceName &compName :
+       details->componentNames()) {
+    auto it = scope->find(compName);
+    if (it == scope->cend())
+      continue;
+    const Fortran::semantics::Symbol &comp = it->second.get();
+    if (const Fortran::semantics::DeclTypeSpec *compTy = comp.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *compDerived =
+              compTy->AsDerived())
+        if (containsVectorComponent(*compDerived))
+          return true;
+  }
+  return false;
+}
+
+/// Returns true when \p var is an automatic local variable eligible for
+/// -finit-local= initialization. Excluded: variables without a symbol,
+/// globals, dummy arguments, SAVE'd vars, ALLOCATABLE/POINTER, vars in
+/// an EQUIVALENCE set, vars with explicit or default initialization, and
+/// CUDA variables whose storage is always unreachable by a plain fir.store
+/// (constant, shared, usedevice). The Device case is deferred to genInitLocal
+/// which applies cuf::isCUDADeviceContext to distinguish cuf.alloc from
+/// fir.alloca storage.
+static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
+  if (!var.hasSymbol() || var.isGlobal())
+    return false;
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  if (Fortran::semantics::IsDummy(sym))
+    return false;
+  // Function result variables own the return-value storage and must not be
+  // pre-initialized: the function body is responsible for setting the result.
+  if (sym.IsFuncResult())
+    return false;
+  // Main-program locals have implicit SAVE semantics (Fortran 2018 8.5.16p4).
+  // IsSaved() does not catch this case because the SAVE attribute is implicit
+  // rather than explicit, so check the enclosing scope kind directly.
+  if (sym.owner().kind() == Fortran::semantics::Scope::Kind::MainProgram)
+    return false;
+  if (Fortran::semantics::IsSaved(sym))
+    return false;
+  if (Fortran::semantics::IsAllocatableOrPointer(sym))
+    return false;
+  if (Fortran::lower::hasDefaultInitialization(sym))
+    return false;
+  if (const auto *obj =
+          sym.detailsIf<Fortran::semantics::ObjectEntityDetails>())
+    if (obj->init())
+      return false;
+  if (Fortran::semantics::FindEquivalenceSet(sym))
+    return false;
+  // Cray pointees own no storage of their own; their FIR base is a
+  // pointer-box descriptor. Initializing it would overwrite the
+  // descriptor, not the pointee storage.
+  if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee))
+    return false;
+  // PowerPC vector types (vector(real(4)) etc.) lower to fir::VectorType
+  // which does not implement DataLayoutTypeInterface at the HLFIR level.
+  // Without this guard:
+  //   - A direct vector local would hit llvm_unreachable in genByteSplatInit
+  //     (historically it silently fell back to zero before that assert was
+  //     added).
+  //   - A derived-type local with a vector component would crash in
+  //     record-size calculation when DataLayoutTypeInterface was queried.
+  // Exclude both cases by walking components recursively.
+  if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
+    if (const Fortran::semantics::DerivedTypeSpec *derived =
+            declTy->AsDerived())
+      if (containsVectorComponent(*derived))
+        return false;
+  // CUDA storage accessibility:
+  //   constant / shared / usedevice: always unreachable by a plain fir.store
+  //     from the host -- skip.
+  //   device: the allocation choice (cuf.alloc vs fir.alloca) depends on
+  //     whether the insertion point is in a device context; that check
+  //     requires the MLIR builder and is deferred to genInitLocal, which
+  //     calls cuf::isCUDADeviceContext(builder.getRegion()) after this
+  //     predicate returns true.
+  //   managed / unified / pinned: host-accessible unified memory -- initialize.
+  if (auto cudaAttr = Fortran::semantics::GetCUDADataAttr(&sym)) {
+    switch (*cudaAttr) {
+    case Fortran::common::CUDADataAttr::Constant:
+    case Fortran::common::CUDADataAttr::Shared:
+    case Fortran::common::CUDADataAttr::UseDevice:
+      return false;
+    default:
+      break;
+    }
+  }
+  return true;
+}
+
+/// Build a constant whose every byte equals \p bytePat.
+/// Handles: integer, float (bitcast from integer splat), complex (both parts),
+/// and logical (raw integer, stored via bitcasted address by the caller).
+/// Character, derived-type, and sequence types are all intercepted by
+/// genInitLocalStore or initAddr before this function is called and must
+/// not reach it. fir::VectorType (PowerPC vector types, direct or as a
+/// derived-type component) is excluded upstream by shouldInitLocal via
+/// containsVectorComponent and will never reach this function.
+static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Type ty,
+                                    uint8_t bytePat) {
+  mlir::Type eleTy = fir::unwrapSequenceType(ty);
+
+  // Build a signless integer constant from a byte splat.  arith.constant
+  // requires a signless integer type; callers that need a non-signless result
+  // (e.g. unsigned ui32) must fir.convert the returned value themselves.
+  auto makeIntCst = [&](unsigned bits) -> mlir::Value {
+    llvm::APInt byteVal(8, bytePat);
+    llvm::APInt splat = llvm::APInt::getSplat(bits, byteVal);
+    mlir::Type intTy = builder.getIntegerType(bits);
+    return mlir::arith::ConstantOp::create(
+        builder, loc, intTy, builder.getIntegerAttr(intTy, splat));
+  };
+
+  if (auto fpTy = mlir::dyn_cast<mlir::FloatType>(eleTy)) {
+    mlir::Value intCst = makeIntCst(fpTy.getWidth());
+    return mlir::arith::BitcastOp::create(builder, loc, fpTy, intCst);
+  }
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(eleTy)) {
+    mlir::Value cst = makeIntCst(intTy.getWidth());
+    // arith.constant only supports signless integers; fir.convert reinterprets
+    // the bit pattern into the declared signed or unsigned type without
+    // changing any bits, satisfying FIR verification for !fir.ref<ui32> etc.
+    if (!intTy.isSignless())
+      cst = builder.createConvert(loc, intTy, cst);
+    return cst;
+  }
+  // Complex: apply the byte pattern to each (real, imag) part.
+  if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(eleTy)) {
+    mlir::Type partTy = cplxTy.getElementType();
+    mlir::Value partVal = genByteSplatInit(builder, loc, partTy, bytePat);
+    return mlir::complex::CreateOp::create(builder, loc, cplxTy, partVal,
+                                           partVal);
+  }
+  // LOGICAL(k) has a fixed size of k bytes under the default kind mapping,
+  // but a non-default mapping (e.g. --kind-mapping=l4:8) may map LOGICAL(4)
+  // to a single byte.  Use KindMapping::getLogicalBitsize so the constant
+  // width matches the actual allocation size.
+  // The caller stores it via a bitcasted address to preserve the bit pattern
+  // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
+  // Sub-byte and non-byte-multiple LOGICAL mappings (e.g. --kind-mapping=l4:1)
+  // are not supported: APInt::getSplat requires the destination width >= 8.
+  // CHARACTER kind mappings with sub-byte or non-byte-multiple widths are
+  // similarly unsupported and are guarded in genInitLocalStore / genInitLocal.
+  if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
+    unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
+    if (bits < 8)
+      TODO(loc, "-finit-local= with a sub-byte LOGICAL kind mapping");
+    return makeIntCst(bits);
+  }
+  // All types that pass shouldInitLocal and reach genInitLocalStore are
+  // handled explicitly above (integer, float, complex, logical) or are
+  // intercepted before this call (character, record, sequence).
+  // PowerPC vector types (direct or as a derived-type component) are excluded
+  // by shouldInitLocal via containsVectorComponent and never reach here.
+  // A silent zero for an unhandled type would violate the hex-mode contract,
+  // so assert rather than fall back silently.
+  llvm_unreachable("genByteSplatInit: unhandled type in hex mode");
+}
+
+/// Emit a store of the -finit-local= pattern for a single scalar address.
+/// Fixed-length CHARACTER in hex mode: byte-loop over every byte of storage.
+/// LOGICAL stores via a bitcasted integer address to preserve the raw bit
+/// pattern past fir.convert normalization.
+/// All byte-view and coordinate types carry the source address volatility so
+/// that final stores are emitted as "store volatile" when the variable is
+/// volatile.
+static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type ty, mlir::Value addr,
+                              Fortran::lower::InitLocalKind mode,
+                              uint8_t hexByte) {
+  // Fixed-length CHARACTER: for hex mode emit a compile-time byte-loop so
+  // every code-unit gets the requested pattern. Zero falls through to
+  // fir.zero_bits below.
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(ty)) {
+    // CHARACTER(0) has zero-length storage -- nothing to initialize.
+    if (charTy.getLen() == 0)
+      return;
+    if (mode == Fortran::lower::InitLocalKind::Hex) {
+      // Loop over every byte of the character storage. For kind=1 each
+      // code unit is one byte; for kind=2/4 (UTF-16/32) each code unit is
+      // kind bytes wide. We iterate nUnits * kindBytes times to cover all
+      // bytes.  Use KindMapping to get the true byte width under any
+      // --kind-mapping override.
+      int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
+      // A sub-byte or non-byte-multiple CHARACTER kind mapping is not
+      // supported for hex initialization (same restriction as LOGICAL).
+      // getCharacterBitsize / 8 would truncate to zero (sub-byte) or give
+      // a wrong stride (non-byte-multiple), so emit a controlled diagnostic.
+      unsigned charBits =
+          builder.getKindMap().getCharacterBitsize(charTy.getFKind());
+      if (charBits < 8 || charBits % 8 != 0)
+        TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
+                  "CHARACTER kind mapping");
+      int64_t kindBytes = charBits / 8;
+      int64_t nBytes = nUnits * kindBytes;
+      if (nBytes > 0) {
+        mlir::Type idxTy = builder.getIndexType();
+        mlir::Type i8Ty = builder.getIntegerType(8);
+        // Use an i8 sequence so fir.coordinate_of strides by exactly 1 byte,
+        // regardless of any --kind-mapping override for character kind 1.
+        mlir::Type i8SeqTy = fir::SequenceType::get(
+            {fir::SequenceType::getUnknownExtent()}, i8Ty);
+        bool addrVolatile1 = fir::isa_volatile_type(addr.getType());
+        mlir::Value byteBase = builder.createConvertWithVolatileCast(
+            loc, builder.getRefType(i8SeqTy, addrVolatile1), addr);
+        mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+        mlir::Value last =
+            builder.createIntegerConstant(loc, idxTy, nBytes - 1);
+        mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+        auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                          /*unordered=*/false,
+                                          /*finalCount=*/false);
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(loop.getBody());
+        mlir::Value iv = loop.getInductionVar();
+        bool byteVolatile1 = fir::isa_volatile_type(byteBase.getType());
+        mlir::Value byteAddr = fir::CoordinateOp::create(
+            builder, loc, builder.getRefType(i8Ty, byteVolatile1), byteBase,
+            mlir::ValueRange{iv});
+        mlir::Value pat = builder.createIntegerConstant(
+            loc, i8Ty, static_cast<int64_t>(hexByte));
+        fir::StoreOp::create(builder, loc, pat, byteAddr);
+      }
+      return;
+    }
+  }
+  // REAL and COMPLEX: when the allocation size exceeds the store size
+  // (e.g. x86_fp80 stores 10 bytes but occupies 16), fill the full
+  // allocation with a byte loop so padding bytes are also initialized.
+  auto emitByteLoop = [&](uint64_t nBytes) {
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Type i8Ty = builder.getIntegerType(8);
+    mlir::Type i8SeqTy =
+        fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
+    bool addrVolatile2 = fir::isa_volatile_type(addr.getType());
+    mlir::Value byteBase = builder.createConvertWithVolatileCast(
+        loc, builder.getRefType(i8SeqTy, addrVolatile2), addr);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Value last = builder.createIntegerConstant(
+        loc, idxTy, static_cast<int64_t>(nBytes) - 1);
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(loop.getBody());
+    mlir::Value iv = loop.getInductionVar();
+    bool byteVolatile2 = fir::isa_volatile_type(byteBase.getType());
+    mlir::Value byteAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(i8Ty, byteVolatile2), byteBase,
+        mlir::ValueRange{iv});
+    int64_t fillByte =
+        (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
+    mlir::Value pat = builder.createIntegerConstant(loc, i8Ty, fillByte);
+    fir::StoreOp::create(builder, loc, pat, byteAddr);
+  };
+
+  if (mlir::isa<mlir::FloatType, mlir::ComplexType>(ty)) {
+    const mlir::DataLayout &dl = builder.getDataLayout();
+    uint64_t storeSize = dl.getTypeSize(ty);
+    uint64_t allocSize = llvm::alignTo(storeSize, dl.getTypeABIAlignment(ty));
+    if (allocSize > storeSize) {
+      emitByteLoop(allocSize);
+      return;
+    }
+  }
+
+  mlir::Value val;
+  switch (mode) {
+  case Fortran::lower::InitLocalKind::Zero:
+    val = fir::ZeroOp::create(builder, loc, ty);
+    break;
+  case Fortran::lower::InitLocalKind::Hex:
+    val = genByteSplatInit(builder, loc, ty, hexByte);
+    break;
+  default:
+    llvm_unreachable("unexpected InitLocalKind in genInitLocalStore");
+  }
+  // For LOGICAL in hex mode, genByteSplatInit returns a raw integer to
+  // preserve the bit pattern. Store it via a bitcasted address to avoid
+  // fir.convert normalization (which would reduce any nonzero value to
+  // logical true).
+  if (mode == Fortran::lower::InitLocalKind::Hex &&
+      mlir::isa<fir::LogicalType>(ty)) {
+    auto logTy = mlir::cast<fir::LogicalType>(ty);
+    unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
+    bool logVolatile = fir::isa_volatile_type(addr.getType());
+    mlir::Type intRefTy =
+        builder.getRefType(builder.getIntegerType(bits), logVolatile);
+    mlir::Value intAddr =
+        builder.createConvertWithVolatileCast(loc, intRefTy, addr);
+    fir::StoreOp::create(builder, loc, val, intAddr);
+  } else {
+    fir::StoreOp::create(builder, loc, val, addr);
+  }
+}
+
+/// Initialize all storage of the local variable \p var per -finit-local= mode.
+/// Arrays: all modes use a flat fir.do_loop + fir.coordinate_of over a
+/// rank-1 view to avoid both the llvm.mlir.constant crash on non-zero
+/// ArrayAttrs and the quadratic compile time of fir.insert_on_range.
+/// Derived types use a byte-fill loop. All byte-view and coordinate types
+/// carry the source address volatility so that stores into volatile variables
+/// are emitted as "store volatile" end-to-end.
+/// PowerPC vector types (direct or as a derived-type component) are excluded
+/// upstream by shouldInitLocal via
+/// containsVectorComponent and never reach this function.
+/// Scalars store directly via genInitLocalStore.
+static void genInitLocal(Fortran::lower::AbstractConverter &converter,
+                         const Fortran::lower::pft::Variable &var,
+                         Fortran::lower::SymMap &symMap) {
+  Fortran::lower::InitLocalKind mode =
+      converter.getLoweringOptions().getInitLocalMode();
+  if (mode == Fortran::lower::InitLocalKind::Off)
+    return;
+  if (!shouldInitLocal(var))
+    return;
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  uint8_t hexByte = converter.getLoweringOptions().getInitLocalPattern();
+
+  // Mirror the allocation decision: a CUDA Device variable is allocated via
+  // cuf.alloc when cuf::isCUDADeviceContext is false (host or host_device
+  // subprograms), and via fir.alloca when it is true (device/global kernels,
+  // including BLOCK-construct locals inside such kernels).  Only the fir.alloca
+  // path is reachable by a plain fir.store, so skip initialization if the
+  // variable has a Device attribute but the current region is not a device
+  // context (which would mean the storage is a cuf.alloc).
+  if (auto cudaAttr = Fortran::semantics::GetCUDADataAttr(&var.getSymbol()))
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Device &&
+        !cuf::isCUDADeviceContext(builder.getRegion()))
+      return;
+
+  fir::ExtendedValue exv =
+      converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+  mlir::Value base = fir::getBase(exv);
+  mlir::Type storeTy = fir::unwrapRefType(base.getType());
+
+  // Recursive helper: dispatch on type to initialize the storage at \p addr
+  // of type \p ty. Handles arrays, derived types, and scalars.
+  std::function<void(mlir::Type, mlir::Value)> initAddr =
+      [&](mlir::Type ty, mlir::Value addr) {
+        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+          // Array: use a flat fir.do_loop over all elements. Cast to a
+          // rank-1 unknown-extent ref so the flat IV is a valid single-
+          // coordinate index regardless of array rank. This avoids both
+          // the LLVM lowering crash (non-zero ArrayAttr) and the quadratic
+          // compile time of fir.insert_on_range for large arrays.
+          mlir::Type eleTy = seqTy.getEleTy();
+          // Skip arrays with unknown or zero extents, and CHARACTER arrays
+          // (known TODO, pending PR #159788).
+          bool hasUnknown = mlir::isa<fir::CharacterType>(eleTy);
+          int64_t totalElems = 1;
+          for (auto dim : seqTy.getShape()) {
+            if (dim == fir::SequenceType::getUnknownExtent() || dim == 0) {
+              hasUnknown = true;
+              break;
+            }
+            totalElems *= dim;
+          }
+          if (!hasUnknown) {
+            mlir::Type idxTy = builder.getIndexType();
+            mlir::Type rank1SeqTy = fir::SequenceType::get(
+                {fir::SequenceType::getUnknownExtent()}, eleTy);
+            bool rank1Volatile = fir::isa_volatile_type(addr.getType());
+            mlir::Value rank1Addr = builder.createConvertWithVolatileCast(
+                loc, builder.getRefType(rank1SeqTy, rank1Volatile), addr);
+            mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+            mlir::Value last =
+                builder.createIntegerConstant(loc, idxTy, totalElems - 1);
+            mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+            auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                              /*unordered=*/false,
+                                              /*finalCount=*/false);
+            mlir::OpBuilder::InsertionGuard guard(builder);
+            builder.setInsertionPointToStart(loop.getBody());
+            mlir::Value iv = loop.getInductionVar();
+            bool elemVolatile = fir::isa_volatile_type(rank1Addr.getType());
+            mlir::Value elemAddr = fir::CoordinateOp::create(
+                builder, loc, builder.getRefType(eleTy, elemVolatile),
+                rank1Addr, mlir::ValueRange{iv});
+            initAddr(eleTy, elemAddr);
+          }
+        } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
+          // Byte-fill the full allocation (fields + internal padding +
+          // tail padding). A typed fir.zero_bits store would leave tail
+          // padding as 'undef', which LLVM may not zero at -O2.
+          {
+            auto [byteSize, _align] = fir::getTypeSizeAndAlignmentOrCrash(
+                loc, recTy, builder.getDataLayout(), builder.getKindMap());
+            if (byteSize > 0) {
+              mlir::Type idxTy = builder.getIndexType();
+              mlir::Type i8Ty = builder.getIntegerType(8);
+              mlir::Type i8SeqTy = fir::SequenceType::get(
+                  {fir::SequenceType::getUnknownExtent()}, i8Ty);
+              bool addrVolatile3 = fir::isa_volatile_type(addr.getType());
+              mlir::Value byteBase = builder.createConvertWithVolatileCast(
+                  loc, builder.getRefType(i8SeqTy, addrVolatile3), addr);
+              mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+              mlir::Value last = builder.createIntegerConstant(
+                  loc, idxTy, static_cast<int64_t>(byteSize) - 1);
+              mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+              auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                                /*unordered=*/false,
+                                                /*finalCount=*/false);
+              mlir::OpBuilder::InsertionGuard guard(builder);
+              builder.setInsertionPointToStart(loop.getBody());
+              mlir::Value iv = loop.getInductionVar();
+              bool byteVolatile3 = fir::isa_volatile_type(byteBase.getType());
+              mlir::Value byteAddr = fir::CoordinateOp::create(
+                  builder, loc, builder.getRefType(i8Ty, byteVolatile3),
+                  byteBase, mlir::ValueRange{iv});
+              int64_t fillByte =
+                  (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
+              mlir::Value pat =
+                  builder.createIntegerConstant(loc, i8Ty, fillByte);
+              fir::StoreOp::create(builder, loc, pat, byteAddr);
+            }
+          }
+        } else if (!mlir::isa<fir::BaseBoxType>(ty)) {
+          // Scalar (integer, real, complex, logical, character): delegate to
+          // genInitLocalStore, which handles each type and mode combination.
+          // Skip FIR box types (e.g. a Cray pointee descriptor) that do not
+          // represent initializable value storage.
+          genInitLocalStore(builder, loc, ty, addr, mode, hexByte);
+        }
+      };
+
+  // Runtime-length CHARACTER: emit a byte-by-byte fir.do_loop guarded by
+  // the runtime length so we neither skip bytes (the old single-store
+  // behaviour) nor write through a zero-byte allocation when len == 0.
+  // Both HLFIR and non-HLFIR paths store a CharBoxValue in the symMap for
+  // a scalar character(n) local, so fir::getLen(exv) always returns the
+  // runtime length when the character type has dynamic length.
+  auto getRtCharLen = [&]() -> mlir::Value { return fir::getLen(exv); };
+
+  // Only handle the dynamic-length case here; fixed-length falls through to
+  // initAddr which calls genInitLocalStore directly.
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(storeTy);
+      charTy && charTy.hasDynamicLen()) {
+    if (mlir::Value rtLen = getRtCharLen()) {
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Value lenIdx = builder.createConvert(loc, idxTy, rtLen);
+      mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      // For kind>1 (UTF-16/32) the runtime length is in code units; multiply
+      // by the kind byte width to get the total byte count.  Use KindMapping
+      // so a --kind-mapping override is respected.
+      // Same sub-byte / non-byte-multiple guard as the fixed-length path.
+      unsigned charBitsRt =
+          builder.getKindMap().getCharacterBitsize(charTy.getFKind());
+      if (charBitsRt < 8 || charBitsRt % 8 != 0)
+        TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
+                  "CHARACTER kind mapping");
+      int64_t kindBytes = charBitsRt / 8;
+      if (kindBytes > 1) {
+        mlir::Value kindCst =
+            builder.createIntegerConstant(loc, idxTy, kindBytes);
+        lenIdx = mlir::arith::MulIOp::create(builder, loc, lenIdx, kindCst);
+      }
+      // last = byteCount - 1; the loop is skipped entirely when byteCount == 0.
+      mlir::Value last = mlir::arith::SubIOp::create(builder, loc, lenIdx, one);
+      auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                        /*unordered=*/false,
+                                        /*finalCount=*/false);
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointToStart(loop.getBody());
+      mlir::Value iv = loop.getInductionVar();
+      // Use an i8 sequence so fir.coordinate_of strides by exactly 1 byte,
+      // regardless of any --kind-mapping override for character kind 1.
+      mlir::Type i8Ty = builder.getIntegerType(8);
+      mlir::Type i8SeqTy =
+          fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
+      bool baseVolatile = fir::isa_volatile_type(base.getType());
+      mlir::Value byteBase = builder.createConvertWithVolatileCast(
+          loc, builder.getRefType(i8SeqTy, baseVolatile), base);
+      bool byteVolatile4 = fir::isa_volatile_type(byteBase.getType());
+      mlir::Value byteAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(i8Ty, byteVolatile4), byteBase,
+          mlir::ValueRange{iv});
+      int64_t fillByte =
+          (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
+      mlir::Value pat = builder.createIntegerConstant(loc, i8Ty, fillByte);
+      fir::StoreOp::create(builder, loc, pat, byteAddr);
+      return;
+    }
+  }
+  initAddr(storeTy, base);
+}
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -1294,6 +1815,8 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   if (mustBeDefaultInitializedAtRuntime(var))
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
+  else
+    genInitLocal(converter, var, symMap);
   auto *builder = &converter.getFirOpBuilder();
   bool needsHostCudaCleanup = needCUDAAlloc(var.getSymbol()) &&
                               !cuf::isCUDADeviceContext(builder->getRegion());
