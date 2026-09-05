@@ -59,6 +59,7 @@
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
+#include "VPlanCrossPartCSE.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
@@ -70,6 +71,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -304,6 +306,23 @@ static cl::opt<bool> EnableLoadStoreRuntimeInterleave(
     "enable-loadstore-runtime-interleave", cl::init(true), cl::Hidden,
     cl::desc(
         "Enable runtime interleaving until load/store ports are saturated"));
+
+/// Enable cross-part load-overlap analysis during IC selection.
+static cl::opt<bool> EnableInterleaveCSE(
+    "enable-interleave-cse", cl::init(false), cl::Hidden,
+    cl::desc("Raise heuristic IC=1 to IC=2 when exact cross-part load overlap "
+             "predicts a downstream saving"));
+
+/// Minimum percentage of the modeled UF=2 body predicted to be saved.
+static cl::opt<unsigned> InterleaveCSEMinSavingPct(
+    "interleave-cse-min-pct", cl::init(5), cl::Hidden,
+    cl::desc("Minimum predicted downstream load saving as a percentage of the "
+             "modeled UF=2 vector loop body"));
+
+/// Minimum number of exact load overlaps required to request IC=2.
+static cl::opt<unsigned> InterleaveCSEMinOpportunities(
+    "interleave-cse-min-ops", cl::init(2), cl::Hidden,
+    cl::desc("Minimum number of exact cross-part load-overlap opportunities"));
 
 /// The number of stores in a loop that are allowed to need predication.
 cl::opt<unsigned> NumberOfStoresToPredicate(
@@ -3544,9 +3563,53 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
   return Clone;
 }
 
+bool LoopVectorizationPlanner::shouldUseCrossPartCSE() const {
+  // Keep the disabled path free of policy queries and cost-map allocation.
+  if (!EnableInterleaveCSE)
+    return false;
+  return OrigLoop->isInnermost() && Hints.getInterleave() == 0 &&
+         !CM.maskPartialAliasing();
+}
+
+bool LoopVectorizationPlanner::shouldCollectCrossPartCSECosts(
+    VPlan &Plan, ElementCount VF) const {
+  return shouldUseCrossPartCSE() && VF.isVector() && !VF.isScalable() &&
+         Plan.hasUF(CrossPartCSERequiredInterleaveCount);
+}
+
+bool LoopVectorizationPlanner::shouldInterleaveForCrossPartCSE(
+    VPlan &Plan, ElementCount VF, InstructionCost LoopCost, unsigned MaxIC) {
+  // Cross-part CSE only augments ordinary heuristic selection. The policy gate
+  // excludes explicit user counts and loops requiring partial-alias masking,
+  // while MaxIC preserves target, trip-count, and register-pressure limits.
+  if (!shouldUseCrossPartCSE() || MaxIC < CrossPartCSERequiredInterleaveCount ||
+      !VF.isVector() || VF.isScalable())
+    return false;
+
+  auto CostIt = CrossPartCSERecipeCosts.find({&Plan, VF});
+  if (CostIt == CrossPartCSERecipeCosts.end())
+    return false;
+  if (!CostIt->second)
+    return false;
+
+  CrossPartCSEOptions Options;
+  Options.MinSavingPct = InterleaveCSEMinSavingPct;
+  Options.MinOpportunities = InterleaveCSEMinOpportunities;
+  if (!isCrossPartCSEProfitable(Plan, VF, LoopCost, OrigLoop, PSE,
+                                *CostIt->second, Options))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "LV: Exact cross-part load overlap predicts a "
+                       "downstream saving; raising IC to 2.\n");
+  return true;
+}
+
 unsigned
 LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
                                                 InstructionCost LoopCost) {
+  // Recipe keys borrow VPlan storage and are useful only during this selection.
+  scope_exit ClearCrossPartCSECosts([&] { CrossPartCSERecipeCosts.clear(); });
+
   // -- The interleave heuristics --
   // We interleave the loop in order to expose ILP and reduce the loop overhead.
   // There are many micro-architectural considerations that we can't predict
@@ -3881,6 +3944,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       return std::max(IC / 2, SmallIC);
     }
 
+    if (SmallIC == 1 && shouldInterleaveForCrossPartCSE(Plan, VF, LoopCost, IC))
+      return CrossPartCSERequiredInterleaveCount;
+
     LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce branch cost.\n");
     return SmallIC;
   }
@@ -3891,6 +3957,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
     return IC;
   }
+
+  if (shouldInterleaveForCrossPartCSE(Plan, VF, LoopCost, IC))
+    return CrossPartCSERequiredInterleaveCount;
 
   LLVM_DEBUG(dbgs() << "LV: Not Interleaving.\n");
   return 1;
@@ -5272,8 +5341,15 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       if (!VPlans.empty() && VPlans.front()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
-        if (UserVF.isScalar() ||
-            cost(*VPlans.front(), UserVF, /*RU=*/nullptr).isValid()) {
+        InstructionCost UserVFCost = 0;
+        if (!UserVF.isScalar()) {
+          UserVFCost = cost(*VPlans.front(), UserVF, /*RU=*/nullptr);
+          // Validation must not retain borrowed VPlan recipe keys. A valid
+          // forced plan is costed lazily during IC selection, while an invalid
+          // plan may be destroyed immediately below.
+          CrossPartCSERecipeCosts.clear();
+        }
+        if (UserVF.isScalar() || UserVFCost.isValid()) {
           LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
           LLVM_DEBUG(printPlans(dbgs()));
           return;
@@ -5330,6 +5406,12 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
   return CM.ValuesToIgnore.contains(UI) ||
          (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
          SkipCostComputation.contains(UI);
+}
+
+void VPCostContext::recordRecipeCost(const VPRecipeBase *R,
+                                     InstructionCost Cost) {
+  assert(RecipeCosts && "recipe costs must be enabled by the caller");
+  (*RecipeCosts)[R] = Cost;
 }
 
 void VPCostContext::invalidateWideningDecision(Instruction *I,
@@ -5511,6 +5593,15 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
                                                VPRegisterUsage *RU) const {
   VPCostContext CostCtx(*TLI, Plan, *CM, Config,
                         /*ReusePrintingSlotTracker=*/true);
+  if (shouldCollectCrossPartCSECosts(Plan, VF)) {
+    std::unique_ptr<VPRecipeCostMap> &Costs =
+        CrossPartCSERecipeCosts[{&Plan, VF}];
+    if (!Costs)
+      Costs = std::make_unique<VPRecipeCostMap>();
+    Costs->clear();
+    // The pointee remains stable if the owning DenseMap rehashes.
+    CostCtx.RecipeCosts = Costs.get();
+  }
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -5546,6 +5637,11 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
 
 std::pair<VectorizationFactor, VPlan *>
 LoopVectorizationPlanner::computeBestVF() {
+  // Discard maps produced while validating a user VF; the candidate loop below
+  // retains costs only for the actual winning Plan/VF pair.
+  CrossPartCSERecipeCosts.clear();
+  bool TrackRecipeCosts = shouldUseCrossPartCSE();
+
   if (VPlans.empty())
     return {VectorizationFactor::Disabled(), nullptr};
   // If there is a single VPlan with a single VF, return it directly.
@@ -5599,6 +5695,10 @@ LoopVectorizationPlanner::computeBestVF() {
   }
 
   VPlan *PlanForBestVF = &FirstPlan;
+  // Identify the retained recipe-cost map for the current winning Plan/VF
+  // pair. The key is absent while the winner is scalar or otherwise ineligible
+  // for cross-part analysis.
+  std::optional<std::pair<const VPlan *, ElementCount>> BestRecipeCostKey;
 
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
@@ -5635,9 +5735,34 @@ LoopVectorizationPlanner::computeBestVF() {
           cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
+      bool IsMoreProfitable =
+          isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail());
+      if (IsMoreProfitable) {
         BestFactor = CurrentFactor;
         PlanForBestVF = P.get();
+      }
+
+      // Costing may retain a recipe-cost map for each eligible candidate. Keep
+      // only the map associated with the best candidate seen so far, because
+      // IC selection consumes costs exclusively for the selected Plan/VF pair.
+      if (TrackRecipeCosts) {
+        std::pair<const VPlan *, ElementCount> CurrentKey = {P.get(), VF};
+        bool HasCurrentRecipeCosts =
+            CrossPartCSERecipeCosts.contains(CurrentKey);
+        if (IsMoreProfitable) {
+          // The current candidate replaces the previous winner, so its map
+          // also replaces any recipe costs retained for that winner.
+          if (BestRecipeCostKey)
+            CrossPartCSERecipeCosts.erase(*BestRecipeCostKey);
+          if (HasCurrentRecipeCosts)
+            BestRecipeCostKey = CurrentKey;
+          else
+            BestRecipeCostKey.reset();
+        } else if (HasCurrentRecipeCosts) {
+          // Discard costs for a losing candidate immediately to prevent recipe
+          // pointers from outliving a plan that is not selected.
+          CrossPartCSERecipeCosts.erase(CurrentKey);
+        }
       }
 
       // If profitable add it to ProfitableVF list.
@@ -5647,6 +5772,15 @@ LoopVectorizationPlanner::computeBestVF() {
   }
 
   VPlan &BestPlan = *PlanForBestVF;
+  assert((!TrackRecipeCosts || CrossPartCSERecipeCosts.size() <= 1) &&
+         "only the selected VF recipe costs may remain");
+  assert((!shouldCollectCrossPartCSECosts(BestPlan, BestFactor.Width) ||
+          (BestRecipeCostKey &&
+           *BestRecipeCostKey ==
+               std::make_pair(static_cast<const VPlan *>(PlanForBestVF),
+                              BestFactor.Width) &&
+           CrossPartCSERecipeCosts.contains(*BestRecipeCostKey))) &&
+         "selected fixed VF must retain its recipe costs");
 
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");

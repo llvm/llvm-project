@@ -25,6 +25,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
+#include "VPlanHelpers.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
@@ -897,6 +899,17 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
+  /// Cost-traversal results retained for eligible fixed-VF Plan/VF candidates
+  /// until IC selection decides whether cross-part CSE can affect interleaving.
+  ///
+  /// Each map contains the recipes visited while costing its exact candidate,
+  /// including zero entries for recipes whose direct cost was skipped. Recipes
+  /// outside that traversal are absent; cross-part analysis queries only its
+  /// supported widened-load recipes.
+  mutable DenseMap<std::pair<const VPlan *, ElementCount>,
+                   std::unique_ptr<VPRecipeCostMap>>
+      CrossPartCSERecipeCosts;
+
   /// Computes the cost of \p Plan for vectorization factor \p VF.
   ///
   /// The current implementation requires access to the
@@ -906,6 +919,36 @@ class LoopVectorizationPlanner {
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
   InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
+
+  /// Return whether cross-part CSE may participate in IC selection for this
+  /// loop.
+  ///
+  /// This is the loop-level policy gate: it checks the feature flag and
+  /// conditions independent of a particular VPlan/VF candidate, including
+  /// whether the loop is innermost, has no explicit interleave count, and does
+  /// not require partial-alias masking. A true result does not mean that a
+  /// supported or profitable cross-part opportunity has been found.
+  bool shouldUseCrossPartCSE() const;
+
+  /// Return whether to retain per-recipe costs for cross-part CSE analysis of
+  /// this exact \p Plan and \p VF candidate.
+  ///
+  /// Unlike shouldUseCrossPartCSE(), this candidate-level gate additionally
+  /// requires a fixed vector VF and a plan capable of the required UF=2. It
+  /// controls transient cost-map population during candidate costing; the
+  /// retained costs are consumed only if this Plan/VF pair reaches IC
+  /// selection.
+  bool shouldCollectCrossPartCSECosts(VPlan &Plan, ElementCount VF) const;
+
+  /// Return whether cross-part CSE opportunities in \p Plan for \p VF justify
+  /// requesting the interleave count required by the analysis.
+  ///
+  /// This supplements the ordinary interleave heuristics with VPlan-specific
+  /// analysis across logical parts. A false result leaves the ordinary
+  /// interleave-count decision unchanged.
+  bool shouldInterleaveForCrossPartCSE(VPlan &Plan, ElementCount VF,
+                                       InstructionCost LoopCost,
+                                       unsigned MaxIC);
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid

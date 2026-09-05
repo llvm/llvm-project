@@ -325,6 +325,13 @@ struct VPTransformState {
   VPDominatorTree VPDT;
 };
 
+/// Effective costs recorded for recipes visited by one VPlan cost traversal.
+///
+/// A visited recipe whose direct computation is skipped, for example because
+/// the legacy model precomputed its cost, has a zero entry. Recipes not visited
+/// by that traversal have no entry.
+using VPRecipeCostMap = DenseMap<const VPRecipeBase *, InstructionCost>;
+
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
@@ -336,6 +343,12 @@ struct VPCostContext {
   TargetTransformInfo::TargetCostKind CostKind;
   PredicatedScalarEvolution &PSE;
   const Loop *L;
+
+  /// Optional destination for the recipe costs produced by this traversal.
+  ///
+  /// It is non-null only for an eligible fixed-VF cost run while cross-part CSE
+  /// for interleaving is enabled.
+  VPRecipeCostMap *RecipeCosts = nullptr;
 
   /// Number of predicated stores in the VPlan, computed on demand.
   std::optional<unsigned> NumPredStores;
@@ -351,6 +364,9 @@ struct VPCostContext {
   /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
+
+  /// Record one recipe's directly computed effective cost.
+  void recordRecipeCost(const VPRecipeBase *R, InstructionCost Cost);
 
   /// Mark the widening decision for \p I at \p VF as invalidated since a VPlan
   /// transform replaced the original recipe.
