@@ -11777,23 +11777,75 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
 void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
                                                 DebugLoc DL) const {
   MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
-  auto Builder = BuildMI(MBB, InsertPt, DL, get(AArch64::PAUTH_EPILOGUE))
-                     .setMIFlag(MachineInstr::FrameDestroy);
-
   MachineFunction &MF = *MBB.getParent();
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   auto &AFL = *static_cast<const AArch64FrameLowering *>(
       MF.getSubtarget().getFrameLowering());
+
+  SmallVector<Register, 3> ImplicitDefs;
   if (AFL.getArgumentStackToRestore(MF, MBB)) {
-    Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
-    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
+    ImplicitDefs.push_back(AArch64::X17);
+    ImplicitDefs.push_back(AArch64::X16);
     if (AFI->branchProtectionPAuthLR())
-      Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
-    return;
+      ImplicitDefs.push_back(AArch64::X15);
+  } else if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR()) {
+    ImplicitDefs.push_back(AArch64::X16);
   }
 
-  if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
-    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
+  // If the scratch registers we plan using are alive at this point,
+  // try spilling them to other registers.
+
+  assert(MF.getProperties().hasTracksLiveness());
+  RegScavenger RS;
+  RS.enterBasicBlockEnd(MBB);
+  RS.backward(InsertPt);
+
+  // Find out which scratch registers have to be spilled to other GPRs,
+  // mark the rest as unavailable to be spilled-to.
+  SmallVector<std::pair<Register, Register>, 3> Spills;
+  for (Register ScratchReg : ImplicitDefs) {
+    // With Speculative Load Hardening, X16 is reported as reserved by MRI,
+    // but a fallback to DSB+ISB is actually supported as long as implicit-defs
+    // are set appropriately.
+    if (ScratchReg == AArch64::X16 &&
+        MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
+      continue;
+
+    assert(!MF.getRegInfo().isReserved(ScratchReg));
+
+    if (RS.isRegUsed(ScratchReg))
+      Spills.emplace_back(ScratchReg, AArch64::NoRegister);
+    else
+      RS.setRegUsed(ScratchReg);
+  }
+
+  for (auto &[ScratchReg, SpillReg] : Spills) {
+    (void)ScratchReg;
+    SpillReg = RS.FindUnusedReg(&AArch64::GPR64RegClass);
+    if (!SpillReg)
+      reportFatalUsageError(
+          "Cannot insert PAUTH_EPILOGUE: ran out of registers");
+    RS.setRegUsed(SpillReg);
+  }
+
+  auto EmitMOV = [&](Register DstReg, Register SrcReg) {
+    BuildMI(MBB, InsertPt, DL, get(AArch64::ORRXrs), DstReg)
+        .addReg(AArch64::XZR)
+        .addReg(SrcReg)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  };
+
+  for (auto [ScratchReg, SpillReg] : Spills)
+    EmitMOV(SpillReg, ScratchReg);
+
+  auto Builder = BuildMI(MBB, InsertPt, DL, get(AArch64::PAUTH_EPILOGUE))
+                     .setMIFlag(MachineInstr::FrameDestroy);
+  for (auto ScratchReg : ImplicitDefs)
+    Builder.addReg(ScratchReg, RegState::ImplicitDefine);
+
+  for (auto [ScratchReg, SpillReg] : llvm::reverse(Spills))
+    EmitMOV(ScratchReg, SpillReg);
 }
 
 MachineBasicBlock::iterator
