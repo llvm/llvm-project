@@ -69,7 +69,7 @@ func.func @unroll_outer_nested_parallel_loop(%src: memref<5x16x12x4x4xf32>, %dst
       %1 = affine.apply affine_map<(d0, d1) -> (d0 + (d1 floordiv 4) * 4)>(%arg5, %arg7)
       %subv_in = memref.subview %src[%arg3, %0, %1, 0, 0] [1, 1, 1, 4, 4] [1, 1, 1, 1, 1] : memref<5x16x12x4x4xf32> to memref<4x4xf32, strided<[4, 1], offset: ?>>
       %subv_out = memref.subview %dst[%arg3, %0, %1, 0, 0] [1, 1, 1, 4, 4] [1, 1, 1, 1, 1] : memref<5x16x12x4x4xf32> to memref<4x4xf32, strided<[4, 1], offset: ?>>
-      linalg.erf ins(%subv_in : memref<4x4xf32, strided<[4, 1], offset: ?>>) outs(%subv_out : memref<4x4xf32, strided<[4, 1], offset: ?>>)
+      linalg.elementwise kind=#linalg.elementwise_kind<erf> ins(%subv_in : memref<4x4xf32, strided<[4, 1], offset: ?>>) outs(%subv_out : memref<4x4xf32, strided<[4, 1], offset: ?>>)
       scf.reduce
     }
     scf.reduce
@@ -91,13 +91,13 @@ func.func @unroll_outer_nested_parallel_loop(%src: memref<5x16x12x4x4xf32>, %dst
 // CHECK:             scf.parallel ([[INV0:%.*]], [[INV1:%.*]]) = ([[C0]], [[C0]]) to ([[C4]], [[C4]]) step ([[C1]], [[C1]])
 // CHECK:               affine.apply {{.*}}([[OUTV1]], [[INV0]])
 // CHECK:               affine.apply {{.*}}([[OUTV2]], [[INV1]])
-// CHECK:               linalg.erf
+// CHECK:               linalg.elementwise kind=#linalg.elementwise_kind<erf>
 
 // CHECK:             [[UNR_OUTV2:%.*]] = affine.apply {{.*}}([[OUTV2]])
 // CHECK:             scf.parallel ([[INV0B:%.*]], [[INV1B:%.*]]) = ([[C0]], [[C0]]) to ([[C4]], [[C4]]) step ([[C1]], [[C1]])
 // CHECK:               affine.apply {{.*}}([[OUTV1]], [[INV0B]])
 // CHECK:               affine.apply {{.*}}([[UNR_OUTV2]], [[INV1B]])
-// CHECK:               linalg.erf
+// CHECK:               linalg.elementwise kind=#linalg.elementwise_kind<erf>
 
 // -----
 
@@ -141,7 +141,7 @@ func.func @unroll_inner_nested_parallel_loop(%src: memref<5x16x12x4x4xf32>, %dst
       %1 = affine.apply affine_map<(d0, d1) -> (d0 + (d1 floordiv 4) * 4)>(%arg5, %arg7)
       %subv_in = memref.subview %src[%arg3, %0, %1, 0, 0] [1, 1, 1, 4, 4] [1, 1, 1, 1, 1] : memref<5x16x12x4x4xf32> to memref<4x4xf32, strided<[4, 1], offset: ?>>
       %subv_out = memref.subview %dst[%arg3, %0, %1, 0, 0] [1, 1, 1, 4, 4] [1, 1, 1, 1, 1] : memref<5x16x12x4x4xf32> to memref<4x4xf32, strided<[4, 1], offset: ?>>
-      linalg.erf ins(%subv_in : memref<4x4xf32, strided<[4, 1], offset: ?>>) outs(%subv_out : memref<4x4xf32, strided<[4, 1], offset: ?>>)
+      linalg.elementwise kind=#linalg.elementwise_kind<erf> ins(%subv_in : memref<4x4xf32, strided<[4, 1], offset: ?>>) outs(%subv_out : memref<4x4xf32, strided<[4, 1], offset: ?>>)
       scf.reduce
     }
     scf.reduce
@@ -163,9 +163,9 @@ func.func @unroll_inner_nested_parallel_loop(%src: memref<5x16x12x4x4xf32>, %dst
 // CHECK-UNROLL-INNER:            scf.parallel ([[INV0:%.*]], [[INV1:%.*]]) = ([[C0]], [[C0]]) to ([[C4]], [[C4]]) step ([[C1]], [[C2]])
 // CHECK-UNROLL-INNER:              affine.apply {{.*}}([[OUTV1]], [[INV0]])
 // CHECK-UNROLL-INNER:              affine.apply {{.*}}([[OUTV2]], [[INV1]])
-// CHECK-UNROLL-INNER:              linalg.erf
+// CHECK-UNROLL-INNER:              linalg.elementwise kind=#linalg.elementwise_kind<erf>
 
 // CHECK-UNROLL-INNER:              [[UNR_INV1:%.*]] = affine.apply {{.*}}([[INV1]])
 // CHECK-UNROLL-INNER:              affine.apply {{.*}}([[OUTV1]], [[INV0]])
 // CHECK-UNROLL-INNER:              affine.apply {{.*}}([[OUTV2]], [[UNR_INV1]])
-// CHECK-UNROLL-INNER:              linalg.erf
+// CHECK-UNROLL-INNER:              linalg.elementwise kind=#linalg.elementwise_kind<erf>

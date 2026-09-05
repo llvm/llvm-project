@@ -317,14 +317,14 @@ func.func @tensor_cast_to_buffer_layout_and_memspace(%arg0 : tensor<4x6x16x32xi8
 func.func @load_after_write_from_buffer_cast(%arg0: index, %arg1: index,
                             %arg2: tensor<?x?xf32>) -> f32 {
   %0 = bufferization.to_buffer %arg2 : tensor<?x?xf32> to memref<?x?xf32>
-  linalg.ceil ins(%0 : memref<?x?xf32>) outs(%0 : memref<?x?xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<ceil> ins(%0 : memref<?x?xf32>) outs(%0 : memref<?x?xf32>)
   %1 = memref.load %0[%arg0, %arg1] : memref<?x?xf32>
   return %1 : f32
 }
 // CHECK-SAME: %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
 // CHECK-SAME: %[[TENSOR:[0-9a-z]+]]: tensor<?x?xf32>
 //      CHECK: %[[M:.+]] = bufferization.to_buffer %[[TENSOR]] : tensor<?x?xf32> to memref<?x?xf32>
-//      CHECK: linalg.ceil ins(%[[M]] : memref<?x?xf32>) outs(%[[M]] : memref<?x?xf32>)
+//      CHECK: linalg.elementwise kind=#linalg.elementwise_kind<ceil> ins(%[[M]] : memref<?x?xf32>) outs(%[[M]] : memref<?x?xf32>)
 //      CHECK: %[[RES:.*]] = memref.load %[[M]][%[[IDX0]], %[[IDX1]]] : memref<?x?xf32>
 //      CHECK: return %[[RES]] : f32
 
