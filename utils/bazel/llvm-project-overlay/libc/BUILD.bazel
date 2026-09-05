@@ -251,7 +251,10 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("wctype"),
     libc_header_info(
         "stdlib",
-        other_srcs = ["include/stdlib-malloc.yaml"],
+        other_srcs = [
+            "include/stdlib-alloca.yaml",
+            "include/stdlib-malloc.yaml",
+        ],
     ),
     libc_header_info(
         "malloc",

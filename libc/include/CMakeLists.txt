@@ -540,6 +540,7 @@ add_header_macro(
   ../libc/include/stdlib.yaml
   stdlib.h
   DEPENDS
+    .llvm-libc-macros.alloca_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdlib_macros
     .llvm-libc-types.__atexithandler_t
