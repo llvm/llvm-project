@@ -247,7 +247,7 @@ define double @fdiv_ninf_nan_op0(double %x) {
 ; CHECK-LABEL: @fdiv_ninf_nan_op0(
 ; CHECK-NEXT:    ret double -qnan
 ;
-  %r = fdiv ninf double 0xfff8000000000000, %x
+  %r = fdiv ninf double -qnan, %x
   ret double %r
 }
 
@@ -255,7 +255,7 @@ define double @fadd_ninf_nan_op1(double %x) {
 ; CHECK-LABEL: @fadd_ninf_nan_op1(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fadd ninf double %x, 0x7ff8000000000000
+  %r = fadd ninf double %x, +qnan
   ret double %r
 }
 
@@ -263,7 +263,7 @@ define double @fdiv_ninf_inf_op0(double %x) {
 ; CHECK-LABEL: @fdiv_ninf_inf_op0(
 ; CHECK-NEXT:    ret double poison
 ;
-  %r = fdiv ninf double 0x7ff0000000000000, %x
+  %r = fdiv ninf double +inf, %x
   ret double %r
 }
 
@@ -271,7 +271,7 @@ define double @fadd_ninf_inf_op1(double %x) {
 ; CHECK-LABEL: @fadd_ninf_inf_op1(
 ; CHECK-NEXT:    ret double poison
 ;
-  %r = fadd ninf double %x, 0xfff0000000000000
+  %r = fadd ninf double %x, -inf
   ret double %r
 }
 
@@ -279,7 +279,7 @@ define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op0(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %r = fsub nnan double 0x7ff0000000000000, %x
+  %r = fsub nnan double +inf, %x
   ret double %r
 }
 
@@ -290,7 +290,7 @@ define double @fmul_nnan_inf_op1(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = fmul nnan double [[X:%.*]], -inf
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = fmul nnan double %x, 0xfff0000000000000
+  %r = fmul nnan double %x, -inf
   ret double %r
 }
 
@@ -331,7 +331,7 @@ define float @sqrt_nnan_nan() {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float +qnan)
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = call nnan float @llvm.sqrt(float 0x7ff8000000000000)
+  %sqrt = call nnan float @llvm.sqrt(float +qnan)
   ret float %sqrt
 }
 
@@ -340,6 +340,6 @@ define float @sqrt_ninf_inf() {
 ; CHECK-NEXT:    [[SQRT:%.*]] = call ninf float @llvm.sqrt.f32(float -inf)
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
-  %sqrt = call ninf float @llvm.sqrt(float 0xfff0000000000000)
+  %sqrt = call ninf float @llvm.sqrt(float -inf)
   ret float %sqrt
 }

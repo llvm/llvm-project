@@ -2570,7 +2570,7 @@ public:
   void execute(VPTransformState &State) override = 0;
 
   /// Returns the start value of the induction.
-  VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
+  VPValue *getStartValue() const { return getOperand(0); }
 
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
@@ -2629,7 +2629,7 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
   bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPIRValue *Start, VPValue *Step,
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 const VPIRFlags &Flags, DebugLoc DL)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
@@ -2638,13 +2638,13 @@ public:
     addOperand(VF);
   }
 
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPIRValue *Start, VPValue *Step,
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc, const VPIRFlags &Flags,
                                 DebugLoc DL)
-      : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
-                               Start, Step, IndDesc,
-                               Trunc ? Trunc->getType() : Start->getType(), DL),
+      : VPWidenInductionRecipe(
+            VPRecipeBase::VPWidenIntOrFpInductionSC, IV, Start, Step, IndDesc,
+            Trunc ? Trunc->getType() : Start->getScalarType(), DL),
         VPIRFlags(Flags), Trunc(Trunc) {
     addOperand(VF);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
@@ -3323,7 +3323,9 @@ public:
   /// Return true if the in-loop reduction is conditional.
   bool isConditional() const { return IsConditional; };
   /// Returns true if the reduction outputs a vector with a scaled down VF.
-  bool isPartialReduction() const { return getVFScaleFactor() > 1; }
+  bool isPartialReduction() const {
+    return std::holds_alternative<RdxUnordered>(Style);
+  }
   /// Returns true if the reduction is in-loop.
   bool isInLoop() const {
     return std::holds_alternative<RdxInLoop>(Style) ||
@@ -3832,6 +3834,9 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
 
+  /// Returns the opcode of the widened load.
+  unsigned getOpcode() const { return Instruction::Load; }
+
   /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
 
@@ -3881,6 +3886,9 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadEVLSC)
+
+  /// Returns the opcode of the widened load.
+  unsigned getOpcode() const { return Instruction::Load; }
 
   /// Return the EVL operand.
   VPValue *getEVL() const { return getOperand(1); }
@@ -4375,6 +4383,17 @@ struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
     : public ConstStrippingForwardingCast<
           VPWidenMemoryRecipe, const VPRecipeBase *,
           CastInfo<VPWidenMemoryRecipe, VPRecipeBase *>> {};
+
+/// Support casting from VPSingleDefRecipe -> VPWidenMemoryRecipe (loads only).
+template <>
+struct CastInfo<VPWidenMemoryRecipe, VPSingleDefRecipe *>
+    : vpdetail::CastInfoMixinImpl<VPWidenMemoryRecipe, VPWidenLoadRecipe,
+                                  VPWidenLoadEVLRecipe> {};
+template <>
+struct CastInfo<VPWidenMemoryRecipe, const VPSingleDefRecipe *>
+    : public ConstStrippingForwardingCast<
+          VPWidenMemoryRecipe, const VPSingleDefRecipe *,
+          CastInfo<VPWidenMemoryRecipe, VPSingleDefRecipe *>> {};
 
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>

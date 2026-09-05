@@ -5,18 +5,19 @@ if(NOT TARGET "omp")
 endif()
 
 add_library(omptarget SHARED
-  device.cpp
   interface.cpp
   omptarget.cpp
   OffloadRTL.cpp
   LegacyAPI.cpp
-  PluginManager.cpp
-  DeviceImage.cpp
 
   OpenMP/API.cpp
-  OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+
+  ../libompaccsupport/device.cpp
+  ../libompaccsupport/PluginManager.cpp
+  ../libompaccsupport/DeviceImage.cpp
+  ../libompaccsupport/Mapping.cpp
 
   KernelLanguage/API.cpp
 )

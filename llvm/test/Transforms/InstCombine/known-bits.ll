@@ -1607,7 +1607,7 @@ define i32 @test_ninf_only(double %x) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i32 0
 ;
-  %cmp = fcmp oeq double %x, 0xFFF0000000000000
+  %cmp = fcmp oeq double %x, -inf
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:
@@ -1711,7 +1711,7 @@ define i1 @test_simplify_icmp2(double %x) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %abs = tail call double @llvm.fabs.f64(double %x)
-  %cond = fcmp oeq double %abs, 0x7FF0000000000000
+  %cond = fcmp oeq double %abs, +inf
   br i1 %cond, label %if.then, label %if.else
 
 if.then:

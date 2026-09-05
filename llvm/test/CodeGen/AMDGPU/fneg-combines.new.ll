@@ -282,7 +282,7 @@ define amdgpu_ps float @fneg_fadd_0_safe_f32(float inreg %tmp2, float inreg %tmp
   %tmp11 = fneg float %.i188
   %.i092 = select i1 %tmp10, float %tmp2, float %tmp11
   %tmp12 = fcmp ule float %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, float 0.000000e+00, float 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, float 0.000000e+00, float +qnan
   ret float %.i198
 }
 
@@ -310,7 +310,7 @@ define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6
   %tmp11 = fneg float %.i188
   %.i092 = select i1 %tmp10, float %tmp2, float %tmp11
   %tmp12 = fcmp ule float %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, float 0.000000e+00, float 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, float 0.000000e+00, float +qnan
   ret float %.i198
 }
 
@@ -640,7 +640,7 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
   %tmp11 = fneg double %.i188
   %.i092 = select i1 %tmp10, double %tmp2, double %tmp11
   %tmp12 = fcmp ule double %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, double 0.000000e+00, double 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, double 0.000000e+00, double +qnan
   ret double %.i198
 }
 
@@ -707,7 +707,7 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
   %tmp11 = fneg nsz double %.i188
   %.i092 = select i1 %tmp10, double %tmp2, double %tmp11
   %tmp12 = fcmp ule double %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, double 0.000000e+00, double 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, double 0.000000e+00, double +qnan
   ret double %.i198
 }
 
@@ -765,7 +765,7 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
   %tmp11 = fneg double %.i188
   %.i092 = select i1 %tmp10, double %tmp2, double %tmp11
   %tmp12 = fcmp ule double %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, double 0.000000e+00, double 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, double 0.000000e+00, double +qnan
   ret double %.i198
 }
 

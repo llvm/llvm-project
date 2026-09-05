@@ -266,9 +266,6 @@ def HasVirt  : Predicate<"Subtarget->hasVirt()">,
                AssemblerPredicate<(all_of FeatureVirt)>;
 def HasGINV  : Predicate<"Subtarget->hasGINV()">,
                AssemblerPredicate<(all_of FeatureGINV)>;
-// TODO: Add support for FPOpFusion::Standard
-def AllowFPOpFusion : Predicate<"TM.Options.AllowFPOpFusion =="
-                                " FPOpFusion::Fast">;
 //===----------------------------------------------------------------------===//
 // Mips GPR size adjectives.
 // They are mutually exclusive.
@@ -535,10 +532,6 @@ class ABI_N64 {
 
 class ABI_NOT_N64 {
   list<Predicate> AdditionalPredicates = [IsNotN64];
-}
-
-class FPOP_FUSION_FAST {
-  list <Predicate> AdditionalPredicates = [AllowFPOpFusion];
 }
 
 //===----------------------------------------------------------------------===//

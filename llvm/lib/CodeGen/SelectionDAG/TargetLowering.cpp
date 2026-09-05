@@ -9750,10 +9750,24 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
 
   // Work in an integer type matching the destination float width.
   EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
-  EVT IntVT = DstVT.isVector()
-                  ? EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
-                                     DstVT.getVectorElementCount())
-                  : IntScalarVT;
+  EVT IntVT = IntScalarVT;
+  if (DstVT.isVector()) {
+    IntVT = EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
+                             DstVT.getVectorElementCount());
+  } else if (!isTypeLegal(IntScalarVT)) {
+    // Avoid generating illegal type as there is no other places that'll
+    // legalize it. Vector types don't have this problem because they
+    // are subject to LegalizeVectorOps and another type legalization phase
+    // will follow.
+    if (getTypeAction(*DAG.getContext(), IntScalarVT) != TypePromoteInteger) {
+      // We only know how to handle situations where the legal type is wider.
+      DAG.getContext()->emitError(
+          "CONVERT_FROM_ARBITRARY_FP: the requested integer value type for its "
+          "legalization is not supported");
+      return SDValue();
+    }
+    IntVT = getTypeToTransformTo(*DAG.getContext(), IntScalarVT);
+  }
 
   SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
 
@@ -9821,9 +9835,10 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
 
   // Normal value conversion.
   const int BiasAdjust = DstBias - SrcBias;
-  SDValue NormDstExp =
-      DAG.getNode(ISD::ADD, dl, IntVT, ExpField,
-                  DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
+  SDValue NormDstExp = DAG.getNode(
+      ISD::ADD, dl, IntVT, ExpField,
+      DAG.getConstant(APInt(IntVT.getScalarSizeInBits(), BiasAdjust, true), dl,
+                      IntVT));
 
   SDValue NormDstMant;
   if (DstMant > SrcMant) {
@@ -9845,7 +9860,7 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   // Denormal value conversion.
   SDValue DenormResult;
   {
-    const unsigned IntVTBits = DstBits;
+    const unsigned IntVTBits = IntVT.getScalarSizeInBits();
     SDValue LeadingZeros =
         DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, IntVT, MantField);
 
@@ -9853,7 +9868,7 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
         (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
     SDValue DenormDstExp = DAG.getNode(
         ISD::SUB, dl, IntVT,
-        DAG.getConstant(APInt(DstBits, DenormExpConst, true), dl, IntVT),
+        DAG.getConstant(APInt(IntVTBits, DenormExpConst, true), dl, IntVT),
         LeadingZeros);
 
     SDValue MantMSB =
@@ -9894,6 +9909,24 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
+
+  if (!DstVT.bitsEq(IntVT)) {
+    // Store to stack before loading it back.
+    assert(!IntVT.isVector() && IntVT.bitsGT(DstVT));
+    // IntScalarVT is the original type that has the same width as DstVT.
+    Align Alignment = DAG.getReducedAlign(IntScalarVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(IntScalarVT.getStoreSize(), Alignment);
+    auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachinePointerInfo PtrInfo =
+        MachinePointerInfo::getFixedStack(MF, FrameIndex);
+    SDValue Store = DAG.getTruncStore(DAG.getEntryNode(), dl, Result, StackPtr,
+                                      PtrInfo, IntScalarVT, Alignment);
+
+    SDValue Load = DAG.getLoad(DstVT, dl, Store, StackPtr, PtrInfo, Alignment);
+    return DAG.getMergeValues({Load, Load.getValue(1)}, dl);
+  }
 
   return DAG.getNode(ISD::BITCAST, dl, DstVT, Result);
 }
@@ -10991,19 +11024,33 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
     if (SDValue V = CTTZTableLookup(Node, DAG, dl, VT, Op, NumBitsPerElt))
       return V;
 
-  // for now, we use: { return popcount(~x & (x - 1)); }
-  // unless the target has ctlz but not ctpop, in which case we use:
+  bool UseCTLZ =
+      isOperationLegal(ISD::CTLZ, VT) && !isOperationLegal(ISD::CTPOP, VT);
+
+  // When only ctlz is available and the operand is nonzero we can use:
+  // { return nlz(x & -x) ^ 31; }
+  // which is more efficient than:
+  // { return 32 - nlz(~x & (x - 1)); }.
+  if (UseCTLZ && Node->getOpcode() == ISD::CTTZ_ZERO_POISON) {
+    SDValue LowestBit =
+        DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNegative(Op, dl, VT));
+    return DAG.getNode(ISD::XOR, dl, VT,
+                       DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, VT, LowestBit),
+                       DAG.getConstant(NumBitsPerElt - 1, dl, VT));
+  }
+
+  // If ctpop is available, we use:
+  // { return popcount(~x & (x-1)); }
+  // If the target has ctlz but not ctpop, we use:
   // { return 32 - nlz(~x & (x-1)); }
   // Ref: "Hacker's Delight" by Henry Warren
   SDValue Tmp = DAG.getNode(
       ISD::AND, dl, VT, DAG.getNOT(dl, Op, VT),
       DAG.getNode(ISD::SUB, dl, VT, Op, DAG.getConstant(1, dl, VT)));
 
-  // If ISD::CTLZ is legal and CTPOP isn't, then do that instead.
-  if (isOperationLegal(ISD::CTLZ, VT) && !isOperationLegal(ISD::CTPOP, VT)) {
+  if (UseCTLZ)
     return DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(NumBitsPerElt, dl, VT),
                        DAG.getNode(ISD::CTLZ, dl, VT, Tmp));
-  }
 
   return DAG.getNode(ISD::CTPOP, dl, VT, Tmp);
 }

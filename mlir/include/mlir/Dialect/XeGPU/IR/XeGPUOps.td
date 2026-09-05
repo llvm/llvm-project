@@ -1213,7 +1213,10 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
   }];
   let arguments = (ins XeGPU_MemorySpaceAttr: $memory_kind,
                        XeGPU_FenceScopeAttr: $fence_scope);
-  let assemblyFormat = [{`memory_kind` `=` $memory_kind `,` `fence_scope` `=` $fence_scope attr-dict}];
+  let assemblyFormat = [{
+    `memory_kind` `=` enum($memory_kind) `,`
+    `fence_scope` `=` enum($fence_scope) attr-dict
+  }];
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
@@ -1571,7 +1574,7 @@ def XeGPU_LaneShuffleOp
   }];
 
   let assemblyFormat = [{
-    $source $mode attr-dict `:` type($source)
+    $source enum($mode) attr-dict `:` type($source)
   }];
 
   let hasVerifier = 1;

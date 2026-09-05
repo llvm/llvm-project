@@ -14,6 +14,7 @@ add_mlir_unittest(MLIRIRTests
   LocationTest.cpp
   MLIRContextResetTest.cpp
   MemrefLayoutTest.cpp
+  OpImplementationTest.cpp
   OperationSupportTest.cpp
   PatternMatchTest.cpp
   RemarkTest.cpp  

@@ -127,6 +127,14 @@ acc.loop vector(%i64value: i64, %i64value: i64) {
 
 // -----
 
+func.func @acc_routine_bind() {
+  return
+}
+// expected-error@+1 {{expected symbol reference or string attribute}}
+acc.routine @acc_routine_bind_rout func(@acc_routine_bind) bind(42 : i64)
+
+// -----
+
 func.func @acc_routine_parallelism() -> () {
   return
 }
@@ -862,13 +870,13 @@ func.func @acc_loop_container() {
 
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{no data clause modifiers are allowed}}
-%0 = acc.private varPtr(%value : memref<f32>) <{modifiers = #acc<data_clause_modifier zero>}> -> memref<f32>
+%0 = acc.private varPtr(%value : memref<f32>) <{modifiers = #acc.data_clause_modifier<zero>}> -> memref<f32>
 
 // -----
 
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
-%0 = acc.create varPtr(%value : memref<f32>) <{modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}> -> memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>) <{modifiers = #acc.data_clause_modifier<readonly,zero,capture,always>}> -> memref<f32>
 
 // -----
 

@@ -229,7 +229,7 @@ define nofpclass(nan) float @compute_not_nofpclass(float noundef nofpclass(nan) 
 ; CHECK-NEXT:    [[Y:%.*]] = fmul float [[X]], +qnan
 ; CHECK-NEXT:    ret float [[Y]]
 ;
-  %y = fmul float %x, 0x7FF8000000000000
+  %y = fmul float %x, +qnan
   ret float %y
 }
 

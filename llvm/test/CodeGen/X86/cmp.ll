@@ -757,17 +757,15 @@ f:
 define i32 @lowmask_i64_mask62(i64 %val) {
 ; NO-NDD-LABEL: lowmask_i64_mask62:
 ; NO-NDD:       # %bb.0:
-; NO-NDD-NEXT:    shlq $2, %rdi # encoding: [0x48,0xc1,0xe7,0x02]
 ; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NO-NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
+; NO-NDD-NEXT:    shlq $2, %rdi # encoding: [0x48,0xc1,0xe7,0x02]
 ; NO-NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NO-NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; NDD-LABEL: lowmask_i64_mask62:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    shlq $2, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x02]
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
+; NDD-NEXT:    shlq $2, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x02]
 ; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 4611686018427387903

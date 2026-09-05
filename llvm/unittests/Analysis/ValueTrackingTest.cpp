@@ -449,16 +449,15 @@ TEST_F(MatchSelectPatternTest, VectorFMinOtherOrdered) {
 }
 
 TEST_F(MatchSelectPatternTest, VectorNotFMinimum) {
-  parseAssembly(
-      "define <4 x float> @test(<4 x float> %a) {\n"
-      "  %1 = fcmp ule <4 x float> %a, \n"
-      "    <float 5.0, float 0x7ff8000000000000, float 5.0, float 5.0>\n"
-      "  %A = select <4 x i1> %1, <4 x float> %a,\n"
-      "     <4 x float> <float 5.0, float 0x7ff8000000000000, float 5.0, float "
-      "5.0>\n"
-      "  ret <4 x float> %A\n"
-      "}\n");
-  // The lane that contains a NaN (0x7ff80...) behaves like a
+  parseAssembly("define <4 x float> @test(<4 x float> %a) {\n"
+                "  %1 = fcmp ule <4 x float> %a, \n"
+                "    <float 5.0, float +qnan, float 5.0, float 5.0>\n"
+                "  %A = select <4 x i1> %1, <4 x float> %a,\n"
+                "     <4 x float> <float 5.0, float +qnan, float 5.0, float "
+                "5.0>\n"
+                "  ret <4 x float> %A\n"
+                "}\n");
+  // The lane that contains a NaN (0x7FC0...) behaves like a
   // non-NaN-propagating min and the other lines behave like a NaN-propagating
   // min, so check that neither is returned.
   expectPattern({SPF_UNKNOWN, SPNB_NA, false});
@@ -1543,29 +1542,26 @@ TEST_F(ComputeKnownFPClassTest, SelectPosOrNeg0) {
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectPosInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0x7FF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float +inf, float +inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcPosInf, false);
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectNegInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0xFFF0000000000000, float 0xFFF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float -inf, float -inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcNegInf, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, SelectPosOrNegInf) {
-  parseAssembly(
-      "define float @test(i1 %cond) {\n"
-      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0xFFF0000000000000"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(i1 %cond) {\n"
+                "  %A = select i1 %cond, float +inf, float -inf"
+                "  ret float %A\n"
+                "}\n");
   expectKnownFPClass(fcInf, std::nullopt);
 }
 
@@ -2178,10 +2174,10 @@ TEST_F(ComputeKnownFPClassTest, CannotBeOrderedLessThanZero) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_OrdNan) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp ord double %arg, 0x7FF8000000000000"
-                "  %A2 = fcmp uno double %arg, 0x7FF8000000000000"
-                "  %A3 = fcmp oeq double %arg, 0x7FF8000000000000"
-                "  %A4 = fcmp ueq double %arg, 0x7FF8000000000000"
+                "  %A = fcmp ord double %arg, +qnan"
+                "  %A2 = fcmp uno double %arg, +qnan"
+                "  %A3 = fcmp oeq double %arg, +qnan"
+                "  %A4 = fcmp ueq double %arg, +qnan"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2211,12 +2207,12 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_OrdNan) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp olt double %arg, 0xFFF0000000000000"
-                "  %A2 = fcmp uge double %arg, 0xFFF0000000000000"
-                "  %A3 = fcmp ogt double %arg, 0xFFF0000000000000"
-                "  %A4 = fcmp ule double %arg, 0xFFF0000000000000"
-                "  %A5 = fcmp oge double %arg, 0xFFF0000000000000"
-                "  %A6 = fcmp ult double %arg, 0xFFF0000000000000"
+                "  %A = fcmp olt double %arg, -inf"
+                "  %A2 = fcmp uge double %arg, -inf"
+                "  %A3 = fcmp ogt double %arg, -inf"
+                "  %A4 = fcmp ule double %arg, -inf"
+                "  %A5 = fcmp oge double %arg, -inf"
+                "  %A6 = fcmp ult double %arg, -inf"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2260,12 +2256,12 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
   parseAssembly("declare double @llvm.fabs.f64(double)\n"
                 "define i1 @test(double %arg) {\n"
                 "  %fabs.arg = call double @llvm.fabs.f64(double %arg)\n"
-                "  %A = fcmp olt double %fabs.arg, 0xFFF0000000000000"
-                "  %A2 = fcmp uge double %fabs.arg, 0xFFF0000000000000"
-                "  %A3 = fcmp ogt double %fabs.arg, 0xFFF0000000000000"
-                "  %A4 = fcmp ule double %fabs.arg, 0xFFF0000000000000"
-                "  %A5 = fcmp oge double %fabs.arg, 0xFFF0000000000000"
-                "  %A6 = fcmp ult double %fabs.arg, 0xFFF0000000000000"
+                "  %A = fcmp olt double %fabs.arg, -inf"
+                "  %A2 = fcmp uge double %fabs.arg, -inf"
+                "  %A3 = fcmp ogt double %fabs.arg, -inf"
+                "  %A4 = fcmp ule double %fabs.arg, -inf"
+                "  %A5 = fcmp oge double %fabs.arg, -inf"
+                "  %A6 = fcmp ult double %fabs.arg, -inf"
                 "  ret i1 %A\n"
                 "}\n");
 
@@ -2309,10 +2305,10 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_FabsNInf) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp ogt double %arg, 0x7FF0000000000000"
-                "  %A2 = fcmp ule double %arg, 0x7FF0000000000000"
-                "  %A3 = fcmp ole double %arg, 0x7FF0000000000000"
-                "  %A4 = fcmp ugt double %arg, 0x7FF0000000000000"
+                "  %A = fcmp ogt double %arg, +inf"
+                "  %A2 = fcmp ule double %arg, +inf"
+                "  %A3 = fcmp ole double %arg, +inf"
+                "  %A4 = fcmp ugt double %arg, +inf"
                 "  ret i1 %A\n"
                 "}\n");
 

@@ -37,3 +37,10 @@ float3 test_degrees_float3(float3 p0) { return degrees(p0); }
 // CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x float> %{{.*}}, splat (float f0x42652EE1)
 // CHECK-NEXT: ret <4 x float> [[MUL]]
 float4 test_degrees_float4(float4 p0) { return degrees(p0); }
+
+// CHECK-LABEL: test_degrees_float5
+// CHECK: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <5 x float> %{{.*}}, splat (float f0x42652EE1)
+// CHECK-NEXT: ret <5 x float> [[MUL]]
+vector<float, 5> test_degrees_float5(vector<float, 5> p0) {
+	return degrees(p0);
+}

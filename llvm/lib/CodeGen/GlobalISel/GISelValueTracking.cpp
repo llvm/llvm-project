@@ -75,12 +75,6 @@ Align GISelValueTracking::computeKnownAlignment(Register R, unsigned Depth) {
   }
 }
 
-KnownBits GISelValueTracking::getKnownBits(MachineInstr &MI) {
-  assert(MI.getNumExplicitDefs() == 1 &&
-         "expected single return generic instruction");
-  return getKnownBits(MI.getOperand(0).getReg());
-}
-
 KnownBits GISelValueTracking::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
   // Since the number of lanes in a scalable vector is unknown at compile time,
@@ -2712,6 +2706,21 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         break;
     }
     break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+    LLT VecVT = MRI.getType(InVec);
+    if (VecVT.isScalableVector())
+      return computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
+    unsigned NumSrcElts = VecVT.getNumElements();
+    std::optional<APInt> ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
+    return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.

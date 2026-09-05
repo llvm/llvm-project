@@ -56,6 +56,7 @@
 #include "llvm/CodeGen/PBQP/Solution.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -154,7 +155,8 @@ private:
   void findVRegIntervalsToAlloc(const MachineFunction &MF, LiveIntervals &LIS);
 
   /// Constructs an initial graph.
-  void initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM, Spiller &VRegSpiller);
+  void initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM, Spiller &VRegSpiller,
+                       const RegisterClassInfo &RCI);
 
   /// Spill the given VReg.
   void spillVReg(Register VReg, SmallVectorImpl<Register> &NewIntervals,
@@ -170,8 +172,8 @@ private:
 
   /// Postprocessing before final spilling. Sets basic block "live in"
   /// variables.
-  void finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
-                     VirtRegMap &VRM) const;
+  void finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
+                     const RegisterClassInfo &RCI) const;
 
   void postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS);
 };
@@ -532,6 +534,19 @@ void PBQPRAConstraint::anchor() {}
 
 void PBQPRAConstraintList::anchor() {}
 
+INITIALIZE_PASS_BEGIN(RegAllocPBQP, "regallocpbqp", "PBQP Register Allocator",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
+INITIALIZE_PASS_END(RegAllocPBQP, "regallocpbqp", "PBQP Register Allocator",
+                    false, false)
+
 void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.setPreservesCFG();
   au.addRequired<AAResultsWrapperPass>();
@@ -548,6 +563,7 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();
   au.addRequired<MachineDominatorTreeWrapperPass>();
+  au.addRequired<MachineRegisterClassInfoWrapperPass>();
   au.addRequired<VirtRegMapWrapperLegacy>();
   au.addPreserved<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(au);
@@ -577,7 +593,8 @@ static bool isACalleeSavedRegister(MCRegister Reg,
 }
 
 void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
-                                   Spiller &VRegSpiller) {
+                                   Spiller &VRegSpiller,
+                                   const RegisterClassInfo &RCI) {
   MachineFunction &MF = G.getMetadata().MF;
 
   LiveIntervals &LIS = G.getMetadata().LIS;
@@ -611,11 +628,8 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
 
     // Compute an initial allowed set for the current vreg.
     std::vector<MCRegister> VRegAllowed;
-    ArrayRef<MCPhysReg> RawPRegOrder = TRI.getRawAllocationOrder(*TRC, MF);
-    for (MCPhysReg R : RawPRegOrder) {
+    for (MCPhysReg R : RCI.getOrder(TRC)) {
       MCRegister PReg(R);
-      if (MRI.isReserved(PReg))
-        continue;
 
       // vregLI crosses a regmask operand that clobbers preg.
       if (!RegMaskOverlaps.empty() && !RegMaskOverlaps.test(PReg))
@@ -741,10 +755,9 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
   return !AnotherRoundNeeded;
 }
 
-void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
-                                 LiveIntervals &LIS,
-                                 VirtRegMap &VRM) const {
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+void RegAllocPBQP::finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
+                                 VirtRegMap &VRM,
+                                 const RegisterClassInfo &RCI) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // First allocate registers for the empty intervals.
@@ -754,16 +767,10 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
     Register PReg = MRI.getSimpleHint(LI.reg());
 
     if (PReg == 0) {
-      const TargetRegisterClass &RC = *MRI.getRegClass(LI.reg());
-      ArrayRef<MCPhysReg> RawPRegOrder = TRI.getRawAllocationOrder(RC, MF);
-      for (MCRegister CandidateReg : RawPRegOrder) {
-        if (!VRM.getRegInfo().isReserved(CandidateReg)) {
-          PReg = CandidateReg;
-          break;
-        }
-      }
-      assert(PReg &&
+      ArrayRef<MCPhysReg> Order = RCI.getOrder(MRI.getRegClass(LI.reg()));
+      assert(!Order.empty() &&
              "No un-reserved physical registers in this register class");
+      PReg = Order.front();
     }
 
     VRM.assignVirt2Phys(LI.reg(), PReg);
@@ -805,6 +812,9 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
   MF.getRegInfo().freezeReservedRegs();
 
+  const RegisterClassInfo &RCI =
+      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+
   LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
 
   // Allocator main loop:
@@ -844,7 +854,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
       (void) Round;
 
       PBQPRAGraph G(PBQPRAGraph::GraphMetadata(MF, LIS, MBFI));
-      initializeGraph(G, VRM, *VRegSpiller);
+      initializeGraph(G, VRM, *VRegSpiller, RCI);
       ConstraintsRoot->apply(G);
 
 #ifndef NDEBUG
@@ -868,7 +878,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Finalise allocation, allocate empty ranges.
-  finalizeAlloc(MF, LIS, VRM);
+  finalizeAlloc(MF, LIS, VRM, RCI);
   postOptimization(*VRegSpiller, LIS);
   VRegsToAlloc.clear();
   EmptyIntervalVRegs.clear();
