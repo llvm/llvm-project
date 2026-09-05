@@ -476,6 +476,38 @@ collectVisibleFeatures(const Record *GPU,
   return Visible;
 }
 
+// The value of the SubtargetFeature in \p GPU's closure that sets \p FieldName,
+// or \p Default if it has none. Two features setting the same field to
+// different values is an error: SubtargetFeature silently takes the larger.
+static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
+                               int64_t Default) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+
+  const Record *Found = nullptr;
+  int64_t Value = Default;
+  for (const Record *F : Closure) {
+    if (F->getValueAsString("FieldName") != FieldName)
+      continue;
+
+    int64_t V;
+    if (!to_integer(F->getValueAsString("Value"), V)) {
+      PrintFatalError(F->getLoc(), "feature '" + F->getValueAsString("Name") +
+                                       "' must have an integer value");
+    }
+    if (Found && V != Value) {
+      PrintFatalError(GPU->getLoc(),
+                      "GPU '" + GPU->getValueAsString("Name") +
+                          "' gets conflicting '" + FieldName +
+                          "' values from '" + Found->getValueAsString("Name") +
+                          "' and '" + F->getValueAsString("Name") + "'");
+    }
+    Found = F;
+    Value = V;
+  }
+  return Value;
+}
+
 // Make sure a "gfxN-generic" processor doesn't expose a frontend-visible
 // feature missing from any covered processor.
 //
@@ -498,14 +530,29 @@ validateGenericFeatures(const Record *GPU,
     SetVector<const Record *> MemberFeatures =
         collectVisibleFeatures(Member, FeatureIdx);
     for (const Record *F : GenericFeatures) {
-      if (!MemberFeatures.contains(F)) {
+      if (MemberFeatures.contains(F))
+        continue;
+
+      StringRef FieldName = F->getValueAsString("FieldName");
+      if (FieldName == "AddressableLocalMemorySize") {
+        int64_t GenericValue = getFeatureValue(GPU, FieldName, 32768);
+        int64_t MemberValue = getFeatureValue(Member, FieldName, 32768);
+        if (GenericValue <= MemberValue)
+          continue;
+
         PrintFatalError(GPU->getLoc(),
                         "generic target '" + GPU->getValueAsString("Name") +
                             "' exposes feature '" +
-                            F->getValueAsString("Name") +
-                            "' not supported by covered GPU '" +
+                            F->getValueAsString("Name") + "' exceeding the '" +
+                            FieldName + "' of covered GPU '" +
                             Member->getValueAsString("Name") + "'");
       }
+
+      PrintFatalError(GPU->getLoc(),
+                      "generic target '" + GPU->getValueAsString("Name") +
+                          "' exposes feature '" + F->getValueAsString("Name") +
+                          "' not supported by covered GPU '" +
+                          Member->getValueAsString("Name") + "'");
     }
   }
 }
@@ -544,38 +591,6 @@ emitFeatureBitset(raw_ostream &OS, const Record *GPU,
     emitFeatureEnum(OS, Name);
   }
   OS << "})";
-}
-
-// The value of the SubtargetFeature in \p GPU's closure that sets \p FieldName,
-// or \p Default if it has none. Two features setting the same field to
-// different values is an error: SubtargetFeature silently takes the larger.
-static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
-                               int64_t Default) {
-  SetVector<const Record *> Closure;
-  collectFeatureClosure(GPU, Closure);
-
-  const Record *Found = nullptr;
-  int64_t Value = Default;
-  for (const Record *F : Closure) {
-    if (F->getValueAsString("FieldName") != FieldName)
-      continue;
-
-    int64_t V;
-    if (!to_integer(F->getValueAsString("Value"), V)) {
-      PrintFatalError(F->getLoc(), "feature '" + F->getValueAsString("Name") +
-                                       "' must have an integer value");
-    }
-    if (Found && V != Value) {
-      PrintFatalError(GPU->getLoc(),
-                      "GPU '" + GPU->getValueAsString("Name") +
-                          "' gets conflicting '" + FieldName +
-                          "' values from '" + Found->getValueAsString("Name") +
-                          "' and '" + F->getValueAsString("Name") + "'");
-    }
-    Found = F;
-    Value = V;
-  }
-  return Value;
 }
 
 /// Emit a GPUInfo table indexed by (GPUKind - AMDGPUFirstGPUKind). Name and
