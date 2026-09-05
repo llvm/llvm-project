@@ -6697,8 +6697,10 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       Attr.setInvalid();
   } else {
     // The keyword-based type attributes imply which address space to use.
-    ASIdx = S.getLangOpts().SYCLIsDevice ? Attr.asSYCLLangAS()
-                                         : Attr.asOpenCLLangAS();
+    // The SYCL address space attributes are available in both SYCL host and
+    // device compilation.
+    ASIdx =
+        S.getLangOpts().isSYCL() ? Attr.asSYCLLangAS() : Attr.asOpenCLLangAS();
     if (S.getLangOpts().HLSL)
       ASIdx = Attr.asHLSLLangAS();
 
@@ -9127,6 +9129,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
     case ParsedAttr::AT_AddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;
