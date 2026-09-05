@@ -25,4 +25,3 @@ directly.
 The exception to this is MSVC environments. Libc++ does not currently have users
 that require a stable ABI in MSVC environments, so MSVC-only changes may be
 applied unconditionally.
-

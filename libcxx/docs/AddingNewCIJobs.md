@@ -2,9 +2,9 @@
 
 # Adding New CI Jobs
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Adding The Job
 
@@ -66,4 +66,3 @@ order to avoid flaky failures, which reduce the value of CI for everyone.
 
 We may be reluctant to add and support CI jobs that take a long time to finish
 or that are too flaky.
-

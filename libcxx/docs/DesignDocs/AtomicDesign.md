@@ -491,7 +491,7 @@ Where:
   the library defines `__atomic_flag__` as a typedef to `bool`.
 - To communicate that the above intrinsics are available, the compiler must
   arrange for `__has_feature` to return 1 when fed the intrinsic name
-  appended with an '\_' and the mangled type name of `__atomic_flag__`.
+  appended with an '_' and the mangled type name of `__atomic_flag__`.
 
 For example if `__atomic_flag__` is `unsigned int`:
 
@@ -788,4 +788,3 @@ void bar() { return A.compare_exchange_strong(y, z); }
 If only **one** of these calls to `compare_exchange_strong` is implemented with
 mutex-locked code, then that mutex-locked code will not be executed mutually
 exclusively of the one implemented in a lock-free manner.
-

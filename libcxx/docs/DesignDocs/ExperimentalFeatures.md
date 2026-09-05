@@ -1,10 +1,10 @@
 # Experimental Features
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
-(experimental-features-1)=
+(experimental features)=
 
 ## Overview
 
@@ -188,4 +188,3 @@ We have not yet shipped an implementation of the Concurrency TS.
 % | 4       | Atomic Smart Pointers                                 |                    |                                          | Adopted for C++20       |
 
 % +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-

@@ -58,4 +58,3 @@ include/<targetB>/c++/v1/
 When compiling for `targetA`, Clang will use the `__config_site` inside
 `include/<targetA>/c++/v1/`, and the corresponding `__config_site` for
 `targetB`.
-

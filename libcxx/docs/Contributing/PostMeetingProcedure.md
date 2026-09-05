@@ -98,4 +98,3 @@ libcxx/utils/conformance csv synchronize libcxx/docs/Status/Cxx<NN>Issues.csv \
 ```
 
 This can then be committed as a follow-up PR.
-
