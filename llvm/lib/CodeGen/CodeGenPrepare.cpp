@@ -2978,6 +2978,67 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
   return false;
 }
 
+/// Check whether, on the path through predecessor \p Pred, \p FieldValues
+/// exactly reassembles the aggregate return value of a single call in
+/// \p Pred (each field is an extractvalue of the same call at the same
+/// index). Returns that call, or null if the pattern does not match.
+static CallInst *findTailCallReassembledInPred(ArrayRef<Value *> FieldValues,
+                                               BasicBlock *BB,
+                                               BasicBlock *Pred) {
+  CallInst *CallSource = nullptr;
+  for (unsigned Index = 0; Index < FieldValues.size(); ++Index) {
+    Value *V = FieldValues[Index];
+    if (auto *PN = dyn_cast<PHINode>(V)) {
+      if (PN->getParent() != BB)
+        return nullptr;
+      V = PN->getIncomingValueForBlock(Pred);
+    }
+    auto *EVI = dyn_cast<ExtractValueInst>(V);
+    if (!EVI || EVI->getParent() != Pred || !EVI->hasOneUse() ||
+        EVI->getNumIndices() != 1 || EVI->getIndices()[0] != Index)
+      return nullptr;
+    auto *CI = dyn_cast<CallInst>(EVI->getAggregateOperand());
+    if (!CI || CI->getParent() != Pred || (CallSource && CallSource != CI))
+      return nullptr;
+    CallSource = CI;
+  }
+  // The extractvalues found above are distinct (they use distinct indices),
+  // so requiring exactly that many uses guarantees the call has no other
+  // uses and its whole return value flows into the return. The type check
+  // rules out calls returning a larger struct with matching leading fields.
+  if (!CallSource || CallSource->getNumUses() != FieldValues.size() ||
+      CallSource->getType() != BB->getParent()->getReturnType())
+    return nullptr;
+  return CallSource;
+}
+
+/// Parse a chain of insertvalues in \p BB that fully constructs a struct
+/// starting from undef/poison. On success, FieldValues[I] holds the value
+/// inserted at field index I and \p ChainInsts holds the instructions.
+static bool
+collectInsertValueChain(Value *V, BasicBlock *BB,
+                        SmallVectorImpl<Value *> &FieldValues,
+                        SmallPtrSetImpl<Instruction *> &ChainInsts) {
+  StructType *Ty = dyn_cast<StructType>(V->getType());
+  if (!Ty)
+    return false;
+  unsigned NumIndices = Ty->getNumElements(), CoveredIndices = 0;
+  FieldValues.assign(NumIndices, nullptr);
+  while (auto *IVI = dyn_cast<InsertValueInst>(V)) {
+    if (IVI->getParent() != BB || !IVI->hasOneUse() ||
+        IVI->getNumIndices() != 1)
+      return false;
+    unsigned Index = IVI->getIndices()[0];
+    if (FieldValues[Index] == nullptr) {
+      FieldValues[Index] = IVI->getInsertedValueOperand();
+      CoveredIndices++;
+    }
+    ChainInsts.insert(IVI);
+    V = IVI->getAggregateOperand();
+  }
+  return isa<UndefValue>(V) && CoveredIndices == NumIndices;
+}
+
 /// Look for opportunities to duplicate return instructions to the predecessor
 /// to enable tail call optimizations. The case it is currently looking for is
 /// the following one. Known intrinsics or library function that may be tail
@@ -3024,20 +3085,33 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   PHINode *PN = nullptr;
   ExtractValueInst *EVI = nullptr;
   BitCastInst *BCI = nullptr;
+  // Set if the return value is an insertvalue chain reassembling a struct,
+  // e.g. from `ret {i64, i32} %agg` where %agg is built up by insertvalues
+  // whose field values are (phis of) extractvalues of calls.
+  SmallVector<Value *, 4> FieldValues;
+  SmallPtrSet<Instruction *, 4> ChainInsts;
+  bool IsAggregateReturn = false;
   Value *V = RetI->getReturnValue();
   if (V) {
     BCI = dyn_cast<BitCastInst>(V);
     if (BCI)
       V = BCI->getOperand(0);
 
-    EVI = dyn_cast<ExtractValueInst>(V);
-    if (EVI) {
-      V = EVI->getOperand(0);
-      if (!llvm::all_of(EVI->indices(), equal_to(0)))
-        return false;
-    }
+    if (isa<InsertValueInst>(V)) {
+      if (collectInsertValueChain(V, BB, FieldValues, ChainInsts))
+        IsAggregateReturn = true;
+      else
+        ChainInsts.clear();
+    } else {
+      EVI = dyn_cast<ExtractValueInst>(V);
+      if (EVI) {
+        V = EVI->getOperand(0);
+        if (!llvm::all_of(EVI->indices(), equal_to(0)))
+          return false;
+      }
 
-    PN = dyn_cast<PHINode>(V);
+      PN = dyn_cast<PHINode>(V);
+    }
   }
 
   if (PN && PN->getParent() != BB)
@@ -3077,9 +3151,10 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   // Make sure there are no instructions between the first instruction
   // and return.
   BasicBlock::const_iterator BI = BB->getFirstNonPHIIt();
-  // Skip over pseudo-probes and the bitcast.
+  // Skip over pseudo-probes, the bitcast and the insertvalue chain.
   while (&*BI == BCI || &*BI == EVI || isa<PseudoProbeInst>(BI) ||
-         isLifetimeEndOrBitCastFor(&*BI) || isFakeUse(&*BI))
+         isLifetimeEndOrBitCastFor(&*BI) || isFakeUse(&*BI) ||
+         ChainInsts.contains(&*BI))
     BI = std::next(BI);
   if (&*BI != RetI)
     return false;
@@ -3092,10 +3167,25 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   };
 
   SmallVector<BasicBlock *, 4> TailCallBBs;
+  // For the aggregate-return case, the call whose return value is
+  // reassembled on the path through each candidate predecessor.
+  SmallDenseMap<BasicBlock *, CallInst *, 4> AggregateCalls;
   // Record the call instructions so we can insert any fake uses
   // that need to be preserved before them.
   SmallVector<CallInst *, 4> CallInsts;
-  if (PN) {
+  if (IsAggregateReturn) {
+    SmallPtrSet<BasicBlock *, 4> VisitedBBs;
+    for (BasicBlock *Pred : predecessors(BB)) {
+      if (!VisitedBBs.insert(Pred).second)
+        continue;
+      CallInst *CI = findTailCallReassembledInPred(FieldValues, BB, Pred);
+      if (CI && MayBePermittedAsTailCall(CI)) {
+        TailCallBBs.push_back(Pred);
+        AggregateCalls[Pred] = CI;
+        CallInsts.push_back(CI);
+      }
+    }
+  } else if (PN) {
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       // Look through bitcasts.
       Value *IncomingVal = PN->getIncomingValue(I)->stripPointerCasts();
@@ -3160,7 +3250,12 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
       continue;
 
     // Duplicate the return into TailCallBB.
-    (void)FoldReturnIntoUncondBranch(RetI, BB, TailCallBB, DTU);
+    ReturnInst *NewRet = FoldReturnIntoUncondBranch(RetI, BB, TailCallBB, DTU);
+    // For the aggregate-return case, the duplicated return still refers to
+    // the insertvalue chain in BB. Return the call's result directly instead,
+    // which is equivalent on this path and enables the tail call.
+    if (IsAggregateReturn)
+      NewRet->setOperand(0, AggregateCalls.lookup(TailCallBB));
     assert(!VerifyBFIUpdates ||
            BFI->getBlockFreq(BB) >= BFI->getBlockFreq(TailCallBB));
     BFI->setBlockFreq(BB,
