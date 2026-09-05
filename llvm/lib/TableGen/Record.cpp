@@ -2016,7 +2016,8 @@ const FoldOpInit *FoldOpInit::get(const Init *Start, const Init *List,
                                   const Init *Expr, const RecTy *Type) {
   detail::RecordKeeperImpl &RK = Start->getRecordKeeper().getImpl();
   FoldingSetInsertToken Token;
-  if (const FoldOpInit *I = RK.TheFoldOpInitPool.lookup({Start, List, A, B, Expr, Type}, Token))
+  if (const FoldOpInit *I =
+          RK.TheFoldOpInitPool.lookup({Start, List, A, B, Expr, Type}, Token))
     return I;
 
   FoldOpInit *I = new (RK.Allocator) FoldOpInit(Start, List, A, B, Expr, Type);
@@ -2121,7 +2122,8 @@ const ExistsOpInit *ExistsOpInit::get(const RecTy *CheckType,
                                       const Init *Expr) {
   detail::RecordKeeperImpl &RK = Expr->getRecordKeeper().getImpl();
   FoldingSetInsertToken Token;
-  if (const ExistsOpInit *I = RK.TheExistsOpInitPool.lookup({CheckType, Expr}, Token))
+  if (const ExistsOpInit *I =
+          RK.TheExistsOpInitPool.lookup({CheckType, Expr}, Token))
     return I;
 
   ExistsOpInit *I = new (RK.Allocator) ExistsOpInit(CheckType, Expr);
@@ -2182,7 +2184,8 @@ const InstancesOpInit *InstancesOpInit::get(const RecTy *Type,
                                             const Init *Regex) {
   detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
   FoldingSetInsertToken Token;
-  if (const InstancesOpInit *I = RK.TheInstancesOpInitPool.lookup({Type, Regex}, Token))
+  if (const InstancesOpInit *I =
+          RK.TheInstancesOpInitPool.lookup({Type, Regex}, Token))
     return I;
 
   InstancesOpInit *I = new (RK.Allocator) InstancesOpInit(Type, Regex);
@@ -2526,7 +2529,8 @@ const CondOpInit *CondOpInit::get(ArrayRef<const Init *> Conds,
 
   detail::RecordKeeperImpl &RK = Ty->getRecordKeeper().getImpl();
   FoldingSetInsertToken Token;
-  if (const CondOpInit *I = RK.TheCondOpInitPool.lookup({Ty, Conds, Values}, Token))
+  if (const CondOpInit *I =
+          RK.TheCondOpInitPool.lookup({Ty, Conds, Values}, Token))
     return I;
 
   void *Mem = RK.Allocator.Allocate(
