@@ -18355,13 +18355,17 @@ void Sema::PushExpressionEvaluationContextForFunction(
     Current.InImmediateEscalatingFunctionContext =
         getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
 
-    if (isLambdaMethod(FD))
-      Current.InImmediateFunctionContext =
-          FD->isConsteval() ||
-          (isLambdaMethod(FD) && (Parent.isConstantEvaluated() ||
-                                  Parent.isImmediateFunctionContext()));
-    else
-      Current.InImmediateFunctionContext = FD->isConsteval();
+    const bool InheritParentImmediateContext =
+        isLambdaMethod(FD) && !isLambdaCallOperator(FD);
+
+    // A lambda call operator body is not a subexpression of the enclosing
+    // lambda-expression. Other lambda methods may be synthesized while
+    // processing the lambda and need to inherit the enclosing evaluation
+    // context.
+    Current.InImmediateFunctionContext =
+        FD->isConsteval() ||
+        (InheritParentImmediateContext &&
+         (Parent.isConstantEvaluated() || Parent.isImmediateFunctionContext()));
   }
 }
 
