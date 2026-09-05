@@ -35,7 +35,8 @@ bool AffectedRangeManager::computeAffectedLines(
     if (Line->InPPDirective) {
       FormatToken *Last = Line->Last;
       const auto *PPEnd = I + 1;
-      while (PPEnd != E && !(*PPEnd)->First->HasUnescapedNewline) {
+      while (PPEnd != E && !(*PPEnd)->First->HasUnescapedNewline &&
+             (*PPEnd)->First->isNot(tok::eof)) {
         Last = (*PPEnd)->Last;
         ++PPEnd;
       }

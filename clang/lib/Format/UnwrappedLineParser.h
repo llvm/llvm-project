@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 
 #include "Macros.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <stack>
 
 namespace clang {
@@ -213,8 +214,11 @@ private:
   void parseVerilogExtern();
   // Skip things that can precede the keywords like module.
   void skipVerilogQualifiers();
+  struct PPState;
+  PPState savePPState() const;
+  void restorePPState(const PPState &State);
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
-  parseMacroCall();
+  parseMacroCall(const PPState &SavedPPState);
 
   // Used by addUnwrappedLine to denote whether to keep or remove a level
   // when resetting the line state.
@@ -415,6 +419,26 @@ private:
   // Points to the #ifndef condition for a potential include guard. Null unless
   // IncludeGuardState == IG_IfNdefed.
   FormatToken *IncludeGuardToken;
+
+  // The preprocessor bookkeeping that is rolled back when the token stream is
+  // rewound over preprocessor directives, which happens if the speculatively
+  // parsed arguments of a macro call are discarded. See readToken().
+  struct PPState {
+    SmallVector<PPBranch, 16> PPStack;
+    int PPBranchLevel;
+    SmallVector<int, 8> PPLevelBranchIndex;
+    SmallVector<int, 8> PPLevelBranchCount;
+    std::stack<int> PPChainBranchIndex;
+    IncludeGuardState IncludeGuard;
+    FormatToken *IncludeGuardToken;
+    bool AtEndOfPPLine;
+  };
+
+  // The hash tokens of the parsed preprocessor directives. The lines of a
+  // directive are kept when the token stream is rewound over it, so it is then
+  // parsed again only for its effect on the preprocessor bookkeeping. See
+  // readToken().
+  llvm::SmallPtrSet<const FormatToken *, 16> ParsedPPDirectives;
 
   // Contains the first start column where the source begins. This is zero for
   // normal source code and may be nonzero when formatting a code fragment that
