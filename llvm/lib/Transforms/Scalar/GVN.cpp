@@ -3658,7 +3658,13 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       return false;
   }
 
-  uint32_t ValNo = VN.lookup(CurInst);
+  // Instructions inserted by GVN itself in the current iteration, e.g. when
+  // coercing an available load value to the load type, have not been assigned
+  // a value number yet. They have no leaders either, so PRE cannot do anything
+  // with them until they are numbered on the next iteration; skip them.
+  uint32_t ValNo = VN.lookup(CurInst, /*Verify=*/false);
+  if (!ValNo)
+    return false;
 
   // Look for the predecessors for PRE opportunities.  We're
   // only trying to solve the basic diamond case, where
