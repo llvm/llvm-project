@@ -1776,7 +1776,7 @@ Parser::TPResult Parser::TryParseParameterDeclarationClause(
       return TPResult::True;
 
     ParsedAttributes attrs(AttrFactory);
-    MaybeParseMicrosoftAttributes(attrs);
+    MaybeParseMicrosoftAttributes(attrs, /*IsStmtContext=*/false);
 
     // decl-specifier-seq
     // A parameter-declaration's initializer must be preceded by an '=', so

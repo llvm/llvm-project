@@ -6122,7 +6122,7 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
   // Optionally skip Microsoft attributes.
   ParsedAttributes Attrs(AttrFactory);
-  MaybeParseMicrosoftAttributes(Attrs);
+  MaybeParseMicrosoftAttributes(Attrs, /*IsStmtContext=*/false);
 
   // Check whether the next token(s) are part of a declaration
   // specifier, in which case we have the start of a parameter and,
@@ -7612,7 +7612,7 @@ void Parser::ParseParameterDeclarationClause(
       MaybeParseCXX11Attributes(ArgDeclAttrs);
 
       // Skip any Microsoft attributes before a param.
-      MaybeParseMicrosoftAttributes(ArgDeclSpecAttrs);
+      MaybeParseMicrosoftAttributes(ArgDeclSpecAttrs, /*IsStmtContext=*/false);
     }
 
     SourceLocation DSStart = Tok.getLocation();
