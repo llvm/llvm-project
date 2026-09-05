@@ -22,6 +22,15 @@
 //   COMMON_INTERCEPTOR_MEMMOVE_IMPL
 //   COMMON_INTERCEPTOR_MEMCPY_IMPL
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
+//
+// The fortified _chk variants below reuse the macros above by default (a tool
+// may override the following to customize their behavior):
+//   COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
+//   COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL
+//   COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL
+// There is no common plain "mempcpy" interceptor to fall back on, so the
+// __mempcpy_chk interceptor is only emitted when a tool defines:
+//   COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL
 //===----------------------------------------------------------------------===//
 
 #ifdef SANITIZER_REDEFINE_BUILTINS_H
@@ -81,6 +90,64 @@
     }                                                       \
     return REAL(memcpy)(dst, src, size);                    \
   }
+#endif
+
+// __{memset,memmove,memcpy}_chk(dst, ..., size, dst_size) abort when the
+// operation would write more than dst_size bytes, and otherwise behave exactly
+// like the corresponding plain function. So the overflow case is forwarded to
+// the real fortified function, and every other case is handled by the tool's
+// normal implementation, which is semantically identical and applies the usual
+// instrumentation.
+//
+// The overflow case deliberately calls the real function rather than Die() or
+// the libc's failure hook directly:
+//   - Portability. glibc exports __chk_fail(), but Bionic (__fortify_fatal),
+//     Apple (__chk_fail_overflow) and FreeBSD all use different, mostly
+//     unexported entry points, and glibc's __fortify_fail is GLIBC_PRIVATE.
+//   - Diagnostics. Each libc prints its own message, and Bionic even reports
+//     the offending sizes. Delegating reproduces that for free.
+//   - Consistency. Termination stays identical to an uninstrumented build, and
+//     to the tools which do not intercept these at all (e.g. lsan and ubsan).
+//     Die() would instead exit silently, and only under some of the tools.
+// A stack trace is still available for the resulting abort via handle_abort=1.
+//
+// REAL() is not resolved yet while nothing is initialized, so the bound is
+// enforced with CHECK_LE there instead, and the plain implementation's own
+// early startup path performs the access.
+#ifndef COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
+#  define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size) \
+    {                                                                     \
+      if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                    \
+        CHECK_LE(size, dst_size);                                         \
+      } else if (UNLIKELY(size > dst_size)) {                             \
+        return REAL(__memset_chk)(dst, v, size, dst_size);                \
+      }                                                                   \
+      COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size);                  \
+    }
+#endif
+
+#ifndef COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL
+#  define COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dst, src, size, dst_size) \
+    {                                                                        \
+      if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                       \
+        CHECK_LE(size, dst_size);                                            \
+      } else if (UNLIKELY(size > dst_size)) {                                \
+        return REAL(__memmove_chk)(dst, src, size, dst_size);                \
+      }                                                                      \
+      COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);                  \
+    }
+#endif
+
+#ifndef COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL
+#  define COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dst, src, size, dst_size) \
+    {                                                                       \
+      if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                      \
+        CHECK_LE(size, dst_size);                                           \
+      } else if (UNLIKELY(size > dst_size)) {                               \
+        return REAL(__memcpy_chk)(dst, src, size, dst_size);                \
+      }                                                                     \
+      COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);                  \
+    }
 #endif
 
 #if SANITIZER_INTERCEPT_MEMSET
@@ -233,6 +300,50 @@ INTERCEPTOR(void *, bzero, void *block, usize size) {
 #define INIT_BZERO
 #endif  // SANITIZER_INTERCEPT_BZERO
 
+#if SANITIZER_INTERCEPT___MEMSET_CHK
+INTERCEPTOR(void*, __memset_chk, void* dst, int v, usize size, usize dst_size) {
+  void* ctx;
+  COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size);
+}
+#  define INIT___MEMSET_CHK COMMON_INTERCEPT_FUNCTION(__memset_chk);
+#else
+#  define INIT___MEMSET_CHK
+#endif  // SANITIZER_INTERCEPT___MEMSET_CHK
+
+#if SANITIZER_INTERCEPT___MEMMOVE_CHK
+INTERCEPTOR(void*, __memmove_chk, void* dst, const void* src, usize size,
+            usize dst_size) {
+  void* ctx;
+  COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dst, src, size, dst_size);
+}
+#  define INIT___MEMMOVE_CHK COMMON_INTERCEPT_FUNCTION(__memmove_chk);
+#else
+#  define INIT___MEMMOVE_CHK
+#endif  // SANITIZER_INTERCEPT___MEMMOVE_CHK
+
+#if SANITIZER_INTERCEPT___MEMCPY_CHK
+INTERCEPTOR(void*, __memcpy_chk, void* dst, const void* src, usize size,
+            usize dst_size) {
+  void* ctx;
+  COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dst, src, size, dst_size);
+}
+#  define INIT___MEMCPY_CHK COMMON_INTERCEPT_FUNCTION(__memcpy_chk);
+#else
+#  define INIT___MEMCPY_CHK
+#endif  // SANITIZER_INTERCEPT___MEMCPY_CHK
+
+#if SANITIZER_INTERCEPT___MEMPCPY_CHK && \
+    defined(COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL)
+INTERCEPTOR(void*, __mempcpy_chk, void* dst, const void* src, usize size,
+            usize dst_size) {
+  void* ctx;
+  COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL(ctx, dst, src, size, dst_size);
+}
+#  define INIT___MEMPCPY_CHK COMMON_INTERCEPT_FUNCTION(__mempcpy_chk);
+#else
+#  define INIT___MEMPCPY_CHK
+#endif  // SANITIZER_INTERCEPT___MEMPCPY_CHK
+
 namespace __sanitizer {
 // This does not need to be called if InitializeCommonInterceptors() is called.
 void InitializeMemintrinsicInterceptors() {
@@ -242,5 +353,9 @@ void InitializeMemintrinsicInterceptors() {
   INIT_AEABI_MEM;
   INIT___BZERO;
   INIT_BZERO;
+  INIT___MEMSET_CHK;
+  INIT___MEMMOVE_CHK;
+  INIT___MEMCPY_CHK;
+  INIT___MEMPCPY_CHK;
 }
 }  // namespace __sanitizer
