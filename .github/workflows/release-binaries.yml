@@ -328,7 +328,11 @@ jobs:
         RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
         ZSTD: ${{ inputs.runs-on == 'windows-11-arm' && './zstd.exe' || 'zstd' }}
       run: |
-        xz -dc "$RELEASE_BINARY_FILENAME" | "$ZSTD" --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
+        # A 1 GiB window captures duplicate code across the large statically
+        # linked tools. Four workers keep memory use within runner limits.
+        xz -dc "$RELEASE_BINARY_FILENAME" | \
+          "$ZSTD" --ultra -21 --long=30 -T4 -B1024M \
+          -o "$RELEASE_BINARY_FILENAME_ZSTD"
 
     - name: Generate sha256 digest for binaries
       id: digest
