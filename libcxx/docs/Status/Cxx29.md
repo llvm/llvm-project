@@ -1,44 +1,50 @@
-.. _cxx29-status:
+(cxx29-status)=
 
-================================
-libc++ C++29 Status
-================================
+# libc++ C++29 Status
 
+```{eval-rst}
 .. include:: ../Helpers/Styles.md
+```
 
-.. contents::
-   :local:
+```{contents}
+:local: true
+```
 
-
-Overview
-================================
+## Overview
 
 In June 2026, the C++ standard committee adopted the first changes to the next version of the C++ standard, known here as "C++29".
 
-This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx29>`__.
+This page shows the status of libc++; the status of clang's support of the language features is [here](https://clang.llvm.org/cxx_status.html#cxx29).
 
-.. attention:: Features in unreleased drafts of the standard are subject to change.
+:::{attention}
+Features in unreleased drafts of the standard are subject to change.
+:::
 
 The groups that have contributed papers:
 
--  CWG - Core Language Working group
--  LWG - Library working group
--  SG1 - Study group #1 (Concurrency working group)
+- CWG - Core Language Working group
+- LWG - Library working group
+- SG1 - Study group #1 (Concurrency working group)
 
-.. note:: "Nothing to do" means that no library changes were needed to implement this change.
+:::{note}
+"Nothing to do" means that no library changes were needed to implement this change.
+:::
 
-Paper Status
-====================================
+## Paper Status
 
+```{eval-rst}
 .. csv-table::
    :file: Cxx29Papers.csv
    :header-rows: 1
    :widths: auto
+```
 
-Library Working Group Issues Status
-====================================
+## Library Working Group Issues Status
 
+```{eval-rst}
 .. csv-table::
    :file: Cxx29Issues.csv
    :header-rows: 1
    :widths: auto
+```
+
