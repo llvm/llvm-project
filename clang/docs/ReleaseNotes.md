@@ -856,6 +856,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 #### Improvements
 
+### Clang IR Improvements
+
+- Clang IR has now been enabled in builds by default, and should work with most workloads. However this is still an experimental flag and a work-in-progress.
+
+
 ## Additional Information
 
 A wide variety of additional information is available on the [Clang web
