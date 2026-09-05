@@ -27,6 +27,18 @@ add_header_library(
 )
 
 add_header_library(
+  getpid
+  HDRS
+    getpid.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sched_getaffinity
   HDRS
     sched_getaffinity.h
@@ -446,6 +458,23 @@ add_header_library(
 )
 
 add_header_library(
+  posix_fadvise
+  HDRS
+    posix_fadvise.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.off_t
+    libc.include.sys_syscall
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ptrace
   HDRS
     ptrace.h
@@ -641,6 +670,96 @@ add_header_library(
 )
 
 add_header_library(
+  getegid
+  HDRS
+    getegid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  getpgid
+  HDRS
+    getpgid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setuid
+  HDRS
+    setuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setreuid
+  HDRS
+    setreuid.h
+  DEPENDS
+    libc.hdr.types.uid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setgid
+  HDRS
+    setgid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setregid
+  HDRS
+    setregid.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  setpgid
+  HDRS
+    setpgid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
   link
   HDRS
     link.h
@@ -707,6 +826,18 @@ add_header_library(
   fchdir
   HDRS
     fchdir.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  chroot
+  HDRS
+    chroot.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common

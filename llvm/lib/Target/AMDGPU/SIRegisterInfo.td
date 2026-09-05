@@ -1177,6 +1177,32 @@ def VS_128_Align2 : SIRegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
 }
 } // End GeneratePressureSet = 0
 
+// Indexed resources (GFX13) encode the buffer/image descriptor as a single
+// 32-bit index register (a Lo256 VGPR for the per-lane/non-uniform form, or an
+// SGPR for the uniform-indexed form) instead of the full SReg_128/SReg_256
+// descriptor.
+def RsrcReg32 : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32_Lo256, SGPR_32)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+}
+
+// Parses rsrcidx(<reg>).
+def RsrcRegClass : AsmOperandClass {
+  let Name = "RsrcReg";
+  let ParserMethod = "parseRsrcReg";
+  let PredicateMethod = "isRsrcReg32";
+  let RenderMethod = "addRegOperands";
+}
+
+// Class does not contain any 128 bit values but for disassembler purposes allows
+// decoding to SReg_128.
+def RsrcReg128Op : RegisterOperand<RsrcReg32> {
+  let ParserMatchClass = RsrcRegClass;
+  let DecoderMethod = "decodeRsrcReg128";
+  let EncoderMethod = "getMachineOpValueRsrcRegOp";
+  let PrintMethod = "printRsrcReg";
+}
+
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
 multiclass AVRegClass<int numRegs, list<ValueType> regTypes,

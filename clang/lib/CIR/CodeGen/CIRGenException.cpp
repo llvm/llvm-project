@@ -387,7 +387,7 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
   cir::InitCatchKind kind;
-  bool shouldInitFromExnDirectly;
+  bool shouldInitFromExnDirectly = false;
 
   // If we're catching by reference, we can just cast the object
   // pointer to the appropriate pointer.

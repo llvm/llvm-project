@@ -28,6 +28,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/Support/Error.h"
+
 #include "AbortWithPayloadFrameRecognizer.h"
 #include "SystemRuntimeMacOSX.h"
 
@@ -130,33 +132,38 @@ SystemRuntimeMacOSX::GetQueueNameFromThreadQAddress(addr_t dispatch_qaddr) {
     // dispatch_qaddr is from a thread_info(THREAD_IDENTIFIER_INFO) call for a
     // thread - deref it to get the address of the dispatch_queue_t structure
     // for this thread's queue.
-    Status error;
-    addr_t dispatch_queue_addr =
-        m_process->ReadPointerFromMemory(dispatch_qaddr, error);
-    if (error.Success()) {
-      if (m_libdispatch_offsets.dqo_version >= 4) {
-        // libdispatch versions 4+, pointer to dispatch name is in the queue
-        // structure.
-        addr_t pointer_to_label_address =
-            dispatch_queue_addr + m_libdispatch_offsets.dqo_label;
-        addr_t label_addr =
-            m_process->ReadPointerFromMemory(pointer_to_label_address, error);
-        if (error.Success()) {
-          m_process->ReadCStringFromMemory(label_addr, dispatch_queue_name,
-                                           error);
-        }
+    llvm::Expected<lldb::addr_t> dispatch_queue_addr =
+        m_process->ReadPointerFromMemory(dispatch_qaddr);
+    if (!dispatch_queue_addr) {
+      llvm::consumeError(dispatch_queue_addr.takeError());
+      return dispatch_queue_name;
+    }
+    if (m_libdispatch_offsets.dqo_version >= 4) {
+      // libdispatch versions 4+, pointer to dispatch name is in the queue
+      // structure.
+      addr_t pointer_to_label_address =
+          *dispatch_queue_addr + m_libdispatch_offsets.dqo_label;
+      llvm::Expected<lldb::addr_t> label_addr =
+          m_process->ReadPointerFromMemory(pointer_to_label_address);
+      if (label_addr) {
+        Status error;
+        m_process->ReadCStringFromMemory(*label_addr, dispatch_queue_name,
+                                         error);
       } else {
-        // libdispatch versions 1-3, dispatch name is a fixed width char array
-        // in the queue structure.
-        addr_t label_addr =
-            dispatch_queue_addr + m_libdispatch_offsets.dqo_label;
-        dispatch_queue_name.resize(m_libdispatch_offsets.dqo_label_size, '\0');
-        size_t bytes_read =
-            m_process->ReadMemory(label_addr, &dispatch_queue_name[0],
-                                  m_libdispatch_offsets.dqo_label_size, error);
-        if (bytes_read < m_libdispatch_offsets.dqo_label_size)
-          dispatch_queue_name.erase(bytes_read);
+        llvm::consumeError(label_addr.takeError());
       }
+    } else {
+      // libdispatch versions 1-3, dispatch name is a fixed width char array
+      // in the queue structure.
+      addr_t label_addr =
+          *dispatch_queue_addr + m_libdispatch_offsets.dqo_label;
+      dispatch_queue_name.resize(m_libdispatch_offsets.dqo_label_size, '\0');
+      Status error;
+      size_t bytes_read =
+          m_process->ReadMemory(label_addr, &dispatch_queue_name[0],
+                                m_libdispatch_offsets.dqo_label_size, error);
+      if (bytes_read < m_libdispatch_offsets.dqo_label_size)
+        dispatch_queue_name.erase(bytes_read);
     }
   }
   return dispatch_queue_name;
@@ -164,14 +171,9 @@ SystemRuntimeMacOSX::GetQueueNameFromThreadQAddress(addr_t dispatch_qaddr) {
 
 lldb::addr_t SystemRuntimeMacOSX::GetLibdispatchQueueAddressFromThreadQAddress(
     addr_t dispatch_qaddr) {
-  addr_t libdispatch_queue_t_address = LLDB_INVALID_ADDRESS;
-  Status error;
-  libdispatch_queue_t_address =
-      m_process->ReadPointerFromMemory(dispatch_qaddr, error);
-  if (!error.Success()) {
-    libdispatch_queue_t_address = LLDB_INVALID_ADDRESS;
-  }
-  return libdispatch_queue_t_address;
+  return llvm::expectedToOptional(
+             m_process->ReadPointerFromMemory(dispatch_qaddr))
+      .value_or(LLDB_INVALID_ADDRESS);
 }
 
 lldb::QueueKind SystemRuntimeMacOSX::GetQueueKind(addr_t dispatch_queue_addr) {
@@ -251,17 +253,19 @@ SystemRuntimeMacOSX::GetQueueIDFromThreadQAddress(lldb::addr_t dispatch_qaddr) {
     // thread - deref it to get the address of the dispatch_queue_t structure
     // for this thread's queue.
     Status error;
-    uint64_t dispatch_queue_addr =
-        m_process->ReadPointerFromMemory(dispatch_qaddr, error);
+    llvm::Expected<lldb::addr_t> dispatch_queue_addr =
+        m_process->ReadPointerFromMemory(dispatch_qaddr);
+    if (!dispatch_queue_addr) {
+      llvm::consumeError(dispatch_queue_addr.takeError());
+      return queue_id;
+    }
+    addr_t serialnum_address =
+        *dispatch_queue_addr + m_libdispatch_offsets.dqo_serialnum;
+    queue_id_t serialnum = m_process->ReadUnsignedIntegerFromMemory(
+        serialnum_address, m_libdispatch_offsets.dqo_serialnum_size,
+        LLDB_INVALID_QUEUE_ID, error);
     if (error.Success()) {
-      addr_t serialnum_address =
-          dispatch_queue_addr + m_libdispatch_offsets.dqo_serialnum;
-      queue_id_t serialnum = m_process->ReadUnsignedIntegerFromMemory(
-          serialnum_address, m_libdispatch_offsets.dqo_serialnum_size,
-          LLDB_INVALID_QUEUE_ID, error);
-      if (error.Success()) {
-        queue_id = serialnum;
-      }
+      queue_id = serialnum;
     }
   }
 

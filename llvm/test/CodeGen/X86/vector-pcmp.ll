@@ -1447,18 +1447,18 @@ define <2 x i1> @ispositive_mask_v2i64_v2i1(<2 x i64> %x, <2 x i1> %y) {
 ; AVX512F-LABEL: ispositive_mask_v2i64_v2i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllq $63, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpgtq %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltq %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmq %xmm1, %xmm1, %k1 {%k1}
-; AVX512F-NEXT:    vmovdqa64 %xmm2, %xmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQBW-LABEL: ispositive_mask_v2i64_v2i1:
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512DQBW-NEXT:    vpcmpgtq %xmm3, %xmm0, %k1
+; AVX512DQBW-NEXT:    vpcmpnltq %xmm2, %xmm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtq %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2q %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
@@ -1489,18 +1489,19 @@ define <4 x i1> @is_positive_mask_v4i32_v4i1(<4 x i32> %x, <4 x i1> %y) {
 ; AVX512F-LABEL: is_positive_mask_v4i32_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpgtd %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltd %xmm2, %xmm0, %k1
+; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmd %xmm1, %xmm1, %k1 {%k1}
-; AVX512F-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQBW-LABEL: is_positive_mask_v4i32_v4i1:
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpmovd2m %xmm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512DQBW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQBW-NEXT:    vpcmpnltd %xmm1, %xmm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2d %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -1537,8 +1538,7 @@ define <8 x i1> @is_positive_mask_v8i16_v8i1(<8 x i16> %x, <8 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX512DQBW-NEXT:    vpcmpgtw %xmm3, %xmm0, %k1
+; AVX512DQBW-NEXT:    vpcmpnltw %xmm2, %xmm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtw %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2w %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
@@ -1580,8 +1580,8 @@ define <16 x i1> @is_positive_mask_v16i8_v16i1(<16 x i8> %x, <16 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpmovb2m %xmm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512DQBW-NEXT:    vpcmpgtb %xmm1, %xmm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQBW-NEXT:    vpcmpnltb %xmm1, %xmm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2b %k0, %xmm0
 ; AVX512DQBW-NEXT:    retq
   %cmp = icmp sgt <16 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -1630,8 +1630,8 @@ define <4 x i1> @is_positive_mask_v4i64_v4i1(<4 x i64> %x, <4 x i1> %y) {
 ; AVX512F-LABEL: is_positive_mask_v4i64_v4i1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpcmpgtq %ymm2, %ymm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltq %ymm2, %ymm0, %k1
 ; AVX512F-NEXT:    vptestmd %xmm1, %xmm1, %k1 {%k1}
 ; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -1642,8 +1642,7 @@ define <4 x i1> @is_positive_mask_v4i64_v4i1(<4 x i64> %x, <4 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512DQBW-NEXT:    vpcmpgtq %ymm3, %ymm0, %k1
+; AVX512DQBW-NEXT:    vpcmpnltq %ymm2, %ymm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtd %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2d %k0, %xmm0
 ; AVX512DQBW-NEXT:    vzeroupper
@@ -1688,10 +1687,11 @@ define <8 x i1> @is_positive_mask_v8i32_v8i1(<8 x i32> %x, <8 x i1> %y) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX512F-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpcmpgtd %ymm2, %ymm0, %k1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vpcmpnltd %ymm2, %ymm0, %k1
+; AVX512F-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512F-NEXT:    vptestmd %ymm1, %ymm1, %k1 {%k1}
-; AVX512F-NEXT:    vmovdqa32 %ymm2, %ymm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1700,8 +1700,8 @@ define <8 x i1> @is_positive_mask_v8i32_v8i1(<8 x i32> %x, <8 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpmovw2m %xmm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512DQBW-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQBW-NEXT:    vpcmpnltd %ymm1, %ymm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2w %k0, %xmm0
 ; AVX512DQBW-NEXT:    vzeroupper
 ; AVX512DQBW-NEXT:    retq
@@ -1759,8 +1759,8 @@ define <16 x i1> @is_positive_mask_v16i16_v16i1(<16 x i16> %x, <16 x i1> %y) {
 ; AVX512DQBW:       # %bb.0:
 ; AVX512DQBW-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512DQBW-NEXT:    vpcmpgtw %ymm3, %ymm0, %k1
+; AVX512DQBW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512DQBW-NEXT:    vpcmpnltw %ymm3, %ymm0, %k1
 ; AVX512DQBW-NEXT:    vpcmpgtb %xmm1, %xmm2, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2b %k0, %xmm0
 ; AVX512DQBW-NEXT:    vzeroupper
@@ -1925,10 +1925,10 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ;
 ; AVX512DQBW-LABEL: is_positive_mask_v32i8_v32i1:
 ; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQBW-NEXT:    vpsllw $7, %ymm1, %ymm1
 ; AVX512DQBW-NEXT:    vpmovb2m %ymm1, %k1
-; AVX512DQBW-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512DQBW-NEXT:    vpcmpgtb %ymm1, %ymm0, %k0 {%k1}
+; AVX512DQBW-NEXT:    vpcmpnltb %ymm2, %ymm0, %k0 {%k1}
 ; AVX512DQBW-NEXT:    vpmovm2b %k0, %ymm0
 ; AVX512DQBW-NEXT:    retq
   %cmp = icmp sgt <32 x i8> %x, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>

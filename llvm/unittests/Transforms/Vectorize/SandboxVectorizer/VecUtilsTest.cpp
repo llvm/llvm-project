@@ -622,6 +622,93 @@ bb2:
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(nullptr), nullptr);
 }
 
+TEST_F(VecUtilsTest, GetInsertPointAfterInstrs) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+bb_phi:
+  %phi1 = phi i8 [0, %bb_phi], [1, %bb_phi]
+  %phi2 = phi i8 [0, %bb_phi], [1, %bb_phi]
+  %A = add i8 %v, 1
+  %B = add i8 %v, 2
+  %C = add i8 %v, 3
+  ret void
+
+bb_nophi:
+  %X = add i8 %v, 4
+  %Y = add i8 %v, 5
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  llvm::BasicBlock::Create(this->C, "bb_empty", &LLVMF);
+
+  sandboxir::Context Ctx(this->C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+
+  auto &BBPhi = getBasicBlockByName(F, "bb_phi");
+  auto It = BBPhi.begin();
+  auto *Phi1 = cast<sandboxir::PHINode>(&*It++);
+  auto *Phi2 = cast<sandboxir::PHINode>(&*It++);
+  auto *A = cast<sandboxir::Instruction>(&*It++);
+  auto *B = cast<sandboxir::Instruction>(&*It++);
+  auto *InstC = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  auto &BBNOPhi = getBasicBlockByName(F, "bb_nophi");
+  It = BBNOPhi.begin();
+  auto *X = cast<sandboxir::Instruction>(&*It++);
+  auto *Y = cast<sandboxir::Instruction>(&*It++);
+
+  auto &BBEmpty = getBasicBlockByName(F, "bb_empty");
+
+  auto *ArgV = F.getArg(0);
+
+  // 1. Non-PHI instructions in BB
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBPhi),
+            B->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A, B}, &BBPhi),
+            InstC->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({B, A}, &BBPhi),
+            InstC->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({InstC}, &BBPhi),
+            Ret->getIterator());
+
+  // 2. PHI instructions in BB
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi2}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(
+      sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1, Phi2}, &BBPhi),
+      A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({Phi1, B}, &BBPhi),
+            InstC->getIterator());
+
+  // 3. Fallback when BotI == nullptr (no matching instruction in BB)
+  // 3a. BB has PHIs
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({ArgV}, &BBPhi),
+            A->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({X}, &BBPhi),
+            A->getIterator());
+
+  // 3b. BB has no PHIs
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBNOPhi),
+            Y->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({ArgV}, &BBNOPhi),
+            Y->getIterator());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBNOPhi),
+            Y->getIterator());
+
+  // 3c. Empty BB
+  EXPECT_TRUE(BBEmpty.empty());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({}, &BBEmpty),
+            BBEmpty.begin());
+  EXPECT_EQ(sandboxir::VecUtils::getInsertPointAfterInstrs({A}, &BBEmpty),
+            BBEmpty.begin());
+}
+
 TEST_F(VecUtilsTest, GetCommonScalarType) {
   parseIR(R"IR(
 define void @foo(i8 %v, ptr %ptr) {

@@ -7,8 +7,6 @@
 ; exact) MFMAs in a phi-carried loop with high VGPR pressure, every MFMA in the
 ; loop is rewritten to the AGPR-destination form (v_mfma_f32_16x16x32_f16 a*).
 
-; FIXME: To enable on gfx950?
-; CHECK: warning: {{.*}}'amdgpu-sched-strategy'='coexec' is only supported for gfx1250
 ; CHECK-LABEL: v5_local_prefetch:
 ; CHECK-COUNT-28: v_mfma_f32_16x16x32_f16 a
 ; CHECK-NOT: v_mfma_f32_16x16x32_f16 v

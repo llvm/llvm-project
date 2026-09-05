@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s --transform-interpreter --allow-unregistered-dialect --verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --verify-diagnostics | FileCheck %s
 
-// RUN: mlir-opt %s --transform-interpreter --allow-unregistered-dialect --verify-diagnostics \
+// RUN: mlir-opt %s --transform-interpreter --verify-diagnostics \
 // RUN:   --mlir-print-debuginfo | FileCheck %s --check-prefix=CHECK-LOC
 
 func.func @nested_ops() {

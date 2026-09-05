@@ -751,9 +751,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
 }
 
 void Sema::DiagPlaceholderVariableDefinition(SourceLocation Loc) {
-  Diag(Loc, getLangOpts().CPlusPlus26
-                ? diag::warn_cxx23_placeholder_var_definition
-                : diag::ext_placeholder_var_definition);
+  DiagCompat(Loc, diag_compat::placeholder_var_definition);
 }
 
 NamedDecl *
@@ -11622,10 +11620,8 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
 
   // C++0x explicit conversion operators.
   if (DS.hasExplicitSpecifier())
-    Diag(DS.getExplicitSpecLoc(),
-         getLangOpts().CPlusPlus11
-             ? diag::warn_cxx98_compat_explicit_conversion_functions
-             : diag::ext_explicit_conversion_functions)
+    DiagCompat(DS.getExplicitSpecLoc(),
+               diag_compat::explicit_conversion_functions)
         << SourceRange(DS.getExplicitSpecRange());
 }
 
@@ -13677,10 +13673,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
       // A using-declaration shall not name a scoped enumerator.
       // C++20 p1099 permits enumerators.
       if (EC && R && ED->isScoped())
-        Diag(SS.getBeginLoc(),
-             getLangOpts().CPlusPlus20
-                 ? diag::warn_cxx17_compat_using_decl_scoped_enumerator
-                 : diag::ext_using_decl_scoped_enumerator)
+        DiagCompat(SS.getBeginLoc(), diag_compat::using_decl_scoped_enumerator)
             << SS.getRange();
 
       // We want to consider the scope of the enumerator
@@ -17022,10 +17015,7 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(FnDecl)) {
     if (MethodDecl->isStatic()) {
       if (Op == OO_Call || Op == OO_Subscript)
-        Diag(FnDecl->getLocation(),
-             (LangOpts.CPlusPlus23
-                  ? diag::warn_cxx20_compat_operator_overload_static
-                  : diag::ext_operator_overload_static))
+        DiagCompat(FnDecl->getLocation(), diag_compat::operator_overload_static)
             << FnDecl;
       else
         return Diag(FnDecl->getLocation(), diag::err_operator_overload_static)
@@ -18969,9 +18959,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   // 'operator<=>' when parsing the '<=>' token.
   if (DefKind.isComparison() &&
       DefKind.asComparison() != DefaultedComparisonKind::ThreeWay) {
-    Diag(DefaultLoc, getLangOpts().CPlusPlus20
-                         ? diag::warn_cxx17_compat_defaulted_comparison
-                         : diag::ext_defaulted_comparison);
+    DiagCompat(DefaultLoc, diag_compat::defaulted_comparison);
   }
 
   FD->setDefaulted();

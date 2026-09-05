@@ -16,6 +16,7 @@ static_library("Vectorize") {
     "SLPVectorizer.cpp",
     "SLPVectorizer/SLPCompatibilityAnalysis.cpp",
     "SLPVectorizer/SLPCostAnalysis.cpp",
+    "SLPVectorizer/SLPTypeUtils.cpp",
     "SLPVectorizer/SLPUtils.cpp",
     "SandboxVectorizer/DependencyGraph.cpp",
     "SandboxVectorizer/InstrMaps.cpp",
