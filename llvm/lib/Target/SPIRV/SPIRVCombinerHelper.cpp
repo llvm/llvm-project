@@ -235,20 +235,10 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
 
 /// This match is part of a combine that
 /// rewrites fmul (x,180/pi) to degrees(x)
-///   (f32 (g_fmul
-///          (f32 X)
-///          (f32 180/pi)))
-/// ->
-///   (f32 (g_intrinsic degrees
-///          (f32 X)))
-///
-/// The constant operand may also be a splat for vector types:
-///   (vXf32 (g_fmul
-///            (vXf32 X)
-///            (vXf32 splat(180/pi))))
-/// ->
-///   (vXf32 (g_intrinsic degrees
-///            (vXf32 X)))
+///   (fN (g_fmul (fN X) (fN 180/pi))) -> (fN (g_intrinsic degrees (fN X)))
+///   (vXfN (g_fmul (vXfN X) (vXfN splat(180/pi)))) ->
+///   (vXfN (g_intrinsic degrees (vXfN X)))
+/// where `fN` denotes a supported floating-point type.
 bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
   Register NonConstReg;
   std::optional<FPValueAndVReg> ConstVal;
@@ -376,6 +366,13 @@ Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
 
   Register DotRes;
   if (isVectorType(SpvVecType)) {
+getOpcode() == SPIRV::OpTypeVector;
+  SPIRVTypeInst SpvScalarType = GR->getScalarOrVectorComponentType(SpvVecType);
+  bool IsFloatOp = SpvScalarType->getOpcode() == SPIRV::OpTypeFloat;
+  LLT VecTy = GR->getRegType(SpvVecType);
+
+  Register DotRes;
+  if (IsVectorOp) {
     LLT ScalarTy = VecTy.getElementType();
     Intrinsic::SPVIntrinsics DotIntrinsic =
         (IsFloatOp ? Intrinsic::spv_fdot : Intrinsic::spv_udot);
