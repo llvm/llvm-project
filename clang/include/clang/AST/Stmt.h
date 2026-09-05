@@ -670,6 +670,7 @@ protected:
 
   class InitListExprBitfields {
     friend class ASTStmtReader;
+    friend class Expr;
     friend class InitListExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
@@ -682,6 +683,10 @@ protected:
     // Whether this list is explicitly written in the source (with braces).
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsExplicit : 1;
+    /// Whether this list initializes an object using a default member
+    /// initializer. See InitListExpr::initializesObjectWithDefaultMemberInit().
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned InitializesObjectWithDefaultMemberInit : 1;
   };
 
   class ParenListExprBitfields {

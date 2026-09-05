@@ -51,6 +51,16 @@ class FieldDecl;
 class LangOptions;
 class VarDecl;
 
+/// The pointers a `CFGElement` stores are AST nodes and `CFGElement`s of AST
+/// nodes, all of which are allocated by `ASTContext`'s allocator with at least
+/// 8-byte alignment. Three low bits are therefore available for the kind; the
+/// alignment itself is checked by `llvm::PointerIntPair`.
+struct CFGElementPtrTraits {
+  static void *getAsVoidPointer(const void *P) { return const_cast<void *>(P); }
+  static const void *getFromVoidPointer(void *P) { return P; }
+  static constexpr int NumLowBitsAvailable = 3;
+};
+
 /// Represents a top-level expression in a basic block.
 class CFGElement {
 public:
@@ -81,16 +91,22 @@ public:
     DTOR_BEGIN = AutomaticObjectDtor,
     DTOR_END = TemporaryDtor,
     CleanupFunction,
+    // list-initialized object marker kind
+    ListInitObjectBegin,
+    ListInitObjectEnd,
+    LIST_INIT_OBJECT_BEGIN = ListInitObjectBegin,
+    LIST_INIT_OBJECT_END = ListInitObjectEnd,
   };
 
 protected:
-  // The int bits are used to mark the kind.
-  llvm::PointerIntPair<const void *, 2> Data1;
-  llvm::PointerIntPair<const void *, 2> Data2;
+  // The int bits are used to mark the kind: three bits in each of the two
+  // pointers, so up to 64 kinds.
+  llvm::PointerIntPair<const void *, 3, unsigned, CFGElementPtrTraits> Data1;
+  llvm::PointerIntPair<const void *, 3, unsigned, CFGElementPtrTraits> Data2;
 
   CFGElement(Kind kind, const void *Ptr1, const void *Ptr2 = nullptr)
-      : Data1(Ptr1, ((unsigned)kind) & 0x3),
-        Data2(Ptr2, (((unsigned)kind) >> 2) & 0x3) {
+      : Data1(Ptr1, ((unsigned)kind) & 0x7),
+        Data2(Ptr2, (((unsigned)kind) >> 3) & 0x7) {
     assert(getKind() == kind);
   }
 
@@ -121,7 +137,7 @@ public:
 
   Kind getKind() const {
     unsigned x = Data2.getInt();
-    x <<= 2;
+    x <<= 3;
     x |= Data1.getInt();
     return (Kind) x;
   }
@@ -406,6 +422,68 @@ private:
   friend class CFGElement;
   static bool isKind(const CFGElement &elem) {
     return elem.getKind() == ScopeEnd;
+  }
+};
+
+/// Delimits the region of a list-initialization that establishes the object
+/// which `this` denotes inside the default member initializers it uses.
+///
+/// A `ListInitObjectBegin` precedes every element of the list-initialization,
+/// including the default member initializers themselves, and the matching
+/// `ListInitObjectEnd` follows them. This re-expresses, in the linearized CFG,
+/// the nesting that the AST encodes by containment: consumers that walk the
+/// CFG can carry the object forward from the marker instead of searching for
+/// the enclosing list-initialization.
+///
+/// Only emitted when `BuildOptions::AddCXXDefaultInitExprInAggregates` is set,
+/// since otherwise the default member initializers are not in the CFG at all.
+class CFGListInitObject : public CFGElement {
+public:
+  /// The `InitListExpr` or `CXXParenListInitExpr` that establishes the object.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL const Expr *getListInitExpr() const {
+    return static_cast<const Expr *>(Data1.getPointer());
+  }
+
+protected:
+  CFGListInitObject() = default;
+  CFGListInitObject(Kind K, const Expr *E) : CFGElement(K, E) {
+    assert(isKind(*this));
+  }
+
+private:
+  friend class CFGElement;
+
+  static bool isKind(const CFGElement &E) {
+    return E.getKind() >= LIST_INIT_OBJECT_BEGIN &&
+           E.getKind() <= LIST_INIT_OBJECT_END;
+  }
+};
+
+class CFGListInitObjectBegin : public CFGListInitObject {
+public:
+  CFGListInitObjectBegin() {}
+  explicit CFGListInitObjectBegin(const Expr *E)
+      : CFGListInitObject(ListInitObjectBegin, E) {}
+
+private:
+  friend class CFGElement;
+
+  static bool isKind(const CFGElement &E) {
+    return E.getKind() == ListInitObjectBegin;
+  }
+};
+
+class CFGListInitObjectEnd : public CFGListInitObject {
+public:
+  CFGListInitObjectEnd() {}
+  explicit CFGListInitObjectEnd(const Expr *E)
+      : CFGListInitObject(ListInitObjectEnd, E) {}
+
+private:
+  friend class CFGElement;
+
+  static bool isKind(const CFGElement &E) {
+    return E.getKind() == ListInitObjectEnd;
   }
 };
 
@@ -1206,6 +1284,14 @@ public:
     Elements.push_back(CFGScopeEnd(VD, S), C);
   }
 
+  void appendListInitObjectBegin(const Expr *E, BumpVectorContext &C) {
+    Elements.push_back(CFGListInitObjectBegin(E), C);
+  }
+
+  void appendListInitObjectEnd(const Expr *E, BumpVectorContext &C) {
+    Elements.push_back(CFGListInitObjectEnd(E), C);
+  }
+
   void appendBaseDtor(const CXXBaseSpecifier *BS, BumpVectorContext &C) {
     Elements.push_back(CFGBaseDtor(BS), C);
   }
@@ -1301,6 +1387,11 @@ public:
     bool AddCXXNewAllocator = false;
     bool AddCXXDefaultInitExprInCtors = false;
     bool AddCXXDefaultInitExprInAggregates = false;
+    /// Bracket each list-initialization that establishes an object for the
+    /// default member initializers it uses with CFGListInitObjectBegin/End.
+    /// Requires AddCXXDefaultInitExprInAggregates, since otherwise those
+    /// initializers are not in the CFG.
+    bool AddListInitObjectMarkers = false;
     bool AddRichCXXConstructors = false;
     bool MarkElidedCXXConstructors = false;
     bool AddVirtualBaseBranches = false;

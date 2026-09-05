@@ -91,6 +91,9 @@ const Stmt *SymbolConjured::getStmt() const {
     return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
   case CFGElement::ScopeEnd:
     return Elem->castAs<CFGScopeEnd>().getTriggerStmt();
+  case CFGElement::ListInitObjectBegin:
+  case CFGElement::ListInitObjectEnd:
+    return Elem->castAs<CFGListInitObject>().getListInitExpr();
   case CFGElement::NewAllocator:
     return Elem->castAs<CFGNewAllocator>().getAllocatorExpr();
   case CFGElement::LifetimeEnds:

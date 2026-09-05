@@ -2443,6 +2443,7 @@ InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
   sawArrayRangeDesignator(false);
   InitExprs.insert(C, InitExprs.end(), initExprs.begin(), initExprs.end());
   InitListExprBits.IsExplicit = isExplicit;
+  InitListExprBits.InitializesObjectWithDefaultMemberInit = false;
 
   setDependence(computeDependence(this));
 }
@@ -2593,6 +2594,14 @@ static bool IsDecompositionDeclRefExpr(const Expr *E) {
     return false;
 
   return isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
+}
+
+bool Expr::initializesObjectWithDefaultMemberInit() const {
+  if (const auto *ILE = dyn_cast<InitListExpr>(this))
+    return ILE->InitListExprBits.InitializesObjectWithDefaultMemberInit;
+  if (const auto *PLIE = dyn_cast<CXXParenListInitExpr>(this))
+    return PLIE->InitializesObjectWithDefaultMemberInit;
+  return false;
 }
 
 bool Expr::isReadIfDiscardedInCPlusPlus11() const {

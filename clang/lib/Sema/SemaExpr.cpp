@@ -5760,9 +5760,11 @@ struct EnsureImmediateInvocationInDefaultArgs
   ExprResult TransformLambdaExpr(LambdaExpr *E) { return E; }
   ExprResult TransformBlockExpr(BlockExpr *E) { return E; }
 
-  // Make sure we don't rebuild the this pointer as it would
-  // cause it to incorrectly point it to the outermost class
-  // in the case of nested struct initialization.
+  // Copy the 'this' pointer rather than rebuilding it: rebuilding would
+  // re-derive its type from the current 'this' type, which would incorrectly
+  // point it to the outermost class in the case of nested struct
+  // initialization. Copying keeps the type and location, while still giving
+  // each use of a default member initializer its own node.
   ExprResult TransformCXXThisExpr(CXXThisExpr *E) { return E; }
 
   // Rewrite to source location to refer to the context in which they are used.
@@ -5933,11 +5935,23 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // expression is an ExprWithCleanups. Then make sure the normal lifetime
   // extension code recurses into the default initializer and does lifetime
   // extension when warranted.
+  //
+  // The initializer is rebuilt for *every* use, so that each
+  // CXXDefaultInitExpr owns its own copy of it. The initializer is written
+  // once but evaluated once per use, and `this` within it denotes whichever
+  // object that use initializes; sharing the nodes between uses would make
+  // the two indistinguishable to anything that keys state on `Expr *`.
+  //
+  // Only the rewrites above are semantic; the rest is a copy of an initializer
+  // that has already been checked where it was written. Re-checking it must
+  // therefore not diagnose a second time, and if re-checking fails to
+  // reproduce it we keep the one from the declaration instead of failing here.
   bool ContainsAnyTemporaries =
       isa_and_present<ExprWithCleanups>(Field->getInClassInitializer());
+  bool SemanticRebuild =
+      V.HasImmediateCalls || (NeedRebuild && ContainsAnyTemporaries);
   if (Field->getInClassInitializer() &&
-      !Field->getInClassInitializer()->containsErrors() &&
-      (V.HasImmediateCalls || (NeedRebuild && ContainsAnyTemporaries))) {
+      !Field->getInClassInitializer()->containsErrors() && SemanticRebuild) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
@@ -5948,17 +5962,28 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
         parentEvaluationContext().InLifetimeExtendingContext;
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
-    runWithSufficientStackSpace(Loc, [&] {
-      Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
-                                           /*CXXDirectInit=*/false);
-    });
-    if (!Res.isInvalid())
-      Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
-    if (Res.isInvalid()) {
-      Field->setInvalidDecl();
-      return ExprError();
+    {
+      std::optional<TentativeAnalysisScope> SilenceRecheck;
+      if (!SemanticRebuild)
+        SilenceRecheck.emplace(*this);
+      runWithSufficientStackSpace(Loc, [&] {
+        Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
+                                             /*CXXDirectInit=*/false);
+      });
+      if (!Res.isInvalid())
+        Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
     }
-    Init = Res.get();
+    if (Res.isInvalid()) {
+      if (SemanticRebuild) {
+        Field->setInvalidDecl();
+        return ExprError();
+      }
+      // Keep sharing the initializer from the declaration; it has already been
+      // checked and diagnosed there.
+      Init = nullptr;
+    } else {
+      Init = Res.get();
+    }
   }
 
   if (Field->getInClassInitializer()) {

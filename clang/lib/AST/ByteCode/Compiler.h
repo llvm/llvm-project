@@ -42,6 +42,7 @@ template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
 template <class Emitter> class StmtExprScope;
 template <class Emitter> class LocOverrideScope;
+template <class Emitter> class ListInitObjectScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -362,6 +363,7 @@ private:
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
   friend class InitStackScope<Emitter>;
+  friend class ListInitObjectScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
@@ -505,6 +507,13 @@ protected:
 
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;
+
+  /// Offset of a local holding a pointer to the object established by the
+  /// innermost enclosing list-initialization that uses a default member
+  /// initializer, if any. Within such an initializer, `this` denotes that
+  /// object rather than the instance pointer of the current frame. This
+  /// mirrors CodeGenFunction::CXXDefaultInitExprThis.
+  UnsignedOrNone ListInitObjectPtr = std::nullopt;
 
   /// Type of the expression returned by the function.
   OptPrimType ReturnType;

@@ -5195,9 +5195,12 @@ class CXXParenListInitExpr final
   friend class TrailingObjects;
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
+  friend class Expr;
 
   unsigned NumExprs;
   unsigned NumUserSpecifiedExprs;
+  /// See Expr::initializesObjectWithDefaultMemberInit().
+  bool InitializesObjectWithDefaultMemberInit = false;
   SourceLocation InitLoc, LParenLoc, RParenLoc;
   llvm::PointerUnion<Expr *, FieldDecl *> ArrayFillerOrUnionFieldInit;
 
@@ -5230,6 +5233,11 @@ public:
         NumUserSpecifiedExprs(0) {}
 
   void updateDependence() { setDependence(computeDependence(this)); }
+
+  /// See Expr::initializesObjectWithDefaultMemberInit().
+  void setInitializesObjectWithDefaultMemberInit(bool V = true) {
+    InitializesObjectWithDefaultMemberInit = V;
+  }
 
   MutableArrayRef<Expr *> getInitExprs() {
     return getTrailingObjects(NumExprs);

@@ -30,6 +30,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -366,26 +367,37 @@ public:
     return ThisPointeeLoc;
   }
 
-  /// Returns the storage location assigned to the `this` pointee in the
-  /// environment given a specific `CXXThisExpr`. Returns null if the `this`
-  /// pointee has no assigned storage location in the environment.
-  /// Note that `this` can be used in a non-member context, e.g.:
+  /// Returns the object established by the innermost list-initialization
+  /// currently being evaluated, or null if there is none.
+  ///
+  /// Within a default member initializer, `this` denotes the object being
+  /// initialized. When that initializer is used by a list-initialization
+  /// rather than by a constructor, the object is not the `this` pointee of the
+  /// enclosing member function:
   ///
   /// \code
-  ///   struct S {
-  ///     int x;
-  ///     int y = this->x;
-  ///   };
-  ///   int foo() {
-  ///     return S{10}.y;  // will have a `this` for initializing `S::y`.
-  ///   }
+  ///   struct S { int x; int y = this->x; };
+  ///   int foo() { return S{10}.y; }  // `this` denotes the `S{10}` object
   /// \endcode
-  RecordStorageLocation *
-  getThisPointeeStorageLocation(const CXXThisExpr &ThisExpr) const {
-    auto It = ThisExprOverrides->find(&ThisExpr);
-    if (It == ThisExprOverrides->end())
-      return ThisPointeeLoc;
-    return It->second;
+  ///
+  /// The CFG brackets such a list-initialization with
+  /// `CFGListInitObjectBegin`/`CFGListInitObjectEnd`, which push and pop this
+  /// stack, so the object is available while its elements are evaluated.
+  RecordStorageLocation *getListInitObjectLocation() const {
+    return ListInitObjects.empty() ? nullptr : ListInitObjects.back();
+  }
+
+  /// Pushes the object established by a list-initialization. Called for
+  /// `CFGListInitObjectBegin`.
+  void pushListInitObject(RecordStorageLocation &Loc) {
+    ListInitObjects.push_back(&Loc);
+  }
+
+  /// Pops the object established by a list-initialization. Called for
+  /// `CFGListInitObjectEnd`.
+  void popListInitObject() {
+    assert(!ListInitObjects.empty());
+    ListInitObjects.pop_back();
   }
 
   /// Sets the storage location assigned to the `this` pointee in the
@@ -717,8 +729,6 @@ public:
 private:
   using PrValueToResultObject =
       llvm::DenseMap<const Expr *, RecordStorageLocation *>;
-  using ThisExprOverridesMap =
-      llvm::DenseMap<const CXXThisExpr *, RecordStorageLocation *>;
 
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
@@ -782,15 +792,6 @@ private:
                        RecordStorageLocation *ThisPointeeLoc,
                        RecordStorageLocation *LocForRecordReturnVal);
 
-  static ThisExprOverridesMap
-  buildThisExprOverridesMap(const FunctionDecl *FuncDecl,
-                            RecordStorageLocation *ThisPointeeLoc,
-                            const PrValueToResultObject &ResultObjectMap);
-
-  static ThisExprOverridesMap
-  buildThisExprOverridesMap(Stmt *S, RecordStorageLocation *ThisPointeeLoc,
-                            const PrValueToResultObject &ResultObjectMap);
-
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
@@ -833,14 +834,13 @@ private:
   //   constructed.
   RecordStorageLocation *LocForRecordReturnVal = nullptr;
 
+  // The objects established by the list-initializations currently being
+  // evaluated, innermost last. See getListInitObjectLocation().
+  llvm::SmallVector<RecordStorageLocation *, 1> ListInitObjects;
+
   // The storage location of the `this` pointee. Should only be null if the
   // analysis target is not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
-
-  // Maps from `CXXThisExpr`s to their storage locations, if it should be
-  // different from `ThisPointeeLoc` (for example, CXXThisExpr that are
-  // under a CXXDefaultInitExpr under an InitListExpr).
-  std::shared_ptr<ThisExprOverridesMap> ThisExprOverrides;
 
   // Maps from declarations and glvalue expression to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these

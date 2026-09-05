@@ -285,6 +285,23 @@ private:
   bool Active;
 };
 
+/// Scope for the object established by a list-initialization that uses a
+/// default member initializer. Mirrors
+/// CodeGenFunction::FieldConstructionScope.
+template <class Emitter> class ListInitObjectScope final {
+public:
+  ListInitObjectScope(Compiler<Emitter> *Ctx, UnsignedOrNone Ptr)
+      : Ctx(Ctx), OldValue(Ctx->ListInitObjectPtr) {
+    Ctx->ListInitObjectPtr = Ptr;
+  }
+
+  ~ListInitObjectScope() { Ctx->ListInitObjectPtr = OldValue; }
+
+private:
+  Compiler<Emitter> *Ctx;
+  UnsignedOrNone OldValue;
+};
+
 /// Scope used to handle temporaries in toplevel variable declarations.
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
@@ -2304,6 +2321,23 @@ template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
   InitLinkScope<Emitter> ILS(this, InitLink::InitList());
+
+  // If this list initializes an object using a default member initializer,
+  // `this` within that initializer denotes the object being initialized here.
+  // Record a pointer to it so that CXXThisExpr can simply load it; the pointer
+  // is on the stack because visitInitializer() puts it there.
+  // Note: only enter the scope when this list establishes an object. A nested
+  // list that does not must leave the enclosing one in place, since a default
+  // member initializer may contain one.
+  std::optional<ListInitObjectScope<Emitter>> LIOS;
+  if (E->initializesObjectWithDefaultMemberInit() && Initializing) {
+    unsigned Offset = this->allocateLocalPrimitive(E, PT_Ptr, /*IsConst=*/true);
+    if (!this->emitDupPtr(E))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, Offset, E))
+      return false;
+    LIOS.emplace(this, Offset);
+  }
 
   QualType QT = E->getType();
   if (const auto *AT = QT->getAs<AtomicType>())
@@ -6452,57 +6486,30 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (!InitStackActive || InitStack.empty())
     return this->emitThis(E);
 
-  // If our init stack is, for example:
-  // 0 Stack: 3 (decl)
-  // 1 Stack: 6 (init list)
-  // 2 Stack: 1 (field)
-  // 3 Stack: 6 (init list)
-  // 4 Stack: 1 (field)
-  //
-  // We want to find the LAST element in it that's an init list,
-  // which is marked with the K_InitList marker. The index right
-  // before that points to an init list. We need to find the
-  // elements before the K_InitList element that point to a base
-  // (e.g. a decl or This), optionally followed by field, elem, etc.
-  // In the example above, we want to emit elements [0..2].
-  unsigned StartIndex = 0;
-  unsigned EndIndex = 0;
-  // Find the init list.
-  for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
-    if (InitStack[StartIndex].Kind == InitLink::K_DIE) {
-      EndIndex = StartIndex;
-      --StartIndex;
-      break;
-    }
-  }
+  // We are inside a default member initializer (InitStackActive), so 'this'
+  // denotes the object under construction. If a list-initialization
+  // established one, it recorded a pointer to it; otherwise the path in
+  // InitStack leads to it.
+  if (ListInitObjectPtr)
+    return this->emitGetLocal(PT_Ptr, *ListInitObjectPtr, E);
 
-  // Walk backwards to find the base.
+  // Walk backwards to the base the path starts from, then replay it.
+  unsigned StartIndex = InitStack.size() - 1;
   for (; StartIndex > 0; --StartIndex) {
-    if (InitStack[StartIndex].Kind == InitLink::K_InitList)
-      continue;
-
     if (InitStack[StartIndex].Kind != InitLink::K_Field &&
         InitStack[StartIndex].Kind != InitLink::K_Elem &&
         InitStack[StartIndex].Kind != InitLink::K_Base &&
+        InitStack[StartIndex].Kind != InitLink::K_InitList &&
         InitStack[StartIndex].Kind != InitLink::K_DIE)
       break;
   }
-
-  if (StartIndex == 0 && EndIndex == 0)
-    EndIndex = InitStack.size() - 1;
 
   assert(InitStack[StartIndex].Kind == InitLink::K_Decl ||
          InitStack[StartIndex].Kind == InitLink::K_This ||
          InitStack[StartIndex].Kind == InitLink::K_Temp ||
          InitStack[StartIndex].Kind == InitLink::K_RVO);
 
-  // NOTE: This could be StartIndex < EndIndex, but we're also abusing the
-  // InitStack mechanism in visitWithSubstitutions to have the This pointer
-  // _just_ be a local variable.
-  assert(StartIndex <= EndIndex);
-
-  // Emit the instructions.
-  for (unsigned I = StartIndex; I != (EndIndex + 1); ++I) {
+  for (unsigned I = StartIndex, N = InitStack.size(); I != N; ++I) {
     if (InitStack[I].Kind == InitLink::K_InitList ||
         InitStack[I].Kind == InitLink::K_DIE)
       continue;

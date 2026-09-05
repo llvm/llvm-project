@@ -960,6 +960,16 @@ private:
       B->appendScopeEnd(VD, S, cfg->getBumpVectorContext());
   }
 
+  /// Whether `E` establishes an object that `this` denotes inside the default
+  /// member initializers it uses, and those initializers are part of the CFG.
+  bool marksListInitObject(const Expr *E) {
+    assert((!BuildOpts.AddListInitObjectMarkers ||
+            BuildOpts.AddCXXDefaultInitExprInAggregates) &&
+           "markers are useless without the initializers they bracket");
+    return BuildOpts.AddListInitObjectMarkers &&
+           E->initializesObjectWithDefaultMemberInit();
+  }
+
   /// Find a relational comparison with an expression evaluating to a
   /// boolean and a constant other than 0 and 1.
   /// e.g. if ((x < y) == 10)
@@ -2612,9 +2622,28 @@ CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {
       B = R;
     if (BuildOpts.AddCXXDefaultInitExprInAggregates) {
       if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Child))
-        if (Stmt *Child = DIE->getExpr())
-          if (CFGBlock *R = Visit(Child))
+        if (Stmt *Body = DIE->getExpr()) {
+          // Bracket the default member initializer -- and only it -- with the
+          // object this list-initialization establishes: `this` denotes that
+          // object there, whereas in the explicitly written elements it still
+          // denotes the object of the enclosing member function.
+          //
+          // The CFG is built backwards, so the end marker goes in first and
+          // the begin marker last; in execution order they bracket the body.
+          bool MarksObject = marksListInitObject(ILE);
+          if (MarksObject) {
+            autoCreateBlock();
+            Block->appendListInitObjectEnd(ILE, cfg->getBumpVectorContext());
+            B = Block;
+          }
+          if (CFGBlock *R = Visit(Body))
             B = R;
+          if (MarksObject) {
+            autoCreateBlock();
+            Block->appendListInitObjectBegin(ILE, cfg->getBumpVectorContext());
+            B = Block;
+          }
+        }
     }
   }
   return B;
@@ -5525,6 +5554,8 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
     case CFGElement::ScopeEnd:
     case CFGElement::FullExprCleanup:
     case CFGElement::CleanupFunction:
+    case CFGElement::ListInitObjectBegin:
+    case CFGElement::ListInitObjectEnd:
       llvm_unreachable("getDestructorDecl should only be used with "
                        "ImplicitDtors");
     case CFGElement::AutomaticObjectDtor: {
@@ -6125,6 +6156,16 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     OS << "CFGScopeEnd(";
     if (const VarDecl *VD = E.castAs<CFGScopeEnd>().getVarDecl())
       OS << VD->getQualifiedNameAsString();
+    OS << ")";
+    break;
+
+  case CFGElement::Kind::ListInitObjectBegin:
+  case CFGElement::Kind::ListInitObjectEnd:
+    OS << (E.getKind() == CFGElement::Kind::ListInitObjectBegin
+               ? "CFGListInitObjectBegin("
+               : "CFGListInitObjectEnd(");
+    E.castAs<CFGListInitObject>().getListInitExpr()->getType().print(
+        OS, PrintingPolicy(Helper.getLangOpts()));
     OS << ")";
     break;
 
