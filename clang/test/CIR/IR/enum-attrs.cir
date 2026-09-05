@@ -79,6 +79,32 @@ cir.func @sync_scope_attr() {
                           #cir.sync_scope<opencl_all_svm_devices>]}
 }
 
+// CHECK-LABEL: cir.func @atomic_fetch_attr() {
+cir.func @atomic_fetch_attr() {
+  // CHECK: cir.return {cir.test = [#cir.atomic_fetch<add>, #cir.atomic_fetch<nand>, #cir.atomic_fetch<minimum_num>]}
+  cir.return {cir.test = [#cir.atomic_fetch<add>,
+                          #cir.atomic_fetch<nand>,
+                          #cir.atomic_fetch<minimum_num>]}
+}
+
+// The None case declares no keyword, so it spells as its symbol name.
+
+// CHECK-LABEL: cir.func @assume_bundle_attr() {
+cir.func @assume_bundle_attr() {
+  // CHECK: cir.return {cir.test = [#cir.assume_bundle<None>, #cir.assume_bundle<align>, #cir.assume_bundle<separate_storage>, #cir.assume_bundle<dereferenceable>]}
+  cir.return {cir.test = [#cir.assume_bundle<None>,
+                          #cir.assume_bundle<align>,
+                          #cir.assume_bundle<separate_storage>,
+                          #cir.assume_bundle<dereferenceable>]}
+}
+
+// CHECK-LABEL: cir.func @asm_flavor_attr() {
+cir.func @asm_flavor_attr() {
+  // CHECK: cir.return {cir.test = [#cir.asm_flavor<x86_att>, #cir.asm_flavor<x86_intel>]}
+  cir.return {cir.test = [#cir.asm_flavor<x86_att>,
+                          #cir.asm_flavor<x86_intel>]}
+}
+
 // The operations themselves keep printing a bare keyword.
 
 // CHECK-LABEL: cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
