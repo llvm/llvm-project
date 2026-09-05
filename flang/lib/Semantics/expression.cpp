@@ -1645,6 +1645,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
                           std::get_if<Expr<SomeInteger>>(&expr->u)}) {
                     if (coarrayRef.stat()) {
                       Say("coindexed reference has multiple STAT= specifiers"_err_en_US);
+                    } else if (!IsVariable(*intExpr)) {
+                      // A parser::Variable may resolve to a nonpointer
+                      // function reference.
+                      Say("STAT= specifier must be a scalar integer variable"_err_en_US);
                     } else {
                       coarrayRef.set_stat(Expr<SomeInteger>{*intExpr});
                     }
