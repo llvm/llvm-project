@@ -366,13 +366,6 @@ Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
 
   Register DotRes;
   if (isVectorType(SpvVecType)) {
-getOpcode() == SPIRV::OpTypeVector;
-  SPIRVTypeInst SpvScalarType = GR->getScalarOrVectorComponentType(SpvVecType);
-  bool IsFloatOp = SpvScalarType->getOpcode() == SPIRV::OpTypeFloat;
-  LLT VecTy = GR->getRegType(SpvVecType);
-
-  Register DotRes;
-  if (IsVectorOp) {
     LLT ScalarTy = VecTy.getElementType();
     Intrinsic::SPVIntrinsics DotIntrinsic =
         (IsFloatOp ? Intrinsic::spv_fdot : Intrinsic::spv_udot);
