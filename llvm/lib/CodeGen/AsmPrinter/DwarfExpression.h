@@ -27,6 +27,7 @@ class AsmPrinter;
 class APInt;
 class DwarfCompileUnit;
 class DIELoc;
+class GlobalValue;
 class TargetRegisterInfo;
 class MachineLocation;
 
@@ -135,6 +136,17 @@ protected:
   virtual void emitData1(uint8_t Value) = 0;
 
   virtual void emitBaseTypeRef(uint64_t Idx) = 0;
+
+  /// Whether a relocated address operand, as needed by DW_OP_addr, can be
+  /// emitted into this output form. A location list is backed by a plain byte
+  /// buffer, which cannot carry a relocation.
+  virtual bool supportsRelocatedAddress() const { return false; }
+
+  /// Emit a relocated address operand. Only called when
+  /// supportsRelocatedAddress() returns true.
+  virtual void emitRelocatedAddress(const MCSymbol *Sym) {
+    llvm_unreachable("relocated address unsupported by this output form");
+  }
 
   /// Start emitting data to the temporary buffer. The data stored in the
   /// temporary buffer can be committed to the main output using
@@ -307,6 +319,11 @@ public:
   /// Emit location information expressed via WebAssembly location + offset
   /// The Index is an identifier for locals, globals or operand stack.
   void addWasmLocation(unsigned Index, uint64_t Offset);
+
+  /// Emit the address of \p GV as an implicit location description, i.e. as the
+  /// value of the described entity rather than as the address of its storage.
+  /// Returns false if the address cannot be spelled in this unit's DWARF.
+  bool addGlobalAddress(const GlobalValue *GV);
 };
 
 /// DwarfExpression implementation for .debug_loc entries.
@@ -362,6 +379,9 @@ class DIEDwarfExpression final : public DwarfExpression {
   void emitUnsigned(uint64_t Value) override;
   void emitData1(uint8_t Value) override;
   void emitBaseTypeRef(uint64_t Idx) override;
+
+  bool supportsRelocatedAddress() const override { return true; }
+  void emitRelocatedAddress(const MCSymbol *Sym) override;
 
   void enableTemporaryBuffer() override;
   void disableTemporaryBuffer() override;

@@ -1656,6 +1656,13 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
         continue;
       }
 
+    // The address of a global is a link-time constant.
+    if (const auto *GV = dyn_cast<GlobalValue>(V))
+      if (canDescribeGlobalAddressInDebugInfo(GV)) {
+        LocationOps.emplace_back(SDDbgOperand::fromGlobalAddr(GV));
+        continue;
+      }
+
     // If the Value is a frame index, we can create a FrameIndex debug value
     // without relying on the DAG at all.
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
