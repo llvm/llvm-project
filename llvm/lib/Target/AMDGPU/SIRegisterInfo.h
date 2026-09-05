@@ -30,10 +30,10 @@ class MachineInstrBuilder;
 class RegisterBank;
 struct SGPRSpillBuilder;
 
-/// Register allocation hint types. Helps eliminate unneeded COPY with True16
+/// AMDGPU-specific register allocation hint types.
 namespace AMDGPURI {
 
-enum { Size16 = 1, Size32 = 2 };
+enum { Size16 = 1, Size32 = 2, PreferAGPR = 3 };
 
 } // end namespace AMDGPURI
 

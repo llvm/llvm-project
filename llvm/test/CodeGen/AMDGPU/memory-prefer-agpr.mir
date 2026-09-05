@@ -1,0 +1,85 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa \
+# RUN:   -run-pass=amdgpu-prepare-agpr-alloc,greedy,virtregrewriter \
+# RUN:   -verify-regalloc -verify-machineinstrs -o - %s | \
+# RUN:   FileCheck %s
+
+--- |
+  define amdgpu_kernel void @prefer_agpr_mfma() {
+    ret void
+  }
+
+  define amdgpu_kernel void @require_vgpr() {
+    ret void
+  }
+
+  define amdgpu_kernel void @prefer_agpr_store() {
+    ret void
+  }
+
+  define amdgpu_kernel void @prefer_agpr_flat_load() {
+    ret void
+  }
+...
+---
+name:            prefer_agpr_mfma
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: prefer_agpr_mfma
+  ; CHECK: [[LOAD:\$agpr[0-9]+_agpr[0-9]+]] = BUFFER_LOAD_DWORDX2_OFFSET
+  ; CHECK: V_SMFMAC_F32_16X16X32_F16_e64 {{(killed )?}}[[LOAD]],
+  ; CHECK: BUFFER_STORE_DWORDX2_OFFSET killed renamable [[LOAD]],
+  bb.0:
+    %0:av_64_align2 = BUFFER_LOAD_DWORDX2_OFFSET undef %1:sgpr_128, 0, 0, 0, 0, implicit $exec
+    %2:av_128_align2 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:av_128_align2 = IMPLICIT_DEF
+    %4:av_128_align2 = V_SMFMAC_F32_16X16X32_F16_e64 %0, %2, %3, 0, 0, %4, implicit $mode, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET %4, undef %1:sgpr_128, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX2_OFFSET %0, undef %1:sgpr_128, 0, 8, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            require_vgpr
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: require_vgpr
+  ; CHECK: [[LOAD_LO:\$vgpr[0-9]+]]_[[LOAD_HI:vgpr[0-9]+]] = BUFFER_LOAD_DWORDX2_OFFSET
+  ; CHECK: V_SMFMAC_F32_16X16X32_F16_e64 [[LOAD_LO]]_[[LOAD_HI]],
+  ; CHECK: V_ADD_U32_e32 killed [[LOAD_LO]],
+  bb.0:
+    ; The VGPR-only add constrains the load result to a VGPR register class.
+    %0:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFSET undef %1:sgpr_128, 0, 0, 0, 0, implicit $exec
+    %2:av_128_align2 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:av_128_align2 = IMPLICIT_DEF
+    %4:av_128_align2 = V_SMFMAC_F32_16X16X32_F16_e64 %0, %2, %3, 0, 0, %4, implicit $mode, implicit $exec
+    %5:vgpr_32 = V_ADD_U32_e32 %0.sub0, %3, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            prefer_agpr_store
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: prefer_agpr_store
+  ; CHECK: [[VALUE:\$agpr[0-9]+_agpr[0-9]+]] = IMPLICIT_DEF
+  ; CHECK: BUFFER_STORE_DWORDX2_OFFSET killed renamable [[VALUE]],
+  bb.0:
+    %0:av_64_align2 = IMPLICIT_DEF
+    BUFFER_STORE_DWORDX2_OFFSET %0, undef %1:sgpr_128, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            prefer_agpr_flat_load
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: prefer_agpr_flat_load
+  ; CHECK: [[LOAD:\$agpr[0-9]+_agpr[0-9]+]] = FLAT_LOAD_DWORDX2
+  ; CHECK: V_SMFMAC_F32_16X16X32_F16_e64 {{(killed )?}}[[LOAD]],
+  bb.0:
+    %0:av_64_align2 = FLAT_LOAD_DWORDX2 undef %1:vreg_64_align2, 0, 0, implicit $exec, implicit $flat_scr
+    %2:av_128_align2 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:av_128_align2 = IMPLICIT_DEF
+    %4:av_128_align2 = V_SMFMAC_F32_16X16X32_F16_e64 %0, %2, %3, 0, 0, %4, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
