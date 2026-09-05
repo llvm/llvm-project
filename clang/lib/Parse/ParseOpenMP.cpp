@@ -4693,6 +4693,11 @@ ExprResult Parser::ParseOpenMPIteratorsExpr() {
       IdLoc = ConsumeToken();
     } else {
       Diag(Tok, diag::err_expected_unqualified_id) << 0;
+      SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                StopBeforeMatch);
+      if (Tok.is(tok::comma))
+        ConsumeToken();
+      continue;
     }
 
     // Parse '='.
