@@ -676,6 +676,10 @@
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_as_rvalue
 #    error "__cpp_lib_ranges_as_rvalue should not be defined before c++23"
 #  endif
@@ -1701,6 +1705,10 @@
 
 #  ifdef __cpp_lib_ranges_as_const
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -2896,6 +2904,10 @@
 
 #  ifdef __cpp_lib_ranges_as_const
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -4358,6 +4370,10 @@
 
 #  ifdef __cpp_lib_ranges_as_const
 #    error "__cpp_lib_ranges_as_const should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -5994,6 +6010,10 @@
 #    ifdef __cpp_lib_ranges_as_const
 #      error "__cpp_lib_ranges_as_const should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_as_rvalue
@@ -7987,6 +8007,13 @@
 #    ifdef __cpp_lib_ranges_as_const
 #      error "__cpp_lib_ranges_as_const should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifndef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_as_input != 202502L
+#    error "__cpp_lib_ranges_as_input should have the value 202502L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_as_rvalue

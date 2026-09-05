@@ -41,6 +41,8 @@ Implemented Papers
 - P3052R2: ``view_interface::at()`` (`Github <https://llvm.org/PR204395>`__)
 - P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
 - P3059R2: Making user-defined constructors of view iterators/sentinels private (`Github <https://github.com/llvm/llvm-project/issues/189599>`__)
+- P3137R3: ``views::as_input`` (`Github <https://llvm.org/PR127873>`__)
+- P3828R1: Rename the ``as_input`` view to ``as_input`` (`Github <https://llvm.org/PR189602>`__)
 - P0792R14: ``function_ref`` : a type-erased callable reference (`Github <https://llvm.org/PR105376>`__)
 - P3016R6: Resolve inconsistencies in begin/end for ``valarray`` and braced initializer lists
   (`Github <https://llvm.org/PR171271>`__)
