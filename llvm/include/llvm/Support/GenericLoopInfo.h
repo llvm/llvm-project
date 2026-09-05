@@ -479,13 +479,10 @@ protected:
   /// This creates an empty loop.
   LoopBase() : ParentLoop(nullptr) {}
 
-  // Analyses such as ScalarEvolution key their results off `Loop` pointers, so
-  // an address must never come to name a different loop. Rather than `delete` a
-  // `Loop`, passes call LoopInfo::destroy(), which retains the memory until the
-  // owning LoopInfo dies.
-  //
-  // To make it easier to follow this rule, we mark the destructor as
-  // non-public.
+  // ScalarEvolution and others key results off `Loop` pointers, so an address
+  // must never come to name a different loop. Passes call LoopInfo::destroy()
+  // rather than `delete`, retaining the memory until the owning LoopInfo dies;
+  // the non-public destructor enforces that.
   ~LoopBase() {
     for (auto *SubLoop : SubLoops)
       SubLoop->~LoopT();
@@ -859,15 +856,13 @@ public:
   void analyze(const DominatorTreeBase<BlockT, false> &DomTree);
   ///@}
 
-  /// Rebuild the loop forest from the CFG, reusing the existing loop object for
-  /// every block that still heads a loop. Analyses that key on loop pointers,
-  /// such as ScalarEvolution and the loop analysis manager, stay valid for the
-  /// loops that survive.
+  /// Rebuild the loop forest from the CFG, refilling the existing loop object
+  /// of every block that still heads a loop, so that analyses keyed on loop
+  /// pointers stay valid for the survivors.
   ///
-  /// Returns, in a deterministic order, the loops whose header no longer heads
-  /// one, each with the header it had. They are left empty and unlinked but not
-  /// destroyed: the caller must run its deletion callbacks on them, then call
-  /// destroy().
+  /// Returns the loops whose header no longer heads one, each with its former
+  /// header, in a deterministic order. They are left empty and unlinked; the
+  /// caller must run its deletion callbacks on them and then destroy() them.
   ///
   /// Every loop's header must still belong to the function.
   SmallVector<std::pair<LoopT *, BlockT *>, 4>

@@ -1697,87 +1697,74 @@ TEST(LoopInfoTest, UnreachableBlock) {
   EXPECT_FALSE(LI.empty());
 }
 
-TEST(LoopInfoTest, Recompute) {
-  const char *ModuleStr = "define void @test(i1 %c) {\n"
-                          "entry:\n"
-                          "  br label %outer\n"
-                          "outer:\n"
-                          "  br label %inner\n"
-                          "inner:\n"
-                          "  br i1 %c, label %inner, label %outer.latch\n"
-                          "outer.latch:\n"
-                          "  br i1 %c, label %outer, label %exit\n"
-                          "exit:\n"
-                          "  ret void\n"
-                          "}\n";
+// An outer loop whose body is a self loop.
+const char NestedLoopsIR[] = R"(
+define void @test(i1 %c) {
+entry:
+  br label %outer
+outer:
+  br label %inner
+inner:
+  br i1 %c, label %inner, label %outer.latch
+outer.latch:
+  br i1 %c, label %outer, label %exit
+exit:
+  ret void
+}
+)";
 
+/// Retarget \p BB's first successor to \p To and rebuild \p DT.
+static void redirect(DominatorTree &DT, BasicBlock *BB, BasicBlock *To) {
+  BB->getTerminator()->setSuccessor(0, To);
+  DT.recalculate(*BB->getParent());
+}
+
+TEST(LoopInfoTest, Recompute) {
   LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+  std::unique_ptr<Module> M = makeLLVMModule(Context, NestedLoopsIR);
   Function *F = M->getFunction("test");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
 
   BasicBlock *Outer = getBlockByName(F, "outer");
   BasicBlock *Inner = getBlockByName(F, "inner");
+  BasicBlock *Latch = getBlockByName(F, "outer.latch");
   Loop *OuterL = LI.getLoopFor(Outer);
   Loop *InnerL = LI.getLoopFor(Inner);
   ASSERT_NE(OuterL, nullptr);
   ASSERT_NE(InnerL, nullptr);
 
-  // An unchanged CFG must reproduce the same forest in the same objects.
-  auto Removed = LI.recompute(DT);
-  EXPECT_TRUE(Removed.empty());
+  // An unchanged CFG rebuilds the same forest in the same objects.
+  EXPECT_TRUE(LI.recompute(DT).empty());
   EXPECT_EQ(LI.getLoopFor(Outer), OuterL);
   EXPECT_EQ(LI.getLoopFor(Inner), InnerL);
   EXPECT_EQ(InnerL->getParentLoop(), OuterL);
-  EXPECT_EQ(OuterL->getSubLoops().size(), 1u);
   EXPECT_EQ(OuterL->getNumBlocks(), 3u);
   LI.verify();
 
-  // Drop the inner backedge. The outer loop keeps its identity and absorbs the
-  // block; only the inner loop is reported as removed.
-  Inner->getTerminator()->setSuccessor(0, getBlockByName(F, "outer.latch"));
-  DT.recalculate(*F);
-  Removed = LI.recompute(DT);
-  EXPECT_EQ(LI.getLoopFor(Outer), OuterL);
+  // Without its backedge the inner loop is gone and the outer absorbs it.
+  redirect(DT, Inner, Latch);
+  auto Removed = LI.recompute(DT);
   EXPECT_EQ(LI.getLoopFor(Inner), OuterL);
   EXPECT_TRUE(OuterL->getSubLoops().empty());
   ASSERT_EQ(Removed.size(), 1u);
-  EXPECT_EQ(Removed[0].first, InnerL);
-  EXPECT_EQ(Removed[0].second, Inner);
+  EXPECT_EQ(Removed[0], std::make_pair(InnerL, Inner));
   LI.verify();
   LI.destroy(InnerL);
 
-  // Dropping the last backedge leaves no loops at all.
-  getBlockByName(F, "outer.latch")
-      ->getTerminator()
-      ->setSuccessor(0, getBlockByName(F, "exit"));
-  DT.recalculate(*F);
+  // Dropping the last backedge leaves no loops.
+  redirect(DT, Latch, getBlockByName(F, "exit"));
   Removed = LI.recompute(DT);
   EXPECT_TRUE(LI.empty());
   ASSERT_EQ(Removed.size(), 1u);
-  EXPECT_EQ(Removed[0].first, OuterL);
-  EXPECT_EQ(Removed[0].second, Outer);
+  EXPECT_EQ(Removed[0], std::make_pair(OuterL, Outer));
   LI.verify();
   LI.destroy(OuterL);
 }
 
-TEST(LoopInfoTest, RecomputeHoist) {
-  const char *ModuleStr = "define void @test(i1 %c) {\n"
-                          "entry:\n"
-                          "  br label %outer\n"
-                          "outer:\n"
-                          "  br label %inner\n"
-                          "inner:\n"
-                          "  br i1 %c, label %inner, label %outer.latch\n"
-                          "outer.latch:\n"
-                          "  br i1 %c, label %outer, label %exit\n"
-                          "exit:\n"
-                          "  ret void\n"
-                          "}\n";
-
+TEST(LoopInfoTest, RecomputeHoistsChild) {
   LLVMContext Context;
-  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+  std::unique_ptr<Module> M = makeLLVMModule(Context, NestedLoopsIR);
   Function *F = M->getFunction("test");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
@@ -1789,19 +1776,14 @@ TEST(LoopInfoTest, RecomputeHoist) {
   ASSERT_NE(OuterL, nullptr);
   ASSERT_NE(InnerL, nullptr);
 
-  // Drop the outer backedge. The inner loop keeps its identity and becomes
-  // top-level; only the outer loop is reported as removed.
-  getBlockByName(F, "outer.latch")
-      ->getTerminator()
-      ->setSuccessor(0, getBlockByName(F, "exit"));
-  DT.recalculate(*F);
+  // Losing the outer backedge leaves the inner loop top-level, still itself.
+  redirect(DT, getBlockByName(F, "outer.latch"), getBlockByName(F, "exit"));
   auto Removed = LI.recompute(DT);
   EXPECT_EQ(LI.getLoopFor(Inner), InnerL);
   EXPECT_EQ(InnerL->getParentLoop(), nullptr);
   EXPECT_EQ(LI.getLoopFor(Outer), nullptr);
   ASSERT_EQ(Removed.size(), 1u);
-  EXPECT_EQ(Removed[0].first, OuterL);
-  EXPECT_EQ(Removed[0].second, Outer);
+  EXPECT_EQ(Removed[0], std::make_pair(OuterL, Outer));
   LI.verify();
   LI.destroy(OuterL);
 }

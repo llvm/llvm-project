@@ -1844,9 +1844,8 @@ static void deleteDeadBlocksFromLoop(Loop &L,
     LI.removeBlocksIf(*Cur,
                       [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
-  // Now delete the dead child loops. The later recompute cannot retire them
-  // for us: it needs every loop's header to still be in the function, and
-  // these are about to be erased.
+  // Delete the dead child loops here: recompute requires every loop's header
+  // to still be in the function, and these blocks are about to be erased.
   for (Loop *ChildL : L) {
     if (!DeadBlockSet.count(ChildL->getHeader()))
       continue;
@@ -1917,8 +1916,8 @@ static bool rebuildLoopAfterUnswitch(Loop &L, DominatorTree &DT, LoopInfo &LI,
   for (auto [RemovedL, Header] : Removed) {
     assert((RemovedL == &L || is_contained(Children, RemovedL)) &&
            "Unswitching can only remove loops from the current nest!");
-    // markLoopAsDeleted for L is triggered by the caller (postUnswitch); after
-    // this destroy its pointer is only used as a key.
+    // The caller (postUnswitch) marks L itself as deleted; past this destroy
+    // its pointer serves only as a key.
     if (RemovedL != &L)
       LoopUpdater.markLoopAsDeleted(*RemovedL, Header->getName());
     LI.destroy(RemovedL);
