@@ -23,6 +23,7 @@
 #include "src/__support/elf/load_module.h"
 #include "src/__support/elf/module.h"
 #include "src/__support/elf/passive_abi.h"
+#include "src/__support/elf/run_path.h"
 #include "src/__support/elf/startup_stack.h"
 #include "src/__support/elf/thread_pointer.h"
 #include "src/__support/elf/tls_block.h"
@@ -50,12 +51,18 @@ public:
                         const ExecutableImage &image) {
     // The executable is already mapped; describe it where the kernel put it.
     const ElfW(Addr) bias = executable_bias(image);
-    modules_[count_++] = Module(image.phdrs, image.phnum, bias, "");
+    modules_[count_++] =
+        Module(image.phdrs, image.phnum, bias, executable_path(stack));
 
     // The kernel maps the executable but applies nothing. A position
     // independent one still has relative relocations of its own, and without
     // them even its init array bounds point at the wrong addresses.
     modules_[0].relocations().apply_relative(bias);
+
+    // A program started through a link looks for its libraries beside the
+    // file it really is.
+    executable_origin_ = executable_origin(modules_[0].name(), executable_path_,
+                                           sizeof(executable_path_));
 
     // Breadth first, so a dependency named earlier is loaded earlier, which
     // is the order symbol lookup then walks.
@@ -65,7 +72,8 @@ public:
       requester.for_each_needed([&](const char *name) {
         if (failed || already_loaded(name))
           return;
-        if (!load_dependency(requester, name))
+        if (!load_dependency(requester, i == 0 ? executable_origin_ : nullptr,
+                             name))
           failed = true;
       });
       if (failed)
@@ -123,6 +131,15 @@ private:
     return 0;
   }
 
+  // What the kernel was asked to run, which is where $ORIGIN points for the
+  // executable's own run path. It may be relative, in which case it is
+  // relative to the same directory the kernel resolved it against.
+  LIBC_INLINE static const char *executable_path(const StartupStack &stack) {
+    if (auto value = stack.auxval(AT_EXECFN))
+      return reinterpret_cast<const char *>(*value);
+    return "";
+  }
+
   LIBC_INLINE bool already_loaded(const char *name) const {
     for (size_t i = 0; i < count_; ++i) {
       const char *soname = modules_[i].soname();
@@ -156,9 +173,12 @@ private:
     return nullptr;
   }
 
-  // Tries `name` under each colon separated directory in `list`.
+  // Tries `name` under each colon separated directory in `list`. `origin` is
+  // what $ORIGIN stands for in that list, and is null where the list may not
+  // use it.
   LIBC_INLINE bool try_path_list(const char *list, const char *name,
-                                 LoadedModule &out) {
+                                 LoadedModule &out,
+                                 const char *origin = nullptr) {
     if (list == nullptr)
       return false;
     for (const char *segment = list; segment != nullptr;) {
@@ -167,10 +187,8 @@ private:
         ++end;
       char dir[256];
       const size_t length = static_cast<size_t>(end - segment);
-      if (length > 0 && length < sizeof(dir)) {
-        for (size_t i = 0; i < length; ++i)
-          dir[i] = segment[i];
-        dir[length] = '\0';
+      if (length > 0 &&
+          expand_run_path(segment, length, origin, dir, sizeof(dir))) {
         char path[256];
         if (join(dir, name, path, sizeof(path))) {
           auto loaded = load_module(path, page_size_);
@@ -186,8 +204,11 @@ private:
   }
 
   // The search order a loader is expected to use: the requesting object's own
-  // run path, then LD_LIBRARY_PATH, then the system directories.
-  LIBC_INLINE bool load_dependency(const Module &from, const char *name) {
+  // run path, then LD_LIBRARY_PATH, then the system directories. `origin` is
+  // what $ORIGIN in `from`'s run path stands for, or null for the directory of
+  // its own name.
+  LIBC_INLINE bool load_dependency(const Module &from, const char *origin,
+                                   const char *name) {
     if (count_ >= MAX_STARTUP_MODULES) {
       report("too many shared objects\n");
       return false;
@@ -202,7 +223,8 @@ private:
     }
 
     LoadedModule loaded;
-    if (try_path_list(run_path(from), name, loaded))
+    if (try_path_list(run_path(from), name, loaded,
+                      origin != nullptr ? origin : from.name()))
       return remember(loaded);
     if (try_path_list(library_path_, name, loaded))
       return remember(loaded);
@@ -329,6 +351,9 @@ private:
 
   size_t page_size_;
   const char *library_path_;
+  // Where the executable really is, for $ORIGIN in its run path.
+  char executable_path_[MAX_EXECUTABLE_PATH];
+  const char *executable_origin_ = nullptr;
   Module modules_[MAX_STARTUP_MODULES];
   MappedModule mappings_[MAX_STARTUP_MODULES];
   intptr_t tls_offsets_[MAX_STARTUP_MODULES] = {};

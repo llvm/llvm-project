@@ -63,6 +63,7 @@ add_libc_test(
     libc.src.__support.elf.tls_layout
 )
 
+
 add_libc_test(
   load_layout_test
   SUITE
@@ -155,4 +156,15 @@ add_libc_test(
     startup_stack_test.cpp
   DEPENDS
     libc.src.__support.elf.startup_stack
+)
+
+add_libc_test(
+  run_path_test
+  SUITE
+    libc-support-tests
+  SRCS
+    run_path_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.elf.run_path
 )
