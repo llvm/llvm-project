@@ -13852,21 +13852,23 @@ void ASTContext::addCopyConstructorForExceptionObject(CXXRecordDecl *RD,
 
 void ASTContext::addTypedefNameForUnnamedTagDecl(TagDecl *TD,
                                                  TypedefNameDecl *DD) {
-  return ABI->addTypedefNameForUnnamedTagDecl(TD, DD);
+  if (ABI)
+    ABI->addTypedefNameForUnnamedTagDecl(TD, DD);
 }
 
 TypedefNameDecl *
 ASTContext::getTypedefNameForUnnamedTagDecl(const TagDecl *TD) {
-  return ABI->getTypedefNameForUnnamedTagDecl(TD);
+  return ABI ? ABI->getTypedefNameForUnnamedTagDecl(TD) : nullptr;
 }
 
 void ASTContext::addDeclaratorForUnnamedTagDecl(TagDecl *TD,
                                                 DeclaratorDecl *DD) {
-  return ABI->addDeclaratorForUnnamedTagDecl(TD, DD);
+  if (ABI)
+    ABI->addDeclaratorForUnnamedTagDecl(TD, DD);
 }
 
 DeclaratorDecl *ASTContext::getDeclaratorForUnnamedTagDecl(const TagDecl *TD) {
-  return ABI->getDeclaratorForUnnamedTagDecl(TD);
+  return ABI ? ABI->getDeclaratorForUnnamedTagDecl(TD) : nullptr;
 }
 
 void ASTContext::setParameterIndex(const ParmVarDecl *D, unsigned int index) {
