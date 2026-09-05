@@ -6901,6 +6901,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     updateDAGForMaybeTailCall(MC);
     return;
   }
+  case Intrinsic::ct_select: {
+    // CT_SELECT carries no SDNodeFlags, so any fast-math flags on the call are
+    // dropped here. This is conservative: the poison-generating flags were
+    // already available to the middle end, and dropping them only removes an
+    // assumption, keeping the node opaque to FMF-driven combines.
+    SDValue Cond = getValue(I.getArgOperand(0));
+    SDValue A = getValue(I.getArgOperand(1));
+    SDValue B = getValue(I.getArgOperand(2));
+    setValue(&I, DAG.getCTSelect(getCurSDLoc(), A.getValueType(), Cond, A, B));
+    return;
+  }
   case Intrinsic::call_preallocated_setup: {
     const CallBase *PreallocatedCall = FindPreallocatedCall(&I);
     SDValue SrcValue = DAG.getSrcValue(PreallocatedCall);

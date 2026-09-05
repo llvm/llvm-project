@@ -2068,8 +2068,23 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
     [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
      NoCapture<ArgIndex<0>>]>;
 
-///===------------------------- Other Intrinsics --------------------------===//
+///===---------------------- Constant Time Intrinsics ----------------------===//
 //
+// Intrinsic to support constant-time select. The selected value is pure, but
+// the intrinsic is intentionally modeled like llvm.sideeffect: it only touches
+// inaccessible memory so it remains an opaque barrier to generic transforms.
+// This prevents passes from deleting it when unused, speculating it, or
+// rewriting it into an ordinary select, while avoiding claims about writes to
+// accessible program memory. The constant-time lowering contract is described
+// in LangRef. llvm_any_ty alone would also admit aggregates, which codegen
+// does not support; the Verifier restricts the value type to integer, byte,
+// floating-point, or pointer types, or vectors of them.
+def int_ct_select
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_i1_ty, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrInaccessibleMemOnly]>;
+
+///===------------------------- Other Intrinsics --------------------------===//
 // TODO: We should introduce a new memory kind fo traps (and other side effects
 //       we only model to keep things alive).
 def int_trap : Intrinsic<[], [],

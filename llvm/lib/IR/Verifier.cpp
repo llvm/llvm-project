@@ -6231,6 +6231,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::ct_select: {
+    // The value type is only constrained to first-class by tablegen's
+    // llvm_any_ty; SelectionDAG lowering only supports single-value types.
+    Type *ValTy = Call.getType();
+    Check(ValTy->isIntOrIntVectorTy() || ValTy->isFPOrFPVectorTy() ||
+              ValTy->isPtrOrPtrVectorTy() || ValTy->isByteOrByteVectorTy(),
+          "llvm.ct.select only supports integer, byte, floating-point, or "
+          "pointer types, or vectors of them",
+          Call);
+    break;
+  }
   case Intrinsic::coro_begin:
   case Intrinsic::coro_begin_custom_abi:
     Check(isa<AnyCoroIdInst>(Call.getArgOperand(0)),
