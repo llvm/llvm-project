@@ -3690,7 +3690,7 @@ static bool addrMayUseNonFixedFrameIndex(SDValue Addr,
   if (auto *FI = dyn_cast<FrameIndexSDNode>(Addr))
     return !MFI.isFixedObjectIndex(FI->getIndex());
   if (Depth >= SelectionDAG::MaxRecursionDepth)
-    return false;
+    return true;
   switch (Addr.getOpcode()) {
   case ISD::ADD:
   case ISD::OR:
@@ -3700,6 +3700,8 @@ static bool addrMayUseNonFixedFrameIndex(SDValue Addr,
   case ISD::SUB:
     return addrMayUseNonFixedFrameIndex(Addr.getOperand(0), MFI, Depth + 1);
   default:
+    // Only add-like nodes and the LHS of a SUB can fold a frame index into the
+    // base; anything else is matched as a register or symbol base.
     return false;
   }
 }
