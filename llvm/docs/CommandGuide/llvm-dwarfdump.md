@@ -206,6 +206,13 @@ variable definedness in coverage statistics (implies
 {option}`--show-variable-coverage`)
 :::
 
+:::{option} --variable-coverage-maybe-undefined
+Use with {option}`--show-variable-coverage` and
+{option}`--variable-coverage-bitcode-file` to consider variables
+live if they are defined on at least one path (default behaviour is
+to require a variable to be defined on all paths to be counted)
+:::
+
 :::{option} --combine-inline-variable-instances
 Use with {option}`--show-variable-coverage` to average variable
 coverage across inlined subroutine instances instead of printing
