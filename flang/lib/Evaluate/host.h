@@ -20,6 +20,8 @@
 #if HAS_QUADMATHLIB
 #include "quadmath_wrapper.h"
 #include "flang/Common/float128.h"
+#elif HAS_LIBMF128_HOST
+#include "flang/Common/float128.h"
 #endif
 #include "flang/Evaluate/type.h"
 #include <cfenv>
@@ -159,9 +161,13 @@ struct HostTypeHelper<
       long double, UnsupportedType>;
 };
 
-#if HAS_QUADMATHLIB
+#if HAS_QUADMATHLIB || HAS_LIBMF128_HOST
 template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
-  // IEEE 754 128bits
+  // IEEE 754 128bits.
+  //
+  // Both routes use the same host type; only the library the folding table
+  // calls differs - libquadmath's *q or glibc's *f128. Keeping the type common
+  // is what lets the two share everything above this line.
   using Type = __float128;
 };
 #else
@@ -184,6 +190,21 @@ template <int KIND> struct HostTypeHelper<Type<TypeCategory::Complex, KIND>> {
 template <> struct HostTypeHelper<Type<TypeCategory::Complex, 16>> {
   using RealT = Fortran::evaluate::Type<TypeCategory::Real, 16>;
   using Type = __complex128;
+};
+#elif HAS_LIBMF128_HOST
+// __complex128 is libquadmath's typedef and is not available here. The mode
+// attribute is how flang already spells this type in flang/Common/float128.h
+// for the runtime, and glibc's complex *f128 functions take the same ABI.
+// The C-style typedef, not `using`: with an alias declaration the mode
+// attribute is silently dropped and the type degrades to _Complex float. The
+// static_assert below caught exactly that during development.
+typedef _Complex float __attribute__((mode(TC))) HostComplex128;
+static_assert(sizeof(HostComplex128) == 32,
+    "mode(TC) must be a pair of binary128 values; if it is not, the complex "
+    "folding table below is calling libm with the wrong ABI");
+template <> struct HostTypeHelper<Type<TypeCategory::Complex, 16>> {
+  using RealT = Fortran::evaluate::Type<TypeCategory::Real, 16>;
+  using Type = HostComplex128;
 };
 #endif
 

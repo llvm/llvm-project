@@ -29,6 +29,16 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
+- `REAL(16)` math support can now be built against glibc rather than
+  libquadmath, with `-DFLANG_RUNTIME_F128_MATH_LIB=libm`. glibc 2.26 and later
+  export the `*f128` entry points from `libm`, which is linked into every
+  program already, so this route needs no third-party library at either build
+  or run time and avoids the licensing question libquadmath raises for
+  distributors. The same library is used for compile-time constant folding as
+  for the runtime, so `parameter :: v = sin(x)` and `y = sin(x)` are computed
+  by one implementation rather than two. See
+  [Real16MathSupport](Real16MathSupport.md).
+
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release

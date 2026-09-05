@@ -224,10 +224,88 @@ DEFINE_SIMPLE_ALIAS(Yn, ynl)
 #define F128_RT_QNAN \
   (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::quiet_NaN())
 #elif HAS_LIBMF128
-// We can use __float128 versions of libm functions.
-// __STDC_WANT_IEC_60559_TYPES_EXT__ needs to be defined
-// before including cmath to enable the *f128 prototypes.
-#error "Float128Math build with glibc>=2.26 is unsupported yet"
+// glibc 2.26 and later export *f128 entry points from libm. They are the same
+// IEEE-754 binary128 functions libquadmath provides as *q, so this route needs
+// no third-party library: libm is already linked into everything.
+//
+// __STDC_WANT_IEC_60559_TYPES_EXT__ must be defined before any header pulls in
+// <cmath>, and it is set on the target in this directory's CMakeLists.txt
+// rather than here. In a header it would depend on this file being included
+// before <cmath> in every translation unit, which no header can guarantee -
+// and the failure is silent, because the prototypes simply do not appear.
+//
+// Measured on glibc 2.43 with clang: <cmath> exposes sqrtf128 even without the
+// macro, while <complex.h> does not expose cabsf128 without it. Relying on that
+// asymmetry would give a scalar half that appears to work beside a complex half
+// that does not compile, in the same build.
+#include <cmath>
+#include <limits>
+
+// Compile-time canary. If the *f128 prototypes are not visible here - a macro
+// lost, an include reordered, a future libc spelling them differently - the
+// aliases below would resolve to nothing and the failure would surface at link
+// time or in the field. This makes it surface at the line that owns the
+// assumption.
+[[maybe_unused]] static CppTypeFor<TypeCategory::Real, 16> (*const
+        f128_prototype_canary)(CppTypeFor<TypeCategory::Real, 16>) = &sqrtf128;
+
+DEFINE_SIMPLE_ALIAS(Abs, fabsf128)
+DEFINE_SIMPLE_ALIAS(Acos, acosf128)
+DEFINE_SIMPLE_ALIAS(Acosh, acoshf128)
+DEFINE_SIMPLE_ALIAS(Asin, asinf128)
+DEFINE_SIMPLE_ALIAS(Asinh, asinhf128)
+DEFINE_SIMPLE_ALIAS(Atan, atanf128)
+DEFINE_SIMPLE_ALIAS(Atan2, atan2f128)
+DEFINE_SIMPLE_ALIAS(Atanh, atanhf128)
+DEFINE_SIMPLE_ALIAS(Ceil, ceilf128)
+DEFINE_SIMPLE_ALIAS(Cos, cosf128)
+DEFINE_SIMPLE_ALIAS(Cosh, coshf128)
+DEFINE_SIMPLE_ALIAS(Erf, erff128)
+DEFINE_SIMPLE_ALIAS(Erfc, erfcf128)
+DEFINE_SIMPLE_ALIAS(Exp, expf128)
+DEFINE_SIMPLE_ALIAS(Floor, floorf128)
+DEFINE_SIMPLE_ALIAS(Fma, fmaf128)
+DEFINE_SIMPLE_ALIAS(Frexp, frexpf128)
+DEFINE_SIMPLE_ALIAS(Hypot, hypotf128)
+DEFINE_SIMPLE_ALIAS(Ilogb, ilogbf128)
+DEFINE_SIMPLE_ALIAS(J0, j0f128)
+DEFINE_SIMPLE_ALIAS(J1, j1f128)
+DEFINE_SIMPLE_ALIAS(Jn, jnf128)
+DEFINE_SIMPLE_ALIAS(Ldexp, ldexpf128)
+DEFINE_SIMPLE_ALIAS(Lgamma, lgammaf128)
+DEFINE_SIMPLE_ALIAS(Log, logf128)
+DEFINE_SIMPLE_ALIAS(Log10, log10f128)
+DEFINE_SIMPLE_ALIAS(Lround, lroundf128)
+DEFINE_SIMPLE_ALIAS(Nearbyint, nearbyintf128)
+DEFINE_SIMPLE_ALIAS(Nextafter, nextafterf128)
+DEFINE_SIMPLE_ALIAS(Pow, powf128)
+DEFINE_SIMPLE_ALIAS(Remainder, remainderf128)
+DEFINE_SIMPLE_ALIAS(Round, roundf128)
+DEFINE_SIMPLE_ALIAS(Sin, sinf128)
+DEFINE_SIMPLE_ALIAS(Sinh, sinhf128)
+DEFINE_SIMPLE_ALIAS(Sqrt, sqrtf128)
+DEFINE_SIMPLE_ALIAS(Tan, tanf128)
+DEFINE_SIMPLE_ALIAS(Tanh, tanhf128)
+DEFINE_SIMPLE_ALIAS(Tgamma, tgammaf128)
+DEFINE_SIMPLE_ALIAS(Trunc, truncf128)
+DEFINE_SIMPLE_ALIAS(Y0, y0f128)
+DEFINE_SIMPLE_ALIAS(Y1, y1f128)
+DEFINE_SIMPLE_ALIAS(Yn, ynf128)
+
+// Isinf, Isnan and the quiet NaN are not libm entry points in any width, but
+// they still need implementations: the fallback for an unaliased name is a
+// runtime Crash, not a default. The builtins are type-generic and correct for
+// binary128; the libquadmath branch reaches the same place through isinfq and
+// isnanq.
+DEFINE_SIMPLE_ALIAS(Isinf, __builtin_isinf)
+DEFINE_SIMPLE_ALIAS(Isnan, __builtin_isnan)
+
+// Not libm calls: isinf and isnan are type-generic macros, and the quiet NaN
+// comes from numeric_limits rather than from a function.
+#define F128_RT_INFINITY \
+  (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::infinity())
+#define F128_RT_QNAN \
+  (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::quiet_NaN())
 #endif
 
 } // namespace Fortran::runtime
