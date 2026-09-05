@@ -1,0 +1,762 @@
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=-gfx940-insts -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=NO-GFX940 %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=true -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=FORCE-ENABLED %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=false -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=DISABLED %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=OTHER-GFX9 %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -passes=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -start-before=si-insert-waitcnts -stop-after=si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -O0 -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=true -verify-machineinstrs -run-pass=si-insert-waitcnts -o - %s | FileCheck --check-prefix=O0 %s
+# RUN: llc -O0 -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-waitcnt-branch-padding=true -verify-machineinstrs -passes=si-insert-waitcnts -o - %s | FileCheck --check-prefix=O0 %s
+# Cache PDT before the merged pass and verify its post-pass result contains the
+# newly split block.
+# RUN: llc -simplify-mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='require<machine-post-dom-tree>,si-insert-waitcnts,print<machine-post-dom-tree>' -filetype=null %s 2>&1 | FileCheck --check-prefix=PDT %s
+
+--- |
+  define amdgpu_kernel void @pad_execz_edge_for_vmem() #0 { ret void }
+  define amdgpu_kernel void @pad_ordinary_vmem_dependency() #0 { ret void }
+  define amdgpu_kernel void @pad_execz_edge_for_second_vmem() #0 { ret void }
+  define amdgpu_kernel void @pad_masked_else_execz_edge() #0 { ret void }
+  define amdgpu_kernel void @share_buffer_inv_padding_suffix() #0 { ret void }
+  define amdgpu_kernel void @share_equal_buffer_inv_padding_suffix() #0 { ret void }
+  define amdgpu_kernel void @share_buffer_inv_padding_suffix_from_fallthrough() #0 { ret void }
+  define amdgpu_kernel void @pad_active_edge_preserving_exec_and_scc() #0 { ret void }
+  define amdgpu_kernel void @pad_direct_and_split_edges() #0 { ret void }
+  define amdgpu_kernel void @pad_without_sgpr_resources() #0 { ret void }
+  define amdgpu_kernel void @equal_arm_counts_need_no_padding() #0 { ret void }
+  define amdgpu_kernel void @pad_after_common_wait() #0 { ret void }
+  define amdgpu_kernel void @pad_inner_join_not_loop_header() #0 { ret void }
+  define amdgpu_kernel void @pad_before_loop() #0 { ret void }
+  define amdgpu_kernel void @padding_disabled_without_attribute() { ret void }
+  define amdgpu_kernel void @padding_skipped_for_optnone() #1 { ret void }
+
+  attributes #0 = { "amdgpu-waitcnt-branch-padding"="true" }
+  attributes #1 = { noinline optnone "amdgpu-waitcnt-branch-padding"="true" }
+...
+
+---
+name:            pad_execz_edge_for_vmem
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_execz_edge_for_vmem
+  ; O0-LABEL: name: pad_execz_edge_for_vmem
+  ; O0-NOT: BUFFER_INV
+  ; NO-GFX940-LABEL: name: pad_execz_edge_for_vmem
+  ; DISABLED-LABEL: name: pad_execz_edge_for_vmem
+  ; OTHER-GFX9-LABEL: name: pad_execz_edge_for_vmem
+  ; PDT-LABEL: MachinePostDominatorTree for machine function: pad_execz_edge_for_vmem
+  ; PDT: %bb.3
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: S_CBRANCH_EXECZ %bb.3
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    liveins: $exec, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $sgpr2_sgpr3
+
+    $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def dead $scc
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    ; O0: WAIT_ASYNCMARK 0
+    ; O0-NEXT: S_WAITCNT .Vmcnt_0
+    ; DISABLED-NOT: BUFFER_INV
+    ; DISABLED: WAIT_ASYNCMARK 0
+    ; DISABLED-NEXT: S_WAITCNT .Vmcnt_0
+    ; NO-GFX940-NOT: BUFFER_INV
+    ; NO-GFX940: WAIT_ASYNCMARK 0
+    ; NO-GFX940-NEXT: S_WAITCNT .Vmcnt_0
+    ; OTHER-GFX9-NOT: BUFFER_INV
+    ; OTHER-GFX9: WAIT_ASYNCMARK 0
+    ; OTHER-GFX9-NEXT: S_WAITCNT .Vmcnt_0
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  ; CHECK: bb.3:
+  ; CHECK-NOT: S_MOV_B64
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+  ; O0-NOT: BUFFER_INV
+...
+
+---
+name:            pad_ordinary_vmem_dependency
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_ordinary_vmem_dependency
+  ; O0-LABEL: name: pad_ordinary_vmem_dependency
+  ; PDT-LABEL: MachinePostDominatorTree for machine function: pad_ordinary_vmem_dependency
+  bb.0:
+    liveins: $exec, $scc, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; CHECK: S_CBRANCH_SCC1 %bb.3
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    liveins: $exec, $vgpr0_vgpr1
+
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $vgpr2
+
+    ; CHECK: S_WAITCNT .Vmcnt_1
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
+    $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
+    S_ENDPGM 0
+
+  ; CHECK: bb.3:
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+...
+
+---
+name:            pad_execz_edge_for_second_vmem
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_execz_edge_for_second_vmem
+  ; DISABLED-LABEL: name: pad_execz_edge_for_second_vmem
+  ; OTHER-GFX9-LABEL: name: pad_execz_edge_for_second_vmem
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    S_NOP 0, implicit-def dead $sgpr6, implicit-def dead $sgpr7
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: S_CBRANCH_EXECZ %bb.3
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    liveins: $exec, $m0, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $sgpr2_sgpr3
+
+    $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def dead $scc
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  ; CHECK: bb.3:
+  ; CHECK-NOT: S_MOV_B64
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+...
+
+---
+name:            pad_masked_else_execz_edge
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_masked_else_execz_edge
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    DS_WRITE_B32 $vgpr0, $vgpr1, 0, 0, implicit $m0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    $sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 killed $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $exec = S_XOR_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    ; CHECK: S_CBRANCH_EXECZ %bb.5
+    S_CBRANCH_EXECZ %bb.4, implicit $exec
+
+  bb.3:
+    liveins: $exec, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.4:
+    liveins: $exec, $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    ASYNCMARK
+    ; CHECK: WAIT_ASYNCMARK 1
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    WAIT_ASYNCMARK 1
+    S_ENDPGM 0
+
+  ; CHECK: bb.5:
+  ; CHECK-NOT: S_MOV_B64
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.4
+...
+
+---
+name:            share_buffer_inv_padding_suffix
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: share_buffer_inv_padding_suffix
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    $exec = S_AND_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    ; CHECK: S_CBRANCH_EXECZ %bb.4
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+
+  bb.1:
+    liveins: $exec, $sgpr0, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $exec = S_AND_B64 $exec, $sgpr2_sgpr3, implicit-def dead $scc
+    ; CHECK: S_CBRANCH_EXECZ %bb.5
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+
+  bb.2:
+    liveins: $exec, $sgpr0, $vgpr0_vgpr1
+
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.3:
+    liveins: $exec, $sgpr0
+
+    ; CHECK: S_NOP 0, implicit $sgpr0
+    ; CHECK-NEXT: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_3
+    S_NOP 0, implicit $sgpr0
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  ; CHECK: bb.4:
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NOT: BUFFER_INV
+  ; CHECK-NOT: S_BRANCH
+  ; CHECK: bb.5:
+  ; CHECK-COUNT-2: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.3
+...
+
+---
+name:            share_equal_buffer_inv_padding_suffix
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: share_equal_buffer_inv_padding_suffix
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    $exec = S_AND_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    ; CHECK: S_CBRANCH_EXECZ %bb.4
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+
+  bb.1:
+    liveins: $exec, $sgpr0, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    $exec = S_AND_B64 $exec, $sgpr2_sgpr3, implicit-def dead $scc
+    ; CHECK: S_CBRANCH_EXECZ %bb.5
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+
+  bb.2:
+    liveins: $exec, $sgpr0, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.3:
+    liveins: $exec, $sgpr0
+
+    ; CHECK: S_NOP 0, implicit $sgpr0
+    ; CHECK-NEXT: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    S_NOP 0, implicit $sgpr0
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  ; CHECK: bb.4:
+  ; CHECK-NOT: BUFFER_INV
+  ; CHECK-NOT: S_BRANCH
+  ; CHECK: bb.5:
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.3
+...
+
+---
+name:            share_buffer_inv_padding_suffix_from_fallthrough
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: share_buffer_inv_padding_suffix_from_fallthrough
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    $exec = S_AND_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+
+  bb.1:
+    liveins: $exec, $sgpr0, $sgpr2_sgpr3
+
+    $exec = S_AND_B64 $exec, $sgpr2_sgpr3, implicit-def dead $scc
+    S_CBRANCH_EXECZ %bb.5, implicit $exec
+
+  ; CHECK: bb.6:
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.7
+
+  bb.2:
+    liveins: $exec, $sgpr0
+
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_2
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  bb.3:
+    liveins: $exec, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $exec = S_AND_B64 $exec, $sgpr2_sgpr3, implicit-def dead $scc
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.4:
+    liveins: $exec, $vgpr0_vgpr1
+
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.5:
+    liveins: $exec
+
+    S_ENDPGM 0
+
+  ; CHECK: bb.7:
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+...
+
+---
+name:            pad_active_edge_preserving_exec_and_scc
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_active_edge_preserving_exec_and_scc
+  bb.0:
+    liveins: $exec, $m0, $scc, $vgpr0_vgpr1
+
+    S_NOP 0, implicit-def dead $sgpr6, implicit-def dead $sgpr7
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    ; CHECK: S_CBRANCH_SCC1 %bb.3
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    liveins: $exec, $m0, $scc, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $m0, $scc, $vgpr0_vgpr1
+
+    ; CHECK: S_NOP 0, implicit $scc
+    ; CHECK-NEXT: WAIT_ASYNCMARK 0
+    S_NOP 0, implicit $scc
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_2
+    ; CHECK-NEXT: DS_WRITE_B32
+    WAIT_ASYNCMARK 0
+    DS_WRITE_B32 $vgpr0, $vgpr1, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+
+  ; CHECK: bb.3:
+  ; CHECK: liveins: {{.*}}$scc
+  ; CHECK-NOT: S_MOV_B64
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+...
+
+---
+name:            pad_direct_and_split_edges
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_direct_and_split_edges
+  bb.0:
+    liveins: $exec, $m0, $scc, $sgpr0, $sgpr4, $vgpr0_vgpr1
+
+    S_NOP 0, implicit-def dead $sgpr7
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    liveins: $exec, $m0, $scc, $sgpr0, $sgpr4, $vgpr0_vgpr1
+
+    ; CHECK: bb.1:
+    ; CHECK: liveins: {{.*}}$scc
+    ; CHECK-NOT: S_MOV_B64
+    ; CHECK: BUFFER_INV 0, implicit $exec
+    ; CHECK-NEXT: S_BRANCH %bb.4, implicit $sgpr0, implicit $sgpr4, implicit $scc
+    S_BRANCH %bb.4, implicit $sgpr0, implicit $sgpr4, implicit $scc
+
+  bb.2:
+    liveins: $exec, $m0, $scc, $vgpr0_vgpr1
+
+    ; CHECK: S_CBRANCH_SCC1 %bb.[[INV:[0-9]+]]
+    S_CBRANCH_SCC1 %bb.4, implicit $scc
+
+  bb.3:
+    liveins: $exec, $m0, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.4:
+    liveins: $exec, $m0, $vgpr0_vgpr1
+
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    WAIT_ASYNCMARK 0
+    DS_WRITE_B32 $vgpr0, $vgpr1, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+
+  ; CHECK: bb.[[INV]]:
+  ; CHECK-NOT: S_MOV_B64
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.4
+...
+
+---
+name:            pad_without_sgpr_resources
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_without_sgpr_resources
+  bb.0:
+    liveins: $exec, $m0, $scc, $sgpr0, $sgpr2, $sgpr4, $sgpr6, $vgpr0_vgpr1
+
+    S_NOP 0, implicit-def dead $sgpr7
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    liveins: $exec, $m0, $scc, $sgpr0, $sgpr2, $sgpr4, $sgpr6, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $m0, $scc, $sgpr0, $sgpr2, $sgpr4, $sgpr6, $vgpr0_vgpr1
+
+    S_NOP 0, implicit $sgpr0, implicit $sgpr2, implicit $sgpr4, implicit $sgpr6, implicit $scc
+    ; CHECK-NOT: S_MOV_B64
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    WAIT_ASYNCMARK 0
+    DS_WRITE_B32 $vgpr0, $vgpr1, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+
+  ; CHECK: bb.3:
+  ; CHECK-NOT: S_MOV_B64
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+...
+
+---
+name:            equal_arm_counts_need_no_padding
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: equal_arm_counts_need_no_padding
+  bb.0:
+    liveins: $exec, $m0, $scc, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    liveins: $exec, $m0, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    liveins: $exec, $m0, $vgpr0_vgpr1
+
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+
+  bb.3:
+    liveins: $exec
+
+    ; CHECK-NOT: BUFFER_INV
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_0
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+...
+
+---
+name:            pad_after_common_wait
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_after_common_wait
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    S_WAITCNT 0
+    $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK: S_CBRANCH_EXECZ %bb.3
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    liveins: $exec, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $sgpr2_sgpr3
+
+    $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def dead $scc
+    ; CHECK: WAIT_ASYNCMARK 0
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  ; CHECK: bb.3:
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+...
+
+---
+name:            pad_inner_join_not_loop_header
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_inner_join_not_loop_header
+  bb.0:
+    liveins: $exec, $m0, $vgpr0_vgpr1
+
+    $sgpr0 = S_MOV_B32 0
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    S_WAITCNT_lds_direct
+    ; CHECK: ASYNCMARK
+    ; CHECK: ASYNCMARK
+    ; CHECK-NOT: BUFFER_INV
+    ; CHECK: bb.1:
+
+  bb.1:
+    liveins: $exec, $m0, $sgpr0, $vgpr0_vgpr1
+
+    S_BITCMP0_B32 $sgpr0, 0, implicit-def $scc
+    $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
+    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 killed $sgpr2_sgpr3, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK: S_CBRANCH_EXECZ %bb.5
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+
+  bb.2:
+    liveins: $exec, $m0, $sgpr0, $sgpr4_sgpr5, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+
+  bb.3:
+    liveins: $exec, $m0, $sgpr0, $sgpr4_sgpr5, $vgpr0_vgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr4_sgpr5, implicit-def dead $scc
+    ASYNCMARK
+    ; CHECK: WAIT_ASYNCMARK 1
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    ; CHECK-NEXT: $sgpr0 = S_ADD_U32
+    ; CHECK-NEXT: S_CMP_LT_U32
+    ; CHECK-NEXT: S_CBRANCH_SCC1 %bb.1
+    WAIT_ASYNCMARK 1
+    $sgpr0 = S_ADD_U32 $sgpr0, 1, implicit-def dead $scc
+    S_CMP_LT_U32 $sgpr0, 4, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+
+  bb.4:
+    liveins: $exec
+
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  ; CHECK: bb.5:
+  ; CHECK-NOT: S_MOV_B64
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.3
+...
+
+---
+name:            pad_before_loop
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: pad_before_loop
+  bb.0:
+    liveins: $exec, $m0, $scc, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    ; CHECK: S_CBRANCH_SCC1 %bb.6
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    liveins: $exec, $m0, $scc, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $scc
+
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_1
+    WAIT_ASYNCMARK 0
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $exec, $scc
+
+    S_CBRANCH_SCC1 %bb.5, implicit $scc
+
+  bb.4:
+    liveins: $exec, $scc
+
+    ASYNCMARK
+    S_BRANCH %bb.3
+
+  bb.5:
+    liveins: $exec
+
+    S_ENDPGM 0
+
+  ; CHECK: bb.6:
+  ; CHECK: BUFFER_INV 0, implicit $exec
+  ; CHECK-NEXT: S_BRANCH %bb.2
+...
+
+---
+name:            padding_disabled_without_attribute
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: padding_disabled_without_attribute
+  ; FORCE-ENABLED-LABEL: name: padding_disabled_without_attribute
+  bb.0:
+    liveins: $exec, $m0, $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    GLOBAL_LOAD_LDS_DWORD $vgpr0_vgpr1, 0, 0, 1, implicit $m0, implicit $exec
+    ASYNCMARK
+    $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    ; FORCE-ENABLED: S_CBRANCH_EXECZ %bb.3
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    liveins: $exec, $sgpr2_sgpr3, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $sgpr2_sgpr3
+
+    $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def dead $scc
+    ; CHECK-NOT: BUFFER_INV
+    ; CHECK: WAIT_ASYNCMARK 0
+    ; CHECK-NEXT: S_WAITCNT .Vmcnt_0
+    ; FORCE-ENABLED: WAIT_ASYNCMARK 0
+    ; FORCE-ENABLED-NEXT: S_WAITCNT .Vmcnt_1
+    WAIT_ASYNCMARK 0
+    S_ENDPGM 0
+
+  ; CHECK-NOT: BUFFER_INV
+  ; FORCE-ENABLED: bb.3:
+  ; FORCE-ENABLED-NOT: S_MOV_B64
+  ; FORCE-ENABLED: BUFFER_INV 0, implicit $exec
+...
+
+---
+name:            padding_skipped_for_optnone
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy:       8
+body:             |
+  ; CHECK-LABEL: name: padding_skipped_for_optnone
+  ; CHECK-NOT: BUFFER_INV
+  bb.0:
+    liveins: $exec, $scc, $vgpr0_vgpr1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    liveins: $exec, $vgpr0_vgpr1
+
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+
+  bb.2:
+    liveins: $exec, $vgpr2
+
+    ; CHECK: S_WAITCNT .Vmcnt_0
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
+    $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec
+    S_ENDPGM 0
+    ; CHECK-NOT: BUFFER_INV
+...
