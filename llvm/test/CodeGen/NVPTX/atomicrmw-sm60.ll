@@ -1835,71 +1835,41 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ;
 ; SM60-NOFTZ-ALLOW-LABEL: fsub_acq_rel_float_global_cta(
 ; SM60-NOFTZ-ALLOW:       {
-; SM60-NOFTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM60-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
+; SM60-NOFTZ-ALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM60-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM60-NOFTZ-ALLOW-EMPTY:
 ; SM60-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM60-NOFTZ-ALLOW-NEXT:    ld.param.b32 %r2, [fsub_acq_rel_float_global_cta_param_1];
 ; SM60-NOFTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
-; SM60-NOFTZ-ALLOW-NEXT:    membar.cta;
-; SM60-NOFTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
-; SM60-NOFTZ-ALLOW-NEXT:  $L__BB61_1: // %atomicrmw.start
-; SM60-NOFTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NOFTZ-ALLOW-NEXT:    sub.rn.f32 %r3, %r4, %r2;
-; SM60-NOFTZ-ALLOW-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM60-NOFTZ-ALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM60-NOFTZ-ALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM60-NOFTZ-ALLOW-NEXT:    @%p1 bra $L__BB61_1;
-; SM60-NOFTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NOFTZ-ALLOW-NEXT:    membar.cta;
-; SM60-NOFTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-NOFTZ-ALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
+; SM60-NOFTZ-ALLOW-NEXT:    neg.f32 %r2, %r1;
+; SM60-NOFTZ-ALLOW-NEXT:    atom.cta.global.add.f32 %r3, [%rd1], %r2;
+; SM60-NOFTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM60-NOFTZ-ALLOW-NEXT:    ret;
 ;
 ; SM60-FTZ-DISALLOW-LABEL: fsub_acq_rel_float_global_cta(
 ; SM60-FTZ-DISALLOW:       {
-; SM60-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM60-FTZ-DISALLOW-NEXT:    .reg .b32 %r<5>;
+; SM60-FTZ-DISALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM60-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM60-FTZ-DISALLOW-EMPTY:
 ; SM60-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM60-FTZ-DISALLOW-NEXT:    ld.param.b32 %r2, [fsub_acq_rel_float_global_cta_param_1];
 ; SM60-FTZ-DISALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
-; SM60-FTZ-DISALLOW-NEXT:    membar.cta;
-; SM60-FTZ-DISALLOW-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
-; SM60-FTZ-DISALLOW-NEXT:  $L__BB61_1: // %atomicrmw.start
-; SM60-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-FTZ-DISALLOW-NEXT:    sub.rn.ftz.f32 %r3, %r4, %r2;
-; SM60-FTZ-DISALLOW-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM60-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM60-FTZ-DISALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM60-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB61_1;
-; SM60-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-FTZ-DISALLOW-NEXT:    membar.cta;
-; SM60-FTZ-DISALLOW-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-FTZ-DISALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
+; SM60-FTZ-DISALLOW-NEXT:    neg.ftz.f32 %r2, %r1;
+; SM60-FTZ-DISALLOW-NEXT:    atom.cta.global.add.f32 %r3, [%rd1], %r2;
+; SM60-FTZ-DISALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM60-FTZ-DISALLOW-NEXT:    ret;
 ;
 ; SM60-FTZ-ALLOW-LABEL: fsub_acq_rel_float_global_cta(
 ; SM60-FTZ-ALLOW:       {
-; SM60-FTZ-ALLOW-NEXT:    .reg .pred %p<2>;
-; SM60-FTZ-ALLOW-NEXT:    .reg .b32 %r<5>;
+; SM60-FTZ-ALLOW-NEXT:    .reg .b32 %r<4>;
 ; SM60-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
 ; SM60-FTZ-ALLOW-EMPTY:
 ; SM60-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM60-FTZ-ALLOW-NEXT:    ld.param.b32 %r2, [fsub_acq_rel_float_global_cta_param_1];
 ; SM60-FTZ-ALLOW-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
-; SM60-FTZ-ALLOW-NEXT:    membar.cta;
-; SM60-FTZ-ALLOW-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
-; SM60-FTZ-ALLOW-NEXT:  $L__BB61_1: // %atomicrmw.start
-; SM60-FTZ-ALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-FTZ-ALLOW-NEXT:    sub.rn.ftz.f32 %r3, %r4, %r2;
-; SM60-FTZ-ALLOW-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r4, %r3;
-; SM60-FTZ-ALLOW-NEXT:    setp.ne.b32 %p1, %r1, %r4;
-; SM60-FTZ-ALLOW-NEXT:    mov.b32 %r4, %r1;
-; SM60-FTZ-ALLOW-NEXT:    @%p1 bra $L__BB61_1;
-; SM60-FTZ-ALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-FTZ-ALLOW-NEXT:    membar.cta;
-; SM60-FTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-FTZ-ALLOW-NEXT:    ld.param.b32 %r1, [fsub_acq_rel_float_global_cta_param_1];
+; SM60-FTZ-ALLOW-NEXT:    neg.ftz.f32 %r2, %r1;
+; SM60-FTZ-ALLOW-NEXT:    atom.cta.global.add.f32 %r3, [%rd1], %r2;
+; SM60-FTZ-ALLOW-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM60-FTZ-ALLOW-NEXT:    ret;
         %retval = atomicrmw fsub ptr  addrspace(1) %addr, float %val syncscope("block") acq_rel
         ret float %retval
@@ -2355,24 +2325,14 @@ define double @fadd_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 define double @fsub_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %val) {
 ; SM60-LABEL: fsub_acq_rel_double_global_cta(
 ; SM60:       {
-; SM60-NEXT:    .reg .pred %p<2>;
-; SM60-NEXT:    .reg .b64 %rd<6>;
+; SM60-NEXT:    .reg .b64 %rd<5>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.b64 %rd3, [fsub_acq_rel_double_global_cta_param_1];
-; SM60-NEXT:    ld.param.b64 %rd2, [fsub_acq_rel_double_global_cta_param_0];
-; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.volatile.global.b64 %rd5, [%rd2];
-; SM60-NEXT:  $L__BB67_1: // %atomicrmw.start
-; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM60-NEXT:    sub.rn.f64 %rd4, %rd5, %rd3;
-; SM60-NEXT:    atom.cta.global.cas.b64 %rd1, [%rd2], %rd5, %rd4;
-; SM60-NEXT:    setp.ne.b64 %p1, %rd1, %rd5;
-; SM60-NEXT:    mov.b64 %rd5, %rd1;
-; SM60-NEXT:    @%p1 bra $L__BB67_1;
-; SM60-NEXT:  // %bb.2: // %atomicrmw.end
-; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
+; SM60-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_double_global_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [fsub_acq_rel_double_global_cta_param_1];
+; SM60-NEXT:    neg.f64 %rd3, %rd2;
+; SM60-NEXT:    atom.cta.global.add.f64 %rd4, [%rd1], %rd3;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; SM60-NEXT:    ret;
         %retval = atomicrmw fsub ptr  addrspace(1) %addr, double %val syncscope("block") acq_rel
         ret double %retval
