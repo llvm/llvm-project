@@ -1433,6 +1433,191 @@ struct AAAMDGPUMinAGPRAlloc
 };
 
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
+/// The accum_offset a function has been committed to by its callers, that is,
+/// the ceiling on the number of architectural VGPRs it may allocate.
+struct MinUnsignedState {
+  unsigned Value = 0;
+  bool Unknown = true;
+
+  bool operator==(const MinUnsignedState &Other) const {
+    return Unknown == Other.Unknown && Value == Other.Value;
+  }
+  bool operator!=(const MinUnsignedState &Other) const {
+    return !(*this == Other);
+  }
+
+  /// Combine with the boundary of one caller. AGPRs are addressed relative to
+  /// accum_offset, so a function reachable from several callers has to fit
+  /// under the lowest boundary any of them committed to.
+  void merge(const MinUnsignedState &Other) {
+    assert(!Other.Unknown && "cannot merge an unknown accum offset");
+    if (Unknown) {
+      *this = Other;
+      return;
+    }
+    Value = std::min(Value, Other.Value);
+  }
+};
+
+/// An abstract attribute to propagate the accum_offset a kernel was compiled
+/// with down the call graph to its device functions, emitted as
+/// "amdgpu-accum-offset". Entry functions seed the boundary from their own
+/// vector register budget and AGPR requirement; every other function inherits
+/// the lowest boundary over its callers.
+///
+/// The AGPR side of the split needs no propagation: for a non-entry function
+/// getMaxNumVectorRegs pins the AGPR ceiling to the value of
+/// "amdgpu-agpr-alloc", which AAAMDGPUMinAGPRAlloc has already computed as that
+/// function's own requirement.
+struct AAAMDGPUAccumOffset
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUAccumOffset(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  static AAAMDGPUAccumOffset &createForPosition(const IRPosition &IRP,
+                                                Attributor &A) {
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+      return *new (A.Allocator) AAAMDGPUAccumOffset(IRP, A);
+    llvm_unreachable("AAAMDGPUAccumOffset is only valid for function position");
+  }
+
+  // When not all callers are known, any unknown caller that reaches this
+  // function will itself have a pessimistic amdgpu-agpr-alloc attribute, which
+  // splits its register file in half. We also know that the FlatWorkGroupSize
+  // attribute will be pessimistic for at least the current function (the one
+  // being called in the indirect callsite).
+  unsigned computePessimisticValue(Attributor &A) const {
+    Function *F = getAssociatedFunction();
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
+    unsigned MaxWG = ST.getMaxFlatWorkGroupSize();
+    unsigned Occ = std::clamp(ST.getWavesPerEUForWorkGroup(MaxWG), 1u,
+                              ST.getMaxWavesPerEU());
+    unsigned Budget =
+        ST.getMaxNumVGPRs(Occ, AMDGPU::getDynamicVGPRBlockSize(*F));
+    return Budget / 2; // 128/2 == 64 on gfx90a at the max work-group size
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    MinUnsignedState OldState = AccumOffset;
+
+    // The boundary is recomputed from scratch on every update rather than
+    // accumulated, because the seed itself moves: a kernel's boundary drops as
+    // AAAMDGPUMinAGPRAlloc climbs, and callees have to follow it down.
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      unsigned Offset = 0;
+      const auto *AGPRAlloc = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+          *this, IRPosition::function(*F), DepClassTy::OPTIONAL);
+
+      auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+      const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
+      unsigned MaxRegs = ST.getMaxNumVGPRs(*F);
+      if (!AGPRAlloc || !AGPRAlloc->isValidState()) {
+        Offset = MaxRegs / 2; // pessimistic
+        if (Offset == computePessimisticValue(A))
+          return indicatePessimisticFixpoint();
+      } else {
+        Offset = MaxRegs - std::min(MaxRegs, AGPRAlloc->getAssumed());
+      }
+
+      AccumOffset = {Offset, /*Unknown=*/false};
+      LLVM_DEBUG(dbgs() << "Accum offset for " << F->getName() << ": " << Offset
+                        << "\n");
+    } else {
+      MinUnsignedState Merged;
+
+      auto CheckUse = [&](const Use &U, bool &Follow) {
+        if (auto *CE = dyn_cast<ConstantExpr>(U.getUser())) {
+          if (CE->isCast() && CE->getType()->isPointerTy()) {
+            Follow = true;
+            return true;
+          }
+        }
+        if (isa<SelectInst>(U.getUser()) || isa<PHINode>(U.getUser())) {
+          Follow = true;
+          return true;
+        }
+        AbstractCallSite ACS(&U);
+        const Use *EffectiveUse =
+            ACS && ACS.isCallbackCall() ? &ACS.getCalleeUseForCallback() : &U;
+        if (!ACS || !ACS.isCallee(EffectiveUse))
+          return true;
+
+        Function *Caller = ACS.getInstruction()->getFunction();
+        const auto *CallerAA = A.getAAFor<AAAMDGPUAccumOffset>(
+            *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+        if (!CallerAA || !CallerAA->isValidState())
+          return true;
+
+        const MinUnsignedState &CallerOffset = CallerAA->getAccumOffset();
+        if (!CallerOffset.Unknown)
+          Merged.merge(CallerOffset);
+        return true;
+      };
+
+      A.checkForAllUses(CheckUse, *this, *F);
+
+      // Checks for unknown call sites.
+      bool DummyUAI = false;
+      bool AllCallsitesKnown = A.checkForAllCallSites(
+          [](AbstractCallSite) { return true; }, *this, true, DummyUAI);
+      if (!AllCallsitesKnown && !Merged.Unknown)
+        Merged.merge({computePessimisticValue(A), /*Unknown=*/false});
+
+      // Stays unknown when no caller contributed a boundary, so that functions
+      // outside any kernel's reach are left unconstrained.
+      AccumOffset = Merged;
+    }
+
+    return OldState == AccumOffset ? ChangeStatus::UNCHANGED
+                                   : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (AccumOffset.Unknown)
+      return ChangeStatus::UNCHANGED;
+    SmallString<4> Buffer;
+    raw_svector_ostream OS(Buffer);
+    OS << AccumOffset.Value;
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(getAssociatedFunction()->getContext(), AttrName,
+                        OS.str())},
+        /*ForceReplace=*/true);
+  }
+
+  const MinUnsignedState &getAccumOffset() const { return AccumOffset; }
+
+  const std::string getAsStr(Attributor *A) const override {
+    if (!getAssumed() || AccumOffset.Unknown)
+      return "unknown";
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << AttrName << '=' << AccumOffset.Value;
+    return Str;
+  }
+
+  void trackStatistics() const override {}
+
+  StringRef getName() const override { return "AAAMDGPUAccumOffset"; }
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUAccumOffset.
+  static bool classof(const AbstractAttribute *AA) {
+    return AA->getIdAddr() == &ID;
+  }
+
+  static const char ID;
+
+private:
+  MinUnsignedState AccumOffset;
+
+  static constexpr char AttrName[] = "amdgpu-accum-offset";
+};
+
+const char AAAMDGPUAccumOffset::ID = 0;
 
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
@@ -1597,10 +1782,10 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
-       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
+       &AAAMDGPUMinAGPRAlloc::ID, &AAAMDGPUAccumOffset::ID, &AACallEdges::ID,
+       &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
+       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1642,8 +1827,10 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
     if (!F->isDeclaration() && ST.hasClusters())
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
 
-    if (ST.hasGFX90AInsts())
+    if (ST.hasGFX90AInsts()) {
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDGPUAccumOffset>(IRPosition::function(*F));
+    }
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;
