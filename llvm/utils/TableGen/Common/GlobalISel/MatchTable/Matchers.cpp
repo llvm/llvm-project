@@ -830,8 +830,6 @@ void RuleMatcher::emit(MatchTable &Table) {
     Table << MatchTable::Opcode("GIR_DoneWithCustomAction", -1)
           << MatchTable::Comment("Fn")
           << MatchTable::NamedValue(2, CustomCXXAction)
-          << MatchTable::Comment("RootFlagsToDrop")
-          << MatchTable::NamedValue(4, CustomCXXActionRootFlagsToDrop)
           << MatchTable::LineBreak;
   } else {
     // Emit all actions except the last one, then emit coverage and emit the

@@ -123,7 +123,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:      // MIs[0] y
 // CHECK-NEXT:      // No operand predicates
 // CHECK-NEXT:      // Combiner Rule #3: NoMatchTwoApply
-// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2),
 // CHECK-NEXT:      // Label 7: @{{[0-9]+}}
 // CHECK-NEXT:      GIM_Reject,
 // CHECK-NEXT:      // Label 2: @{{[0-9]+}}
@@ -134,7 +134,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:      // MIs[0] y
 // CHECK-NEXT:      // No operand predicates
 // CHECK-NEXT:      // Combiner Rule #4: CombineCXXOrder
-// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner3), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner3),
 // CHECK-NEXT:      // Label 8: @{{[0-9]+}}
 // CHECK-NEXT:      GIM_Reject,
 // CHECK-NEXT:      // Label 3: @{{[0-9]+}}
@@ -145,7 +145,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:      // MIs[0] b
 // CHECK-NEXT:      // No operand predicates
 // CHECK-NEXT:      // Combiner Rule #1: TwoMatchTwoApply
-// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1),
 // CHECK-NEXT:      // Label 9: @{{[0-9]+}}
 // CHECK-NEXT:      GIM_Reject,
 // CHECK-NEXT:      // Label 4: @{{[0-9]+}}
@@ -156,11 +156,11 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:      // MIs[0] b
 // CHECK-NEXT:      // No operand predicates
 // CHECK-NEXT:      // Combiner Rule #0: OneMatchOneApply
-// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
 // CHECK-NEXT:      // Label 10: @{{[0-9]+}}
 // CHECK-NEXT:      GIM_Reject,
 // CHECK-NEXT:      // Label 5: @{{[0-9]+}}
 // CHECK-NEXT:      GIM_Reject,
-// CHECK-NEXT:      }; // Size: 553 bytes
+// CHECK-NEXT:      }; // Size: 537 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }

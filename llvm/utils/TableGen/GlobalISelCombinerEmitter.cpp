@@ -1954,7 +1954,6 @@ bool CombineRuleBuilder::emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
 
   const auto &Code = CXXPredicateCode::getCustomActionCode(CodeStr);
   M.setCustomCXXAction(Code.getEnumNameWithPrefix(CXXCustomActionPrefix));
-  M.setCustomCXXActionRootFlagsToDrop(PoisonGeneratingMIFlagsExpr);
   return true;
 }
 
@@ -2108,7 +2107,8 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
   if (CGIP.isIntrinsic() && !HasEmittedIntrinsicID)
     EmitIntrinsicID();
 
-  // Poison-generating flags need to be explicitly preserved by the pattern.
+  // Poison-generating root flags need to be explicitly preserved by the
+  // pattern.
   DstMI.addRootMIFlagsToDrop(PoisonGeneratingMIFlagsExpr);
 
   // Render MIFlags

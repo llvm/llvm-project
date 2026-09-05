@@ -515,12 +515,9 @@ enum {
   /// Calls a C++ function that concludes the current match.
   /// The C++ function is free to return false and reject the match, or
   /// return true and mutate the instruction(s) (or do nothing, even).
-  /// RootFlagsToDrop only applies to implicit root flag propagation. Flags
-  /// already present on OutMIs when the custom action returns are treated as
+  /// Poison-generating flags left on OutMIs by the custom action are treated as
   /// explicitly preserved.
   /// - FnID(2) - The function to call.
-  /// - RootFlagsToDrop(4) - Flags to clear from implicit root flag propagation
-  ///   for instructions added to OutMIs by the function.
   GIR_DoneWithCustomAction,
 
   /// Render operands to the specified instruction using a custom function,

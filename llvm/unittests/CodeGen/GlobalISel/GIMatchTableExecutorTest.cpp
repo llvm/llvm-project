@@ -8,6 +8,8 @@
 
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "GISelMITest.h"
+#include "llvm/CodeGen/GlobalISel/Combiner.h"
+#include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Target/TargetMachine.h"
@@ -17,34 +19,40 @@ using namespace llvm;
 
 namespace {
 
-class TestGIMatchTableExecutor : public GIMatchTableExecutor {
+class TestGIMatchTableExecutor : public Combiner {
 public:
+  TestGIMatchTableExecutor(MachineFunction &MF, const CombinerInfo &CInfo)
+      : Combiner(MF, CInfo, /*VT*/ nullptr) {}
+
   static const char *getName() { return "test-gimatchtable-executor"; }
 
   void setupGeneratedPerFunctionState(MachineFunction &MF) override {}
+  bool tryCombineAll(MachineInstr &I) const override { return false; }
 
   bool runCustomAction(unsigned FnID, const MatcherState &State,
                        NewMIVector &OutMIs) const override {
-    assert(FnID == 1);
+    assert((FnID == 1 || FnID == 2) && "Expected a valid FnID");
     MachineInstr &Root = *State.MIs[0];
     MachineBasicBlock &MBB = *Root.getParent();
     MachineInstrBuilder MIB =
         BuildMI(MBB, Root.getIterator(), Root.getDebugLoc(),
-                MF->getSubtarget().getInstrInfo()->get(TargetOpcode::G_SUB))
+                Root.getMF()->getSubtarget().getInstrInfo()->get(
+                    TargetOpcode::G_SUB))
             .addDef(Root.getOperand(0).getReg())
             .addUse(Root.getOperand(1).getReg())
             .addUse(Root.getOperand(2).getReg());
-    MIB.setMIFlags(MachineInstr::NoSWrap);
+    if (FnID == 1)
+      MIB.setMIFlags(MachineInstr::NoSWrap);
     OutMIs.push_back(MIB);
     return true;
   }
 
-  bool run(MachineInstr &Root, MachineIRBuilder &Builder,
+  bool run(ArrayRef<MachineInstr *> MIs, MachineIRBuilder &Builder,
            const uint8_t *MatchTable, const TargetInstrInfo &TII,
            MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
            const RegisterBankInfo &RBI) const {
     MatcherState State(/*MaxRenderers=*/0);
-    State.MIs.push_back(&Root);
+    State.MIs.append(MIs.begin(), MIs.end());
     using PredicateBitset = Bitset<1>;
     using ComplexMatcherMemFn =
         ComplexRendererFns (TestGIMatchTableExecutor::*)(MachineOperand &)
@@ -58,6 +66,15 @@ public:
                              State, ExecInfo, Builder, MatchTable, TII, MRI,
                              TRI, RBI, AvailableFeatures, nullptr);
   }
+
+  bool run(MachineInstr &Root, MachineIRBuilder &Builder,
+           const uint8_t *MatchTable, const TargetInstrInfo &TII,
+           MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+           const RegisterBankInfo &RBI) const {
+    MachineInstr *RootMI = &Root;
+    return run(ArrayRef<MachineInstr *>(RootMI), Builder, MatchTable, TII, MRI,
+               TRI, RBI);
+  }
 };
 
 static void appendU16(SmallVectorImpl<uint8_t> &Table, uint16_t Value) {
@@ -70,6 +87,12 @@ static void appendU32(SmallVectorImpl<uint8_t> &Table, uint32_t Value) {
   Table.push_back((Value >> 8) & 0xff);
   Table.push_back((Value >> 16) & 0xff);
   Table.push_back((Value >> 24) & 0xff);
+}
+
+static CombinerInfo getTestCombinerInfo() {
+  return CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+                      /*LInfo*/ nullptr, /*OptEnabled*/ true,
+                      /*OptSize*/ false, /*MinSize*/ false);
 }
 
 } // namespace
@@ -111,7 +134,7 @@ TEST(GlobalISelLEB128Test, fastDecodeULEB128) {
 #undef EXPECT_DECODE_ULEB128_EQ
 }
 
-TEST_F(AArch64GISelMITest, MatchTableExplicitMIFlagsOverrideRootFlagsToDrop) {
+TEST_F(AArch64GISelMITest, MatchTableExplicitMIFlagsOverrideDefaultPoisonDrop) {
   setUp("");
   if (!TM)
     GTEST_SKIP();
@@ -120,8 +143,8 @@ TEST_F(AArch64GISelMITest, MatchTableExplicitMIFlagsOverrideRootFlagsToDrop) {
   auto Root =
       B.buildInstr(TargetOpcode::G_ADD, {RootReg}, {Copies[1], Copies[2]});
   Root->setFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
-
-  TestGIMatchTableExecutor Executor;
+  CombinerInfo CInfo = getTestCombinerInfo();
+  TestGIMatchTableExecutor Executor(*MF, CInfo);
   Executor.setupMF(*MF, nullptr);
 
   SmallVector<uint8_t, 32> MatchTable;
@@ -130,16 +153,10 @@ TEST_F(AArch64GISelMITest, MatchTableExplicitMIFlagsOverrideRootFlagsToDrop) {
   appendU16(MatchTable, TargetOpcode::G_SUB);
   MatchTable.push_back(GIR_BuildMI);
   MatchTable.push_back(1); // InsnID
-  appendU16(MatchTable, TargetOpcode::G_SUB);
-  MatchTable.push_back(GIR_UnsetMIFlags);
-  MatchTable.push_back(0); // InsnID
-  appendU32(MatchTable, MachineInstr::NoUWrap | MachineInstr::NoSWrap);
+  appendU16(MatchTable, TargetOpcode::G_MUL);
   MatchTable.push_back(GIR_SetMIFlags);
   MatchTable.push_back(0); // InsnID
   appendU32(MatchTable, MachineInstr::NoSWrap);
-  MatchTable.push_back(GIR_UnsetMIFlags);
-  MatchTable.push_back(1); // InsnID
-  appendU32(MatchTable, MachineInstr::NoUWrap | MachineInstr::NoSWrap);
   MatchTable.push_back(GIR_CopyMIFlags);
   MatchTable.push_back(1); // InsnID
   MatchTable.push_back(0); // OldInsnID
@@ -150,16 +167,66 @@ TEST_F(AArch64GISelMITest, MatchTableExplicitMIFlagsOverrideRootFlagsToDrop) {
                            *MRI, *STI.getRegisterInfo(),
                            *STI.getRegBankInfo()));
 
-  SmallVector<MachineInstr *, 2> BuiltMIs;
+  MachineInstr *SetFlagsMI = nullptr;
+  MachineInstr *CopiedFlagsMI = nullptr;
   for (MachineInstr &MI : *EntryMBB) {
     if (MI.getOpcode() == TargetOpcode::G_SUB)
-      BuiltMIs.push_back(&MI);
+      SetFlagsMI = &MI;
+    if (MI.getOpcode() == TargetOpcode::G_MUL)
+      CopiedFlagsMI = &MI;
   }
-  ASSERT_EQ(BuiltMIs.size(), 2u);
-  EXPECT_FALSE(BuiltMIs[0]->getFlag(MachineInstr::NoUWrap));
-  EXPECT_TRUE(BuiltMIs[0]->getFlag(MachineInstr::NoSWrap));
-  EXPECT_TRUE(BuiltMIs[1]->getFlag(MachineInstr::NoUWrap));
-  EXPECT_TRUE(BuiltMIs[1]->getFlag(MachineInstr::NoSWrap));
+  ASSERT_NE(SetFlagsMI, nullptr);
+  EXPECT_FALSE(SetFlagsMI->getFlag(MachineInstr::NoUWrap));
+  EXPECT_TRUE(SetFlagsMI->getFlag(MachineInstr::NoSWrap));
+
+  ASSERT_NE(CopiedFlagsMI, nullptr);
+  EXPECT_TRUE(CopiedFlagsMI->getFlag(MachineInstr::NoUWrap));
+  EXPECT_TRUE(CopiedFlagsMI->getFlag(MachineInstr::NoSWrap));
+}
+
+TEST_F(AArch64GISelMITest, MatchTableExplicitUnsetMIFlagsBlocksPropagation) {
+  setUp("");
+  if (!TM)
+    GTEST_SKIP();
+
+  Register RootReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  auto Root =
+      B.buildInstr(TargetOpcode::G_ADD, {RootReg}, {Copies[1], Copies[2]});
+  Root->setFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap |
+                 MachineInstr::FmNsz);
+
+  CombinerInfo CInfo = getTestCombinerInfo();
+  TestGIMatchTableExecutor Executor(*MF, CInfo);
+  Executor.setupMF(*MF, nullptr);
+
+  SmallVector<uint8_t, 32> MatchTable;
+  MatchTable.push_back(GIR_BuildMI);
+  MatchTable.push_back(0); // InsnID
+  appendU16(MatchTable, TargetOpcode::G_SUB);
+  MatchTable.push_back(GIR_SetMIFlags);
+  MatchTable.push_back(0); // InsnID
+  appendU32(MatchTable, MachineInstr::NoUWrap | MachineInstr::FmNsz);
+  MatchTable.push_back(GIR_UnsetMIFlags);
+  MatchTable.push_back(0); // InsnID
+  appendU32(MatchTable, MachineInstr::NoUWrap | MachineInstr::FmNsz);
+  MatchTable.push_back(GIR_Done);
+
+  const TargetSubtargetInfo &STI = MF->getSubtarget();
+  EXPECT_TRUE(Executor.run(*Root, B, MatchTable.data(), *STI.getInstrInfo(),
+                           *MRI, *STI.getRegisterInfo(),
+                           *STI.getRegBankInfo()));
+
+  MachineInstr *BuiltMI = nullptr;
+  for (MachineInstr &MI : *EntryMBB) {
+    if (MI.getOpcode() == TargetOpcode::G_SUB) {
+      BuiltMI = &MI;
+      break;
+    }
+  }
+  ASSERT_NE(BuiltMI, nullptr);
+  EXPECT_FALSE(BuiltMI->getFlag(MachineInstr::NoUWrap));
+  EXPECT_FALSE(BuiltMI->getFlag(MachineInstr::FmNsz));
+  EXPECT_FALSE(BuiltMI->getFlag(MachineInstr::NoSWrap));
 }
 
 TEST_F(AArch64GISelMITest, MatchTableCustomActionDropsRootMIFlags) {
@@ -172,13 +239,13 @@ TEST_F(AArch64GISelMITest, MatchTableCustomActionDropsRootMIFlags) {
       B.buildInstr(TargetOpcode::G_ADD, {RootReg}, {Copies[1], Copies[2]});
   Root->setFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
 
-  TestGIMatchTableExecutor Executor;
+  CombinerInfo CInfo = getTestCombinerInfo();
+  TestGIMatchTableExecutor Executor(*MF, CInfo);
   Executor.setupMF(*MF, nullptr);
 
   SmallVector<uint8_t, 16> MatchTable;
   MatchTable.push_back(GIR_DoneWithCustomAction);
   appendU16(MatchTable, 1); // FnID
-  appendU32(MatchTable, MachineInstr::NoUWrap | MachineInstr::NoSWrap);
 
   const TargetSubtargetInfo &STI = MF->getSubtarget();
   EXPECT_TRUE(Executor.run(*Root, B, MatchTable.data(), *STI.getInstrInfo(),
@@ -195,4 +262,39 @@ TEST_F(AArch64GISelMITest, MatchTableCustomActionDropsRootMIFlags) {
   ASSERT_NE(BuiltMI, nullptr);
   EXPECT_FALSE(BuiltMI->getFlag(MachineInstr::NoUWrap));
   EXPECT_TRUE(BuiltMI->getFlag(MachineInstr::NoSWrap));
+}
+
+TEST_F(AArch64GISelMITest, MatchTableCustomActionDropsUnsetRootMIFlags) {
+  setUp("");
+  if (!TM)
+    GTEST_SKIP();
+
+  Register RootReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  auto Root =
+      B.buildInstr(TargetOpcode::G_ADD, {RootReg}, {Copies[1], Copies[2]});
+  Root->setFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
+
+  CombinerInfo CInfo = getTestCombinerInfo();
+  TestGIMatchTableExecutor Executor(*MF, CInfo);
+  Executor.setupMF(*MF, nullptr);
+
+  SmallVector<uint8_t, 16> MatchTable;
+  MatchTable.push_back(GIR_DoneWithCustomAction);
+  appendU16(MatchTable, 2); // FnID
+
+  const TargetSubtargetInfo &STI = MF->getSubtarget();
+  EXPECT_TRUE(Executor.run(*Root, B, MatchTable.data(), *STI.getInstrInfo(),
+                           *MRI, *STI.getRegisterInfo(),
+                           *STI.getRegBankInfo()));
+
+  MachineInstr *BuiltMI = nullptr;
+  for (MachineInstr &MI : *EntryMBB) {
+    if (MI.getOpcode() == TargetOpcode::G_SUB) {
+      BuiltMI = &MI;
+      break;
+    }
+  }
+  ASSERT_NE(BuiltMI, nullptr);
+  EXPECT_FALSE(BuiltMI->getFlag(MachineInstr::NoUWrap));
+  EXPECT_FALSE(BuiltMI->getFlag(MachineInstr::NoSWrap));
 }
