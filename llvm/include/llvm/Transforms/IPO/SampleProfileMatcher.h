@@ -132,8 +132,6 @@ public:
     freeContainer(FunctionsWithoutProfile);
     freeContainer(FuncToProfileNameMap);
   }
-
-private:
   FunctionSamples *getFlattenedSamplesFor(const FunctionId &Fname) {
     auto It = FlattenedProfiles.find(Fname);
     if (It != FlattenedProfiles.end())
@@ -144,6 +142,8 @@ private:
     StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
     return getFlattenedSamplesFor(FunctionId(CanonFName));
   }
+
+private:
   template <typename T> inline void freeContainer(T &C) {
     T Empty;
     std::swap(C, Empty);
@@ -179,6 +179,11 @@ private:
            State == MatchState::RecoveredMismatch ||
            State == MatchState::RemovedMatch;
   };
+
+  bool checksumMismatch(const Function &F, const FunctionSamples &FS) {
+    return FunctionSamples::ProfileIsProbeBased &&
+           !ProbeManager->profileIsValid(F, FS);
+  }
 
   void
   countCallGraphRecoveredSamples(const FunctionSamples &FS,

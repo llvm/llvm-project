@@ -472,8 +472,7 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
     return;
   // For probe-based profiles, run matching only when profile checksum is
   // mismatched.
-  bool ChecksumMismatch = FunctionSamples::ProfileIsProbeBased &&
-                          !ProbeManager->profileIsValid(F, *FSForMatching);
+  bool ChecksumMismatch = checksumMismatch(F, *FSForMatching);
   bool RunCFGMatching =
       !FunctionSamples::ProfileIsProbeBased || ChecksumMismatch;
   bool RunCGMatching = SalvageUnusedProfile;
@@ -696,6 +695,14 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
 
     if (SalvageUnusedProfile && !CallGraphRecoveredProfiles.empty())
       countCallGraphRecoveredSamples(*FS, CallGraphRecoveredProfiles);
+    else {
+      auto I = FuncMappings.find(FS->getFuncName());
+      if (I != FuncMappings.end() && checksumMismatch(F, *FS)) {
+        NumCallGraphRecoveredProfiledFunc++;
+        CallGraphRecoveredProfiles.insert(FS->getFunction());
+        countCallGraphRecoveredSamples(*FS, CallGraphRecoveredProfiles);
+      }
+    }
 
     // Checksum mismatch is only used in pseudo-probe mode.
     if (FunctionSamples::ProfileIsProbeBased)
