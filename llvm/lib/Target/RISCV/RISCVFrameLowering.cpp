@@ -493,9 +493,8 @@ bool RISCVFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-      RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-      MFI.isFrameAddressTaken())
+  if (MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
+      MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken())
     return true;
 
   // With large callframes around we may need to use FP to access the scavenging

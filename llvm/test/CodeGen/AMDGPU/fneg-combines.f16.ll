@@ -628,7 +628,7 @@ define amdgpu_ps half @fneg_fadd_0_safe_f16(half inreg %tmp2, half inreg %tmp6, 
   %tmp11 = fneg half %.i188
   %.i092 = select i1 %tmp10, half %tmp2, half %tmp11
   %tmp12 = fcmp ule half %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, half 0.000000e+00, half 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, half 0.000000e+00, half +qnan
   ret half %.i198
 }
 
@@ -686,7 +686,7 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
   %tmp11 = fneg half %.i188
   %.i092 = select i1 %tmp10, half %tmp2, half %tmp11
   %tmp12 = fcmp ule half %.i092, 0.000000e+00
-  %.i198 = select i1 %tmp12, half 0.000000e+00, half 0x7FF8000000000000
+  %.i198 = select i1 %tmp12, half 0.000000e+00, half +qnan
   ret half %.i198
 }
 

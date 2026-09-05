@@ -33,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -575,7 +574,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(SubReg);
 
   // Set the frame-pointer register and its aliases as reserved if needed.
-  if (TFI->hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF)) {
+  if (TFI->hasFP(MF) || MF.framePointerIsReserved()) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
       MF.getContext().reportError(
           SMLoc(),

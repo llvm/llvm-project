@@ -704,12 +704,10 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
   if (LiveVirtRegs.empty())
     return;
 
-  for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins()) {
-    MCRegister Reg = P.PhysReg;
-    // Set state to live-in. This possibly overrides mappings to virtual
-    // registers but we don't care anymore at this point.
-    setPhysRegState(Reg, regLiveIn);
-  }
+  // Set state to live-in. This possibly overrides mappings to virtual
+  // registers but we don't care anymore at this point.
+  for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins())
+    setPhysRegState(P.PhysReg, regLiveIn);
 
   SmallSet<Register, 2> PrologLiveIns;
 
@@ -1454,9 +1452,10 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   });
 }
 
-// Returns true if MO is tied and the operand it's tied to is not Undef (not
-// Undef is not the same thing as Def).
+// Returns true if this def (MO) ties to a use that actually carries a value
+// (not undef).
 static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
+  assert(MO.isDef() && "expected a def operand");
   if (!MO.isTied())
     return false;
   unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));

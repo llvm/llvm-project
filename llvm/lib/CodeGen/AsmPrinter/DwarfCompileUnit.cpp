@@ -35,7 +35,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -519,8 +518,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
   attachRangesOrLowHighPC(*SPDie, BB_List);
 
   if (DD->useAppleExtensionAttributes() &&
-      !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
-          *DD->getCurrentFunction()))
+      !DD->getCurrentFunction()->disableFramePointerElim())
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
 
   if (emitFuncLineTableOffsets() && LineTableSym) {

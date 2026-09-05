@@ -53,7 +53,7 @@ public:
   /// Ideally `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     LLVM_DEBUG({
-      for (auto FileEntry : FilesToRecord)
+      for (const auto &FileEntry : FilesToRecord)
         llvm::dbgs() << "Did not record contents for input file: "
                      << FileEntry.getName() << "\n";
     });
