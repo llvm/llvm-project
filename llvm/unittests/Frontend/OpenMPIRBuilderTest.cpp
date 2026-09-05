@@ -370,15 +370,15 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
 
   IRBuilder<> Builder(BB);
 
-  ASSERT_THAT_EXPECTED(
-      OMPBuilder.createBarrier({IRBuilder<>::InsertPoint()}, OMPD_for),
-      Succeeded());
+  ASSERT_THAT_EXPECTED(OMPBuilder.createBarrier(
+                           {IRBuilder<>::InsertPoint(), DebugLoc()}, OMPD_for),
+                       Succeeded());
   EXPECT_TRUE(M->global_empty());
   EXPECT_EQ(M->size(), 1U);
   EXPECT_EQ(F->size(), 1U);
   EXPECT_EQ(BB->size(), 0U);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_THAT_EXPECTED(OMPBuilder.createBarrier(Loc, OMPD_for), Succeeded());
   EXPECT_FALSE(M->global_empty());
   EXPECT_EQ(M->size(), 3U);
@@ -421,7 +421,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
 
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, NewIP,
                        OMPBuilder.createCancel(Loc, nullptr, OMPD_parallel));
   Builder.restoreIP(NewIP);
@@ -482,7 +482,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
 
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, NewIP,
       OMPBuilder.createCancel(Loc, Builder.getTrue(), OMPD_parallel));
@@ -548,7 +548,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
 
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, NewIP,
                        OMPBuilder.createBarrier(Loc, OMPD_for));
   Builder.restoreIP(NewIP);
@@ -921,11 +921,11 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
     BasicBlock *NewBB = SplitBlock(CGBB, &*CodeGenIP.getPoint());
     CGBB->getTerminator()->eraseFromParent();
 
-    ASSERT_EXPECTED_INIT(
-        OpenMPIRBuilder::InsertPointTy, AfterIP,
-        OMPBuilder.createParallel(InsertPointTy(CGBB, CGBB->end()), AllocaIP,
-                                  {}, InnerBodyGenCB, PrivCB, FiniCB, nullptr,
-                                  nullptr, OMP_PROC_BIND_default, false));
+    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
+                         OMPBuilder.createParallel(
+                             {InsertPointTy(CGBB, CGBB->end()), DebugLoc()},
+                             AllocaIP, {}, InnerBodyGenCB, PrivCB, FiniCB,
+                             nullptr, nullptr, OMP_PROC_BIND_default, false));
 
     Builder.restoreIP(AfterIP);
     Builder.CreateBr(NewBB);
@@ -1028,20 +1028,20 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
     NewBB1->getTerminator()->eraseFromParent();
     ;
 
-    ASSERT_EXPECTED_INIT(
-        OpenMPIRBuilder::InsertPointTy, AfterIP1,
-        OMPBuilder.createParallel(InsertPointTy(CGBB, CGBB->end()), AllocaIP,
-                                  {}, InnerBodyGenCB, PrivCB, FiniCB, nullptr,
-                                  nullptr, OMP_PROC_BIND_default, false));
+    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP1,
+                         OMPBuilder.createParallel(
+                             {InsertPointTy(CGBB, CGBB->end()), DebugLoc()},
+                             AllocaIP, {}, InnerBodyGenCB, PrivCB, FiniCB,
+                             nullptr, nullptr, OMP_PROC_BIND_default, false));
 
     Builder.restoreIP(AfterIP1);
     Builder.CreateBr(NewBB1);
 
     ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP2,
                          OMPBuilder.createParallel(
-                             InsertPointTy(NewBB1, NewBB1->end()), AllocaIP, {},
-                             InnerBodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-                             OMP_PROC_BIND_default, false));
+                             {InsertPointTy(NewBB1, NewBB1->end()), DebugLoc()},
+                             AllocaIP, {}, InnerBodyGenCB, PrivCB, FiniCB,
+                             nullptr, nullptr, OMP_PROC_BIND_default, false));
 
     Builder.restoreIP(AfterIP2);
     Builder.CreateBr(NewBB2);
@@ -1232,9 +1232,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
     // Create three barriers, two cancel barriers but only one checked.
     Function *CBFn, *BFn;
 
-    ASSERT_EXPECTED_INIT(
-        OpenMPIRBuilder::InsertPointTy, BarrierIP1,
-        OMPBuilder.createBarrier(Builder.saveIP(), OMPD_parallel));
+    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, BarrierIP1,
+                         OMPBuilder.createBarrier(Builder, OMPD_parallel));
     Builder.restoreIP(BarrierIP1);
 
     CBFn = M->getFunction("__kmpc_cancel_barrier");
@@ -1248,7 +1247,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
 
     ASSERT_EXPECTED_INIT(
         OpenMPIRBuilder::InsertPointTy, BarrierIP2,
-        OMPBuilder.createBarrier(Builder.saveIP(), OMPD_parallel, true));
+        OMPBuilder.createBarrier(Builder, OMPD_parallel, true));
     Builder.restoreIP(BarrierIP2);
     CBFn = M->getFunction("__kmpc_cancel_barrier");
     BFn = M->getFunction("__kmpc_barrier");
@@ -1259,9 +1258,9 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
     ASSERT_TRUE(isa<CallInst>(BFn->user_back()));
     ASSERT_TRUE(BFn->user_back()->use_empty());
 
-    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, BarrierIP3,
-                         OMPBuilder.createBarrier(Builder.saveIP(),
-                                                  OMPD_parallel, false, false));
+    ASSERT_EXPECTED_INIT(
+        OpenMPIRBuilder::InsertPointTy, BarrierIP3,
+        OMPBuilder.createBarrier(Builder, OMPD_parallel, false, false));
     Builder.restoreIP(BarrierIP3);
     ASSERT_TRUE(CBFn->hasNUses(2));
     ASSERT_TRUE(BFn->hasOneUse());
@@ -1567,7 +1566,7 @@ TEST_F(OpenMPIRBuilderTest, CollapseNestedLoops) {
     };
     ASSERT_EXPECTED_INIT(
         CanonicalLoopInfo *, InnerLoopResult,
-        OMPBuilder.createCanonicalLoop(Builder.saveIP(), InnerLoopBodyGenCB,
+        OMPBuilder.createCanonicalLoop(Builder, InnerLoopBodyGenCB,
                                        InnerTripCount, "inner"));
     InnerLoop = InnerLoopResult;
 
@@ -1693,10 +1692,10 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
       createPrintfCall(Builder, "i=%d j=%d\\n", {OuterLC, InnerLC});
       return Error::success();
     };
-    ASSERT_EXPECTED_INIT(CanonicalLoopInfo *, InnerLoopResult,
-                         OMPBuilder.createCanonicalLoop(OuterCodeGenIP,
-                                                        InnerLoopBodyGenCB,
-                                                        TripCount, "inner"));
+    ASSERT_EXPECTED_INIT(
+        CanonicalLoopInfo *, InnerLoopResult,
+        OMPBuilder.createCanonicalLoop({OuterCodeGenIP, DebugLoc()},
+                                       InnerLoopBodyGenCB, TripCount, "inner"));
     InnerLoop = InnerLoopResult;
   };
   ASSERT_EXPECTED_INIT(
@@ -1800,11 +1799,11 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
       Call = createPrintfCall(Builder, "i=%d j=%d\\n", {OuterLC, InnerLC});
       return Error::success();
     };
-    ASSERT_EXPECTED_INIT(
-        CanonicalLoopInfo *, InnerLoopResult,
-        OMPBuilder.createCanonicalLoop(OuterCodeGenIP, InnerLoopBodyGenCB,
-                                       InnerStartVal, InnerStopVal, InnerStep,
-                                       false, false, ComputeIP, "inner"));
+    ASSERT_EXPECTED_INIT(CanonicalLoopInfo *, InnerLoopResult,
+                         OMPBuilder.createCanonicalLoop(
+                             {OuterCodeGenIP, DebugLoc()}, InnerLoopBodyGenCB,
+                             InnerStartVal, InnerStopVal, InnerStep, false,
+                             false, ComputeIP, "inner"));
     InnerLoop = InnerLoopResult;
   };
   ASSERT_EXPECTED_INIT(CanonicalLoopInfo *, OuterLoop,
@@ -5321,8 +5320,8 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   OMPBuilder.Config.setIsGPU(false);
 
   bool ReduceVariableByRef[] = {false, false};
-  ASSERT_THAT_EXPECTED(OMPBuilder.createReductions(BodyIP, BodyAllocaIP,
-                                                   ReductionInfos,
+  ASSERT_THAT_EXPECTED(OMPBuilder.createReductions({BodyIP, DebugLoc()},
+                                                   BodyAllocaIP, ReductionInfos,
                                                    ReduceVariableByRef),
                        Succeeded());
 
@@ -5730,7 +5729,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
 
   ASSERT_THAT_EXPECTED(
       OMPBuilder.createReductions(
-          FirstBodyIP, FirstBodyAllocaIP,
+          {FirstBodyIP, DebugLoc()}, FirstBodyAllocaIP,
           {{SumType, SumReduced, SumPrivatized,
             /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
             /*ReductionGenClang=*/nullptr, sumAtomicReduction,
@@ -5739,7 +5738,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
       Succeeded());
   ASSERT_THAT_EXPECTED(
       OMPBuilder.createReductions(
-          SecondBodyIP, SecondBodyAllocaIP,
+          {SecondBodyIP, DebugLoc()}, SecondBodyAllocaIP,
           {{XorType, XorReduced, XorPrivatized,
             /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, xorReduction,
             /*ReductionGenClang=*/nullptr, xorAtomicReduction,
@@ -6137,9 +6136,8 @@ TEST_F(OpenMPIRBuilderTest, EmitMapperCall) {
       ArrayType::get(PointerType::getUnqual(Ctx), TotalNbOperand), Mapnames,
       /*Idx0=*/0, /*Idx1=*/0);
 
-  OMPBuilder.emitMapperCall(Builder.saveIP(), BeginMapperFunc, SrcLocInfo,
-                            MaptypesArg, MapnamesArg, MapperAllocas, -1,
-                            TotalNbOperand);
+  OMPBuilder.emitMapperCall(Builder, BeginMapperFunc, SrcLocInfo, MaptypesArg,
+                            MapnamesArg, MapperAllocas, -1, TotalNbOperand);
 
   CallInst *MapperCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(MapperCall, nullptr);
