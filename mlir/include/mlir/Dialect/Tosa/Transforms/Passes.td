@@ -199,6 +199,24 @@ def TosaDowngrade1p1To1p0Pass
   }];
 }
 
+def TosaGatherScatterHardeningPass
+    : Pass<"tosa-gather-scatter-hardening", "func::FuncOp"> {
+  let summary = "Clamp TOSA gather and scatter indices to valid bounds";
+  let description = [{
+    Bounds the indices used by each gather and scatter with TOSA minimum and
+    maximum operations so that all accesses are in bounds. When the same
+    indices value is used by several gather or scatter operations that require
+    identical bounds, one bounding sequence is shared by all of them. Other
+    users continue to use the original indices.
+
+    The indexed dimension must be statically known and non-empty.
+  }];
+
+  let dependentDialects = [
+    "tosa::TosaDialect"
+  ];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
