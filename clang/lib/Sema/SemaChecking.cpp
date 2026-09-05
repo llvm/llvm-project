@@ -14042,6 +14042,16 @@ static void CheckCommaOperand(
     bool ExtraCheckForImplicitConversion,
     llvm::SmallVectorImpl<AnalyzeImplicitConversionsWorkItem> &WorkList) {
   E = E->IgnoreParenImpCasts();
+
+  // A conditional operand is fed into the context type branch by branch, the
+  // same way CheckConditionalOperand does, so that a conditional whose
+  // branches each convert cleanly is not reported through the type of the
+  // conditional as a whole. CheckConditionalOperator analyzes the
+  // subexpressions itself, so do not add this one to the work list.
+  if (ExtraCheckForImplicitConversion && E->getType() != T)
+    if (auto *CO = dyn_cast<AbstractConditionalOperator>(E))
+      return CheckConditionalOperator(S, CO, CC, T);
+
   WorkList.push_back({E, CC, false});
 
   if (ExtraCheckForImplicitConversion && E->getType() != T)
