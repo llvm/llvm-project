@@ -1035,18 +1035,6 @@ func.func @vector_store_dead_elim_same_type(%arg0: memref<20x1xi64>) {
   return
 }
 
-// Regression test for https://github.com/llvm/llvm-project/issues/216916:
-// loadCSE must not replace a load with a dominating, equivalent load that
-// has itself already been scheduled for erasure earlier in the same walk.
-// Doing so used to leave a load's uses pointing at an operation that was
-// about to be destroyed, which crashed with "operation destroyed but still
-// has uses". %a and %b below read the same, never-overwritten location
-// (%m[3]; the store only touches %m[0]) and dominate one another, so they
-// are redundant and must be CSE'd down to a single load without crashing.
-// %c reads the same location from inside the loop body: it does not
-// dominate (nor is dominated by) %a/%b in the same way, so loadCSE
-// conservatively leaves it as a separate load — this test only asserts
-// that doing so does not crash.
 memref.global "private" @gv : memref<4xi64> = dense<[1, 2, 3, 4]>
 
 // CHECK-LABEL: func @load_cse_no_replace_with_erased_load

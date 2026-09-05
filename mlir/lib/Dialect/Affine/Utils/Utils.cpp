@@ -1001,8 +1001,7 @@ static void loadCSE(AffineReadOpInterface loadA,
       continue;
 
     // loadB should not already be scheduled for erasure. Otherwise, loadA
-    // would end up being replaced with (and then erased along with) an
-    // operation that no longer exists.
+    // would end up being replaced with an operation that no longer exists.
     if (llvm::is_contained(loadOpsToErase, loadB.getOperation()))
       continue;
 
