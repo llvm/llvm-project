@@ -681,7 +681,8 @@ struct BubbleDownBitCastForStridedSliceExtract
       return failure();
 
     unsigned rank = extractOp.getSourceVectorType().getRank();
-    assert(castDstLastDim % castSrcLastDim == 0);
+    if (castDstLastDim % castSrcLastDim != 0)
+        return failure();
     int64_t expandRatio = castDstLastDim / castSrcLastDim;
 
     // If we have a less number of offsets than the rank, then implicitly we
@@ -752,10 +753,12 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
     bool isNumElemsShrink = castSrcLastDim >= castDstLastDim;
     int64_t ratio;
     if (isNumElemsShrink) {
-      assert(castSrcLastDim % castDstLastDim == 0);
+      if (castSrcLastDim % castDstLastDim != 0)
+        return failure();
       ratio = castSrcLastDim / castDstLastDim;
     } else {
-      assert(castDstLastDim % castSrcLastDim == 0);
+      if (castDstLastDim % castSrcLastDim != 0)
+        return failure();
       ratio = castDstLastDim / castSrcLastDim;
     }
 
@@ -825,7 +828,8 @@ struct BubbleUpBitCastForStridedSliceInsert
     if (castSrcLastDim < castDstLastDim)
       return failure();
 
-    assert(castSrcLastDim % castDstLastDim == 0);
+    if (castSrcLastDim % castDstLastDim != 0)
+      return failure();
     int64_t shrinkRatio = castSrcLastDim / castDstLastDim;
 
     auto insertOp =
@@ -941,7 +945,8 @@ public:
     if (castSrcLastDim < castDstLastDim)
       return failure();
 
-    assert(castSrcLastDim % castDstLastDim == 0);
+    if (castSrcLastDim % castDstLastDim != 0)
+      return failure();
     int64_t shrinkRatio = castSrcLastDim / castDstLastDim;
     // Nothing to do if it is already bitcasting to a single element.
     if (castSrcLastDim == shrinkRatio)
