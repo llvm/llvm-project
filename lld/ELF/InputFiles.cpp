@@ -951,9 +951,26 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
+    // dependentSections holds plain InputSections, and not every section is
+    // one: there is no InputSectionBase at all for an SHT_STRTAB section, a
+    // MergeInputSection for a mergeable one and an EhInputSection for
+    // .eh_frame. Diagnose these as the check below diagnoses a non-regular
+    // linked-to section.
+    //
+    // Test sh_flags and the name as well as the class, so that the diagnostic
+    // does not vary with -O0, which does not merge, or with -r, which keeps
+    // .eh_frame a plain InputSection.
+    StringRef name = check(obj.getSectionName(sec, shstrtab));
+    auto *isec = dyn_cast_or_null<InputSection>(this->sections[i]);
+    if (!isec || (sec.sh_flags & SHF_MERGE) || name == ".eh_frame") {
+      ErrAlways(ctx) << this << ":(" << name
+                     << "): a non-regular section should not have "
+                        "SHF_LINK_ORDER";
+      continue;
+    }
+
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
-    InputSection *isec = cast<InputSection>(this->sections[i]);
     linkSec->dependentSections.push_back(isec);
     if (!isa<InputSection>(linkSec))
       ErrAlways(ctx)
