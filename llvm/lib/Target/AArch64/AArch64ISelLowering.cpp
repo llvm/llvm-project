@@ -4218,6 +4218,17 @@ static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
     // of a SUB operation can be reused.
     PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
                                     {Val->getOperand(0), Val->getOperand(1)});
+    // The first comparison supports the full 12-bit CMP/CMN immediate range,
+    // while subsequent CCMP/CCMN comparisons only support a 5-bit immediate [0, 31].
+    // Prefer a wider-immediate comparison first to avoid materializing constants.
+    if (!PreferFirst && VT.isInteger()) {
+      if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(1))) {
+        APInt CVal = C->getAPIntValue();
+        if (CVal.abs().ugt(31) &&
+            AArch64_AM::isLegalArithImmed(CVal.abs().getZExtValue()))
+          PreferFirst = true;
+      }
+    }
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -21996,6 +22007,28 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(N);
+  // If the opcode is SUBS and the comparison value is negative, transform
+  // it to ADDS (CMN) when abs(C) - 1 is a legal arithmetic immediate,
+  // avoiding materialization of the constant into a register.
+  if (Cmp0.getOpcode() == AArch64ISD::SUBS) {
+    if (auto *C0 = dyn_cast<ConstantSDNode>(Cmp0.getOperand(1))) {
+      APInt C0Val = C0->getAPIntValue();
+      if (C0Val.isNegative() && C0Val.abs().ugt(31) &&
+          (CC0 == AArch64CC::LE || CC0 == AArch64CC::GT)) {
+        APInt AbsC0Minus1 = C0Val.abs() - 1;
+        if (AArch64_AM::isLegalArithImmed(AbsC0Minus1.getZExtValue())) {
+          SDValue NewImm =
+              DAG.getConstant(AbsC0Minus1, DL, C0->getValueType(0));
+          Cmp0 = DAG.getNode(AArch64ISD::ADDS, DL,
+                             DAG.getVTList(Cmp0.getOperand(0).getValueType(),
+                                           FlagsVT),
+                             Cmp0.getOperand(0), NewImm)
+                     .getValue(1);
+          CC0 = (CC0 == AArch64CC::LE) ? AArch64CC::LT : AArch64CC::GE;
+        }
+      }
+    }
+  }
   SDValue CCmp, Condition;
   unsigned NZCV;
 
