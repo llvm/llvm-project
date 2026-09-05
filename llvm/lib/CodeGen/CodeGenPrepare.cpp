@@ -8410,6 +8410,11 @@ public:
   /// Check if it is profitable to promote \p ToBePromoted
   /// by moving downward the transition through.
   bool shouldPromote(const Instruction *ToBePromoted) const {
+    if (!isSafeToSpeculativelyExecute(
+            ToBePromoted, /*CtxI=*/nullptr, /*AC=*/nullptr, /*DT=*/nullptr,
+            /*TLI=*/nullptr, /*UseVariableInfo=*/false,
+            /*IgnoreUBImplyingAttrs=*/false))
+      return false;
     // Promote only if all the operands can be statically expanded.
     // Indeed, we do not want to introduce any new kind of transitions.
     for (const Use &U : ToBePromoted->operands()) {
