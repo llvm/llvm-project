@@ -119,6 +119,7 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
 
+  libc_add_definition(config_options "LIBC_COPT_STRING_COMPARE_IMPL=${LIBC_CONF_STRING_COMPARE_IMPL}")
   libc_add_definition(config_options "LIBC_COPT_STRING_LENGTH_IMPL=${LIBC_CONF_STRING_LENGTH_IMPL}")
   libc_add_definition(config_options "LIBC_COPT_FIND_FIRST_CHARACTER_IMPL=${LIBC_CONF_FIND_FIRST_CHARACTER_IMPL}")
 
