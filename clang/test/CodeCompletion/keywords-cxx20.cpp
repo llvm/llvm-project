@@ -14,14 +14,31 @@ int f(){ co_test test; return 1; }
 module: private;
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:1:3 %s | FileCheck --check-prefix=CHECK-MODULE1 %s
+// CHECK-MODULE1: COMPLETION: module
 // CHECK-MODULE1: module;
 // CHECK-MODULE1: module <#name#>;
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:3:11 %s | FileCheck --check-prefix=CHECK-MODULE2 %s
+// CHECK-MODULE2: COMPLETION: module
 // CHECK-MODULE2: module <#name#>;
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:14:3 %s | FileCheck --check-prefix=CHECK-MODULE3 %s
+// CHECK-MODULE3: COMPLETION: module
 // CHECK-MODULE3: module: private;
+
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:1:1 %s | FileCheck --check-prefix=CHECK-TOPLEVEL %s
+// CHECK-TOPLEVEL: COMPLETION: export
+// CHECK-TOPLEVEL: COMPLETION: import
+// CHECK-TOPLEVEL: import <#name#>;
+// CHECK-TOPLEVEL: COMPLETION: module
+// CHECK-TOPLEVEL: module;
+// CHECK-TOPLEVEL: module <#name#>;
+
+// RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:14:1 %s | FileCheck --check-prefix=CHECK-INTERFACE %s
+// CHECK-INTERFACE: COMPLETION: import
+// CHECK-INTERFACE: import <#name#>;
+// CHECK-INTERFACE: COMPLETION: module
+// CHECK-INTERFACE: module: private;
 
 // RUN: %clang_cc1 -std=c++20 -code-completion-at=%s:3:3 %s | FileCheck --check-prefix=CHECK-EXPORT %s
 // CHECK-EXPORT: export
