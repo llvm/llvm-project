@@ -2515,6 +2515,30 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return NumSrcSignBits - (NumSrcBits - TyBits);
     break;
   }
+  case TargetOpcode::G_BITCAST: {
+    Register Src = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(Src);
+
+    unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+
+    if (DstTy.isScalableVector())
+      break;
+    if (TyBits == NumSrcBits)
+      return computeNumSignBits(Src, DemandedElts, Depth + 1);
+    if (NumSrcBits % TyBits == 0) {
+      unsigned NumElts = DstTy.getNumElements();
+      unsigned Scale = NumSrcBits / TyBits;
+      APInt SrcDemandedElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumElts / Scale);
+      unsigned NumSignBits =
+          computeNumSignBits(Src, SrcDemandedElts, Depth + 1);
+      if (NumSignBits > (Scale - 1) * TyBits) {
+        return NumSignBits - (Scale - 1) * TyBits;
+      }
+      return 1;
+    }
+    break;
+  }
   case TargetOpcode::G_SELECT: {
     return computeNumSignBitsMin(MI.getOperand(2).getReg(),
                                  MI.getOperand(3).getReg(), DemandedElts,
