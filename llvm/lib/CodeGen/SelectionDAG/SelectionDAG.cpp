@@ -2689,6 +2689,42 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
   return CreateStackTemporary(Bytes, Align);
 }
 
+SDValue SelectionDAG::emitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
+                                       const SDLoc &DL, SDValue Chain) {
+  EVT SrcVT = SrcOp.getValueType();
+  Type *DestType = DestVT.getTypeForEVT(*getContext());
+  Align DestAlign = getDataLayout().getPrefTypeAlign(DestType);
+
+  // Create the stack frame object.
+  Align SrcAlign =
+      getDataLayout().getPrefTypeAlign(SrcVT.getTypeForEVT(*getContext()));
+  SDValue FIPtr = CreateStackTemporary(SlotVT.getStoreSize(), SrcAlign);
+
+  FrameIndexSDNode *StackPtrFI = cast<FrameIndexSDNode>(FIPtr);
+  int SPFI = StackPtrFI->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(getMachineFunction(), SPFI);
+
+  // Emit a store to the stack slot.  Use a truncstore if the input value is
+  // later than DestVT.
+  SDValue Store;
+
+  if (SrcVT.bitsGT(SlotVT))
+    Store = getTruncStore(Chain, DL, SrcOp, FIPtr, PtrInfo, SlotVT, SrcAlign);
+  else {
+    assert(SrcVT.bitsEq(SlotVT) && "Invalid store");
+    Store = getStore(Chain, DL, SrcOp, FIPtr, PtrInfo, SrcAlign);
+  }
+
+  // Result is a load from the stack slot.
+  if (SlotVT.bitsEq(DestVT))
+    return getLoad(DestVT, DL, Store, FIPtr, PtrInfo, DestAlign);
+
+  assert(SlotVT.bitsLT(DestVT) && "Unknown extension!");
+  return getExtLoad(ISD::EXTLOAD, DL, DestVT, Store, FIPtr, PtrInfo, SlotVT,
+                    DestAlign);
+}
+
 SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
                                 ISD::CondCode Cond, const SDLoc &dl,
                                 SDNodeFlags Flags) {
