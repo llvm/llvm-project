@@ -357,12 +357,12 @@ namespace {
 // `SubsetOpInterface`, which is unfortunately tensor-only today; if it gains
 // memref support, look into unifying with it to improve code reuse.
 //
-/// Fully static footprint of a memref value resolved through a chain of
-/// rank-preserving, unit-stride `memref.subview` ops: the underlying root
-/// memref and, per root dimension, the `[offset, offset + size)` interval it
-/// covers. Every offset and size should be static; a chain with any dynamic
-/// offset or size (or that otherwise cannot be modelled) has no footprint at
-/// all and should be reported as `std::nullopt`.
+/// Static footprint of a memref value relative to a `root` memref reached
+/// through a chain of rank-preserving, unit-stride `memref.subview` ops: per
+/// `root` dimension, the `[offset, offset + size)` interval the value covers.
+/// The root is the buffer if the whole chain is static, otherwise the source
+/// of the first subview that cannot be modelled statically. Two footprints are
+/// therefore comparable only when they resolve to the *same* root value.
 struct SubviewFootprint {
   Value root;
   SmallVector<int64_t> offsets;
@@ -370,45 +370,43 @@ struct SubviewFootprint {
 };
 } // namespace
 
-/// Resolve `base` through a `memref.subview` chain to its static footprint, or
-/// `std::nullopt` if it cannot be modelled statically.
+/// Resolve `base` through a `memref.subview` chain to a static footprint, or
+/// `std::nullopt` if it cannot be modelled. Composition stops at the first
+/// subview with a dynamic offset/size, a non-unit stride, or a rank reduction;
+/// that subview's own result becomes the footprint root. This keeps two slices
+/// that share a common (possibly dynamically-offset) base comparable through
+/// their static offsets relative to that base.
 static std::optional<SubviewFootprint> resolveSubviewFootprint(Value base) {
-  SmallVector<SubViewOp> chain;
-  Value source = base;
-  while (auto sv = source.getDefiningOp<SubViewOp>()) {
-    chain.push_back(sv);
-    source = sv.getSource();
-  }
-  // The resolved root must be a genuine buffer, not another kind of view.
-  if (isa_and_nonnull<ViewLikeOpInterface>(source.getDefiningOp()))
-    return std::nullopt;
-
-  auto rootTy = dyn_cast<MemRefType>(source.getType());
-  if (!rootTy || !rootTy.hasStaticShape())
+  auto baseTy = dyn_cast<MemRefType>(base.getType());
+  if (!baseTy || llvm::any_of(baseTy.getShape(), ShapedType::isDynamic))
     return std::nullopt;
   SubviewFootprint footprint;
-  footprint.root = source;
-  // Seed with the whole-root footprint (offset 0, full extent per dimension).
-  // Each subview in the chain narrows it below.
-  footprint.offsets.assign(rootTy.getRank(), 0);
-  footprint.sizes.assign(rootTy.getShape().begin(), rootTy.getShape().end());
-  // Compose from the outermost subview (closest to the root) inward.
-  for (SubViewOp sv : llvm::reverse(chain)) {
-    // Rank-reducing subviews would misalign the per-dimension bookkeeping.
-    if (sv.getSourceType().getRank() != sv.getType().getRank())
-      return std::nullopt;
+  // Size is fixed by `base` itself; offset accumulates the static offsets of
+  // the composable subviews walked toward the root.
+  footprint.offsets.assign(baseTy.getRank(), 0);
+  footprint.sizes.assign(baseTy.getShape().begin(), baseTy.getShape().end());
+
+  Value cur = base;
+  while (auto sv = cur.getDefiningOp<SubViewOp>()) {
     ArrayRef<int64_t> staticOffsets = sv.getStaticOffsets();
-    ArrayRef<int64_t> staticSizes = sv.getStaticSizes();
     ArrayRef<int64_t> staticStrides = sv.getStaticStrides();
-    if (llvm::any_of(staticOffsets, ShapedType::isDynamic) ||
-        llvm::any_of(staticSizes, ShapedType::isDynamic) ||
+    // Rank-reducing or non-static-offset / non-unit-stride subviews cannot be
+    // composed: stop here and use `sv`'s result as the root.
+    if (sv.getSourceType().getRank() != sv.getType().getRank() ||
+        llvm::any_of(staticOffsets, ShapedType::isDynamic) ||
         llvm::any_of(staticStrides, [](int64_t s) { return s != 1; }))
-      return std::nullopt;
-    for (unsigned d = 0, e = staticOffsets.size(); d < e; ++d) {
+      break;
+    for (unsigned d = 0, e = staticOffsets.size(); d < e; ++d)
       footprint.offsets[d] += staticOffsets[d];
-      footprint.sizes[d] = staticSizes[d];
-    }
+    cur = sv.getSource();
   }
+  // The root must be a genuine buffer or a `memref.subview` result, not another
+  // kind of view (collapse/expand/reshape) whose coordinate remapping would
+  // invalidate the per-dimension offset bookkeeping.
+  if (auto *def = cur.getDefiningOp())
+    if (isa<ViewLikeOpInterface>(def) && !isa<SubViewOp>(def))
+      return std::nullopt;
+  footprint.root = cur;
   return footprint;
 }
 
