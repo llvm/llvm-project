@@ -247,28 +247,16 @@ define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inre
 ; GFX1170-GISEL-FAKE16-NEXT:    global_store_b16 v1, v0, s[6:7]
 ; GFX1170-GISEL-FAKE16-NEXT:    s_endpgm
 ;
-; GFX12-SDAG-TRUE16-LABEL: s_test_minmax_f16:
-; GFX12-SDAG-TRUE16:       ; %bb.0:
-; GFX12-SDAG-TRUE16-NEXT:    s_maximum_f16 s0, s0, s1
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s5, s4
-; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s4, s3
-; GFX12-SDAG-TRUE16-NEXT:    s_minimum_f16 s0, s0, s2
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX12-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[4:5]
-; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-SDAG-FAKE16-LABEL: s_test_minmax_f16:
-; GFX12-SDAG-FAKE16:       ; %bb.0:
-; GFX12-SDAG-FAKE16-NEXT:    s_maximum_f16 s0, s0, s1
-; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s5, s4
-; GFX12-SDAG-FAKE16-NEXT:    s_mov_b32 s4, s3
-; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX12-SDAG-FAKE16-NEXT:    s_minimum_f16 s0, s0, s2
-; GFX12-SDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
-; GFX12-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[4:5]
-; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
+; GFX12-SDAG-LABEL: s_test_minmax_f16:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_maximum_f16 s0, s0, s1
+; GFX12-SDAG-NEXT:    s_mov_b32 s5, s4
+; GFX12-SDAG-NEXT:    s_mov_b32 s4, s3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-SDAG-NEXT:    s_minimum_f16 s0, s0, s2
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; GFX12-SDAG-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-TRUE16-LABEL: s_test_minmax_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:

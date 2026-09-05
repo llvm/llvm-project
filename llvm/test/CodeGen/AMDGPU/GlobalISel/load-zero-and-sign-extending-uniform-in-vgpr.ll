@@ -283,7 +283,7 @@ define amdgpu_ps void @sextload_and_zextload_P1_i8_to_i16_not_uniform_mmo(ptr ad
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -298,7 +298,7 @@ define amdgpu_ps void @sextload_and_zextload_P1_i8_to_i16_not_uniform_mmo(ptr ad
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
   %a = load volatile i8, ptr addrspace(1) %ptra
@@ -325,7 +325,7 @@ define amdgpu_ps void @sextload_and_zextload_P1_i8_to_i16_clobbered(ptr addrspac
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -343,7 +343,7 @@ define amdgpu_ps void @sextload_and_zextload_P1_i8_to_i16_clobbered(ptr addrspac
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_endpgm
   store i16 0, ptr addrspace(1) %out
@@ -448,7 +448,7 @@ define amdgpu_ps void @sextload_and_zextload_P3_i8_to_i16(ptr addrspace(3) inreg
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-NEXT:    ds_store_b16 v0, v1
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -463,7 +463,7 @@ define amdgpu_ps void @sextload_and_zextload_P3_i8_to_i16(ptr addrspace(3) inreg
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_mov_b16_e32 v1.l, s0
+; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    ds_store_b16 v0, v1
 ; GFX12-NEXT:    s_endpgm
   %a = load i8, ptr addrspace(3) %ptra

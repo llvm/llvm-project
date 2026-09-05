@@ -3920,10 +3920,9 @@ define amdgpu_ps half @v_fshr_i16_vss(i16 %lhs, i16 inreg %rhs, i16 inreg %amt) 
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 s2, 15, s1
 ; GFX11-TRUE16-NEXT:    s_and_b32 s1, s1, 15
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, s2, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, s2, v0.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, s0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;

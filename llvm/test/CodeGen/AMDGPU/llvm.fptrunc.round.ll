@@ -1179,22 +1179,20 @@ define amdgpu_gs void @s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s0
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s1
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v4.l, s3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-GISEL-NEXT:    v_mov_b16_e32 v5.l, v2.l
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s2
-; GFX11-GISEL-NEXT:    v_mov_b16_e32 v6.l, v3.l
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v4.l, s2
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v5.l, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 2
-; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s3
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s3, v4
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v5
-; GFX11-GISEL-NEXT:    v_mov_b16_e32 v5.l, v2.l
 ; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s2
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v6
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v5
+; GFX11-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s3
 ; GFX11-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX11-GISEL-NEXT:    s_pack_ll_b32_b16 s1, s2, s3
+; GFX11-GISEL-NEXT:    s_pack_ll_b32_b16 s1, s4, s5
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0

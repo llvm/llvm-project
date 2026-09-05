@@ -92,8 +92,9 @@ body: |
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-TRUE16-NEXT: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-TRUE16-NEXT: [[V_CVT_F16_F32_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CVT_F16_F32_t16_e64 0, [[V_CVT_F32_I32_e64_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_CVT_F16_F32_t16_e64_]]
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_CVT_F16_F32_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
     ;
     ; GFX11-FAKE16-LABEL: name: sitofp_i32_to_f16_vv
     ; GFX11-FAKE16: liveins: $vgpr0
@@ -141,8 +142,9 @@ body: |
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX11-TRUE16-NEXT: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-TRUE16-NEXT: [[V_CVT_F16_F32_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CVT_F16_F32_t16_e64 0, [[V_CVT_F32_I32_e64_]], 0, 0, 0, implicit $mode, implicit $exec
-    ; GFX11-TRUE16-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_CVT_F16_F32_t16_e64_]]
-    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[COPY1]]
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_CVT_F16_F32_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
+    ; GFX11-TRUE16-NEXT: $vgpr0 = COPY [[REG_SEQUENCE]]
     ;
     ; GFX11-FAKE16-LABEL: name: sitofp_i32_to_f16_vs
     ; GFX11-FAKE16: liveins: $sgpr0

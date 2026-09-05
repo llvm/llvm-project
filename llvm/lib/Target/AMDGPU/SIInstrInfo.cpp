@@ -6489,6 +6489,11 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
         .addImm(AMDGPU::sub0_sub1)
         .addReg(Low64, RegState::Kill)
         .addImm(AMDGPU::sub2_sub3);
+  } else if (Size == 16 && RI.getCommonSubClass(&AMDGPU::SGPR_32RegClass, RC)) {
+    // Special legalization for sreg32 to vgpr16 copy
+    Register VReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, I, DL, get(Opcode), VReg).add(MO);
+    BuildMI(*MBB, I, DL, get(Opcode), Reg).addReg(VReg, {}, AMDGPU::lo16);
   } else {
     BuildMI(*MBB, I, DL, get(Opcode), Reg).add(MO);
   }
