@@ -154,3 +154,37 @@ body: |
     %3:_(i64) = G_CONSTANT i64 10
     %4:_(<4 x i16>) = G_INSERT_VECTOR_ELT %2, %1, %3
 ...
+---
+# computeNumSignBits: scalable vector - conservatively checks both operands
+name: signbits_scalable
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @signbits_scalable
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+    %0:_(i8) = COPY $b0
+    %1:_(i16) = G_SEXT %0
+    %2:_(<vscale x 4 x i16>) = COPY $z0
+    %3:_(i64) = G_CONSTANT i64 0
+    %4:_(<vscale x 4 x i16>) = G_INSERT_VECTOR_ELT %2, %1, %3
+...
+---
+# computeNumSignBits: scalable vector with sext source - min of both
+name: signbits_scalable_sext_src
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @signbits_scalable_sext_src
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+    %0:_(i8) = COPY $b0
+    %1:_(i16) = G_SEXT %0
+    %2:_(<vscale x 4 x i16>) = G_SPLAT_VECTOR %1
+    %3:_(i64) = G_CONSTANT i64 0
+    %4:_(<vscale x 4 x i16>) = G_INSERT_VECTOR_ELT %2, %1, %3
+...
