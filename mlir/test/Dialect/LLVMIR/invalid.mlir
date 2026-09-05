@@ -1419,6 +1419,27 @@ func.func @insert_vector_invalid_source_vector_size(%arg0 : vector<16385xi8>, %a
 
 // -----
 
+func.func @insert_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<536870913xi8> into vector<16xi8>
+}
+
+// -----
+
+func.func @insert_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>, %arg1 : vector<[16]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<[4294967296]xi8> into vector<[16]xi8>
+}
+
+// -----
+
+func.func @insert_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<2305843009213693953xi8> into vector<16xi8>
+}
+
+// -----
+
 func.func @insert_vector_invalid_dest_vector_size(%arg0 : vector<16xi8>, %arg1 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<16xi8> into vector<[16385]xi8>
@@ -1436,6 +1457,27 @@ func.func @insert_scalable_into_fixed_length_vector(%arg0 : vector<[8]xf32>, %ar
 func.func @extract_vector_invalid_source_vector_size(%arg0 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[16385]xi8>
+}
+
+// -----
+
+func.func @extract_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<536870913xi8>
+}
+
+// -----
+
+func.func @extract_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[4294967296]xi8>
+}
+
+// -----
+
+func.func @extract_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<2305843009213693953xi8>
 }
 
 // -----
