@@ -103,14 +103,15 @@ void Scope::Init(Scope *parent, unsigned flags) {
   NRVO = std::nullopt;
 }
 
-bool Scope::containedInPrototypeScope() const {
-  const Scope *S = this;
-  while (S) {
+const Scope *Scope::getEnclosingFunctionPrototypeScope() const {
+  for (const Scope *S = this; S; S = S->getParent())
     if (S->isFunctionPrototypeScope())
-      return true;
-    S = S->getParent();
-  }
-  return false;
+      return S;
+  return nullptr;
+}
+
+bool Scope::containedInPrototypeScope() const {
+  return getEnclosingFunctionPrototypeScope() != nullptr;
 }
 
 void Scope::EnterLoopBody(LabelDecl *LD) {

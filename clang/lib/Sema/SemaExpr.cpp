@@ -63,6 +63,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -122,6 +123,40 @@ static void DiagnoseUnusedOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc) {
         S.Diag(Loc, diag::warn_used_but_marked_unused) << D;
     }
   }
+}
+
+static bool checkThreadLocalCompoundLiteral(Sema &S, SourceLocation Loc,
+                                            QualType T) {
+  if (S.getLangOpts().ObjCAutoRefCount && T->isObjCLifetimeType()) {
+    Qualifiers::ObjCLifetime Lifetime = T.getObjCLifetime();
+    if (Lifetime == Qualifiers::OCL_None)
+      Lifetime = T->getObjCARCImplicitLifetime();
+
+    if (Lifetime && Lifetime != Qualifiers::OCL_ExplicitNone) {
+      S.Diag(Loc, diag::err_arc_thread_ownership)
+          << S.Context.getLifetimeQualifiedType(T, Lifetime);
+      return true;
+    }
+  }
+
+  if (T.isDestructedType()) {
+    S.Diag(Loc, diag::err_thread_nontrivial_dtor);
+    return true;
+  }
+
+  unsigned MaxAlign = S.Context.getTargetInfo().getMaxTLSAlign();
+  if (!MaxAlign || T->isDependentType())
+    return false;
+
+  CharUnits MaxAlignChars = S.Context.toCharUnitsFromBits(MaxAlign);
+  CharUnits TypeAlign = S.Context.getTypeAlignInChars(T);
+  if (TypeAlign <= MaxAlignChars)
+    return false;
+
+  S.Diag(Loc, diag::err_tls_aligned_over_maximum)
+      << (unsigned)TypeAlign.getQuantity() << /*IsCompoundLiteral=*/true
+      << (unsigned)MaxAlignChars.getQuantity();
+  return true;
 }
 
 void Sema::NoteDeletedFunction(FunctionDecl *Decl) {
@@ -7435,9 +7470,9 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), FDecl);
 }
 
-ExprResult
-Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
-                           SourceLocation RParenLoc, Expr *InitExpr) {
+ExprResult Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
+                                      SourceLocation RParenLoc, Expr *InitExpr,
+                                      const DeclSpec *DS) {
   assert(Ty && "ActOnCompoundLiteral(): missing type");
   assert(InitExpr && "ActOnCompoundLiteral(): missing expression");
 
@@ -7446,13 +7481,95 @@ Sema::ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
   if (!TInfo)
     TInfo = Context.getTrivialTypeSourceInfo(literalType);
 
-  return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, InitExpr);
+  StorageClass SC = SC_None;
+  ThreadStorageClassSpecifier TSC = TSCS_unspecified;
+  ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified;
+  SourceLocation StorageClassLoc;
+  SourceLocation ThreadStorageClassLoc;
+  SourceLocation ConstexprLoc;
+  if (DS) {
+    DeclSpec::SCS StorageClassSpec = DS->getStorageClassSpec();
+    if (StorageClassSpec != DeclSpec::SCS_unspecified &&
+        StorageClassSpec != DeclSpec::SCS_static &&
+        StorageClassSpec != DeclSpec::SCS_register) {
+      Diag(DS->getStorageClassSpecLoc(),
+           diag::err_compound_literal_invalid_storage_class)
+          << DeclSpec::getSpecifierName(StorageClassSpec);
+      return ExprError();
+    }
+    SC = StorageClassSpecToVarDeclStorageClass(*DS);
+
+    TSC = DS->getThreadStorageClassSpec();
+    ConstexprKind = DS->getConstexprSpecifier();
+    StorageClassLoc = DS->getStorageClassSpecLoc();
+    ThreadStorageClassLoc = DS->getThreadStorageClassSpecLoc();
+    ConstexprLoc = DS->getConstexprSpecLoc();
+  }
+
+  return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, InitExpr, SC,
+                                  StorageClassLoc, TSC, ThreadStorageClassLoc,
+                                  ConstexprKind, ConstexprLoc);
 }
 
-ExprResult
-Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
-                               SourceLocation RParenLoc, Expr *LiteralExpr) {
+ExprResult Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc,
+                                          TypeSourceInfo *TInfo,
+                                          SourceLocation RParenLoc,
+                                          Expr *LiteralExpr, StorageClass SC,
+                                          ThreadStorageClassSpecifier TSC,
+                                          ConstexprSpecKind ConstexprKind) {
+  return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, LiteralExpr, SC,
+                                  LParenLoc, TSC, LParenLoc, ConstexprKind,
+                                  LParenLoc);
+}
+
+ExprResult Sema::BuildCompoundLiteralExpr(
+    SourceLocation LParenLoc, TypeSourceInfo *TInfo, SourceLocation RParenLoc,
+    Expr *LiteralExpr, StorageClass SC, SourceLocation StorageClassLoc,
+    ThreadStorageClassSpecifier TSC, SourceLocation ThreadStorageClassLoc,
+    ConstexprSpecKind ConstexprKind, SourceLocation ConstexprLoc) {
   QualType literalType = TInfo->getType();
+  const Scope *S = getCurScope();
+  const Scope *PrototypeScope = S->getEnclosingFunctionPrototypeScope();
+
+  bool HasStatic = SC == SC_Static;
+  bool HasRegister = SC == SC_Register;
+  bool HasThreadStorage = TSC != TSCS_unspecified;
+  bool HasConstexpr = ConstexprKind == ConstexprSpecKind::Constexpr;
+
+  bool IsFunctionDeclarationScope =
+      PrototypeScope && PrototypeScope->isFunctionDeclarationScope();
+  bool IsFileScope = !CurContext->isFunctionOrMethod() &&
+                     !S->isInCFunctionScope() && !PrototypeScope;
+
+  if (HasConstexpr && literalType->isObjectType())
+    literalType.addConst();
+
+  if (getLangOpts().C23 &&
+      (SC != SC_None || HasThreadStorage || HasConstexpr)) {
+    if (HasRegister && IsFileScope) {
+      Diag(StorageClassLoc, diag::err_register_compound_literal_file_scope);
+      return ExprError();
+    }
+    if (HasThreadStorage && !IsFileScope && !HasStatic) {
+      Diag(ThreadStorageClassLoc,
+           diag::err_thread_local_compound_literal_without_static);
+      return ExprError();
+    }
+    if (HasThreadStorage && !Context.getTargetInfo().isTLSSupported()) {
+      Diag(ThreadStorageClassLoc, diag::err_thread_unsupported);
+      return ExprError();
+    }
+    if (HasConstexpr &&
+        CheckConstexprType(ConstexprLoc, literalType,
+                           diag::err_c23_constexpr_invalid_type))
+      return ExprError();
+  }
+
+  if (getLangOpts().C23 && IsFileScope &&
+      literalType->isVariablyModifiedType()) {
+    Diag(LParenLoc, diag::err_vm_decl_in_file_scope);
+    return ExprError();
+  }
 
   if (literalType->isArrayType()) {
     if (RequireCompleteSizedType(
@@ -7487,32 +7604,45 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
         return ExprError();
     }
   } else if (!literalType->isDependentType() &&
-             RequireCompleteType(LParenLoc, literalType,
-               diag::err_typecheck_decl_incomplete_type,
-               SourceRange(LParenLoc, LiteralExpr->getSourceRange().getEnd())))
+             RequireCompleteType(
+                 LParenLoc, literalType,
+                 diag::err_typecheck_decl_incomplete_type,
+                 SourceRange(LParenLoc,
+                             LiteralExpr->getSourceRange().getEnd())))
     return ExprError();
 
-  InitializedEntity Entity
-    = InitializedEntity::InitializeCompoundLiteralInit(TInfo);
-  InitializationKind Kind
-    = InitializationKind::CreateCStyleCast(LParenLoc,
-                                           SourceRange(LParenLoc, RParenLoc),
-                                           /*InitList=*/true);
+  InitializedEntity Entity = InitializedEntity::InitializeCompoundLiteralInit(
+      TInfo, literalType, ConstexprKind);
+  InitializationKind Kind = InitializationKind::CreateCStyleCast(
+      LParenLoc, SourceRange(LParenLoc, RParenLoc),
+      /*InitList=*/true);
   InitializationSequence InitSeq(*this, Entity, Kind, LiteralExpr);
-  ExprResult Result = InitSeq.Perform(*this, Entity, Kind, LiteralExpr,
-                                      &literalType);
+  ExprResult Result =
+      InitSeq.Perform(*this, Entity, Kind, LiteralExpr, &literalType);
   if (Result.isInvalid())
     return ExprError();
   LiteralExpr = Result.get();
 
-  // We treat the compound literal as being at file scope if it's not in a
-  // function or method body, or within the function's prototype scope. This
-  // means the following compound literal is not at file scope:
-  //   void func(char *para[(int [1]){ 0 }[0]);
-  const Scope *S = getCurScope();
-  bool IsFileScope = !CurContext->isFunctionOrMethod() &&
-                     !S->isInCFunctionScope() &&
-                     (!S || !S->isFunctionPrototypeScope());
+  if (HasConstexpr && !LiteralExpr->isTypeDependent() &&
+      !LiteralExpr->isValueDependent() && !literalType->isDependentType()) {
+    SmallVector<PartialDiagnosticAt, 4> Notes;
+    Expr::EvalResult Eval;
+    Eval.Diag = &Notes;
+    if (!LiteralExpr->EvaluateAsConstantExpr(Eval, Context) ||
+        Notes.size() > 0) {
+      SourceLocation DiagLoc = ConstexprLoc;
+      if (Notes.size() == 1 && Notes.front().second.getDiagID() ==
+                                   diag::note_invalid_subexpr_in_const_expr) {
+        DiagLoc = Notes.front().first;
+        Notes.clear();
+      }
+      Diag(DiagLoc, diag::err_compound_literal_initializer_not_constant)
+          << LiteralExpr->getSourceRange();
+      for (const PartialDiagnosticAt &Note : Notes)
+        Diag(Note.first, Note.second);
+      return ExprError();
+    }
+  }
 
   // In C, compound literals are l-values for some reason.
   // For GCC compatibility, in C++, file-scope array compound literals with
@@ -7536,34 +7666,56 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
       (getLangOpts().CPlusPlus && !(IsFileScope && literalType->isArrayType()))
           ? VK_PRValue
           : VK_LValue;
+  CompoundLiteralExpr::ScopeKind Scope =
+      IsFileScope ? CompoundLiteralExpr::ScopeKind::File
+                  : CompoundLiteralExpr::ScopeKind::Block;
+
+  bool HasGlobalStorage =
+      IsFileScope || (getLangOpts().C23 && (HasStatic || HasThreadStorage));
+
+  if (HasThreadStorage && checkThreadLocalCompoundLiteral(
+                              *this, ThreadStorageClassLoc, literalType))
+    return ExprError();
 
   // C99 6.5.2.5
   //  "If the compound literal occurs outside the body of a function, the
   //  initializer list shall consist of constant expressions."
-  if (IsFileScope)
+  if (HasGlobalStorage || HasConstexpr)
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
-        if (!Init->isTypeDependent() && !Init->isValueDependent() &&
+        if (!HasConstexpr && !Init->isTypeDependent() &&
+            !Init->isValueDependent() &&
             !Init->isConstantInitializer(Context)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
         }
 
-        ILE->setInit(i, ConstantExpr::Create(Context, Init));
+        Expr::EvalResult Eval;
+        if (HasConstexpr &&
+            Init->EvaluateAsRValue(Eval, Context,
+                                   /*InConstantContext=*/true) &&
+            Eval.Val.hasValue())
+          ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
+        else
+          ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
 
-  auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
-                                              LiteralExpr, IsFileScope);
-  if (IsFileScope) {
-    if (!LiteralExpr->isTypeDependent() &&
-        !LiteralExpr->isValueDependent() &&
-        !literalType->isDependentType()) // C99 6.5.2.5p3
+  auto *E = new (Context)
+      CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK, LiteralExpr, Scope,
+                          SC, TSC, ConstexprKind);
+
+  if (HasGlobalStorage && !HasConstexpr) {
+    if (!LiteralExpr->isTypeDependent() && !LiteralExpr->isValueDependent() &&
+        !literalType->isDependentType()) { // C99 6.5.2.5p3
       if (CheckForConstantInitializer(LiteralExpr))
         return ExprError();
-  } else if (literalType.getAddressSpace() != LangAS::opencl_private &&
-             literalType.getAddressSpace() != LangAS::Default) {
+    }
+  }
+
+  if (!IsFileScope && literalType.getAddressSpace() != LangAS::opencl_private &&
+      literalType.getAddressSpace() != LangAS::Default) {
     // Embedded-C extensions to C99 6.5.2.5:
     //   "If the compound literal occurs inside the body of a function, the
     //   type name shall not be qualified by an address-space qualifier."
@@ -7572,22 +7724,41 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     return ExprError();
   }
 
-  if (!IsFileScope && !getLangOpts().CPlusPlus) {
+  if (HasStatic && !literalType.isConstQualified()) {
+    if (PrototypeScope) {
+      if (IsFunctionDeclarationScope &&
+          DelayedDiagnostics.shouldDelayDiagnostics())
+        DelayedDiagnostics.add(
+            sema::DelayedDiagnostic::makeForbiddenStatic(StorageClassLoc));
+    } else {
+      DiagnoseStaticInInline(StorageClassLoc, getCurFunctionDecl());
+    }
+  }
+
+  if (!HasGlobalStorage && !getLangOpts().CPlusPlus) {
     // Compound literals that have automatic storage duration are destroyed at
     // the end of the scope in C; in C++, they're just temporaries.
 
-    // Emit diagnostics if it is or contains a C union type that is non-trivial
-    // to destruct.
-    if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
-      checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
-                            NonTrivialCUnionContext::CompoundLiteral,
-                            NTCUK_Destruct);
+    if (PrototypeScope) {
+      if (literalType.isDestructedType()) {
+        Cleanup.setExprNeedsCleanups(true);
+        ExprCleanupObjects.push_back(E);
+      }
+    } else {
+      // Emit diagnostics if it is or contains a C union type that is
+      // non-trivial to destruct.
+      if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
+        checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
+                              NonTrivialCUnionContext::CompoundLiteral,
+                              NTCUK_Destruct);
 
-    // Diagnose jumps that enter or exit the lifetime of the compound literal.
-    if (literalType.isDestructedType()) {
-      Cleanup.setExprNeedsCleanups(true);
-      ExprCleanupObjects.push_back(E);
-      getCurFunction()->setHasBranchProtectedScope();
+      // Diagnose jumps that enter or exit the lifetime of the compound
+      // literal.
+      if (literalType.isDestructedType()) {
+        Cleanup.setExprNeedsCleanups(true);
+        ExprCleanupObjects.push_back(E);
+        getCurFunction()->setHasBranchProtectedScope();
+      }
     }
   }
 
@@ -10124,8 +10295,9 @@ static void ConstructTransparentUnion(Sema &S, ASTContext &C,
   // Build a compound literal constructing a value of the transparent
   // union type from this initializer list.
   TypeSourceInfo *unionTInfo = C.getTrivialTypeSourceInfo(UnionType);
-  EResult = new (C) CompoundLiteralExpr(SourceLocation(), unionTInfo, UnionType,
-                                        VK_PRValue, Initializer, false);
+  EResult = new (C)
+      CompoundLiteralExpr(SourceLocation(), unionTInfo, UnionType, VK_PRValue,
+                          Initializer, CompoundLiteralExpr::ScopeKind::Block);
 }
 
 AssignConvertType
@@ -14904,68 +15076,6 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
   }
 }
 
-/// getPrimaryDecl - Helper function for CheckAddressOfOperand().
-/// This routine allows us to typecheck complex/recursive expressions
-/// where the declaration is needed for type checking. We only need to
-/// handle cases when the expression references a function designator
-/// or is an lvalue. Here are some examples:
-///  - &(x) => x
-///  - &*****f => f for f a function designator.
-///  - &s.xx => s
-///  - &s.zz[1].yy -> s, if zz is an array
-///  - *(x + 1) -> x, if x is an array
-///  - &"123"[2] -> 0
-///  - & __real__ x -> x
-///
-/// FIXME: We don't recurse to the RHS of a comma, nor handle pointers to
-/// members.
-static ValueDecl *getPrimaryDecl(Expr *E) {
-  switch (E->getStmtClass()) {
-  case Stmt::DeclRefExprClass:
-    return cast<DeclRefExpr>(E)->getDecl();
-  case Stmt::MemberExprClass:
-    // If this is an arrow operator, the address is an offset from
-    // the base's value, so the object the base refers to is
-    // irrelevant.
-    if (cast<MemberExpr>(E)->isArrow())
-      return nullptr;
-    // Otherwise, the expression refers to a part of the base
-    return getPrimaryDecl(cast<MemberExpr>(E)->getBase());
-  case Stmt::ArraySubscriptExprClass: {
-    // FIXME: This code shouldn't be necessary!  We should catch the implicit
-    // promotion of register arrays earlier.
-    Expr* Base = cast<ArraySubscriptExpr>(E)->getBase();
-    if (ImplicitCastExpr* ICE = dyn_cast<ImplicitCastExpr>(Base)) {
-      if (ICE->getSubExpr()->getType()->isArrayType())
-        return getPrimaryDecl(ICE->getSubExpr());
-    }
-    return nullptr;
-  }
-  case Stmt::UnaryOperatorClass: {
-    UnaryOperator *UO = cast<UnaryOperator>(E);
-
-    switch(UO->getOpcode()) {
-    case UO_Real:
-    case UO_Imag:
-    case UO_Extension:
-      return getPrimaryDecl(UO->getSubExpr());
-    default:
-      return nullptr;
-    }
-  }
-  case Stmt::ParenExprClass:
-    return getPrimaryDecl(cast<ParenExpr>(E)->getSubExpr());
-  case Stmt::ImplicitCastExprClass:
-    // If the result of an implicit cast is an l-value, we care about
-    // the sub-expression; otherwise, the result here doesn't matter.
-    return getPrimaryDecl(cast<ImplicitCastExpr>(E)->getSubExpr());
-  case Stmt::CXXUuidofExprClass:
-    return cast<CXXUuidofExpr>(E)->getGuidDecl();
-  default:
-    return nullptr;
-  }
-}
-
 namespace {
 enum {
   AO_Bit_Field = 0,
@@ -14973,9 +15083,47 @@ enum {
   AO_Property_Expansion = 2,
   AO_Register_Variable = 3,
   AO_Matrix_Element = 4,
-  AO_No_Error = 5
+  AO_Register_Compound_Literal = 5,
+  AO_No_Error = 6
 };
 }
+
+using PrimaryObject = llvm::PointerUnion<ValueDecl *, CompoundLiteralExpr *>;
+
+static PrimaryObject getPrimaryObject(Expr *E) {
+  E = E->IgnoreParens();
+  switch (E->getStmtClass()) {
+  case Stmt::DeclRefExprClass:
+    return cast<DeclRefExpr>(E)->getDecl();
+  case Stmt::CompoundLiteralExprClass:
+    return cast<CompoundLiteralExpr>(E);
+  case Stmt::MemberExprClass:
+    if (cast<MemberExpr>(E)->isArrow())
+      return {};
+    return getPrimaryObject(cast<MemberExpr>(E)->getBase());
+  case Stmt::ArraySubscriptExprClass: {
+    Expr *Base = cast<ArraySubscriptExpr>(E)->getBase()->IgnoreParens();
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(Base);
+        ICE && ICE->getSubExpr()->getType()->isArrayType())
+      return getPrimaryObject(ICE->getSubExpr());
+    return {};
+  }
+  case Stmt::UnaryOperatorClass: {
+    UnaryOperator *UO = cast<UnaryOperator>(E);
+    if (UO->getOpcode() == UO_Real || UO->getOpcode() == UO_Imag ||
+        UO->getOpcode() == UO_Extension)
+      return getPrimaryObject(UO->getSubExpr());
+    return {};
+  }
+  case Stmt::ImplicitCastExprClass:
+    return getPrimaryObject(cast<ImplicitCastExpr>(E)->getSubExpr());
+  case Stmt::CXXUuidofExprClass:
+    return cast<CXXUuidofExpr>(E)->getGuidDecl();
+  default:
+    return {};
+  }
+}
+
 /// Diagnose invalid operand for address of operations.
 ///
 /// \param Type The type of operand which cannot have its address taken.
@@ -15079,7 +15227,8 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     // Technically, there should be a check for array subscript
     // expressions here, but the result of one is always an lvalue anyway.
   }
-  ValueDecl *dcl = getPrimaryDecl(op);
+  PrimaryObject Primary = getPrimaryObject(op);
+  ValueDecl *dcl = Primary.dyn_cast<ValueDecl *>();
 
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(dcl))
     if (!checkAddressOfFunctionIsAvailable(FD, /*Complain=*/true,
@@ -15230,6 +15379,10 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
                     NonTypeTemplateParmDecl, BindingDecl, MSGuidDecl,
                     UnnamedGlobalConstantDecl>(dcl))
       llvm_unreachable("Unknown/unexpected decl type");
+  } else if (!getLangOpts().CPlusPlus) {
+    if (auto *CLE = Primary.dyn_cast<CompoundLiteralExpr *>();
+        CLE && CLE->getStorageClass() == SC_Register)
+      AddressOfError = AO_Register_Compound_Literal;
   }
 
   if (AddressOfError != AO_No_Error) {

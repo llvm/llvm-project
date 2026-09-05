@@ -1243,7 +1243,10 @@ void ASTStmtWriter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   Record.AddSourceLocation(E->getLParenLoc());
   Record.AddTypeSourceInfo(E->getTypeSourceInfo());
   Record.AddStmt(E->getInitializer());
-  Record.push_back(E->isFileScope());
+  Record.push_back(llvm::to_underlying(E->getScopeKind()));
+  Record.push_back(E->getStorageClass());
+  Record.push_back(E->getTSCSpec());
+  Record.push_back(E->isConstexpr());
   Code = serialization::EXPR_COMPOUND_LITERAL;
 }
 

@@ -2491,7 +2491,8 @@ def err_init_conversion_failed : Error<
   "base class|a constructor delegation|a vector element|a matrix element|a "
   "block element|a block element|a complex element|a lambda capture|a compound"
   " literal initializer|a related result|a parameter of CF audited function|a "
-  "structured binding|a member subobject}0 "
+  "structured binding|a member subobject|a constexpr compound literal "
+  "initializer}0 "
   "%diff{of type $ with an %select{rvalue|lvalue}2 of type $|"
   "with an %select{rvalue|lvalue}2 of incompatible type}1,3"
   "%select{|: different classes%diff{ ($ vs $)|}5,6"
@@ -3186,6 +3187,15 @@ def err_c23_constexpr_init_type_mismatch : Error<
   "constexpr initializer for type %0 is of type %1">;
 def err_c23_constexpr_pointer_not_null : Error<
   "constexpr pointer initializer is not null">;
+def err_register_compound_literal_file_scope : Error<
+  "file scope compound literal specifies 'register'">;
+def err_thread_local_compound_literal_without_static : Error<
+  "compound literal with 'thread_local' storage duration at block scope must "
+  "also specify 'static'">;
+def err_compound_literal_invalid_storage_class : Error<
+  "storage class specifier '%0' is not permitted in a compound literal">;
+def err_compound_literal_initializer_not_constant : Error<
+  "initializer of compound literal must be a constant expression">;
 
 // C++ Concepts
 def err_concept_decls_may_only_appear_in_global_namespace_scope : Error<
@@ -3767,9 +3777,10 @@ def err_attr_codemodel_arg : Error<"code model '%0' is not supported on this tar
 
 def err_aix_attr_unsupported : Error<"%0 attribute is not yet supported on AIX">;
 
-def err_tls_var_aligned_over_maximum : Error<
-  "alignment (%0) of thread-local variable %1 is greater than the maximum supported "
-  "alignment (%2) for a thread-local variable on this target">;
+def err_tls_aligned_over_maximum : Error<
+  "alignment (%0) of thread-local %select{variable %3|compound literal}1 is "
+  "greater than the maximum supported alignment (%2) for "
+  "%select{a thread-local variable|thread-local storage}1 on this target">;
 
 def err_only_annotate_after_access_spec : Error<
   "access specifier can only have annotation attributes">;
@@ -7949,7 +7960,8 @@ def err_typecheck_sclass_func : Error<"illegal storage class on function">;
 def err_static_block_func : Error<
   "function declared in block scope cannot have 'static' storage class">;
 def err_typecheck_address_of : Error<"address of %select{bit-field"
-  "|vector element|property expression|register variable|matrix element}0 requested">;
+  "|vector element|property expression|register variable|matrix element"
+  "|register compound literal}0 requested">;
 def ext_typecheck_addrof_void : Extension<
   "ISO C forbids taking the address of an expression of type 'void'">;
 def err_unqualified_pointer_member_function : Error<

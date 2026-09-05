@@ -5701,11 +5701,7 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
   return Invalid;
 }
 
-/// StorageClassSpecToVarDeclStorageClass - Maps a DeclSpec::SCS to
-/// a VarDecl::StorageClass. Any error reporting is up to the caller:
-/// illegal input values are mapped to SC_None.
-static StorageClass
-StorageClassSpecToVarDeclStorageClass(const DeclSpec &DS) {
+StorageClass Sema::StorageClassSpecToVarDeclStorageClass(const DeclSpec &DS) {
   DeclSpec::SCS StorageClassSpec = DS.getStorageClassSpec();
   assert(StorageClassSpec != DeclSpec::SCS_typedef &&
          "Parser allowed 'typedef' as storage class VarDecl.");
@@ -7456,7 +7452,7 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
 /// Given that we are within the definition of the given function,
 /// will that definition behave like C99's 'inline', where the
 /// definition is discarded except for optimization purposes?
-static bool isFunctionDefinitionDiscarded(Sema &S, FunctionDecl *FD) {
+static bool isFunctionDefinitionDiscarded(Sema &S, const FunctionDecl *FD) {
   // Try to avoid calling GetGVALinkageForFunction.
 
   // All cases of this require the 'inline' keyword.
@@ -7468,6 +7464,14 @@ static bool isFunctionDefinitionDiscarded(Sema &S, FunctionDecl *FD) {
 
   // Okay, go ahead and call the relatively-more-expensive function.
   return S.Context.GetGVALinkageForFunction(FD) == GVA_AvailableExternally;
+}
+
+void Sema::DiagnoseStaticInInline(SourceLocation Loc, const FunctionDecl *FD) {
+  if (!FD || !isFunctionDefinitionDiscarded(*this, FD))
+    return;
+
+  Diag(Loc, diag::warn_static_local_in_extern_inline);
+  MaybeSuggestAddingStaticToDecl(FD);
 }
 
 /// Determine whether a variable is extern "C" prior to attaching
@@ -8227,14 +8231,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // be marked 'static'.  Also note that it's possible to get these
   // semantics in C++ using __attribute__((gnu_inline)).
   if (SC == SC_Static && S->getFnParent() != nullptr &&
-      !NewVD->getType().isConstQualified()) {
-    FunctionDecl *CurFD = getCurFunctionDecl();
-    if (CurFD && isFunctionDefinitionDiscarded(*this, CurFD)) {
-      Diag(D.getDeclSpec().getStorageClassSpecLoc(),
-           diag::warn_static_local_in_extern_inline);
-      MaybeSuggestAddingStaticToDecl(CurFD);
-    }
-  }
+      !NewVD->getType().isConstQualified())
+    DiagnoseStaticInInline(D.getDeclSpec().getStorageClassSpecLoc(),
+                           getCurFunctionDecl());
 
   if (D.getDeclSpec().isModulePrivateSpecified()) {
     if (IsVariableTemplateSpecialization)
@@ -8935,32 +8934,31 @@ static bool checkForConflictWithNonVisibleExternC(Sema &S, const T *ND,
   return false;
 }
 
-static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
-                                     QualType T) {
-  QualType CanonT = SemaRef.Context.getCanonicalType(T);
+bool Sema::CheckConstexprType(SourceLocation Loc, QualType T, unsigned DiagID) {
+  QualType CanonT = Context.getCanonicalType(T);
   // C23 6.7.1p5: An object declared with storage-class specifier constexpr or
   // any of its members, even recursively, shall not have an atomic type, or a
   // variably modified type, or a type that is volatile or restrict qualified.
   if (CanonT->isVariablyModifiedType()) {
-    SemaRef.Diag(VarLoc, diag::err_c23_constexpr_invalid_type) << T;
+    Diag(Loc, DiagID) << T;
     return true;
   }
 
   // Arrays are qualified by their element type, so get the base type (this
   // works on non-arrays as well).
-  CanonT = SemaRef.Context.getBaseElementType(CanonT);
+  CanonT = Context.getBaseElementType(CanonT);
 
   if (CanonT->isAtomicType() || CanonT.isVolatileQualified() ||
       CanonT.isRestrictQualified()) {
-    SemaRef.Diag(VarLoc, diag::err_c23_constexpr_invalid_type) << T;
+    Diag(Loc, DiagID) << T;
     return true;
   }
 
   if (CanonT->isRecordType()) {
     const RecordDecl *RD = CanonT->getAsRecordDecl();
     if (!RD->isInvalidDecl() &&
-        llvm::any_of(RD->fields(), [&SemaRef, VarLoc](const FieldDecl *F) {
-          return CheckC23ConstexprVarType(SemaRef, VarLoc, F->getType());
+        llvm::any_of(RD->fields(), [this, Loc, DiagID](const FieldDecl *F) {
+          return CheckConstexprType(Loc, F->getType(), DiagID);
         }))
       return true;
   }
@@ -9236,7 +9234,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   if (getLangOpts().C23 && NewVD->isConstexpr() &&
-      CheckC23ConstexprVarType(*this, NewVD->getLocation(), T)) {
+      CheckConstexprType(NewVD->getLocation(), T,
+                         diag::err_c23_constexpr_invalid_type)) {
     NewVD->setInvalidDecl();
     return;
   }
@@ -15450,9 +15449,10 @@ void Sema::CheckThreadLocalForLargeAlignment(VarDecl *VD) {
     if (!VD->hasDependentAlignment()) {
       CharUnits MaxAlignChars = Context.toCharUnitsFromBits(MaxAlign);
       if (Context.getDeclAlign(VD) > MaxAlignChars) {
-        Diag(VD->getLocation(), diag::err_tls_var_aligned_over_maximum)
-            << (unsigned)Context.getDeclAlign(VD).getQuantity() << VD
-            << (unsigned)MaxAlignChars.getQuantity();
+        Diag(VD->getLocation(), diag::err_tls_aligned_over_maximum)
+            << (unsigned)Context.getDeclAlign(VD).getQuantity()
+            << /*IsCompoundLiteral=*/false
+            << (unsigned)MaxAlignChars.getQuantity() << VD;
       }
     }
   }

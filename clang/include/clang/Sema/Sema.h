@@ -4032,6 +4032,10 @@ public:
                                      ArrayRef<BindingDecl *> Bindings = {});
 
 private:
+  /// Maps a DeclSpec::SCS to a VarDecl::StorageClass. Any error reporting is up
+  /// to the caller; illegal input values are mapped to SC_None.
+  static StorageClass StorageClassSpecToVarDeclStorageClass(const DeclSpec &DS);
+
   // Perform a check on an AsmLabel to verify its consistency and emit
   // diagnostics in case of an error.
   void CheckAsmLabel(Scope *S, Expr *AsmLabelExpr, StorageClass SC,
@@ -4052,6 +4056,8 @@ public:
   /// Returns true if the variable declaration is a redeclaration.
   bool CheckVariableDeclaration(VarDecl *NewVD, LookupResult &Previous);
   void CheckVariableDeclarationType(VarDecl *NewVD);
+  bool CheckConstexprType(SourceLocation Loc, QualType T, unsigned DiagID);
+  void DiagnoseStaticInInline(SourceLocation Loc, const FunctionDecl *FD);
   void CheckCompleteVariableDeclaration(VarDecl *VD);
 
   NamedDecl *ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
@@ -7538,13 +7544,23 @@ public:
   /// the ParenListExpr into a sequence of comma binary operators.
   ExprResult MaybeConvertParenListExprToParenExpr(Scope *S, Expr *ME);
 
-  ExprResult ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
-                                  SourceLocation RParenLoc, Expr *InitExpr);
+private:
+  ExprResult BuildCompoundLiteralExpr(
+      SourceLocation LParenLoc, TypeSourceInfo *TInfo, SourceLocation RParenLoc,
+      Expr *LiteralExpr, StorageClass SC, SourceLocation StorageClassLoc,
+      ThreadStorageClassSpecifier TSC, SourceLocation ThreadStorageClassLoc,
+      ConstexprSpecKind ConstexprKind, SourceLocation ConstexprLoc);
 
-  ExprResult BuildCompoundLiteralExpr(SourceLocation LParenLoc,
-                                      TypeSourceInfo *TInfo,
-                                      SourceLocation RParenLoc,
-                                      Expr *LiteralExpr);
+public:
+  ExprResult ActOnCompoundLiteral(SourceLocation LParenLoc, ParsedType Ty,
+                                  SourceLocation RParenLoc, Expr *InitExpr,
+                                  const DeclSpec *DS = nullptr);
+
+  ExprResult BuildCompoundLiteralExpr(
+      SourceLocation LParenLoc, TypeSourceInfo *TInfo, SourceLocation RParenLoc,
+      Expr *LiteralExpr, StorageClass SC = SC_None,
+      ThreadStorageClassSpecifier TSC = TSCS_unspecified,
+      ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified);
 
   ExprResult ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
                            SourceLocation RBraceLoc);

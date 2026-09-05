@@ -461,9 +461,23 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
+static bool CheckConstexprVar(InterpState &S, CodePtr OpPC,
+                              const Descriptor *Desc) {
+  const auto *VD = Desc->asVarDecl();
+  if (!VD)
+    return true;
+  if (S.getLangOpts().C23 && S.EvalMode == EvaluationMode::ConstantExpression &&
+      VD != S.EvaluatingDecl && !VD->isConstexpr())
+    return Invalid(S, OpPC);
+  return true;
+}
+
 bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
                    AccessKinds AK) {
   assert(Desc);
+
+  if (!CheckConstexprVar(S, OpPC, Desc))
+    return false;
 
   const auto *D = Desc->asVarDecl();
   if (S.checkingConstantDestruction(D)) {
@@ -473,13 +487,6 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
       return true;
   } else if (!D || D == S.EvaluatingDecl || D->isConstexpr())
     return true;
-
-  // If we're evaluating the initializer for a constexpr variable in C23, we may
-  // only read other contexpr variables. Abort here since this one isn't
-  // constexpr.
-  if (const auto *VD = S.EvaluatingDecl;
-      VD && VD->isConstexpr() && S.getLangOpts().C23)
-    return Invalid(S, OpPC);
 
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
@@ -524,8 +531,10 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (S.checkingConstantDestruction(Ptr))
     return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 
-  if (!Ptr.isStatic() || !Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer())
     return true;
+  if (!Ptr.isStatic())
+    return CheckConstexprVar(S, OpPC, Ptr.getDeclDesc());
   if (!Ptr.getDeclID())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
@@ -849,6 +858,8 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
   const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
   const Descriptor *BlockDesc = B->getDescriptor();
+  if (!CheckConstexprVar(S, OpPC, BlockDesc))
+    return false;
   if (!Desc.IsInitialized)
     return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
   if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
