@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Config/abi-breaking.h"
@@ -109,9 +111,52 @@ Location LatticeAnchor::getLoc() const {
 // DataFlowSolver
 //===----------------------------------------------------------------------===//
 
+/// Emits a diagnostic listing all analyses whose declared dependencies are
+/// not loaded in the solver. Returns failure if any dependency is missing.
+static LogicalResult validateDependencies(
+    Operation *top, ArrayRef<std::unique_ptr<DataFlowAnalysis>> analyses,
+    llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter) {
+  llvm::SmallDenseSet<TypeID, 8> loaded;
+  for (const std::unique_ptr<DataFlowAnalysis> &analysis : analyses)
+    loaded.insert(analysis->getTypeID());
+
+  struct Missing {
+    StringRef requester;
+    AnalysisDependencies::Dependency dep;
+  };
+  SmallVector<Missing> missing;
+
+  for (const std::unique_ptr<DataFlowAnalysis> &analysis : analyses) {
+    if (analysisFilter && !analysisFilter(*analysis))
+      continue;
+    AnalysisDependencies deps;
+    analysis->getDependentAnalyses(deps);
+    for (const AnalysisDependencies::Dependency &dep : deps.getDependencies()) {
+      if (!loaded.contains(dep.typeID))
+        missing.push_back({analysis->getName(), dep});
+    }
+  }
+
+  if (missing.empty())
+    return success();
+
+  InFlightDiagnostic err =
+      emitError(top->getLoc(),
+                "DataFlowSolver: missing required analyses; load each missing "
+                "analysis via `solver.load<T>()` before `initializeAndRun`");
+  for (const Missing &m : missing) {
+    err.attachNote() << "analysis '" << m.requester << "' requires '"
+                     << m.dep.name << "' (not loaded)";
+  }
+  return err;
+}
+
 LogicalResult DataFlowSolver::initializeAndRun(
     Operation *top,
     llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter) {
+  if (failed(validateDependencies(top, childAnalyses, analysisFilter)))
+    return failure();
+
   // Enable enqueue to the worklist.
   isRunning = true;
   llvm::scope_exit guard([&]() { isRunning = false; });
@@ -137,7 +182,7 @@ LogicalResult DataFlowSolver::initializeAndRun(
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
     if (!shouldInitialize(analysis))
       continue;
-    DATAFLOW_DEBUG(LDBG() << "Priming analysis: " << analysis.debugName);
+    DATAFLOW_DEBUG(LDBG() << "Priming analysis: " << analysis.getName());
     if (failed(analysis.initialize(top)))
       return failure();
   }
@@ -149,7 +194,7 @@ LogicalResult DataFlowSolver::initializeAndRun(
     auto [point, analysis] = worklist.front();
     worklist.pop();
 
-    DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->debugName
+    DATAFLOW_DEBUG(LDBG() << "Invoking '" << analysis->getName()
                           << "' on: " << *point);
     if (failed(analysis->visit(point)))
       return failure();
