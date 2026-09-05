@@ -25,6 +25,8 @@ using namespace VPlanPatternMatch;
 
 namespace {
 class VPPredicator {
+  VPlan &Plan;
+
   /// Builder to construct recipes to compute masks.
   VPBuilder Builder;
 
@@ -92,7 +94,8 @@ class VPPredicator {
   VPValue *createBlendMaskForEdges(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
 
 public:
-  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan), VPPDF(VPPDT) {}
+  VPPredicator(VPlan &Plan)
+      : Plan(Plan), VPDT(Plan), VPPDT(Plan), VPPDF(VPPDT) {}
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -109,6 +112,9 @@ public:
 
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
   void convertPhisToBlends(VPBasicBlock *VPBB);
+
+  /// Predicate and linearize the plan.
+  void run();
 };
 } // namespace
 
@@ -394,17 +400,12 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
-  // Nested loop regions (outer-loop vectorization) are not supported yet.
-  if (Plan.isOuterLoop())
-    return;
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  // Scan the body of the loop in a topological order to visit each basic block
-  // after having visited its predecessor basic blocks.
-  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+void VPPredicator::run() {
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // Scan the body of the loop in a topological order to visit each basic
+  // block after having visited its predecessor basic blocks.
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  VPPredicator Predicator(Plan);
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
@@ -412,9 +413,9 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
     if (VPBB != Header)
-      Predicator.createBlockInMask(VPBB);
+      createBlockInMask(VPBB);
 
-    VPValue *BlockMask = Predicator.getBlockInMask(VPBB);
+    VPValue *BlockMask = getBlockInMask(VPBB);
     if (!BlockMask)
       continue;
 
@@ -427,7 +428,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
 
   for (VPBlockBase *VPBB : reverse(RPOT))
     if (VPBB != Header)
-      Predicator.convertPhisToBlends(cast<VPBasicBlock>(VPBB));
+      convertPhisToBlends(cast<VPBasicBlock>(VPBB));
 
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
@@ -445,4 +446,11 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
 
     PrevVPBB = VPBB;
   }
+}
+
+void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
+  // Nested loop regions (outer-loop vectorization) are not supported yet.
+  if (Plan.isOuterLoop())
+    return;
+  VPPredicator(Plan).run();
 }
