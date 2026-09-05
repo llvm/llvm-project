@@ -4536,54 +4536,44 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
       // If we have an SGPR input, we will violate the constant bus restriction.
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
-    MachineInstr *DefMI = nullptr;
     const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-    std::optional<int64_t> ImmOpt;
-    int64_t Imm;
 
-    if (!Src0Literal &&
-        (ImmOpt = getImmOrMaterializedImm(MRI, *Src2, &DefMI))) {
-      unsigned NewOpc = getNewFMAAKInst(ST, Opc);
-      if (pseudoToMCOpcode(NewOpc) != -1) {
-        MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                  .add(*Dst)
-                  .add(*Src0)
-                  .add(*Src1)
-                  .addImm(*ImmOpt)
-                  .setMIFlags(MI.getFlags());
-        U.RemoveMIUse = DefMI;
-        return MIB;
+    // Try to replace a source with an immediate
+    for (const MachineOperand **SrcX : {&Src2, &Src1, &Src0}) {
+      if (Src0Literal && *SrcX != Src0)
+        continue;
+
+      unsigned NewOpc =
+          (*SrcX == Src2) ? getNewFMAAKInst(ST, Opc) : getNewFMAMKInst(ST, Opc);
+      if (pseudoToMCOpcode(NewOpc) == -1)
+        continue;
+
+      MachineInstr *DefMI = nullptr;
+      std::optional<int64_t> ImmOpt =
+          getImmOrMaterializedImm(MRI, **SrcX, &DefMI);
+      if (!ImmOpt)
+        continue;
+      MachineOperand ImmOp = MachineOperand::CreateImm(*ImmOpt);
+      *SrcX = &ImmOp;
+      if (Src0 == &ImmOp) {
+        // Src0 has an immediate value, but an immediate cannot be in position
+        // src0. Swap Src0 and Src1's positions.
+        if (!isOperandLegal(
+                MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
+                Src1))
+          continue;
+        std::swap(Src0, Src1);
       }
-    }
-    unsigned NewOpc = getNewFMAMKInst(ST, Opc);
-    if (!Src0Literal &&
-        (ImmOpt = getImmOrMaterializedImm(MRI, *Src1, &DefMI))) {
-      if (pseudoToMCOpcode(NewOpc) != -1) {
-        MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                  .add(*Dst)
-                  .add(*Src0)
-                  .addImm(*ImmOpt)
-                  .add(*Src2)
-                  .setMIFlags(MI.getFlags());
-        U.RemoveMIUse = DefMI;
-        return MIB;
-      }
-    }
-    if ((ImmOpt = getImmOrMaterializedImm(MRI, *Src0, &DefMI))) {
-      Imm = *ImmOpt;
-      if (pseudoToMCOpcode(NewOpc) != -1 &&
-          isOperandLegal(
-              MI, AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src0),
-              Src1)) {
-        MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                  .add(*Dst)
-                  .add(*Src1)
-                  .addImm(Imm)
-                  .add(*Src2)
-                  .setMIFlags(MI.getFlags());
-        U.RemoveMIUse = DefMI;
-        return MIB;
-      }
+
+      MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
+                .add(*Dst)
+                .add(*Src0)
+                .add(*Src1)
+                .add(*Src2)
+                .setMIFlags(MI.getFlags());
+
+      U.RemoveMIUse = DefMI;
+      return MIB;
     }
   }
 
