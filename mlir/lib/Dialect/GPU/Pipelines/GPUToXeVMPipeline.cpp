@@ -148,6 +148,12 @@ void buildGPUPassPipeline(OpPassManager &pm,
         arith::createArithEmulateUnsupportedFloats(
             std::move(arithEmulateOptions)));
   }
+  // Lower whatever Math ops are left. `convert-math-to-xevm` above only maps
+  // the ops that have a native or OpenCL counterpart; the rest (e.g.
+  // `math.isinf`) have no XeVM lowering and would otherwise survive into
+  // serialization, where translation to LLVM IR fails. This must run after the
+  // XeVM-specific conversions so those keep taking priority.
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertMathToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
 }
