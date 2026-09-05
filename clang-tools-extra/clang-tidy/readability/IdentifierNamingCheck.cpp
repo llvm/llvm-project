@@ -293,8 +293,14 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
       Options.get("CheckAnonFieldInParent", false);
   const bool TypedefInheritAnonTagConfig =
       Options.get("TypedefInheritAnonTagConfig", false);
-  return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
-          CheckAnonFieldInParent, TypedefInheritAnonTagConfig};
+  const bool AllowTrailingUnderscore =
+      Options.get("AllowTrailingUnderscore", false);
+  return {std::move(Styles),
+          std::move(HNOption),
+          IgnoreMainLike,
+          CheckAnonFieldInParent,
+          TypedefInheritAnonTagConfig,
+          AllowTrailingUnderscore};
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
@@ -866,13 +872,15 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 MainFileStyle->isCheckingAnonFieldInParentScope());
   Options.store(Opts, "TypedefInheritAnonTagConfig",
                 MainFileStyle->isTypedefInheritingAnonTagConfig());
+  Options.store(Opts, "AllowTrailingUnderscore",
+                MainFileStyle->isAllowingTrailingUnderscore());
 }
 
 bool IdentifierNamingCheck::matchesStyle(
     StringRef Type, StringRef Name,
     const IdentifierNamingCheck::NamingStyle &Style,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    const NamedDecl *Decl) const {
+    const NamedDecl *Decl, bool AllowTrailingUnderscore) const {
   static const llvm::Regex Matchers[] = {
       llvm::Regex("^.*$"),
       llvm::Regex("^[a-z][a-z0-9_]*$"),
@@ -886,6 +894,8 @@ bool IdentifierNamingCheck::matchesStyle(
 
   if (!Name.consume_front(Style.Prefix))
     return false;
+  if (AllowTrailingUnderscore)
+    Name.consume_back("_");
   if (!Name.consume_back(Style.Suffix))
     return false;
   if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType) {
@@ -1095,8 +1105,10 @@ std::string IdentifierNamingCheck::fixupWithStyle(
     StringRef Type, StringRef Name,
     const IdentifierNamingCheck::NamingStyle &Style,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    const Decl *D) const {
+    const Decl *D, bool AllowTrailingUnderscore) const {
   Name.consume_front(Style.Prefix);
+  const bool KeepTrailingUnderscore =
+      AllowTrailingUnderscore && Name.consume_back("_");
   Name.consume_back(Style.Suffix);
   std::string Fixed = fixupWithCase(
       Type, Name, D, Style, HNOption,
@@ -1118,7 +1130,9 @@ std::string IdentifierNamingCheck::fixupWithStyle(
   if (Mid.empty())
     Mid = "_";
 
-  return (Style.Prefix + HungarianPrefix + Mid + Style.Suffix).str();
+  return (Style.Prefix + HungarianPrefix + Mid + Style.Suffix +
+          (KeepTrailingUnderscore ? "_" : ""))
+      .str();
 }
 
 /// Returns \c true if \p Style can reject a name. A Hungarian prefix cannot
@@ -1361,7 +1375,8 @@ IdentifierNamingCheck::getFailureInfo(
     SourceLocation Location,
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) const {
+    StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit,
+    bool AllowTrailingUnderscore) const {
   if (SK == SK_Invalid)
     return std::nullopt;
 
@@ -1373,7 +1388,7 @@ IdentifierNamingCheck::getFailureInfo(
   if (Style.IgnoredRegexp.isValid() && Style.IgnoredRegexp.match(Name))
     return std::nullopt;
 
-  if (matchesStyle(Type, Name, Style, HNOption, ND))
+  if (matchesStyle(Type, Name, Style, HNOption, ND, AllowTrailingUnderscore))
     return std::nullopt;
 
   std::string KindName =
@@ -1383,7 +1398,8 @@ IdentifierNamingCheck::getFailureInfo(
                           IdentifierNamingCheck::CT_LowerCase);
   llvm::replace(KindName, '_', ' ');
 
-  std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
+  std::string Fixup =
+      fixupWithStyle(Type, Name, Style, HNOption, ND, AllowTrailingUnderscore);
   if (StringRef(Fixup) == Name) {
     if (!IgnoreFailedSplit) {
       LLVM_DEBUG(Location.print(llvm::dbgs(), SM);
@@ -1416,7 +1432,7 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
                     FileStyle.isIgnoringMainLikeFunction(),
                     FileStyle.isCheckingAnonFieldInParentScope(),
                     FileStyle.isTypedefInheritingAnonTagConfig()),
-      SM, IgnoreFailedSplit);
+      SM, IgnoreFailedSplit, FileStyle.isAllowingTrailingUnderscore());
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
@@ -1434,7 +1450,8 @@ IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
 
   return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(),
                         nullptr, Loc, Style.getStyles(), Style.getHNOption(),
-                        UsedKind, SM, IgnoreFailedSplit);
+                        UsedKind, SM, IgnoreFailedSplit,
+                        Style.isAllowingTrailingUnderscore());
 }
 
 RenamerClangTidyCheck::DiagInfo

@@ -82,6 +82,7 @@ The available options are summarized below:
 **General options**
 
  - :option:`AggressiveDependentMemberLookup`
+ - :option:`AllowTrailingUnderscore`
  - :option:`CheckAnonFieldInParent`
  - :option:`GetConfigPerFile`
  - :option:`IgnoreMainLikeFunctions`
@@ -395,6 +396,35 @@ After if AggressiveDependentMemberLookup is `true`:
         this->bad_named_member = 0;
       }
     };
+
+.. option:: AllowTrailingUnderscore
+
+    When set to `true`, a single trailing underscore is allowed on any
+    identifier, in addition to whatever casing, prefix and suffix are
+    otherwise configured for its kind.
+
+For example using values of:
+
+   - AllowTrailingUnderscore of `true`
+   - LocalVariableCase of ``camelBack``
+
+Transforms names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    void f(int value) {
+      int Value_ = value;
+    }
+
+After:
+
+.. code-block:: c++
+
+    void f(int value) {
+      int value_ = value;
+    }
 
 .. option:: CheckAnonFieldInParent
 
