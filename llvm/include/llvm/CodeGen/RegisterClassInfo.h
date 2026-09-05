@@ -110,7 +110,8 @@ public:
   LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &) {
     auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
-    return !PAC.preservedWhenStateless();
+    return !PAC.preserved() &&
+           !PAC.preservedSet<AllAnalysesOn<MachineFunction>>();
   }
 
   /// getNumAllocatableRegs - Returns the number of actually allocatable
