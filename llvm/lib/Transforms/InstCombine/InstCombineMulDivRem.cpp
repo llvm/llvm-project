@@ -1318,6 +1318,33 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   return nullptr;
 }
 
+/// True if the divisor selects between two constants, so that splitting the
+/// division leaves a constant divisor on either arm.
+static bool isSplittableSelectDivisor(BinaryOperator &I) {
+  const APInt *C1, *C2;
+  if (!match(I.getOperand(1), m_Select(m_Value(), m_APInt(C1), m_APInt(C2))))
+    return false;
+
+  // Both arms are evaluated after the split, so neither may divide by zero.
+  if (C1->isZero() || C2->isZero())
+    return false;
+
+  // Signed division of INT_MIN by -1 overflows so an arm dividing by -1 would
+  // be undefined on a path that previously chose the other arm.
+  bool IsSigned =
+      I.getOpcode() == Instruction::SDiv || I.getOpcode() == Instruction::SRem;
+  if (IsSigned && (C1->isAllOnes() || C2->isAllOnes()))
+    return false;
+
+  // An unsigned divisor with the high bit set leaves a quotient of zero or
+  // one which folds to a compare against the select without a split.
+  if (I.getOpcode() == Instruction::UDiv && C1->isNegative() &&
+      C2->isNegative())
+    return false;
+
+  return true;
+}
+
 /// Common integer divide/remainder transforms
 Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
   assert(I.isIntDivRem() && "Unexpected instruction");
@@ -1351,6 +1378,16 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
                                           /*FoldWithMultiUse*/ true))
       return R;
   }
+
+  // X div/rem (select C, C1, C2) --> select C, (X div/rem C1), (X div/rem C2)
+  // This increases instruction count but it's okay since a constant divisor
+  // does not need the hardware divider.
+  if (!MinimizeSize && isSplittableSelectDivisor(I))
+    if (Instruction *R = FoldOpIntoSelect(I, cast<SelectInst>(Op1),
+                                          /*FoldWithMultiUse=*/true,
+                                          /*SimplifyBothArms=*/false,
+                                          /*AllowNoArmSimplification=*/true))
+      return R;
 
   return nullptr;
 }
