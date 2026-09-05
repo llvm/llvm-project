@@ -333,6 +333,20 @@ TEST_F(ConfigCompileTests, Tidy) {
 #endif
 }
 
+TEST_F(ConfigCompileTests, TidyExperimentalCustomChecks) {
+  EXPECT_FALSE(Conf.Diagnostics.ClangTidy.ExperimentalCustomChecks);
+
+  Frag.Diagnostics.ClangTidy.ExperimentalCustomChecks = true;
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_TRUE(Conf.Diagnostics.ClangTidy.ExperimentalCustomChecks);
+
+  Fragment Override;
+  Override.Diagnostics.ClangTidy.ExperimentalCustomChecks = false;
+  auto Compiled = std::move(Override).compile(Diags.callback());
+  EXPECT_TRUE(Compiled(Parm, Conf));
+  EXPECT_FALSE(Conf.Diagnostics.ClangTidy.ExperimentalCustomChecks);
+}
+
 TEST_F(ConfigCompileTests, TidyBadChecks) {
   auto &Tidy = Frag.Diagnostics.ClangTidy;
   Tidy.Add.emplace_back("unknown-check");

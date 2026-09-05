@@ -63,6 +63,25 @@ Example
     main(); // warning: call to main function. [custom-call-main-function]
   }
 
+Using with clangd
+=================
+
+To enable query-based custom checks in clangd, add the following to the clangd
+configuration:
+
+.. code-block:: yaml
+
+  Diagnostics:
+    ClangTidy:
+      ExperimentalCustomChecks: true
+      FastCheckFilter: Loose
+
+The custom-check definitions and check selection remain part of the clang-tidy
+configuration. ``ExperimentalCustomChecks`` does not override clangd's
+``FastCheckFilter``. Because custom checks are not present in clangd's
+fast-check database, ``Strict`` excludes them, while ``Loose`` and ``None``
+allow them.
+
 Matters Need Attention
 ======================
 
