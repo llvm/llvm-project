@@ -298,6 +298,13 @@ private:
   bool canTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
                     GetElementPtrInst *GEP, Value *Idx);
 
+  /// A helper function that returns whether truncating \p V to \p BitWidth and
+  /// extending it back reproduces \p V, so that a sext/zext applied after the
+  /// truncation can still be reasoned about at the width of \p V.
+  ///
+  /// \p Signed Whether the value is extended back with sext rather than zext.
+  bool truncPreservesValue(Value *V, unsigned BitWidth, bool Signed);
+
   /// Analyze a xor expression, and identify the bits in the constant operand
   /// that are disjoint from the base operand's known set bits. For these
   /// disjoint bits, a xor is equivalent to an addition, which allows us to
@@ -684,6 +691,18 @@ bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
   return true;
 }
 
+bool ConstantOffsetExtractor::truncPreservesValue(Value *V, unsigned BitWidth,
+                                                  bool Signed) {
+  unsigned SrcBits = V->getType()->getScalarSizeInBits();
+  if (SrcBits <= BitWidth)
+    return true;
+
+  // Extending back with sext additionally requires the sign bit of the
+  // truncated value to be clear, so that sext and zext agree.
+  unsigned KeepBits = Signed ? BitWidth - 1 : BitWidth;
+  return computeKnownBits(V, DL).countMinLeadingZeros() >= SrcBits - KeepBits;
+}
+
 APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
                                                    bool SignExtended,
                                                    bool ZeroExtended) {
@@ -741,9 +760,17 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
     else if (BO->getOpcode() == Instruction::Xor)
       ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
-    ConstantOffset =
-        find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
-            .trunc(BitWidth);
+    // A pending sext/zext applies to the truncated value, but canTraceInto
+    // checks nuw/nsw at the width of the operand it traces into.  Those flags
+    // say nothing about wrapping at BitWidth, so keep searching only when the
+    // truncation loses no bits.  Otherwise
+    //   zext i64 (trunc i8 (add nuw i32 (zext i8 251), (zext i8 5)))
+    // which is 0 would be rebuilt as 251 + 5 = 256.
+    if ((!SignExtended && !ZeroExtended) ||
+        truncPreservesValue(U->getOperand(0), BitWidth, SignExtended))
+      ConstantOffset =
+          find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
+              .trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), GEP, Idx, /* SignExtended */ true, ZeroExtended)

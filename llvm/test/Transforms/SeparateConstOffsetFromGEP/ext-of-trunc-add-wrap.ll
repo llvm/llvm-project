@@ -12,16 +12,14 @@
 define ptr addrspace(1) @zext_of_lossy_trunc(ptr addrspace(1) %p, i8 %a, i64 %iv) {
 ; CHECK-LABEL: define ptr addrspace(1) @zext_of_lossy_trunc(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i8 [[A:%.*]], i64 [[IV:%.*]]) {
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[IV_NEXT]] to i8
 ; CHECK-NEXT:    [[AZ:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[AZ]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i8 [[TMP1]] to i64
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[IV]] to i8
 ; CHECK-NEXT:    [[TZ:%.*]] = zext i8 [[T]] to i32
-; CHECK-NEXT:    [[SUM8:%.*]] = trunc i32 [[TZ]] to i8
+; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i32 [[AZ]], [[TZ]]
+; CHECK-NEXT:    [[SUM8:%.*]] = trunc i32 [[SUM]] to i8
 ; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i8 [[SUM8]] to i64
-; CHECK-NEXT:    [[SUM2:%.*]] = add i64 [[TMP2]], [[IDX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[P]], i64 [[SUM2]]
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP7]], i64 4
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[P]], i64 [[IDX]]
 ; CHECK-NEXT:    ret ptr addrspace(1) [[Q]]
 ;
   %iv.next = add nuw nsw i64 %iv, 1
@@ -62,11 +60,11 @@ define ptr addrspace(1) @sext_of_lossy_trunc(ptr addrspace(1) %p, i32 %x) {
 ; CHECK-LABEL: define ptr addrspace(1) @sext_of_lossy_trunc(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[X]], 127
-; CHECK-NEXT:    [[SUM8:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[SUM:%.*]] = add nuw nsw i32 [[A]], 3
+; CHECK-NEXT:    [[SUM8:%.*]] = trunc i32 [[SUM]] to i8
 ; CHECK-NEXT:    [[IDX:%.*]] = sext i8 [[SUM8]] to i64
 ; CHECK-NEXT:    [[Q:%.*]] = getelementptr i32, ptr addrspace(1) [[P]], i64 [[IDX]]
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i8, ptr addrspace(1) [[Q]], i64 12
-; CHECK-NEXT:    ret ptr addrspace(1) [[Q2]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[Q]]
 ;
   %a = and i32 %x, 127
   %sum = add nuw nsw i32 %a, 3
