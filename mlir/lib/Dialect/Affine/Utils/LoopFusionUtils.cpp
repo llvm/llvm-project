@@ -21,6 +21,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
@@ -352,10 +353,40 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
   return FusionResult::Success;
 }
 
+static void remapPromotedResults(AffineForOp forOp, ValueRange replacements,
+                                 IRMapping &mapper) {
+  llvm::SmallDenseMap<Value, Value, 4> replacementMap;
+  for (auto [result, replacement] : llvm::zip(forOp.getResults(), replacements))
+    replacementMap[result] = replacement;
+
+  SmallVector<std::pair<Value, Value>> remaps;
+  for (auto [from, to] : mapper.getValueMap()) {
+    auto replacement = replacementMap.find(to);
+    if (replacement != replacementMap.end())
+      remaps.push_back({from, replacement->second});
+  }
+  for (auto [from, to] : remaps)
+    mapper.map(from, to);
+}
+
+static FailureOr<SmallVector<Value>>
+getSingleIterationYieldedValues(AffineForOp forOp) {
+  std::optional<APInt> tripCount = forOp.getStaticTripCount();
+  if (!tripCount || *tripCount != 1)
+    return failure();
+
+  // TODO: extend this for arbitrary affine bounds.
+  if (forOp.getLowerBoundMap().getNumResults() != 1)
+    return failure();
+
+  return SmallVector<Value>(forOp.getBody()->getTerminator()->getOperands());
+}
+
 /// Patch the loop body of a forOp that is a single iteration reduction loop
 /// into its containing block.
 static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
-                                                    bool siblingFusionUser) {
+                                                    bool siblingFusionUser,
+                                                    IRMapping *mapper) {
   // Check if the reduction loop is a single iteration loop.
   std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount || *tripCount != 1)
@@ -376,6 +407,11 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
           [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs) {
             return newOperands;
           }));
+  if (mapper)
+    remapPromotedResults(
+        forOp,
+        newLoop.getResults().slice(parentOpNumResults, forOp.getNumResults()),
+        *mapper);
 
   // For sibling-fusion users, collect operations that use the results of the
   // `forOp` outside the new parent loop that has absorbed all its iter args
@@ -420,14 +456,45 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
   return success();
 }
 
+static LogicalResult
+promoteIfSingleIterationAndUpdateMapper(AffineForOp forOp, IRMapping *mapper) {
+  if (!mapper)
+    return promoteIfSingleIteration(forOp);
+
+  FailureOr<SmallVector<Value>> replacements =
+      getSingleIterationYieldedValues(forOp);
+  if (failed(replacements))
+    return failure();
+
+  llvm::SmallDenseMap<Value, Value, 4> replacementMap;
+  for (auto [result, replacement] :
+       llvm::zip(forOp.getResults(), *replacements))
+    replacementMap[result] = replacement;
+
+  for (auto &mapEntry : mapper->getValueMap()) {
+    Value to = mapEntry.second;
+    auto replacement = replacementMap.find(to);
+    if (replacement == replacementMap.end())
+      continue;
+    Operation *definingOp = replacement->second.getDefiningOp();
+    if (!definingOp || !forOp->isProperAncestor(definingOp))
+      return failure();
+  }
+
+  remapPromotedResults(forOp, *replacements, *mapper);
+  return promoteIfSingleIteration(forOp);
+}
+
 /// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion point
 /// and source slice loop bounds specified in 'srcSlice'.
 void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
                              const ComputationSliceState &srcSlice,
-                             bool isInnermostSiblingInsertion) {
+                             bool isInnermostSiblingInsertion,
+                             IRMapping *resultMapper) {
   // Clone 'srcForOp' into 'dstForOp' at 'srcSlice->insertPoint'.
   OpBuilder b(srcSlice.insertPoint->getBlock(), srcSlice.insertPoint);
-  IRMapping mapper;
+  IRMapping localMapper;
+  IRMapping &mapper = resultMapper ? *resultMapper : localMapper;
   b.clone(*srcForOp, mapper);
 
   // Update 'sliceLoopNest' upper and lower bounds from computed 'srcSlice'.
@@ -461,10 +528,10 @@ void mlir::affine::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
         isInnermostSiblingInsertion && srcIsUnitSlice())
       // Patch reduction loop - only ones that are sibling-fused with the
       // destination loop - into the parent loop.
-      (void)promoteSingleIterReductionLoop(forOp, true);
+      (void)promoteSingleIterReductionLoop(forOp, true, resultMapper);
     else
       // Promote any single iteration slice loops.
-      (void)promoteIfSingleIteration(forOp);
+      (void)promoteIfSingleIterationAndUpdateMapper(forOp, resultMapper);
   }
 }
 

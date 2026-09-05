@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
@@ -22,6 +23,8 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -60,7 +63,7 @@ struct LoopFusion : public affine::impl::AffineLoopFusionBase<LoopFusion> {
     this->affineFusionMode = affineFusionMode;
   }
 
-  void runOnBlock(Block *block);
+  LogicalResult runOnBlock(Block *block);
   void runOnOperation() override;
 };
 
@@ -122,6 +125,168 @@ static bool canRemoveSrcNodeAfterFusion(
   }
 
   return true;
+}
+
+static void replaceInits(RewriterBase &rewriter, AffineForOp forOp,
+                         ArrayRef<unsigned> initIndices, ValueRange newInits) {
+  assert(initIndices.size() == newInits.size() &&
+         "expected one replacement value per init operand index");
+
+  SmallVector<Value> inits(forOp.getInits());
+  assert(llvm::all_of(initIndices,
+                      [&](unsigned index) { return index < inits.size(); }) &&
+         "expected replacement indices to fit in affine.for init operands");
+
+  for (auto [initIndex, newInit] : llvm::zip(initIndices, newInits))
+    inits[initIndex] = newInit;
+  rewriter.modifyOpInPlace(forOp,
+                           [&]() { forOp.getInitsMutable().assign(inits); });
+}
+
+static AffineForOp
+getAffineForOpWithResults(ValueRange values,
+                          SmallVectorImpl<unsigned> &indices) {
+  assert(!values.empty() && "expected values to forward");
+  auto firstResult = dyn_cast<OpResult>(values.front());
+  if (!firstResult)
+    return nullptr;
+
+  auto forOp = dyn_cast<AffineForOp>(firstResult.getOwner());
+  if (!forOp)
+    return nullptr;
+  assert(forOp.getNumResults() == forOp.getInits().size() &&
+         "expected one init operand per affine.for result");
+
+  indices.clear();
+  for (Value value : values) {
+    auto result = dyn_cast<OpResult>(value);
+    if (!result || result.getOwner() != forOp) {
+      indices.clear();
+      return nullptr;
+    }
+    indices.push_back(result.getResultNumber());
+  }
+  return forOp;
+}
+
+static LogicalResult getBackwardSliceForValues(ValueRange values,
+                                               AffineForOp parentForOp,
+                                               SetVector<Operation *> &slice) {
+  BackwardSliceOptions options;
+  options.inclusive = true;
+  options.omitBlockArguments = true;
+  options.filter = [&](Operation *op) {
+    return parentForOp->isProperAncestor(op);
+  };
+
+  for (Value value : values)
+    if (Operation *definingOp = value.getDefiningOp()) {
+      if (failed(getBackwardSlice(definingOp, &slice, options)))
+        return failure();
+    }
+  return success();
+}
+
+static void replaceInitUsesInPromotedSlice(RewriterBase &rewriter,
+                                           const SetVector<Operation *> &slice,
+                                           ValueRange oldValues,
+                                           ValueRange newValues) {
+  assert(oldValues.size() == newValues.size() &&
+         "expected one replacement value per old value");
+
+  for (auto [oldValue, newValue] : llvm::zip(oldValues, newValues)) {
+    rewriter.replaceUsesWithIf(oldValue, newValue, [&](OpOperand &use) {
+      return slice.contains(use.getOwner());
+    });
+  }
+}
+
+static Operation *getAncestorInBlock(Operation *op, Block *block) {
+  while (op && op->getBlock() != block)
+    op = op->getParentOp();
+  return op;
+}
+
+// Check that all result users remain dominated after sibling fusion moves
+// `definingOp` before `insertPoint`.
+static bool resultUsersRemainDominated(Operation *opWithUsers,
+                                       Operation *definingOp,
+                                       Operation *insertPoint) {
+  Block *block = insertPoint->getBlock();
+  bool definingOpWillMove = definingOp != insertPoint;
+  for (Value result : opWithUsers->getResults()) {
+    if (result.use_empty())
+      continue;
+    for (OpOperand &use : result.getUses()) {
+      Operation *userAncestor = getAncestorInBlock(use.getOwner(), block);
+      if (!userAncestor)
+        return false;
+      if (definingOpWillMove && userAncestor->isBeforeInBlock(insertPoint))
+        return false;
+      if (!definingOpWillMove && !definingOp->isBeforeInBlock(userAncestor))
+        return false;
+    }
+  }
+  return true;
+}
+
+// Carry values from the cloned sibling loop through the destination loop nest.
+// Each newly added iter_arg is used as the corresponding init of the loop that
+// currently defines the forwarded values.
+static FailureOr<SmallVector<Value>>
+forwardValuesThroughAffineForNest(ValueRange values, ValueRange inits,
+                                  AffineForOp &outerForOp) {
+  IRRewriter rewriter(outerForOp->getContext());
+  SmallVector<Value> forwardedValues(values.begin(), values.end());
+  assert(!forwardedValues.empty() && "expected values to forward");
+
+  while (true) {
+    Operation *parentOp =
+        forwardedValues.front().getParentBlock()->getParentOp();
+    AffineForOp parentForOp = dyn_cast<AffineForOp>(parentOp);
+    if (!parentForOp)
+      parentForOp = parentOp->getParentOfType<AffineForOp>();
+
+    assert(parentForOp && "expected value to be nested in an affine.for");
+
+    SmallVector<unsigned> initIndices;
+    AffineForOp producerForOp =
+        getAffineForOpWithResults(forwardedValues, initIndices);
+    SetVector<Operation *> promotedSlice;
+    if (!producerForOp && failed(getBackwardSliceForValues(
+                              forwardedValues, parentForOp, promotedSlice)))
+      return failure();
+
+    SmallVector<Value> newIterArgsForReplacement;
+    FailureOr<LoopLikeOpInterface> newLoopOrFailure =
+        parentForOp.replaceWithAdditionalYields(
+            rewriter, inits, /*replaceInitOperandUsesInLoop=*/false,
+            [&](OpBuilder &, Location, ValueRange newIterArgs) {
+              newIterArgsForReplacement.assign(newIterArgs.begin(),
+                                               newIterArgs.end());
+              if (producerForOp)
+                replaceInits(rewriter, producerForOp, initIndices, newIterArgs);
+              return forwardedValues;
+            });
+
+    if (failed(newLoopOrFailure))
+      return failure();
+
+    AffineForOp newForOp = cast<AffineForOp>(newLoopOrFailure->getOperation());
+    if (!producerForOp)
+      replaceInitUsesInPromotedSlice(rewriter, promotedSlice, inits,
+                                     newIterArgsForReplacement);
+
+    auto newResults = newForOp->getResults().take_back(forwardedValues.size());
+    forwardedValues.assign(newResults.begin(), newResults.end());
+
+    if (parentForOp == outerForOp) {
+      outerForOp = newForOp;
+      break;
+    }
+  }
+
+  return forwardedValues;
 }
 
 /// Returns in 'srcIdCandidates' the producer fusion candidates for consumer
@@ -809,16 +974,19 @@ public:
     }
   }
   /// Run only sibling fusion on the `mdg`.
-  void runSiblingFusionOnly() {
-    fuseSiblingNodes();
+  LogicalResult runSiblingFusionOnly() {
+    if (failed(fuseSiblingNodes()))
+      return failure();
     eraseUnusedMemRefAllocations();
+    return success();
   }
 
   /// Run only producer/consumer fusion on the `mdg`.
-  void runProducerConsumerFusionOnly() {
+  LogicalResult runProducerConsumerFusionOnly() {
     fuseProducerConsumerNodes(
         /*maxSrcUserCount=*/std::numeric_limits<unsigned>::max());
     eraseUnusedMemRefAllocations();
+    return success();
   }
 
   // Run the GreedyFusion pass.
@@ -826,13 +994,15 @@ public:
   //    unique consumer.
   // *) Second pass fuses sibling nodes which share no dependence edges.
   // *) Third pass fuses any remaining producer nodes into their users.
-  void runGreedyFusion() {
+  LogicalResult runGreedyFusion() {
     // TODO: Run this repeatedly until a fixed-point is reached.
     fuseProducerConsumerNodes(/*maxSrcUserCount=*/1);
-    fuseSiblingNodes();
+    if (failed(fuseSiblingNodes()))
+      return failure();
     fuseProducerConsumerNodes(
         /*maxSrcUserCount=*/std::numeric_limits<unsigned>::max());
     eraseUnusedMemRefAllocations();
+    return success();
   }
 
   /// Returns true if a private memref can be created for `memref` given
@@ -1176,7 +1346,7 @@ public:
 
   // Visits each node in the graph, and for each node, attempts to fuse it with
   // its sibling nodes (nodes which share a parent, but no dependence edges).
-  void fuseSiblingNodes() {
+  LogicalResult fuseSiblingNodes() {
     LDBG() << "--- Sibling Fusion ---";
     init();
     while (!worklist.empty()) {
@@ -1192,12 +1362,14 @@ public:
       if (!isa<AffineForOp>(dstNode->op))
         continue;
       // Attempt to fuse 'dstNode' with its sibling nodes in the graph.
-      fuseWithSiblingNodes(dstNode);
+      if (failed(fuseWithSiblingNodes(dstNode)))
+        return failure();
     }
+    return success();
   }
 
   // Attempt to fuse 'dstNode' with sibling nodes in the graph.
-  void fuseWithSiblingNodes(Node *dstNode) {
+  LogicalResult fuseWithSiblingNodes(Node *dstNode) {
     DenseSet<unsigned> visitedSibNodeIds;
     std::pair<unsigned, Value> idAndMemref;
     auto dstAffineForOp = cast<AffineForOp>(dstNode->op);
@@ -1287,7 +1459,7 @@ public:
           if (!fraction || fraction > 0) {
             LDBG() << "Can't perform maximal fusion with a cyclic dependence "
                    << "and non-zero additional compute.";
-            return;
+            return success();
           }
         } else {
           // Set redundant computation tolerance to zero regardless of what the
@@ -1331,14 +1503,69 @@ public:
       // destination loop. Based on this, the fused loop may be optimized
       // further inside `fuseLoops`.
       bool isInnermostInsertion = (bestDstLoopDepth == dstLoopDepthTest);
+
+      bool enableSiblingInsertionCleanup =
+          isInnermostInsertion && sibAffineForOp->use_empty();
+
       // Fuse computation slice of 'sibLoopNest' into 'dstLoopNest'.
+      bool hasUsedSiblingResults = !sibAffineForOp->use_empty();
+      if (!dstAffineForOp->use_empty() &&
+          !resultUsersRemainDominated(dstAffineForOp, dstAffineForOp,
+                                      insertPointInst)) {
+        LDBG() << "Destination results have users before the fused loop "
+                  "insertion point.";
+        continue;
+      }
+      if (hasUsedSiblingResults &&
+          !resultUsersRemainDominated(sibAffineForOp, dstAffineForOp,
+                                      insertPointInst)) {
+        LDBG() << "Sibling results have users before the fused loop insertion "
+                  "point.";
+        continue;
+      }
+
+      IRMapping mapper;
       affine::fuseLoops(sibAffineForOp, dstAffineForOp, bestSlice,
-                        isInnermostInsertion);
+                        enableSiblingInsertionCleanup,
+                        hasUsedSiblingResults ? &mapper : nullptr);
 
       auto dstForInst = cast<AffineForOp>(dstNode->op);
       // Update operation position of fused loop nest (if needed).
       if (insertPointInst != dstForInst)
         dstForInst->moveBefore(insertPointInst);
+
+      // The cloned sibling loop now lives inside the destination loop. Carry
+      // any used results out before replacing the original sibling loop.
+      if (hasUsedSiblingResults) {
+        SmallVector<Value> usedClonedSibResults;
+        SmallVector<Value> usedSibInits;
+        for (auto [oldResult, init] : llvm::zip(sibAffineForOp->getResults(),
+                                                sibAffineForOp.getInits())) {
+          if (oldResult.use_empty())
+            continue;
+          usedClonedSibResults.push_back(mapper.lookup(oldResult));
+          usedSibInits.push_back(init);
+        }
+
+        FailureOr<SmallVector<Value>> replacementResults =
+            forwardValuesThroughAffineForNest(usedClonedSibResults,
+                                              usedSibInits, dstAffineForOp);
+        if (failed(replacementResults)) {
+          LDBG() << "Failed to forward sibling loop results through the "
+                    "destination loop nest.";
+          return failure();
+        }
+
+        unsigned nextReplacement = 0;
+        for (Value oldResult : sibAffineForOp->getResults()) {
+          if (oldResult.use_empty())
+            continue;
+          Value newResult = (*replacementResults)[nextReplacement++];
+          oldResult.replaceAllUsesWith(newResult);
+        }
+
+        dstNode->op = dstAffineForOp;
+      }
 
       LDBG() << "Fused sibling nest " << sibId << " into destination nest "
              << dstNode->id << " at depth " << bestDstLoopDepth << ":";
@@ -1353,6 +1580,7 @@ public:
       mdg->removeNode(sibNode->id);
       op->erase();
     }
+    return success();
   }
 
   // Searches block argument uses and the graph from 'dstNode' looking for a
@@ -1369,6 +1597,7 @@ public:
       // TODO: Remove restrict to single load op restriction.
       if (sibNode->getLoadOpCount(memref) != 1)
         return false;
+
       // Skip if there exists a path of dependent edges between
       // 'sibNode' and 'dstNode'.
       if (mdg->hasDependencePath(sibNode->id, dstNode->id) ||
@@ -1517,11 +1746,11 @@ public:
 } // namespace
 
 /// Run fusion on `block`.
-void LoopFusion::runOnBlock(Block *block) {
+LogicalResult LoopFusion::runOnBlock(Block *block) {
   MemRefDependenceGraph g(*block);
   if (!g.init()) {
     LDBG() << "MDG init failed";
-    return;
+    return success();
   }
 
   std::optional<unsigned> fastMemorySpaceOpt;
@@ -1532,25 +1761,28 @@ void LoopFusion::runOnBlock(Block *block) {
                       maximalFusion, computeToleranceThreshold);
 
   if (affineFusionMode == FusionMode::ProducerConsumer)
-    fusion.runProducerConsumerFusionOnly();
+    return fusion.runProducerConsumerFusionOnly();
   else if (affineFusionMode == FusionMode::Sibling)
-    fusion.runSiblingFusionOnly();
-  else
-    fusion.runGreedyFusion();
+    return fusion.runSiblingFusionOnly();
+  return fusion.runGreedyFusion();
 }
 
 void LoopFusion::runOnOperation() {
   // Call fusion on every op that has at least two affine.for nests (in post
   // order).
-  getOperation()->walk([&](Operation *op) {
+  WalkResult result = getOperation()->walk([&](Operation *op) {
     for (Region &region : op->getRegions()) {
       for (Block &block : region.getBlocks()) {
         auto affineFors = block.getOps<AffineForOp>();
-        if (!affineFors.empty() && !llvm::hasSingleElement(affineFors))
-          runOnBlock(&block);
+        if (!affineFors.empty() && !llvm::hasSingleElement(affineFors) &&
+            failed(runOnBlock(&block)))
+          return WalkResult::interrupt();
       }
     }
+    return WalkResult::advance();
   });
+  if (result.wasInterrupted())
+    signalPassFailure();
 }
 
 std::unique_ptr<Pass> mlir::affine::createLoopFusionPass(
