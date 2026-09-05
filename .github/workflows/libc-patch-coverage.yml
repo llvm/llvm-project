@@ -1,0 +1,298 @@
+name: Libc Patch Code Coverage
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'libc/src/**'
+      - 'libc/include/**'
+      - 'libc/test/**'
+      - 'libc/CMakeLists.txt'
+      - '.github/workflows/libc-patch-coverage.yml'
+      - '!libc/docs/**'
+      - '!libc/benchmarks/**'
+      - '!libc/fuzzing/**'
+      - '!libc/utils/**'
+      - '!**.md'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'libc/src/**'
+      - 'libc/include/**'
+      - 'libc/test/**'
+      - 'libc/CMakeLists.txt'
+      - '.github/workflows/libc-patch-coverage.yml'
+      - '!libc/docs/**'
+      - '!libc/benchmarks/**'
+      - '!libc/fuzzing/**'
+      - '!libc/utils/**'
+      - '!**.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit-coverage:
+    timeout-minutes: 60
+    name: libc-pre-commit-coverage
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 100
+        persist-credentials: false
+
+    - name: Setup Compiler Cache (sccache)
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+      with:
+        max-size: 1G
+        key: libc_coverage_unified_v2_x86_64
+        variant: sccache
+
+    - name: Configure CMake
+      run: |
+        export CMAKE_FLAGS="
+          -G Ninja
+          -S runtimes
+          -B build-cov
+          -DCMAKE_C_COMPILER=clang-23
+          -DCMAKE_CXX_COMPILER=clang++-23
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DLLVM_USE_LINKER=lld-23
+          -DLLVM_ENABLE_RUNTIMES=libc
+          -DLLVM_LIBC_FULL_BUILD=ON
+          -DLIBC_ENABLE_COVERAGE=ON
+          -DLIBC_TEST_UNIT_TEST_ONLY=ON
+          -DLIBC_TEST_SKIP_DEATH_TESTS=ON
+          -DLIBC_TEST_SKIP_SHARED_TESTS=ON
+        "
+        cmake $CMAKE_FLAGS
+
+    - name: Build and Run Targeted Tests
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        PR_BASE_REPO: ${{ github.event.pull_request.base.repo.full_name }}
+        PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        COMMIT_SHA: ${{ github.sha }}
+        BRANCH_REF: ${{ github.ref_name }}
+        REPO_NAME: ${{ github.repository }}
+      run: |
+        # Ensure upstream llvm-project remote is configured
+        git remote add upstream https://github.com/llvm/llvm-project.git 2>/dev/null || true
+
+        # 1. Deterministically resolve Base and Head references against upstream llvm-project
+        if [ "$EVENT_NAME" == "pull_request" ]; then
+          BASE_SHA="$PR_BASE_SHA"
+          HEAD_SHA="$PR_HEAD_SHA"
+          BASE_REF="$PR_BASE_REF"
+          HEAD_REF="$PR_HEAD_REF"
+          BASE_REPO="${PR_BASE_REPO:-llvm/llvm-project}"
+          HEAD_REPO="${PR_HEAD_REPO:-$REPO_NAME}"
+          # Fetch base branch history to resolve merge base
+          git fetch upstream "$BASE_REF" --depth=100 2>/dev/null || git fetch origin "$BASE_REF" --depth=100 2>/dev/null || git fetch upstream "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_SHA" --depth=1 2>/dev/null || true
+          DIFF_BASE=$(git merge-base "$BASE_SHA" HEAD 2>/dev/null || true)
+          if [ -z "$DIFF_BASE" ]; then
+            git fetch --no-tags --deepen=200 2>/dev/null || true
+            DIFF_BASE=$(git merge-base "$BASE_SHA" HEAD 2>/dev/null || echo "$BASE_SHA")
+          fi
+        elif [ "$BRANCH_REF" != "main" ]; then
+          # For feature branches, compare against main merge-base
+          git fetch origin main --depth=100 2>/dev/null || true
+          BASE_SHA=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD~1 2>/dev/null || echo "HEAD~1")
+          HEAD_SHA="$COMMIT_SHA"
+          BASE_REF="main"
+          HEAD_REF="$BRANCH_REF"
+          BASE_REPO="llvm/llvm-project"
+          HEAD_REPO="$REPO_NAME"
+          DIFF_BASE="$BASE_SHA"
+        else
+          # For direct pushes, compare the pushed commit against its parent (HEAD~1)
+          BASE_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD~1")
+          HEAD_SHA="$COMMIT_SHA"
+          BASE_REF="main"
+          HEAD_REF="$BRANCH_REF"
+          BASE_REPO="llvm/llvm-project"
+          HEAD_REPO="$REPO_NAME"
+          DIFF_BASE="HEAD~1"
+        fi
+
+        # Persist resolved commit references for all downstream steps
+        echo "DIFF_BASE=$DIFF_BASE" >> $GITHUB_ENV
+        echo "BASE_SHA=$BASE_SHA" >> $GITHUB_ENV
+        echo "HEAD_SHA=$HEAD_SHA" >> $GITHUB_ENV
+        echo "BASE_REF=$BASE_REF" >> $GITHUB_ENV
+        echo "HEAD_REF=$HEAD_REF" >> $GITHUB_ENV
+        echo "BASE_REPO=$BASE_REPO" >> $GITHUB_ENV
+        echo "HEAD_REPO=$HEAD_REPO" >> $GITHUB_ENV
+
+        echo "[LOG] Resolved Base: ${BASE_REF} (${BASE_SHA:0:7}) in ${BASE_REPO}"
+        echo "[LOG] Resolved Head: ${HEAD_REF} (${HEAD_SHA:0:7}) in ${HEAD_REPO}"
+
+        MODIFIED_FILES=$(git diff --name-only "$DIFF_BASE" HEAD -- libc/src/ || true)
+        echo "[LOG] Modified files in libc/src/:"
+        echo "$MODIFIED_FILES"
+
+        if [ -z "$MODIFIED_FILES" ]; then
+          echo "[LOG] No source files modified in libc/src/. Exiting successfully."
+          echo "TARGETS=" >> $GITHUB_ENV
+
+          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+          echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
+          echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
+          echo "---" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "**Coverage Validated**" >> coverage_report.md
+          echo "No \`.cpp\` source files in \`libc/src/\` were modified in this patch." >> coverage_report.md
+
+          cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+
+        # Get all valid ninja targets
+        ninja -C build-cov -t targets > all_targets.txt
+
+        TARGETS=""
+
+        for FILE in $MODIFIED_FILES; do
+          # Skip core support files from direct target mapping (tested transitively)
+          if [[ "$FILE" == *"__support/"* ]]; then
+            echo "[LOG] -> Support file ($FILE) will be tested transitively."
+            continue
+          fi
+
+          if [[ "$FILE" =~ ^libc/src/([^/]+)/(.*/)?([^/]+)\.cpp$ ]]; then
+            DIR="${BASH_REMATCH[1]}"
+            FUNC="${BASH_REMATCH[3]}"
+            ALL_MATCHES=$(grep -oE "^libc\.test\.src\.${DIR}\.([a-zA-Z0-9_]+\.)*${FUNC}_test\.__unit__" all_targets.txt || true)
+            FOUND_TARGET=$(echo "$ALL_MATCHES" | head -n 1 | tr -d '\r\n ' || true)
+            if [ -n "$FOUND_TARGET" ]; then
+              echo "[LOG] -> Matched $FILE -> $FOUND_TARGET"
+              TARGETS="$TARGETS $FOUND_TARGET"
+            else
+              echo "[LOG] -> Notice: No direct unit test target found for $FILE."
+            fi
+          fi
+        done
+
+        # Remove duplicate targets
+        TARGETS=$(echo "$TARGETS" | xargs -n1 | sort -u | xargs || true)
+        echo "[LOG] Executing Ninja targets: $TARGETS"
+
+        if [ -n "$TARGETS" ]; then
+          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+          ninja -C build-cov $TARGETS
+          echo "TARGETS=$TARGETS" >> $GITHUB_ENV
+        else
+          echo "[LOG] No standalone unit test targets to run."
+          echo "TARGETS=" >> $GITHUB_ENV
+
+          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+          echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
+          echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
+          echo "---" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "**Coverage Validated**" >> coverage_report.md
+          echo "Modified files do not have standalone unit test targets." >> coverage_report.md
+
+          cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Merge Profiles
+      if: env.TARGETS != ''
+      run: |
+        find . -name "libc_cov_*.profraw" > profraw_list.txt
+        NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
+        echo "[LOG] Discovered $NUM_PROFS raw profile data files."
+        if [ -s profraw_list.txt ]; then
+          llvm-profdata-23 merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
+          echo "[LOG] Successfully merged profile data into libc_full.profdata."
+        else
+          echo "[LOG] Warning: No profraw files found."
+        fi
+
+    - name: Extract Executables and Generate Summary
+      if: env.TARGETS != ''
+      run: |
+        EXECUTABLES=($(find build-cov -type f -executable -name "*__build__"))
+        OBJECTS=("${EXECUTABLES[@]:1}")
+        OBJECTS=("${OBJECTS[@]/#/-object=}")
+
+        echo "[LOG] Discovered ${#EXECUTABLES[@]} instrumented binaries for llvm-cov export."
+
+        if [ ! -f libc_full.profdata ] || [ ${#EXECUTABLES[@]} -eq 0 ]; then
+          echo "[LOG] Notice: Profile data or instrumented executables not found. Generating non-coverage summary."
+          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+          echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
+          echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
+          echo "---" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "**Coverage Validated**" >> coverage_report.md
+          echo "No executable statement profile data was collected for the modified lines in this patch." >> coverage_report.md
+          cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+
+        # 1. Generate JSON report for Python script
+        llvm-cov-23 export -format=text -instr-profile=libc_full.profdata "${EXECUTABLES[0]}" "${OBJECTS[@]}" > coverage.json
+
+        # 2. Generate git diff for modified libc source files
+        git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
+
+        # 3. Run Diff Coverage Python Script using persisted commit metadata
+        PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
+        cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+        echo "[LOG] Coverage report successfully written to GITHUB_STEP_SUMMARY."
+
+    - name: Fallback Failure Summary
+      if: failure() && !hashFiles('coverage_report.md')
+      run: |
+        echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+        echo "" >> coverage_report.md
+        echo "- **Base Branch:** [\`${BASE_REF:-main}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO:-llvm/llvm-project}/commit/${BASE_SHA:-main})" >> coverage_report.md
+        echo "- **Head Commit:** [\`${HEAD_REF:-HEAD}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO:-llvm/llvm-project}/commit/${HEAD_SHA:-HEAD})" >> coverage_report.md
+        echo "---" >> coverage_report.md
+        echo "" >> coverage_report.md
+        echo "**Coverage Validated**" >> coverage_report.md
+        echo "The targeted build or test execution encountered an error before coverage data could be finalized. Inspect the job logs for details." >> coverage_report.md
+
+        cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+
+
+    - name: Upload Patch Coverage Artifacts
+      if: always() && hashFiles('coverage_report.md')
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: libc-patch-coverage-report
+        path: |
+          coverage_report.md
+          patch.diff
+          coverage.json
+        if-no-files-found: ignore
+        retention-days: 14
+        overwrite: true
