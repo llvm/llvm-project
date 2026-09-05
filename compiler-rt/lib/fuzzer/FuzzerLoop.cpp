@@ -312,7 +312,7 @@ void Fuzzer::RssLimitCallback() {
   if (EF->__sanitizer_acquire_crash_state &&
       !EF->__sanitizer_acquire_crash_state())
     return;
-  Printf("==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %dMb)\n",
+  Printf("==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMB; limit: %dMB)\n",
          GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintMemoryProfile();
@@ -336,11 +336,11 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
     Printf(" corp: %zd", Corpus.NumActiveUnits());
     if (size_t N = Corpus.SizeInBytes()) {
       if (N < (1 << 14))
-        Printf("/%zdb", N);
+        Printf("/%zdB", N);
       else if (N < (1 << 24))
-        Printf("/%zdKb", N >> 10);
+        Printf("/%zdKB", N >> 10);
       else
-        Printf("/%zdMb", N >> 20);
+        Printf("/%zdMB", N >> 20);
     }
     if (size_t FF = Corpus.NumInputsThatTouchFocusFunction())
       Printf(" focus: %zd", FF);
@@ -351,7 +351,7 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
     Printf(" units: %zd", Units);
 
   Printf(" exec/s: %zd", ExecPerSec);
-  Printf(" rss: %zdMb", GetPeakRSSMb());
+  Printf(" rss: %zdMB", GetPeakRSSMb());
   Printf("%s", End);
 }
 
@@ -816,8 +816,8 @@ void Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
     Unit U({'\n'}); // Valid ASCII input.
     RunOne(U.data(), U.size());
   } else {
-    Printf("INFO: seed corpus: files: %zd min: %zdb max: %zdb total: %zdb"
-           " rss: %zdMb\n",
+    Printf("INFO: seed corpus: files: %zd min: %zdB max: %zdB total: %zdB"
+           " rss: %zdMB\n",
            CorporaFiles.size(), MinSize, MaxSize, TotalSize, GetPeakRSSMb());
     if (Options.ShuffleAtStartUp)
       std::shuffle(CorporaFiles.begin(), CorporaFiles.end(), MD.GetRand());
