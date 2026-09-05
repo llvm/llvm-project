@@ -10,8 +10,8 @@ define <vscale x 4 x float> @scalable_vec_acos(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.acos.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -32,8 +32,8 @@ define <vscale x 4 x float> @scalable_vec_asin(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.asin.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -54,8 +54,8 @@ define <vscale x 4 x float> @scalable_vec_atan(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.atan.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -86,8 +86,8 @@ define <vscale x 4 x float> @scalable_vec_cos(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.cos.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -108,8 +108,8 @@ define <vscale x 4 x float> @scalable_vec_cosh(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.cosh.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -130,8 +130,8 @@ define <vscale x 4 x float> @scalable_vec_exp10(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.exp10.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -152,8 +152,8 @@ define <vscale x 4 x float> @scalable_vec_log2(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.log2.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -174,8 +174,8 @@ define <vscale x 4 x float> @scalable_vec_log10(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.log10.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -196,8 +196,8 @@ define <vscale x 4 x float> @scalable_vec_sin(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.sin.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -218,8 +218,8 @@ define <vscale x 4 x float> @scalable_vec_sinh(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.sinh.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -240,8 +240,8 @@ define <vscale x 4 x float> @scalable_vec_tan(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.tan.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
@@ -262,8 +262,8 @@ define <vscale x 4 x float> @scalable_vec_tanh(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ [[INPUT]], [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ poison, [[TMP0]] ], [ [[TMP8:%.*]], %[[BB3]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[INPUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.tanh.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
