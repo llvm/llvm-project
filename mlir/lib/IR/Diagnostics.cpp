@@ -446,7 +446,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
                                                 DiagnosticSeverity kind,
                                                 bool displaySourceLine) {
   // Extract a file location from this loc.
-  auto fileLoc = loc->findInstanceOf<FileLineColLoc>();
+  auto fileLoc = loc->findInstanceOf<FileLineColRange>();
 
   // If one doesn't exist, then print the raw message without a source location.
   if (!fileLoc) {
@@ -462,8 +462,30 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // location to an SMLoc.
   if (displaySourceLine) {
     auto smloc = convertLocToSMLoc(fileLoc);
-    if (smloc.isValid())
+    if (smloc.isValid()) {
+      // Preserve the existing point diagnostic for FileLineColLoc. For a
+      // proper range, highlight it when both endpoints form a resolvable,
+      // non-empty, ordered range in the same source buffer. Otherwise, safely
+      // fall back to the start point.
+      auto start =
+          std::make_pair(fileLoc.getStartLine(), fileLoc.getStartColumn());
+      auto end = std::make_pair(fileLoc.getEndLine(), fileLoc.getEndColumn());
+      if (!isStrictFileLineColLoc(fileLoc) && start.first != 0 &&
+          start.second != 0 && end.first != 0 && end.second != 0 &&
+          start < end) {
+        unsigned bufferId =
+            impl->getSourceMgrBufferIDForFile(mgr, fileLoc.getFilename());
+        SMLoc endLoc = mgr.FindLocForLineAndColumn(
+            bufferId, fileLoc.getEndLine(), fileLoc.getEndColumn());
+        if (endLoc.isValid() &&
+            mgr.FindBufferContainingLoc(smloc) == bufferId &&
+            mgr.FindBufferContainingLoc(endLoc) == bufferId) {
+          SMRange range(smloc, endLoc);
+          return mgr.PrintMessage(os, smloc, getDiagKind(kind), message, range);
+        }
+      }
       return mgr.PrintMessage(os, smloc, getDiagKind(kind), message);
+    }
   }
 
   // If the conversion was unsuccessful, create a diagnostic with the file
@@ -471,8 +493,8 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // the constructor of SMDiagnostic that takes a location.
   std::string locStr;
   llvm::raw_string_ostream locOS(locStr);
-  locOS << fileLoc.getFilename().getValue() << ":" << fileLoc.getLine() << ":"
-        << fileLoc.getColumn();
+  locOS << fileLoc.getFilename().getValue() << ":" << fileLoc.getStartLine()
+        << ":" << fileLoc.getStartColumn();
   llvm::SMDiagnostic diag(locStr, getDiagKind(kind), message.str());
   diag.print(nullptr, os);
 }
@@ -549,7 +571,7 @@ SourceMgrDiagnosticHandler::findLocToShow(Location loc) {
         // emitted in a different note on the main diagnostic.
         return findLocToShow(callLoc.getCallee());
       })
-      .Case([&](FileLineColLoc) -> std::optional<Location> { return loc; })
+      .Case([&](FileLineColRange) -> std::optional<Location> { return loc; })
       .Case([&](FusedLoc fusedLoc) -> std::optional<Location> {
         // Fused location is unique in that we try to find a sub-location to
         // show, rather than the top-level location itself.
@@ -573,16 +595,17 @@ SourceMgrDiagnosticHandler::findLocToShow(Location loc) {
 
 /// Get a memory buffer for the given file, or the main file of the source
 /// manager if one doesn't exist. This always returns non-null.
-SMLoc SourceMgrDiagnosticHandler::convertLocToSMLoc(FileLineColLoc loc) {
+SMLoc SourceMgrDiagnosticHandler::convertLocToSMLoc(FileLineColRange loc) {
   // The column and line may be zero to represent unknown column and/or unknown
   /// line/column information.
-  if (loc.getLine() == 0 || loc.getColumn() == 0)
+  if (loc.getStartLine() == 0 || loc.getStartColumn() == 0)
     return SMLoc();
 
   unsigned bufferId = impl->getSourceMgrBufferIDForFile(mgr, loc.getFilename());
   if (!bufferId)
     return SMLoc();
-  return mgr.FindLocForLineAndColumn(bufferId, loc.getLine(), loc.getColumn());
+  return mgr.FindLocForLineAndColumn(bufferId, loc.getStartLine(),
+                                     loc.getStartColumn());
 }
 
 //===----------------------------------------------------------------------===//
