@@ -11,6 +11,7 @@
 #include "AffineMapDetail.h"
 #include "AttributeDetail.h"
 #include "IntegerSetDetail.h"
+#include "SymbolRefContainmentCache.h"
 #include "TypeDetail.h"
 #include "mlir/IR/Action.h"
 #include "mlir/IR/AffineExpr.h"
@@ -279,6 +280,12 @@ public:
     llvm::DenseMap<StringRef, size_t> baseDialectReferencingStrAttrCounts;
   };
   std::unique_ptr<TransientScopeState> transientState;
+
+  /// Cache recording which uniqued types and attributes are provably free of a
+  /// transitive SymbolRefAttr. Filled on demand by symbol-table verification;
+  /// cleared when a transient scope ends, since storage interned during the
+  /// scope is freed then.
+  SymbolRefContainmentCache symbolRefContainmentCache{threadingIsEnabled};
 
 public:
   MLIRContextImpl(bool threadingIsEnabled)
@@ -779,6 +786,10 @@ void MLIRContext::endTransientScope() {
   ctxImpl.affineUniquer.endTransientScope();
   ctxImpl.distinctAttributeAllocator.endTransientScope();
 
+  // Transiently allocated uniqued storage is freed here and its addresses may
+  // be recycled, so the containment memo must not survive the scope.
+  ctxImpl.symbolRefContainmentCache.clear();
+
   ctxImpl.transientState.reset();
 }
 
@@ -1267,6 +1278,11 @@ DistinctAttrStorage *
 detail::DistinctAttributeUniquer::allocateStorage(MLIRContext *context,
                                                   Attribute referencedAttr) {
   return context->getImpl().distinctAttributeAllocator.allocate(referencedAttr);
+}
+
+detail::SymbolRefContainmentCache &
+detail::getSymbolRefContainmentCache(MLIRContext *ctx) {
+  return ctx->getImpl().symbolRefContainmentCache;
 }
 
 /// Return empty dictionary.
