@@ -2,11 +2,14 @@
 // RUN:   FileCheck %s -check-prefix=NEW
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fclang-abi-compat=23 %s -o - | \
 // RUN:   FileCheck %s -check-prefix=COMPAT
+// RUN: %clang_cc1 -triple x86_64-scei-ps4 -emit-llvm %s -o - | \
+// RUN:   FileCheck %s -check-prefix=COMPAT
 
 // A non-zero-width unnamed bit-field classifies the eightbyte it occupies as
 // INTEGER like a named one, matching GCC, so this struct travels in two integer
-// registers. Under -fclang-abi-compat=23 the unnamed bit-field is padding, so
-// the low eightbyte stays NO_CLASS and only the high eightbyte is passed.
+// registers. Under -fclang-abi-compat=23 (and on PlayStation) the unnamed
+// bit-field is padding, so the low eightbyte stays NO_CLASS and only the high
+// eightbyte is passed.
 struct s {
   long : 64;
   long a;
