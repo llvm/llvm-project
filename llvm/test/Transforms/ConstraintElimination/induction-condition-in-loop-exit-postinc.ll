@@ -673,8 +673,7 @@ define i1 @postinc_start_plus_step_overflow_unsigned(i1 %c) {
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_0:.*]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_0]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i64 [[IV_NEXT]], 100
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;

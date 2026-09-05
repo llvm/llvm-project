@@ -13,8 +13,7 @@ define i1 @mul_via_range(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[A]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i8 [[M]], 50
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %m = mul i8 %a, 10
@@ -62,8 +61,7 @@ define i1 @shl_via_range(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[A]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i8 [[M]], 20
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %m = shl i8 %a, 2
