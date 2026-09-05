@@ -244,16 +244,177 @@
         integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_type_str = -5
         integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_other = -6
 
-        interface
 
 !         ***
 !         *** omp_* entry points
 !         ***
 
+        interface omp_set_num_threads
           subroutine omp_set_num_threads(num_threads) bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: num_threads
           end subroutine omp_set_num_threads
+
+          subroutine kmp_set_num_threads_8(num_threads) bind(c)
+            integer (kind=8), value :: num_threads
+          end subroutine kmp_set_num_threads_8
+        end interface omp_set_num_threads
+
+        interface omp_set_max_active_levels
+          subroutine omp_set_max_active_levels(max_levels) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: max_levels
+          end subroutine omp_set_max_active_levels
+
+          subroutine kmp_set_max_active_levels_8(max_levels) bind(c)
+            integer (kind=8), value :: max_levels
+          end subroutine kmp_set_max_active_levels_8
+        end interface omp_set_max_active_levels
+
+        interface omp_get_ancestor_thread_num
+          function omp_get_ancestor_thread_num(level) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_ancestor_thread_num
+            integer (kind=omp_integer_kind), value :: level
+          end function omp_get_ancestor_thread_num
+
+          function kmp_get_ancestor_thread_num_8(level) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_get_ancestor_thread_num_8
+            integer (kind=8), value :: level
+          end function kmp_get_ancestor_thread_num_8
+        end interface omp_get_ancestor_thread_num
+
+        interface omp_get_team_size
+          function omp_get_team_size(level) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_team_size
+            integer (kind=omp_integer_kind), value :: level
+          end function omp_get_team_size
+
+          function kmp_get_team_size_8(level) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_get_team_size_8
+            integer (kind=8), value :: level
+          end function kmp_get_team_size_8
+        end interface omp_get_team_size
+
+        interface omp_set_schedule
+          subroutine omp_set_schedule(kind, chunk_size) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_sched_kind), value :: kind
+            integer (kind=omp_integer_kind), value :: chunk_size
+          end subroutine omp_set_schedule
+
+          subroutine kmp_set_schedule_8(kind, chunk_size) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_sched_kind), value :: kind
+            integer (kind=8), value :: chunk_size
+          end subroutine kmp_set_schedule_8
+        end interface omp_set_schedule
+
+        interface omp_get_schedule
+          subroutine omp_get_schedule(kind, chunk_size) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_sched_kind) kind
+            integer (kind=omp_integer_kind) chunk_size
+          end subroutine omp_get_schedule
+
+          subroutine kmp_get_schedule_8(kind, chunk_size) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_sched_kind) kind
+            integer (kind=8) chunk_size
+          end subroutine kmp_get_schedule_8
+        end interface omp_get_schedule
+
+        interface omp_get_place_num_procs
+          function omp_get_place_num_procs(place_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: place_num
+            integer (kind=omp_integer_kind) omp_get_place_num_procs
+          end function omp_get_place_num_procs
+
+          function kmp_get_place_num_procs_8(place_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=8), value :: place_num
+            integer (kind=omp_integer_kind) kmp_get_place_num_procs_8
+          end function kmp_get_place_num_procs_8
+        end interface omp_get_place_num_procs
+
+        interface omp_get_place_proc_ids
+          subroutine omp_get_place_proc_ids(place_num, ids) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: place_num
+            integer (kind=omp_integer_kind) ids(*)
+          end subroutine omp_get_place_proc_ids
+
+          subroutine kmp_get_place_proc_ids_8(place_num, ids) bind(c)
+            integer (kind=8), value :: place_num
+            integer (kind=8) ids(*)
+          end subroutine kmp_get_place_proc_ids_8
+        end interface omp_get_place_proc_ids
+
+        interface omp_get_partition_place_nums
+          subroutine omp_get_partition_place_nums(place_nums) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) place_nums(*)
+          end subroutine omp_get_partition_place_nums
+
+          subroutine kmp_get_partition_place_nums_8(place_nums) bind(c)
+            integer (kind=8) place_nums(*)
+          end subroutine kmp_get_partition_place_nums_8
+        end interface omp_get_partition_place_nums
+
+        interface omp_set_default_device
+          subroutine omp_set_default_device(device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: device_num
+          end subroutine omp_set_default_device
+
+          subroutine kmp_set_default_device_8(device_num) bind(c)
+            integer (kind=8), value :: device_num
+          end subroutine kmp_set_default_device_8
+        end interface omp_set_default_device
+
+        interface omp_pause_resource
+          function omp_pause_resource(kind, device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_pause_resource_kind), value :: kind
+            integer (kind=omp_integer_kind), value :: device_num
+            integer (kind=omp_integer_kind) omp_pause_resource
+          end function omp_pause_resource
+
+          function kmp_pause_resource_8(kind, device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_pause_resource_kind), value :: kind
+            integer (kind=8), value :: device_num
+            integer (kind=omp_integer_kind) kmp_pause_resource_8
+          end function kmp_pause_resource_8
+        end interface omp_pause_resource
+
+        interface omp_set_num_teams
+          subroutine omp_set_num_teams(num_teams) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: num_teams
+          end subroutine omp_set_num_teams
+
+          subroutine kmp_set_num_teams_8(num_teams) bind(c)
+            integer (kind=8), value :: num_teams
+          end subroutine kmp_set_num_teams_8
+        end interface omp_set_num_teams
+
+        interface omp_set_teams_thread_limit
+          subroutine omp_set_teams_thread_limit(thread_limit) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: thread_limit
+          end subroutine omp_set_teams_thread_limit
+
+          subroutine kmp_set_teams_thread_limit_8(thread_limit) bind(c)
+            integer (kind=8), value :: thread_limit
+          end subroutine kmp_set_teams_thread_limit_8
+        end interface omp_set_teams_thread_limit
+
+        interface
 
           subroutine omp_set_dynamic(dynamic_threads) bind(c)
             use omp_lib_kinds
@@ -310,11 +471,6 @@
             integer (kind=omp_integer_kind) omp_get_thread_limit
           end function omp_get_thread_limit
 
-          subroutine omp_set_max_active_levels(max_levels) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: max_levels
-          end subroutine omp_set_max_active_levels
-
           function omp_get_max_active_levels() bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_max_active_levels
@@ -330,30 +486,6 @@
             integer (kind=omp_integer_kind) omp_get_active_level
           end function omp_get_active_level
 
-          function omp_get_ancestor_thread_num(level) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind) omp_get_ancestor_thread_num
-            integer (kind=omp_integer_kind), value :: level
-          end function omp_get_ancestor_thread_num
-
-          function omp_get_team_size(level) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind) omp_get_team_size
-            integer (kind=omp_integer_kind), value :: level
-          end function omp_get_team_size
-
-          subroutine omp_set_schedule(kind, chunk_size) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_sched_kind), value :: kind
-            integer (kind=omp_integer_kind), value :: chunk_size
-          end subroutine omp_set_schedule
-
-          subroutine omp_get_schedule(kind, chunk_size) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_sched_kind) kind
-            integer (kind=omp_integer_kind) chunk_size
-          end subroutine omp_get_schedule
-
           function omp_get_proc_bind() bind(c)
             use omp_lib_kinds
             integer (kind=omp_proc_bind_kind) omp_get_proc_bind
@@ -364,18 +496,6 @@
             integer (kind=omp_integer_kind) omp_get_num_places
           end function omp_get_num_places
 
-          function omp_get_place_num_procs(place_num) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: place_num
-            integer (kind=omp_integer_kind) omp_get_place_num_procs
-          end function omp_get_place_num_procs
-
-          subroutine omp_get_place_proc_ids(place_num, ids) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: place_num
-            integer (kind=omp_integer_kind) ids(*)
-          end subroutine omp_get_place_proc_ids
-
           function omp_get_place_num() bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_place_num
@@ -385,11 +505,6 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_partition_num_places
           end function omp_get_partition_num_places
-
-          subroutine omp_get_partition_place_nums(place_nums) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind) place_nums(*)
-          end subroutine omp_get_partition_place_nums
 
           function omp_get_wtime() bind(c)
             use omp_lib_kinds
@@ -405,11 +520,6 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_default_device
           end function omp_get_default_device
-
-          subroutine omp_set_default_device(device_num) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: device_num
-          end subroutine omp_set_default_device
 
           function omp_get_num_devices() bind(c)
             use omp_lib_kinds
@@ -445,13 +555,6 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_device_num
           end function omp_get_device_num
-
-          function omp_pause_resource(kind, device_num) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_pause_resource_kind), value :: kind
-            integer (kind=omp_integer_kind), value :: device_num
-            integer (kind=omp_integer_kind) omp_pause_resource
-          end function omp_pause_resource
 
           function omp_pause_resource_all(kind) bind(c)
             use omp_lib_kinds
@@ -640,20 +743,11 @@
             integer (kind=kmp_size_t_kind) :: omp_capture_affinity
           end function omp_capture_affinity
 
-          subroutine omp_set_num_teams(num_teams) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: num_teams
-          end subroutine omp_set_num_teams
 
           function omp_get_max_teams() bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_max_teams
           end function omp_get_max_teams
-
-          subroutine omp_set_teams_thread_limit(thread_limit) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: thread_limit
-          end subroutine omp_set_teams_thread_limit
 
           function omp_get_teams_thread_limit() bind(c)
             use omp_lib_kinds
@@ -932,25 +1026,112 @@
             integer, intent(in) :: num_resources
             integer, intent(in) :: resources(*)
           end function omp_get_submemspace
+        end interface
 
 !         ***
 !         *** kmp_* entry points
 !         ***
 
+        interface kmp_set_stacksize
           subroutine kmp_set_stacksize(size) bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: size
           end subroutine kmp_set_stacksize
 
-          subroutine kmp_set_stacksize_s(size) bind(c)
-            use omp_lib_kinds
-            integer (kind=kmp_size_t_kind), value :: size
-          end subroutine kmp_set_stacksize_s
+          subroutine kmp_set_stacksize_8(size) bind(c)
+            integer (kind=8), value :: size
+          end subroutine kmp_set_stacksize_8
+        end interface kmp_set_stacksize
 
+        interface kmp_set_blocktime
           subroutine kmp_set_blocktime(msec) bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: msec
           end subroutine kmp_set_blocktime
+
+          subroutine kmp_set_blocktime_8(msec) bind(c)
+            integer (kind=8), value :: msec
+          end subroutine kmp_set_blocktime_8
+        end interface kmp_set_blocktime
+
+        interface kmp_set_library
+          subroutine kmp_set_library(libnum) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: libnum
+          end subroutine kmp_set_library
+
+          subroutine kmp_set_library_8(libnum) bind(c)
+            integer (kind=8), value :: libnum
+          end subroutine kmp_set_library_8
+        end interface kmp_set_library
+
+        interface kmp_set_disp_num_buffers
+          subroutine kmp_set_disp_num_buffers(num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: num
+          end subroutine kmp_set_disp_num_buffers
+
+          subroutine kmp_set_disp_num_buffers_8(num) bind(c)
+            integer (kind=8), value :: num
+          end subroutine kmp_set_disp_num_buffers_8
+        end interface kmp_set_disp_num_buffers
+
+        interface kmp_set_affinity_mask_proc
+          function kmp_set_affinity_mask_proc(proc, mask) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_set_affinity_mask_proc
+            integer (kind=omp_integer_kind), value :: proc
+            integer (kind=kmp_affinity_mask_kind) mask
+          end function kmp_set_affinity_mask_proc
+
+          function kmp_set_affinity_mask_proc_8(proc, mask) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_set_affinity_mask_proc_8
+            integer (kind=8), value :: proc
+            integer (kind=kmp_affinity_mask_kind) mask
+          end function kmp_set_affinity_mask_proc_8
+        end interface kmp_set_affinity_mask_proc
+
+        interface kmp_unset_affinity_mask_proc
+          function kmp_unset_affinity_mask_proc(proc, mask) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_unset_affinity_mask_proc
+            integer (kind=omp_integer_kind), value :: proc
+            integer (kind=kmp_affinity_mask_kind) mask
+          end function kmp_unset_affinity_mask_proc
+
+          function kmp_unset_affinity_mask_proc_8(proc, mask) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_unset_affinity_mask_proc_8
+            integer (kind=8), value :: proc
+            integer (kind=kmp_affinity_mask_kind) mask
+          end function kmp_unset_affinity_mask_proc_8
+        end interface kmp_unset_affinity_mask_proc
+
+        interface kmp_get_affinity_mask_proc
+          function kmp_get_affinity_mask_proc(proc, mask) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_get_affinity_mask_proc
+            integer (kind=omp_integer_kind), value :: proc
+            integer (kind=kmp_affinity_mask_kind) mask
+          end function kmp_get_affinity_mask_proc
+
+          function kmp_get_affinity_mask_proc_8(proc, mask) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) kmp_get_affinity_mask_proc_8
+            integer (kind=8), value :: proc
+            integer (kind=kmp_affinity_mask_kind) mask
+          end function kmp_get_affinity_mask_proc_8
+        end interface kmp_get_affinity_mask_proc
+
+        interface
+          subroutine kmp_set_stacksize_s(size) bind(c)
+            use omp_lib_kinds
+            integer (kind=kmp_size_t_kind), value :: size
+          end subroutine kmp_set_stacksize_s
+        end interface
+
+        interface
 
           subroutine kmp_set_library_serial() bind(c)
           end subroutine kmp_set_library_serial
@@ -960,12 +1141,9 @@
 
           subroutine kmp_set_library_throughput() bind(c)
           end subroutine kmp_set_library_throughput
+        end interface
 
-          subroutine kmp_set_library(libnum) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: libnum
-          end subroutine kmp_set_library
-
+        interface
           subroutine kmp_set_defaults(string)
             character (len=*) :: string
           end subroutine kmp_set_defaults
@@ -989,12 +1167,9 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) kmp_get_library
           end function kmp_get_library
+        end interface
 
-          subroutine kmp_set_disp_num_buffers(num) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind), value :: num
-          end subroutine kmp_set_disp_num_buffers
-
+        interface
           function kmp_set_affinity(mask) bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) kmp_set_affinity
@@ -1021,28 +1196,9 @@
             use omp_lib_kinds
             integer (kind=kmp_affinity_mask_kind) mask
           end subroutine kmp_destroy_affinity_mask
+        end interface
 
-          function kmp_set_affinity_mask_proc(proc, mask) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind) kmp_set_affinity_mask_proc
-            integer (kind=omp_integer_kind), value :: proc
-            integer (kind=kmp_affinity_mask_kind) mask
-          end function kmp_set_affinity_mask_proc
-
-          function kmp_unset_affinity_mask_proc(proc, mask) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind) kmp_unset_affinity_mask_proc
-            integer (kind=omp_integer_kind), value :: proc
-            integer (kind=kmp_affinity_mask_kind) mask
-          end function kmp_unset_affinity_mask_proc
-
-          function kmp_get_affinity_mask_proc(proc, mask) bind(c)
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind) kmp_get_affinity_mask_proc
-            integer (kind=omp_integer_kind), value :: proc
-            integer (kind=kmp_affinity_mask_kind) mask
-          end function kmp_get_affinity_mask_proc
-
+        interface
           function kmp_malloc(size) bind(c)
             use omp_lib_kinds
             integer (kind=kmp_pointer_kind) kmp_malloc
@@ -1152,6 +1308,7 @@
 
         ! make the above routine definitions public
         public :: omp_set_num_threads
+        public :: kmp_set_num_threads_8
         public :: omp_set_dynamic
         public :: omp_set_nested
         public :: omp_get_num_threads
@@ -1164,24 +1321,33 @@
         public :: omp_get_nested
         public :: omp_get_thread_limit
         public :: omp_set_max_active_levels
+        public :: kmp_set_max_active_levels_8
         public :: omp_get_max_active_levels
         public :: omp_get_level
         public :: omp_get_active_level
         public :: omp_get_ancestor_thread_num
+        public :: kmp_get_ancestor_thread_num_8
         public :: omp_get_team_size
+        public :: kmp_get_team_size_8
         public :: omp_set_schedule
+        public :: kmp_set_schedule_8
         public :: omp_get_schedule
+        public :: kmp_get_schedule_8
         public :: omp_get_proc_bind
         public :: omp_get_num_places
         public :: omp_get_place_num_procs
+        public :: kmp_get_place_num_procs_8
         public :: omp_get_place_proc_ids
+        public :: kmp_get_place_proc_ids_8
         public :: omp_get_place_num
         public :: omp_get_partition_num_places
         public :: omp_get_partition_place_nums
+        public :: kmp_get_partition_place_nums_8
         public :: omp_get_wtime
         public :: omp_get_wtick
         public :: omp_get_default_device
         public :: omp_set_default_device
+        public :: kmp_set_default_device_8
         public :: omp_get_num_devices
         public :: omp_get_num_teams
         public :: omp_get_team_num
@@ -1190,6 +1356,7 @@
         public :: omp_get_initial_device
         public :: omp_get_device_num
         public :: omp_pause_resource
+        public :: kmp_pause_resource_8
         public :: omp_pause_resource_all
         public :: omp_get_supported_active_levels
         public :: omp_fulfill_event
@@ -1216,8 +1383,10 @@
         public :: omp_display_affinity
         public :: omp_capture_affinity
         public :: omp_set_num_teams
+        public :: kmp_set_num_teams_8
         public :: omp_get_max_teams
         public :: omp_set_teams_thread_limit
+        public :: kmp_set_teams_thread_limit_8
         public :: omp_get_teams_thread_limit
         public :: omp_display_env
         public :: omp_target_alloc
@@ -1241,26 +1410,33 @@
         public :: omp_free
         public :: omp_in_explicit_task
         public :: kmp_set_stacksize
+        public :: kmp_set_stacksize_8
         public :: kmp_set_stacksize_s
         public :: kmp_set_blocktime
+        public :: kmp_set_blocktime_8
         public :: kmp_set_library_serial
         public :: kmp_set_library_turnaround
         public :: kmp_set_library_throughput
         public :: kmp_set_library
+        public :: kmp_set_library_8
         public :: kmp_set_defaults
         public :: kmp_get_stacksize
         public :: kmp_get_stacksize_s
         public :: kmp_get_blocktime
         public :: kmp_get_library
         public :: kmp_set_disp_num_buffers
+        public :: kmp_set_disp_num_buffers_8
         public :: kmp_set_affinity
         public :: kmp_get_affinity
         public :: kmp_get_affinity_max_proc
         public :: kmp_create_affinity_mask
         public :: kmp_destroy_affinity_mask
         public :: kmp_set_affinity_mask_proc
+        public :: kmp_set_affinity_mask_proc_8
         public :: kmp_unset_affinity_mask_proc
+        public :: kmp_unset_affinity_mask_proc_8
         public :: kmp_get_affinity_mask_proc
+        public :: kmp_get_affinity_mask_proc_8
         public :: kmp_malloc
         public :: kmp_aligned_malloc
         public :: kmp_calloc
