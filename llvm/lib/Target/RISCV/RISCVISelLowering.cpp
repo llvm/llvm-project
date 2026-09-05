@@ -1616,7 +1616,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setVectorInterleaveAction(
             {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-            {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
+            {3, 4, 5, 6, 7, 8}, VT, Custom);
 
         setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT},
                            VT, Custom);
@@ -1796,7 +1796,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setVectorInterleaveAction(
             {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-            {2, 3, 4, 5, 6, 7, 8}, VT, Custom);
+            {3, 4, 5, 6, 7, 8}, VT, Custom);
 
         setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
                             ISD::MGATHER, ISD::MSCATTER},

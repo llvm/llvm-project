@@ -194,7 +194,9 @@ define void @hang_when_merging_stores_after_legalisation_intrinsic(ptr %a, <2 x 
 ; CHECK-LABEL: hang_when_merging_stores_after_legalisation_intrinsic:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, s0
-; CHECK-NEXT:    stp q0, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: hang_when_merging_stores_after_legalisation_intrinsic:
@@ -219,15 +221,8 @@ define void @hang_when_merging_stores_after_legalisation_intrinsic(ptr %a, <2 x 
 define void @interleave_store_without_splat_intrinsic(ptr %a, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: interleave_store_without_splat_intrinsic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, z1.s[3]
-; CHECK-NEXT:    mov z3.s, z0.s[3]
-; CHECK-NEXT:    mov z4.s, z1.s[2]
-; CHECK-NEXT:    mov z5.s, z0.s[2]
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z2.s, z3.s, z2.s
-; CHECK-NEXT:    zip1 z3.s, z5.s, z4.s
-; CHECK-NEXT:    zip1 z1.d, z3.d, z2.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: interleave_store_without_splat_intrinsic:

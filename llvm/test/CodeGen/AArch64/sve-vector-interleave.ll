@@ -957,14 +957,14 @@ define <vscale x 12 x i64> @interleave6_nxv12i64(<vscale x 2 x i64> %vec0, <vsca
 ; SVE-NEXT:    zip2 z1.d, z1.d, z4.d
 ; SVE-NEXT:    zip2 z0.d, z0.d, z3.d
 ; SVE-NEXT:    ptrue p0.d
-; SVE-NEXT:    st3d { z24.d - z26.d }, p0, [sp]
-; SVE-NEXT:    st3d { z0.d - z2.d }, p0, [sp, #3, mul vl]
-; SVE-NEXT:    ldr z0, [sp]
-; SVE-NEXT:    ldr z1, [sp, #1, mul vl]
-; SVE-NEXT:    ldr z2, [sp, #2, mul vl]
-; SVE-NEXT:    ldr z3, [sp, #3, mul vl]
-; SVE-NEXT:    ldr z4, [sp, #4, mul vl]
-; SVE-NEXT:    ldr z5, [sp, #5, mul vl]
+; SVE-NEXT:    st3d { z24.d - z26.d }, p0, [sp, #3, mul vl]
+; SVE-NEXT:    st3d { z0.d - z2.d }, p0, [sp]
+; SVE-NEXT:    ldr z0, [sp, #3, mul vl]
+; SVE-NEXT:    ldr z1, [sp, #4, mul vl]
+; SVE-NEXT:    ldr z2, [sp, #5, mul vl]
+; SVE-NEXT:    ldr z3, [sp]
+; SVE-NEXT:    ldr z4, [sp, #1, mul vl]
+; SVE-NEXT:    ldr z5, [sp, #2, mul vl]
 ; SVE-NEXT:    addvl sp, sp, #6
 ; SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SVE-NEXT:    ret
@@ -983,14 +983,14 @@ define <vscale x 12 x i64> @interleave6_nxv12i64(<vscale x 2 x i64> %vec0, <vsca
 ; SME2-NEXT:    mov z2.d, z25.d
 ; SME2-NEXT:    mov z3.d, z7.d
 ; SME2-NEXT:    ptrue p0.d
-; SME2-NEXT:    st3d { z4.d - z6.d }, p0, [sp]
-; SME2-NEXT:    ldr z0, [sp]
-; SME2-NEXT:    st3d { z1.d - z3.d }, p0, [sp, #3, mul vl]
-; SME2-NEXT:    ldr z1, [sp, #1, mul vl]
-; SME2-NEXT:    ldr z2, [sp, #2, mul vl]
-; SME2-NEXT:    ldr z3, [sp, #3, mul vl]
-; SME2-NEXT:    ldr z4, [sp, #4, mul vl]
-; SME2-NEXT:    ldr z5, [sp, #5, mul vl]
+; SME2-NEXT:    st3d { z4.d - z6.d }, p0, [sp, #3, mul vl]
+; SME2-NEXT:    ldr z0, [sp, #3, mul vl]
+; SME2-NEXT:    st3d { z1.d - z3.d }, p0, [sp]
+; SME2-NEXT:    ldr z1, [sp, #4, mul vl]
+; SME2-NEXT:    ldr z2, [sp, #5, mul vl]
+; SME2-NEXT:    ldr z3, [sp]
+; SME2-NEXT:    ldr z4, [sp, #1, mul vl]
+; SME2-NEXT:    ldr z5, [sp, #2, mul vl]
 ; SME2-NEXT:    addvl sp, sp, #6
 ; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; SME2-NEXT:    ret
