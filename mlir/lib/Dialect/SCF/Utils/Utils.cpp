@@ -1006,6 +1006,20 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
       }
     }
   }
+
+  // Conservatively decline if an iteration argument of an enclosing loop is
+  // read anywhere but as the init operand of the loop nested in it: coalescing
+  // would replace that value, fixed for a whole run of the inner loop, with the
+  // one carried by the coalesced loop, which changes on every iteration.
+  for (unsigned i = 1, e = loops.size(); i < e; ++i) {
+    Operation *innerLoop = loops[i].getOperation();
+    for (BlockArgument iterArg : loops[i - 1].getRegionIterArgs()) {
+      if (llvm::any_of(iterArg.getUsers(),
+                       [&](Operation *user) { return user != innerLoop; }))
+        return failure();
+    }
+  }
+
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
   for (auto loop : loops) {

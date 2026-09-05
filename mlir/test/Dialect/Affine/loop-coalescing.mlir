@@ -489,3 +489,24 @@ func.func @inner_loop_yields_induction_var() -> index {
   }
   return %r : index
 }
+
+// -----
+
+// The inner loop reads an iteration argument of the outer loop: no coalescing.
+
+// CHECK-LABEL: @no_coalesce_outer_iter_arg_read_in_inner_loop
+// CHECK-SAME:    %[[INIT:[A-Za-z0-9]+]]: i64
+func.func @no_coalesce_outer_iter_arg_read_in_inner_loop(%init: i64, %lb: index,
+    %ub: index, %step: index) -> i64 {
+  // CHECK: scf.for %{{.*}} iter_args(%[[OUTER:.*]] = %[[INIT]]) -> (i64)
+  %0 = scf.for %i = %lb to %ub step %step iter_args(%outer = %init) -> (i64) {
+    // CHECK: scf.for %{{.*}} iter_args(%[[INNER:.*]] = %[[OUTER]]) -> (i64)
+    %1 = scf.for %j = %lb to %ub step %step iter_args(%inner = %outer) -> (i64) {
+      // CHECK: arith.addi %[[INNER]], %[[OUTER]] : i64
+      %2 = arith.addi %inner, %outer : i64
+      scf.yield %2 : i64
+    }
+    scf.yield %1 : i64
+  }
+  return %0 : i64
+}
