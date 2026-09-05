@@ -42,6 +42,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -176,6 +177,7 @@ class SROA {
   LLVMContext *const C;
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
+  OptimizationRemarkEmitter *const ORE;
   const bool PreserveCFG;
   const bool AggregateToVector;
 
@@ -238,8 +240,8 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions Options)
-      : C(C), DTU(DTU), AC(AC),
+       SROAOptions Options, OptimizationRemarkEmitter *ORE = nullptr)
+      : C(C), DTU(DTU), AC(AC), ORE(ORE),
         PreserveCFG(Options.CFG == SROAOptions::PreserveCFG),
         AggregateToVector(Options.AggregateToVector) {}
 
@@ -598,8 +600,21 @@ public:
   ///
   /// If this is true, the slices are never fully built and should be
   /// ignored.
-  bool isEscaped() const { return PointerEscapingInstr; }
-  bool isEscapedReadOnly() const { return PointerEscapingInstrReadOnly; }
+  bool isEscaped() const { return PtrI.isEscaped() || PtrI.isAborted(); }
+
+  bool isEscapedReadOnly() const { return PtrI.isEscapedReadOnly(); }
+
+  /// The instruction that stopped us from building slices (null if none)
+  Instruction *getPointerEscapingInst() const {
+    return PtrI.isEscaped() ? PtrI.getEscapingInst() : PtrI.getAbortingInst();
+  }
+
+  /// Failure reason, generic text about pointer escape if we don't have one.
+  const char *getFailureReason() const {
+    if (PtrI.isEscaped())
+      return "Pointer escapes.";
+    return PtrI.getFailureReason();
+  }
 
   /// Support for iterating over the slices.
   /// @{
@@ -675,14 +690,13 @@ private:
   AllocaInst &AI;
 #endif
 
-  /// The instruction responsible for this alloca not having a known set
-  /// of slices.
+  /// The outcome of walking the uses of the alloca.
   ///
-  /// When an instruction (potentially) escapes the pointer to the alloca, we
-  /// store a pointer to that here and abort trying to form slices of the
-  /// alloca. This will be null if the alloca slices are analyzed successfully.
-  Instruction *PointerEscapingInstr;
-  Instruction *PointerEscapingInstrReadOnly;
+  /// When an instruction (potentially) escapes the pointer to the alloca, or
+  /// is a use the walk cannot model, this records it and we abort trying to
+  /// form slices of the alloca. It reports neither if the alloca slices are
+  /// analyzed successfully.
+  detail::PtrUseVisitorBase::PtrInfo PtrI;
 
   /// The slices of the alloca.
   ///
@@ -1120,7 +1134,8 @@ private:
     if (Size.isScalable()) {
       unsigned VScale = LI.getFunction()->getVScaleValue();
       if (!VScale)
-        return PI.setAborted(&LI);
+        return PI.setAborted(
+            &LI, "Is loaded with a scalable size and no known vscale.");
 
       Size = TypeSize::getFixed(Size.getKnownMinValue() * VScale);
     }
@@ -1134,13 +1149,14 @@ private:
     if (ValOp == *U)
       return PI.setEscapedAndAborted(&SI);
     if (!IsOffsetKnown)
-      return PI.setAborted(&SI);
+      return PI.setAborted(&SI, "Is stored at an offset that is not known.");
 
     TypeSize StoreSize = DL.getTypeStoreSize(ValOp->getType());
     if (StoreSize.isScalable()) {
       unsigned VScale = SI.getFunction()->getVScaleValue();
       if (!VScale)
-        return PI.setAborted(&SI);
+        return PI.setAborted(
+            &SI, "Is stored with a scalable size and no known vscale.");
 
       StoreSize = TypeSize::getFixed(StoreSize.getKnownMinValue() * VScale);
     }
@@ -1177,7 +1193,7 @@ private:
       return markAsDead(II);
 
     if (!IsOffsetKnown)
-      return PI.setAborted(&II);
+      return PI.setAborted(&II, "Has a memset at an offset that is not known.");
 
     insertUse(II, Offset,
               Length ? Length->getLimitedValue()
@@ -1197,7 +1213,8 @@ private:
       return;
 
     if (!IsOffsetKnown)
-      return PI.setAborted(&II);
+      return PI.setAborted(
+          &II, "Has a memory transfer at an offset that is not known.");
 
     // This side of the transfer is completely out-of-bounds, and so we can
     // nuke the entire transfer. However, we also need to nuke the other side
@@ -1264,7 +1281,8 @@ private:
     }
 
     if (!IsOffsetKnown)
-      return PI.setAborted(&II);
+      return PI.setAborted(
+          &II, "Used by an intrinsic at an offset that is not known.");
 
     if (II.isLifetimeStartOrEnd()) {
       insertUse(II, Offset, AllocSize, true);
@@ -1294,7 +1312,7 @@ private:
       if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
         TypeSize LoadSize = DL.getTypeStoreSize(LI->getType());
         if (LoadSize.isScalable()) {
-          PI.setAborted(LI);
+          PI.setAborted(LI, "Loaded with a scalable size and no known vscale.");
           return nullptr;
         }
         Size = std::max(Size, LoadSize.getFixedValue());
@@ -1306,7 +1324,7 @@ private:
           return SI;
         TypeSize StoreSize = DL.getTypeStoreSize(Op->getType());
         if (StoreSize.isScalable()) {
-          PI.setAborted(SI);
+          PI.setAborted(SI, "Stored with a scalable size and no known vscale.");
           return nullptr;
         }
         Size = std::max(Size, StoreSize.getFixedValue());
@@ -1338,7 +1356,8 @@ private:
     // instructions in this BB, which may be required during rewriting. Bail out
     // on these cases.
     if (isa<PHINode>(I) && !I.getParent()->hasInsertionPt())
-      return PI.setAborted(&I);
+      return PI.setAborted(
+          &I, "Address reaches a phi with no valid insertion point.");
 
     // TODO: We could use simplifyInstruction here to fold PHINodes and
     // SelectInsts. However, doing so requires to change the current
@@ -1362,14 +1381,16 @@ private:
     }
 
     if (!IsOffsetKnown)
-      return PI.setAborted(&I);
+      return PI.setAborted(&I,
+                           "Reaches a phi or select with an unknown offset.");
 
     // See if we already have computed info on this node.
     uint64_t &Size = PHIOrSelectSizes[&I];
     if (!Size) {
       // This is a new PHI/Select, check for an unsafe use of it.
       if (Instruction *UnsafeI = hasUnsafePHIOrSelectUse(&I, Size))
-        return PI.setAborted(UnsafeI);
+        return PI.setAborted(
+            UnsafeI, "Reaches a phi or select with an unsupported use.");
     }
 
     // For PHI and select operands outside the alloca, we can't nuke the entire
@@ -1391,7 +1412,9 @@ private:
   void visitSelectInst(SelectInst &SI) { visitPHINodeOrSelectInst(SI); }
 
   /// Disable SROA entirely if there are unhandled users of the alloca.
-  void visitInstruction(Instruction &I) { PI.setAborted(&I); }
+  void visitInstruction(Instruction &I) {
+    PI.setAborted(&I, "Has a use that could not be analyzed.");
+  }
 
   void visitCallBase(CallBase &CB) {
     // If the call operand is read-only and only does a read-only or address
@@ -1412,18 +1435,13 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       AI(AI),
 #endif
-      PointerEscapingInstr(nullptr), PointerEscapingInstrReadOnly(nullptr) {
+      PtrI() {
   SliceBuilder PB(DL, AI, *this);
-  SliceBuilder::PtrInfo PtrI = PB.visitPtr(AI);
-  if (PtrI.isEscaped() || PtrI.isAborted()) {
-    // FIXME: We should sink the escape vs. abort info into the caller nicely,
-    // possibly by just storing the PtrInfo in the AllocaSlices.
-    PointerEscapingInstr = PtrI.getEscapingInst() ? PtrI.getEscapingInst()
-                                                  : PtrI.getAbortingInst();
-    assert(PointerEscapingInstr && "Did not track a bad instruction");
+  PtrI = PB.visitPtr(AI);
+  if (isEscaped()) {
+    assert(getPointerEscapingInst() && "Did not track a bad instruction");
     return;
   }
-  PointerEscapingInstrReadOnly = PtrI.getEscapedReadOnlyInst();
 
   llvm::erase_if(Slices, [](const Slice &S) { return S.isDead(); });
 
@@ -1454,15 +1472,17 @@ void AllocaSlices::printUse(raw_ostream &OS, const_iterator I,
 }
 
 void AllocaSlices::print(raw_ostream &OS) const {
-  if (PointerEscapingInstr) {
+  if (isEscaped()) {
     OS << "Can't analyze slices for alloca: " << AI << "\n"
        << "  A pointer to this alloca escaped by:\n"
-       << "  " << *PointerEscapingInstr << "\n";
+       << "  " << *getPointerEscapingInst() << "\n";
+    if (const char *Reason = getFailureReason())
+      OS << "  " << Reason << "\n";
     return;
   }
 
-  if (PointerEscapingInstrReadOnly)
-    OS << "Escapes into ReadOnly: " << *PointerEscapingInstrReadOnly << "\n";
+  if (Instruction *ReadOnly = PtrI.getEscapedReadOnlyInst())
+    OS << "Escapes into ReadOnly: " << *ReadOnly << "\n";
 
   OS << "Slices of alloca: " << AI << "\n";
   for (const_iterator I = begin(), E = end(); I != E; ++I)
@@ -6159,6 +6179,24 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
+/// Report an aggregate allocation that slice analysis could not take apart.
+/// Only aggregates are reported: an escaping scalar alloca is not a missed
+/// splitting opportunity. The remark is anchored at the blocking use rather
+/// than the alloca, because that use is what the user can act on.
+static void reportAllocaNotSplit(const AllocaInst &AI, const AllocaSlices &AS,
+                                 OptimizationRemarkEmitter *ORE) {
+  if (!ORE || !AI.getAllocatedType()->isAggregateType())
+    return;
+  Instruction *Blocker = AS.getPointerEscapingInst();
+  if (!Blocker)
+    return;
+  ORE->emit([&] {
+    return OptimizationRemarkMissed(DEBUG_TYPE, "AllocaNotSplit", Blocker)
+           << "aggregate allocation was not split. "
+           << ore::NV("Reason", AS.getFailureReason());
+  });
+}
+
 /// Analyze an alloca for SROA.
 ///
 /// This analyzes the alloca to ensure we can reason about it, builds
@@ -6194,8 +6232,10 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // Build the slices using a recursive instruction-visiting builder.
   AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
-  if (AS.isEscaped())
+  if (AS.isEscaped()) {
+    reportAllocaNotSplit(AI, AS, ORE);
     return {Changed, CFGChanged};
+  }
 
   if (AS.isEscapedReadOnly()) {
     Changed |= propagateStoredValuesToLoads(AI, AS);
@@ -6370,8 +6410,10 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  OptimizationRemarkEmitter &ORE =
+      AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, Options, &ORE).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

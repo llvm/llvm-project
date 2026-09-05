@@ -55,6 +55,7 @@ public:
     /// Reset the pointer info, clearing all state.
     void reset() {
       AbortedInfo = nullptr;
+      FailureReason = nullptr;
       EscapedInfo = nullptr;
     }
 
@@ -81,11 +82,17 @@ public:
     /// nocapture call.
     Instruction *getEscapedReadOnlyInst() const { return EscapedReadOnly; }
 
+    /// Why \c getAbortingInst() stopped the visit, or null if the visitor did
+    /// not supply a reason.
+    const char *getFailureReason() const { return FailureReason; }
+
     /// Mark the visit as aborted. Intended for use in a void return.
     /// \param I The instruction which caused the visit to abort, if available.
-    void setAborted(Instruction *I) {
+    /// \param Reason Explanation of the failure.
+    void setAborted(Instruction *I, const char *Reason = nullptr) {
       assert(I && "Expected a valid pointer in setAborted");
       AbortedInfo = I;
+      FailureReason = Reason;
     }
 
     /// Mark the pointer as escaped. Intended for use in a void return.
@@ -112,6 +119,7 @@ public:
 
   private:
     Instruction *AbortedInfo = nullptr;
+    const char *FailureReason = nullptr;
     Instruction *EscapedInfo = nullptr;
     Instruction *EscapedReadOnly = nullptr;
   };
