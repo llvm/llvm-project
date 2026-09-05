@@ -27853,6 +27853,30 @@ static SDValue performSTORECombine(SDNode *N,
                         ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
                         ST->getAAInfo());
 
+  // A store of a freshly loaded i1 vector round-trips through an unpack to
+  // a byte vector and a repack. Forward it as an integer load/store pair
+  // instead. The memory accesses are unchanged, only the value type is.
+  if (DCI.isBeforeLegalize() && ISD::isNormalStore(N) && !ST->isVolatile() &&
+      ValueVT.isFixedLengthVector() &&
+      ValueVT.getVectorElementType() == MVT::i1 &&
+      ValueVT.getSizeInBits().isKnownMultipleOf(8) &&
+      Value.getOpcode() == ISD::LOAD && Value.hasOneUse()) {
+    LoadSDNode *LD = cast<LoadSDNode>(Value);
+    if (ISD::isNormalLoad(LD) && !LD->isVolatile() &&
+        LD->getMemoryVT() == MemVT) {
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
+      SDValue NewLoad =
+          DAG.getLoad(IntVT, SDLoc(LD), LD->getChain(), LD->getBasePtr(),
+                      LD->getPointerInfo(), LD->getBaseAlign(),
+                      LD->getMemOperand()->getFlags(), LD->getAAInfo());
+      SDValue StoreChain = Chain.getNode() == LD ? NewLoad.getValue(1) : Chain;
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+      return DAG.getStore(StoreChain, DL, NewLoad, Ptr, ST->getPointerInfo(),
+                          ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
+                          ST->getAAInfo());
+    }
+  }
+
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
     return Res;
 
