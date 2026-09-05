@@ -957,6 +957,19 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
       Value *NarrowOp0 = Builder.CreateTrunc(BinOp0, DestTy);
       return BinaryOperator::Create(BinOp->getOpcode(), NarrowOp0, X);
     }
+
+    if (BinOp0->hasOneUse() && TypeEvaluationHelper::canEvaluateTruncated(
+                                   BinOp0, DestTy, *this, &Trunc)) {
+      Value *NarrowOp0 = EvaluateInDifferentType(BinOp0, DestTy, false);
+      Value *NarrowOp1 = Builder.CreateTrunc(BinOp1, DestTy);
+      return BinaryOperator::Create(BinOp->getOpcode(), NarrowOp0, NarrowOp1);
+    }
+    if (BinOp1->hasOneUse() && TypeEvaluationHelper::canEvaluateTruncated(
+                                   BinOp1, DestTy, *this, &Trunc)) {
+      Value *NarrowOp0 = Builder.CreateTrunc(BinOp0, DestTy);
+      Value *NarrowOp1 = EvaluateInDifferentType(BinOp1, DestTy, false);
+      return BinaryOperator::Create(BinOp->getOpcode(), NarrowOp0, NarrowOp1);
+    }
     break;
   }
   case Instruction::LShr:
