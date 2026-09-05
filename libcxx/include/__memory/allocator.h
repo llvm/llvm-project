@@ -15,7 +15,7 @@
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
-#include <__new/allocate.h>
+#include <__new/align_val_t.h>
 #include <__new/exceptions.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -86,11 +86,12 @@ public:
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     if (__n > allocator_traits<allocator>::max_size(*this))
       std::__throw_bad_array_new_length();
-    if (__libcpp_is_constant_evaluated()) {
-      return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
-    } else {
-      return std::__libcpp_allocate<_Tp>(__element_count(__n));
-    }
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
+    if _LIBCPP_CONSTEXPR (_LIBCPP_ALIGNOF(value_type) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      return static_cast<_Tp*>(
+          __builtin_operator_new(__n * sizeof(value_type), static_cast<align_val_t>(_LIBCPP_ALIGNOF(value_type))));
+#endif
+    return static_cast<_Tp*>(__builtin_operator_new(__n * sizeof(value_type)));
   }
 
 #if _LIBCPP_STD_VER >= 23
@@ -100,13 +101,22 @@ public:
   }
 #endif
 
+#if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+#  define _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(...) __VA_ARGS__
+#else
+#  define _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(...) /* nothing */
+#endif
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void deallocate(_Tp* __p, size_t __n) _NOEXCEPT {
-    if (__libcpp_is_constant_evaluated()) {
-      ::operator delete(__p);
-    } else {
-      std::__libcpp_deallocate<_Tp>(__p, __element_count(__n));
-    }
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
+    if (_LIBCPP_ALIGNOF(value_type) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      return __builtin_operator_delete(__p _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __n * sizeof(value_type)),
+                                       static_cast<align_val_t>(_LIBCPP_ALIGNOF(value_type)));
+#endif
+    return __builtin_operator_delete(__p _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(, __n * sizeof(value_type)));
   }
+
+#undef _LIBCPP_ONLY_IF_SIZED_DEALLOCATION
 
   // C++20 Removed members
 #if _LIBCPP_STD_VER <= 17
