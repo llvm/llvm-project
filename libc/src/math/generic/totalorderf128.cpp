@@ -7,13 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/totalorderf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/totalorderf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(int, totalorderf128,
                    (const float128 *x, const float128 *y)) {
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
+  Float128 x_f128 = cpp::bit_cast<Float128>(*x);
+  Float128 y_f128 = cpp::bit_cast<Float128>(*y);
+  return math::totalorderf128(&x_f128, &y_f128);
+#else
   return math::totalorderf128(x, y);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -386,6 +386,15 @@ static_assert(Float128(0.0) ==
                                                    Float128(0.0)));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fabsf128(Float128(-1.0)));
+constexpr Float128 TOTALORDERF128_X = Float128(0.0);
+constexpr Float128 TOTALORDERF128_Y = Float128(0.0);
+static_assert(1 == LIBC_NAMESPACE::shared::totalorderf128(&TOTALORDERF128_X,
+                                                          &TOTALORDERF128_Y));
+constexpr Float128 TOTALORDERMAGF128_X = Float128(0.0);
+constexpr Float128 TOTALORDERMAGF128_Y = Float128(0.0);
+static_assert(1 ==
+              LIBC_NAMESPACE::shared::totalordermagf128(&TOTALORDERMAGF128_X,
+                                                        &TOTALORDERMAGF128_Y));
 static_assert(Float128(1.0) ==
               LIBC_NAMESPACE::shared::fdimf128(Float128(1.0), Float128(0.0)));
 static_assert(Float128(0.0) ==
@@ -469,15 +478,6 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpxf128(float128(0.0), 0, 32));
-constexpr float128 TOTALORDERF128_X = float128(0.0);
-constexpr float128 TOTALORDERF128_Y = float128(0.0);
-static_assert(1 == LIBC_NAMESPACE::shared::totalorderf128(&TOTALORDERF128_X,
-                                                          &TOTALORDERF128_Y));
-constexpr float128 TOTALORDERMAGF128_X = float128(0.0);
-constexpr float128 TOTALORDERMAGF128_Y = float128(0.0);
-static_assert(1 ==
-              LIBC_NAMESPACE::shared::totalordermagf128(&TOTALORDERMAGF128_X,
-                                                        &TOTALORDERMAGF128_Y));
 static_assert(0 ==
               LIBC_NAMESPACE::shared::fmodf128(float128(4.0), float128(2.0)));
 static_assert(float128(0.0) == [] {

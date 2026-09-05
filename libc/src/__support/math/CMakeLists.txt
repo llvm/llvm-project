@@ -5639,8 +5639,8 @@ add_header_library(
   HDRS
     totalorderf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
@@ -5696,8 +5696,8 @@ add_header_library(
   HDRS
     totalordermagf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
