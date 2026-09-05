@@ -7964,7 +7964,8 @@ private:
     if (DelayTemplateIdDestruction)
       return;
     if (!TemplateIds.empty() &&
-        (Tok.is(tok::eof) || !PP.mightHavePendingAnnotationTokens()))
+        (Tok.is(tok::eof) || !PP.mightHavePendingAnnotationTokens()) &&
+        Tok.isNot(tok::annot_template_id))
       DestroyTemplateIds();
   }
   void DestroyTemplateIds();
