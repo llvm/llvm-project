@@ -916,6 +916,18 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
   }
   if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
     return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
+  // Overloaded comparisons are represented as CXXOperatorCallExpr rather than
+  // BinaryOperator, so negate them by replacing their operator location.
+  if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(E)) {
+    const StringRef NegatedOperator = negatedOperator(OpCall);
+    if (!NegatedOperator.empty()) {
+      if (OpCall->getOperatorLoc().isMacroID())
+        return true;
+      Fixes.push_back(FixItHint::CreateReplacement(OpCall->getOperatorLoc(),
+                                                   NegatedOperator));
+      return false;
+    }
+  }
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
     if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
