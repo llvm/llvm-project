@@ -3345,7 +3345,12 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">,
     // Tentative definitions.
     I32EnumAttrCase<"CommonLinkage", 10, "common">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_GlobalLinkageKindAttr
+    : CIR_EnumAttr<CIR_GlobalLinkageKind, "linkage">;
 
 // TODO(CIR): For starters, cir.global has only name and type.  The other
 // properties of a global variable will be added over time as more of ClangIR
@@ -3411,7 +3416,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
-                       CIR_GlobalLinkageKind:$linkage,
+                       CIR_GlobalLinkageKindAttr:$linkage,
                        OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModelAttr>:$tls_model,
                        OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
@@ -3437,7 +3442,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     ($sym_visibility^)?
     ($global_visibility^)?
     (`constant` $constant^)?
-    $linkage
+    enum($linkage)
     (`comdat` $comdat^)?
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
@@ -4202,7 +4207,11 @@ def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
   I32EnumAttrCase<"SpirFunction", 2, "spir_function">,
   I32EnumAttrCase<"SpirKernel", 3, "spir_kernel">,
   I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CallingConvAttr : CIR_EnumAttr<CIR_CallingConv, "calling_conv">;
 
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, SymbolName, SymbolVisibility,
@@ -4296,11 +4305,11 @@ def CIR_FuncOp : CIR_Op<"func", [
     UnitAttr:$no_proto,
     UnitAttr:$dso_local,
     DefaultValuedAttr<
-      CIR_GlobalLinkageKind,
+      CIR_GlobalLinkageKindAttr,
       "cir::GlobalLinkageKind::ExternalLinkage"
     >:$linkage,
     DefaultValuedAttr<
-      CIR_CallingConv,
+      CIR_CallingConvAttr,
       "cir::CallingConv::C"
     >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
@@ -4308,7 +4317,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-    OptionalAttr<CIR_SideEffect>:$side_effect,
+    OptionalAttr<CIR_SideEffectAttr>:$side_effect,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
@@ -4612,7 +4621,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       UnitAttr:$nothrow,
       OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
       UnitAttr:$musttail,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      DefaultValuedAttr<CIR_SideEffectAttr, "SideEffect::All">:$side_effect,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs
       );
