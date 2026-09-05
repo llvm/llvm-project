@@ -72,6 +72,9 @@ class UnrollState {
     return Plan.getConstantInt(CanIVIntTy, Part);
   }
 
+  /// Unroll a VPWidenLoadRecipe or VPWidenStoreRecipe with a VFMultiple > 1.
+  void unrollMemOpWithVFMultiple(VPRecipeBase &R, unsigned VFMultiple);
+
 public:
   UnrollState(VPlan &Plan, unsigned UF) : Plan(Plan), UF(UF) {}
 
@@ -288,6 +291,62 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
   }
 }
 
+void UnrollState::unrollMemOpWithVFMultiple(VPRecipeBase &R,
+                                            unsigned VFMultiple) {
+  assert(VFMultiple > 1 && UF % VFMultiple == 0);
+  SmallVector<VPRecipeBase *, 4> Groups(UF / VFMultiple, nullptr);
+  Groups[0] = &R;
+
+  // A memory op with a VFMultiple is widened to VF * VFMultiple elements, so
+  // after unrolling by UF we materialize UF / VFMultiple such ops, each
+  // covering VFMultiple unroll parts.
+  VPBuilder Builder = VPBuilder::getToInsertAfter(&R);
+  for (unsigned Group = 1; Group < Groups.size(); ++Group) {
+    auto *Copy = Builder.insert(R.clone());
+    remapOperands(Copy, Group * VFMultiple);
+    Groups[Group] = Copy;
+  }
+
+  if (auto *Store = dyn_cast<VPWidenStoreRecipe>(&R)) {
+    VPValue *StoredValue = Store->getStoredValue();
+    for (unsigned Group = 0; Group < Groups.size(); ++Group) {
+      VPRecipeBase *Store = Groups[Group];
+      Builder.setInsertPoint(Store);
+      SmallVector<VPValue *, 4> Parts;
+      // We need to concatenate VFMultiple parts to form the stored value.
+      for (unsigned Part = 0; Part < VFMultiple; ++Part)
+        Parts.push_back(
+            getValueForPart(StoredValue, Group * VFMultiple + Part));
+      auto *Concat =
+          Builder.createNaryOp(VPInstruction::ConcatVectorParts, Parts);
+      Groups[Group]->setOperand(1, Concat);
+      ToSkip.insert(Concat);
+    }
+  } else {
+    assert(isa<VPWidenLoadRecipe>(R) && "Expected a load recipe");
+    // We need to extract each unroll part as a subvector.
+    auto ExtractPart0 = Builder.createNaryOp(
+        VPInstruction::ExtractVectorForPart,
+        {Groups[0]->getVPSingleValue(), getConstantInt(0)});
+    // First replace R with an extract of the first unroll part (ExtractPart0).
+    R.getVPSingleValue()->replaceUsesWithIf(
+        ExtractPart0, [&](VPUser &U, unsigned) { return &U != ExtractPart0; });
+    ToSkip.insert(ExtractPart0);
+
+    // Create extracts for the remaining unroll parts and remap later uses of
+    // ExtractPart0 to the correct unrolled part.
+    for (unsigned Part = 1; Part != UF; ++Part) {
+      VPRecipeBase *Group = Groups[Part / VFMultiple];
+      unsigned IndexInGroup = Part % VFMultiple;
+      auto *Extract = Builder.createNaryOp(
+          VPInstruction::ExtractVectorForPart,
+          {Group->getVPSingleValue(), getConstantInt(IndexInGroup)});
+      addRecipeForPart(ExtractPart0, Extract, Part);
+      ToSkip.insert(Extract);
+    }
+  }
+}
+
 /// Handle non-header-phi recipes.
 void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   if (match(&R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount())))
@@ -299,6 +358,13 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       return;
     }
   }
+
+  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(&R);
+      WidenMem && WidenMem->getVFMultiple() > 1) {
+    unrollMemOpWithVFMultiple(R, WidenMem->getVFMultiple());
+    return;
+  }
+
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
     if (isa<StoreInst>(RepR->getUnderlyingValue()) &&
         RepR->getOperand(1)->isDefinedOutsideLoopRegions()) {

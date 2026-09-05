@@ -458,6 +458,11 @@ struct VPlanTransforms {
   static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
 
+  /// Widens memory operations by a factor of UF based on a target hook.
+  /// This allows targets to use wider memory operations when profitable.
+  static void scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF, unsigned UF,
+                                      const TargetTransformInfo &TTI);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void

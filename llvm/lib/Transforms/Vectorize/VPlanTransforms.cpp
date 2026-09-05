@@ -3951,6 +3951,50 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   }
 }
 
+void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
+                                              unsigned UF,
+                                              const TargetTransformInfo &TTI) {
+  if (UF == 1)
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPValue *StoredValue = nullptr;
+      if (!match(&R, m_WidenLoad(m_VPValue())) &&
+          !match(&R, m_WidenStore(m_VPValue(), m_VPValue(StoredValue))))
+        continue;
+
+      auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
+      if (!MemOp->isConsecutive())
+        continue;
+
+      // TODO: Support masked loads/stores. This requires widening the header
+      // mask to the same factor as the memory operation.
+      assert(!MemOp->isMasked() && "Masked accesses are not supported yet");
+
+      Type *AccessType = StoredValue ? StoredValue->getScalarType()
+                                     : R.getVPSingleValue()->getScalarType();
+      unsigned Opcode = isa<VPWidenLoadRecipe>(MemOp->getAsRecipe())
+                            ? Instruction::Load
+                            : Instruction::Store;
+
+      std::optional<Instruction::CastOps> CastHint;
+      VPUser *MaybeCast = Opcode == Instruction::Store
+                              ? StoredValue->getDefiningRecipe()
+                              : R.getVPSingleValue()->getSingleUser();
+      if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
+        CastHint = Cast->getOpcode();
+
+      unsigned ScaleFactor = TTI.getPreferredVFMultipleForMemoryOp(
+          Opcode, AccessType, VF, UF, /*IsMasked=*/false, CastHint);
+      assert((ScaleFactor != 0 && UF % ScaleFactor == 0) &&
+             "ScaleFactor must divide UF");
+      MemOp->setVFMultiple(ScaleFactor);
+    }
+  }
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding

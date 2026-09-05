@@ -296,7 +296,9 @@ private:
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
                   std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
-                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe>)
+                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe> ||
+                  std::is_same_v<RecipeTy, VPWidenLoadRecipe> ||
+                  std::is_same_v<RecipeTy, VPWidenStoreRecipe>)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -1004,6 +1006,27 @@ template <typename Addr_t, typename Val_t, typename Mask_t>
 inline Store_match<Addr_t, Val_t, Mask_t>
 m_MaskedStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
   return Store_match<Addr_t, Val_t, Mask_t>(Addr, Val, Mask);
+}
+
+template <typename Op0_t>
+using VPWidenLoadRecipe_match =
+    Recipe_match<std::tuple<Op0_t>, 0,
+                 /*Commutative*/ false, VPWidenLoadRecipe>;
+
+template <typename Op0_t>
+VPWidenLoadRecipe_match<Op0_t> m_WidenLoad(const Op0_t &Op0) {
+  return VPWidenLoadRecipe_match<Op0_t>(Op0);
+}
+
+template <typename Op0_t, typename Op1_t>
+using VPWidenStoreRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t>, 0,
+                 /*Commutative*/ false, VPWidenStoreRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+VPWidenStoreRecipe_match<Op0_t, Op1_t> m_WidenStore(const Op0_t &Op0,
+                                                    const Op1_t &Op1) {
+  return VPWidenStoreRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
