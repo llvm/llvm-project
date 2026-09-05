@@ -52579,7 +52579,8 @@ static SDValue combineAndMaskToShift(SDNode *N, const SDLoc &DL,
 
 // Get the index node from the lowered DAG of a GEP IR instruction with one
 // indexing dimension.
-static SDValue getIndexFromUnindexedLoad(LoadSDNode *Ld) {
+static SDValue getIndexFromUnindexedLoad(LoadSDNode *Ld, unsigned EltBytes) {
+  using namespace llvm::SDPatternMatch;
   if (Ld->isIndexed())
     return SDValue();
 
@@ -52587,11 +52588,23 @@ static SDValue getIndexFromUnindexedLoad(LoadSDNode *Ld) {
   if (Base.getOpcode() != ISD::ADD)
     return SDValue();
 
-  SDValue ShiftedIndex = Base.getOperand(0);
-  if (ShiftedIndex.getOpcode() != ISD::SHL)
+  // The index must be scaled by exactly the element size.
+  SDValue Index;
+  if (!sd_match(Base.getOperand(0),
+                m_Shl(m_Value(Index), m_SpecificInt(Log2_32(EltBytes)))))
     return SDValue();
 
-  return ShiftedIndex.getOperand(0);
+  // The other operand must be the start of the table: a constant offset
+  // folded into the global address would shift the index.
+  SDValue GlobalOp = Base.getOperand(1);
+  if (GlobalOp.getOpcode() == X86ISD::Wrapper ||
+      GlobalOp.getOpcode() == X86ISD::WrapperRIP)
+    GlobalOp = GlobalOp.getOperand(0);
+  auto *GA = dyn_cast<GlobalAddressSDNode>(GlobalOp);
+  if (!GA || GA->getOffset() != 0)
+    return SDValue();
+
+  return Index;
 }
 
 static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
@@ -52679,15 +52692,16 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
 
   // Try matching the pattern for both operands.
   for (unsigned i = 0; i < 2; i++) {
-    // continue if the operand is not a load instruction
+    // The operand must be a plain load of a whole table element: an
+    // extending load only reads part of the mask.
     auto *Ld = dyn_cast<LoadSDNode>(Node->getOperand(i));
-    if (!Ld)
+    if (!Ld || !Ld->isSimple() || Ld->getExtensionType() != ISD::NON_EXTLOAD)
       continue;
     const Value *MemOp = Ld->getMemOperand()->getValue();
     if (!MemOp)
       continue;
     // Get the Node which indexes into the array.
-    SDValue Index = getIndexFromUnindexedLoad(Ld);
+    SDValue Index = getIndexFromUnindexedLoad(Ld, VT.getSizeInBits() / 8);
     if (!Index)
       continue;
 
