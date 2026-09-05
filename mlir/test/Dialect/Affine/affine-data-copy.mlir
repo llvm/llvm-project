@@ -495,3 +495,32 @@ func.func @multiple_blocks(%arg0: index) -> memref<1x2x1xi32> {
 ^bb3:  // pred: ^bb1
   return %1 : memref<1x2x1xi32>
 }
+
+// -----
+
+// Test that memref.store on the same memref as affine.load/store doesn't
+// cause replaceAllMemRefUsesWith to fail. Before the fix, memref.store
+// (which doesn't implement AffineMapAccessInterface) caused the entire
+// memref replacement to fail silently, leaving the fast buffer uninitialized.
+
+memref.global "private" @__constant_4xi32 : memref<4xi32> = dense<[3, -7, 11, -13]>
+
+// CHECK-LABEL:   func.func @memref_store_with_affine_access() -> i32 {
+// CHECK:           %[[ALLOC:.*]] = memref.alloc() : memref<1xi32>
+// CHECK:           affine.for
+// CHECK:             affine.store %{{.*}}, %[[ALLOC]]
+// CHECK:             memref.store %{{.*}}, %[[ALLOC]]
+// CHECK:           affine.load %[[ALLOC]]
+// CHECK:           memref.dealloc %[[ALLOC]]
+// CHECK:         }
+func.func @memref_store_with_affine_access() -> i32 {
+  %c0 = arith.constant 0 : index
+  %c100_i32 = arith.constant 100 : i32
+  %0 = memref.get_global @__constant_4xi32 : memref<4xi32>
+  affine.for %arg0 = 0 to 4 {
+    affine.store %c100_i32, %0[0] : memref<4xi32>
+    memref.store %c100_i32, %0[%c0] : memref<4xi32>
+  }
+  %1 = affine.load %0[0] : memref<4xi32>
+  return %1 : i32
+}
