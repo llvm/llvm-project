@@ -66,7 +66,7 @@ namespace clangd {
 
 // Implemented in Check.cpp.
 bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts);
+           ClangdLSPServer::Options &&Opts);
 
 namespace {
 
@@ -993,8 +993,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (EnableConfig)
     ProviderStack = config::Provider::createDefaultProviders(TFS);
   ProviderStack.push_back(std::make_unique<FlagsConfigProvider>());
-  auto Config = config::Provider::combineOwned(std::move(ProviderStack));
-  Opts.ConfigProvider = Config.Combined.get();
+  Opts.ConfigProvider = config::Provider::combine(std::move(ProviderStack));
 
   // Create an empty clang-tidy option.
   TidyProvider ClangTidyOptProvider;
@@ -1033,7 +1032,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return 1;
     }
     log("Entering check mode (no LSP server)");
-    return check(Path, TFS, Opts)
+    return check(Path, TFS, std::move(Opts))
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }
@@ -1070,7 +1069,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                                                 std::move(*Mappings));
   }
 
-  ClangdLSPServer LSPServer(*TransportLayer, TFS, Opts);
+  ClangdLSPServer LSPServer(*TransportLayer, TFS, std::move(Opts));
   llvm::set_thread_name("clangd.main");
   int ExitCode = LSPServer.run()
                      ? 0

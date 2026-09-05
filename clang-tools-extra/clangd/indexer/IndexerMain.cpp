@@ -172,10 +172,10 @@ int main(int argc, const char **argv) {
     ProviderStack =
         clang::clangd::config::Provider::createDefaultProviders(TFS);
   auto ConfigProvider =
-      clang::clangd::config::Provider::combineOwned(std::move(ProviderStack));
+      clang::clangd::config::Provider::combine(std::move(ProviderStack));
   auto ContextProvider =
       clang::clangd::ClangdServer::createConfiguredContextProvider(
-          ConfigProvider.Combined.get(), /*Callbacks=*/nullptr);
+          ConfigProvider.get(), /*Callbacks=*/nullptr);
 
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;

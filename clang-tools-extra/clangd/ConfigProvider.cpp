@@ -146,9 +146,9 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
 }
 
 std::unique_ptr<Provider>
-Provider::combine(std::vector<const Provider *> Providers) {
+Provider::combine(std::vector<std::unique_ptr<Provider>> Providers) {
   class CombinedProvider : public Provider {
-    std::vector<const Provider *> Providers;
+    std::vector<std::unique_ptr<Provider>> Providers;
 
     std::vector<CompiledFragment>
     getFragments(const Params &P, DiagnosticCallback DC) const override {
@@ -161,20 +161,11 @@ Provider::combine(std::vector<const Provider *> Providers) {
     }
 
   public:
-    CombinedProvider(std::vector<const Provider *> Providers)
+    CombinedProvider(std::vector<std::unique_ptr<Provider>> Providers)
         : Providers(std::move(Providers)) {}
   };
 
   return std::make_unique<CombinedProvider>(std::move(Providers));
-}
-
-Provider::OwningProvider
-Provider::combineOwned(std::vector<std::unique_ptr<Provider>> Sources) {
-  std::vector<const Provider *> Pointers;
-  Pointers.reserve(Sources.size());
-  for (const auto &P : Sources)
-    Pointers.push_back(P.get());
-  return {combine(std::move(Pointers)), std::move(Sources)};
 }
 
 std::vector<std::unique_ptr<Provider>>

@@ -1660,7 +1660,7 @@ void ClangdLSPServer::onAST(const ASTParams &Params,
 }
 
 ClangdLSPServer::ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
-                                 const ClangdLSPServer::Options &Opts)
+                                 ClangdLSPServer::Options &&Opts)
     : ShouldProfile(/*Period=*/std::chrono::minutes(5),
                     /*Delay=*/std::chrono::minutes(1)),
       ShouldCleanupMemory(/*Period=*/std::chrono::minutes(1),
@@ -1668,12 +1668,13 @@ ClangdLSPServer::ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
       BackgroundContext(Context::current().clone()), Transp(Transp),
       MsgHandler(new MessageHandler(*this)), TFS(TFS),
       SupportedSymbolKinds(defaultSymbolKinds()),
-      SupportedCompletionItemKinds(defaultCompletionItemKinds()), Opts(Opts) {
-  if (Opts.ConfigProvider) {
-    assert(!Opts.ContextProvider &&
+      SupportedCompletionItemKinds(defaultCompletionItemKinds()),
+      Opts(std::move(Opts)) {
+  if (this->Opts.ConfigProvider) {
+    assert(!this->Opts.ContextProvider &&
            "Only one of ConfigProvider and ContextProvider allowed!");
     this->Opts.ContextProvider = ClangdServer::createConfiguredContextProvider(
-        Opts.ConfigProvider, this);
+        this->Opts.ConfigProvider.get(), this);
   }
   LSPBinder Bind(this->Handlers, *this);
   Bind.method("initialize", this, &ClangdLSPServer::onInitialize);
