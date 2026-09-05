@@ -1333,6 +1333,17 @@ TEST(TypeHints, Lambda) {
   assertTypeHints("auto $L[[x]] = <:$ret[[:>]]{return 42;};",
                   ExpectedHint{": (lambda)", "L"},
                   ExpectedHint{"-> int", "ret"});
+
+  // The return type follows the noexcept specifier in a lambda declarator.
+  // https://github.com/clangd/clangd/issues/2696
+  assertTypeHints(R"cpp(
+    void f() {
+      []() $ret[[noexcept]] {};
+      [] $retNoParams[[noexcept]] {};
+    }
+  )cpp",
+                  ExpectedHint{"-> void", "ret"},
+                  ExpectedHint{"-> void", "retNoParams"});
 }
 
 // Structured bindings tests.
@@ -1427,6 +1438,8 @@ TEST(TypeHints, ReturnTypeDeduction) {
 
     auto f5($noreturn[[)]] {}
 
+    auto f6() $retNoexcept[[noexcept]] { return 42; }
+
     // `auto` conversion operator
     struct A {
       operator auto($retConv[[)]] { return 42; }
@@ -1440,7 +1453,7 @@ TEST(TypeHints, ReturnTypeDeduction) {
   )cpp",
       ExpectedHint{"-> int", "ret1a"}, ExpectedHint{"-> int", "ret1b"},
       ExpectedHint{"-> int &", "ret2"}, ExpectedHint{"-> void", "noreturn"},
-      ExpectedHint{"-> int", "retConv"});
+      ExpectedHint{"-> int", "retNoexcept"}, ExpectedHint{"-> int", "retConv"});
 }
 
 TEST(TypeHints, DependentType) {
