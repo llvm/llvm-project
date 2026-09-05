@@ -1481,8 +1481,8 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
-  ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
+  ; GFX1250-NEXT:   $vgpr0_lo16 = COPY [[COPY10]]
+  ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }
@@ -2219,8 +2219,8 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
-  ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
+  ; GFX1250-NEXT:   $vgpr0_lo16 = COPY [[COPY10]]
+  ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }

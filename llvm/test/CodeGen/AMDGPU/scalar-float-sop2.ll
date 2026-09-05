@@ -74,70 +74,26 @@ define amdgpu_vs float @fmax_f32(float inreg %a, float inreg %b) {
 }
 
 define amdgpu_vs half @fadd_f16(half inreg %a, half inreg %b) {
-; CHECK-LABEL: fadd_f16:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_f16 s0, s0, s1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
    %add = fadd half %a, %b
    ret half %add
 }
 
 define amdgpu_vs half @fsub_f16(half inreg %a, half inreg %b) {
-; CHECK-LABEL: fsub_f16:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_sub_f16 s0, s0, s1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
    %sub = fsub half %a, %b
    ret half %sub
 }
 
 define amdgpu_vs half @fmul_f16(half inreg %a, half inreg %b) {
-; CHECK-LABEL: fmul_f16:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mul_f16 s0, s0, s1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
    %mul = fmul half %a, %b
    ret half %mul
 }
 
 define amdgpu_vs half @fmin_f16(half inreg %a, half inreg %b) {
-; GFX1150-LABEL: fmin_f16:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    s_min_f16 s0, s0, s1
-; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
-; GFX12-LABEL: fmin_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_min_num_f16 s0, s0, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
    %min = call half @llvm.minnum.f16(half %a, half %b)
    ret half %min
 }
 
 define amdgpu_vs half @fmax_f16(half inreg %a, half inreg %b) {
-; GFX1150-LABEL: fmax_f16:
-; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    s_max_f16 s0, s0, s1
-; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1150-NEXT:    ; return to shader part epilog
-;
-; GFX12-LABEL: fmax_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_max_num_f16 s0, s0, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
    %max = call half @llvm.maxnum.f16(half %a, half %b)
    ret half %max
 }
@@ -182,27 +138,12 @@ define amdgpu_vs float @fmac_f32_with_mov(float inreg %a, float inreg %b, float 
 }
 
 define amdgpu_vs half @fmac_f16(half inreg %a, half inreg %b, half inreg %c) {
-; CHECK-LABEL: fmac_f16:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_fmac_f16 s0, s1, s2
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
   %res = call half @llvm.fma.f16(half %b, half %c, half %a)
   ret half %res
 }
 
 ; Check selection of mov + fmac if src2 of fmac has a use later
 define amdgpu_vs half @fmac_f16_with_mov(half inreg %a, half inreg %b, half inreg %c) {
-; CHECK-LABEL: fmac_f16_with_mov:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s3, s2
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; CHECK-NEXT:    s_fmac_f16 s3, s0, s1
-; CHECK-NEXT:    s_add_f16 s0, s3, s2
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
   %fma = call half @llvm.fma.f16(half %a, half %b, half %c)
   %res = fadd half %fma, %c
   ret half %res

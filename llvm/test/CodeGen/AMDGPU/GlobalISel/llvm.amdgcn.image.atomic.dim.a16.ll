@@ -1420,6 +1420,7 @@ define amdgpu_ps float @atomic_add_i32_3d(<8 x i32> inreg %rsrc, i32 %data, i16 
 ; GFX11-TRUE16-LABEL: atomic_add_i32_3d:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -1428,7 +1429,7 @@ define amdgpu_ps float @atomic_add_i32_3d(<8 x i32> inreg %rsrc, i32 %data, i16 
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -1528,6 +1529,7 @@ define amdgpu_ps float @atomic_add_i32_cube(<8 x i32> inreg %rsrc, i32 %data, i1
 ; GFX11-TRUE16-LABEL: atomic_add_i32_cube:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -1536,7 +1538,7 @@ define amdgpu_ps float @atomic_add_i32_cube(<8 x i32> inreg %rsrc, i32 %data, i1
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_CUBE unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_CUBE unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -1736,6 +1738,7 @@ define amdgpu_ps float @atomic_add_i32_2darray(<8 x i32> inreg %rsrc, i32 %data,
 ; GFX11-TRUE16-LABEL: atomic_add_i32_2darray:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -1744,7 +1747,7 @@ define amdgpu_ps float @atomic_add_i32_2darray(<8 x i32> inreg %rsrc, i32 %data,
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -1844,6 +1847,7 @@ define amdgpu_ps float @atomic_add_i32_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, 
 ; GFX11-TRUE16-LABEL: atomic_add_i32_2dmsaa:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -1852,7 +1856,7 @@ define amdgpu_ps float @atomic_add_i32_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, 
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v0, [v1, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -1951,9 +1955,9 @@ define amdgpu_ps float @atomic_add_i32_2darraymsaa(<8 x i32> inreg %rsrc, i32 %d
 ;
 ; GFX11-TRUE16-LABEL: atomic_add_i32_2darraymsaa:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v3
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v2.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v4.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v4.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -1962,7 +1966,7 @@ define amdgpu_ps float @atomic_add_i32_2darraymsaa(<8 x i32> inreg %rsrc, i32 %d
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v0, v[5:6], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v0, v[1:2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -3535,6 +3539,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_3d(<8 x i32> inreg %rsrc, i64 %data
 ; GFX11-TRUE16-LABEL: atomic_add_i64_3d:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -3543,7 +3548,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_3d(<8 x i32> inreg %rsrc, i64 %data
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -3643,6 +3648,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_cube(<8 x i32> inreg %rsrc, i64 %da
 ; GFX11-TRUE16-LABEL: atomic_add_i64_cube:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -3651,7 +3657,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_cube(<8 x i32> inreg %rsrc, i64 %da
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_CUBE unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -3851,6 +3857,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2darray(<8 x i32> inreg %rsrc, i64 
 ; GFX11-TRUE16-LABEL: atomic_add_i64_2darray:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -3859,7 +3866,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2darray(<8 x i32> inreg %rsrc, i64 
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_ARRAY unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -3959,6 +3966,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2dmsaa(<8 x i32> inreg %rsrc, i64 %
 ; GFX11-TRUE16-LABEL: atomic_add_i64_2dmsaa:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -3967,7 +3975,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2dmsaa(<8 x i32> inreg %rsrc, i64 %
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], [v2, v4], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -4066,9 +4074,9 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2darraymsaa(<8 x i32> inreg %rsrc, 
 ;
 ; GFX11-TRUE16-LABEL: atomic_add_i64_2darraymsaa:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v4
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.h, v3.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v5.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v5.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -4077,7 +4085,7 @@ define amdgpu_ps <2 x float> @atomic_add_i64_2darraymsaa(<8 x i32> inreg %rsrc, 
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], v[6:7], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm glc a16
+; GFX11-TRUE16-NEXT:    image_atomic_add v[0:1], v[2:3], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm glc a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;

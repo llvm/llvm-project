@@ -52,8 +52,9 @@ define amdgpu_ps half @struct_buffer_load_format_f16__sgpr_rsrc__vgpr_vindex__vg
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; GFX12-NEXT:   [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (f16), align 1, addrspace 8)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN]]
-  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN]].lo16
+  ; GFX12-NEXT:   $vgpr0_lo16 = COPY [[COPY7]]
+  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %val = call half @llvm.amdgcn.struct.buffer.load.format.f16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
 }
@@ -455,8 +456,9 @@ define amdgpu_ps half @struct_buffer_load_format_f16__sgpr_rsrc__vgpr_vindex__vg
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; GFX12-NEXT:   [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 4095, 0, 0, implicit $exec :: (dereferenceable load (f16), align 1, addrspace 8)
-  ; GFX12-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN]]
-  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN]].lo16
+  ; GFX12-NEXT:   $vgpr0_lo16 = COPY [[COPY7]]
+  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %voffset = add i32 %voffset.base, 4095
   %val = call half @llvm.amdgcn.struct.buffer.load.format.f16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
@@ -512,10 +514,8 @@ define amdgpu_ps half @struct_buffer_load_format_i16__sgpr_rsrc__vgpr_vindex__vg
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; GFX12-NEXT:   [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable load (i16), align 1, addrspace 8)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_FORMAT_D16_X_VBUFFER_BOTHEN]].lo16
-  ; GFX12-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
-  ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY7]], %subreg.lo16, [[DEF]], %subreg.hi16
-  ; GFX12-NEXT:   $vgpr0 = COPY [[REG_SEQUENCE2]]
-  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX12-NEXT:   $vgpr0_lo16 = COPY [[COPY7]]
+  ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0_lo16
   %val = call i16 @llvm.amdgcn.struct.buffer.load.format.i16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %fval = bitcast i16 %val to half
   ret half %fval

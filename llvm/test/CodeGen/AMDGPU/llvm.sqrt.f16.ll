@@ -438,13 +438,21 @@ define amdgpu_ps half @sqrt_f16_s(half inreg %x) {
 ; GFX11-FAKE16-NEXT:    v_sqrt_f16_e32 v0, s0
 ; GFX11-FAKE16-NEXT:    ; return to shader part epilog
 ;
-; GFX12-TRUE16-LABEL: sqrt_f16_s:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    v_s_sqrt_f16 s0, s0
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-TRUE16-NEXT:    ; return to shader part epilog
+; GFX12-TRUE16-SDAG-LABEL: sqrt_f16_s:
+; GFX12-TRUE16-SDAG:       ; %bb.0:
+; GFX12-TRUE16-SDAG-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-TRUE16-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-TRUE16-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-TRUE16-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-TRUE16-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-TRUE16-GISEL-LABEL: sqrt_f16_s:
+; GFX12-TRUE16-GISEL:       ; %bb.0:
+; GFX12-TRUE16-GISEL-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-TRUE16-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-TRUE16-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-FAKE16-LABEL: sqrt_f16_s:
 ; GFX12-FAKE16:       ; %bb.0:

@@ -700,19 +700,21 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK45-LABEL: name: general_case_load_with_waterfall
   ; CHECK45: bb.1 (%ir-block.0):
   ; CHECK45-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK45-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; CHECK45-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr3, $vgpr4, $vgpr5, $vgpr2_lo16
   ; CHECK45-NEXT: {{  $}}
   ; CHECK45-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK45-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK45-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; CHECK45-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY $vgpr2_lo16
   ; CHECK45-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; CHECK45-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; CHECK45-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; CHECK45-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY2]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK45-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8191
   ; CHECK45-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; CHECK45-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY4]], [[COPY6]], implicit $exec
-  ; CHECK45-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[V_AND_B32_e64_]], %subreg.sub1
+  ; CHECK45-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[V_AND_B32_e64_]], %subreg.sub1
   ; CHECK45-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK45-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 25
   ; CHECK45-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
@@ -721,17 +723,17 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK45-NEXT:   [[V_LSHL_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_OR_B32_e64 [[COPY3]], [[COPY7]], [[COPY9]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 7
   ; CHECK45-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_3]]
-  ; CHECK45-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 [[COPY10]], [[REG_SEQUENCE1]], implicit $exec
+  ; CHECK45-NEXT:   [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = V_LSHRREV_B64_e64 [[COPY10]], [[REG_SEQUENCE2]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 12
   ; CHECK45-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
-  ; CHECK45-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY11]], [[COPY2]], implicit $exec
+  ; CHECK45-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY11]], [[REG_SEQUENCE1]], implicit $exec
   ; CHECK45-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 28
   ; CHECK45-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_5]]
   ; CHECK45-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY12]], [[COPY5]], implicit $exec
   ; CHECK45-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
   ; CHECK45-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub1
   ; CHECK45-NEXT:   [[V_OR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 [[COPY14]], [[V_LSHLREV_B32_e64_]], [[V_LSHLREV_B32_e64_1]], implicit $exec
-  ; CHECK45-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[V_LSHL_OR_B32_e64_]], %subreg.sub1, [[COPY13]], %subreg.sub2, [[V_OR3_B32_e64_]], %subreg.sub3
+  ; CHECK45-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[V_LSHL_OR_B32_e64_]], %subreg.sub1, [[COPY13]], %subreg.sub2, [[V_OR3_B32_e64_]], %subreg.sub3
   ; CHECK45-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
   ; CHECK45-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK45-NEXT: {{  $}}
@@ -742,11 +744,11 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[V_LSHL_OR_B32_e64_]], implicit $exec
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY13]], implicit $exec
   ; CHECK45-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[V_OR3_B32_e64_]], implicit $exec
-  ; CHECK45-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; CHECK45-NEXT:   [[COPY16:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE2]].sub0_sub1
-  ; CHECK45-NEXT:   [[COPY17:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE2]].sub2_sub3
-  ; CHECK45-NEXT:   [[COPY18:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE3]].sub0_sub1
-  ; CHECK45-NEXT:   [[COPY19:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE3]].sub2_sub3
+  ; CHECK45-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
+  ; CHECK45-NEXT:   [[COPY16:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE3]].sub0_sub1
+  ; CHECK45-NEXT:   [[COPY17:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE3]].sub2_sub3
+  ; CHECK45-NEXT:   [[COPY18:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE4]].sub0_sub1
+  ; CHECK45-NEXT:   [[COPY19:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE4]].sub2_sub3
   ; CHECK45-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY18]], [[COPY16]], implicit $exec
   ; CHECK45-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[COPY19]], [[COPY17]], implicit $exec
   ; CHECK45-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
@@ -755,7 +757,7 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; CHECK45-NEXT: bb.3:
   ; CHECK45-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK45-NEXT: {{  $}}
-  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[COPY15]], [[REG_SEQUENCE3]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (f32) from %ir.rsrc, align 1, addrspace 8)
+  ; CHECK45-NEXT:   [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[COPY15]], [[REG_SEQUENCE4]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (f32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK45-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; CHECK45-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK45-NEXT: {{  $}}

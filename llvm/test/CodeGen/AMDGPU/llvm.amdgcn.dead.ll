@@ -645,6 +645,7 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v68, off, s32 offset:84
 ; ASM-GISEL-TRUE16-NEXT:    v_and_b32_e32 v1, 1, v1
 ; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-GISEL-TRUE16-NEXT:    ; kill: def $vgpr2_lo16 killed $vgpr2_lo16 def $vgpr2_hi16
 ; ASM-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; ASM-GISEL-TRUE16-NEXT:    v_cmpx_ne_u32_e32 0, v1
 ; ASM-GISEL-TRUE16-NEXT:    s_cbranch_execz .LBB3_2

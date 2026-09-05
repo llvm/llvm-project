@@ -600,101 +600,101 @@ define <4 x float> @v4_from_e5m3fnu(<4 x i8> %x) {
 ; GFX1170-NEXT:    v_or_b32_e32 v10, v0, v4
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s1, 7, v4
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v11, 31, v8
-; GFX1170-NEXT:    v_add_nc_u32_e32 v17, -8, v8
+; GFX1170-NEXT:    v_add_nc_u32_e32 v16, -8, v8
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s2, 31, v0
 ; GFX1170-NEXT:    v_sub_nc_u32_e32 v8, 0x8d, v8
 ; GFX1170-NEXT:    v_lshlrev_b32_e64 v11, v11, 1
 ; GFX1170-NEXT:    v_lshl_or_b32 v0, v0, 23, v9
 ; GFX1170-NEXT:    s_and_b32 vcc_lo, s0, vcc_lo
-; GFX1170-NEXT:    v_clz_i32_u32_e32 v15, v6
 ; GFX1170-NEXT:    s_and_b32 s0, s2, s1
+; GFX1170-NEXT:    v_cmp_ne_u32_e64 s1, 0, v6
 ; GFX1170-NEXT:    v_xor_b32_e32 v4, v4, v11
 ; GFX1170-NEXT:    v_add_nc_u32_e32 v0, 0x38000000, v0
-; GFX1170-NEXT:    v_cmp_ne_u32_e64 s1, 0, v6
+; GFX1170-NEXT:    v_clz_i32_u32_e32 v11, v6
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s2, 0, v2
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v4, v17, v4
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v4, v16, v4
 ; GFX1170-NEXT:    s_and_b32 s1, s2, s1
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s2, 31, v2
 ; GFX1170-NEXT:    v_lshl_or_b32 v4, v8, 23, v4
 ; GFX1170-NEXT:    v_and_b32_e32 v5, 7, v1
 ; GFX1170-NEXT:    v_bfe_u32 v1, v1, 3, 5
-; GFX1170-NEXT:    v_sub_nc_u32_e32 v8, 31, v15
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1170-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc_lo
 ; GFX1170-NEXT:    v_clz_i32_u32_e32 v12, v5
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v13, 20, v5
+; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v5
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v1
 ; GFX1170-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v10
 ; GFX1170-NEXT:    v_and_b32_e32 v7, 7, v3
-; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v5
-; GFX1170-NEXT:    v_sub_nc_u32_e32 v16, 31, v12
-; GFX1170-NEXT:    v_add_nc_u32_e32 v9, -8, v12
-; GFX1170-NEXT:    v_sub_nc_u32_e32 v12, 0x8d, v12
-; GFX1170-NEXT:    v_lshl_or_b32 v13, v1, 23, v13
-; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v1
-; GFX1170-NEXT:    v_lshlrev_b32_e64 v16, v16, 1
-; GFX1170-NEXT:    v_or_b32_e32 v14, v1, v5
-; GFX1170-NEXT:    v_lshlrev_b32_e64 v4, v8, 1
-; GFX1170-NEXT:    v_add_nc_u32_e32 v8, 0x38000000, v13
+; GFX1170-NEXT:    v_sub_nc_u32_e32 v15, 31, v12
+; GFX1170-NEXT:    v_add_nc_u32_e32 v16, -8, v12
+; GFX1170-NEXT:    v_sub_nc_u32_e32 v8, 0x8d, v12
 ; GFX1170-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
-; GFX1170-NEXT:    v_xor_b32_e32 v16, v5, v16
-; GFX1170-NEXT:    v_clz_i32_u32_e32 v11, v7
 ; GFX1170-NEXT:    s_and_b32 vcc_lo, s4, s3
-; GFX1170-NEXT:    v_xor_b32_e32 v4, v6, v4
+; GFX1170-NEXT:    v_lshlrev_b32_e64 v15, v15, 1
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v13, 20, v5
+; GFX1170-NEXT:    v_sub_nc_u32_e32 v4, 31, v11
+; GFX1170-NEXT:    v_or_b32_e32 v14, v1, v5
+; GFX1170-NEXT:    v_clz_i32_u32_e32 v9, v7
+; GFX1170-NEXT:    v_xor_b32_e32 v15, v5, v15
+; GFX1170-NEXT:    v_lshl_or_b32 v12, v1, 23, v13
+; GFX1170-NEXT:    v_lshlrev_b32_e64 v4, v4, 1
+; GFX1170-NEXT:    v_add_nc_u32_e32 v10, -8, v11
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v0, v0, 0x7fc00000, s0
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v9, v9, v16
-; GFX1170-NEXT:    v_sub_nc_u32_e32 v10, 31, v11
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v13, v16, v15
+; GFX1170-NEXT:    v_add_nc_u32_e32 v12, 0x38000000, v12
+; GFX1170-NEXT:    v_xor_b32_e32 v4, v6, v4
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s0, 31, v1
 ; GFX1170-NEXT:    v_bfe_u32 v3, v3, 3, 5
+; GFX1170-NEXT:    v_lshl_or_b32 v8, v8, 23, v13
 ; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v7
-; GFX1170-NEXT:    v_lshl_or_b32 v9, v12, 23, v9
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v3
-; GFX1170-NEXT:    v_dual_cndmask_b32 v8, v8, v9 :: v_dual_add_nc_u32 v9, -8, v15
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v4, v10, v4
+; GFX1170-NEXT:    v_sub_nc_u32_e32 v10, 0x8d, v11
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
+; GFX1170-NEXT:    v_dual_cndmask_b32 v8, v12, v8 :: v_dual_lshlrev_b32 v11, 20, v6
+; GFX1170-NEXT:    v_sub_nc_u32_e32 v12, 31, v9
 ; GFX1170-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v14
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v4, v9, v4
+; GFX1170-NEXT:    v_lshl_or_b32 v4, v10, 23, v4
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1170-NEXT:    v_lshl_or_b32 v10, v2, 23, v11
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v11, 20, v7
+; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 0, v3
 ; GFX1170-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc_lo
 ; GFX1170-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v5
-; GFX1170-NEXT:    v_lshlrev_b32_e64 v5, v10, 1
-; GFX1170-NEXT:    v_sub_nc_u32_e32 v9, 0x8d, v15
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v10, 20, v6
+; GFX1170-NEXT:    v_lshlrev_b32_e64 v5, v12, 1
+; GFX1170-NEXT:    v_add_nc_u32_e32 v10, 0x38000000, v10
 ; GFX1170-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_4)
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1170-NEXT:    v_xor_b32_e32 v1, v7, v5
-; GFX1170-NEXT:    v_add_nc_u32_e32 v5, -8, v11
-; GFX1170-NEXT:    v_lshl_or_b32 v4, v9, 23, v4
-; GFX1170-NEXT:    v_lshl_or_b32 v9, v2, 23, v10
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v10, 20, v7
-; GFX1170-NEXT:    v_lshlrev_b32_e32 v1, v5, v1
-; GFX1170-NEXT:    v_sub_nc_u32_e32 v5, 0x8d, v11
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1170-NEXT:    v_add_nc_u32_e32 v9, 0x38000000, v9
-; GFX1170-NEXT:    v_lshl_or_b32 v10, v3, 23, v10
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1170-NEXT:    v_lshl_or_b32 v1, v5, 23, v1
-; GFX1170-NEXT:    v_cndmask_b32_e64 v4, v9, v4, s1
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX1170-NEXT:    v_add_nc_u32_e32 v5, 0x38000000, v10
-; GFX1170-NEXT:    v_or_b32_e32 v10, v2, v6
+; GFX1170-NEXT:    v_add_nc_u32_e32 v5, -8, v9
+; GFX1170-NEXT:    v_cndmask_b32_e64 v4, v10, v4, s1
 ; GFX1170-NEXT:    s_and_b32 s1, s4, s3
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s4, 31, v3
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1170-NEXT:    v_lshlrev_b32_e32 v1, v5, v1
+; GFX1170-NEXT:    v_sub_nc_u32_e32 v5, 0x8d, v9
+; GFX1170-NEXT:    v_lshl_or_b32 v9, v3, 23, v11
+; GFX1170-NEXT:    v_lshl_or_b32 v1, v5, 23, v1
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1170-NEXT:    v_add_nc_u32_e32 v5, 0x38000000, v9
+; GFX1170-NEXT:    v_or_b32_e32 v9, v2, v6
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v1, v5, v1, s1
 ; GFX1170-NEXT:    v_or_b32_e32 v5, v3, v7
-; GFX1170-NEXT:    v_cmp_ne_u32_e64 s1, 0, v10
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-NEXT:    v_cmp_ne_u32_e64 s1, 0, v9
 ; GFX1170-NEXT:    v_cmp_ne_u32_e64 s3, 0, v5
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s1
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s1, 7, v6
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v5, 0, v1, s3
 ; GFX1170-NEXT:    v_cmp_eq_u32_e64 s3, 7, v7
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v1, v8, 0x7fc00000, s0
 ; GFX1170-NEXT:    s_and_b32 s0, s2, s1
+; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v2, v4, 0x7fc00000, s0
 ; GFX1170-NEXT:    s_and_b32 s0, s4, s3
-; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1170-NEXT:    v_cndmask_b32_e64 v3, v5, 0x7fc00000, s0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;

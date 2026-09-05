@@ -46,6 +46,7 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw(<8 x i32> inreg %rsrc, i16 %s, 
 ; GFX11-TRUE16-LABEL: load_3d_v4f32_xyzw:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s2, s4
@@ -54,7 +55,7 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw(<8 x i32> inreg %rsrc, i16 %s, 
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s7
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s6, s8
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s7, s9
-; GFX11-TRUE16-NEXT:    image_load v[0:3], [v0, v2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
+; GFX11-TRUE16-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -175,10 +176,10 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr 
 ; GFX11-TRUE16-LABEL: load_3d_v4f32_xyzw_tfe:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v7, 0
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v2
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v9, v7
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v10, v7
@@ -228,10 +229,10 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr 
 ; GFX12-TRUE16-LABEL: load_3d_v4f32_xyzw_tfe:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v7, 0
-; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v2
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v1.l
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, s2
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s1, s3
@@ -343,10 +344,10 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ; GFX11-TRUE16-LABEL: load_3d_v4f32_xyzw_tfe_lwe:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v7, 0
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v2
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v1.l
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, s2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v8, v7
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v9, v7
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v10, v7
@@ -396,10 +397,10 @@ define amdgpu_ps <4 x float> @load_3d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ; GFX12-TRUE16-LABEL: load_3d_v4f32_xyzw_tfe_lwe:
 ; GFX12-TRUE16:       ; %bb.0:
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v7, 0
-; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v2
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v0.l
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v1.l
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v2.l
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, s2
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
 ; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s1, s3
