@@ -230,6 +230,22 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the X86 Backend
 
+* Masked gather/scatter operations that are split across several registers are
+  costed more accurately. Lanes in a vector whose length is not a multiple of
+  its split factor are no longer dropped, so a `v9i32` gather is costed as nine
+  lanes rather than eight. The index width is also chosen for the operation as
+  a whole rather than recomputed for each part, so a wide gather through a
+  32-bit-index GEP is no longer priced as if it used 64-bit indices. Both
+  corrections apply to every X86 subtarget and every cost kind. Lengths that do
+  divide their split factor, and operations that genuinely need 64-bit indices,
+  are unchanged.
+
+* Masked gather/scatter costs now take the index width from the address space
+  their pointers live in, instead of assuming the width of address space 0. On
+  x86 this matters for the 32-bit address spaces 270 and 271: a vector of those
+  pointers is half as wide as the same count of ordinary pointers, so it is no
+  longer costed as though it had to be split in two.
+
 ### Changes to the OCaml bindings
 
 ### Changes to the Python bindings

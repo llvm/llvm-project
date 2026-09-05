@@ -6623,8 +6623,16 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   // operation will use 16 x 64 indices which do not fit in a zmm and needs
   // to split. Also check that the base pointer is the same for all lanes,
   // and that there's at most one variable index.
-  auto getIndexSizeInBits = [](const Value *Ptr, const DataLayout &DL) {
-    unsigned IndexSize = DL.getPointerSizeInBits();
+  // The index starts out as wide as the pointers being gathered, which is a
+  // property of the address space they live in. Asking the data layout without
+  // one answers for address space 0, which is not necessarily theirs.
+  unsigned PtrSizeInBits = DL.getPointerSizeInBits(
+      Ptr && Ptr->getType()->isPtrOrPtrVectorTy()
+          ? Ptr->getType()->getScalarType()->getPointerAddressSpace()
+          : AddressSpace);
+
+  auto getIndexSizeInBits = [PtrSizeInBits](const Value *Ptr) {
+    unsigned IndexSize = PtrSizeInBits;
     const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
     if (IndexSize < 64 || !GEP)
       return IndexSize;
@@ -6649,9 +6657,8 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
 
   // Trying to reduce IndexSize to 32 bits for vector 16.
   // By default the IndexSize is equal to pointer size.
-  unsigned IndexSize = (ST->hasAVX512() && VF >= 16)
-                           ? getIndexSizeInBits(Ptr, DL)
-                           : DL.getPointerSizeInBits();
+  unsigned IndexSize =
+      (ST->hasAVX512() && VF >= 16) ? getIndexSizeInBits(Ptr) : PtrSizeInBits;
 
   auto *IndexVTy = FixedVectorType::get(
       IntegerType::get(SrcVTy->getContext(), IndexSize), VF);
@@ -6659,24 +6666,20 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(SrcVTy);
   InstructionCost::CostType SplitFactor =
       std::max(IdxsLT.first, SrcLT.first).getValue();
-  if (SplitFactor > 1) {
-    // Handle splitting of vector of pointers
-    auto *SplitSrcTy =
-        FixedVectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
-    return SplitFactor * getGSVectorCost(Opcode, CostKind, SplitSrcTy, Ptr,
-                                         Alignment, AddressSpace);
-  }
-
-  // If we didn't split, this will be a single gather/scatter instruction.
+  // A vector of pointers that does not fit one register is split into
+  // SplitFactor gather/scatter instructions, each paying the overhead.
   if (CostKind == TTI::TCK_CodeSize)
-    return 1;
+    return SplitFactor;
 
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
   const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
                                                        : getScatterOverhead();
-  return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                           Alignment, AddressSpace, CostKind);
+  // Charge every lane of the original vector. Descending into VF / SplitFactor
+  // dropped the remainder, so a v9 gather was costed as eight lanes.
+  return SplitFactor * GSOverhead +
+         VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(), Alignment,
+                              AddressSpace, CostKind);
 }
 
 /// Calculate the cost of Gather / Scatter operation
