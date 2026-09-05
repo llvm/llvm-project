@@ -670,11 +670,15 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     llvm_unreachable("already handled!");
 
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
     emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/false, dest, ptr, val1,
                                 val2, failureOrderExpr, size, order, scope);
     return;
 
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
     emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/true, dest, ptr, val1,
                                 val2, failureOrderExpr, size, order, scope);
     return;
@@ -699,7 +703,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
-  case AtomicExpr::AO__scoped_atomic_load: {
+  case AtomicExpr::AO__scoped_atomic_load:
+  case AtomicExpr::AO__hip_atomic_load:
+  case AtomicExpr::AO__opencl_atomic_load: {
     cir::LoadOp load =
         builder.createLoad(loc, ptr, /*isVolatile=*/expr->isVolatile());
 
@@ -714,7 +720,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__scoped_atomic_store:
-  case AtomicExpr::AO__scoped_atomic_store_n: {
+  case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__hip_atomic_store:
+  case AtomicExpr::AO__opencl_atomic_store: {
     cir::LoadOp loadVal1 = builder.createLoad(loc, val1);
 
     assert(!cir::MissingFeatures::atomicSyncScopeID());
@@ -730,6 +738,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_exchange:
+  case AtomicExpr::AO__hip_atomic_exchange:
+  case AtomicExpr::AO__opencl_atomic_exchange:
     opName = cir::AtomicXchgOp::getOperationName();
     break;
 
@@ -740,6 +750,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
+  case AtomicExpr::AO__hip_atomic_fetch_add:
+  case AtomicExpr::AO__opencl_atomic_fetch_add:
     handleFetchOp(cir::AtomicFetchKind::Add);
     break;
 
@@ -750,6 +762,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
+  case AtomicExpr::AO__hip_atomic_fetch_sub:
+  case AtomicExpr::AO__opencl_atomic_fetch_sub:
     handleFetchOp(cir::AtomicFetchKind::Sub);
     break;
 
@@ -760,6 +774,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
+  case AtomicExpr::AO__hip_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
     handleFetchOp(cir::AtomicFetchKind::Min);
     break;
 
@@ -784,6 +800,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
+  case AtomicExpr::AO__hip_atomic_fetch_max:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
     handleFetchOp(cir::AtomicFetchKind::Max);
     break;
 
@@ -808,6 +826,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
+  case AtomicExpr::AO__hip_atomic_fetch_and:
+  case AtomicExpr::AO__opencl_atomic_fetch_and:
     handleFetchOp(cir::AtomicFetchKind::And);
     break;
 
@@ -818,6 +838,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
+  case AtomicExpr::AO__hip_atomic_fetch_or:
+  case AtomicExpr::AO__opencl_atomic_fetch_or:
     handleFetchOp(cir::AtomicFetchKind::Or);
     break;
 
@@ -828,6 +850,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_xor:
   case AtomicExpr::AO__atomic_fetch_xor:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
+  case AtomicExpr::AO__hip_atomic_fetch_xor:
+  case AtomicExpr::AO__opencl_atomic_fetch_xor:
     handleFetchOp(cir::AtomicFetchKind::Xor);
     break;
 
@@ -869,43 +893,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     break;
 
   case AtomicExpr::AO__opencl_atomic_init:
-
-  case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
-  case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
-
-  case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
-  case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
-
-  case AtomicExpr::AO__opencl_atomic_load:
-  case AtomicExpr::AO__hip_atomic_load:
-
-  case AtomicExpr::AO__opencl_atomic_store:
-  case AtomicExpr::AO__hip_atomic_store:
-
-  case AtomicExpr::AO__hip_atomic_exchange:
-  case AtomicExpr::AO__opencl_atomic_exchange:
-
-  case AtomicExpr::AO__hip_atomic_fetch_add:
-  case AtomicExpr::AO__opencl_atomic_fetch_add:
-
-  case AtomicExpr::AO__hip_atomic_fetch_sub:
-  case AtomicExpr::AO__opencl_atomic_fetch_sub:
-
-  case AtomicExpr::AO__hip_atomic_fetch_min:
-  case AtomicExpr::AO__opencl_atomic_fetch_min:
-
-  case AtomicExpr::AO__hip_atomic_fetch_max:
-  case AtomicExpr::AO__opencl_atomic_fetch_max:
-
-  case AtomicExpr::AO__hip_atomic_fetch_and:
-  case AtomicExpr::AO__opencl_atomic_fetch_and:
-
-  case AtomicExpr::AO__hip_atomic_fetch_or:
-  case AtomicExpr::AO__opencl_atomic_fetch_or:
-
-  case AtomicExpr::AO__hip_atomic_fetch_xor:
-  case AtomicExpr::AO__opencl_atomic_fetch_xor:
-
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
   }
@@ -1258,7 +1245,6 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
              cgf.getContext().VoidPtrTy);
     break;
   }
-
   case AtomicExpr::AO__hip_atomic_store:
   case AtomicExpr::AO__opencl_atomic_store:
     cgf.cgm.errorNYI(loc,
@@ -1436,6 +1422,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load_n:
   case AtomicExpr::AO__c11_atomic_load:
+  case AtomicExpr::AO__opencl_atomic_load:
+  case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__atomic_test_and_set:
   case AtomicExpr::AO__atomic_clear:
     break;
@@ -1462,6 +1450,10 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
   case AtomicExpr::AO__scoped_atomic_compare_exchange:
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
+  case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
     val1 = emitPointerWithAlignment(e->getVal1());
     if (e->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
         e->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
@@ -1563,6 +1555,24 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__atomic_fetch_fmaximum:
   case AtomicExpr::AO__atomic_fetch_fminimum_num:
   case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__hip_atomic_exchange:
+  case AtomicExpr::AO__hip_atomic_store:
+  case AtomicExpr::AO__hip_atomic_fetch_add:
+  case AtomicExpr::AO__hip_atomic_fetch_sub:
+  case AtomicExpr::AO__hip_atomic_fetch_min:
+  case AtomicExpr::AO__hip_atomic_fetch_max:
+  case AtomicExpr::AO__hip_atomic_fetch_and:
+  case AtomicExpr::AO__hip_atomic_fetch_or:
+  case AtomicExpr::AO__hip_atomic_fetch_xor:
+  case AtomicExpr::AO__opencl_atomic_exchange:
+  case AtomicExpr::AO__opencl_atomic_store:
+  case AtomicExpr::AO__opencl_atomic_fetch_add:
+  case AtomicExpr::AO__opencl_atomic_fetch_sub:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
+  case AtomicExpr::AO__opencl_atomic_fetch_and:
+  case AtomicExpr::AO__opencl_atomic_fetch_or:
+  case AtomicExpr::AO__opencl_atomic_fetch_xor:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
   }
