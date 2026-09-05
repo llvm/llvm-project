@@ -755,17 +755,18 @@ bool BPFMIPreEmitPeepholeImpl::removeMayGotoZero() {
   return Changed;
 }
 
-// If the last insn in a funciton is 'JAL &bpf_unreachable', let us add an
-// 'exit' insn after that insn. This will ensure no fallthrough at the last
+// If the last non-debug insn in a function is 'JAL &bpf_unreachable', let us
+// add an 'exit' insn after it. This will ensure no fallthrough at the last
 // insn, making kernel verification easier.
 bool BPFMIPreEmitPeepholeImpl::addExitAfterUnreachable() {
   MachineBasicBlock &MBB = MF->back();
-  MachineInstr &MI = MBB.back();
-  if (MI.getOpcode() != BPF::JAL || !MI.getOperand(0).isGlobal() ||
-      MI.getOperand(0).getGlobal()->getName() != BPF_TRAP)
+  auto MBBI = MBB.getLastNonDebugInstr(/*SkipPseudoOp=*/false);
+  if (MBBI == MBB.end() || MBBI->getOpcode() != BPF::JAL ||
+      !MBBI->getOperand(0).isGlobal() ||
+      MBBI->getOperand(0).getGlobal()->getName() != BPF_TRAP)
     return false;
 
-  BuildMI(&MBB, MI.getDebugLoc(), TII->get(BPF::RET));
+  BuildMI(&MBB, MBBI->getDebugLoc(), TII->get(BPF::RET));
   return true;
 }
 
