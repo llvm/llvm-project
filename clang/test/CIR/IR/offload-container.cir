@@ -1,0 +1,28 @@
+// RUN: cir-opt %s -split-input-file --verify-roundtrip | FileCheck %s
+
+module attributes {cir.offload.container} {
+  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  }
+  module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+  }
+}
+
+// CHECK: module attributes {cir.offload.container} {
+// CHECK:   module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+// CHECK:   module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+
+// -----
+
+module attributes {cir.offload.container} {
+  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  }
+  module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+  }
+  module @device_1 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+  }
+}
+
+// CHECK: module attributes {cir.offload.container} {
+// CHECK:   module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+// CHECK:   module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+// CHECK:   module @device_1 attributes {cir.offload.kind = #cir.offload_kind<device>} {

@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -108,6 +109,87 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                                 mlir::Location loc) {
   return cir::ConstantOp::create(builder, loc, type,
                                  mlir::cast<mlir::TypedAttr>(value));
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect attribute verification
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyOffloadKind(mlir::ModuleOp module,
+                                       cir::OffloadKind expected) {
+  auto attr = module->getAttrOfType<cir::OffloadKindAttr>(
+      cir::CIRDialect::getOffloadKindAttrName());
+  if (!attr)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' offload kind attribute";
+  if (attr.getValue() != expected)
+    return module.emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadKindAttrName()
+           << "' value '" << cir::stringifyOffloadKind(expected) << "'";
+  return success();
+}
+
+// A module marked with `cir.offload.container` holds the host module followed
+// by one or more device modules, each tagged with `cir.offload.kind`. Keeping
+// the host module first gives later offload passes a simple convention for
+// finding the host side while iterating the remaining device modules.
+static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
+  auto container = mlir::dyn_cast<mlir::ModuleOp>(op);
+  if (!container)
+    return op->emitError() << "expects '"
+                           << cir::CIRDialect::getOffloadContainerAttrName()
+                           << "' attribute to be attached to '"
+                           << mlir::ModuleOp::getOperationName() << "'";
+
+  mlir::Block &body = *container.getBody();
+  if (body.empty())
+    return container.emitOpError()
+           << "expects host module as the first nested op";
+
+  auto host = mlir::dyn_cast<mlir::ModuleOp>(body.front());
+  if (!host)
+    return container.emitOpError()
+           << "expects host module as the first nested op";
+  if (failed(verifyOffloadKind(host, cir::OffloadKind::Host)))
+    return failure();
+
+  auto it = body.begin();
+  ++it;
+  if (it == body.end())
+    return container.emitOpError() << "expects at least one device module";
+
+  for (; it != body.end(); ++it) {
+    auto module = mlir::dyn_cast<mlir::ModuleOp>(*it);
+    if (!module)
+      return container.emitOpError()
+             << "expects only nested builtin.module ops";
+    if (failed(verifyOffloadKind(module, cir::OffloadKind::Device)))
+      return failure();
+  }
+  return success();
+}
+
+LogicalResult
+cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
+                                          mlir::NamedAttribute attr) {
+  if (attr.getName() == getOffloadContainerAttrName()) {
+    if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
+      return op->emitError() << "expects '" << getOffloadContainerAttrName()
+                             << "' to be a unit attribute";
+    return verifyOffloadContainer(op);
+  }
+
+  // The container verifier owns the structural contract between a container
+  // and the modules it holds. All this can add is that the kind attribute
+  // never lands on something that is not a module.
+  if (attr.getName() == getOffloadKindAttrName() &&
+      !mlir::isa<mlir::ModuleOp>(op))
+    return op->emitError() << "expects '" << getOffloadKindAttrName()
+                           << "' attribute to be attached to '"
+                           << mlir::ModuleOp::getOperationName() << "'";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

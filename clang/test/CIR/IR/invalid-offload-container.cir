@@ -1,0 +1,80 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module attributes {cir.offload.container} {
+  module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} { // expected-error {{expects 'cir.offload.kind' value 'host'}}
+  }
+}
+
+// -----
+
+module attributes {cir.offload.container} {
+  module @host_0 attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  }
+  module @host_1 attributes {cir.offload.kind = #cir.offload_kind<host>} { // expected-error {{expects 'cir.offload.kind' value 'device'}}
+  }
+}
+
+// -----
+
+module attributes {cir.offload.container} {
+  module @host { // expected-error {{expects 'cir.offload.kind' offload kind attribute}}
+  }
+}
+
+// -----
+
+// expected-error@+1 {{expects only nested builtin.module ops}}
+module attributes {cir.offload.container} {
+  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  }
+  cir.func @f() {
+    cir.return
+  }
+}
+
+// -----
+
+// expected-error@+1 {{expects at least one device module}}
+module attributes {cir.offload.container} {
+  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  }
+}
+
+// -----
+
+module {
+  // The op below keeps the CIR dialect loaded, which is what makes the
+  // dialect attribute verifier run on the empty container module.
+  cir.func @f() {
+    cir.return
+  }
+  // expected-error@+1 {{expects host module as the first nested op}}
+  module @container attributes {cir.offload.container} {
+  }
+}
+
+// -----
+
+module {
+  cir.func @f() {
+    cir.return {cir.offload.container} // expected-error {{expects 'cir.offload.container' attribute to be attached to 'builtin.module'}}
+  }
+}
+
+// -----
+
+module {
+  cir.func @f() {
+    cir.return {cir.offload.kind = #cir.offload_kind<host>} // expected-error {{expects 'cir.offload.kind' attribute to be attached to 'builtin.module'}}
+  }
+}
+
+// -----
+
+// expected-error@+1 {{expects 'cir.offload.container' to be a unit attribute}}
+module attributes {cir.offload.container = 0 : i32} {
+  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  }
+  module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+  }
+}
