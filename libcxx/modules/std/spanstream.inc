@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
+#if _LIBCPP_STD_VER >= 23
   using std::basic_spanbuf;
 
   using std::swap;
@@ -38,5 +38,5 @@ export namespace std {
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
   using std::wspanstream;
 #  endif
-#endif
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std
