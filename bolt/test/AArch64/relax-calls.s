@@ -55,11 +55,15 @@ hot:
 # CHECK-BOLT-LITE:     BOLT-INFO: 3 long thunks created
 
 ## Check the number of thunks created in other modes.
-# CHECK-BOLT: BOLT-INFO: 4 short thunks created
+# CHECK-BOLT: BOLT-INFO: relaxed 4 remote cluster calls with thunks
 # CHECK-BOLT: BOLT-INFO: 3 long thunks created
+# CHECK-BOLT: BOLT-INFO: 1 long thunks reused
 
-# CHECK-BOLT-HOT-END: BOLT-INFO: 4 short thunks created
+# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 1 adjacent cluster calls with thunks
+# CHECK-BOLT-HOT-END: BOLT-INFO: relaxed 3 remote cluster calls with thunks
+# CHECK-BOLT-HOT-END: BOLT-INFO: 1 short thunks created
 # CHECK-BOLT-HOT-END: BOLT-INFO: 2 long thunks created
+# CHECK-BOLT-HOT-END: BOLT-INFO: 1 long thunks reused
 
 ## Check that correct veneers are used depending on the target proximity.
 # CHECK-OUTPUT-LABEL: <hot>:

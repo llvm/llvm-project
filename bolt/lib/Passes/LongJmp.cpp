@@ -73,6 +73,13 @@ static void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
     BC.MIB->applyBTIFixupToTarget(StubBB);
 }
 
+static bool isWithinClusterRange(uint64_t SourceOffset, uint64_t TargetOffset) {
+  const uint64_t Distance = SourceOffset <= TargetOffset
+                                ? TargetOffset - SourceOffset
+                                : SourceOffset - TargetOffset;
+  return Distance < opts::MaxClusterSize;
+}
+
 static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
   if (!Func.isSplit() || Func.empty())
     return nullptr;
@@ -1063,7 +1070,6 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
 
   FragmentClusterLayout Layout;
   SmallVector<OutputFragment> OrderedFragments;
-  uint64_t EstimatedSize = 0;
   for (size_t I = 0; I < OutputFunctions.size(); ++I) {
     BinaryFunction *BF = OutputFunctions[I];
     if (!BC.shouldEmit(*BF) || BF->isPatch())
@@ -1122,11 +1128,13 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
     return ClusterRanges;
   };
 
-  auto addFragmentToCluster = [&](const OutputFragment &Fragment,
-                                  FragmentCluster &FC,
-                                  const unsigned ClusterNum) {
+  uint64_t LayoutOffset = 0;
+  auto addFragmentToCluster = [&](const OutputFragment &Fragment) {
+    FragmentCluster &FC = Layout.Clusters.back();
+    const unsigned ClusterNum = Layout.Clusters.size() - 1;
     BinaryFunction &BF = *OutputFunctions[Fragment.FunctionIndex];
     const FunctionFragment &FF = *Fragment.FF;
+    const uint64_t FragmentOffset = LayoutOffset;
 
     if (FC.NumFragments == 0) {
       FC.StartSectionName = Fragment.SectionName;
@@ -1136,38 +1144,46 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
     FC.EndSectionName = Fragment.SectionName;
     FC.LastFunctionIndex = Fragment.FunctionIndex;
     ++FC.NumFragments;
-    EstimatedSize += Fragment.Size;
 
     // Map primary entry points.
     if (FF.isMainFragment())
-      for (const MCSymbol *Symbol : BF.getSymbols())
+      for (const MCSymbol *Symbol : BF.getSymbols()) {
         Layout.SymToCluster[Symbol] = ClusterNum;
+        Layout.SymToOffset[Symbol] = FragmentOffset;
+      }
 
+    uint64_t BBOffset = FragmentOffset;
     for (const BinaryBasicBlock *BB : FF) {
       Layout.BBToCluster[BB] = ClusterNum;
-      if (const MCSymbol *Label = BB->getLabel())
+      Layout.BBToOffset[BB] = BBOffset;
+      if (const MCSymbol *Label = BB->getLabel()) {
         Layout.SymToCluster[Label] = ClusterNum;
+        Layout.SymToOffset[Label] = BBOffset;
+      }
 
       // Map secondary entry points.
-      if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(*BB))
+      if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(*BB)) {
         Layout.SymToCluster[EntrySymbol] = ClusterNum;
+        Layout.SymToOffset[EntrySymbol] = BBOffset;
+      }
+
+      BBOffset += BB->estimateSize();
     }
 
     FC.Size += Fragment.Size;
+    LayoutOffset += Fragment.Size;
   };
 
   for (const FragmentRange &Range : buildClusterRanges()) {
-    Layout.Clusters.emplace_back(FragmentCluster());
-    FragmentCluster &FC = Layout.Clusters.back();
-    const unsigned ClusterNum = Layout.Clusters.size() - 1;
+    Layout.Clusters.emplace_back();
     for (size_t I = Range.Begin; I < Range.End; ++I)
-      addFragmentToCluster(OrderedFragments[I], FC, ClusterNum);
+      addFragmentToCluster(OrderedFragments[I]);
   }
 
   if (Layout.Clusters.empty())
     return Layout;
 
-  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << EstimatedSize
+  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
                     << '\n');
 
   // Print cluster stats.
@@ -1205,7 +1221,9 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
                              FragmentClusterLayout &Layout) {
   auto &Clusters = Layout.Clusters;
   auto &BBToCluster = Layout.BBToCluster;
+  auto &BBToOffset = Layout.BBToOffset;
   auto &SymToCluster = Layout.SymToCluster;
+  auto &SymToOffset = Layout.SymToOffset;
 
   struct CrossClusterCall {
     MCInst *Inst;
@@ -1231,8 +1249,13 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
       if (SourceIt == BBToCluster.end())
         continue;
       const unsigned SourceCluster = SourceIt->second;
+      // The cluster lookup above guarantees this BB has a layout offset.
+      uint64_t InstOffset = BBToOffset[&BB];
 
       for (MCInst &Inst : BB) {
+        const uint64_t SourceOffset = InstOffset;
+        InstOffset += BC.computeInstructionSize(Inst);
+
         if (!BC.MIB->isCall(Inst) && !BC.MIB->isUnconditionalBranch(Inst))
           continue;
 
@@ -1251,9 +1274,16 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
             !BC.getSymbolValue(*TargetSymbol))
           continue;
 
-        // If not found TargetCluster becomes UINT_MAX.
+        // If not found use -1 so the computed distance is out of range.
         unsigned TargetCluster = Found ? It->second : -1;
         if (TargetCluster == SourceCluster)
+          continue;
+
+        // A target with a cluster was mapped by the layout builder, so it
+        // also has an offset. Otherwise use -1 so the computed distance is
+        // conservatively treated as out of range.
+        const uint64_t TargetOffset = Found ? SymToOffset[TargetSymbol] : -1;
+        if (isWithinClusterRange(SourceOffset, TargetOffset))
           continue;
 
         CrossClusterCall Call{&Inst, TargetSymbol, SourceCluster,
@@ -1402,7 +1432,9 @@ void LongJmpPass::relaxUnconditionalBranches(
     FragmentClusterLayout &Layout) {
   auto &Clusters = Layout.Clusters;
   auto &BBToCluster = Layout.BBToCluster;
+  auto &BBToOffset = Layout.BBToOffset;
   auto &SymToCluster = Layout.SymToCluster;
+  auto &SymToOffset = Layout.SymToOffset;
 
   struct CrossClusterBranch {
     MCInst *Inst;
@@ -1421,8 +1453,13 @@ void LongJmpPass::relaxUnconditionalBranches(
       if (SourceIt == BBToCluster.end())
         continue;
       const unsigned SourceCluster = SourceIt->second;
+      // The cluster lookup above guarantees this BB has a layout offset.
+      uint64_t InstOffset = BBToOffset[&BB];
 
       for (MCInst &Inst : BB) {
+        const uint64_t SourceOffset = InstOffset;
+        InstOffset += BC.computeInstructionSize(Inst);
+
         if (!BC.MIB->isUnconditionalBranch(Inst))
           continue;
 
@@ -1436,6 +1473,11 @@ void LongJmpPass::relaxUnconditionalBranches(
 
         const unsigned TargetCluster = TargetIt->second;
         if (SourceCluster == TargetCluster)
+          continue;
+
+        // The cluster lookup above guarantees this symbol has a layout offset.
+        const uint64_t TargetOffset = SymToOffset[TargetSymbol];
+        if (isWithinClusterRange(SourceOffset, TargetOffset))
           continue;
 
         CrossClusterBranches.push_back(

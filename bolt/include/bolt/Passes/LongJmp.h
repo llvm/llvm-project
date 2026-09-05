@@ -127,7 +127,9 @@ class LongJmpPass : public BinaryFunctionPass {
   struct FragmentClusterLayout {
     SmallVector<FragmentCluster, 4> Clusters;
     DenseMap<const BinaryBasicBlock *, unsigned> BBToCluster;
+    DenseMap<const BinaryBasicBlock *, uint64_t> BBToOffset;
     DenseMap<const MCSymbol *, unsigned> SymToCluster;
+    DenseMap<const MCSymbol *, uint64_t> SymToOffset;
   };
 
   FragmentClusterLayout
