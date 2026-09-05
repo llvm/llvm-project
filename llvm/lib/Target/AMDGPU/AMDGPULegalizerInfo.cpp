@@ -23,6 +23,8 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -2411,7 +2413,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SET_FPENV:
     return legalizeSetFPEnv(MI, MRI, B);
   case TargetOpcode::G_TRAP:
-    return legalizeTrap(MI, MRI, B);
+    return legalizeTrap(Helper, MI);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
   default:
@@ -7749,19 +7751,22 @@ bool AMDGPULegalizerInfo::legalizeSBufferPrefetch(LegalizerHelper &Helper,
 }
 
 // TODO: Move to selection
-bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
-                                       MachineRegisterInfo &MRI,
-                                       MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrap(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   if (!ST.hasTrapHandler() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
-    return legalizeTrapEndpgm(MI, MRI, B);
+    return legalizeTrapEndpgm(Helper, MI);
 
   return ST.supportsGetDoorbellID() ?
          legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);
 }
 
-bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrapEndpgm(LegalizerHelper &Helper,
+                                             MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock &BB = B.getMBB();
   MachineFunction *MF = BB.getParent();
@@ -7776,7 +7781,18 @@ bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
   // We need a block split to make the real endpgm a terminator. We also don't
   // want to break phis in successor blocks, so we can't just delete to the
   // end of the block.
+  // An instruction's parent block is part of its CSE profile, so notify
+  // observers about the instructions moved by the split.
+  SmallVector<MachineInstr *, 8> MovedInstrs;
+  MachineBasicBlock::iterator SplitPoint(&MI);
+  ++SplitPoint;
+  for (auto I = SplitPoint, E = BB.end(); I != E; ++I) {
+    Observer.changingInstr(*I);
+    MovedInstrs.push_back(&*I);
+  }
   BB.splitAt(MI, false /*UpdateLiveIns*/);
+  for (MachineInstr *MovedMI : MovedInstrs)
+    Observer.changedInstr(*MovedMI);
   MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
   MF->push_back(TrapBB);
   BuildMI(*TrapBB, TrapBB->end(), DL, B.getTII().get(AMDGPU::S_ENDPGM))
