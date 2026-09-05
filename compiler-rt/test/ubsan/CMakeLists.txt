@@ -3,6 +3,40 @@ set(UBSAN_LIT_TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(UBSAN_TESTSUITES)
 set(UBSAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 
+set(COMPILER_RT_UBSAN_CAN_RUN_HIP FALSE)
+set(COMPILER_RT_UBSAN_CAN_RUN_OPENMP_OFFLOAD FALSE)
+set(UBSAN_GPU_ARCH "")
+set(UBSAN_HIP_LIB_DIR "")
+
+# Determine if this machine can run the AMDGPU test suite.
+if(LLVM_RUNTIMES_BUILD AND COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
+  find_program(UBSAN_OFFLOAD_ARCH offload-arch PATHS ${LLVM_TOOLS_BINARY_DIR})
+  if(UBSAN_OFFLOAD_ARCH)
+    execute_process(COMMAND ${UBSAN_OFFLOAD_ARCH} --only=amdgpu
+                    OUTPUT_VARIABLE _ubsan_amdgpu_archs
+                    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    string(REPLACE "\n" ";" _ubsan_amdgpu_archs "${_ubsan_amdgpu_archs}")
+    if(_ubsan_amdgpu_archs)
+      list(GET _ubsan_amdgpu_archs 0 UBSAN_GPU_ARCH)
+    endif()
+  endif()
+
+  if(UBSAN_GPU_ARCH)
+    find_library(UBSAN_TEST_HIP_LIBRARY NAMES amdhip64
+      HINTS "$ENV{ROCM_PATH}/lib" "$ENV{HIP_PATH}/lib" /opt/rocm/lib)
+    if(UBSAN_TEST_HIP_LIBRARY)
+      set(COMPILER_RT_UBSAN_CAN_RUN_HIP TRUE)
+      get_filename_component(UBSAN_HIP_LIB_DIR "${UBSAN_TEST_HIP_LIBRARY}" DIRECTORY)
+    endif()
+    if(HAVE_OFFLOAD)
+      set(COMPILER_RT_UBSAN_CAN_RUN_OPENMP_OFFLOAD TRUE)
+    endif()
+  endif()
+endif()
+
+pythonize_bool(COMPILER_RT_UBSAN_CAN_RUN_HIP)
+pythonize_bool(COMPILER_RT_UBSAN_CAN_RUN_OPENMP_OFFLOAD)
+
 macro(add_ubsan_testsuite test_mode sanitizer arch lld thinlto)
   set(UBSAN_LIT_TEST_MODE "${test_mode}")
   set(CONFIG_NAME ${UBSAN_LIT_TEST_MODE})
@@ -142,3 +176,16 @@ endif()
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
+
+# Add offload dependencies as compiler-rt is built before offload.
+function(_ubsan_depend_on_offload)
+  if(NOT TARGET check-ubsan)
+    return()
+  endif()
+  foreach(dep omp omptarget)
+    if(TARGET ${dep})
+      add_dependencies(check-ubsan ${dep})
+    endif()
+  endforeach()
+endfunction()
+cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}" CALL _ubsan_depend_on_offload)

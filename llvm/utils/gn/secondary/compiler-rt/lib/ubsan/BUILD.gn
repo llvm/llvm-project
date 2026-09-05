@@ -45,6 +45,7 @@ source_set("sources") {
     "ubsan_flags.h",
     "ubsan_handlers.cpp",
     "ubsan_handlers.h",
+    "ubsan_handlers_internal.h",
     "ubsan_init.cpp",
     "ubsan_init.h",
     "ubsan_monitor.cpp",
