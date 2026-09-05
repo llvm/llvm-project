@@ -45,3 +45,37 @@ program main
   !ERROR: 'llt' is not an unrestricted specific intrinsic procedure
   u => llt
 end program main
+
+! A restricted specific intrinsic used with an implicit procedure interface
+! must be diagnosed even without an explicit INTRINSIC statement.
+subroutine testRestrictedSpecificWithoutIntrinsicStmt
+  procedure(), pointer :: p
+  !ERROR: 'llt' is not an unrestricted specific intrinsic procedure
+  p => llt
+end subroutine
+
+! A restricted specific intrinsic used in a procedure pointer assignment
+! must be diagnosed even without an explicit INTRINSIC statement.
+subroutine testRestrictedSpecificWithoutIntrinsicStmt1
+  !ERROR: 'llt' is not an unrestricted specific intrinsic procedure
+  u => llt
+end subroutine
+
+! Restricted intrinsic used as a procedure pointer interface.
+subroutine testRestrictedSpecificInterfaceWithoutIntrinsicStmt
+  !ERROR: Intrinsic procedure 'llt' is not an unrestricted specific intrinsic permitted for use as the definition of the interface to procedure pointer 'p'
+  procedure(llt), pointer :: p
+end subroutine
+
+! Restricted intrinsic with a numeric result.
+subroutine testRestrictedSpecificIntegerWithoutIntrinsicStmt
+  procedure(), pointer :: p
+  !ERROR: 'amin0' is not an unrestricted specific intrinsic procedure
+  p => amin0
+end subroutine
+
+! A restricted intrinsic remains valid when used as an ordinary function call.
+subroutine testRestrictedSpecificCallWithoutIntrinsicStmt
+  logical :: result
+  result = llt('a', 'b')
+end subroutine
