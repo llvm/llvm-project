@@ -28,7 +28,7 @@
 
 namespace llvm {
 // Simple helper function that returns a string as printed from a op.
-template <typename T> static std::string debugString(T &&Op) {
+template <typename T> std::string debugString(T &&Op) {
   std::string InstrStr;
   llvm::raw_string_ostream Os(InstrStr);
   Os << Op;
