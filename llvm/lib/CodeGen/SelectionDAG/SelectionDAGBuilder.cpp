@@ -11767,7 +11767,9 @@ void SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V,
                    std::nullopt); // This is not an ABI copy.
   SDValue Chain = DAG.getEntryNode();
 
-  if (ExtendType == ISD::ANY_EXTEND) {
+  // Callbr exports must preserve the COPY chain needed by
+  // visitCallBrLandingPad() to recover the INLINEASM_BR output.
+  if (ExtendType == ISD::ANY_EXTEND && !isa<CallBrInst>(V)) {
     auto PreferredExtendIt = FuncInfo.PreferredExtendType.find(V);
     if (PreferredExtendIt != FuncInfo.PreferredExtendType.end())
       ExtendType = PreferredExtendIt->second;
