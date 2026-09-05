@@ -115,9 +115,6 @@ macro(add_clang_library name)
     if(TARGET "obj.${name}")
       target_compile_definitions("obj.${name}" PUBLIC CLANG_BUILD_STATIC)
     endif()
-  elseif(TARGET "obj.${name}" AND NOT ARG_SHARED AND NOT ARG_STATIC)
-    # Clang component libraries linked to clang-cpp are declared without SHARED or STATIC
-    target_compile_definitions("obj.${name}" PUBLIC CLANG_EXPORTS)
   endif()
 
   set(libs ${name})
