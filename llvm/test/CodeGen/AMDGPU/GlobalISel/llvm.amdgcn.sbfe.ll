@@ -58,6 +58,16 @@ define i64 @v_bfe_i64_arg_arg_imm_width_33(i64 %src0, i32 %src1) #0 {
   ret i64 %bfe_i64
 }
 
+define i64 @v_bfe_i64_arg_arg_imm_width_64(i64 %src0, i32 %src1) #0 {
+; GFX6-LABEL: v_bfe_i64_arg_arg_imm_width_64:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ashr_i64 v[0:1], v[0:1], v2
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+  %bfe_i64 = call i64 @llvm.amdgcn.sbfe.i64(i64 %src0, i32 %src1, i32 64)
+  ret i64 %bfe_i64
+}
+
 define amdgpu_ps i64 @s_bfe_i64_arg_arg_arg(i64 inreg %src0, i32 inreg %src1, i32 inreg %src2) #0 {
 ; GFX6-LABEL: s_bfe_i64_arg_arg_arg:
 ; GFX6:       ; %bb.0:
