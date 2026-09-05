@@ -595,15 +595,13 @@ define amdgpu_kernel void @s_test_imin_sle_i8(ptr addrspace(1) %out, [8 x i32], 
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x4c nv
-; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x28 nv
+; GFX1250-NEXT:    s_load_i8 s2, s[4:5], 0x28 nv
+; GFX1250-NEXT:    s_load_i8 s3, s[4:5], 0x4c nv
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_sext_i32_i8 s2, s2
-; GFX1250-NEXT:    s_sext_i32_i8 s3, s3
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_min_i32 s2, s3, s2
+; GFX1250-NEXT:    s_min_i32 s2, s2, s3
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b8 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -4065,15 +4063,13 @@ define amdgpu_kernel void @simplify_demanded_bits_test_umin_ult_i16(ptr addrspac
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x28 nv
-; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x4c nv
+; GFX1250-NEXT:    s_load_u16 s2, s[4:5], 0x28 nv
+; GFX1250-NEXT:    s_load_u16 s3, s[4:5], 0x4c nv
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX1250-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_min_u32 s2, s2, s3
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
@@ -4198,15 +4194,13 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_clause 0x2
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x28 nv
-; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x4c nv
+; GFX1250-NEXT:    s_load_i16 s2, s[4:5], 0x28 nv
+; GFX1250-NEXT:    s_load_i16 s3, s[4:5], 0x4c nv
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_sext_i32_i16 s2, s2
-; GFX1250-NEXT:    s_sext_i32_i16 s3, s3
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_min_i32 s2, s2, s3
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
