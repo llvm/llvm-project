@@ -4,11 +4,12 @@
 # Check that instruction mapping stats work.
 
 # We ought to map all of the instructions (5 of them) as legal, and then
-# terminate the string with a single illegal character. Debug instructions are
-# always invisible, and don't contribute to the length of the string.
+# terminate the string with a single illegal character. Debug instructions do
+# not contribute to the mapping or its statistics. The IMPLICIT_DEF is a
+# non-debug invisible instruction and is counted by NumInvisible.
 
 # CHECK: 1 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
-# CHECK: 1 machine-outliner - Invisible instructions skipped during mapping
+# CHECK: 1 machine-outliner - Non-debug invisible instructions skipped during mapping
 # CHECK: 5 machine-outliner - Outlinable instructions mapped
 # CHECK: 1 machine-outliner - Sentinel values inserted during mapping
 # CHECK: 6 machine-outliner - Total number of instructions mapped and saved to mapping vector
@@ -26,5 +27,6 @@ body:             |
     $x1 = ORRXri $xzr, 1
     $x2 = ORRXri $xzr, 1
     DBG_VALUE $x3, $noreg
+    $x4 = IMPLICIT_DEF
     $x3 = ORRXri $xzr, 1
     RET undef $lr
