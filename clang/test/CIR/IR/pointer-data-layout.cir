@@ -23,10 +23,17 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
-// Per-address-space pointer layouts are not supported yet.
-// expected-error @below {{!cir.ptr data layout entries are currently limited to the default address space}}
+// Per-address-space pointer layouts round-trip without diagnostics.
 module attributes {dlti.dl_spec = #dlti.dl_spec<
     !cir.ptr<!cir.void, target_address_space(5)> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32>>} {
+}
+
+// -----
+
+// Non-target address spaces are not allowed as data layout keys.
+// expected-error @below {{expected !cir.ptr data layout entry for '!cir.ptr<!cir.void, lang_address_space(offload_local)>' to use target_address_space}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+    !cir.ptr<!cir.void, lang_address_space(offload_local)> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32>>} {
 }
 
 // -----
