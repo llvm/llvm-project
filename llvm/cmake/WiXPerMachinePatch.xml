@@ -1,0 +1,5 @@
+<CPackWiXPatch>
+  <CPackWiXFragment Id="#PRODUCT">
+    <Property Id="ALLUSERS" Value="1"/>
+  </CPackWiXFragment>
+</CPackWiXPatch>

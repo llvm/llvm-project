@@ -150,6 +150,12 @@ Makes programs 10x faster by doing Special New Thing.
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
 
+### Changes to the Windows installer
+
+* The project has migrated to MSI installers. Previous installations of LLVM,
+  prior (and including) 23.1.0, must be manually uninstalled first, before
+  installing this new release.
+
 ### Changes to TableGen
 
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
