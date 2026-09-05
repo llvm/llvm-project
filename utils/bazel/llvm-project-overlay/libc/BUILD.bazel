@@ -8698,11 +8698,9 @@ libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
-        ":__support_common",
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
-        ":__support_macros_properties_types",
-        ":llvm_libc_types_float128",
     ],
 )
 

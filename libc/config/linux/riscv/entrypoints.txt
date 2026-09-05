@@ -755,6 +755,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
+    libc.src.math.ldexpf128
     libc.src.math.ldexpl
     libc.src.math.lgammaf
     libc.src.math.llogb
@@ -831,9 +832,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.roundl
     libc.src.math.scalbln
     libc.src.math.scalblnf
+    libc.src.math.scalblnf128
     libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
+    libc.src.math.scalbnf128
     libc.src.math.scalbnl
     libc.src.math.setpayload
     libc.src.math.setpayloadf
@@ -1044,7 +1047,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
-    libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.logbf128
     libc.src.math.modff128
@@ -1054,8 +1056,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.nextupf128
     libc.src.math.remainderf128
     libc.src.math.remquof128
-    libc.src.math.scalblnf128
-    libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
     libc.src.math.setpayloadsigf128
     libc.src.math.totalorderf128

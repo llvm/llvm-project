@@ -1721,6 +1721,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ldexpf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    ldexpf128_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpf128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
   logb_test
   SUITE
     libc-math-unittests

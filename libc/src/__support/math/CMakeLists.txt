@@ -2624,7 +2624,7 @@ add_header_library(
     scalblnf128.h
   DEPENDS
     libc.hdr.float_macros
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
@@ -2687,7 +2687,7 @@ add_header_library(
     scalbnf128.h
   DEPENDS
     libc.hdr.float_macros
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
@@ -4042,9 +4042,9 @@ add_header_library(
   HDRS
     ldexpf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.macros.config
 )
 
 add_header_library(
