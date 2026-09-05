@@ -50719,10 +50719,10 @@ combineIntDivRemViaExactFPDiv(SDNode *N, MVT FPSclVT, bool IsSigned, bool IsRem,
 // i64: the quotient doesn't fit f64 exactly, so build it from two
 // rounded-down reciprocal multiplies, one of the dividend and one of its
 // remainder. {rd/ru-sae} rounding is 512-bit so AVX512DQ only.
-static SDValue combineIntDivRemViaFPReciprocal(SDNode *N, bool IsSigned,
-                                               bool IsRem, SelectionDAG &DAG,
-                                               const X86Subtarget &Subtarget,
-                                               const SDLoc &DL) {
+static SDValue combineInt64DivRemViaFPReciprocal(SDNode *N, bool IsSigned,
+                                                 bool IsRem, SelectionDAG &DAG,
+                                                 const X86Subtarget &Subtarget,
+                                                 const SDLoc &DL) {
   EVT VT = N->getValueType(0);
   SDValue Dividend = N->getOperand(0);
   SDValue Divisor = N->getOperand(1);
@@ -50901,8 +50901,8 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       UseExactFPDiv
           ? combineIntDivRemViaExactFPDiv(N, FPSclVT, IsSigned, IsRem, IsStrict,
                                           DAG, DCI, Subtarget, DL)
-          : combineIntDivRemViaFPReciprocal(N, IsSigned, IsRem, DAG, Subtarget,
-                                            DL);
+          : combineInt64DivRemViaFPReciprocal(N, IsSigned, IsRem, DAG,
+                                              Subtarget, DL);
   // Narrow a widened result back to VT.
   if (Res && Res.getValueType() != VT)
     Res = DAG.getExtractSubvector(DL, VT, Res, 0);
