@@ -7442,8 +7442,8 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_INTERLEAVE(SDNode *N) {
   SDValue Interleaved =
       DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, WidenVTs, WidenOps);
 
-  EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                       WidenEC.multiplyCoefficientBy(Factor));
+  EVT PackedWidenVT =
+      EVT::getVectorVT(*DAG.getContext(), EltVT, WidenEC * Factor);
   SmallVector<SDValue, 8> Slices(Factor);
   for (unsigned Idx = 0; Idx != Factor; ++Idx)
     Slices[Idx] = Interleaved.getValue(Idx);
@@ -7451,8 +7451,8 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_INTERLEAVE(SDNode *N) {
   SDValue Packed = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedWidenVT, Slices);
 
   for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
-    SDValue Narrow = DAG.getExtractSubvector(
-        DL, VT, Packed, OrigEC.multiplyCoefficientBy(Idx).getKnownMinValue());
+    SDValue Narrow = DAG.getExtractSubvector(DL, VT, Packed,
+                                             OrigEC.getKnownMinValue() * Idx);
     SDValue Wide =
         DAG.getInsertSubvector(DL, DAG.getPOISON(WidenVT), Narrow, /*Idx=*/0U);
     SetWidenedVector(SDValue(N, Idx), Wide);
@@ -7490,10 +7490,9 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   // not concat the widened operands but the original ones to effectively
   // generate a "packed" concated and widened vector, before extracting new
   // operand vectors with the widened type.
-  EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                       WidenEC.multiplyCoefficientBy(Factor));
-  EVT ConcatVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                  OrigEC.multiplyCoefficientBy(Factor));
+  EVT PackedWidenVT =
+      EVT::getVectorVT(*DAG.getContext(), EltVT, WidenEC * Factor);
+  EVT ConcatVT = EVT::getVectorVT(*DAG.getContext(), EltVT, OrigEC * Factor);
   SDValue ConcatOp = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, N->ops());
   SDValue PackedWidenVec = DAG.getInsertSubvector(
       DL, DAG.getUNDEF(PackedWidenVT), ConcatOp, /*Idx=*/0U);
@@ -7501,9 +7500,8 @@ void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   // Extract the new widened operand vectors.
   SmallVector<SDValue, 8> NewOps(Factor, SDValue());
   for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
-    NewOps[Idx] = DAG.getExtractSubvector(
-        DL, WidenVT, PackedWidenVec,
-        WidenEC.multiplyCoefficientBy(Idx).getKnownMinValue());
+    NewOps[Idx] = DAG.getExtractSubvector(DL, WidenVT, PackedWidenVec,
+                                          WidenEC.getKnownMinValue() * Idx);
   }
 
   SmallVector<EVT, 8> NewVTs(Factor, WidenVT);
