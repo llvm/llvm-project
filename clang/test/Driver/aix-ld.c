@@ -656,7 +656,7 @@
 // RUN:        -stdlib=libstdc++ -nostdinc++ \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-LIBSTDCXX %s
-// CHECK-LD-LIBSTDCXX: LLVM ERROR: linking libstdc++ unimplemented on AIX
+// CHECK-LD-LIBSTDCXX: LLVM ERROR: linking non-libc++ unimplemented on AIX
 
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -shared.
 // RUN: %clangxx -x c++ %s 2>&1 -### \

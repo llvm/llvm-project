@@ -806,6 +806,9 @@ void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
   case ToolChain::CST_Libstdcxx:
     CmdArgs.push_back("-lstdc++");
     break;
+  case ToolChain::CST_MSVCSTL:
+    llvm::report_fatal_error("linking msvcstl is unimplemented");
+    break;
   }
 }
 

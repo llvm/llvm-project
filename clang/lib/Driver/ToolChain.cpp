@@ -703,6 +703,29 @@ std::string ToolChain::getInputFilename(const InputInfo &Input) const {
   return Input.getFilename();
 }
 
+static bool isIncludeDirArg(StringRef Arg) {
+  return Arg == "-internal-isystem" || Arg == "-internal-externc-isystem" ||
+         Arg == "-isystem" || Arg == "-cxx-isystem" || Arg == "-idirafter";
+}
+
+llvm::SmallVector<std::string>
+ToolChain::getCXXStdlibIncludeDirs(const ArgList &Args) const {
+  ArgStringList CC1Args;
+  if (Args.hasArg(options::OPT_stdlibxx_isystem))
+    AddClangCXXStdlibIsystemArgs(Args, CC1Args);
+  else
+    AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+
+  llvm::SmallVector<std::string> Rets;
+  for (size_t I = 0; I < CC1Args.size(); ++I) {
+    StringRef Arg(CC1Args[I]);
+    if (isIncludeDirArg(Arg) && I + 1 < CC1Args.size()) {
+      Rets.emplace_back(CC1Args[++I]);
+    }
+  }
+  return Rets;
+}
+
 ToolChain::UnwindTableLevel
 ToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   return UnwindTableLevel::None;
@@ -1575,6 +1598,8 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
     runtimeLibType = ToolChain::RLT_CompilerRT;
   else if (LibName == "libgcc")
     runtimeLibType = ToolChain::RLT_Libgcc;
+  else if (LibName == "vcruntime")
+    runtimeLibType = ToolChain::RLT_VCRuntime;
   else if (LibName == "platform")
     runtimeLibType = GetDefaultRuntimeLibType();
   else {
@@ -1614,6 +1639,8 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
     unwindLibType = ToolChain::UNW_CompilerRT;
   } else if (LibName == "libgcc")
     unwindLibType = ToolChain::UNW_Libgcc;
+  else if (LibName == "vcruntime")
+    unwindLibType = ToolChain::UNW_VCRuntime;
   else {
     if (A)
       getDriver().Diag(diag::err_drv_invalid_unwindlib_name)
@@ -1637,6 +1664,8 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
     cxxStdlibType = ToolChain::CST_Libcxx;
   else if (LibName == "libstdc++")
     cxxStdlibType = ToolChain::CST_Libstdcxx;
+  else if (LibName == "msvcstl")
+    cxxStdlibType = ToolChain::CST_MSVCSTL;
   else if (LibName == "platform")
     cxxStdlibType = GetDefaultCXXStdlibType();
   else {
@@ -1656,6 +1685,8 @@ StringRef ToolChain::GetCXXStdlibName(const ArgList &Args) const {
     return "libc++";
   case ToolChain::CST_Libstdcxx:
     return "libstdc++";
+  case ToolChain::CST_MSVCSTL:
+    return "msvcstl";
   }
   llvm_unreachable("unknown C++ standard library type");
 }
@@ -1826,6 +1857,10 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 
   case ToolChain::CST_Libstdcxx:
     CmdArgs.push_back("-lstdc++");
+    break;
+
+  case ToolChain::CST_MSVCSTL:
+    // MSVC STL does not need to add -l
     break;
   }
 }
