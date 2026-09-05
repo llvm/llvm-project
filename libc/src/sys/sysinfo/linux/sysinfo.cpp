@@ -22,9 +22,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sysinfo, (struct sysinfo * info)) {
-  auto result = linux_syscalls::sysinfo(info);
-  if (!result) {
-    libc_errno = result.error();
+  int result = linux_syscalls::sysinfo(info);
+  if (result < 0) {
+    libc_errno = -result;
     return -1;
   }
   return 0;

@@ -24,8 +24,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE ErrorOr<int> sysinfo(struct sysinfo *info) {
-  return syscall_checked<int>(SYS_sysinfo, info);
+LIBC_INLINE int sysinfo(struct sysinfo *info) {
+  return LIBC_NAMESPACE::syscall_impl<int>(SYS_sysinfo, info);
 }
 
 } // namespace linux_syscalls
