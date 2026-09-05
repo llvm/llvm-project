@@ -26,6 +26,7 @@
 #include "test_macros.h"
 
 constexpr int num_reader = 4;
+constexpr int num_writer = 4;
 const std::chrono::seconds test_time(10);
 
 struct alignas(128) MyObject : public std::rcu_obj_base<MyObject> {
@@ -52,6 +53,9 @@ void test_read_write_lock() {
 
   std::vector<std::jthread> readers;
   readers.reserve(num_reader);
+
+  std::vector<std::jthread> writers;
+  writers.reserve(num_writer);
 
   auto reader_func = [&globalObjRWLock, &globalObjMutex](std::stop_token token) {
     int read_count = 0;
@@ -81,14 +85,19 @@ void test_read_write_lock() {
   for (int i = 0; i < num_reader; ++i) {
     readers.emplace_back(reader_func);
   }
-  std::jthread writer(writer_func);
+  for (int i = 0; i < num_writer; ++i) {
+    writers.emplace_back(writer_func);
+  }
 
   std::this_thread::sleep_for(test_time);
 
   for (auto& reader : readers) {
     reader.request_stop();
   }
-  writer.request_stop();
+
+  for (auto& writer : writers) {
+    writer.request_stop();
+  }
 }
 
 void test_rcu() {
@@ -97,6 +106,9 @@ void test_rcu() {
 
   std::vector<std::jthread> readers;
   readers.reserve(num_reader);
+
+  std::vector<std::jthread> writers;
+  writers.reserve(num_writer);
 
   auto reader_func = [&dom, &global_obj_rcu](std::stop_token token) {
     int read_count = 0;
@@ -132,7 +144,10 @@ void test_rcu() {
   for (int i = 0; i < num_reader; ++i) {
     readers.emplace_back(reader_func);
   }
-  std::jthread writer(writer_func);
+
+  for (int i = 0; i < num_writer; ++i) {
+    writers.emplace_back(writer_func);
+  }
   std::jthread syncer(syncer_func);
 
   std::this_thread::sleep_for(test_time);
@@ -140,7 +155,9 @@ void test_rcu() {
   for (auto& reader : readers) {
     reader.request_stop();
   }
-  writer.request_stop();
+  for (auto& writer : writers) {
+    writer.request_stop();
+  }
   syncer.request_stop();
   std::rcu_synchronize(dom);
 }

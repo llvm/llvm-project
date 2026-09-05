@@ -162,8 +162,14 @@ the `atomic` integer API, e.g. `fetch_or`. An `atomic` of a wrapper struct won't
 `rcu_singly_list_view`
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It also stores the back pointer of the list to make the push back operation more efficient.
-It provides APIs to push a node to the back of the list, splice from another list and to iterate through the list.
+A helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It also stores the back pointer of the list to make the splice back operation more efficient.
+It provides APIs to splice from another `rcu_singly_list_view` or  `rcu_thread_local_list_view`, and to iterate through the list.
+
+`rcu_thread_local_list_view`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A thread safe helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It provides APIs to push a node into the list, or to be spliced to another `rcu_singly_list_view`.
+It uses `thread_local` storage to avoid contentions from multiple threads pushing nodes into the list.
 
 For the derived class of `rcu_obj_base`, the `retire` is `noexcept`, which means that no memory allocation can happen when pushing it to the retired callback queue.
 
@@ -179,13 +185,9 @@ This is the main class that implements the `rcu` logic. It contains
 
 - `std::atomic<bool> grace_period_waiting_flag_` : This flag is used to sleep/wake up the collector thread that is waiting for the grace period to end.
 
-- `std::mutex retire_queue_mutex_` and  `rcu_singly_list_view __retired_callback_queue_` : This queue stores all the retired callbacks that are waiting for the grace period to end.
+- `rcu_thread_local_list_view retired_queue_stage0_;` : All the retired objects are directly pushed to this queue first.
 
-  - TODO: `mutex` can throw, we need to consider how to replace it.
-
-  - Design 2: The access pattern of this list in this implementation is very special. The writer threads are only going to push to this queue. And the collector threads are only going to splice the entire queue. It is easy to implement it with a single `atomic<pair<Head*, Tail*>>`. It will be efficient if the platform supports 16 bytes CAS. To reduce contention between multiple writer threads retiring objects, we let each thread have a thread local queue
-
-- `rcu_singly_list_view callbacks_phase_1_` and `rcu_singly_list_view callbacks_phase_2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector (?) thread is holding the `grace_period_mutex_` .
+- `rcu_singly_list_view retired_queue_stage1_` and `rcu_singly_list_view retired_queue_stage2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector thread is holding the `grace_period_mutex_` .
 
 The domain has few operations:
 
@@ -204,7 +206,7 @@ The domain has few operations:
 `retire`
 ^^^^^^^^
 
-- We need to push the retired callback to the `__retired_callback_queue_`
+- We need to push the retired callback to the `retired_queue_stage0_`
 
 `synchronize`
 ^^^^^^^^^^^^^
@@ -216,6 +218,25 @@ The domain has few operations:
   - in the critical section with the new phase.
 
 - After each phase ends, we can move the callbacks to the next stage's queue, and we can evaluate the callbacks that have gone through two stages.
+
+- Detailed Algorithms of going through one grace period:
+
+  1. lock `grace_period_mutex_`
+  2. Promote stage 0 to stage 1
+  3. Flip the global phase
+  4. Wait for the current grace period to end
+  5. Promote stage 2 to the local ready list
+  6. Promote stage 1 to stage 2
+  7. unlock `grace_period_mutex_`
+  8. Drain the local ready list
+
+- Post condition of each cycle of this algorithm:
+
+  1. Nodes that were previously inside stage 2 queue will be drained
+  2. Nodes that were previously inside stage 0 will end up in stage 2
+  3. stage 1 queue was empty before the cycle and empty after the cycle (maybe we should make it a local variable instead?)
+
+- Note: in this design, both `rcu_retire` and `rcu_synchronize` calls this `synchronize` operation.
 
 
 Design Questions
@@ -254,6 +275,9 @@ And Thomas Rodgers (libstdc++ contributor) also said:
 
 In libc++'s design, we would like to follow Folly's approach to run these deleters inline when `rcu_synchronize` or
 `rcu_barrier` is called.
+
+If we create a libc++ owned collector thread that performs stage migration and potentially stage 2 collection, there is a challenge that creating that thread is something each platform would have to teach us how to do
+(e.g. embedded threads can't actually create a thread with the `std::thread` constructor). There's also no precedent for libc++ to create a thread on the user's behalf.
 
 When should we run the deleters
 -------------------------------
