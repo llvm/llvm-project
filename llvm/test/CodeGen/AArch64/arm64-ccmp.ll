@@ -625,10 +625,9 @@ define i32 @select_andor(i32 %v1, i32 %v2, i32 %v3) {
 define i32 @select_andor32(i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-SD-LABEL: select_andor32:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    cmp w1, w2
-; CHECK-SD-NEXT:    mov w8, #32 ; =0x20
-; CHECK-SD-NEXT:    ccmp w0, w8, #4, lt
-; CHECK-SD-NEXT:    ccmp w0, w1, #0, eq
+; CHECK-SD-NEXT:    cmp w0, #32
+; CHECK-SD-NEXT:    ccmp w1, w2, #0, ne
+; CHECK-SD-NEXT:    ccmp w0, w1, #0, ge
 ; CHECK-SD-NEXT:    csel w0, w0, w1, eq
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1258,3 +1257,4 @@ define i1 @cmp_or_negative_const(i32 %a, i32 %b) {
   ret i1 %or.cond
 }
 attributes #0 = { nounwind }
+
