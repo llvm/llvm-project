@@ -104,41 +104,17 @@ static cl::opt<bool> DisableTailCallElimForColdCalls(
     cl::desc("Disable tail call elimination and optimization for cold calls or "
              "in cold functions"));
 
+/// Return true if tail call elimination should be disabled for the given call
+/// instruction due to coldness. \p DisableColdTailCalls indicates whether the
+/// DisableTailCallElimForColdCalls flag is enabled and the enclosing function
+/// was determined to be cold overall (via attributes, calling convention, or
+/// profile). Note that mandatory tail calls (musttail) are never disabled.
 static bool shouldDisableTailCallsForCold(const CallBase *CB,
-                                          const Function *Caller,
-                                          const ProfileSummaryInfo *PSI,
-                                          BlockFrequencyInfo *BFI) {
-  if (!DisableTailCallElimForColdCalls)
-    return false;
-
+                                          bool DisableColdTailCalls) {
   if (CB && CB->isMustTailCall())
     return false;
 
-  if (Caller && (Caller->hasFnAttribute(Attribute::Cold) ||
-                 Caller->getCallingConv() == CallingConv::Cold))
-    return true;
-
-  if (!PSI || !PSI->hasProfileSummary())
-    return false;
-
-  // We require both the function entry and the call site/block/callee to be
-  // cold.
-  // 1. Checking that the function entry is cold ensures we don't disable tail
-  //    call elimination in hot functions (with calls on cold conditional
-  //    paths), which would force stack frame setup and teardown on hot paths.
-  // 2. Checking that the call site/block/callee is also cold ensures that if a
-  //    function has a cold entry count but contains a hot loop, we don't
-  //    disable tail call elimination for calls within that hot loop.
-  if (Caller && PSI->isFunctionEntryCold(Caller) && CB) {
-    if (CB->hasFnAttr(Attribute::Cold) ||
-        CB->getCallingConv() == CallingConv::Cold)
-      return true;
-    if (BFI && (PSI->isColdCallSite(*CB, BFI) ||
-                PSI->isColdBlock(CB->getParent(), BFI)))
-      return true;
-  }
-
-  return false;
+  return DisableColdTailCalls;
 }
 
 /// Scan the specified function for alloca instructions.
@@ -241,7 +217,7 @@ struct AllocaDerivedValueTracker {
 } // namespace
 
 static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
-                      ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+                      bool DisableColdTailCalls) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
@@ -305,7 +281,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
 
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
-      bool DisableForCold = shouldDisableTailCallsForCold(CI, &F, PSI, BFI);
+      bool DisableForCold =
+          shouldDisableTailCallsForCold(CI, DisableColdTailCalls);
       bool IsNoTail = CI->isNoTailCall() || DisableForCold ||
                       CI->hasOperandBundlesOtherThan(
                           {LLVMContext::OB_clang_arc_attachedcall,
@@ -546,7 +523,7 @@ class TailRecursionEliminator {
   OptimizationRemarkEmitter *ORE;
   DomTreeUpdater &DTU;
   BlockFrequencyInfo *const BFI;
-  ProfileSummaryInfo *const PSI;
+  const bool DisableColdTailCalls;
   const bool UpdateFunctionEntryCount;
   const uint64_t OrigEntryBBFreq;
   const uint64_t OrigEntryCount;
@@ -582,9 +559,10 @@ class TailRecursionEliminator {
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
                           DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
-                          ProfileSummaryInfo *PSI,
+                          bool DisableColdTailCalls,
                           bool UpdateFunctionEntryCount)
-      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI), PSI(PSI),
+      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
+        DisableColdTailCalls(DisableColdTailCalls),
         UpdateFunctionEntryCount(UpdateFunctionEntryCount),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
@@ -643,7 +621,8 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
 
   assert((!CI->isTailCall() || !CI->isNoTailCall()) &&
          "Incompatible call site attributes(Tail,NoTail)");
-  if (!CI->isTailCall() || shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
+  if (!CI->isTailCall() ||
+      shouldDisableTailCallsForCold(CI, DisableColdTailCalls))
     return nullptr;
 
   // As a special case, detect code like this:
@@ -912,8 +891,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
   if (!DisableEntryCountRecompute && UpdateFunctionEntryCount &&
-      OrigEntryBBFreq) {
-    assert(F.getEntryCount().has_value());
+      OrigEntryBBFreq && F.getEntryCount().has_value()) {
     // This pass is not expected to remove BBs, only add an entry BB. For that
     // reason, and because the BB here isn't the new entry BB, the BFI lookup is
     // expected to succeed.
@@ -1076,8 +1054,22 @@ bool TailRecursionEliminator::eliminate(
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
+  // We only disable tail calls in functions that are cold overall.
+  // 1. Checking that the function is cold ensures we don't disable tail call
+  //    elimination in hot functions (with calls on cold conditional paths),
+  //    which would force stack frame setup and teardown on hot paths.
+  // 2. Using isFunctionColdInCallGraph ensures all basic blocks in the function
+  //    are cold, preventing disabling tail call elimination for calls within a
+  //    hot loop inside a function with a cold entry count, and also handles
+  //    SamplePGO where entry counts may be missing or inaccurate.
+  bool DisableColdTailCalls =
+      DisableTailCallElimForColdCalls &&
+      (F.hasFnAttribute(Attribute::Cold) ||
+       F.getCallingConv() == CallingConv::Cold ||
+       (PSI && BFI && PSI->isFunctionColdInCallGraph(&F, *BFI)));
+
   bool MadeChange = false;
-  MadeChange |= markTails(F, ORE, PSI, BFI);
+  MadeChange |= markTails(F, ORE, DisableColdTailCalls);
 
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
@@ -1088,8 +1080,8 @@ bool TailRecursionEliminator::eliminate(
     return MadeChange;
 
   // Change any tail recursive calls to loops.
-  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI, PSI,
-                              UpdateFunctionEntryCount);
+  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI,
+                              DisableColdTailCalls, UpdateFunctionEntryCount);
 
   for (BasicBlock &BB : F)
     MadeChange |= TRE.processBlock(BB);
@@ -1158,7 +1150,7 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // This must come first. It needs the 2 analyses, meaning, if it came after
   // the lines asking for the cached result, should they be nullptr (which, in
   // the case of the PDT, is likely), updates to the trees would be missed.
-  auto *BFI = F.getEntryCount().has_value()
+  auto *BFI = (F.getEntryCount().has_value() || DisableTailCallElimForColdCalls)
                   ? &AM.getResult<BlockFrequencyAnalysis>(F)
                   : nullptr;
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);

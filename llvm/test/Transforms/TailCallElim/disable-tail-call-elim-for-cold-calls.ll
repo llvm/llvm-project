@@ -137,6 +137,29 @@ exit:
   ret void
 }
 
+; Check that a call inside a function with missing profile count IS marked as tail.
+define void @test_missing_profile() {
+; CHECK-LABEL: @test_missing_profile(
+; CHECK: tail call void @normal_callee()
+  call void @normal_callee()
+  ret void
+}
+
+; Check that a call inside a function with missing entry count but with branch weights IS marked as tail, even though the block with the call is cold.
+define void @test_missing_entry_with_branch_weights(i1 %cond) {
+; CHECK-LABEL: @test_missing_entry_with_branch_weights(
+; CHECK: tail call void @normal_callee()
+entry:
+  br i1 %cond, label %if.then, label %if.else, !prof !16
+
+if.then:
+  ret void
+
+if.else:
+  call void @normal_callee()
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
