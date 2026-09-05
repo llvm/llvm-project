@@ -852,12 +852,21 @@ public:
     // Do nothing.
   }
 
+  /// Return true if Reg overlaps one of the anti-hinted register units.
+  bool isAntiHintedReg(MCPhysReg Reg,
+                       const BitVector &AntiHintedRegUnits) const;
+
   /// Apply anti-hints to the allocation order.
-  virtual void applyRegAllocationAntiHints(
+  void applyRegAllocationAntiHints(
       Register VirtReg, ArrayRef<MCPhysReg> Order,
       SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
-      SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
-      const VirtRegMap *VRM = nullptr,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr) const;
+
+  /// Custom reordering of the allocation order.
+  virtual void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
       const LiveRegMatrix *Matrix = nullptr) const;
 
   /// Allow the target to reverse allocation order of local live ranges. This

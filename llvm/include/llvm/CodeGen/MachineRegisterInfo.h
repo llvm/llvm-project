@@ -922,7 +922,7 @@ public:
            "Anti-hints and anti-hint targets are only for virtual registers");
     AntiHintRegs.grow(VReg);
     SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
-    // Avoid duplicates
+    // Avoid duplicates.
     if (!is_contained(AntiHints, AntiHintVReg))
       AntiHints.push_back(AntiHintVReg);
   }
@@ -959,11 +959,10 @@ public:
     return is_contained(AntiHints, AntiHintVReg);
   }
 
-  /// Get the set of physical registers to avoid.
+  /// Get the BitVector of register units to avoid in anti-hints.
   /// VRM is the current virtual register map showing allocations made so far.
-  void getPhysRegAntiHints(Register VReg,
-                           SmallVectorImpl<MCPhysReg> &PhysAntiHints,
-                           const VirtRegMap &VRM) const;
+  void getBitVecRegAntiHints(Register VReg, BitVector &AntiHintedRegUnits,
+                             const VirtRegMap &VRM) const;
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be

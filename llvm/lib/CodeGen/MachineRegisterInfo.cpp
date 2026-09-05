@@ -718,21 +718,23 @@ void MachineRegisterInfo::updateDbgUsersToReg(
   }
 }
 
-void MachineRegisterInfo::getPhysRegAntiHints(
-    Register VReg, SmallVectorImpl<MCPhysReg> &PhysAntiHints,
-    const VirtRegMap &VRM) const {
+void MachineRegisterInfo::getBitVecRegAntiHints(Register VReg,
+                                                BitVector &AntiHintedRegUnits,
+                                                const VirtRegMap &VRM) const {
   assert(VReg.isVirtual() && "Anti-hints are only for virtual registers");
   if (!AntiHintRegs.inBounds(VReg))
     return;
 
-  const SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
-
-  for (Register AntiHintVReg : AntiHints) {
-    // Check if the anti-hinted register has been allocated
-    if (VRM.hasPhys(AntiHintVReg)) {
-      MCPhysReg PhysReg = VRM.getPhys(AntiHintVReg);
-      if (!is_contained(PhysAntiHints, PhysReg))
-        PhysAntiHints.push_back(PhysReg);
-    }
+  auto *TRI = getTargetRegisterInfo();
+  for (Register AntiHintVReg : AntiHintRegs[VReg]) {
+    // Check if the anti-hinted register has been allocated.
+    if (!VRM.hasPhys(AntiHintVReg))
+      continue;
+    // Delay until first allocated anti-hinted register so unused cases keep
+    // default empty BitVector.
+    if (AntiHintedRegUnits.empty())
+      AntiHintedRegUnits.resize(TRI->getNumRegUnits());
+    for (MCRegUnit Unit : TRI->regunits(VRM.getPhys(AntiHintVReg)))
+      AntiHintedRegUnits.set(static_cast<unsigned>(Unit));
   }
 }

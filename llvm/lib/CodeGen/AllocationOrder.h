@@ -29,9 +29,9 @@ class VirtRegMap;
 class LiveRegMatrix;
 
 class LLVM_LIBRARY_VISIBILITY AllocationOrder {
-  // The Hints occupy [0, NumHints). If the Order received in the constructor
-  // needed to be shuffled, the shuffled copy is stored right after them, at
-  // [NumHints, end).
+  // Used as storage for both Hints and CustomOrder if the Order received in the
+  // constructor needs to be altered. [0, NumHints) contains regular hints. If a
+  // custom order is present, [NumHints, end) contains the custom order.
   const SmallVector<MCPhysReg, 16> HintsAndCustomOrder;
   const int NumHints;
   ArrayRef<MCPhysReg> Order;
@@ -95,8 +95,8 @@ public:
                                 const LiveRegMatrix *Matrix);
 
   /// Create an AllocationOrder from HintsAndCustomOrder that contains NumHints
-  /// Hints optionally followed by a reordered Order. If no reordered copy is
-  /// present use Order as-is.
+  /// Hints optionally followed by a custom order. When that custom order is
+  /// present it becomes the allocation order otherwise Order is used as-is.
   AllocationOrder(SmallVector<MCPhysReg, 16> &&HintsAndCustomOrder,
                   int NumHints, ArrayRef<MCPhysReg> Order, bool HardHints)
       : HintsAndCustomOrder(std::move(HintsAndCustomOrder)), NumHints(NumHints),
