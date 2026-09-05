@@ -2268,6 +2268,15 @@ func.func @test_reshape_block_scaled_rank0_scale_input(%arg0 : tensor<64xf8E4M3F
 
 // -----
 
+func.func @test_reshape_block_scaled_rank0_shape_unranked_inputs(%arg0 : tensor<*xf8E4M3FN>, %arg1 : tensor<*xf8E8M0FNU>) -> () {
+  %s = tosa.const_shape {values = dense<> : tensor<0xindex>} : () -> !tosa.shape<0>
+  // expected-error@+1 {{'tosa.reshape_block_scaled' op requires new shape to have a rank greater than 0}}
+  %0:2 = "tosa.reshape_block_scaled"(%arg0, %arg1, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<*xf8E4M3FN>, tensor<*xf8E8M0FNU>, !tosa.shape<0>) -> (tensor<*xf8E4M3FN>, tensor<*xf8E8M0FNU>)
+  return
+}
+
+// -----
+
 func.func @test_reshape_non_block_scaled_block_size_mismatch(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
   %s = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape_block_scaled' op expect block size to be 1, got 32}}

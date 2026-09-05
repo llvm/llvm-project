@@ -3192,7 +3192,8 @@ LogicalResult tosa::ReshapeBlockScaledOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> newScaleShapeValue;
   if (numInputs == 2) {
     newScaleShapeValue.assign(newShapeValue.begin(), newShapeValue.end());
-    if (ShapedType::isStatic(newScaleShapeValue.back()))
+    if (!newScaleShapeValue.empty() &&
+        ShapedType::isStatic(newScaleShapeValue.back()))
       newScaleShapeValue.back() /= blockSize;
   }
 
@@ -3203,7 +3204,8 @@ LogicalResult tosa::ReshapeBlockScaledOp::inferReturnTypeComponents(
     for (size_t idx = 0; idx < newShapeValue.size(); idx++) {
       if (ShapedType::isDynamic(newScaleShapeValue[idx])) {
         newScaleShapeValue[idx] = newShapeValue[idx];
-        if (idx == (newShapeValue.size() - 1))
+        if (idx + 1 == newShapeValue.size() &&
+            ShapedType::isStatic(newScaleShapeValue[idx]))
           newScaleShapeValue[idx] /= blockSize;
       }
     }
@@ -3234,10 +3236,14 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
     return failure();
   }
 
+  const uint32_t blockSize = BlockSizeAttr::getBlockSizeValue(getBlockSize());
+  if (inputList.size() == 2 &&
+      cast<tosa::shapeType>(getNewValueShape().getType()).getRank() == 0)
+    return emitOpError("requires new shape to have a rank greater than 0");
+
   const auto inputType = llvm::cast<ShapedType>(inputList[0].getType());
   if (!inputType.hasRank())
     return success();
-  const uint32_t blockSize = BlockSizeAttr::getBlockSizeValue(getBlockSize());
 
   if (inputList.size() == 2) {
     if (blockSize != BlockSizeAttr::getBlockSizeValue(BlockSize::BLOCK_SIZE_32))
@@ -3302,7 +3308,7 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
       return emitOpError("expect block size to be 1, got ") << blockSize;
   }
 
-  // Get the new value shape dimension values
+  // Get the new value shape dimension values.
   SmallVector<int64_t> shapeValues;
   if (!tosa::getConstShapeValues(getNewValueShape().getDefiningOp(),
                                  shapeValues)) {
@@ -3311,9 +3317,6 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
   }
 
   if (inputList.size() == 2) {
-    if (static_cast<int64_t>(shapeValues.size()) == 0)
-      return emitOpError("requires new shape to have a rank greater than 0");
-
     const int64_t lastShapeDim = shapeValues.back();
     if (ShapedType::isStatic(lastShapeDim) && lastShapeDim % blockSize != 0)
       return emitOpError("expect last dimension of new shape (")
