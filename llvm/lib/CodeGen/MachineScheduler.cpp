@@ -1130,6 +1130,28 @@ void ScheduleDAGMI::schedule() {
 
 /// Apply each ScheduleDAGMutation step in order.
 void ScheduleDAGMI::postProcessDAG() {
+  // Keep copies of block live-in physical registers ahead of inline asm in
+  // their original scheduling region. Sinking such a copy extends an
+  // unspillable physical register live range across the asm, while keeping it
+  // above the asm lets register allocation spill the virtual register instead.
+  for (SUnit &CopySU : SUnits) {
+    MachineInstr *Copy = CopySU.getInstr();
+    if (!Copy->isCopy())
+      continue;
+
+    Register DstReg = Copy->getOperand(0).getReg();
+    Register SrcReg = Copy->getOperand(1).getReg();
+    if (!DstReg.isVirtual() || !SrcReg.isPhysical() ||
+        !Copy->getParent()->isLiveIn(SrcReg))
+      continue;
+
+    for (SUnit &SU : SUnits) {
+      if (SU.NodeNum <= CopySU.NodeNum || !SU.getInstr()->isInlineAsm())
+        continue;
+      addEdge(&SU, SDep(&CopySU, SDep::Artificial));
+    }
+  }
+
   for (auto &m : Mutations)
     m->apply(this);
 }
