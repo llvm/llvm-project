@@ -37,6 +37,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/AtomicScope.h"
 #include <optional>
@@ -146,6 +147,7 @@ private:
   NVPTX::Scope getAtomicScope(const MemSDNode *N) const;
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  bool SelectFAbs(SDValue N, SDValue &Src);
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
@@ -2033,6 +2035,20 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
   int Opcode = IsVec ? NVPTX::FMA_BF16x2rrr : NVPTX::FMA_BF16rrr;
   MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
   ReplaceNode(N, FMA);
+  return true;
+}
+
+// The min/max .abs modifier also accepts operands already known to have no
+// negative values (not even -0). NaN signs are immaterial to these
+// instructions.
+bool NVPTXDAGToDAGISel::SelectFAbs(SDValue N, SDValue &Src) {
+  if (N.getOpcode() == ISD::FABS)
+    Src = N.getOperand(0);
+  else if (CurDAG->computeKnownFPClass(N, fcNegative).signBitIsZeroOrNaN())
+    Src = N;
+  else
+    return false;
+  Src = selectPossiblyImm(Src);
   return true;
 }
 
