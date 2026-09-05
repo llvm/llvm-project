@@ -109,7 +109,8 @@ private:
                              const MachineBasicBlock *MBB,
                              SmallSet<MCRegister, 8> &PhysRefs,
                              PhysDefVector &PhysDefs, bool &PhysUseDef) const;
-  bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
+  bool PhysRegDefsReach(const MachineBasicBlock *CSMBB,
+                        MachineBasicBlock::const_iterator CSI, MachineInstr *MI,
                         const SmallSet<MCRegister, 8> &PhysRefs,
                         const PhysDefVector &PhysDefs, bool &NonLocal) const;
   bool isCSECandidate(MachineInstr *MI);
@@ -329,7 +330,12 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
   return !PhysRefs.empty();
 }
 
-bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
+/// Check whether the registers in \p PhysRefs still hold, at \p MI, the values
+/// they held at \p CSI in \p CSMBB.  The walk covers [CSI, MI), so \p CSI is
+/// scanned like any other position and may be CSMBB->end().
+bool MachineCSEImpl::PhysRegDefsReach(const MachineBasicBlock *CSMBB,
+                                      MachineBasicBlock::const_iterator CSI,
+                                      MachineInstr *MI,
                                       const SmallSet<MCRegister, 8> &PhysRefs,
                                       const PhysDefVector &PhysDefs,
                                       bool &NonLocal) const {
@@ -337,7 +343,6 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
   // not in the same basic block as the given instruction. The only exception
   // is if the common subexpression is in the sole predecessor block.
   const MachineBasicBlock *MBB = MI->getParent();
-  const MachineBasicBlock *CSMBB = CSMI->getParent();
 
   bool CrossMBB = false;
   if (CSMBB != MBB) {
@@ -352,7 +357,7 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
     }
     CrossMBB = true;
   }
-  MachineBasicBlock::const_iterator I = CSMI; I = std::next(I);
+  MachineBasicBlock::const_iterator I = CSI;
   MachineBasicBlock::const_iterator E = MI;
   MachineBasicBlock::const_iterator EE = CSMBB->end();
   unsigned LookAheadLeft = LookAheadLimit;
@@ -583,7 +588,9 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
       if (!PhysUseDef) {
         unsigned CSVN = VNT.lookup(&MI);
         MachineInstr *CSMI = Exps[CSVN];
-        if (PhysRegDefsReach(CSMI, &MI, PhysRefs, PhysDefs, CrossMBBPhysDef))
+        MachineBasicBlock::const_iterator CSI(CSMI);
+        if (PhysRegDefsReach(CSMI->getParent(), std::next(CSI), &MI, PhysRefs,
+                             PhysDefs, CrossMBBPhysDef))
           FoundCSE = true;
       }
     }
@@ -810,7 +817,10 @@ bool MachineCSEImpl::isPRECandidate(MachineInstr *MI,
     if (MO.isReg() && !MO.getReg().isVirtual()) {
       if (MO.isDef())
         return false;
-      else
+      // A use the target considers ignorable is not a real read, so it does
+      // not constrain where the instruction may be hoisted to.  AMDGPU uses
+      // this for the implicit EXEC read on VALU instructions.
+      if (!TII->isIgnorableUse(*MI, MI->getOperandNo(&MO)))
         PhysRefs.insert(MO.getReg());
     }
   }
@@ -860,11 +870,14 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
 
         // If this instruction uses physical registers then we can only do PRE
         // if it's using the value that is live at the place we're hoisting to.
-        bool NonLocal;
+        bool NonLocal = false;
         PhysDefVector PhysDefs;
+        // The copy lands in front of CMBB's first terminator, so the walk has
+        // to start there: the terminator itself lies between the copy and MI.
+        auto FirstTerm = CMBB->getFirstTerminator();
         if (!PhysRefs.empty() &&
-            !PhysRegDefsReach(&*(CMBB->getFirstTerminator()), &MI, PhysRefs,
-                              PhysDefs, NonLocal))
+            !PhysRegDefsReach(CMBB, FirstTerm, &MI, PhysRefs, PhysDefs,
+                              NonLocal))
           continue;
 
         assert(MI.getOperand(0).isDef() &&
@@ -873,8 +886,7 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
         Register NewReg = MRI->cloneVirtualRegister(VReg);
         if (!isProfitableToCSE(NewReg, VReg, CMBB, &MI))
           continue;
-        MachineInstr &NewMI =
-            TII->duplicate(*CMBB, CMBB->getFirstTerminator(), MI);
+        MachineInstr &NewMI = TII->duplicate(*CMBB, FirstTerm, MI);
 
         // When hoisting, make sure we don't carry the debug location of
         // the original instruction, as that's not correct and can cause
