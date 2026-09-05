@@ -103,6 +103,7 @@ static constexpr int One() { return 1; }
 static constexpr int Two() { return 2; }
 static constexpr int Three() { return 3; }
 static constexpr int Four() { return 4; }
+static constexpr unsigned long HugeUnsigned() { return -42; }
 };
 // 'dim' must be 1, 2, or 3.
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to -5}}
@@ -114,6 +115,8 @@ static constexpr int Four() { return 4; }
 #pragma acc routine(Func) gang(dim:HasFuncs::Three())
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
 #pragma acc routine(Func) gang(dim:HasFuncs::Four())
+// expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 18'446'744'073'709'551'574}}
+#pragma acc routine(Func) gang(dim:HasFuncs::HugeUnsigned())
 
 template<typename T>
 struct DependentT {
