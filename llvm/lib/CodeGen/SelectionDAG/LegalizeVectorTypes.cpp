@@ -663,7 +663,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_ADDRSPACECAST(SDNode *N) {
   auto *AddrSpaceCastN = cast<AddrSpaceCastSDNode>(N);
   unsigned SrcAS = AddrSpaceCastN->getSrcAddressSpace();
   unsigned DestAS = AddrSpaceCastN->getDestAddressSpace();
-  return DAG.getAddrSpaceCast(DL, DestVT, Op, SrcAS, DestAS);
+  return DAG.getAddrSpaceCast(DL, DestVT, Op, SrcAS, DestAS,
+                              AddrSpaceCastN->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
@@ -2991,8 +2992,9 @@ void DAGTypeLegalizer::SplitVecRes_ADDRSPACECAST(SDNode *N, SDValue &Lo,
   auto *AddrSpaceCastN = cast<AddrSpaceCastSDNode>(N);
   unsigned SrcAS = AddrSpaceCastN->getSrcAddressSpace();
   unsigned DestAS = AddrSpaceCastN->getDestAddressSpace();
-  Lo = DAG.getAddrSpaceCast(dl, LoVT, Lo, SrcAS, DestAS);
-  Hi = DAG.getAddrSpaceCast(dl, HiVT, Hi, SrcAS, DestAS);
+  SDNodeFlags Flags = AddrSpaceCastN->getFlags();
+  Lo = DAG.getAddrSpaceCast(dl, LoVT, Lo, SrcAS, DestAS, Flags);
+  Hi = DAG.getAddrSpaceCast(dl, HiVT, Hi, SrcAS, DestAS, Flags);
 }
 
 void DAGTypeLegalizer::SplitVecRes_UnaryOpWithTwoResults(SDNode *N,
@@ -6325,9 +6327,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_ADDRSPACECAST(SDNode *N) {
     InOp = DAG.getInsertSubvector(DL, DAG.getPOISON(InWidenVT), InOp, 0);
   }
 
-  return DAG.getAddrSpaceCast(DL, WidenVT, InOp,
-                              AddrSpaceCastN->getSrcAddressSpace(),
-                              AddrSpaceCastN->getDestAddressSpace());
+  return DAG.getAddrSpaceCast(
+      DL, WidenVT, InOp, AddrSpaceCastN->getSrcAddressSpace(),
+      AddrSpaceCastN->getDestAddressSpace(), AddrSpaceCastN->getFlags());
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {

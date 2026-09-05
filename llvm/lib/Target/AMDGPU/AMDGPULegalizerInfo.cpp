@@ -2556,6 +2556,11 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   const AMDGPUTargetMachine &TM
     = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
+  // The source is known non-null for llvm.amdgcn.addrspacecast.nonnull or a
+  // G_ADDRSPACE_CAST carrying the nonnull flag; otherwise we need to guess.
+  const bool IsNonNull =
+      isa<GIntrinsic>(MI) || MI.getFlag(MachineInstr::MIFlag::NonNull);
+
   if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
     return true;
@@ -2583,9 +2588,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return B.buildExtract(Dst, Src, 0).getReg(0);
     };
 
-    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
-    // G_ADDRSPACE_CAST we need to guess.
-    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    if (IsNonNull || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       castFlatToLocalOrPrivate(Dst);
       MI.eraseFromParent();
       return true;
@@ -2655,9 +2658,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return B.buildMergeLikeInstr(Dst, {SrcAsInt, ApertureReg}).getReg(0);
     };
 
-    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
-    // G_ADDRSPACE_CAST we need to guess.
-    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    if (IsNonNull || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       castLocalOrPrivateToFlat(Dst);
       MI.eraseFromParent();
       return true;
