@@ -444,6 +444,9 @@ features cannot lower the translation-unit ABI level;
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- `-Wfortify-source` now diagnoses calls to `fread`, `fwrite`, and `fgets`
+  when the requested size exceeds the corresponding buffer. (#GH204337)
+
 - `-Wfortify-source` now warns when the constant-evaluated argument to
   `umask` has bits set outside `0777`. Those bits are silently discarded
   by the kernel, so setting them is almost always a typo (matching the

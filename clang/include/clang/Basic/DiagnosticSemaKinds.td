@@ -1044,6 +1044,11 @@ def warn_fortify_scanf_overflow : Warning<
   "%2, but the corresponding specifier may require size %3">,
   InGroup<FortifySource>;
 
+def warn_fortify_source_overread : Warning<
+  "'%0' will always read past the end of the source buffer; source buffer has "
+  "size %1, but the size is %2">,
+  InGroup<FortifySource>;
+
 def err_function_start_invalid_type: Error<
   "argument must be a function">;
 
