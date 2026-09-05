@@ -22,6 +22,9 @@
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-vplan-native-path \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
 
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -force-partial-aliasing-vectorization \
+; RUN: -force-target-supports-masked-memory-ops < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ALIAS-MASK
+
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
 ; CHECK: LV: epilogue tail-folding is enabled
@@ -40,6 +43,9 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ;
 ; CHECK-INVALID-BIGER-EPILOGUE-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK-INVALID-BIGER-EPILOGUE: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
+
+; CHECK-ALIAS-MASK-LABEL: Checking a loop in 'test_epilogue_tf'
+; CHECK-ALIAS-MASK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with alias masking
 
 entry:
   br label %for.body
