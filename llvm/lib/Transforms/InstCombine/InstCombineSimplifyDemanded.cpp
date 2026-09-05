@@ -1991,6 +1991,18 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       PoisonElts = PoisonElts2 & PoisonElts3;
       break;
     }
+    case Intrinsic::fma:
+    case Intrinsic::fmuladd: {
+      // Elementwise: each result lane uses only the matching operand lane, so
+      // the demand passes through unchanged to every operand.
+      simplifyAndSetOp(II, 0, DemandedElts, PoisonElts2);
+      simplifyAndSetOp(II, 1, DemandedElts, PoisonElts3);
+      APInt PoisonEltsAcc(VWidth, 0);
+      simplifyAndSetOp(II, 2, DemandedElts, PoisonEltsAcc);
+      // A result lane is poison if any operand lane is poison.
+      PoisonElts = PoisonElts2 | PoisonElts3 | PoisonEltsAcc;
+      break;
+    }
     default: {
       // Handle target specific intrinsics
       std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
