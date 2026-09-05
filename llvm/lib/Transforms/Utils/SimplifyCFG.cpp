@@ -5158,7 +5158,11 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
       setFittedBranchWeights(*SI, NewSwitchWeights, /*IsExpected=*/false);
     } else if (SwitchHasBranchWeights) {
       // If we only have branch weights on the switch, we cannot reconstruct
-      // branch weights correctly, so mark them as unknown.
+      // branch weights correctly, so mark them as unknown if the function has
+      // a profile count. Reset the branch weights first to ensure we remove
+      // the now invalid branch weights if the function is not otherwise
+      // profiled.
+      SI->setMetadata(LLVMContext::MD_prof, nullptr);
       setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     }
   }
