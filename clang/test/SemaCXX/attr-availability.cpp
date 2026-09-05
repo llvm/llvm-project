@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -std=c++23 -fsyntax-only -verify %s
 
 __attribute__((availability(macos, introduced = 10.0))) int init10();
 __attribute__((availability(macos, introduced = 11.0))) int init11(); // expected-note 2 {{'init11' has been marked as being introduced in macOS 11.0}}
@@ -19,3 +20,12 @@ struct S : B0, B1 {
   {}
   int i0, i1;
 };
+
+#if __cplusplus >= 202302L
+void ifConsteval() {
+  if (__builtin_available(macos 10.12, *))
+    ;
+  if consteval {
+  }
+}
+#endif
