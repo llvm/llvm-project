@@ -509,6 +509,130 @@ defm : Zn4WriteResInt<WriteLoad, [Zn4AGU012, Zn4Load], !add(Znver4Model.LoadLate
 // Does not cost anything by itself, only has latency, matching that of the WriteLoad,
 defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLatency, 1), [], 0>;
 
+// AVX-512 masked GATHER / SCATTER. Microcoded, so entries are keyed by
+// (#elements, element width, index width); the two index widths share an entry
+// only where they measure alike. Throughput and latency were measured on
+// Znver4 with every mask bit set, and are accurate to about a cycle; scatter
+// latency is estimated rather than timed. Znver4Model also backs znver5 and
+// znver6, which run 25-55% faster and are pessimistic here.
+//
+// The FP occupancies are the uops.info Zen4 port distributions for the same
+// encodings, with the FP0-3 subgroups (FP01/FP12/FP23/FP123/FP0123) summed
+// into Zn4FPU0123. A scatter's element stores are charged to Zn4FPSt, which
+// keeps them subject to the one-FP-store-per-cycle limit; Zn4FP45 then carries
+// only the remaining FP4/5 uops, so the two together come to the measured
+// FP4/5 total.
+//
+// Those occupancies alone fall short of the measured throughput -- the
+// microcode sequencer, not any one pipe, is the limit -- so Zn4UcodeGS carries
+// the fitted residual, and a retune edits only that column. Charging it there
+// rather than to the FP pipes keeps a gather/scatter from falsely serialising
+// independent FP work. Zn4UcodeGS is abstract, not four pipes; it is declared
+// 4-wide only so that round(tput * 4) keeps the measurement's resolution, and
+// named to sort last so that adding it renumbers no existing resource.
+def Zn4UcodeGS : ProcResource<4>;
+
+class Zn4GatherRes<list<int> cyc, int lat, int uops>
+    : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4FPLd01, Zn4FPU0123, Zn4UcodeGS]> {
+  let ReleaseAtCycles = cyc; let Latency = lat; let NumMicroOps = uops;
+}
+class Zn4ScatterRes<list<int> cyc, int lat, int uops>
+    : SchedWriteRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45, Zn4FPU0123,
+                     Zn4UcodeGS]> {
+  let ReleaseAtCycles = cyc; let Latency = lat; let NumMicroOps = uops;
+}
+// ReleaseAtCycles is [Zn4AGU012, Zn4Load, Zn4FPLd01, Zn4FPU0123, Zn4UcodeGS].
+def Zn4WriteVPGATHERQDZ128 : Zn4GatherRes<[  2,  2,   4,   4,   16], 13, 18>;
+def : InstRW<[Zn4WriteVPGATHERQDZ128, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQDZ128rm, VGATHERQPSZ128rm)>;
+def Zn4WriteVPGATHERDDZ128 : Zn4GatherRes<[  4,  4,   6,   5,   20], 15, 24>;
+def : InstRW<[Zn4WriteVPGATHERDDZ128, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERDDZ128rm, VGATHERDPSZ128rm,
+                     VPGATHERQDZ256rm, VGATHERQPSZ256rm)>;
+def Zn4WriteVPGATHERDDZ256 : Zn4GatherRes<[  8,  8,  10,   9,   37], 20, 41>;
+def : InstRW<[Zn4WriteVPGATHERDDZ256, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERDDZ256rm, VGATHERDPSZ256rm)>;
+def Zn4WriteVPGATHERQDZ    : Zn4GatherRes<[  8,  8,  10,  12,   39], 24, 46>;
+def : InstRW<[Zn4WriteVPGATHERQDZ, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQDZrm, VGATHERQPSZrm)>;
+def Zn4WriteVPGATHERDDZ    : Zn4GatherRes<[ 16, 16,  18,  22,   70], 32, 81>;
+def : InstRW<[Zn4WriteVPGATHERDDZ, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERDDZrm, VGATHERDPSZrm)>;
+def Zn4WriteVPGATHERQQZ128 : Zn4GatherRes<[  2,  2,   4,   3,   16], 12, 17>;
+def : InstRW<[Zn4WriteVPGATHERQQZ128, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQQZ128rm, VGATHERQPDZ128rm,
+                     VPGATHERDQZ128rm, VGATHERDPDZ128rm)>;
+def Zn4WriteVPGATHERQQZ256 : Zn4GatherRes<[  4,  4,   6,   5,   20], 16, 24>;
+def : InstRW<[Zn4WriteVPGATHERQQZ256, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQQZ256rm, VGATHERQPDZ256rm,
+                     VPGATHERDQZ256rm, VGATHERDPDZ256rm)>;
+def Zn4WriteVPGATHERQQZ    : Zn4GatherRes<[  8,  8,  10,  14,   39], 25, 48>;
+def : InstRW<[Zn4WriteVPGATHERQQZ, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQQZrm, VGATHERQPDZrm)>;
+def Zn4WriteVPGATHERDQZ    : Zn4GatherRes<[  8,  8,  10,  13,   38], 22, 46>;
+def : InstRW<[Zn4WriteVPGATHERDQZ, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERDQZrm, VGATHERDPDZrm)>;
+
+// AVX2 (VEX) gathers. AVX2 has no scatter and no VEX form exceeds 8 x i32. All
+// but 8 x i32 measure like the EVEX entry for their shape and reuse it; 8 x i32
+// is genuinely cheaper (8.35 vs 9.19 cyc) and gets its own entry. An InstRW
+// replaces the whole Sched<> list, so each one must restate the mask-writeback
+// def that X86InstrSSE.td attaches. That def is encoding-neutral and models the
+// mask clobber at the generic load latency, 5, for VEX and EVEX alike, while
+// the data result these entries measure is 12 to 32; narrowing that gap is
+// future work for both encodings.
+def : InstRW<[Zn4WriteVPGATHERQDZ128, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQDrm, VGATHERQPSrm)>;
+def : InstRW<[Zn4WriteVPGATHERDDZ128, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERDDrm, VGATHERDPSrm,
+                     VPGATHERQDYrm, VGATHERQPSYrm)>;
+def Zn4WriteVPGATHERDDY    : Zn4GatherRes<[  8,  8,   9,  17,   33], 21, 42>;
+def : InstRW<[Zn4WriteVPGATHERDDY, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERDDYrm, VGATHERDPSYrm)>;
+def : InstRW<[Zn4WriteVPGATHERQQZ128, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQQrm, VGATHERQPDrm,
+                     VPGATHERDQrm, VGATHERDPDrm)>;
+def : InstRW<[Zn4WriteVPGATHERQQZ256, WriteVecMaskedGatherWriteback],
+             (instrs VPGATHERQQYrm, VGATHERQPDYrm,
+                     VPGATHERDQYrm, VGATHERDPDYrm)>;
+
+// ReleaseAtCycles is [Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45, Zn4FPU0123,
+// Zn4UcodeGS].
+def Zn4WriteVPSCATTERQDZ128 : Zn4ScatterRes<[ 2,  2,  2,  4,  1,  16],  6, 17>;
+def : InstRW<[Zn4WriteVPSCATTERQDZ128],
+             (instrs VPSCATTERQDZ128mr, VSCATTERQPSZ128mr)>;
+def Zn4WriteVPSCATTERDDZ128 : Zn4ScatterRes<[ 4,  4,  4,  6,  3,  33],  9, 27>;
+def : InstRW<[Zn4WriteVPSCATTERDDZ128],
+             (instrs VPSCATTERDDZ128mr, VSCATTERDPSZ128mr)>;
+def Zn4WriteVPSCATTERQDZ256 : Zn4ScatterRes<[ 4,  4,  4,  6,  3,  26],  9, 27>;
+def : InstRW<[Zn4WriteVPSCATTERQDZ256],
+             (instrs VPSCATTERQDZ256mr, VSCATTERQPSZ256mr)>;
+def Zn4WriteVPSCATTERDDZ256 : Zn4ScatterRes<[ 8,  8,  8, 10,  7,  49], 14, 48>;
+def : InstRW<[Zn4WriteVPSCATTERDDZ256],
+             (instrs VPSCATTERDDZ256mr, VSCATTERDPSZ256mr)>;
+def Zn4WriteVPSCATTERQDZ    : Zn4ScatterRes<[ 8,  8,  8, 10,  8,  46], 14, 48>;
+def : InstRW<[Zn4WriteVPSCATTERQDZ],
+             (instrs VPSCATTERQDZmr, VSCATTERQPSZmr)>;
+def Zn4WriteVPSCATTERDDZ    : Zn4ScatterRes<[16, 16, 16, 18, 18, 103], 24, 89>;
+def : InstRW<[Zn4WriteVPSCATTERDDZ],
+             (instrs VPSCATTERDDZmr, VSCATTERDPSZmr)>;
+def Zn4WriteVPSCATTERQQZ128 : Zn4ScatterRes<[ 2,  2,  2,  4,  1,  16],  6, 17>;
+def : InstRW<[Zn4WriteVPSCATTERQQZ128],
+             (instrs VPSCATTERQQZ128mr, VSCATTERQPDZ128mr,
+                     VPSCATTERDQZ128mr, VSCATTERDPDZ128mr)>;
+def Zn4WriteVPSCATTERQQZ256 : Zn4ScatterRes<[ 4,  4,  4,  6,  3,  26],  9, 27>;
+def : InstRW<[Zn4WriteVPSCATTERQQZ256],
+             (instrs VPSCATTERQQZ256mr, VSCATTERQPDZ256mr)>;
+def Zn4WriteVPSCATTERDQZ256 : Zn4ScatterRes<[ 4,  4,  4,  6,  3,  24],  9, 28>;
+def : InstRW<[Zn4WriteVPSCATTERDQZ256],
+             (instrs VPSCATTERDQZ256mr, VSCATTERDPDZ256mr)>;
+def Zn4WriteVPSCATTERQQZ    : Zn4ScatterRes<[ 8,  8,  8, 10,  8,  56], 14, 48>;
+def : InstRW<[Zn4WriteVPSCATTERQQZ],
+             (instrs VPSCATTERQQZmr, VSCATTERQPDZmr)>;
+def Zn4WriteVPSCATTERDQZ    : Zn4ScatterRes<[ 8,  8,  8, 10,  7,  44], 14, 48>;
+def : InstRW<[Zn4WriteVPSCATTERDQZ],
+             (instrs VPSCATTERDQZmr, VSCATTERDPDZmr)>;
+
 def Zn4WriteMOVSlow : SchedWriteRes<[Zn4AGU012, Zn4Load]> {
   let Latency = !add(Znver4Model.LoadLatency, 1);
   let ReleaseAtCycles = [3, 1];
