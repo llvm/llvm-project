@@ -406,6 +406,18 @@ TEST_F(FormatTestSelective, WrongIndent) {
                    1, 0));
 }
 
+TEST_F(FormatTestSelective, KeepsEmptyLineBeforeNamespaceClosingBrace) {
+  // The closing brace is not in the range, but its leading empty line is
+  // reformatted because the previous line (or the empty line itself) is.
+  std::string Code = "namespace N {\n"
+                     "\n"
+                     "int i;\n"
+                     "\n"
+                     "}";
+  EXPECT_EQ(Code, format(Code, 15, 0)); // Format `int i;`.
+  EXPECT_EQ(Code, format(Code, 22, 0)); // Format the empty line before `}`.
+}
+
 TEST_F(FormatTestSelective, AlwaysFormatsEntireMacroDefinitions) {
   Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   EXPECT_EQ("int  i;\n"
