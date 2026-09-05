@@ -10670,19 +10670,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     StringLiteral *SE = cast<StringLiteral>(E);
     NewFD->addAttr(
         AsmLabelAttr::Create(Context, SE->getString(), SE->getStrTokenLoc(0)));
-  } else if (!ExtnameUndeclaredIdentifiers.empty()) {
-    llvm::MapVector<IdentifierInfo *, AsmLabelAttr *>::iterator I =
-        ExtnameUndeclaredIdentifiers.find(NewFD->getIdentifier());
-    if (I != ExtnameUndeclaredIdentifiers.end()) {
-      if (isDeclExternC(NewFD)) {
-        NewFD->addAttr(I->second);
-        ExtnameUndeclaredIdentifiers.erase(I);
-      } else if (NewFD->getDeclContext()
-                     ->getRedeclContext()
-                     ->isTranslationUnit())
-        Diag(NewFD->getLocation(), diag::warn_redefine_extname_not_applied)
-            << /*Variable*/0 << NewFD;
-    }
   }
 
   // Copy the parameter declarations from the declarator D to the function
@@ -10850,6 +10837,26 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
   }
 
+  // This linkage query must happen after merging previous declarations.
+  auto ApplyPragmaRedefineExtname = [&] {
+    if (D.getAsmLabel() || ExtnameUndeclaredIdentifiers.empty())
+      return;
+
+    auto I = ExtnameUndeclaredIdentifiers.find(NewFD->getIdentifier());
+    if (I == ExtnameUndeclaredIdentifiers.end())
+      return;
+
+    if (isDeclExternC(NewFD)) {
+      NewFD->addAttr(I->second);
+      ExtnameUndeclaredIdentifiers.erase(I);
+    } else if (NewFD->getDeclContext()
+                   ->getRedeclContext()
+                   ->isTranslationUnit()) {
+      Diag(NewFD->getLocation(), diag::warn_redefine_extname_not_applied)
+          << /*Variable*/ 0 << NewFD;
+    }
+  };
+
   if (!getLangOpts().CPlusPlus) {
     // Perform semantic checking on the function declaration.
     if (!NewFD->isInvalidDecl() && NewFD->isMain())
@@ -10868,6 +10875,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     assert((NewFD->isInvalidDecl() || !D.isRedeclaration() ||
             Previous.getResultKind() != LookupResultKind::FoundOverloaded) &&
            "previous declaration set still overloaded");
+
+    ApplyPragmaRedefineExtname();
 
     // Diagnose no-prototype function declarations with calling conventions that
     // don't support variadic calls. Only do this in C and do it after merging
@@ -11037,6 +11046,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             !D.isRedeclaration() ||
             Previous.getResultKind() != LookupResultKind::FoundOverloaded) &&
            "previous declaration set still overloaded");
+
+    ApplyPragmaRedefineExtname();
 
     NamedDecl *PrincipalDecl = (FunctionTemplate
                                 ? cast<NamedDecl>(FunctionTemplate)
