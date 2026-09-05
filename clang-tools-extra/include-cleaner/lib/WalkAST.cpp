@@ -618,7 +618,10 @@ public:
 
   bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
     if (auto *Ivar = E->getDecl()) {
-      report(E->getLocation(), Ivar);
+      if (auto *Cat = dyn_cast<ObjCCategoryDecl>(Ivar->getDeclContext()))
+        report(E->getLocation(), Cat, RefType::Implicit);
+      else if (auto *IFace = Ivar->getContainingInterface())
+        report(E->getLocation(), IFace, RefType::Implicit);
     }
     return true;
   }

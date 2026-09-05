@@ -1132,11 +1132,11 @@ TEST(WalkAST, ObjCCompatibleAliasUsage) {
            {"-x", "objective-c"});
 }
 
-TEST(WalkAST, ObjCIvarRefExprExplicit) {
+TEST(WalkAST, ObjCIvarRefExprDereferenced) {
   testWalk(R"objc(
-    @interface MyClass {
+    @interface $implicit^MyClass {
       @public
-      int $explicit^foo;
+      int foo;
     }
     @end
   )objc",
@@ -1148,10 +1148,29 @@ TEST(WalkAST, ObjCIvarRefExprExplicit) {
            {"-x", "objective-c"});
 }
 
-TEST(WalkAST, ObjCIvarRefExprFree) {
+TEST(WalkAST, ObjCIvarRefExpr) {
   testWalk(R"objc(
-    @interface MyClass {
-      int $explicit^foo;
+    @interface $implicit^MyClass {
+      int foo;
+    }
+    @end
+  )objc",
+           R"objc(
+    @implementation MyClass
+    - (void)test {
+      int x = ^foo;
+    }
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCIvarRefExprClassExtension) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+    @interface $implicit^MyClass () {
+      int foo;
     }
     @end
   )objc",
