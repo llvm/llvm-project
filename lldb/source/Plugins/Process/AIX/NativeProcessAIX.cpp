@@ -243,8 +243,8 @@ Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return Status("unsupported");
 }
 
-Status NativeProcessAIX::WriteMemory(lldb::addr_t addr, const void *buf,
-                                     size_t size, size_t &bytes_written) {
+Status NativeProcessAIX::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                       size_t size, size_t &bytes_written) {
   return Status("unsupported");
 }
 
