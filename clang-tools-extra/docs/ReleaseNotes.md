@@ -194,6 +194,10 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Fixed a crash in {doc}`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/modernize-use-designated-initializers>` when analyzing
+  malformed code with nested classes and ambiguous initializer.
+
 - Fixed a crash in {doc}`modernize-use-noexcept
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
   code with an unparsed exception specification.
