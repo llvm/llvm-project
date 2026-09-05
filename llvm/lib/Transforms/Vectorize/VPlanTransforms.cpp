@@ -771,7 +771,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *Def = dyn_cast<VPRecipeWithIRFlags>(U);
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
-      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
+      if (!Def ||
+          !isa<VPReplicateRecipe, VPWidenRecipe, VPWidenGEPRecipe>(Def) ||
           Def->user_empty() || !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
