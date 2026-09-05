@@ -1087,6 +1087,12 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
           CGM.getAddrOfConstantCompoundLiteralIfEmitted(E))
     return ConstantAddress(Addr, Addr->getValueType(), Align);
 
+  // A file-scope compound literal is a constant-initialized global, so emit
+  // its initializer under constant-evaluation rules even when reached from a
+  // non-constant context such as the dynamic initializer of another global.
+  if (E->isFileScope())
+    emitter.setInConstantContext(true);
+
   LangAS addressSpace = E->getType().getAddressSpace();
   llvm::Constant *C = emitter.tryEmitForInitializer(E->getInitializer(),
                                                     addressSpace, E->getType());

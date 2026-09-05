@@ -652,6 +652,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
+- Fixed an assertion failure when the dynamic initializer of a global variable
+  takes the address of a file-scope compound literal whose initializer is only
+  constant under constant-evaluation rules, such as `__builtin_constant_p` of a
+  non-constant expression. (#GH212106)
 
 ### OpenACC Specific Changes
 
