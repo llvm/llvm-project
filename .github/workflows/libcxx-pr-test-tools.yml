@@ -45,12 +45,14 @@ jobs:
           fetch-tags: true
 
       - name: Set up Python dependencies
+        shell: bash
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/utils/requirements.txt
 
       - name: Run the tooling smoke test
+        shell: bash
         run: |
           source .venv/bin/activate
           libcxx/utils/ci/run-buildbot test-tools
