@@ -100,6 +100,11 @@ ConverterEBCDIC::convertToEBCDIC(StringRef Source,
   const UTF8 *Ptr = reinterpret_cast<const UTF8 *>(Source.data());
   const UTF8 *End = Ptr + Source.size();
   while (Ptr != End) {
+    if (*Ptr < 0x80) {
+      Result.push_back(static_cast<char>(ISO88591ToIBM1047[*Ptr++]));
+      continue;
+    }
+
     UTF32 Ch;
     switch (convertUTF8Sequence(&Ptr, End, &Ch, strictConversion)) {
     case conversionOK:
