@@ -2246,6 +2246,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.nextafterf128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
