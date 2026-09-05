@@ -19,12 +19,6 @@
 namespace LIBC_NAMESPACE_DECL {
 
 void init_tls(TLSDescriptor &tls_descriptor) {
-  if (app.tls.size == 0) {
-    tls_descriptor.size = 0;
-    tls_descriptor.tp = 0;
-    return;
-  }
-
   // riscv follows the variant 1 TLS layout:
   const uintptr_t TCB_SIZE = sizeof(ThreadControlBlock);
   uintptr_t padding = 0;

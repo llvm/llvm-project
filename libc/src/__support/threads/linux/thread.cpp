@@ -180,8 +180,6 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
 [[gnu::noinline]] void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
-  internal::self.attrib = attrib;
-  attrib->atexit_callback_mgr = internal::get_thread_atexit_callback_mgr();
 
   if (attrib->style == ThreadStyle::POSIX) {
     attrib->retval.posix_retval =
@@ -293,6 +291,8 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
       adjusted_stack + sizeof(StartArgs) + sizeof(ThreadAttributes));
   clear_tid->set(CLEAR_TID_VALUE);
   attrib->platform_data = clear_tid;
+
+  get_tcb(tls.tp)->attrib = attrib;
 
   // The clone syscall takes arguments in an architecture specific order.
   // Also, we want the result of the syscall to be in a register as the child
@@ -526,7 +526,7 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   // cleanup_thread_resources function as that function can be called from a
   // different thread. The destructors of thread local and TSS objects should
   // be called by the thread which owns them.
-  internal::call_atexit_callbacks(attrib);
+  internal::call_atexit_callbacks();
 
   uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
   if (!attrib->detach_state.compare_exchange_strong(
