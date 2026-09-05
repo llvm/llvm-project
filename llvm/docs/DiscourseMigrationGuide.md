@@ -216,5 +216,5 @@ The Mailman archives will remain on the web server for now.
 
 ### I have another question not covered here. What should I do?
 
-Please contact iwg@llvm.org or raise a
-[ticket on GitHub](https://github.com/llvm/llvm-iwg/issues).
+Please post your question in the [Project Infrastructure category on Discourse](https://discourse.llvm.org/c/infrastructure/15) or
+open an issue on the main [LLVM Project issue tracker](https://github.com/llvm/llvm-project/issues) using the `infrastructure` label.
