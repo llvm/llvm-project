@@ -11,6 +11,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  loff_t_test
+  SUITE
+    libc-include-tests
+  SRCS
+    loff_t_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-types.loff_t
+    libc.include.llvm-libc-types.off_t
+)
+
+add_libc_test(
   assert_test
   SUITE
     libc-include-tests
