@@ -3473,34 +3473,26 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     Location loc = op.getLoc();
 
     // Replace uses of ifOp results in the conditionOp with the yielded values
-    // from the ifOp branches.
+    // from the ifOp branches: the after-region argument takes the `then` value,
+    // while the condition operand -- which becomes a while result once the
+    // condition is false -- takes the `else` value.
     //
     // The same ifOp result may be forwarded to several condition operands, so
-    // classify every operand before mutating anything: replacing an ifOp result
-    // rewrites *all* of its uses at once, including condition operands that
-    // have not been visited yet, which would hide them from this scan.
-    SmallVector<std::pair<size_t, size_t>> conditionToIfResult;
+    // assign into the specific operand instead of replacing all uses of the
+    // ifOp result, which would also rewrite the operands not yet visited.
     for (auto [idx, arg] : llvm::enumerate(conditionOp.getArgs())) {
       auto it = llvm::find(ifOp->getResults(), arg);
-      if (it != ifOp->getResults().end())
-        conditionToIfResult.emplace_back(idx, it.getIndex());
-    }
-
-    // The after-region arguments are distinct block arguments, so these
-    // replacements cannot interfere with one another.
-    for (auto [idx, ifOpIdx] : conditionToIfResult)
+      if (it == ifOp->getResults().end())
+        continue;
+      size_t ifOpIdx = it.getIndex();
       rewriter.replaceAllUsesWith(op.getAfterArguments()[idx],
                                   ifOp.thenYield()->getOperand(ifOpIdx));
-
-    // Any remaining use of an ifOp result is on the false path, i.e. a result
-    // of the while op, so it becomes the else value. `ifOp` is
-    // `conditionOp->getPrevNode()` and the assertion above establishes that
-    // `conditionOp` is its only user, so replacing all uses is safe here.
-    // Repeating a replacement for a result forwarded more than once is a no-op
-    // because the first one leaves it without uses.
-    for (auto [idx, ifOpIdx] : conditionToIfResult)
-      rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx],
-                                  ifOp.elseYield()->getOperand(ifOpIdx));
+      unsigned argIdx = idx;
+      Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
+      rewriter.modifyOpInPlace(conditionOp, [&] {
+        conditionOp.getArgsMutable()[argIdx].assign(elseValue);
+      });
+    }
 
     // Collect additional used values from before region.
     SetVector<Value> additionalUsedValuesSet;
