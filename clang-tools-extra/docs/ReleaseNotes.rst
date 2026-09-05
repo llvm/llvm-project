@@ -322,6 +322,11 @@ Improvements to clang-tidy
   checks are `clang-diagnostic-*` ones. This allows using
   :program:`clang-tidy` purely as a frontend to Clang's builtin warnings.
 
+- On Windows, :program:`clang-tidy` will now better match mixes of forwards and
+  backwards slashes when using the `--line-filter` option. This also improves
+  piping from :program:`git` to :program:`clang-tidy-diff.py`, where slashes
+  will now be automatically normalized.
+
 New checks
 ^^^^^^^^^^
 
