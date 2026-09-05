@@ -3407,6 +3407,10 @@ LogicalResult cir::GetMethodOp::verify() {
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
+static mlir::Type memberPointeeType(cir::RecordType recordTy, unsigned idx) {
+  return cir::memberStorageType(recordTy.getMembers()[idx]);
+}
+
 LogicalResult cir::GetMemberOp::verify() {
   const auto recordTy = dyn_cast<RecordType>(getAddrTy().getPointee());
   if (!recordTy)
@@ -3415,7 +3419,11 @@ LogicalResult cir::GetMemberOp::verify() {
   if (recordTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
 
-  if (recordTy.getMembers()[getIndex()] != getType().getPointee())
+  mlir::Type pointeeTy = memberPointeeType(recordTy, getIndex());
+  if (!pointeeTy)
+    return emitError() << "member owns no storage to point at";
+
+  if (pointeeTy != getType().getPointee())
     return emitError() << "member type mismatch";
 
   return mlir::success();
@@ -3432,7 +3440,10 @@ LogicalResult cir::ExtractMemberOp::verify() {
   auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
   if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (structTy.getMembers()[getIndex()] != getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.extract_member does not support bit-fields";
+  if (memberTy != getType())
     return emitError() << "member type mismatch";
   return mlir::success();
 }
@@ -3447,7 +3458,10 @@ LogicalResult cir::InsertMemberOp::verify() {
   auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
   if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (structTy.getMembers()[getIndex()] != getValue().getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.insert_member does not support bit-fields";
+  if (memberTy != getValue().getType())
     return emitError() << "member type mismatch";
   // The op trait already checks that the types of $result and $record match.
   return mlir::success();

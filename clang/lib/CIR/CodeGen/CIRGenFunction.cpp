@@ -1376,11 +1376,11 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
       return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
-  if (builder.isInt8Ty(destPtr.getElementType())) {
-    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
-  }
+  if (!builder.isInt8Ty(destPtr.getElementType()))
+    destPtr = destPtr.withElementType(builder, uInt8Ty);
 
   // Get size and alignment info for this aggregate.
+  mlir::IntegerAttr sizeVal;
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
@@ -1390,6 +1390,8 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     } else {
       return;
     }
+  } else {
+    sizeVal = cgm.getSize(size);
   }
 
   // If the type contains a pointer to data member we can't memset it to zero.
@@ -1408,12 +1410,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     return;
   }
 
-  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
-  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
-  // respective address.
-  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr);
+  // Otherwise, just memset the whole thing to zero.  This is legal
+  // because in LLVM, all default initializers (other than the ones we just
+  // handled above, and the case handled below) are guaranteed to have a bit
+  // pattern of all zeros.
+  mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+  mlir::Value sizeValue =
+      builder.getConstAPInt(loc, cgm.uInt64Ty, sizeVal.getValue());
+  destPtr = destPtr.withElementType(builder, cgm.voidTy);
+  builder.createMemSet(loc, destPtr, zero, sizeValue);
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,

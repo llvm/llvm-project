@@ -397,29 +397,25 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   return RValue::get(result);
 }
 
-/// Emit a `cir.atomic.cmpxchg` for __sync_val_compare_and_swap_N and
-/// __sync_bool_compare_and_swap_N. Returns the old value when `returnBool` is
-/// false, otherwise returns a boolean success flag.
-static RValue emitAtomicCmpXchg(CIRGenFunction &cgf, const CallExpr *e,
-                                bool returnBool) {
-  Address destAddr = checkAtomicAlignment(cgf, e);
-  CIRGenBuilderTy &builder = cgf.getBuilder();
+mlir::Value CIRGenFunction::emitAtomicCmpXchg(const CallExpr *e,
+                                              bool returnBool,
+                                              cir::MemOrder successOrder,
+                                              cir::MemOrder failureOrder,
+                                              cir::SyncScopeKind scope) {
+  Address destAddr = checkAtomicAlignment(*this, e);
+  CIRGenBuilderTy &builder = getBuilder();
   mlir::Value destValue = destAddr.emitRawPointer();
-  mlir::Value expected = cgf.emitScalarExpr(e->getArg(1));
-  mlir::Value desired = cgf.emitScalarExpr(e->getArg(2));
+  mlir::Value expected = emitScalarExpr(e->getArg(1));
+  mlir::Value desired = emitScalarExpr(e->getArg(2));
 
   auto cmpxchg = cir::AtomicCmpXchgOp::create(
-      builder, cgf.getLoc(e->getSourceRange()), destValue, expected, desired,
-      cir::MemOrder::SequentiallyConsistent,
-      cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+      builder, getLoc(e->getSourceRange()), destValue, expected, desired,
+      successOrder, failureOrder, scope,
       /*alignment=*/nullptr, /*weak=*/false, /*is_volatile=*/false);
 
-  if (returnBool) {
-    // cir.atomic.cmpxchg already returns (old, success). Use the success flag
-    // directly instead of re-emitting the expected argument and comparing.
-    return RValue::get(cmpxchg.getSuccess());
-  }
-  return RValue::get(cmpxchg.getOld());
+  if (returnBool)
+    return cmpxchg.getSuccess();
+  return cmpxchg.getOld();
 }
 
 /// Emit a `cir.atomic.xchg` for __sync_swap_N and __sync_lock_test_and_set_N.
@@ -1717,8 +1713,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_coro_end:
     return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroPromiseBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_resume:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
     return getUndefRValue(e->getType());
@@ -2498,12 +2493,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_val_compare_and_swap_2:
   case Builtin::BI__sync_val_compare_and_swap_4:
   case Builtin::BI__sync_val_compare_and_swap_8:
-    return emitAtomicCmpXchg(*this, e, /*returnBool=*/false);
+    return RValue::get(emitAtomicCmpXchg(e, /*returnBool=*/false));
   case Builtin::BI__sync_bool_compare_and_swap_1:
   case Builtin::BI__sync_bool_compare_and_swap_2:
   case Builtin::BI__sync_bool_compare_and_swap_4:
   case Builtin::BI__sync_bool_compare_and_swap_8:
-    return emitAtomicCmpXchg(*this, e, /*returnBool=*/true);
+    return RValue::get(emitAtomicCmpXchg(e, /*returnBool=*/true));
   case Builtin::BI__sync_swap_1:
   case Builtin::BI__sync_swap_2:
   case Builtin::BI__sync_swap_4:
