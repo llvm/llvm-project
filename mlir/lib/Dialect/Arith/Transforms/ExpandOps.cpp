@@ -922,37 +922,57 @@ struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
   }
 };
 
+/// Casts `value` to the float type `targetTy`, picking the cast that fits the
+/// change in width: `arith.extf` and `arith.truncf` each require a strict one,
+/// and `arith.convertf` covers two types of equal width. Fails when the two
+/// have different shapes, which none of the three casts can bridge.
+static FailureOr<Value> castFloatValue(ImplicitLocOpBuilder &b, Value value,
+                                       Type targetTy,
+                                       arith::FastMathFlagsAttr fastmath) {
+  Type sourceTy = value.getType();
+  if (sourceTy == targetTy)
+    return value;
+
+  auto sourceShapedTy = dyn_cast<ShapedType>(sourceTy);
+  auto targetShapedTy = dyn_cast<ShapedType>(targetTy);
+  if (static_cast<bool>(sourceShapedTy) != static_cast<bool>(targetShapedTy))
+    return failure();
+  if (sourceShapedTy && sourceShapedTy.getShape() != targetShapedTy.getShape())
+    return failure();
+
+  unsigned sourceWidth = getElementTypeOrSelf(sourceTy).getIntOrFloatBitWidth();
+  unsigned targetWidth = getElementTypeOrSelf(targetTy).getIntOrFloatBitWidth();
+  if (sourceWidth < targetWidth)
+    return Value(arith::ExtFOp::create(b, targetTy, value, fastmath));
+  if (sourceWidth > targetWidth)
+    return Value(
+        arith::TruncFOp::create(b, targetTy, value, nullptr, fastmath));
+  return Value(
+      arith::ConvertFOp::create(b, targetTy, value, nullptr, fastmath));
+}
+
 struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
   using Base::Base;
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     Value inputOperand = op.getIn();
-    Value scaleOperand = op.getScale();
-    Type scaleTy = scaleOperand.getType();
-    Type scaleETy = getElementTypeOrSelf(scaleOperand);
-    // allow implicit exponent extraction from 16/32 bits floats
-    if (scaleETy.getIntOrFloatBitWidth() >= 16) {
-      scaleETy = b.getF8E8M0Type();
-      scaleTy = cloneToShapedType(scaleTy, scaleETy);
-      scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
-                                             op.getFastmathAttr());
-    }
-    // Catch scale types like f8E5M2.
-    if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
-      return rewriter.notifyMatchFailure(
-          op, "scaling_extf is using scales of type which can not be converted "
-              "to f8E8M0FNU");
-    }
     Type resultTy = op.getType();
-    // extf on scale will essentially create floating point number
-    // of type resulTy that is 2^scale and will also propagate NaNs
-    Value scaleExt =
-        arith::ExtFOp::create(b, resultTy, scaleOperand, op.getFastmathAttr());
+    // The scale multiplies the input by its value, so it is cast to the type
+    // the multiplication happens in rather than reduced to its exponent. For a
+    // f8E8M0FNU scale the cast is the same widening this used to perform, and
+    // it keeps propagating NaNs.
+    FailureOr<Value> scaleExt =
+        castFloatValue(b, op.getScale(), resultTy, op.getFastmathAttr());
+    if (failed(scaleExt)) {
+      return rewriter.notifyMatchFailure(
+          op, "scale and result have different shapes, so the scale cannot be "
+              "cast to the type the multiplication happens in");
+    }
     Value inputExt =
         arith::ExtFOp::create(b, resultTy, inputOperand, op.getFastmathAttr());
     Value result =
-        arith::MulFOp::create(b, inputExt, scaleExt, op.getFastmathAttr());
+        arith::MulFOp::create(b, inputExt, *scaleExt, op.getFastmathAttr());
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -960,8 +980,8 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
 
 /*
 Expands arith.ScalingTruncFOp(in, scale) into
-  scale = arith.truncf(scale) : scaleTy -> f8E8M0FNU
-  result = arith.truncf(in / (2^scale))
+  scale = <cast scale to the type of in>
+  result = arith.truncf(in / scale)
  */
 struct ScalingTruncFOpConverter
     : public OpRewritePattern<arith::ScalingTruncFOp> {
@@ -970,28 +990,20 @@ struct ScalingTruncFOpConverter
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     Value inputOperand = op.getIn();
-    Value scaleOperand = op.getScale();
-    Type scaleTy = scaleOperand.getType();
-    Type scaleETy = getElementTypeOrSelf(scaleOperand);
-    // allow implicit exponent extraction from 16/32 bits floats
-    if (scaleETy.getIntOrFloatBitWidth() >= 16) {
-      scaleETy = b.getF8E8M0Type();
-      scaleTy = cloneToShapedType(scaleTy, scaleETy);
-      scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
-                                             op.getFastmathAttr());
-    }
-    if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
-      return rewriter.notifyMatchFailure(
-          op, "scaling_truncf is using scales type which can not be converted "
-              "to f8E8M0FNU");
-    }
     Type resultTy = op.getType();
     Type inputTy = inputOperand.getType();
-    // this will create a floating point number of type
-    // inputTy that is 2^scale and will also propagate NaNs
-    scaleOperand =
-        arith::ExtFOp::create(b, inputTy, scaleOperand, op.getFastmathAttr());
-    Value result = arith::DivFOp::create(b, inputOperand, scaleOperand,
+    // The scale divides the input by its value, so it is cast to the type the
+    // division happens in rather than reduced to its exponent. For a f8E8M0FNU
+    // scale the cast is the same widening this used to perform, and it keeps
+    // propagating NaNs.
+    FailureOr<Value> scaleCast =
+        castFloatValue(b, op.getScale(), inputTy, op.getFastmathAttr());
+    if (failed(scaleCast)) {
+      return rewriter.notifyMatchFailure(
+          op, "scale and input have different shapes, so the scale cannot be "
+              "cast to the type the division happens in");
+    }
+    Value result = arith::DivFOp::create(b, inputOperand, *scaleCast,
                                          op.getFastmathAttr());
     Value resultCast = arith::TruncFOp::create(
         b, resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
