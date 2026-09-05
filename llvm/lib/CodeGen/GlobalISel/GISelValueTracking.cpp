@@ -2725,6 +2725,43 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    GInsertVectorElement &Insert = cast<GInsertVectorElement>(MI);
+    Register InVec = Insert.getVectorReg();
+    Register InVal = Insert.getElementReg();
+    LLT VecVT = MRI.getType(InVec);
+
+    // If we know the element index, split the demand between the inserted
+    // value and the source vector, otherwise assume we need both. Scalable
+    // vectors carry no per-lane demand, so they always take the minimum of the
+    // whole vector and the inserted value.
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    if (!VecVT.isScalableVector()) {
+      unsigned NumElts = VecVT.getNumElements();
+      auto ConstEltNo = getIConstantVRegVal(Insert.getIndexReg(), MRI);
+      if (ConstEltNo && ConstEltNo->ult(NumElts)) {
+        unsigned EltIdx = ConstEltNo->getZExtValue();
+        DemandedVal = !!DemandedElts[EltIdx];
+        DemandedVecElts.clearBit(EltIdx);
+      }
+    }
+
+    unsigned Tmp = TyBits;
+    if (DemandedVal) {
+      // TODO: Handle implicit truncation of inserted elements.
+      if (MRI.getType(InVal).getSizeInBits() != TyBits)
+        break;
+      unsigned ValSignBits = computeNumSignBits(InVal, APInt(1, 1), Depth + 1);
+      Tmp = std::min(Tmp, ValSignBits);
+    }
+    if (!!DemandedVecElts) {
+      unsigned VecSignBits =
+          computeNumSignBits(InVec, DemandedVecElts, Depth + 1);
+      Tmp = std::min(Tmp, VecSignBits);
+    }
+    return Tmp;
+  }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
     GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
     Register InVec = Extract.getVectorReg();
