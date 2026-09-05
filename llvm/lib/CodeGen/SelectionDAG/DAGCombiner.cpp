@@ -653,6 +653,11 @@ namespace {
     SDValue BuildUDIV(SDNode *N);
     SDValue BuildSREMPow2(SDNode *N);
     SDValue buildOptimizedSREM(SDValue N0, SDValue N1, SDNode *N);
+    /// Materialize an FP constant for estimate refinement. Before operation
+    /// legalization, the softened-vector path returns an opaque load, so
+    /// callers requiring constant recognition, folding, or SDValue identity
+    /// must not use this helper.
+    SDValue materializeFPConstant(double Value, const SDLoc &DL, EVT VT);
     SDValue BuildLogBase2(SDValue V, const SDLoc &DL,
                           bool KnownNeverZero = false,
                           bool InexpensiveOnly = false,
@@ -31730,6 +31735,26 @@ SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL,
   return LogBase2;
 }
 
+SDValue DAGCombiner::materializeFPConstant(double Value, const SDLoc &DL,
+                                           EVT VT) {
+  if (!VT.isFixedLengthVector() || !TLI.isTypeLegal(VT) ||
+      TLI.getTypeAction(*DAG.getContext(), VT.getScalarType()) !=
+          TargetLowering::TypeSoftenFloat)
+    return DAG.getConstantFP(Value, DL, VT);
+
+  assert(!LegalDAG && "load must be created before operation legalization");
+  Type *ScalarTy = VT.getScalarType().getTypeForEVT(*DAG.getContext());
+  Constant *Scalar = ConstantFP::get(ScalarTy, Value);
+  Constant *Vector =
+      ConstantVector::getSplat(VT.getVectorElementCount(), Scalar);
+  SDValue CPIdx =
+      DAG.getConstantPool(Vector, TLI.getPointerTy(DAG.getDataLayout()));
+  Align Alignment = cast<ConstantPoolSDNode>(CPIdx)->getAlign();
+  return DAG.getLoad(
+      VT, DL, DAG.getEntryNode(), CPIdx,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), Alignment);
+}
+
 /// Newton iteration for a function: F(X) is X_{i+1} = X_i - F(X_i)/F'(X_i)
 /// For the reciprocal, we need to find the zero of the function:
 ///   F(X) = 1/X - A [which has a zero at X = 1/A]
@@ -31763,7 +31788,7 @@ SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
 
     SDLoc DL(Op);
     if (Iterations) {
-      SDValue FPOne = DAG.getConstantFP(1.0, DL, VT);
+      SDValue FPOne = materializeFPConstant(1.0, DL, VT);
 
       // Newton iterations: Est = Est + Est (N - Arg * Est)
       // If this is the last iteration, also multiply by the numerator.
@@ -31841,8 +31866,8 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
                                          unsigned Iterations, bool Reciprocal) {
   EVT VT = Arg.getValueType();
   SDLoc DL(Arg);
-  SDValue MinusThree = DAG.getConstantFP(-3.0, DL, VT);
-  SDValue MinusHalf = DAG.getConstantFP(-0.5, DL, VT);
+  SDValue MinusThree = materializeFPConstant(-3.0, DL, VT);
+  SDValue MinusHalf = materializeFPConstant(-0.5, DL, VT);
 
   // This routine must enter the loop below to work correctly
   // when (Reciprocal == false).
