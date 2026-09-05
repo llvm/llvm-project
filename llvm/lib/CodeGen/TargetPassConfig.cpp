@@ -961,6 +961,9 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     addPass(createWasmEHPass());
     break;
   case ExceptionHandling::None:
+  case ExceptionHandling::EmscriptenEH:
+    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
+    // by this point it needs no generic EH preparation, like the None case.
     addPass(createLowerInvokePass());
 
     // The lower invoke pass may create unreachable code. Remove it.
