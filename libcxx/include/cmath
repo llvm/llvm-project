@@ -424,8 +424,15 @@ using ::atanhf _LIBCPP_USING_IF_EXISTS;
 using ::cbrt _LIBCPP_USING_IF_EXISTS;
 using ::cbrtf _LIBCPP_USING_IF_EXISTS;
 
-using ::copysign _LIBCPP_USING_IF_EXISTS;
+using std::__math::copysign;
+
+#  if _LIBCPP_STD_VER >= 23 && __has_constexpr_builtin(__builtin_copysignf)
+_LIBCPP_HIDE_FROM_ABI constexpr float copysignf(float __x, float __y) _NOEXCEPT {
+  return __builtin_copysignf(__x, __y);
+}
+#  else
 using ::copysignf _LIBCPP_USING_IF_EXISTS;
+#  endif
 
 using ::erf _LIBCPP_USING_IF_EXISTS;
 using ::erff _LIBCPP_USING_IF_EXISTS;
@@ -518,7 +525,13 @@ using ::asinhl _LIBCPP_USING_IF_EXISTS;
 using ::atanhl _LIBCPP_USING_IF_EXISTS;
 using ::cbrtl _LIBCPP_USING_IF_EXISTS;
 
+#  if _LIBCPP_STD_VER >= 23 && __has_constexpr_builtin(__builtin_copysignl)
+_LIBCPP_HIDE_FROM_ABI constexpr long double copysignl(long double __x, long double __y) _NOEXCEPT {
+  return __builtin_copysignl(__x, __y);
+}
+#  else
 using ::copysignl _LIBCPP_USING_IF_EXISTS;
+#  endif
 
 using ::erfl _LIBCPP_USING_IF_EXISTS;
 using ::erfcl _LIBCPP_USING_IF_EXISTS;
