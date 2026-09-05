@@ -76,7 +76,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
@@ -231,13 +230,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableNoTrappingFPMath(
-      "enable-no-trapping-fp-math",
-      cl::desc("Enable setting the FP exceptions build "
-               "attribute not to use exceptions"),
-      cl::init(false));
-  CGBINDOPT(EnableNoTrappingFPMath);
 
   static const auto DenormFlagEnumOptions = cl::values(
       clEnumValN(DenormalMode::IEEE, "ieee", "IEEE 754 denormal numbers"),
@@ -585,7 +577,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
   Options.HonorSignDependentRoundingFPMathOption =
       getEnableHonorSignDependentRoundingFPMath();
