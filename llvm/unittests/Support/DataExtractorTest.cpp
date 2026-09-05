@@ -213,6 +213,67 @@ TEST(DataExtractorTest, LEB128_error) {
                         "malformed uleb128, extends past end"));
 }
 
+TEST(DataExtractorTest, SLEB128APSInt) {
+  {
+    // Values that fit within 64 bits should match getSLEB128() exactly.
+    DataExtractor DE(StringRef(leb128data), false);
+    uint64_t Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(2U, Offset);
+    EXPECT_EQ(64U, Result.getBitWidth());
+    EXPECT_EQ(APSInt::get(-7002ULL), Result);
+  }
+
+  {
+    DataExtractor DE(StringRef(bigleb128data), false);
+    uint64_t Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(8U, Offset);
+    EXPECT_EQ(64U, Result.getBitWidth());
+    EXPECT_EQ(APSInt::get(-29839268287359830LL), Result);
+  }
+
+  {
+    // 2^63 is representable as a uint64_t, but overflows int64_t.
+    const char TwoPow63Data[] = "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01";
+    DataExtractor DE(StringRef(TwoPow63Data), false);
+    uint64_t Offset = 0;
+    {
+      llvm::Error Err = llvm::Error::success();
+      EXPECT_EQ(0, DE.getSLEB128(&Offset, &Err));
+      EXPECT_THAT_ERROR(std::move(Err), Failed());
+    }
+    Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(strlen(TwoPow63Data), Offset);
+    EXPECT_FALSE(Result.isNegative());
+    EXPECT_EQ(1ULL << 63, Result.getZExtValue());
+  }
+
+  {
+    // A value in the [INT64_MAX+1, UINT64_MAX] range does not fit the 64-bit
+    // accumulator used by getSLEB128 -- it requires 65 significant bits (64
+    // magnitude bits, plus a 0 sign bit). These encoded values are rejected by
+    // getSLEB128, while getSLEB128APSInt uses APSInt to accommodate it.
+    //
+    // Test an all-ones pattern to verify a bit pattern surviving the growth
+    // past 64 bits (unlike the all-zero data pattern of TwoPow63Data above).
+    const char UInt64MaxData[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x01";
+    DataExtractor DE(StringRef(UInt64MaxData), false);
+    uint64_t Offset = 0;
+    {
+      llvm::Error Err = llvm::Error::success();
+      EXPECT_EQ(0, DE.getSLEB128(&Offset, &Err));
+      EXPECT_THAT_ERROR(std::move(Err), Failed());
+    }
+    Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(strlen(UInt64MaxData), Offset);
+    EXPECT_FALSE(Result.isNegative());
+    EXPECT_EQ(UINT64_MAX, Result.getZExtValue());
+  }
+}
+
 TEST(DataExtractorTest, Cursor_tell) {
   DataExtractor DE(StringRef("AB"), false);
   DataExtractor::Cursor C(0);
