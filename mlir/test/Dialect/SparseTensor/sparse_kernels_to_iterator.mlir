@@ -16,6 +16,10 @@
   map = (d0) -> (d0 : compressed)
 }>
 
+#CSR = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
+}>
+
 
 // CHECK-LABEL:   func.func @sqsum(
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
@@ -166,4 +170,55 @@ func.func @add(%arg0: tensor<10xi32, #VEC>, %arg1: tensor<10xi32, #VEC>) -> tens
       linalg.yield %2 : i32
   } -> tensor<10xi32>
   return %0 : tensor<10xi32>
+}
+
+// ITER-LABEL:   func.func @matvec(
+// ITER:           %[[VECTOR:.*]] = bufferization.to_buffer
+// ITER:           %[[ROW_SPACE:.*]] = sparse_tensor.extract_iteration_space %{{.*}} lvls = 0
+// ITER:           sparse_tensor.iterate %[[ROW_ITER:.*]] in %[[ROW_SPACE]] at(%[[ROW:[a-zA-Z0-9_]+]])
+// ITER:             %[[COL_SPACE:.*]] = sparse_tensor.extract_iteration_space %{{.*}} at %[[ROW_ITER]] lvls = 1
+// ITER:             sparse_tensor.iterate %[[COL_ITER:.*]] in %[[COL_SPACE]] at(%[[COL:[a-zA-Z0-9_]+]])
+// ITER:               %[[MATRIX_VALUE:.*]] = sparse_tensor.extract_value %{{.*}} at %[[COL_ITER]]
+// ITER:               %[[VECTOR_VALUE:.*]] = memref.load %[[VECTOR]][%[[COL]]]
+// ITER:               %[[PRODUCT:.*]] = arith.mulf %[[MATRIX_VALUE]], %[[VECTOR_VALUE]] : f64
+// ITER:               arith.addf %{{.*}}, %[[PRODUCT]] : f64
+
+// CHECK-LABEL:   func.func @matvec(
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VECTOR:.*]] = bufferization.to_buffer
+// CHECK:           %[[OUTPUT:.*]] = bufferization.to_buffer
+// CHECK:           scf.for %[[ROW:.*]] = %[[C0]] to %{{.*}} step %[[C1]] {
+// CHECK:             %[[SUM:.*]] = memref.load %[[OUTPUT]][%[[ROW]]]
+// CHECK:             %[[COL_LO:.*]] = memref.load %{{.*}}[%[[ROW]]]
+// CHECK:             %[[ROW_END:.*]] = arith.addi %[[ROW]], %[[C1]] : index
+// CHECK:             %[[COL_HI:.*]] = memref.load %{{.*}}[%[[ROW_END]]]
+// CHECK:             %[[RESULT:.*]] = scf.for %[[POS:.*]] = %[[COL_LO]] to %[[COL_HI]] step %[[C1]] iter_args(%[[ACC:.*]] = %[[SUM]]) -> (f64) {
+// CHECK:               %[[COL:.*]] = memref.load %{{.*}}[%[[POS]]]
+// CHECK:               %[[MATRIX_VALUE:.*]] = memref.load %{{.*}}[%[[POS]]]
+// CHECK:               %[[VECTOR_VALUE:.*]] = memref.load %[[VECTOR]][%[[COL]]]
+// CHECK:               %[[PRODUCT:.*]] = arith.mulf %[[MATRIX_VALUE]], %[[VECTOR_VALUE]] : f64
+// CHECK:               %[[NEXT:.*]] = arith.addf %[[ACC]], %[[PRODUCT]] : f64
+// CHECK:               scf.yield %[[NEXT]] : f64
+// CHECK:             }
+// CHECK:             memref.store %[[RESULT]], %[[OUTPUT]][%[[ROW]]]
+// CHECK:           }
+func.func @matvec(%matrix: tensor<4x8xf64, #CSR>,
+                  %vector: tensor<8xf64>,
+                  %output: tensor<4xf64>) -> tensor<4xf64> {
+  %result = linalg.generic {
+    indexing_maps = [
+      affine_map<(i, j) -> (i, j)>,
+      affine_map<(i, j) -> (j)>,
+      affine_map<(i, j) -> (i)>
+    ],
+    iterator_types = ["parallel", "reduction"]
+  } ins(%matrix, %vector : tensor<4x8xf64, #CSR>, tensor<8xf64>)
+    outs(%output : tensor<4xf64>) {
+  ^bb0(%matrixValue: f64, %vectorValue: f64, %sum: f64):
+    %product = arith.mulf %matrixValue, %vectorValue : f64
+    %next = arith.addf %sum, %product : f64
+    linalg.yield %next : f64
+  } -> tensor<4xf64>
+  return %result : tensor<4xf64>
 }
