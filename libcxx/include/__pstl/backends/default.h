@@ -29,6 +29,8 @@
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__numeric/transform_exclusive_scan.h>
+#include <__numeric/transform_inclusive_scan.h>
 #include <__optional/comparison.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
@@ -731,6 +733,81 @@ struct __reduce<__default_backend_tag, _ExecutionPolicy> {
         std::move(__init),
         std::forward<_BinaryOperation>(__op),
         __identity{});
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// transform_*clusive_scan family
+//////////////////////////////////////////////////////////////
+template <class _ExecutionPolicy>
+struct __transform_exclusive_scan<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _Tp,
+            class _BinaryOperation,
+            class _UnaryOperation>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first,
+      _ForwardIterator1 __last,
+      _ForwardIterator2 __result,
+      _Tp __init,
+      _BinaryOperation&& __binary_op,
+      _UnaryOperation&& __unary_op) const noexcept {
+    return std::transform_exclusive_scan(
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::move(__init),
+        std::forward<_BinaryOperation>(__binary_op),
+        std::forward<_UnaryOperation>(__unary_op));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __transform_inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _BinaryOperation,
+            class _UnaryOperation>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first,
+             _ForwardIterator1 __last,
+             _ForwardIterator2 __result,
+             _BinaryOperation&& __binary_op,
+             _UnaryOperation&& __unary_op) const noexcept {
+    return std::transform_inclusive_scan(
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::forward<_BinaryOperation>(__binary_op),
+        std::forward<_UnaryOperation>(__unary_op));
+  }
+
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _BinaryOperation,
+            class _UnaryOperation,
+            class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first,
+      _ForwardIterator1 __last,
+      _ForwardIterator2 __result,
+      _BinaryOperation&& __binary_op,
+      _UnaryOperation&& __unary_op,
+      _Tp __init) const noexcept {
+    return std::transform_inclusive_scan(
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::forward<_BinaryOperation>(__binary_op),
+        std::forward<_UnaryOperation>(__unary_op),
+        std::move(__init));
   }
 };
 
