@@ -1,0 +1,18 @@
+## Verify that BOLT detects fixed destination of indirect jump for PIC
+## case when the fixed entry load references the first entry of the jump
+## table (i.e. the address referenced by the load coincides with the jump
+## table base). Previously this crashed with a null-pointer dereference in
+## processIndirectBranch: the jump table at the load address was deleted as
+## "spurious" before looking up the jump table covering the branch base
+## address, which is the same table in this case.
+
+RUN: %clang %cflags -no-pie %S/Inputs/jump-table-fixed-ref-pic-zero.s -Wl,-q -o %t
+RUN: llvm-bolt %t --relocs -o %t.null -print-cfg 2>&1 | FileCheck %s
+
+CHECK: BOLT-INFO: fixed PIC indirect branch detected in main {{.*}} the destination value is 0x[[#TGT:]]
+CHECK: Binary Function "main" after building cfg
+
+CHECK:      movslq ".rodata/1"(%rip), %rax
+CHECK-NEXT: leaq ".rodata/1"(%rip), %rdx
+CHECK-NEXT: addq %rdx, %rax
+CHECK-NEXT: jmpq *%rax # UNKNOWN CONTROL FLOW
