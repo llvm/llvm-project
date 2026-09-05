@@ -2888,6 +2888,23 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+def imm0_4095 : ImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 4096;
+}]>;
+
+// The ADDXri that materialises a frame index can absorb a constant offset,
+// because rewriteAArch64FrameIndex() adds the resolved frame offset to the
+// immediate the instruction already carries.  The rewrite ignores the shift
+// operand, so only offsets that fit the unshifted immediate may be folded;
+// a larger offset keeps its own add off the materialised base, which is what
+// would have been emitted anyway.  The complexity bump raises this above the
+// generic add-immediate instruction pattern (AddedComplexity 6 plus the
+// ComplexPattern priority bonus), which would leave the frame index to be
+// materialised as a separate ADDXri.
+let AddedComplexity = 20 in
+def : Pat<(add (i64 frameindex:$Rn), (i64 imm0_4095:$offset)),
+          (ADDXri (i64 (to_tframeindex $Rn)), (trunc_imm $offset), 0)>;
+
 def negate_imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(-N->getAPIntValue(), SDLoc(N), N->getValueType(0));
 }]>;
