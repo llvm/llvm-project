@@ -1606,7 +1606,7 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
 
   [[maybe_unused]] dwarf::Form OriginalForm = AttrSpec.Form;
   if (AttrSpec.Form == dwarf::DW_FORM_rnglistx) {
-    // DWARFLinker does not generate .debug_addr table. Thus we need to change
+    // DWARFLinker does not preserve input index tables. Thus we need to change
     // all "addrx" related forms to "addr" version. Change DW_FORM_rnglistx
     // to DW_FORM_sec_offset here.
     std::optional<uint64_t> Index = Val.getAsSectionOffset();
@@ -1627,7 +1627,7 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     AttrSpec.Form = dwarf::DW_FORM_sec_offset;
     AttrSize = Unit.getOrigUnit().getFormParams().getDwarfOffsetByteSize();
   } else if (AttrSpec.Form == dwarf::DW_FORM_loclistx) {
-    // DWARFLinker does not generate .debug_addr table. Thus we need to change
+    // DWARFLinker does not preserve input index tables. Thus we need to change
     // all "addrx" related forms to "addr" version. Change DW_FORM_loclistx
     // to DW_FORM_sec_offset here.
     std::optional<uint64_t> Index = Val.getAsSectionOffset();
@@ -1798,13 +1798,13 @@ shouldSkipAttribute(bool Update,
   case dwarf::DW_AT_ranges:
     return !Update && SkipPC;
   case dwarf::DW_AT_rnglists_base:
-    // In case !Update the .debug_addr table is not generated/preserved.
+    // In case !Update the input index tables are not preserved.
     // Thus instead of DW_FORM_rnglistx the DW_FORM_sec_offset is used.
     // Since DW_AT_rnglists_base is used for only DW_FORM_rnglistx the
     // DW_AT_rnglists_base is removed.
     return !Update;
   case dwarf::DW_AT_loclists_base:
-    // In case !Update the .debug_addr table is not generated/preserved.
+    // In case !Update the input index tables are not preserved.
     // Thus instead of DW_FORM_loclistx the DW_FORM_sec_offset is used.
     // Since DW_AT_loclists_base is used for only DW_FORM_loclistx the
     // DW_AT_loclists_base is removed.
@@ -2013,12 +2013,51 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     }
   }
 
-  if (Unit.getOrigUnit().getVersion() >= 5 && !AttrInfo.AttrStrOffsetBaseSeen &&
-      Die->getTag() == dwarf::DW_TAG_compile_unit) {
-    // No DW_AT_str_offsets_base seen, add it to the DIE.
+  // Comparing against the output unit DIE identifies the root of the unit,
+  // whatever its tag. cloneStringAttribute() rewrites strings into
+  // DW_FORM_strx for every DWARFv5 unit without consulting the root tag, and
+  // DWARFv5 section 7.26 resolves those indices only through
+  // DW_AT_str_offsets_base, so a DW_TAG_partial_unit or DW_TAG_skeleton_unit
+  // root needs the attribute on the same terms as a full compilation unit
+  // (DWARFv5 sections 3.1.1 and 3.1.2).
+  if (Die == Unit.getOutputUnitDIE() && Unit.getOrigUnit().getVersion() >= 5 &&
+      !AttrInfo.AttrStrOffsetBaseSeen) {
     Die->addValue(DIEAlloc, dwarf::DW_AT_str_offsets_base,
                   dwarf::DW_FORM_sec_offset, DIEInteger(8));
     OutOffset += 4;
+  }
+
+  // Comparing against the output unit DIE identifies the root of the unit,
+  // whatever its tag. DWARFv5 section 3.1.1 is titled "Full and Partial
+  // Compilation Unit Entries" and prefaces the attribute list below with "A
+  // full or partial compilation unit entry may have the following
+  // attributes", and section 3.1.2 lists "A DW_AT_addr_base attribute" for
+  // skeleton units, so a DW_TAG_partial_unit or DW_TAG_skeleton_unit root
+  // needs it on the same terms as a full compilation unit.
+  if (!Update && Die == Unit.getOutputUnitDIE() && U.getVersion() >= 5 &&
+      !Die->findAttribute(dwarf::DW_AT_addr_base)) {
+    // Ranges and locations are rewritten using addrx-indexed entries, and
+    // DWARFv5 resolves those indices only through DW_AT_addr_base. Per DWARFv5
+    // section 3.1.1:
+    //
+    //   A DW_AT_addr_base attribute [...] points to the beginning of the
+    //   compilation unit's contribution to the .debug_addr section. Indirect
+    //   references (using DW_FORM_addrx, [...] DW_RLE_base_addressx,
+    //   DW_RLE_startx_endx or DW_RLE_startx_length) within the compilation
+    //   unit are interpreted as indices relative to this base.
+    //
+    // The input unit may have none of its own: GCC emits DWARFv5 units with
+    // no .debug_addr contribution at all. Emitting the rewritten entries
+    // without this attribute would leave their indices with no defined base.
+    // The value is patched in emitDebugAddrSection() once the offset of the
+    // unit's address table contribution is known.
+    //
+    // --update preserves the index tables instead of regenerating them, so the
+    // input attribute (if any) keeps its original value and no attribute is
+    // synthesized; emitDebugAddrSection() likewise emits nothing in that mode.
+    OutOffset += Die->addValue(DIEAlloc, dwarf::DW_AT_addr_base,
+                               dwarf::DW_FORM_sec_offset, DIEInteger(0))
+                     ->sizeOf(U.getFormParams());
   }
 
   DIEAbbrev NewAbbrev = Die->generateAbbrev();
@@ -2216,7 +2255,19 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
   if (DwarfVersion < 5)
     return Error::success();
 
-  if (AddrPool.getValues().empty())
+  // A unit which was not cloned has no output unit DIE and therefore no
+  // synthesized DW_AT_addr_base, which is what makes the llvm_unreachable in
+  // patchAddrBase an invariant rather than a reachable failure.
+  //
+  // Every other unit gets a contribution even when no address was pooled,
+  // since otherwise the attribute would point at a table that does not exist.
+  // A contribution with no entries is well formed: DWARFv5 section 7.27
+  // defines the address table as a header "followed by a series of
+  // segment/address pairs", and "the DW_AT_addr_base attribute points to the
+  // first entry following the header", which stays well defined when there are
+  // no entries.
+  DIE *OutputUnitDIE = Unit.getOutputUnitDIE();
+  if (OutputUnitDIE == nullptr)
     return Error::success();
 
   MCSymbol *EndLabel = Emitter->emitDwarfDebugAddrsHeader(Unit);
@@ -2226,7 +2277,7 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
     return createStringError(".debug_addr section offset 0x" +
                              Twine::utohexstr(AddrOffset) + " exceeds the " +
                              dwarf::FormatString(FP.Format) + " limit");
-  patchAddrBase(*Unit.getOutputUnitDIE(), DIEInteger(AddrOffset));
+  patchAddrBase(*OutputUnitDIE, DIEInteger(AddrOffset));
   Emitter->emitDwarfDebugAddrs(AddrPool.getValues(),
                                Unit.getOrigUnit().getAddressByteSize());
   Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);

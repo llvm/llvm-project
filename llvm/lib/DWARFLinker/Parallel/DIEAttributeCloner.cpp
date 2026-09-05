@@ -114,11 +114,18 @@ void DIEAttributeCloner::clone() {
     }
   }
 
-  // We convert source strings into the indexed form for DWARFv5.
-  // Check if original compile unit already has DW_AT_str_offsets_base
-  // attribute.
-  if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-      InUnit.getVersion() >= 5 && !AttrInfo.HasStringOffsetBaseAttr) {
+  // Index 0 is the root DIE of the unit, whatever its tag. cloneStringAttr()
+  // rewrites strings into DW_FORM_strx for every DWARFv5 unit without
+  // consulting the root tag, and DWARFv5 section 7.26 resolves those indices
+  // only through DW_AT_str_offsets_base, so a DW_TAG_partial_unit or
+  // DW_TAG_skeleton_unit root needs the attribute on the same terms as a full
+  // compilation unit (DWARFv5 sections 3.1.1 and 3.1.2).
+  //
+  // The isCompileUnit() test is not redundant: index 0 can also reach the
+  // artificial type unit, where AttrOutOffset is DIE-relative rather than
+  // section-relative, so the patch registered below would be misplaced.
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasStringOffsetBaseAttr && OutUnit.isCompileUnit()) {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{AttrOutOffset,
                          &OutUnit->getOrCreateSectionDescriptor(
@@ -132,6 +139,51 @@ void DIEAttributeCloner::clone() {
                                 dwarf::DW_FORM_sec_offset,
                                 OutUnit->getDebugStrOffsetsHeaderSize())
             .second;
+  }
+
+  // Index 0 is the root DIE of the unit, whatever its tag. DWARFv5 section
+  // 3.1.1 is titled "Full and Partial Compilation Unit Entries" and prefaces
+  // the attribute list below with "A full or partial compilation unit entry
+  // may have the following attributes", and section 3.1.2 lists "A
+  // DW_AT_addr_base attribute" for skeleton units, so a DW_TAG_partial_unit
+  // or DW_TAG_skeleton_unit root needs it on the same terms as a full
+  // compilation unit.
+  //
+  // The UpdateIndexTablesOnly test is required, not an optimization:
+  // cloneScalarAttr() returns early in that mode, before the branch which sets
+  // HasAddrBaseAttr, so the flag reads false even when the input has one.
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasAddrBaseAttr &&
+      !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly) {
+    // Ranges and locations are rewritten using addrx-indexed entries, and
+    // DWARFv5 resolves those indices only through DW_AT_addr_base. Per DWARFv5
+    // section 3.1.1:
+    //
+    //   A DW_AT_addr_base attribute [...] points to the beginning of the
+    //   compilation unit's contribution to the .debug_addr section. Indirect
+    //   references (using DW_FORM_addrx, [...] DW_RLE_base_addressx,
+    //   DW_RLE_startx_endx or DW_RLE_startx_length) within the compilation
+    //   unit are interpreted as indices relative to this base.
+    //
+    // The input unit may have none of its own: GCC emits DWARFv5 units with
+    // no .debug_addr contribution at all. Emitting the rewritten entries
+    // without this attribute would leave their indices with no defined base.
+    //
+    // --update preserves the index tables instead of regenerating them, so the
+    // input attribute (if any) keeps its original value and no attribute is
+    // synthesized; emitDebugAddrSection() likewise emits nothing in that mode.
+    DebugInfoOutputSection.notePatchWithOffsetUpdate(
+        DebugOffsetPatch{
+            AttrOutOffset,
+            &OutUnit->getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr),
+            true},
+        PatchesOffsets);
+
+    AttrOutOffset += Generator
+                         .addScalarAttribute(dwarf::DW_AT_addr_base,
+                                             dwarf::DW_FORM_sec_offset,
+                                             OutUnit->getDebugAddrHeaderSize())
+                         .second;
   }
 }
 
@@ -151,13 +203,13 @@ bool DIEAttributeCloner::shouldSkipAttribute(
     return InUnit.getDIEInfo(InputDIEIdx).getIsInFunctionScope() &&
            !FuncAddressAdjustment.has_value();
   case dwarf::DW_AT_rnglists_base:
-    // In case !Update the .debug_addr table is not generated/preserved.
+    // In case !Update the input index tables are not preserved.
     // Thus instead of DW_FORM_rnglistx the DW_FORM_sec_offset is used.
     // Since DW_AT_rnglists_base is used for only DW_FORM_rnglistx the
     // DW_AT_rnglists_base is removed.
     return !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly;
   case dwarf::DW_AT_loclists_base:
-    // In case !Update the .debug_addr table is not generated/preserved.
+    // In case !Update the input index tables are not preserved.
     // Thus instead of DW_FORM_loclistx the DW_FORM_sec_offset is used.
     // Since DW_AT_loclists_base is used for only DW_FORM_loclistx the
     // DW_AT_loclists_base is removed.
@@ -444,7 +496,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
 
   dwarf::Form ResultingForm = AttrSpec.Form;
   if (AttrSpec.Form == dwarf::DW_FORM_rnglistx) {
-    // DWARFLinker does not generate .debug_addr table. Thus we need to change
+    // DWARFLinker does not preserve input index tables. Thus we need to change
     // all "addrx" related forms to "addr" version. Change DW_FORM_rnglistx
     // to DW_FORM_sec_offset here.
     std::optional<uint64_t> Index = Val.getAsSectionOffset();
@@ -462,7 +514,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     Value = *Offset;
     ResultingForm = dwarf::DW_FORM_sec_offset;
   } else if (AttrSpec.Form == dwarf::DW_FORM_loclistx) {
-    // DWARFLinker does not generate .debug_addr table. Thus we need to change
+    // DWARFLinker does not preserve input index tables. Thus we need to change
     // all "addrx" related forms to "addr" version. Change DW_FORM_loclistx
     // to DW_FORM_sec_offset here.
     std::optional<uint64_t> Index = Val.getAsSectionOffset();
@@ -532,6 +584,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
 
     // Use size of .debug_addr header as attribute value. The offset to
     // .debug_addr would be added later while patching.
+    AttrInfo.HasAddrBaseAttr = true;
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form,
                             OutUnit->getDebugAddrHeaderSize())
