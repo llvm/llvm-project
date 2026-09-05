@@ -1,0 +1,71 @@
+# RUN: llc -mtriple=aarch64 -debug-only=machine-outliner \
+# RUN:   -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null \
+# RUN:   2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Debug instructions do not count toward the minimum block size. Pseudo probes
+# do count because the mapper treats them as ordinary instructions. Count raw
+# instructions so the contents of a bundle retain their historical behavior.
+# The "Mapping N" debug message reports the physical range length, so it still
+# includes an intervening debug instruction.
+
+# CHECK-LABEL: MAPPING FUNCTION: debug_and_ret
+# CHECK: SKIP: MBB size less than minimum size of 2
+# CHECK-LABEL: MAPPING FUNCTION: pseudo_probe_and_ret
+# CHECK: : 1 outlinable range(s)
+# CHECK: Mapping 2 instruction range
+# CHECK: HaveLegalRange = 1
+# CHECK-LABEL: MAPPING FUNCTION: pseudo_probe_debug_and_ret
+# CHECK: : 1 outlinable range(s)
+# CHECK: Mapping 3 instruction range
+# CHECK: HaveLegalRange = 1
+# CHECK-LABEL: MAPPING FUNCTION: single_bundle
+# CHECK: : 1 outlinable range(s)
+# CHECK: Mapping 1 instruction range
+# CHECK: HaveLegalRange = 0
+
+--- |
+  define void @debug_and_ret() noredzone { unreachable }
+  define void @pseudo_probe_and_ret() noredzone { unreachable }
+  define void @pseudo_probe_debug_and_ret() noredzone { unreachable }
+  define void @single_bundle() noredzone { unreachable }
+...
+---
+name:            debug_and_ret
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $lr
+    DBG_VALUE $x0, 0
+    RET undef $lr
+...
+---
+name:            pseudo_probe_and_ret
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+    PSEUDO_PROBE 1, 1, 0, 0
+    RET undef $lr
+...
+---
+name:            pseudo_probe_debug_and_ret
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $lr
+    PSEUDO_PROBE 1, 2, 0, 0
+    DBG_VALUE $x0, 0
+    RET undef $lr
+...
+---
+name:            single_bundle
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+    BUNDLE implicit-def $w8, implicit-def $w9, implicit $w0, implicit $w1, implicit $w2 {
+      $w8 = ADDWrr $w0, $w1
+      $w9 = ADDWrr $w1, $w2
+    }
+...
