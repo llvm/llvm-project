@@ -28,9 +28,9 @@ func.func @main() {
   %ptr = memref.extract_aligned_pointer_as_index %alloc : memref<10xf32> -> index
   %ptr_i64 = arith.index_cast %ptr : index to i64
   %ptr_llvm = llvm.inttoptr %ptr_i64 : i64 to !llvm.ptr
-  %c0 = llvm.mlir.constant(0 : index) : i64
-  %c1 = llvm.mlir.constant(1 : index) : i64
-  %c5 = llvm.mlir.constant(5 : index) : i64
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c5 = llvm.mlir.constant(5 : i64) : i64
   %4 = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   %5 = llvm.insertvalue %ptr_llvm, %4[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   %6 = llvm.insertvalue %ptr_llvm, %5[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>

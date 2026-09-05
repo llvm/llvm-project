@@ -1563,14 +1563,13 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
   }();
 
   LLVM_DEBUG(llvm::dbgs() << "\tType name is '" << NodeTypeName << "'\n");
-  if (!NodeTypeName.empty()) {
-    if (llvm::any_of(Check.IgnoredParameterTypeSuffixes,
-                     [NodeTypeName](StringRef E) {
-                       return !E.empty() && NodeTypeName.ends_with(E);
-                     })) {
-      LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
-      return true;
-    }
+  if (!NodeTypeName.empty() && llvm::any_of(Check.IgnoredParameterTypeSuffixes,
+                                            [NodeTypeName](StringRef E) {
+                                              return !E.empty() &&
+                                                     NodeTypeName.ends_with(E);
+                                            })) {
+    LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
+    return true;
   }
 
   return false;
@@ -1661,9 +1660,9 @@ public:
     if (!CurrentExprOnlyTreeRoot)
       return true;
 
-    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-      if (llvm::find(FD->parameters(), PVD))
-        ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
+    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+        PVD && llvm::find(FD->parameters(), PVD))
+      ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
 
     return true;
   }

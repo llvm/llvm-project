@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NVPTXAsmPrinter.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
@@ -43,6 +44,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -605,6 +607,8 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), OutContext));
   case MachineOperand::MO_ExternalSymbol:
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
+  case MachineOperand::MO_MCSymbol:
+    return GetSymbolRef(MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
     // The jump table index names the .branchtargets list emitted for a brx.idx
     // (see emitJumpTable); reference it by that label.
@@ -771,7 +775,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   auto MakeArg = [&](const unsigned I) {
     Type *Ty = CB.getArgOperand(I)->getType();
 
-    if (CB.paramHasAttr(I, Attribute::ByVal)) {
+    if (CB.isByValArgument(I)) {
       Type *ETy = CB.getParamByValType(I);
       Align ParamByValAlign = getDeviceByValParamAlign(
           &CB, ETy, I + AttributeList::FirstArgIndex, DL);
@@ -839,16 +843,17 @@ void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
 // llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
     const MachineBasicBlock &MBB) const {
-  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const MachineLoopInfo *LI = GetMLI(*MF);
+  assert(LI && "NVPTXAsmPrinter requires MachineLoopInfo");
   // We insert .pragma "nounroll" only to the loop header.
-  if (!LI.isLoopHeader(&MBB))
+  if (!LI->isLoopHeader(&MBB))
     return false;
 
   // llvm.loop.unroll.disable is marked on the back edges of a loop. Therefore,
   // we iterate through each back edge of the loop with header MBB, and check
   // whether its metadata contains llvm.loop.unroll.disable.
   for (const MachineBasicBlock *PMBB : MBB.predecessors()) {
-    if (LI.getLoopFor(PMBB) != LI.getLoopFor(&MBB)) {
+    if (LI->getLoopFor(PMBB) != LI->getLoopFor(&MBB)) {
       // Edges from other loops to MBB are not back edges.
       continue;
     }
@@ -989,7 +994,7 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget *STI = &NTM.getSubtarget<NVPTXSubtarget>(F);
 
-  if (STI->getSmVersion() >= 90) {
+  if (STI->hasFeature(NVPTX::SM90)) {
     const auto ClusterDim = getClusterDim(F);
     const bool BlocksAreClusters = hasBlocksAreClusters(F);
 
@@ -1018,7 +1023,7 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
         Ctx.diagnose(DiagnosticInfoUnsupported(
             F, "blocksareclusters requires reqntid and cluster_dim attributes",
             F.getSubprogram()));
-      else if (STI->getPTXVersion() < 90)
+      else if (!STI->hasFeature(NVPTX::PTX90))
         Ctx.diagnose(DiagnosticInfoUnsupported(
             F, "blocksareclusters requires PTX version >= 9.0",
             F.getSubprogram()));
@@ -1232,7 +1237,8 @@ DwarfDebug *NVPTXAsmPrinter::createDwarfDebug() {
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
-  if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
+  if (M.alias_size() &&
+      (!STI.hasFeature(NVPTX::PTX63) || !STI.hasFeature(NVPTX::SM30)))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
   // We need to call the parent's one explicitly.
@@ -1416,7 +1422,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       O << ".visible ";
     else
       O << ".extern ";
-  } else if (STI.getPTXVersion() >= 50 && GVar->hasCommonLinkage() &&
+  } else if (STI.hasFeature(NVPTX::PTX50) && GVar->hasCommonLinkage() &&
              GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) {
     O << ".common ";
   } else if (GVar->hasLinkOnceLinkage() || GVar->hasWeakLinkage() ||
@@ -1540,7 +1546,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
   emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || STI.getSmVersion() < 30)
+    if (!STI.hasFeature(NVPTX::PTX40) || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
     O << " .attribute(.managed)";
@@ -1839,7 +1845,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || STI.getSmVersion() < 30)
+    if (!STI.hasFeature(NVPTX::PTX40) || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
 
@@ -1914,7 +1920,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
   for (const auto &[ParamIndex, Arg] : enumerate(NonEmptyArgs)) {
     Type *Ty = Arg.getType();
-    const std::string ParamSym = TLI->getParamName(F, ParamIndex);
+    MCSymbol *const ParamSym = TLI->getParamSymbol(OutContext, F, ParamIndex);
 
     if (!IsFirst)
       O << ",\n";
@@ -1943,7 +1949,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         case PTXOpaqueType::None:
           llvm_unreachable("handled above");
         }
-        O << ParamSym;
+        O << *ParamSym;
         continue;
       }
     }
@@ -1962,7 +1968,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           IsKernelFunc ? getPTXParamAlign(F, ETy, ParamIdx, DL)
                        : getDeviceByValParamAlign(F, ETy, ParamIdx, DL);
 
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
+      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << *ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
       continue;
     }
@@ -1975,7 +1981,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       Align OptimalAlign = getPTXParamAlign(
           F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
+      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << *ParamSym
         << "[" << DL.getTypeAllocSize(Ty) << "]";
 
       continue;
@@ -2011,7 +2017,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         }
 
         O << " .align " << Arg.getParamAlign().valueOrOne().value() << " "
-          << ParamSym;
+          << *ParamSym;
         continue;
       }
 
@@ -2022,7 +2028,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         O << "u8";
       else
         O << getPTXFundamentalTypeStr(Ty);
-      O << " " << ParamSym;
+      O << " " << *ParamSym;
       continue;
     }
     // Non-kernel function, just print .param .b<size> for ABI
@@ -2035,14 +2041,14 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       Size = PTySizeInBits;
     } else
       Size = Ty->getPrimitiveSizeInBits();
-    O << "\t.param .b" << Size << " " << ParamSym;
+    O << "\t.param .b" << Size << " " << *ParamSym;
   }
 
   if (F->isVarArg()) {
     if (!IsFirst)
       O << ",\n";
     O << "\t.param .align " << STI.getMaxRequiredAlignment() << " .b8 "
-      << TLI->getParamName(F, /* vararg */ -1) << "[]";
+      << *TLI->getParamSymbol(OutContext, F, /* vararg */ -1) << "[]";
   }
 
   O << "\n)";
@@ -2229,6 +2235,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::BFloatTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID:
+  case Type::FP128TyID:
     AddIntToBuffer(cast<ConstantFP>(CPV)->getValueAPF().bitcastToAPInt());
     break;
 
@@ -2609,6 +2616,10 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
     PrintSymbolOperand(MO, O);
     break;
 
+  case MachineOperand::MO_MCSymbol:
+    MO.getMCSymbol()->print(O, MAI);
+    break;
+
   case MachineOperand::MO_MachineBasicBlock:
     MO.getMBB()->getSymbol()->print(O, MAI);
     break;
@@ -2757,4 +2768,32 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeNVPTXAsmPrinter() {
   RegisterAsmPrinter<NVPTXAsmPrinter> X(getTheNVPTXTarget32());
   RegisterAsmPrinter<NVPTXAsmPrinter> Y(getTheNVPTXTarget64());
+}
+
+PreservedAnalyses NVPTXAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  AsmPrinter &Printer = MAM.getResult<AsmPrinterAnalysis>(M).getPrinter();
+  setupModuleAsmPrinter(M, MAM, Printer);
+  Printer.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+NVPTXAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  AsmPrinter &Printer =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter();
+  setupMachineFunctionAsmPrinter(MFAM, MF, Printer);
+  Printer.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses NVPTXAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  AsmPrinter &Printer = MAM.getResult<AsmPrinterAnalysis>(M).getPrinter();
+  setupModuleAsmPrinter(M, MAM, Printer);
+  Printer.doFinalization(M);
+  return PreservedAnalyses::all();
 }

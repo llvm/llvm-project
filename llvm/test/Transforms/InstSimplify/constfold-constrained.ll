@@ -183,7 +183,7 @@ define double @nonfinite_03() #0 {
 ; CHECK-NEXT:    ret double +qnan
 ;
 entry:
-  %result = call double @llvm.experimental.constrained.trunc.f64(double 0x7ff8000000000000, metadata !"fpexcept.strict") #0
+  %result = call double @llvm.experimental.constrained.trunc.f64(double +qnan, metadata !"fpexcept.strict") #0
   ret double %result
 }
 
@@ -195,7 +195,7 @@ define double @nonfinite_04() #0 {
 ; CHECK-NEXT:    ret double +inf
 ;
 entry:
-  %result = call double @llvm.experimental.constrained.trunc.f64(double 0x7ff0000000000000, metadata !"fpexcept.strict") #0
+  %result = call double @llvm.experimental.constrained.trunc.f64(double +inf, metadata !"fpexcept.strict") #0
   ret double %result
 }
 
@@ -454,7 +454,7 @@ define i1 @cmp_eq_03() #0 {
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
-  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double +qnan, metadata !"oeq", metadata !"fpexcept.ignore") #0
   ret i1 %result
 }
 
@@ -474,7 +474,7 @@ define i1 @cmp_eq_05() #0 {
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
-  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double +qnan, metadata !"oeq", metadata !"fpexcept.ignore") #0
   ret i1 %result
 }
 
@@ -519,7 +519,7 @@ define i1 @cmp_eq_nan_03() #0 {
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
-  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %result = call i1 @llvm.experimental.constrained.fcmp.f64(double +qnan, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
   ret i1 %result
 }
 
@@ -530,7 +530,7 @@ define i1 @cmp_eq_nan_04() #0 {
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
-  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %result = call i1 @llvm.experimental.constrained.fcmps.f64(double +qnan, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0
   ret i1 %result
 }
 

@@ -1442,10 +1442,12 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
             : resultType);
   }
   //   d. Build and return the new op.
-  return VectorizationHookResult{
-      VectorizationHookStatus::NewOp,
-      rewriter.create(op->getLoc(), op->getName().getIdentifier(), vecOperands,
-                      resultTypes, op->getAttrs())};
+  Operation *newOp = Operation::create(
+      op->getLoc(), op->getName(), resultTypes, vecOperands,
+      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+      /*successors=*/{}, /*numRegions=*/0);
+  return VectorizationHookResult{VectorizationHookStatus::NewOp,
+                                 rewriter.insert(newOp)};
 }
 
 /// Generic vectorization function that rewrites the body of a `linalgOp` into
@@ -2067,6 +2069,45 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
         /*padding=*/arith::getZeroConstant(rewriter, loc, elemType),
         /*useInBoundsInsteadOfMasking=*/false);
     vecOperands.push_back(read);
+  }
+
+  // Preserve the contraction's cast semantics when converting operands to the
+  // integer accumulator type. vector.contract provides an implicit signed
+  // integer promotion; the cases below materialize explicit casts as needed.
+  auto castAttr = linalgOp->getAttrOfType<TypeFnAttr>("cast");
+  bool hasUnsignedCast =
+      castAttr && castAttr.getValue() == TypeFn::cast_unsigned;
+  auto accType = dyn_cast<VectorType>(vecOperands[2].getType());
+  auto accElementType =
+      accType ? dyn_cast<IntegerType>(accType.getElementType()) : nullptr;
+  if (accElementType && accElementType.isSignless()) {
+    for (Value &operand : MutableArrayRef(vecOperands).take_front(2)) {
+      auto operandType = cast<VectorType>(operand.getType());
+      Type operandElementType = operandType.getElementType();
+      VectorType castType = operandType.clone(accElementType);
+
+      if (isa<FloatType>(operandElementType)) {
+        operand =
+            hasUnsignedCast
+                ? arith::FPToUIOp::create(rewriter, loc, castType, operand)
+                      .getResult()
+                : arith::FPToSIOp::create(rewriter, loc, castType, operand)
+                      .getResult();
+        continue;
+      }
+
+      auto operandIntegerType = dyn_cast<IntegerType>(operandElementType);
+      if (!operandIntegerType || !operandIntegerType.isSignless())
+        continue;
+      if (operandIntegerType.getWidth() >= accElementType.getWidth())
+        continue;
+      if (!hasUnsignedCast)
+        continue;
+
+      // vector.contract implicitly sign-extends integer operands. Unsigned
+      // promotion therefore requires an explicit zero extension.
+      operand = arith::ExtUIOp::create(rewriter, loc, castType, operand);
+    }
   }
 
   // Remap iterators from linalg to vector.
@@ -2733,8 +2774,8 @@ struct PadOpVectorizationWithTransferReadPattern
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
-      xferOp->setAttr(xferOp.getInBoundsAttrName(),
-                      rewriter.getBoolArrayAttr(inBounds));
+      xferOp->setInherentAttr(xferOp.getInBoundsAttrName(),
+                              rewriter.getBoolArrayAttr(inBounds));
       xferOp.getBaseMutable().assign(padOp.getSource());
       xferOp.getPaddingMutable().assign(padValue);
     });
@@ -2979,20 +3020,30 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   }
 
   // 2. Get the vector shape
+  // Map each source dim to its corresponding (non-dropped) result dim: for a
+  // rank-reducing slice, dropped dims need not be the trailing ones.
+  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+  SmallVector<int64_t> resultDimsForSourceDims;
+  resultDimsForSourceDims.reserve(sourceType.getRank());
+  for (int64_t resultDim = 0, end = resultType.getRank(); resultDim < end;
+       ++resultDim)
+    if (!droppedDims[resultDim])
+      resultDimsForSourceDims.push_back(resultDim);
+  assert(resultDimsForSourceDims.size() ==
+             static_cast<size_t>(sourceType.getRank()) &&
+         "expected one non-dropped result dim per source dim");
+
   SmallVector<int64_t> vecShape;
-  size_t rankDiff = resultType.getRank() - sourceType.getRank();
   for (int64_t i = 0, end = sourceType.getRank(); i < end; ++i) {
     if (!inputVectorSizes.empty()) {
       vecShape.push_back(inputVectorSizes[i]);
     } else if (!sourceType.isDynamicDim(i)) {
       vecShape.push_back(sourceType.getDimSize(i));
-    } else if (!resultType.isDynamicDim(i)) {
+    } else if (!resultType.isDynamicDim(resultDimsForSourceDims[i])) {
       // Source shape is not statically known, but result shape is.
       // Vectorize with size of result shape. This may be larger than the
       // source size.
-      // FIXME: Using rankDiff implies that the source tensor is inserted at
-      // the end of the destination tensor. However, that's not required.
-      vecShape.push_back(resultType.getDimSize(rankDiff + i));
+      vecShape.push_back(resultType.getDimSize(resultDimsForSourceDims[i]));
     } else {
       // Neither source nor result dim of padOp is static. Cannot vectorize
       // the copy.
@@ -3654,16 +3705,15 @@ public:
         .getOperation();
   }
 
-  // Take a value and widen to have the same element type as `ty`.
-  Value promote(RewriterBase &rewriter, Location loc, Value val, Type ty) {
-    const Type srcElementType = getElementTypeOrSelf(val.getType());
+  // Promote `val` to the element type of `ty` using `castOp`.
+  Value promote(RewriterBase &rewriter, Location loc, Value val, Type ty,
+                Operation *castOp) {
     const Type dstElementType = getElementTypeOrSelf(ty);
-    assert(isa<IntegerType>(dstElementType) || isa<FloatType>(dstElementType));
-    if (srcElementType == dstElementType)
+    if (getElementTypeOrSelf(val.getType()) == dstElementType)
       return val;
 
-    const int64_t srcWidth = srcElementType.getIntOrFloatBitWidth();
-    const int64_t dstWidth = dstElementType.getIntOrFloatBitWidth();
+    assert(castOp && "expected a payload cast for promoted operand");
+
     // Handle both shaped as well as scalar types.
     Type dstType;
     if (auto shapedType = dyn_cast<ShapedType>(val.getType()))
@@ -3671,20 +3721,10 @@ public:
     else
       dstType = dstElementType;
 
-    if (isa<IntegerType>(srcElementType) && isa<FloatType>(dstElementType)) {
-      return arith::SIToFPOp::create(rewriter, loc, dstType, val);
-    }
-
-    if (isa<FloatType>(srcElementType) && isa<FloatType>(dstElementType) &&
-        srcWidth < dstWidth)
-      return arith::ExtFOp::create(rewriter, loc, dstType, val);
-
-    if (isa<IntegerType>(srcElementType) && isa<IntegerType>(dstElementType) &&
-        srcWidth < dstWidth)
-      return arith::ExtSIOp::create(rewriter, loc, dstType, val);
-
-    assert(false && "unhandled promotion case");
-    return nullptr;
+    return rewriter
+        .create(loc, castOp->getName().getIdentifier(), val, dstType,
+                castOp->getAttrs())
+        ->getResult(0);
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
@@ -3694,8 +3734,8 @@ public:
     vector::IteratorType red = vector::IteratorType::reduction;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
-    lhs = promote(rewriter, loc, lhs, res.getType());
-    rhs = promote(rewriter, loc, rhs, res.getType());
+    lhs = promote(rewriter, loc, lhs, res.getType(), lhsCastOp);
+    rhs = promote(rewriter, loc, rhs, res.getType(), rhsCastOp);
     auto contrationOp = vector::ContractionOp::create(
         rewriter, loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
@@ -3708,8 +3748,8 @@ public:
   // convolution.
   Value conv1dSliceAsOuterProduct(RewriterBase &rewriter, Location loc,
                                   Value lhs, Value rhs, Value res) {
-    lhs = promote(rewriter, loc, lhs, res.getType());
-    rhs = promote(rewriter, loc, rhs, res.getType());
+    lhs = promote(rewriter, loc, lhs, res.getType(), lhsCastOp);
+    rhs = promote(rewriter, loc, rhs, res.getType(), rhsCastOp);
     return vector::OuterProductOp::create(rewriter, loc, res.getType(), lhs,
                                           rhs, res, vector::CombiningKind::ADD);
   }
@@ -3794,8 +3834,9 @@ public:
 
       SmallVector<bool> inBounds(maskShape.size(), true);
       auto xferOp = cast<VectorTransferOpInterface>(opToMask);
-      xferOp->setAttr(xferOp.getInBoundsAttrName(),
-                      rewriter.getBoolArrayAttr(inBounds));
+      xferOp->setInherentAttr(
+          rewriter.getStringAttr(xferOp.getInBoundsAttrName()),
+          rewriter.getBoolArrayAttr(inBounds));
 
       SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
           cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
@@ -3938,7 +3979,7 @@ public:
     auto resTy = cast<ShapedType>(res.getType());
 
     // TODO(suderman): Change this to use a vector.ima intrinsic.
-    lhs = promote(rewriter, loc, lhs, resTy);
+    lhs = promote(rewriter, loc, lhs, resTy, lhsCastOp);
 
     if (flatten) {
       // NOTE: This following logic won't work for scalable vectors. For this
@@ -3964,7 +4005,7 @@ public:
     rhs = vector::BroadcastOp::create(rewriter, loc,
                                       resTy.clone(rhsTy.getElementType()), rhs);
 
-    rhs = promote(rewriter, loc, rhs, resTy);
+    rhs = promote(rewriter, loc, rhs, resTy, rhsCastOp);
 
     if (!lhs || !rhs)
       return nullptr;
@@ -4089,12 +4130,17 @@ private:
   StringAttr redOp;
   StringAttr poolExtOp;
   bool isPoolExt = false;
+  // Casts used to widen the convolution payload's lhs and rhs. These are null
+  // only when the corresponding operand already has the accumulator type.
+  Operation *lhsCastOp = nullptr;
+  Operation *rhsCastOp = nullptr;
   int strideW, dilationW;
   Value lhsShaped, rhsShaped, resShaped;
   ShapedType lhsShapedType, rhsShapedType, resShapedType;
   vector::CombiningKind reductionKind;
 
-  // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
+  // Sets oper, poolExtOp, isPoolExt and the conv operand casts for valid
+  // conv/pooling ops.
   void setConvOperationKind(Operation *reduceOp) {
     int numBlockArguments =
         llvm::count_if(reduceOp->getOperands(), llvm::IsaPred<BlockArgument>);
@@ -4113,11 +4159,18 @@ private:
         return;
       }
       oper = ConvOperationKind::Conv;
+      setConvCastOps(feedOp);
       return;
     }
     // numBlockArugments == 2 and this is a pooling op.
     oper = ConvOperationKind::Pool;
     isPoolExt = false;
+  }
+
+  // Record the casts applied to the input and filter.
+  void setConvCastOps(Operation *feedOp) {
+    lhsCastOp = feedOp->getOperand(0).getDefiningOp();
+    rhsCastOp = feedOp->getOperand(1).getDefiningOp();
   }
 };
 } // namespace

@@ -36,12 +36,10 @@ def TuneZExtHFusion
                  "Enable SLLI+SRLI to be fused to zero extension of halfword",
                  CheckAll<[
                    CheckOpcode<[SLLI]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperand<2, 48>
                  ]>,
                  CheckAll<[
                    CheckOpcode<[SRLI]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperand<2, 48>
                  ]>>;
 
@@ -53,12 +51,10 @@ def TuneZExtWFusion
                  "Enable SLLI+SRLI to be fused to zero extension of word",
                  CheckAll<[
                    CheckOpcode<[SLLI]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperand<2, 32>
                  ]>,
                  CheckAll<[
                    CheckOpcode<[SRLI]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperand<2, 32>
                  ]>>;
 
@@ -71,12 +67,10 @@ def TuneShiftedZExtWFusion
                  "Enable SLLI+SRLI to be fused when computing (shifted) word zero extension",
                  CheckAll<[
                    CheckOpcode<[SLLI]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperand<2, 32>
                  ]>,
                  CheckAll<[
                    CheckOpcode<[SRLI]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperandRange<2, 0, 31>
                  ]>>;
 
@@ -88,7 +82,6 @@ def TuneLDADDFusion
                  CheckOpcode<[ADD]>,
                  CheckAll<[
                    CheckOpcode<[LD]>,
-                   CheckIsImmOperand<2>,
                    CheckImmOperand<2, 0>
                  ]>>;
 
@@ -227,7 +220,6 @@ def TuneFusionAddMem
              SecondFusionPredicateWithMCInstPredicate<
                CheckAll<[
                  CheckOpcode<LoadStore>,
-                 CheckIsImmOperand<2>,
                  CheckImmOperand<2, 0>
                ]>
              >,

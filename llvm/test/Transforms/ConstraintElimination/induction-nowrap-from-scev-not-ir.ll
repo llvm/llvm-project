@@ -139,8 +139,7 @@ define void @zero_step_addrec_of_outer_loop(i32 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[INNER_LATCH]], label %[[OUTER_LATCH]]
 ; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    [[T:%.*]] = icmp uge i32 [[IV]], [[O]]
-; CHECK-NEXT:    call void @use(i1 [[T]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
 ; CHECK-NEXT:    br label %[[INNER]]
 ; CHECK:       [[OUTER_LATCH]]:

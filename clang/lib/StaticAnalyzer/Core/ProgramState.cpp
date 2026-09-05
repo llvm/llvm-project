@@ -36,7 +36,7 @@ void ProgramStateRelease(const ProgramState *state) {
   ProgramState *s = const_cast<ProgramState*>(state);
   if (--s->refCount == 0) {
     ProgramStateManager &Mgr = s->getStateManager();
-    Mgr.StateSet.RemoveNode(s);
+    Mgr.StateSet.erase(s);
     s->~ProgramState();
     Mgr.freeStates.push_back(s);
   }
@@ -403,9 +403,9 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
 
   llvm::FoldingSetNodeID ID;
   State.Profile(ID);
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
 
-  if (ProgramState *I = StateSet.FindNodeOrInsertPos(ID, InsertPos))
+  if (ProgramState *I = StateSet.lookup(ID, InsertToken))
     return I;
 
   ProgramState *newState = nullptr;
@@ -417,7 +417,7 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
     newState = Alloc.Allocate<ProgramState>();
   }
   new (newState) ProgramState(State);
-  StateSet.InsertNode(newState, InsertPos);
+  StateSet.insert(newState, InsertToken);
   return newState;
 }
 

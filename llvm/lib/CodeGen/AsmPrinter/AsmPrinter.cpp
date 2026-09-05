@@ -788,6 +788,14 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
 
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  MaybeAlign AlignmentGranule = getRequiredGlobalAlignmentGranule(*GV);
+  emitGlobalVariable(GV, AlignmentGranule);
+  if (AlignmentGranule)
+    OutStreamer->emitValueToAlignment(*AlignmentGranule);
+}
+
+void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
+                                    MaybeAlign AlignmentGranule) {
   bool IsEmuTLSVar = TM.useEmulatedTLS() && GV->isThreadLocal();
   assert(!(IsEmuTLSVar && GV->hasCommonLinkage()) &&
          "No emulated TLS variables in the common section");
@@ -853,7 +861,17 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // If the alignment is specified, we *must* obey it.  Overaligning a global
   // with a specified alignment is a prompt way to break globals emitted to
   // sections and expected to be contiguous (e.g. ObjC metadata).
-  const Align Alignment = getGVAlignment(GV, DL);
+  //
+  // If we get passed in an explicit alignment granule, it is up to the caller
+  // to ensure that is not the case (i.e. that the GV is not in a section).
+  Align Alignment = getGVAlignment(GV, DL);
+
+  if (AlignmentGranule) {
+    assert(!GV->hasSection());
+    Size = alignTo(Size, *AlignmentGranule);
+    if (Alignment < *AlignmentGranule)
+      Alignment = *AlignmentGranule;
+  }
 
   for (auto &Handler : Handlers)
     Handler->setSymbolSize(GVSym, Size);
@@ -1534,7 +1552,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     OutStreamer->emitULEB128IntValue(MBBSectionRanges.size());
   }
   // Number of blocks in each MBB section.
-  MapVector<MBBSectionID, unsigned> MBBSectionNumBlocks;
+  DenseMap<MBBSectionID, unsigned> MBBSectionNumBlocks;
   const MCSymbol *PrevMBBEndSymbol = nullptr;
   if (!Features.MultiBBRange) {
     OutStreamer->AddComment("function address");
@@ -3342,13 +3360,21 @@ void AsmPrinter::emitConstantPool() {
       unsigned NewOffset = alignTo(Offset, CPE.getAlign());
       OutStreamer->emitZeros(NewOffset - Offset);
 
-      Offset = NewOffset + CPE.getSizeInBytes(getDataLayout());
-
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
       OutStreamer->emitLabel(Sym);
+
       if (CPE.isMachineConstantPoolEntry())
         emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
       else
         emitGlobalConstant(getDataLayout(), CPE.Val.ConstVal);
+
+      unsigned EntrySize = CPE.getSizeInBytes(getDataLayout());
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitELFSize(Sym,
+                                 MCConstantExpr::create(EntrySize, OutContext));
+
+      Offset = NewOffset + EntrySize;
     }
   }
 }
@@ -3458,12 +3484,19 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
       OutStreamer->emitLabel(GetJTISymbol(JumpTableIndex, true));
 
     MCSymbol *JTISymbol = GetJTISymbol(JumpTableIndex);
+    if (JTInDiffSection && MAI.hasDotTypeDotSizeDirective())
+      OutStreamer->emitSymbolAttribute(JTISymbol, MCSA_ELF_TypeObject);
     OutStreamer->emitLabel(JTISymbol);
 
     // Defer MCAssembler based constant folding due to a performance issue. The
     // label differences will be evaluated at write time.
     for (const MachineBasicBlock *MBB : JTBBs)
       emitJumpTableEntry(MJTI, MBB, JumpTableIndex);
+
+    if (JTInDiffSection && MAI.hasDotTypeDotSizeDirective())
+      OutStreamer->emitELFSize(
+          JTISymbol, MCConstantExpr::create(
+                         JTBBs.size() * MJTI.getEntrySize(DL), OutContext));
   }
 
   if (EmitJumpTableSizesSection)

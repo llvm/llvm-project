@@ -32,8 +32,8 @@ struct WrapEmpty {
   int s;
 };
 WrapEmpty w;
-// CIR-DAG: !rec_OuterWithEmpty = !cir.union<"OuterWithEmpty" {!rec_Empty, !s32i}>
-// CIR-DAG: !rec_WrapEmpty = !cir.struct<"WrapEmpty" {!rec_OuterWithEmpty, !s32i}>
+// CIR-DAG: !rec_OuterWithEmpty = !cir.union<"OuterWithEmpty" {data !rec_Empty, data !s32i}>
+// CIR-DAG: !rec_WrapEmpty = !cir.struct<"WrapEmpty" {data !rec_OuterWithEmpty, data !s32i}>
 // CIR-DAG: cir.global external @w = #cir.zero : !rec_WrapEmpty {alignment = 4 : i64}
 // LLVM-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
 // LLVM-DAG: %union.OuterWithEmpty = type { i32 }
@@ -44,7 +44,7 @@ WrapEmpty w;
 union OnlyEmpty {
   Empty e;
 };
-// CIR-DAG: !rec_OnlyEmpty = !cir.union<"OnlyEmpty" {!rec_Empty}>
+// CIR-DAG: !rec_OnlyEmpty = !cir.union<"OnlyEmpty" {data !rec_Empty}>
 // LLVM-DAG: %union.OnlyEmpty = type { %union.Empty }
 
 // A storage-less union still occupies its own bytes inside a record, so the
@@ -83,11 +83,11 @@ LeadingOver leadOver;
 LeadingZeroBitfield leadZero;
 Leading leadArr[2];
 
-// CIR-DAG: !rec_Leading = !cir.struct<"Leading" {!rec_Empty, !s32i}>
-// CIR-DAG: !rec_Trailing = !cir.struct<"Trailing" {!s32i, !rec_Empty}>
-// CIR-DAG: !rec_Middle = !cir.struct<"Middle" {!s32i, !rec_Empty, !s32i}>
-// CIR-DAG: !rec_LeadingOver = !cir.struct<"LeadingOver" padded {!rec_EmptyAligned, !s32i, !cir.array<!u8i x 12>}>
-// CIR-DAG: !rec_LeadingZeroBitfield = !cir.struct<"LeadingZeroBitfield" {!rec_OnlyZeroBitfield, !s32i}>
+// CIR-DAG: !rec_Leading = !cir.struct<"Leading" {data !rec_Empty, data !s32i}>
+// CIR-DAG: !rec_Trailing = !cir.struct<"Trailing" {data !s32i, data !rec_Empty}>
+// CIR-DAG: !rec_Middle = !cir.struct<"Middle" {data !s32i, data !rec_Empty, data !s32i}>
+// CIR-DAG: !rec_LeadingOver = !cir.struct<"LeadingOver" {data !rec_EmptyAligned, data !s32i, pad !cir.array<!u8i x 12>}>
+// CIR-DAG: !rec_LeadingZeroBitfield = !cir.struct<"LeadingZeroBitfield" {data !rec_OnlyZeroBitfield, data !s32i}>
 
 // CIR keeps the union's own named type as the record's field and leaves the
 // bytes after it to the LLVM struct layout.  Classic covers the union together

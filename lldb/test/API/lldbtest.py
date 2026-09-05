@@ -8,6 +8,8 @@ import lit.TestRunner
 import lit.util
 from lit.formats.base import TestFormat
 
+import lldbflakes
+
 
 class LLDBTest(TestFormat):
     def __init__(self, dotest_cmd):
@@ -33,6 +35,11 @@ class LLDBTest(TestFormat):
                     )
 
     def execute(self, test, litConfig):
+        return lldbflakes.execute_with_reruns(
+            lambda: lit.Test.Result(*self._execute_once(test, litConfig))
+        )
+
+    def _execute_once(self, test, litConfig):
         if litConfig.noExecute:
             return lit.Test.PASS, ""
 
@@ -54,6 +61,9 @@ class LLDBTest(TestFormat):
         # shebang lines.  To make sure we can execute the tests, add
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, "-p", testFile]
+
+        if test.config.maxIndividualTestTime > 0:
+            cmd += ["--timeout", str(test.config.maxIndividualTestTime)]
 
         launcher = getattr(test.config, "lldb_launcher", None)
         if launcher:

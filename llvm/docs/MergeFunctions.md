@@ -279,6 +279,8 @@ properties to be compared on this stage:
    - *Variable arguments*. *LHS* and *RHS* should be both either with or
      without *var-args*.
    - *Calling convention* should be the same.
+   - *KCFI type metadata*. Function-level `!kcfi_type` metadata, if present,
+     should be identical.
 
 2. Function type. Checked by `FunctionComparator::cmpType(Type*, Type*)`
 method. It checks return type and parameters type; the method itself will be

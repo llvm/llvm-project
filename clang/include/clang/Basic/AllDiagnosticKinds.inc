@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
+#include "clang/Basic/DiagnosticCodeGenKinds.inc"
 #include "clang/Basic/DiagnosticSerializationKinds.inc"
 #include "clang/Basic/DiagnosticLexKinds.inc"
 #include "clang/Basic/DiagnosticParseKinds.inc"

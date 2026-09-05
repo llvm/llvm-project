@@ -13,9 +13,19 @@ struct S {
   }
 };
 
-// CIR: !rec_S = !cir.struct<"S" {!s32i}>
+// CIR: !rec_S = !cir.struct<"S" {data !s32i}>
 // LLVM: %struct.S = type { i32 }
 // OGCG: %struct.S = type { i32 }
+
+void use() {
+  S s;
+  s.InlineFunc();
+}
+
+// CIR: cir.func{{.*}} @_Z3usev()
+// CIR:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
+// CIR:   %[[RET_VAL:.*]] = cir.call @_ZN1S10InlineFuncEv(%[[S_ADDR]]) : (!cir.ptr<!rec_S> {{.*}}) -> (!s32i {{.*}})
+// CIR:   cir.return
 
 // CIR: cir.func{{.*}} @_ZN1S10InlineFuncEv(%arg0: !cir.ptr<!rec_S> {{.*}}) -> (!s32i {{.*}})
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
@@ -28,9 +38,14 @@ struct S {
 // CIR:   %[[RET_VAL:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RET_VAL]] : !s32i
 
+// LLVM: define{{.*}} void @_Z3usev()
+// LLVM:   %[[S_ADDR:.*]] = alloca %struct.S
+// LLVM:   %[[RET_VAL:.*]] = call{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[S_ADDR]])
+// LLVM:   ret void
+
 // LLVM: define{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[ARG0:.*]])
-// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0
@@ -38,23 +53,6 @@ struct S {
 // LLVM:   store i32 %[[MEMBER]], ptr %[[RET_ADDR]], align 4
 // LLVM:   %[[RET_VAL:.*]] = load i32, ptr %[[RET_ADDR]], align 4
 // LLVM:   ret i32 %[[RET_VAL]]
-
-// The inlined function is defined after use() in OGCG
-
-void use() {
-  S s;
-  s.InlineFunc();
-}
-
-// CIR: cir.func{{.*}} @_Z3usev()
-// CIR:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
-// CIR:   %[[RET_VAL:.*]] = cir.call @_ZN1S10InlineFuncEv(%[[S_ADDR]]) : (!cir.ptr<!rec_S> {{.*}}) -> (!s32i {{.*}})
-// CIR:   cir.return
-
-// LLVM: define{{.*}} void @_Z3usev()
-// LLVM:   %[[S_ADDR:.*]] = alloca %struct.S
-// LLVM:   %[[RET_VAL:.*]] = call{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[S_ADDR]])
-// LLVM:   ret void
 
 // OGCG: define{{.*}} void @_Z3usev()
 // OGCG:   %[[S_ADDR:.*]] = alloca %struct.S

@@ -335,5 +335,22 @@ entry:
   ret double %mul2
 }
 
+define void @huge_stack() #0 "zero-call-used-regs"="used-gpr" {
+; CHECK-LABEL: huge_stack:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 10
+; CHECK-NEXT:    addi a0, a0, -944
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa_offset 40016
+; CHECK-NEXT:    lui a0, 10
+; CHECK-NEXT:    addi a0, a0, -944
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %1 = alloca [10000 x i32], align 4
+  ret void
+}
+
 attributes #0 = { "target-cpu"="generic" "target-features"="+m,+f,+d" }
 attributes #1 = { "target-cpu"="generic" "target-features"="+m,+zdinx" }

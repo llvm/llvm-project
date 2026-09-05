@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
   // {std,ranges}::copy_n(normal container)
   {
     auto bm = []<class InputContainer, class OutputContainer>(std::string name, auto copy_backward) {
-      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) {
+      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const n = st.range(0);
         using ValueType     = typename InputContainer::value_type;
         InputContainer c;
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
   // {std,ranges}::copy_n(vector<bool>)
   {
     auto bm = []<bool Aligned>(std::string name, auto copy_backward) {
-      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) {
+      benchmark::RegisterBenchmark(name, [copy_backward](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const n = st.range(0);
         std::vector<bool> in(n, true);
         std::vector<bool> out(Aligned ? n : n + 8);

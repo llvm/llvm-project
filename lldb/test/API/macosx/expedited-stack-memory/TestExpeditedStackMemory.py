@@ -92,6 +92,11 @@ class TestExpeditedStackMemory(TestBase):
 
         sent = self.walk_stack(per_frame, disable_memory_cache=False)
 
+        if not expect_stack_reads:
+            # Only a stub that expedites frame 0's stack can serve its locals
+            # from the cache.
+            lldbutil.require_qsupported_capability(self, "ExpediteStack+")
+
         # The process is still stopped after the walk; consult its memory map to
         # classify the reads we just provoked.  Frame 0 is func_e (where we
         # stopped), so both the stack pointer and the `heap` local live there.

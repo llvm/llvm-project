@@ -55,6 +55,8 @@ public:
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opt, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
+
+  bool shouldDefaultToNewPM() const override { return true; }
 }; // MSP430TargetMachine.
 
 } // end namespace llvm

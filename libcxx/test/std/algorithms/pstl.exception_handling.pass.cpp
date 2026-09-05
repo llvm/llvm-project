@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <memory>
 
 #include "check_assertion.h"
 #include "test_execution_policies.h"
@@ -128,6 +129,14 @@ int main(int, char**) {
       }
 
       {
+        // destroy(first, last)
+        assert_non_throwing([=, &policy] { (void)std::destroy(policy, std::move(first1), std::move(last1)); });
+
+        // destroy_n(first, n)
+        assert_non_throwing([=, &policy] { (void)std::destroy_n(policy, std::move(first1), n); });
+      }
+
+      {
         auto binary_pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
 
         // equal(first1, last1, first2)
@@ -172,6 +181,20 @@ int main(int, char**) {
         // find_if_not(first, last, pred)
         assert_non_throwing([=, &policy] {
           (void)std::find_if_not(policy, std::move(first1), std::move(last1), pred);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // find_end(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_end(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // find_end(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_end(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), pred);
         });
       }
 
@@ -239,11 +262,43 @@ int main(int, char**) {
       }
 
       {
+        auto comp = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // is_heap_until(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_heap_until(policy, std::move(first1), std::move(last1)); });
+
+        // is_heap_until(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_heap_until(policy, std::move(first1), std::move(last1), comp);
+        });
+      }
+
+      {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
         // is_partitioned(first, last, pred)
         assert_non_throwing([=, &policy] {
           (void)std::is_partitioned(policy, std::move(first1), std::move(last1), pred);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // max_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::max_element(policy, std::move(first1), std::move(last1)); });
+
+        // max_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::max_element(policy, std::move(first1), std::move(last1), compare);
+        });
+
+        // min_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::min_element(policy, std::move(first1), std::move(last1)); });
+
+        // min_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::min_element(policy, std::move(first1), std::move(last1), compare);
         });
       }
 
@@ -347,6 +402,32 @@ int main(int, char**) {
       }
 
       {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // search(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::search(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // search(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::search(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // search_n(first, last, n, val)
+        assert_non_throwing([=, &policy] { (void)std::search_n(policy, std::move(first1), std::move(last1), 1, 1); });
+
+        // search_n(first, last, n, val, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::search_n(policy, std::move(first1), std::move(last1), 1, 1, pred);
+        });
+      }
+
+      {
         auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
         // sort(first, last)
@@ -445,6 +526,34 @@ int main(int, char**) {
           (void)std::adjacent_difference(policy, std::move(first1), std::move(last1), std::move(dest), op);
         });
       }
+
+      {
+        // uninitialized_default_construct(first, last)
+        assert_non_throwing([=, &policy] {
+          std::uninitialized_default_construct(policy, std::move(first1), std::move(last1));
+        });
+
+        // uninitialized_default_construct_n(first, n)
+        assert_non_throwing([=, &policy] { std::uninitialized_default_construct_n(policy, std::move(first1), n); });
+
+        // uninitialized_value_construct(first, last)
+        assert_non_throwing([=, &policy] {
+          std::uninitialized_value_construct(policy, std::move(first1), std::move(last1));
+        });
+
+        // uninitialized_value_construct_n(first, n)
+        assert_non_throwing([=, &policy] { std::uninitialized_value_construct_n(policy, std::move(first1), n); });
+
+        // uninitialized_fill(first, last, val)
+        assert_non_throwing([=, &policy] {
+          std::uninitialized_fill(policy, std::move(first1), std::move(last1), val);
+        });
+
+        // uninitialized_fill_n(first, n, val)
+        assert_non_throwing([=, &policy] { std::uninitialized_fill_n(policy, std::move(first1), n, val); });
+      }
     }
   });
+
+  return 0;
 }

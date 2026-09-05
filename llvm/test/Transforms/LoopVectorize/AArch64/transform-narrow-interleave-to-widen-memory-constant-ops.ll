@@ -332,8 +332,8 @@ define void @test_add_double_different_var_args_1(ptr %res, ptr noalias %A, ptr 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i64 1
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -385,8 +385,8 @@ define void @test_add_double_different_var_args_2(ptr %res, ptr noalias %A, ptr 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[Y]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = insertelement <2 x double> [[TMP3]], double [[X]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[Y]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = insertelement <2 x double> [[TMP3]], double [[X]], i64 1
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -442,8 +442,8 @@ define void @test_add_double_different_invariant_recipe_args(ptr %res, ptr noali
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul double [[X]], [[Z]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul double [[Y]], [[Z]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i64 1
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

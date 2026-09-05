@@ -186,6 +186,10 @@ bool Operator::skipDefaultBuilders() const {
   return def.getValueAsBit("skipDefaultBuilders");
 }
 
+bool Operator::hasCustomPropertiesPrinter() const {
+  return def.getValueAsBit("hasCustomPropertiesPrinter");
+}
+
 auto Operator::result_begin() const -> const_value_iterator {
   return results.begin();
 }

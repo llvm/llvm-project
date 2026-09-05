@@ -3197,7 +3197,7 @@ define <4 x i32> @load_v4i32_align8_nneg(ptr addrspace(8) inreg %buf, i32 %off) 
 define <8 x half> @load_v8f16_align2_not_oob(ptr addrspace(1) inreg %ptr, i32 %off) {
 ; STRICT-LABEL: define <8 x half> @load_v8f16_align2_not_oob(
 ; STRICT-SAME: ptr addrspace(1) inreg [[PTR:%.*]], i32 [[OFF:%.*]]) {
-; STRICT-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
+; STRICT-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
 ; STRICT-NEXT:    [[Q:%.*]] = call i32 @llvm.umin.i32(i32 [[OFF]], i32 1024)
 ; STRICT-NEXT:    [[RET_OFF_0:%.*]] = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
 ; STRICT-NEXT:    [[RET_SLICE_0:%.*]] = insertelement <8 x half> poison, half [[RET_OFF_0]], i64 0
@@ -3226,14 +3226,14 @@ define <8 x half> @load_v8f16_align2_not_oob(ptr addrspace(1) inreg %ptr, i32 %o
 ;
 ; UNALIGNED_ONLY-LABEL: define <8 x half> @load_v8f16_align2_not_oob(
 ; UNALIGNED_ONLY-SAME: ptr addrspace(1) inreg [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
+; UNALIGNED_ONLY-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
 ; UNALIGNED_ONLY-NEXT:    [[Q:%.*]] = call i32 @llvm.umin.i32(i32 [[OFF]], i32 1024)
 ; UNALIGNED_ONLY-NEXT:    [[RET:%.*]] = call <8 x half> @llvm.amdgcn.raw.ptr.buffer.load.v8f16(ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
 ; UNALIGNED_ONLY-NEXT:    ret <8 x half> [[RET]]
 ;
 ; RELAXED_OOB_ONLY-LABEL: define <8 x half> @load_v8f16_align2_not_oob(
 ; RELAXED_OOB_ONLY-SAME: ptr addrspace(1) inreg [[PTR:%.*]], i32 [[OFF:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
+; RELAXED_OOB_ONLY-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
 ; RELAXED_OOB_ONLY-NEXT:    [[Q:%.*]] = call i32 @llvm.umin.i32(i32 [[OFF]], i32 1024)
 ; RELAXED_OOB_ONLY-NEXT:    [[RET_OFF_0:%.*]] = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
 ; RELAXED_OOB_ONLY-NEXT:    [[RET_SLICE_0:%.*]] = insertelement <8 x half> poison, half [[RET_OFF_0]], i64 0
@@ -3262,12 +3262,12 @@ define <8 x half> @load_v8f16_align2_not_oob(ptr addrspace(1) inreg %ptr, i32 %o
 ;
 ; BOTH_FLAGS-LABEL: define <8 x half> @load_v8f16_align2_not_oob(
 ; BOTH_FLAGS-SAME: ptr addrspace(1) inreg [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
+; BOTH_FLAGS-NEXT:    [[BUF:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) [[PTR]], i16 0, i64 8192, i32 159744)
 ; BOTH_FLAGS-NEXT:    [[Q:%.*]] = call i32 @llvm.umin.i32(i32 [[OFF]], i32 1024)
 ; BOTH_FLAGS-NEXT:    [[RET:%.*]] = call <8 x half> @llvm.amdgcn.raw.ptr.buffer.load.v8f16(ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
 ; BOTH_FLAGS-NEXT:    ret <8 x half> [[RET]]
 ;
-  %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %ptr, i16 0, i64 8192, i32 159744)
+  %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %ptr, i16 0, i64 8192, i32 159744)
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %off.clamped = call i32 @llvm.umin.i32(i32 %off, i32 1024)
 

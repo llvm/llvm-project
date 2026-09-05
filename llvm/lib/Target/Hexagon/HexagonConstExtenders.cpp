@@ -971,8 +971,10 @@ unsigned HCE::getDirectRegReplacement(unsigned ExtOpc) const {
     case Hexagon::A4_combineri:     return TargetOpcode::REG_SEQUENCE;
     case Hexagon::A4_rcmpeqi:       return Hexagon::A4_rcmpeq;
     case Hexagon::A4_rcmpneqi:      return Hexagon::A4_rcmpneq;
-    case Hexagon::C2_cmoveif:       return Hexagon::A2_tfrpf;
-    case Hexagon::C2_cmoveit:       return Hexagon::A2_tfrpt;
+    case Hexagon::C2_cmoveif:
+      return Hexagon::A2_tfrf;
+    case Hexagon::C2_cmoveit:
+      return Hexagon::A2_tfrt;
     case Hexagon::C2_cmpeqi:        return Hexagon::C2_cmpeq;
     case Hexagon::C2_cmpgti:        return Hexagon::C2_cmpgt;
     case Hexagon::C2_cmpgtui:       return Hexagon::C2_cmpgtu;

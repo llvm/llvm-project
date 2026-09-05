@@ -14,7 +14,7 @@
 ; CHECK-AMDGCNSPIRV: OpExtension "SPV_INTEL_global_variable_host_access"
 ; CHECK-AMDGCNSPIRV: OpName %[[#G:]] "G"
 ; CHECK-AMDGCNSPIRV: OpDecorate %[[#G]] HostAccessINTEL 3 "G"
-; CHECK-AMDGCNSPIRV-DAG: %[[#G]] = OpVariable
+; CHECK-AMDGCNSPIRV-DAG: %[[#G]] = OpUntypedVariableKHR
 
 
 @G = external addrspace(1) externally_initialized global i32

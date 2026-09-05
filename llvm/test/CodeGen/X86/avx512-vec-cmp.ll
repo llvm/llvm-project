@@ -1495,8 +1495,8 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ; SKX:       ## %bb.0: ## %entry
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; SKX-NEXT:    vcvtph2ps %xmm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x13,0xc0]
 ; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf0,0x57,0xc9]
+; SKX-NEXT:    vcvtph2ps %xmm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x13,0xc0]
 ; SKX-NEXT:    vcmpneqps %ymm1, %ymm0, %k1 ## encoding: [0x62,0xf1,0x7c,0x28,0xc2,0xc9,0x04]
 ; SKX-NEXT:    vmovdqu8 {{.*#+}} xmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; SKX-NEXT:    ## encoding: [0x62,0xf1,0x7f,0x89,0x6f,0x05,A,A,A,A]

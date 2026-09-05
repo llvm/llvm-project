@@ -21,10 +21,12 @@ using namespace llvm;
 
 namespace {
 
-class MSP430CodeGenPassBuilder
-    : public CodeGenPassBuilder<MSP430CodeGenPassBuilder, MSP430TargetMachine> {
-  using Base =
-      CodeGenPassBuilder<MSP430CodeGenPassBuilder, MSP430TargetMachine>;
+class MSP430CodeGenPassBuilder : public CodeGenPassBuilder {
+  using Base = CodeGenPassBuilder;
+
+  MSP430TargetMachine &getTM() const {
+    return static_cast<MSP430TargetMachine &>(TM);
+  }
 
 public:
   explicit MSP430CodeGenPassBuilder(MSP430TargetMachine &TM,
@@ -32,39 +34,38 @@ public:
                                     PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
-  void addIRPasses(PassManagerWrapper &PMW) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
-  void addPreEmitPass(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
+  void addIRPasses(PassManagerWrapper &PMW) override;
+  Error addInstSelector(PassManagerWrapper &PMW) override;
+  void addPreEmitPass(PassManagerWrapper &PMW) override;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
-void MSP430CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
+void MSP430CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
   Base::addIRPasses(PMW);
 }
 
-Error MSP430CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(MSP430ISelDAGToDAGPass(TM, getOptLevel()), PMW);
+Error MSP430CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(MSP430ISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
   return Error::success();
 }
 
-void MSP430CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
+void MSP430CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(MSP430BranchSelectPass(), PMW);
 }
 
-void MSP430CodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW) const {
+void MSP430CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
   addModulePass(MSP430AsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
-void MSP430CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+void MSP430CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
   addMachineFunctionPass(MSP430AsmPrinterPass(), PMW);
 }
 
-void MSP430CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+void MSP430CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(MSP430AsmPrinterEndPass(), PMW);
 }
 

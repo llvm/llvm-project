@@ -376,7 +376,7 @@ define float @fmul_by_neginf_if_0_oeq_zero_f32(float %x) {
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
-  %scaled.x = fmul float %x, 0xFFF0000000000000
+  %scaled.x = fmul float %x, -inf
   %scaled.if.denormal = select i1 %x.is.zero, float %scaled.x, float %x
   ret float %scaled.if.denormal
 }
@@ -389,7 +389,7 @@ define float @fmul_by_posinf_if_0_oeq_zero_f32(float %x) {
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
-  %scaled.x = fmul float %x, 0x7FF0000000000000
+  %scaled.x = fmul float %x, +inf
   %scaled.if.denormal = select i1 %x.is.zero, float %scaled.x, float %x
   ret float %scaled.if.denormal
 }
@@ -401,7 +401,7 @@ define float @fmul_by_qnan_if_0_oeq_zero_f32(float %x) {
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
-  %scaled.x = fmul float %x, 0x7FF8000000000000
+  %scaled.x = fmul float %x, +qnan
   %scaled.if.denormal = select i1 %x.is.zero, float %scaled.x, float %x
   ret float %scaled.if.denormal
 }
@@ -658,7 +658,7 @@ define float @fmul_by_var_if_0_oeq_zero_f32_assume_finite_fmul_nsz(float %x, flo
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %fabs.y = call float @llvm.fabs.f32(float %y)
-  %is.finite = fcmp olt float %fabs.y, 0x7FF0000000000000
+  %is.finite = fcmp olt float %fabs.y, +inf
   call void @llvm.assume(i1 %is.finite)
   %x.is.zero = fcmp oeq float %x, 0.0
   %scaled.x = fmul float %x, %y
@@ -675,7 +675,7 @@ define float @fmul_by_var_if_not_one_0_zero_f32_assume_finite_fmul_nsz(float %x,
 ; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %fabs.y = call float @llvm.fabs.f32(float %y)
-  %is.finite = fcmp olt float %fabs.y, 0x7FF0000000000000
+  %is.finite = fcmp olt float %fabs.y, +inf
   call void @llvm.assume(i1 %is.finite)
   %x.is.not.zero = fcmp one float %x, 0.0
   %scaled.x = fmul float %x, %y

@@ -21,6 +21,6 @@
 // RUN: %clang -### -fopenmp=libomp --offload-arch=gfx90a --offload-device-only --no-offloadlib -c -emit-llvm -fno-asynchronous-unwind-tables -nogpuinc %s 2>&1 | FileCheck -check-prefix=NO-TABLES  %s
 
 
-// ASYNC-TABLES: "-triple" "amdgcn-amd-amdhsa" {{.*}} "-funwind-tables=2"
-// SYNC-TABLES: "-triple" "amdgcn-amd-amdhsa" {{.*}} "-funwind-tables=1"
-// NO-TABLES-NOT: "-triple" "amdgcn-amd-amdhsa" {{.*}} "-funwind-tables={{.*}}"
+// ASYNC-TABLES: "-triple" "amdgpu{{(9.0a)?}}-amd-amdhsa" {{.*}} "-funwind-tables=2"
+// SYNC-TABLES: "-triple" "amdgpu{{(9.0a)?}}-amd-amdhsa" {{.*}} "-funwind-tables=1"
+// NO-TABLES-NOT: "-triple" "amdgpu{{.*}}-amd-amdhsa" {{.*}} "-funwind-tables={{.*}}"

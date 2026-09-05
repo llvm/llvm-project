@@ -100,9 +100,10 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
 
     // Skip gmock testing::Unused parameters.
-    if (const auto *Typedef = Parm->getType()->getAs<TypedefType>())
-      if (Typedef->getDecl()->getQualifiedNameAsString() == "testing::Unused")
-        continue;
+    if (const auto *Typedef = Parm->getType()->getAs<TypedefType>();
+        Typedef &&
+        Typedef->getDecl()->getQualifiedNameAsString() == "testing::Unused")
+      continue;
 
     // Skip std::nullptr_t.
     if (Parm->getType().getCanonicalType()->isNullPtrType())

@@ -523,9 +523,26 @@ define <1 x i64> @recursive() {
   ret <1 x i64> %10
 }
 
+; Poison elements in the constant operand pass a null ConstantSDNode to the
+; matchUnaryPredicate lambda in visitABD; make sure that does not crash.
+define <4 x i32> @abdu_const_poison(<4 x i8> %x) {
+; CHECK-LABEL: abdu_const_poison:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #8388736 // =0x800080
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    uabdl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %ext = zext <4 x i8> %x to <4 x i32>
+  %sub = sub <4 x i32> <i32 128, i32 128, i32 poison, i32 poison>, %ext
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 false)
+  ret <4 x i32> %abs
+}
+
 declare <8 x i8> @llvm.aarch64.neon.umax.v8i8(<8 x i8>, <8 x i8>)
 declare <1 x i64> @llvm.aarch64.neon.saddlp.v1i64.v2i32(<2 x i32>)
 declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)
 declare <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1)
+declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)

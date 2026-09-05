@@ -16,6 +16,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -36,6 +37,25 @@ static mlir::Value makeLdu(CIRGenFunction &cgf, const CallExpr *expr,
       .getResult();
 }
 
+static mlir::Value makeLdg(CIRGenFunction &cgf, const CallExpr *expr) {
+  auto &builder = cgf.getBuilder();
+  Address ptr = cgf.emitPointerWithAlignment(expr->getArg(0));
+  QualType argType = expr->getArg(0)->getType();
+  mlir::Type elemTy = cgf.convertTypeForMem(argType->getPointeeType());
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+
+  // Use addrspace(1) for NVPTX ADDRESS_SPACE_GLOBAL.
+  mlir::Type globalPtrTy = cir::PointerType::get(
+      elemTy, cir::TargetAddressSpaceAttr::get(
+                  builder.getContext(), llvm::NVPTXAS::ADDRESS_SPACE_GLOBAL));
+  mlir::Value asc =
+      builder.createAddrSpaceCast(loc, ptr.getPointer(), globalPtrTy);
+  cir::LoadOp load =
+      builder.createAlignedLoad(loc, elemTy, asc, ptr.getAlignment());
+  load.setInvariant(true);
+  return load.getResult();
+}
+
 /// Emit a CIR LLVMIntrinsicCallOp for a unary NVVM intrinsic.
 /// The result type is inferred from the single argument.
 static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
@@ -47,6 +67,23 @@ static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
              builder, cgf.getLoc(expr->getExprLoc()),
              builder.getStringAttr(intrinsicName), arg.getType(), {arg})
       .getResult();
+}
+
+static mlir::Value emitBar0Reduction(CIRGenFunction &cgf, const CallExpr *expr,
+                                     llvm::StringRef intrinsicName,
+                                     bool returnsPred) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Type si32Ty = builder.getSInt32Ty();
+  mlir::Value zero = builder.getNullValue(si32Ty, loc);
+  mlir::Value pred = builder.createCompare(
+      loc, cir::CmpOpKind::ne, cgf.emitScalarExpr(expr->getArg(0)), zero);
+  mlir::Type resultTy = returnsPred ? mlir::Type(builder.getBoolTy()) : si32Ty;
+  mlir::Value result = builder.emitIntrinsicCallOp(
+      loc, intrinsicName, resultTy, mlir::ValueRange{zero, pred});
+  if (returnsPred)
+    result = builder.createBoolToInt(result, si32Ty);
+  return result;
 }
 
 static mlir::Value makeScopedAtomicRMW(CIRGenFunction &cgf,
@@ -151,17 +188,13 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-    // success flag.
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeScopedAtomicRMW(*this, expr, cir::AtomicFetchKind::Add,
+                               cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
     return makeBinaryAtomicValue(cir::AtomicFetchKind::UIncWrap, expr,
                                  /*originalArgType=*/nullptr,
@@ -206,10 +239,7 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_ldg_f4:
   case NVPTX::BI__nvvm_ldg_d:
   case NVPTX::BI__nvvm_ldg_d2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeLdg(*this, expr);
   case NVPTX::BI__nvvm_ldu_c:
   case NVPTX::BI__nvvm_ldu_sc:
   case NVPTX::BI__nvvm_ldu_c2:
@@ -350,18 +380,16 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_cta_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::Workgroup);
   case NVPTX::BI__nvvm_atom_sys_cas_gen_us:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_i:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_l:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_match_all_sync_i32p:
   case NVPTX::BI__nvvm_match_all_sync_i64p:
     cgm.errorNYI(expr->getSourceRange(),
@@ -980,20 +1008,16 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
         mlir::ValueRange{emitScalarExpr(expr->getArg(0)),
                          emitScalarExpr(expr->getArg(1))});
   case NVPTX::BI__nvvm_bar0_and:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr,
+                             "nvvm.barrier.cta.red.and.aligned.all",
+                             /*returnsPred=*/true);
   case NVPTX::BI__nvvm_bar0_or:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr, "nvvm.barrier.cta.red.or.aligned.all",
+                             /*returnsPred=*/true);
   case NVPTX::BI__nvvm_bar0_popc:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr,
+                             "nvvm.barrier.cta.red.popc.aligned.all",
+                             /*returnsPred=*/false);
 
   default:
     return std::nullopt;
@@ -1042,7 +1066,8 @@ static mlir::Value packArgsIntoNVPTXFormatBuffer(CIRGenFunction &cgf,
   // We can directly store the arguments into a struct, and the alignment
   // would automatically be correct. That's because vprintf does not
   // accept aggregates.
-  mlir::Type allocaTy = builder.getAnonRecordTy(argTypes);
+  mlir::Type allocaTy = builder.getAnonRecordTy(
+      argTypes, /*packed=*/false, cir::RecordType::getAllDataKinds(argTypes));
   auto allocaAlign = clang::CharUnits::fromQuantity(
       dataLayout.getABITypeAlign(allocaTy).value());
   Address allocaAddr =

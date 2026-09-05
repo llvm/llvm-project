@@ -43,6 +43,7 @@ class ProcessSaveCoreMinidumpPartialReadTestCase(TestBase):
         self.assertTrue(memory64_list_found, "minidump has no Memory64List stream")
 
     @skipUnlessPlatform(["linux"])
+    @skipIf(archs=["arm$"])
     def test_save_core_range_with_unreadable_tail(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

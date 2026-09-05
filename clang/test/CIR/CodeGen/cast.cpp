@@ -96,9 +96,9 @@ bool cptr(void *d) {
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool
 
 // LLVM-LABEL: define{{.*}} i1 @_Z4cptrPv(ptr {{.*}} %0)
-// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, i64 1
-// LLVM:         %[[RETVAL:.*]] = alloca i8, i64 1
-// LLVM:         %[[X_STORAGE:.*]] = alloca i8, i64 1
+// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, 
+// LLVM:         %[[RETVAL:.*]] = alloca i8, 
+// LLVM:         %[[X_STORAGE:.*]] = alloca i8, 
 // LLVM:         store ptr %0, ptr %[[ARG_STORAGE]]
 // LLVM:         %[[LOADED_PTR:.*]] = load ptr, ptr %[[ARG_STORAGE]]
 // LLVM:         %[[NULL_CHECK:.*]] = icmp ne ptr %[[LOADED_PTR]], null
@@ -140,8 +140,8 @@ void f(long int start) {
 // CIR:          cir.cast int_to_ptr %[[MID]] : !u64i -> !cir.ptr<!void>
 
 // LLVM-LABEL: define{{.*}} void @_Z1fl(i64 {{.*}} %0)
-// LLVM: %[[ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[PADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[PADDR:.*]] = alloca ptr, align 8
 // LLVM: store i64 %0, ptr %[[ADDR]], align 8
 // LLVM: %[[L:.*]] = load i64, ptr %[[ADDR]], align 8
 // LLVM: %[[PTR:.*]] = inttoptr i64 %[[L]] to ptr

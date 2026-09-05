@@ -248,7 +248,7 @@ module {
       tensor.yield %cst_f32 : f32
     } : tensor<1x32x32x8xf32> to tensor<1x40x8229x8xf32>
     %1 = bufferization.to_buffer %padded : tensor<1x40x8229x8xf32> to memref<1x40x8229x8xf32>
-    %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<1x32x32x8xf32>
+    %alloc_0 = memref.alloc() alignment = 64 : memref<1x32x32x8xf32>
     affine.for %arg1 = 0 to 1 {
       affine.for %arg2 = 0 to 32 {
         affine.for %arg3 = 0 to 32 {
@@ -267,7 +267,7 @@ module {
         }
       }
     }
-    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x32x32x8xf32>
+    %alloc_1 = memref.alloc() alignment = 64 : memref<1x32x32x8xf32>
     affine.for %arg1 = 0 to 1 {
       affine.for %arg2 = 0 to 32 {
         affine.for %arg3 = 0 to 32 {
@@ -368,12 +368,12 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
 
 // PRODUCER-CONSUMER-MAXIMAL-LABEL: func @memref_index_type
 func.func @memref_index_type() {
-  %0 = llvm.mlir.constant(2 : index) : i64
-  %2 = llvm.mlir.constant(0 : index) : i64
+  %0 = llvm.mlir.constant(2 : i64) : i64
+  %2 = llvm.mlir.constant(0 : i64) : i64
   %3 = builtin.unrealized_conversion_cast %2 : i64 to index
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<8x18xf32>
-  %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<3xf32>
-  %alloc_2 = memref.alloc() {alignment = 64 : i64} : memref<3xindex>
+  %alloc = memref.alloc() alignment = 64 : memref<8x18xf32>
+  %alloc_1 = memref.alloc() alignment = 64 : memref<3xf32>
+  %alloc_2 = memref.alloc() alignment = 64 : memref<3xindex>
   affine.for %arg3 = 0 to 3 {
     %4 = affine.load %alloc_2[%arg3] : memref<3xindex>
     %5 = builtin.unrealized_conversion_cast %4 : index to i64
@@ -562,9 +562,9 @@ func.func @zero_tolerance(%arg0: memref<65536xcomplex<f64>>, %arg1: memref<30x13
   %cst = arith.constant 0.000000e+00 : f64
   %cst_0 = arith.constant 0x4320000000380004 : f64
   %cst_1 = arith.constant 5.000000e-01 : f64
-  %0 = memref.alloc() {alignment = 128 : i64} : memref<30x131072xi64>
-  %1 = memref.alloc() {alignment = 128 : i64} : memref<131072xi1>
-  %2 = memref.alloc() {alignment = 128 : i64} : memref<131072xi128>
+  %0 = memref.alloc() alignment = 128 : memref<30x131072xi64>
+  %1 = memref.alloc() alignment = 128 : memref<131072xi1>
+  %2 = memref.alloc() alignment = 128 : memref<131072xi128>
   // This nest nest shouldn't be fused in when a zero tolerance is specified.
   // ZERO-TOLERANCE: affine.for %{{.*}} = 0 to 131072
   affine.for %arg2 = 0 to 131072 {
@@ -679,7 +679,7 @@ module {
     %cst_0 = arith.constant 2.606200e+03 : f32
     %cst_1 = arith.constant 3.224000e+03 : f32
     %cst_2 = arith.constant 0.000000e+00 : f32
-    %alloc = memref.alloc() {alignment = 64 : i64} : memref<3x7x5x6xf32>
+    %alloc = memref.alloc() alignment = 64 : memref<3x7x5x6xf32>
     affine.for %arg0 = 0 to 3 {
       affine.for %arg1 = 0 to 7 {
         affine.for %arg2 = 0 to 5 {
@@ -689,10 +689,10 @@ module {
         }
       }
     }
-    %alloc_3 = memref.alloc() {alignment = 64 : i64} : memref<3x10x7x6xf32>
+    %alloc_3 = memref.alloc() alignment = 64 : memref<3x10x7x6xf32>
     %subview = memref.subview %alloc_3[0, 2, 1, 0] [3, 7, 5, 6] [1, 1, 1, 1] : memref<3x10x7x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1], offset: 90>>
     memref.copy %alloc, %subview : memref<3x7x5x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1], offset: 90>>
-    %alloc_4 = memref.alloc() {alignment = 64 : i64} : memref<3x10x3x6x1xf32>
+    %alloc_4 = memref.alloc() alignment = 64 : memref<3x10x3x6x1xf32>
     affine.for %arg0 = 0 to 3 {
       affine.for %arg1 = 0 to 10 {
         affine.for %arg2 = 0 to 3 {
@@ -725,7 +725,7 @@ module {
         }
       }
     }
-    %alloc_5 = memref.alloc() {alignment = 64 : i64} : memref<3x10x3x6xf32>
+    %alloc_5 = memref.alloc() alignment = 64 : memref<3x10x3x6xf32>
     %expand_shape = memref.expand_shape %alloc_5 [[0], [1], [2], [3, 4]] output_shape [3, 10, 3, 6, 1] : memref<3x10x3x6xf32> into memref<3x10x3x6x1xf32>
     affine.for %arg0 = 0 to 3 {
       affine.for %arg1 = 0 to 10 {

@@ -14,6 +14,15 @@ contains
     allocate(r(n))
     r = 7
   end function
+  function frchar(n) result(r)
+    integer, value :: n
+    character(len=:), allocatable, managed :: r
+    allocate(character(len=n) :: r)
+  end function
+  function frcharfix() result(r)
+    character(len=4), allocatable, managed :: r
+    allocate(r)
+  end function
 end module
 
 ! Assignments that are data transfers.
@@ -54,6 +63,45 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_attr_assign()
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
+
+! The attribute of a component describes the data the component designates, so it
+! prevails over the attribute of the object the component is taken from. A device
+! component of a managed object is device data, which the host cannot write in
+! place, whatever the form of the reference.
+subroutine device_component_of_managed(n, i)
+  integer :: n, i
+  type :: t
+    integer(4), allocatable, device :: dcomp(:)
+  end type
+  type(t), allocatable, managed :: cm(:)
+  integer(4) :: ha(3)
+  allocate(cm(n))
+  allocate(cm(i)%dcomp(3))
+  cm(i)%dcomp = 10         ! device component = constant
+  cm(i)%dcomp = ha         ! device component = host array
+  cm(i)%dcomp(1:2) = 10    ! device component section = constant
+  ha = cm(i)%dcomp         ! host array = device component
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdevice_component_of_managed
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+
+! The object's attribute still applies to a component that has none.
+subroutine host_component_of_managed(n, i)
+  integer :: n, i
+  type :: t
+    integer(4) :: m(16)
+  end type
+  type(t), allocatable, managed :: cm(:)
+  allocate(cm(n))
+  cm(i)%m = 10
+end subroutine
+
+! CHECK-LABEL: func.func @_QPhost_component_of_managed
+! CHECK-NOT: cuf.data_transfer
 
 ! One whole managed side is enough: the other may be a section.
 subroutine managed_mixed_whole_section()
@@ -309,4 +357,16 @@ subroutine managed_component_attr_section_assign()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPmanaged_component_attr_section_assign()
+! CHECK-NOT: cuf.data_transfer
+
+! A scalar character result carries its length outside of a descriptor, so a
+! transfer would copy raw bytes instead of padding or truncating the destination.
+subroutine managed_char_func_result()
+  use mfr
+  character(len=16) :: h
+  h = frchar(4)
+  h = frcharfix()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPmanaged_char_func_result()
 ! CHECK-NOT: cuf.data_transfer

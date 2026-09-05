@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 class TestPtrRefs(TestBase):
     @skipIfAsan  # The output looks different under ASAN.
     @skipIfMTE  # Heap scanning reads tagged memory with untagged pointers.
-    @skipUnlessDarwin
+    @requireDarwin
     def test_ptr_refs(self):
         """Test format string functionality."""
         self.build()

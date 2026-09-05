@@ -412,11 +412,10 @@ public:
       RetTy = LTy;
     }
 
-      // If the two operands are pointers and the operation is a subtraction,
-      // the result is of type ptrdiff_t, which is signed
-      if (LTy->isAnyPointerType() && RTy->isAnyPointerType() && Op == BO_Sub) {
-        RetTy = Ctx.getPointerDiffType();
-      }
+    // If the two operands are pointers and the operation is a subtraction,
+    // the result is of type ptrdiff_t, which is signed
+    if (LTy->isAnyPointerType() && RTy->isAnyPointerType() && Op == BO_Sub)
+      RetTy = Ctx.getPointerDiffType();
 
     return LTy->isRealFloatingType()
                ? fromFloatBinOp(Solver, NewLHS, Op, NewRHS)

@@ -235,6 +235,7 @@ template <class T> requires(T{})
 constexpr bool e_v = true;
 
 static_assert(e_v<bool>);
+// expected-error@-1 {{constraints not satisfied for variable template 'e_v'}}
 
 } // namespace GH73885
 
@@ -326,7 +327,7 @@ namespace SusbtitutionFailureInArguments1 {
   template void g<int>();
   // expected-error@-1 {{does not refer to a function template}}
 
-  // FIXME: static_assert should gain support for explaining non-satisfied requirements.
   static_assert(requires { { 0 } -> C; });
   // expected-error@-1 {{static assertion failed due to requirement 'requires { { <<error-expression>> } -> C; }'}}
+  // expected-note@-2 {{because 'C<expr-type>' would be invalid}}
 } // namespace SubstitutionFailureInArguments1

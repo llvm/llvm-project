@@ -49,6 +49,13 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global external @fp = #cir.ptr<null> : !cir.ptr<!cir.func<()>>
   cir.global external @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
   cir.global external @fpvar = #cir.ptr<null> : !cir.ptr<!cir.func<(!s32i, ...)>>
+  cir.global external tls_model = tls_dyn @tls1 = #cir.int<0> : !s8i
+  cir.global external tls_model = tls_local_dyn @tls2 = #cir.int<0> : !s8i
+  cir.global external tls_model = tls_init_exec @tls3 = #cir.int<0> : !s8i
+  cir.global external tls_model = tls_local_exec @tls4 = #cir.int<0> : !s8i
+  cir.global external @gi = #cir.int<0> : !s32i
+  cir.global external @gi_past_end = #cir.global_offset<@gi, 4> : !cir.ptr<!s32i>
+  cir.global external @gi_before = #cir.global_offset<@gi, -4> : !cir.ptr<!s32i>
 }
 
 // CHECK: cir.global external @c = #cir.int<0> : !s8i
@@ -87,3 +94,10 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 // CHECK: cir.global external @fp = #cir.ptr<null> : !cir.ptr<!cir.func<()>>
 // CHECK: cir.global external @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
 // CHECK: cir.global external @fpvar = #cir.ptr<null> : !cir.ptr<!cir.func<(!s32i, ...)>>
+// CHECK: cir.global external tls_model = tls_dyn @tls1 = #cir.int<0> : !s8i
+// CHECK: cir.global external tls_model = tls_local_dyn @tls2 = #cir.int<0> : !s8i
+// CHECK: cir.global external tls_model = tls_init_exec @tls3 = #cir.int<0> : !s8i
+// CHECK: cir.global external tls_model = tls_local_exec @tls4 = #cir.int<0> : !s8i
+// CHECK: cir.global external @gi = #cir.int<0> : !s32i
+// CHECK: cir.global external @gi_past_end = #cir.global_offset<@gi, 4> : !cir.ptr<!s32i>
+// CHECK: cir.global external @gi_before = #cir.global_offset<@gi, -4> : !cir.ptr<!s32i>

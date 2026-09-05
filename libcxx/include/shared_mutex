@@ -307,16 +307,15 @@ private:
   bool __owns_;
 
 public:
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock() noexcept : __m_(nullptr), __owns_(false) {}
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI explicit shared_lock(mutex_type& __m)
       : __m_(std::addressof(__m)), __owns_(true) {
     __m_->lock_shared();
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
-      : __m_(std::addressof(__m)),
-        __owns_(false) {}
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, defer_lock_t) noexcept
+      : __m_(std::addressof(__m)), __owns_(false) {}
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(mutex_type& __m, try_to_lock_t)
       : __m_(std::addressof(__m)), __owns_(__m.try_lock_shared()) {}
@@ -342,14 +341,13 @@ public:
   shared_lock(shared_lock const&)            = delete;
   shared_lock& operator=(shared_lock const&) = delete;
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(shared_lock&& __u) _NOEXCEPT
-      : __m_(__u.__m_),
-        __owns_(__u.__owns_) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_lock(shared_lock&& __u) noexcept
+      : __m_(__u.__m_), __owns_(__u.__owns_) {
     __u.__m_    = nullptr;
     __u.__owns_ = false;
   }
 
-  _LIBCPP_HIDE_FROM_ABI shared_lock& operator=(shared_lock&& __u) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI shared_lock& operator=(shared_lock&& __u) noexcept {
     if (this != std::addressof(__u))
       shared_lock(std::move(__u)).swap(*this);
     return *this;
@@ -364,12 +362,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI void unlock();
 
   // Setters
-  _LIBCPP_HIDE_FROM_ABI void swap(shared_lock& __u) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void swap(shared_lock& __u) noexcept {
     std::swap(__m_, __u.__m_);
     std::swap(__owns_, __u.__owns_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI mutex_type* release() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI mutex_type* release() noexcept {
     mutex_type* __m = __m_;
     __m_            = nullptr;
     __owns_         = false;
@@ -377,11 +375,11 @@ public:
   }
 
   // Getters
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool owns_lock() const _NOEXCEPT { return __owns_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool owns_lock() const noexcept { return __owns_; }
 
-  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __owns_; }
+  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __owns_; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mutex_type* mutex() const _NOEXCEPT { return __m_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mutex_type* mutex() const noexcept { return __m_; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(shared_lock);
 
@@ -436,7 +434,7 @@ void shared_lock<_Mutex>::unlock() {
 }
 
 template <class _Mutex>
-inline _LIBCPP_HIDE_FROM_ABI void swap(shared_lock<_Mutex>& __x, shared_lock<_Mutex>& __y) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI void swap(shared_lock<_Mutex>& __x, shared_lock<_Mutex>& __y) noexcept {
   __x.swap(__y);
 }
 

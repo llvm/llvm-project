@@ -16,6 +16,22 @@
 
 using namespace clang;
 
+#ifndef _WIN32
+static StringRef logBody(StringRef Line) { return Line.split(": ").second; }
+
+static SmallVector<StringRef> logBodyLines(StringRef Content) {
+  SmallVector<StringRef> Lines;
+  Content.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  if (Lines.size() < 2) {
+    ADD_FAILURE() << "log not framed by logging_start/logging_end; got "
+                  << Lines.size() << " line(s)";
+    return {};
+  }
+  EXPECT_EQ(logBody(Lines.front()), "logging_start");
+  EXPECT_EQ(logBody(Lines.back()), "logging_end");
+  return SmallVector<StringRef>(ArrayRef(Lines).drop_front().drop_back());
+}
+
 TEST(AtomicLineLoggerTest, DisabledLoggerDoesNotCrash) {
   AtomicLineLogger Logger;
   Logger.log() << "this goes nowhere";
@@ -24,7 +40,6 @@ TEST(AtomicLineLoggerTest, DisabledLoggerDoesNotCrash) {
   EXPECT_TRUE(true);
 }
 
-#ifndef _WIN32
 TEST(AtomicLineLoggerTest, LogLineMoveConstructor) {
   llvm::unittest::TempDir Dir("atomic-logger-test", /*Unique=*/true);
   SmallString<128> LogPath(Dir.path());
@@ -41,9 +56,10 @@ TEST(AtomicLineLoggerTest, LogLineMoveConstructor) {
   ASSERT_TRUE(BufOrErr) << "Failed to read log file";
   StringRef Content = (*BufOrErr)->getBuffer();
 
-  // Only one line should be written (from Moved, not from Original).
-  EXPECT_EQ(Content.count('\n'), 1u);
-  EXPECT_TRUE(Content.contains("after_move"));
+  // Only one log body line should be written (from Moved, not from Original).
+  auto Body = logBodyLines(Content);
+  ASSERT_EQ(Body.size(), 1u);
+  EXPECT_EQ(logBody(Body.front()), "after_move");
 }
 
 TEST(AtomicLineLoggerTest, LogLinePIDTIDMsg) {
@@ -60,17 +76,18 @@ TEST(AtomicLineLoggerTest, LogLinePIDTIDMsg) {
   ASSERT_TRUE(BufOrErr) << "Failed to read log file";
   StringRef Content = (*BufOrErr)->getBuffer();
 
-  // Ends with message + newline.
-  EXPECT_TRUE(Content.ends_with("test_event: some_file.pcm\n"));
+  auto Body = logBodyLines(Content);
+  ASSERT_EQ(Body.size(), 1u);
+  EXPECT_EQ(logBody(Body.front()), "test_event: some_file.pcm");
 
   // Prefix has the form: "<timestamp> <pid> <tid>: "
   // Verify PID matches this process.
   std::string ExpectedPID = std::to_string(llvm::sys::Process::getProcessId());
-  EXPECT_TRUE(Content.contains(ExpectedPID));
+  EXPECT_TRUE(Body.front().contains(ExpectedPID));
 
   // Verify TID is present.
   std::string ExpectedTID = std::to_string(llvm::get_threadid());
-  EXPECT_TRUE(Content.contains(ExpectedTID));
+  EXPECT_TRUE(Body.front().contains(ExpectedTID));
 }
 
 TEST(AtomicLineLoggerTest, LogLineLogArray) {
@@ -149,11 +166,9 @@ TEST(AtomicLineLoggerTest, SingleLineWrittenToFile) {
   StringRef Content = (*BufOrErr)->getBuffer();
 
   // Verify the message is present and the line ends with a newline.
-  EXPECT_TRUE(Content.contains("pcm_write: module.pcm"));
-  EXPECT_TRUE(Content.ends_with("\n"));
-
-  // Verify there is exactly one line.
-  EXPECT_EQ(Content.count('\n'), 1u);
+  auto Body = logBodyLines(Content);
+  ASSERT_EQ(Body.size(), 1u);
+  EXPECT_EQ(logBody(Body.front()), "pcm_write: module.pcm");
 }
 
 TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
@@ -167,6 +182,8 @@ TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
   constexpr unsigned NumThreads = 8;
   constexpr unsigned LinesPerThread = 100;
   constexpr unsigned MessageLen = 32;
+  // One LoggerEven and one LoggerOdd.
+  constexpr unsigned NumLoggers = 2;
 
   {
     // Creating two loggers based on the same file to make sure
@@ -204,9 +221,25 @@ TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
   SmallVector<StringRef> Lines;
   Content.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
-  EXPECT_EQ(Lines.size(), (size_t)(NumThreads * LinesPerThread));
+  SmallVector<StringRef> MessageLines;
+  unsigned Starts = 0, Ends = 0;
+  for (StringRef Line : Lines) {
+    StringRef Body = logBody(Line);
+    if (Body == "logging_start") {
+      ++Starts;
+      continue;
+    }
+    if (Body == "logging_end") {
+      ++Ends;
+      continue;
+    }
+    MessageLines.push_back(Line);
+  }
+  EXPECT_EQ(Starts, NumLoggers);
+  EXPECT_EQ(Ends, NumLoggers);
+  EXPECT_EQ(MessageLines.size(), (size_t)(NumThreads * LinesPerThread));
 
-  for (const auto &Line : Lines) {
+  for (const auto &Line : MessageLines) {
     // For each line, we check the separator, message length, message start and
     // the prefix format to make sure no lines are interleved.
 

@@ -258,4 +258,3 @@ add_libc_test(
     libc.include.stdfix
     ${macros_depends}
 )
-

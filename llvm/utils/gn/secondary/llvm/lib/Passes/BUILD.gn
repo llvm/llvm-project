@@ -3,6 +3,7 @@ static_library("Passes") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
@@ -25,6 +26,8 @@ static_library("Passes") {
     "PassBuilder.cpp",
     "PassBuilderBindings.cpp",
     "PassBuilderPipelines.cpp",
+    "RunCodeGen.cpp",
     "StandardInstrumentations.cpp",
+    "TriggerCrashPasses.cpp",
   ]
 }

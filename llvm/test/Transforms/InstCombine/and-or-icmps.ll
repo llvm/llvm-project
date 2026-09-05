@@ -3341,9 +3341,7 @@ define i1 @icmp_eq_or_z_or_pow2orz_fail_nonzero_const(i8 %x, i8 %y) {
 
 define <2 x i1> @icmp_ne_and_z_and_pow2orz_fail_bad_pred(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @icmp_ne_and_z_and_pow2orz_fail_bad_pred(
-; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
-; CHECK-NEXT:    [[POW2ORZ:%.*]] = and <2 x i8> [[Y]], [[NY]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[X:%.*]], [[POW2ORZ]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;

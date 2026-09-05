@@ -167,28 +167,25 @@ Expected<void *> RecordReplayTy::allocate(uint64_t Size) {
 Error RecordReplayTy::deallocate(void *Ptr) { return Plugin::success(); }
 
 Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
-    const GenericKernelTy &Kernel, const KernelArgsTy &KernelArgs,
-    const KernelExtraArgsTy *KernelExtraArgs,
-    const KernelLaunchParamsTy &LaunchParams, uint32_t NumTeams[3],
-    uint32_t NumThreads[3], uint32_t SharedMemorySize) {
+    const GenericKernelTy &Kernel, const KernelLaunchArgsTy &LaunchArgs,
+    uint32_t NumTeams[3], uint32_t NumThreads[3], uint32_t SharedMemorySize) {
   if (!isRecordingOrReplaying())
     return HandleTy{nullptr, false};
 
   // Register the instance and avoid recording if it is inactive or replaying.
-  auto [Instance, First] = registerInstance(
-      Kernel, NumTeams[0], NumThreads[0], SharedMemorySize,
-      (KernelExtraArgs) ? KernelExtraArgs->ReplayOutcome : nullptr);
+  auto [Instance, First] =
+      registerInstance(Kernel, NumTeams[0], NumThreads[0], SharedMemorySize,
+                       LaunchArgs.ReplayOutcome);
 
   HandleTy Handle{&Instance, First};
   if (!First)
     return Handle;
 
   if (isRecording()) {
-    if (auto Err = recordDescImpl(Kernel, Instance, KernelArgs, LaunchParams))
+    if (auto Err = recordDescImpl(Kernel, Instance, LaunchArgs))
       return Err;
 
-    if (auto Err =
-            recordPrologueImpl(Kernel, Instance, KernelArgs, LaunchParams))
+    if (auto Err = recordPrologueImpl(Kernel, Instance, LaunchArgs))
       return Err;
   }
 
@@ -235,7 +232,7 @@ void RecordReplayTy::populateReplayOutcome(const InstanceTy &Instance,
 
 Error NativeRecordReplayTy::recordPrologueImpl(
     const GenericKernelTy &Kernel, const InstanceTy &Instance,
-    const KernelArgsTy &KernelArgs, const KernelLaunchParamsTy &LaunchParams) {
+    const KernelLaunchArgsTy &LaunchArgs) {
   SmallString<128> SnapshotFilename =
       getFilename(Instance, FileTy::PrologueSnapshot);
   if (auto Err = recordSnapshot(SnapshotFilename.c_str()))
@@ -260,21 +257,21 @@ Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
 
 Error NativeRecordReplayTy::recordDescImpl(
     const GenericKernelTy &Kernel, const InstanceTy &Instance,
-    const KernelArgsTy &KernelArgs, const KernelLaunchParamsTy &LaunchParams) {
+    const KernelLaunchArgsTy &LaunchArgs) {
   json::Object JsonKernelInfo;
   JsonKernelInfo["Name"] = Kernel.getName();
-  JsonKernelInfo["NumArgs"] = KernelArgs.NumArgs;
+  JsonKernelInfo["NumArgs"] = LaunchArgs.NumArgs;
   JsonKernelInfo["NumTeams"] = Instance.NumTeams;
   JsonKernelInfo["NumThreads"] = Instance.NumThreads;
   JsonKernelInfo["SharedMemorySize"] = Instance.SharedMemorySize;
-  JsonKernelInfo["LoopTripCount"] = KernelArgs.Tripcount;
+  JsonKernelInfo["LoopTripCount"] = LaunchArgs.Tripcount;
   JsonKernelInfo["DeviceId"] = Device.getDeviceId();
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
   // Export minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t MinMaxBlocks = std::max(KernelArgs.UserNumBlocks[0], uint32_t(0));
+  uint32_t MinMaxBlocks = std::max(LaunchArgs.UserNumBlocks[0], uint32_t(0));
   json::Array JsonTeamsLimits;
   JsonTeamsLimits.push_back(MinMaxBlocks);
   JsonTeamsLimits.push_back(MinMaxBlocks);
@@ -282,7 +279,7 @@ Error NativeRecordReplayTy::recordDescImpl(
 
   // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
-  uint32_t UserThreads = std::max(KernelArgs.UserThreadLimit[0], uint32_t(0));
+  uint32_t UserThreads = std::max(LaunchArgs.UserThreadLimit[0], uint32_t(0));
   uint32_t MaxThreads = UserThreads
                             ? std::min(UserThreads, Kernel.getMaxThreads())
                             : Kernel.getMaxThreads();
@@ -292,12 +289,12 @@ Error NativeRecordReplayTy::recordDescImpl(
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
-  for (uint32_t I = 0; I < KernelArgs.NumArgs; ++I)
-    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchParams.Args[I]));
+  for (uint32_t I = 0; I < LaunchArgs.NumArgs; ++I)
+    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchArgs.Args[I]));
   JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
 
   json::Array JsonArgOffsets;
-  for (uint32_t I = 0; I < KernelArgs.NumArgs; ++I)
+  for (uint32_t I = 0; I < LaunchArgs.NumArgs; ++I)
     JsonArgOffsets.push_back(0);
   JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 

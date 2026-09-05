@@ -44,7 +44,7 @@ namespace Fortran::parser {
 // R601 alphanumeric-character -> letter | digit | underscore
 // R603 name -> letter [alphanumeric-character]...
 constexpr auto nonDigitIdChar{letter || otherIdChar};
-constexpr auto rawName{nonDigitIdChar >> many(nonDigitIdChar || digit)};
+constexpr auto rawName{nonDigitIdChar >> skipMany(nonDigitIdChar || digit)};
 TYPE_PARSER(space >> sourced(rawName >> construct<Name>()))
 
 // R608 intrinsic-operator ->
@@ -567,12 +567,15 @@ TYPE_CONTEXT_PARSER("type bound procedure part"_en_US,
 //        final-procedure-stmt
 TYPE_CONTEXT_PARSER("type bound procedure binding"_en_US,
     recovery(
-        first(construct<TypeBoundProcBinding>(Parser<TypeBoundProcedureStmt>{}),
-            construct<TypeBoundProcBinding>(Parser<TypeBoundGenericStmt>{}),
-            construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{}),
-            Parser<DataComponentDefStmt>{} >>
-                fail<TypeBoundProcBinding>(
-                    "component definition must precede CONTAINS in a derived type"_err_en_US)),
+        withMessage(
+            "expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS"_err_en_US,
+            first(construct<TypeBoundProcBinding>(
+                      Parser<TypeBoundProcedureStmt>{}),
+                construct<TypeBoundProcBinding>(Parser<TypeBoundGenericStmt>{}),
+                construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{}),
+                Parser<DataComponentDefStmt>{} >>
+                    fail<TypeBoundProcBinding>(
+                        "component definition must precede CONTAINS in a derived type"_err_en_US))),
         construct<TypeBoundProcBinding>(
             !"END"_tok >> SkipTo<'\n'>{} >> construct<ErrorRecovery>())))
 

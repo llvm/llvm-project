@@ -881,16 +881,16 @@ define <4 x i64> @test_mm256_i32gather_epi64(ptr%a0, <2 x i64> %a1) {
 ; X86-LABEL: test_mm256_i32gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X86-NEXT:    vpgatherdq %ymm2, (%eax,%xmm0,2), %ymm1
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_i32gather_epi64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm0,2), %ymm1
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-NEXT:    retq
@@ -968,6 +968,7 @@ define <4 x double> @test_mm256_i32gather_pd(ptr%a0, <2 x i64> %a1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vcmpeqpd %ymm1, %ymm1, %ymm2
+; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vgatherdpd %ymm2, (%eax,%xmm0,2), %ymm1
 ; X86-NEXT:    vmovapd %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -976,6 +977,7 @@ define <4 x double> @test_mm256_i32gather_pd(ptr%a0, <2 x i64> %a1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vcmpeqpd %ymm1, %ymm1, %ymm2
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm0,2), %ymm1
 ; X64-NEXT:    vmovapd %ymm1, %ymm0
 ; X64-NEXT:    retq
@@ -1054,6 +1056,7 @@ define <8 x float> @test_mm256_i32gather_ps(ptr%a0, <4 x i64> %a1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vcmpeqps %ymm1, %ymm1, %ymm2
+; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vgatherdps %ymm2, (%eax,%ymm0,2), %ymm1
 ; X86-NEXT:    vmovaps %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -1062,6 +1065,7 @@ define <8 x float> @test_mm256_i32gather_ps(ptr%a0, <4 x i64> %a1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vcmpeqps %ymm1, %ymm1, %ymm2
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vgatherdps %ymm2, (%rdi,%ymm0,2), %ymm1
 ; X64-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-NEXT:    retq
@@ -1225,16 +1229,16 @@ define <4 x i64> @test_mm256_i64gather_epi64(ptr%a0, <4 x i64> %a1) {
 ; X86-LABEL: test_mm256_i64gather_epi64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X86-NEXT:    vpgatherqq %ymm2, (%eax,%ymm0,2), %ymm1
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_i64gather_epi64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; X64-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm0,2), %ymm1
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0
 ; X64-NEXT:    retq
@@ -1308,6 +1312,7 @@ define <4 x double> @test_mm256_i64gather_pd(ptr%a0, <4 x i64> %a1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vcmpeqpd %ymm1, %ymm1, %ymm2
+; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vgatherqpd %ymm2, (%eax,%ymm0,2), %ymm1
 ; X86-NEXT:    vmovapd %ymm1, %ymm0
 ; X86-NEXT:    retl
@@ -1316,6 +1321,7 @@ define <4 x double> @test_mm256_i64gather_pd(ptr%a0, <4 x i64> %a1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vcmpeqpd %ymm1, %ymm1, %ymm2
+; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm0,2), %ymm1
 ; X64-NEXT:    vmovapd %ymm1, %ymm0
 ; X64-NEXT:    retq

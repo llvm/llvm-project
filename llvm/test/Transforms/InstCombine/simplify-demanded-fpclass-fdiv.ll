@@ -22,8 +22,8 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fdiv_unknown_or_pinf(i1 %cond, 
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv half [[X_OR_PINF]], [[Y_OR_PINF]]
 ; CHECK-NEXT:    ret half [[TMP1]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
-  %y.or.pinf = select i1 %cond, half %y, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
+  %y.or.pinf = select i1 %cond, half %y, half +inf
   %div = fdiv half %x.or.pinf, %y.or.pinf
   ret half %div
 }
@@ -36,8 +36,8 @@ define nofpclass(ninf) half @ret_nofpclass_pinf__fdiv_unknown_or_ninf(i1 %cond, 
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[X_OR_NINF]], [[Y_OR_NINF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.ninf = select i1 %cond, half %x, half 0xFFF0000000000000
-  %y.or.ninf = select i1 %cond, half %y, half 0xFFF0000000000000
+  %x.or.ninf = select i1 %cond, half %x, half -inf
+  %y.or.ninf = select i1 %cond, half %y, half -inf
   %div = fdiv half %x.or.ninf, %y.or.ninf
   ret half %div
 }
@@ -50,8 +50,8 @@ define nofpclass(inf) half @ret_nofpclass_inf__fdiv_unknown_or_pinf(i1 %cond, ha
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv half [[X_OR_PINF]], [[Y_OR_PINF]]
 ; CHECK-NEXT:    ret half [[TMP1]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
-  %y.or.pinf = select i1 %cond, half %y, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
+  %y.or.pinf = select i1 %cond, half %y, half +inf
   %div = fdiv half %x.or.pinf, %y.or.pinf
   ret half %div
 }
@@ -441,7 +441,7 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fdiv_self_unknown_or_pinf(i1 %c
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[X_OR_PINF]], [[X_OR_PINF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
   %div = fdiv half %x.or.pinf, %x.or.pinf
   ret half %div
 }
@@ -454,7 +454,7 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fdiv_self_unknown_or_pinf__othe
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[X_OR_PINF]], [[X_OR_PINF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
   call void @use(half %x.or.pinf)
   %div = fdiv half %x.or.pinf, %x.or.pinf
   ret half %div
@@ -468,7 +468,7 @@ define nofpclass(pinf) half @ret_nofpclass_pinf__fdiv_self_unknown_or_pinf__othe
 ; CHECK-NEXT:    call void @use(half [[X_OR_PINF]])
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
   %div = fdiv half %x.or.pinf, %x.or.pinf
   call void @use(half %x.or.pinf)
   ret half %div
@@ -573,7 +573,7 @@ define nofpclass(inf) half @ret_only_inf_results__lhs_known_non_inf(i1 %cond, ha
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
   %div = fdiv half %x.or.pinf, %y
   ret half %div
 }
@@ -585,7 +585,7 @@ define nofpclass(inf) half @ret_no_inf_results__rhs_known_non_inf(i1 %cond, half
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[X]], [[Y_OR_PINF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %y.or.pinf = select i1 %cond, half %y, half 0x7FF0000000000000
+  %y.or.pinf = select i1 %cond, half %y, half +inf
   %div = fdiv half %x, %y.or.pinf
   ret half %div
 }
@@ -598,7 +598,7 @@ define nofpclass(ninf nan) half @ret_no_ninf_or_nan_results__lhs_known_non_inf(i
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
   %div = fdiv half %x.or.pinf, %y
   ret half %div
 }
@@ -611,7 +611,7 @@ define nofpclass(pinf nan) half @ret_no_pinf_or_nan_results__lhs_known_non_inf(i
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
   %div = fdiv half %x.or.pinf, %y
   ret half %div
 }
@@ -623,7 +623,7 @@ define nofpclass(inf nan) half @ret_no_inf_or_nan_results__lhs_known_non_inf(i1 
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[X]], [[Y]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %x.or.pinf = select i1 %cond, half %x, half 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, half %x, half +inf
   %div = fdiv half %x.or.pinf, %y
   ret half %div
 }
@@ -636,7 +636,7 @@ define nofpclass(inf nan) half @ret_no_inf_or_nan_results__rhs_known_non_inf(i1 
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan half [[X]], [[Y_OR_PINF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
-  %y.or.pinf = select i1 %cond, half %y, half 0x7FF0000000000000
+  %y.or.pinf = select i1 %cond, half %y, half +inf
   %div = fdiv half %x, %y.or.pinf
   ret half %div
 }

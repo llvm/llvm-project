@@ -2,9 +2,9 @@
 
 ## Check that we don't fuse non-RAW dependent pairs.
 
-# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mattr=+arith-cbz-fusion -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
-# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=cyclone -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
-# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -filetype=null %s -mtriple=aarch64-unknown -mattr=+arith-cbz-fusion -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -filetype=null %s -mtriple=aarch64-unknown -mcpu=cyclone -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -filetype=null %s -mtriple=aarch64-unknown -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s
 
 ## The arith op's def ($w0) is live-out via bb.1's livein,
 ## so an Artificial edge from SU(ADDWri) to ExitSU is created by

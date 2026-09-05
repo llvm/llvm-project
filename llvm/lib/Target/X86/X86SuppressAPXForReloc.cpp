@@ -108,8 +108,8 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto suppressEGPRInInstrWithReloc = [&](MachineInstr &MI,
                                           ArrayRef<unsigned> OpNoArray) {
-    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
-                  X86II::getOperandBias(MI.getDesc());
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+    assert(MemOpNo >= 0 && "Expected a memory operand");
     const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
     if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
         MO.getTargetFlags() == X86II::MO_GOTPCREL) {
@@ -178,16 +178,16 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
       case X86::ADD64rm_NF:
       case X86::ADD64mr_NF_ND:
       case X86::ADD64rm_NF_ND: {
-        int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
-                      X86II::getOperandBias(MI.getDesc());
+        int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+        assert(MemOpNo >= 0 && "Expected a memory operand");
         const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
           llvm_unreachable("Unexpected NF instruction!");
         break;
       }
       case X86::ADD64rm_ND: {
-        int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
-                      X86II::getOperandBias(MI.getDesc());
+        int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+        assert(MemOpNo >= 0 && "Expected a memory operand");
         const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
             MO.getTargetFlags() == X86II::MO_GOTPCREL) {

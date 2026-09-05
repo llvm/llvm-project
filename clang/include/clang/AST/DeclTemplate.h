@@ -19,6 +19,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/TemplateBase.h"
@@ -777,16 +778,19 @@ protected:
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                         void *&InsertPos, ProfileArguments... ProfileArgs);
+                         llvm::FoldingSetInsertToken &InsertToken,
+                         ProfileArguments... ProfileArgs);
 
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationLocally(llvm::FoldingSetVector<EntryType> &Specs,
-                            void *&InsertPos, ProfileArguments... ProfileArgs);
+                            llvm::FoldingSetInsertToken &InsertToken,
+                            ProfileArguments... ProfileArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                             EntryType *Entry, void *InsertPos);
+                             EntryType *Entry,
+                             llvm::FoldingSetInsertToken InsertToken);
 
   struct CommonBase {
     CommonBase() : InstantiatedFromMember(nullptr, false) {}
@@ -982,10 +986,10 @@ protected:
 
   /// Add a specialization of this function template.
   ///
-  /// \param InsertPos Insert position in the FoldingSetVector, must have been
-  ///        retrieved by an earlier call to findSpecialization().
-  void addSpecialization(FunctionTemplateSpecializationInfo* Info,
-                         void *InsertPos);
+  /// \param InsertToken Insert token, must have been retrieved by an earlier
+  /// call to findSpecialization().
+  void addSpecialization(FunctionTemplateSpecializationInfo *Info,
+                         llvm::FoldingSetInsertToken InsertToken);
 
 public:
   friend class ASTDeclReader;
@@ -1028,7 +1032,7 @@ public:
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
   FunctionDecl *findSpecialization(ArrayRef<TemplateArgument> Args,
-                                   void *&InsertPos);
+                                   llvm::FoldingSetInsertToken &InsertToken);
 
   FunctionTemplateDecl *getCanonicalDecl() override {
     return cast<FunctionTemplateDecl>(
@@ -2337,11 +2341,13 @@ public:
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
   ClassTemplateSpecializationDecl *
-  findSpecialization(ArrayRef<TemplateArgument> Args, void *&InsertPos);
+  findSpecialization(ArrayRef<TemplateArgument> Args,
+                     llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified specialization knowing that it is not already
-  /// in. InsertPos must be obtained from findSpecialization.
-  void AddSpecialization(ClassTemplateSpecializationDecl *D, void *InsertPos);
+  /// in. InsertToken must be obtained from findSpecialization.
+  void AddSpecialization(ClassTemplateSpecializationDecl *D,
+                         llvm::FoldingSetInsertToken InsertToken);
 
   ClassTemplateDecl *getCanonicalDecl() override {
     return cast<ClassTemplateDecl>(
@@ -2381,12 +2387,13 @@ public:
   /// exists, otherwise return the insertion point.
   ClassTemplatePartialSpecializationDecl *
   findPartialSpecialization(ArrayRef<TemplateArgument> Args,
-                            TemplateParameterList *TPL, void *&InsertPos);
+                            TemplateParameterList *TPL,
+                            llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified partial specialization knowing that it is not
-  /// already in. InsertPos must be obtained from findPartialSpecialization.
+  /// already in. InsertToken must be obtained from findPartialSpecialization.
   void AddPartialSpecialization(ClassTemplatePartialSpecializationDecl *D,
-                                void *InsertPos);
+                                llvm::FoldingSetInsertToken InsertToken);
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(
@@ -2457,76 +2464,78 @@ public:
 /// \code
 /// template \<typename T> class A {
 ///   friend class MyVector<T>; // not a friend template
-///   template \<typename U> friend class B; // not a friend template
+///   template \<typename U> friend class B; // friend class template
 ///   template \<typename U> friend class Foo<T>::Nested; // friend template
 /// };
 /// \endcode
-///
-/// \note This class is not currently in use.  All of the above
-/// will yield a FriendDecl, not a FriendTemplateDecl.
-class FriendTemplateDecl : public Decl {
-  virtual void anchor();
-
-public:
-  using FriendUnion = llvm::PointerUnion<NamedDecl *,TypeSourceInfo *>;
+class FriendTemplateDecl final
+    : public FriendDecl,
+      private llvm::TrailingObjects<FriendTemplateDecl,
+                                    TemplateParameterList *> {
+  void anchor() override;
 
 private:
-  // The number of template parameters;  always non-zero.
-  unsigned NumParams = 0;
+  unsigned NumTPLists = 0;
+  TemplateName Template;
 
-  // The parameter list.
-  TemplateParameterList **Params = nullptr;
+  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc, FriendUnion Friend,
+                     SourceLocation FriendLoc, SourceLocation EllipsisLoc,
+                     ArrayRef<TemplateParameterList *> FriendTPLists,
+                     TemplateName Template = {})
+      : FriendDecl(Decl::FriendTemplate, DC, Loc, Friend, FriendLoc,
+                   EllipsisLoc),
+        NumTPLists(FriendTPLists.size()), Template(Template) {
+    assert(!FriendTPLists.empty());
+    llvm::copy(FriendTPLists, getTrailingObjects());
+  }
 
-  // The declaration that's a friend of this class.
-  FriendUnion Friend;
-
-  // Location of the 'friend' specifier.
-  SourceLocation FriendLoc;
-
-  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc,
-                     TemplateParameterList **Params, unsigned NumParams,
-                     FriendUnion Friend, SourceLocation FriendLoc)
-      : Decl(Decl::FriendTemplate, DC, Loc), NumParams(NumParams),
-        Params(Params), Friend(Friend), FriendLoc(FriendLoc) {}
-
-  FriendTemplateDecl(EmptyShell Empty) : Decl(Decl::FriendTemplate, Empty) {}
+  FriendTemplateDecl(EmptyShell Empty, unsigned NumFriendTPLists)
+      : FriendDecl(Decl::FriendTemplate, Empty), NumTPLists(NumFriendTPLists) {
+    assert(NumFriendTPLists != 0);
+  }
 
 public:
   friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  enum class FriendTemplateEntityKind { Type, Template, Decl };
 
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
-         MutableArrayRef<TemplateParameterList *> Params, FriendUnion Friend,
-         SourceLocation FriendLoc);
+         FriendUnion Friend, SourceLocation FriendLoc,
+         ArrayRef<TemplateParameterList *> FriendTPLists,
+         SourceLocation EllipsisLoc = {}, TemplateName Template = {});
 
-  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+  static FriendTemplateDecl *
+  Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
+         TemplateName Template, SourceLocation FriendLoc,
+         ArrayRef<TemplateParameterList *> FriendTPLists,
+         SourceLocation EllipsisLoc = {});
 
-  /// If this friend declaration names a templated type (or
-  /// a dependent member type of a templated type), return that
-  /// type;  otherwise return null.
-  TypeSourceInfo *getFriendType() const {
-    return Friend.dyn_cast<TypeSourceInfo*>();
+  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                                unsigned NumFriendTPLists);
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  TemplateName getFriendTemplateName() const { return Template; }
+
+  FriendTemplateEntityKind getFriendKind() const {
+    if (getFriendType())
+      return FriendTemplateEntityKind::Type;
+    if (Template.isNull())
+      return FriendTemplateEntityKind::Decl;
+    return FriendTemplateEntityKind::Template;
   }
 
-  /// If this friend declaration names a templated function (or
-  /// a member function of a templated type), return that type;
-  /// otherwise return null.
-  NamedDecl *getFriendDecl() const {
-    return Friend.dyn_cast<NamedDecl*>();
+  NamedDecl *getFriendDecl() const override {
+    if (NamedDecl *ND = Friend.dyn_cast<NamedDecl *>())
+      return ND;
+    return Template.getAsTemplateDecl();
   }
 
-  /// Retrieves the location of the 'friend' keyword.
-  SourceLocation getFriendLoc() const {
-    return FriendLoc;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned i) const {
-    assert(i <= NumParams);
-    return Params[i];
-  }
-
-  unsigned getNumTemplateParameters() const {
-    return NumParams;
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    return ArrayRef(getTrailingObjects(), NumTPLists);
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -3094,11 +3103,13 @@ public:
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
   VarTemplateSpecializationDecl *
-  findSpecialization(ArrayRef<TemplateArgument> Args, void *&InsertPos);
+  findSpecialization(ArrayRef<TemplateArgument> Args,
+                     llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified specialization knowing that it is not already
-  /// in. InsertPos must be obtained from findSpecialization.
-  void AddSpecialization(VarTemplateSpecializationDecl *D, void *InsertPos);
+  /// in. InsertToken must be obtained from findSpecialization.
+  void AddSpecialization(VarTemplateSpecializationDecl *D,
+                         llvm::FoldingSetInsertToken InsertToken);
 
   VarTemplateDecl *getCanonicalDecl() override {
     return cast<VarTemplateDecl>(RedeclarableTemplateDecl::getCanonicalDecl());
@@ -3136,12 +3147,13 @@ public:
   /// exists, otherwise return the insertion point.
   VarTemplatePartialSpecializationDecl *
   findPartialSpecialization(ArrayRef<TemplateArgument> Args,
-                            TemplateParameterList *TPL, void *&InsertPos);
+                            TemplateParameterList *TPL,
+                            llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified partial specialization knowing that it is not
-  /// already in. InsertPos must be obtained from findPartialSpecialization.
+  /// already in. InsertToken must be obtained from findPartialSpecialization.
   void AddPartialSpecialization(VarTemplatePartialSpecializationDecl *D,
-                                void *InsertPos);
+                                llvm::FoldingSetInsertToken InsertToken);
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(

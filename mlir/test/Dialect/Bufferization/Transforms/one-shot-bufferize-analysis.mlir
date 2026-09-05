@@ -112,7 +112,7 @@ func.func @to_buffer_read_only(%idx : index, %f: f32) -> f32 {
   // Some op may write into the result of to_buffer later.
   // CHECK: bufferization.to_buffer
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
-  %m = bufferization.to_buffer %t {read_only} : tensor<5xf32> to memref<5xf32>
+  %m = bufferization.to_buffer %t read_only : tensor<5xf32> to memref<5xf32>
   %2 = tensor.extract %t[%idx] : tensor<5xf32>
   return %2 : f32
 }

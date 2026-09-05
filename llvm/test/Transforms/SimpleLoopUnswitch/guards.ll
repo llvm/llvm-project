@@ -175,35 +175,35 @@ define void @test_nested_loop(i1 %cond, i32 %N, i1 %arg) {
 ; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br i1 [[ARG]], label %[[ENTRY_SPLIT_SPLIT_US:.*]], label %[[ENTRY_SPLIT_SPLIT:.*]]
 ; CHECK:       [[ENTRY_SPLIT_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[OUTER_LOOP_SPLIT_US_US:.*]]
+; CHECK:       [[OUTER_LOOP_SPLIT_US_US]]:
 ; CHECK-NEXT:    br label %[[OUTER_LOOP_US:.*]]
 ; CHECK:       [[OUTER_LOOP_US]]:
-; CHECK-NEXT:    br label %[[OUTER_LOOP_SPLIT_US_US:.*]]
-; CHECK:       [[OUTER_BACKEDGE_US:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_LOOP_US]]
-; CHECK:       [[OUTER_LOOP_SPLIT_US_US]]:
 ; CHECK-NEXT:    br label %[[LOOP_US_US:.*]]
 ; CHECK:       [[LOOP_US_US]]:
-; CHECK-NEXT:    [[IV_US_US:%.*]] = phi i32 [ 0, %[[OUTER_LOOP_SPLIT_US_US]] ], [ [[IV_NEXT_US_US:%.*]], %[[GUARDED_US_US:.*]] ]
+; CHECK-NEXT:    [[IV_US_US:%.*]] = phi i32 [ 0, %[[OUTER_LOOP_US]] ], [ [[IV_NEXT_US_US:%.*]], %[[GUARDED_US_US:.*]] ]
 ; CHECK-NEXT:    br label %[[GUARDED_US_US]]
 ; CHECK:       [[GUARDED_US_US]]:
 ; CHECK-NEXT:    [[IV_NEXT_US_US]] = add i32 [[IV_US_US]], 1
 ; CHECK-NEXT:    [[LOOP_COND_US_US:%.*]] = icmp slt i32 [[IV_NEXT_US_US]], [[N]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND_US_US]], label %[[LOOP_US_US]], label %[[OUTER_BACKEDGE_SPLIT_US_US:.*]]
 ; CHECK:       [[OUTER_BACKEDGE_SPLIT_US_US]]:
-; CHECK-NEXT:    br label %[[OUTER_BACKEDGE_US]]
+; CHECK-NEXT:    br label %[[OUTER_BACKEDGE_US:.*]]
+; CHECK:       [[OUTER_BACKEDGE_US]]:
+; CHECK-NEXT:    br label %[[OUTER_LOOP_SPLIT_US_US]]
 ; CHECK:       [[ENTRY_SPLIT_SPLIT]]:
-; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]
-; CHECK:       [[OUTER_LOOP]]:
 ; CHECK-NEXT:    br label %[[OUTER_LOOP_SPLIT_US:.*]]
 ; CHECK:       [[OUTER_LOOP_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[LOOP_US:.*]]
 ; CHECK:       [[LOOP_US]]:
-; CHECK-NEXT:    [[IV_US:%.*]] = phi i32 [ 0, %[[OUTER_LOOP_SPLIT_US]] ], [ [[IV_NEXT_US:%.*]], %[[GUARDED_US:.*]] ]
-; CHECK-NEXT:    br label %[[GUARDED_US]]
+; CHECK-NEXT:    br label %[[GUARDED_US:.*]]
 ; CHECK:       [[GUARDED_US]]:
+; CHECK-NEXT:    [[IV_US:%.*]] = phi i32 [ 0, %[[LOOP_US]] ], [ [[IV_NEXT_US:%.*]], %[[GUARDED_US1:.*]] ]
+; CHECK-NEXT:    br label %[[GUARDED_US1]]
+; CHECK:       [[GUARDED_US1]]:
 ; CHECK-NEXT:    [[IV_NEXT_US]] = add i32 [[IV_US]], 1
 ; CHECK-NEXT:    [[LOOP_COND_US:%.*]] = icmp slt i32 [[IV_NEXT_US]], [[N]]
-; CHECK-NEXT:    br i1 [[LOOP_COND_US]], label %[[LOOP_US]], label %[[OUTER_BACKEDGE_SPLIT_US:.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND_US]], label %[[GUARDED_US]], label %[[OUTER_BACKEDGE_SPLIT_US:.*]]
 ; CHECK:       [[OUTER_BACKEDGE_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[OUTER_BACKEDGE:.*]]
 ; CHECK:       [[OUTER_LOOP_SPLIT]]:

@@ -1,6 +1,6 @@
-# RUN: not llvm-mc %s -triple=riscv32 -mattr=+experimental-zicfiss,+zcmop,+c -M no-aliases -show-encoding \
+# RUN: not llvm-mc %s -triple=riscv32 -mattr=+zicfiss,+zcmop,+c -M no-aliases -show-encoding \
 # RUN:     2>&1 | FileCheck -check-prefixes=CHECK-ERR %s
-# RUN: not llvm-mc %s -triple=riscv64 -mattr=+experimental-zicfiss,+zcmop,+c -M no-aliases -show-encoding \
+# RUN: not llvm-mc %s -triple=riscv64 -mattr=+zicfiss,+zcmop,+c -M no-aliases -show-encoding \
 # RUN:     2>&1 | FileCheck -check-prefixes=CHECK-ERR %s
 
 # CHECK-ERR: error: register must be ra or t0 (x1 or x5)

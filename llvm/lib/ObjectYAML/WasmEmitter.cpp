@@ -239,9 +239,15 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       case wasm::WASM_SYMBOL_TYPE_DATA:
         writeStringRef(Info.Name, SubSection.getStream());
         if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-          encodeULEB128(Info.DataRef.Segment, SubSection.getStream());
-          encodeULEB128(Info.DataRef.Offset, SubSection.getStream());
-          encodeULEB128(Info.DataRef.Size, SubSection.getStream());
+          if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+              wasm::WASM_SYMBOL_BINDING_COMMON) {
+            encodeULEB128(Info.CommonRef.Size, SubSection.getStream());
+            writeUint8(SubSection.getStream(), Info.CommonRef.Alignment);
+          } else {
+            encodeULEB128(Info.DataRef.Segment, SubSection.getStream());
+            encodeULEB128(Info.DataRef.Offset, SubSection.getStream());
+            encodeULEB128(Info.DataRef.Size, SubSection.getStream());
+          }
         }
         break;
       case wasm::WASM_SYMBOL_TYPE_SECTION:

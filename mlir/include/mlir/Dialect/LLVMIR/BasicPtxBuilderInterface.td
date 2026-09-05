@@ -157,13 +157,16 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
            for (auto val : op->getOperands()) 
             asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
            
-           // Step 3. Add attributes
-           for (auto attr : op->getAttrs()) {
-            if (auto intAttr = dyn_cast<mlir::IntegerAttr>(attr.getValue())) {
-             ::mlir::Value val = makeConstantI32(rewriter, intAttr.getInt());
-             asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
-             }
-           }
+           // Step 3. Add inherent attributes.
+           op->getName().walkInherentAttrs(
+               op, [&](llvm::StringRef, mlir::Attribute &attr) {
+                 if (auto intAttr = dyn_cast<mlir::IntegerAttr>(attr)) {
+                   ::mlir::Value val =
+                       makeConstantI32(rewriter, intAttr.getInt());
+                   asmValues.push_back(
+                       {val, mlir::NVVM::PTXRegisterMod::Read});
+                 }
+               });
            return false; // No manual mapping needed
          }]
        >

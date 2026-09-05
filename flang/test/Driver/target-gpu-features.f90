@@ -6,5 +6,4 @@
 ! RUN: %flang --target=amdgcn-amd-amdhsa -mcpu=gfx902  -nogpulib -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGCN
 
-! CHECK-AMDGCN: "-fc1" "-triple" "amdgcn-amd-amdhsa"
-! CHECK-AMDGCN-SAME: "-target-cpu" "gfx902"
+! CHECK-AMDGCN: "-fc1" "-triple" "amdgpu9.02-amd-amdhsa"

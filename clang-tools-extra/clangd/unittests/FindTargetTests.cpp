@@ -10,6 +10,7 @@
 #include "Selection.h"
 #include "TestTU.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
@@ -656,6 +657,27 @@ TEST_F(TargetDeclTest, Concept) {
   )cpp";
   EXPECT_DECLS("ConceptReference",
                {"template <typename T, typename U> concept Fooable = true"});
+}
+
+TEST_F(TargetDeclTest, PackIndexedConcept) {
+  Flags.push_back("-std=c++2d");
+
+  // constrained-parameter
+  Code = R"cpp(
+    template <template <class> concept... CC>
+    struct S {
+      template <[[CC]]...[0] T>
+      void bar(T t);
+    };
+  )cpp";
+  EXPECT_DECLS("ConceptReference", {"template <class> concept ...CC"});
+
+  // constrained placeholder type
+  Code = R"cpp(
+    template <template <class> concept... CC>
+    void bar([[CC]]...[0] auto t);
+  )cpp";
+  EXPECT_DECLS("ConceptReference", {"template <class> concept ...CC"});
 }
 
 TEST_F(TargetDeclTest, Coroutine) {

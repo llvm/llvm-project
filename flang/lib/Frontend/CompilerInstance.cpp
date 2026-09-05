@@ -34,10 +34,15 @@
 using namespace Fortran::frontend;
 
 CompilerInstance::CompilerInstance()
-    : invocation(new CompilerInvocation()),
+    : CompilerInstance(std::make_shared<CompilerInvocation>()) {}
+
+CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> invocation)
+    : invocation(std::move(invocation)),
       allSources(new Fortran::parser::AllSources()),
       allCookedSources(new Fortran::parser::AllCookedSources(*allSources)),
       parsing(new Fortran::parser::Parsing(*allCookedSources)) {
+  assert(this->invocation && "Invocation must not be null.");
   // TODO: This is a good default during development, but ultimately we should
   // give the user the opportunity to specify this.
   allSources->set_encoding(Fortran::parser::Encoding::UTF_8);
@@ -45,11 +50,6 @@ CompilerInstance::CompilerInstance()
 
 CompilerInstance::~CompilerInstance() {
   assert(outputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> value) {
-  invocation = std::move(value);
 }
 
 void CompilerInstance::setSemaOutputStream(raw_ostream &value) {
@@ -381,6 +381,7 @@ bool CompilerInstance::setUpTargetMachine() {
 
   llvm::TargetOptions tOpts = llvm::TargetOptions();
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
+  tOpts.EnableMachineFunctionSplitter = targetOpts.SplitMachineFunctions;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
   tOpts.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
   tOpts.FunctionSections = CGOpts.FunctionSections;

@@ -247,14 +247,6 @@ MODULE_PASS_WITH_PARAMS(
     "ipsccp", "IPSCCPPass", [](IPSCCPOptions Opts) { return IPSCCPPass(Opts); },
     parseIPSCCPOptions, "no-func-spec;func-spec")
 MODULE_PASS_WITH_PARAMS(
-    "loop-extract", "LoopExtractorPass",
-    [](bool Single) {
-      if (Single)
-        return LoopExtractorPass(1);
-      return LoopExtractorPass();
-    },
-    parseLoopExtractorPassOptions, "single")
-MODULE_PASS_WITH_PARAMS(
     "memprof-use", "MemProfUsePass",
     [](std::string Opts) { return MemProfUsePass(Opts); },
     parseMemProfUsePassOptions, "profile-filename=S")
@@ -333,6 +325,7 @@ CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 CGSCC_PASS("openmp-opt-cgscc", OpenMPOptCGSCCPass())
 CGSCC_PASS("coro-annotation-elide", CoroAnnotationElidePass())
+CGSCC_PASS("trigger-crash-cgscc", TriggerCrashCGSCCPass())
 #undef CGSCC_PASS
 
 #ifndef CGSCC_PASS_WITH_PARAMS
@@ -486,7 +479,6 @@ FUNCTION_PASS("loop-fusion", LoopFusePass())
 FUNCTION_PASS("loop-load-elim", LoopLoadEliminationPass())
 FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("loop-sink", LoopSinkPass())
-FUNCTION_PASS("loop-split-utils", LoopSplitUtilsPass())
 FUNCTION_PASS("loop-versioning", LoopVersioningPass())
 FUNCTION_PASS("lower-atomic", LowerAtomicPass())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
@@ -808,6 +800,7 @@ LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(errs()))
 LOOP_PASS("print<hash-recognize>", HashRecognizePrinterPass(errs()))
 LOOP_PASS("print<iv-users>", IVUsersPrinterPass(errs()))
 LOOP_PASS("print<loopnest>", LoopNestPrinterPass(errs()))
+LOOP_PASS("trigger-crash-loop", TriggerCrashLoopPass())
 #undef LOOP_PASS
 
 #ifndef LOOP_PASS_WITH_PARAMS

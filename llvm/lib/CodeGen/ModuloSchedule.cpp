@@ -83,9 +83,8 @@ void ModuloScheduleExpander::expand() {
       Register Reg = Op.getReg();
       unsigned MaxDiff = 0;
       bool PhiIsSwapped = false;
-      for (MachineOperand &UseOp : MRI.use_operands(Reg)) {
-        MachineInstr *UseMI = UseOp.getParent();
-        int UseStage = Schedule.getStage(UseMI);
+      for (MachineInstr &UseMI : MRI.use_instructions(Reg)) {
+        int UseStage = Schedule.getStage(&UseMI);
         unsigned Diff = 0;
         if (UseStage != -1 && UseStage >= DefStage)
           Diff = UseStage - DefStage;
@@ -359,8 +358,8 @@ static void replaceRegUsesAfterLoop(Register FromReg, Register ToReg,
 /// specified loop.
 static bool hasUseAfterLoop(Register Reg, MachineBasicBlock *BB,
                             MachineRegisterInfo &MRI) {
-  for (const MachineOperand &MO : MRI.use_operands(Reg))
-    if (MO.getParent()->getParent() != BB)
+  for (const MachineInstr &UseMI : MRI.use_instructions(Reg))
+    if (UseMI.getParent() != BB)
       return true;
   return false;
 }
@@ -775,10 +774,10 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         }
         unsigned realUses = 0;
-        for (const MachineOperand &U : MRI.use_operands(reg)) {
+        for (const MachineInstr &UseMI : MRI.use_instructions(reg)) {
           // Check if there are any uses that occur only in the original
           // loop.  If so, that's not a real use.
-          if (U.getParent()->getParent() != BB) {
+          if (UseMI.getParent() != BB) {
             realUses++;
             used = true;
             break;
@@ -949,6 +948,8 @@ bool ModuloScheduleExpander::computeDelta(MachineInstr &MI, unsigned &Delta) {
     return false;
 
   Register BaseReg = BaseOp->getReg();
+  if (!BaseReg.isVirtual())
+    return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   // Check if there is a Phi. If so, get the definition in the loop.
@@ -1722,7 +1723,7 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
         continue;
       if (auto It = Remaps.find(MO.getReg()); It != Remaps.end())
         MO.setReg(It->second);
-      else {
+      else if (MO.getReg().isVirtual()) {
         // If we are using a phi from the source block we need to add a new phi
         // pointing to the old one.
         MachineInstr *Use = MRI.getUniqueVRegDef(MO.getReg());
@@ -2747,8 +2748,7 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
     // most.
     Register InitVal, LoopVal;
     getPhiRegs(MI, MI.getParent(), InitVal, LoopVal);
-    if (!Register(LoopVal).isVirtual() ||
-        MRI.getVRegDef(LoopVal)->getParent() != BB) {
+    if (!Register(LoopVal).isVirtual() || MRI.getDefBlock(LoopVal) != BB) {
       LLVM_DEBUG(
           dbgs() << "Can not apply MVE expander: A phi source value coming "
                     "from the loop is not defined in the loop.\n");

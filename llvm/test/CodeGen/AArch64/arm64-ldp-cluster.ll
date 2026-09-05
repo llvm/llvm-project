@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=exynos-m3 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 
 ; Test ldr clustering.
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: ldr_int:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
@@ -18,7 +18,7 @@ define i32 @ldr_int(ptr %a) nounwind {
 }
 
 ; Test ldpsw clustering
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: ldp_sext_int:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr64 = LDRSWui
@@ -34,7 +34,7 @@ define i64 @ldp_sext_int(ptr %p) nounwind {
 }
 
 ; Test ldur clustering.
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: ldur_int:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(2)
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDURWi
@@ -49,7 +49,7 @@ define i32 @ldur_int(ptr %a) nounwind {
 }
 
 ; Test sext + zext clustering.
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: ldp_half_sext_zext_int:%bb.0
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   %{{[0-9]+}}:gpr64 = LDRSWui
@@ -67,7 +67,7 @@ define i64 @ldp_half_sext_zext_int(ptr %q, ptr %p) nounwind {
 }
 
 ; Test zext + sext clustering.
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: ldp_half_zext_sext_int:%bb.0
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   undef %{{[0-9]+}}.sub_32:gpr64 = LDRWui
@@ -85,7 +85,7 @@ define i64 @ldp_half_zext_sext_int(ptr %q, ptr %p) nounwind {
 }
 
 ; Verify we don't cluster volatile loads.
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: ldr_int_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK: SU(1):   %{{[0-9]+}}:gpr32 = LDRWui
@@ -100,7 +100,7 @@ define i32 @ldr_int_volatile(ptr %a) nounwind {
 }
 
 ; Test ldq clustering (no clustering for Exynos).
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: ldq_cluster:%bb.0
 ; CHECK: Cluster ld/st SU(1) - SU(3)
 ; CHECK: SU(1):   %{{[0-9]+}}:fpr128 = LDRQui
@@ -114,7 +114,7 @@ define <4 x i32> @ldq_cluster(ptr %p) {
   ret <4 x i32> %res
 }
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: LDURSi_LDRSui:%bb.0 entry
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   %3:fpr32 = LDURSi %0:gpr64
@@ -132,7 +132,7 @@ entry:
 
 ; Test LDURQi / LDRQui clustering
 ;
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: LDURQi_LDRQui:%bb.1 vector_body
 ;
 ; CHECK: Cluster ld/st SU(0) - SU(4)
@@ -173,7 +173,7 @@ exit:
 
 ; Test LDURDi / LDRDui clustering
 ;
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: LDURDi_LDRDui:%bb.1 vector_body
 ;
 ; CHECK: Cluster ld/st SU(0) - SU(4)
@@ -212,7 +212,7 @@ exit:
   ret void
 }
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: LDURXi_LDRXui:%bb.0 entry
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):  %{{[0-9]+}}:gpr64 = LDURXi
@@ -228,7 +228,7 @@ entry:
   ret void
 }
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: STURWi_STRWui:%bb.0 entry
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   STURWi %{{[0-9]+}}:gpr32
@@ -242,7 +242,7 @@ entry:
   ret void
 }
 
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK: STURXi_STRXui:%bb.0 entry
 ; CHECK: Cluster ld/st SU(3) - SU(4)
 ; CHECK: SU(3):   STURXi %{{[0-9]+}}:gpr64
@@ -256,7 +256,7 @@ entry:
   ret void
 }
 
-; CHECK-A57: ********** MI Scheduling **********
+; CHECK-A57: Current Schedule Region
 ; CHECK-A57: STURSi_STRSui:%bb.0 entry
 ; CHECK-A57: Cluster ld/st SU(3) - SU(4)
 ; CHECK-A57: SU(3):   STURSi %{{[0-9]+}}:fpr32
@@ -270,7 +270,7 @@ entry:
   ret void
 }
 
-; CHECK-A57: ********** MI Scheduling **********
+; CHECK-A57: Current Schedule Region
 ; CHECK-A57: STURDi_STRDui:%bb.0 entry
 ; CHECK-A57: Cluster ld/st SU(3) - SU(4)
 ; CHECK-A57: SU(3):   STURDi %{{[0-9]+}}:fpr64
@@ -284,7 +284,7 @@ entry:
   ret void
 }
 
-; CHECK-A57: ********** MI Scheduling **********
+; CHECK-A57: Current Schedule Region
 ; CHECK-A57: STURQi_STRQui:%bb.0 entry
 ; CHECK-A57: Cluster ld/st SU(3) - SU(4)
 ; CHECK-A57: SU(3):   STURQi %{{[0-9]+}}:fpr128

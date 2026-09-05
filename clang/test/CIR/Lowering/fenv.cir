@@ -124,6 +124,25 @@ module {
     %0 = cir.fma %a, %b, %c : !cir.double {fenv = #cir.fenv<strict_except = true>}
     // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64) -> f64
     %1 = cir.fma %a, %b, %c : !cir.double
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fmuladd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %2 = cir.fmuladd %a, %b, %c : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64) -> f64
+    %3 = cir.fmuladd %a, %b, %c : !cir.double
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @ternary_fp_vec_builtins
+  cir.func @ternary_fp_vec_builtins(%a: !cir.vector<4 x !cir.float>,
+                                    %b: !cir.vector<4 x !cir.float>,
+                                    %c: !cir.vector<4 x !cir.float>) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fma"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xf32>
+    %0 = cir.fma %a, %b, %c : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+    %1 = cir.fma %a, %b, %c : !cir.vector<4 x !cir.float>
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fmuladd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xf32>
+    %2 = cir.fmuladd %a, %b, %c : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+    %3 = cir.fmuladd %a, %b, %c : !cir.vector<4 x !cir.float>
     cir.return
   }
 

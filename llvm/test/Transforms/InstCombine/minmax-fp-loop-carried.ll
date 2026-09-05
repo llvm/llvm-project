@@ -239,4 +239,43 @@ entry:
   ret i32 %r
 }
 
-declare float @llvm.fabs.f32(float)
+define float @from_phi(ptr %arrayidx.i, i32 %mul, float %acc) {
+; CHECK-LABEL: @from_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND4:%.*]]
+; CHECK:       for.cond4:
+; CHECK-NEXT:    [[ACC_ADDR_1:%.*]] = phi nsz float [ [[ACC_ADDR_0:%.*]], [[FOR_BODY:%.*]] ], [ [[DOTSROA_SPECULATED:%.*]], [[FOR_BODY7:%.*]] ]
+; CHECK-NEXT:    [[HDR_ROW_0:%.*]] = phi ptr [ [[ARRAYIDX_I:%.*]], [[FOR_BODY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY7]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[FOR_BODY]] ], [ [[INC:%.*]], [[FOR_BODY7]] ]
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I_0]], [[MUL:%.*]]
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
+; CHECK:       for.body7:
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[HDR_ROW_0]], align 4
+; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = call nnan ninf nsz float @llvm.minnum.f32(float [[TMP10]], float [[ACC_ADDR_1]])
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[HDR_ROW_0]], i64 4
+; CHECK-NEXT:    br label [[FOR_COND4]]
+; CHECK:       for.cond.cleanup6:
+; CHECK-NEXT:    ret float [[ACC_ADDR_1]]
+;
+entry:
+  br label %for.cond4
+
+for.cond4:                                        ; preds = %for.body7, %for.body
+  %acc.addr.1 = phi nsz float [ %acc, %entry ], [ %.sroa.speculated, %for.body7 ]
+  %row.0 = phi ptr [ %arrayidx.i, %entry ], [ %incdec.ptr, %for.body7 ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body7 ]
+  %cmp5 = icmp slt i32 %i.0, %mul
+  br i1 %cmp5, label %for.body7, label %for.cond.cleanup6
+
+for.body7:                                        ; preds = %for.cond4
+  %10 = load float, ptr %row.0, align 4
+  %cmp.i.i.i = fcmp fast olt float %10, %acc.addr.1
+  %.sroa.speculated = select i1 %cmp.i.i.i, float %10, float %acc.addr.1
+  %inc = add nuw nsw i32 %i.0, 1
+  %incdec.ptr = getelementptr inbounds nuw i8, ptr %row.0, i64 4
+  br label %for.cond4
+
+for.cond.cleanup6:                                ; preds = %for.cond4
+  ret float %acc.addr.1
+}

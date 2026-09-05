@@ -1,5 +1,6 @@
 // Note: Default is function-boundary-type-conversion=infer-layout-map
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1" -canonicalize -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1" -split-input-file | FileCheck %s --check-prefix=INHERENT
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -97,7 +98,7 @@ func.func @foo(%arg0: tensor<3x8xf16>) -> tensor<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP-LABEL:   func.func @call_extract_slice(
 // CHECK-NO-LAYOUT-MAP-SAME:                                  %[[VAL_0:.*]]: memref<4x8xf16>) -> memref<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_1:.*]] = memref.subview %[[VAL_0]][1, 0] [3, 8] [1, 1] : memref<4x8xf16> to memref<3x8xf16, strided<[8, 1], offset: 8>>
-// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() alignment = 64 : memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           memref.copy %[[VAL_1]], %[[VAL_2]] : memref<3x8xf16, strided<[8, 1], offset: 8>> to memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_3:.*]] = call @foo(%[[VAL_2]]) : (memref<3x8xf16>) -> memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           return %[[VAL_3]] : memref<3x8xf16>
@@ -488,9 +489,9 @@ func.func @main() {
   %v1 = arith.constant 1.0 : f32
   %v2 = arith.constant 2.0 : f32
 
-  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() {alignment = 64 : i64} : memref<f32>
+  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() alignment = 64 : memref<64xf32>
+  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() alignment = 64 : memref<64xf32>
+  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() alignment = 64 : memref<f32>
   //  CHECK-DAG:   %[[cA:.*]] = memref.cast %[[A]] : memref<64xf32> to memref<64xf32, strided<[?], offset: ?>>
   //  CHECK-DAG:   %[[cB:.*]] = memref.cast %[[B]] : memref<64xf32> to memref<64xf32, strided<[?], offset: ?>>
   //  CHECK-DAG:   %[[cC:.*]] = memref.cast %[[C]] : memref<f32> to memref<f32, strided<[], offset: ?>>
@@ -590,6 +591,7 @@ func.func private @inner_func(%t: tensor<?xf32>) -> tensor<?xf32> {
 
 // CHECK-LABEL: func @equivalent_func_arg(
 //  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32
+// INHERENT-LABEL: func @equivalent_func_arg(
 func.func @equivalent_func_arg(%t0: tensor<?xf32> {bufferization.writable = true},
                                %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
   // CHECK-NOT: alloc
@@ -597,7 +599,8 @@ func.func @equivalent_func_arg(%t0: tensor<?xf32> {bufferization.writable = true
   // CHECK: scf.for {{.*}} iter_args(%[[t1:.*]] = %[[arg0]])
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
     // CHECK: call @inner_func(%[[t1]])
-    %3 = func.call @inner_func(%t1) : (tensor<?xf32>) -> tensor<?xf32>
+    // INHERENT: call @inner_func({{.*}}) {no_inline}
+    %3 = func.call @inner_func(%t1) {no_inline} : (tensor<?xf32>) -> tensor<?xf32>
     // CHECK: scf.yield %[[t1]]
     scf.yield %3 : tensor<?xf32>
   }
@@ -751,7 +754,7 @@ func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
   // We are conservative around recursive functions. The analysis cannot handle
   // them, so we have to assume the op operand of the call op bufferizes to a
   // memory read and write. This causes a copy in this test case.
-  // CHECK: %[[copy:.*]] = memref.alloc() {alignment = 64 : i64} : memref<5xf32>
+  // CHECK: %[[copy:.*]] = memref.alloc() alignment = 64 : memref<5xf32>
   // CHECK: memref.copy %[[arg0]], %[[copy]]
   // CHECK: %[[cast:.*]] = memref.cast %[[copy]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
   // CHECK: %[[call:.*]] = call @foo(%[[cast]])
@@ -797,7 +800,7 @@ func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
 
 // CHECK-LABEL: func @result_type_mismatch({{.*}}) -> memref<5xf32, strided<[?], offset: ?>>
 func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
-  // CHECK: %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<10xf32>
+  // CHECK: %[[alloc:.*]] = memref.alloc() alignment = 64 : memref<10xf32>
   %t = tensor.empty() : tensor<10xf32>
   cf.cond_br %c, ^bb1, ^bb2
 ^bb1:

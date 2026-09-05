@@ -1,8 +1,8 @@
 ; On v79 and above, checks for Assertion `isImm() && "Wrong MachineOperand accessor"' failed
 
-; RUN: llc -march=hexagon -enable-xqf-gen=true -enable-rem-conv=true \
+; RUN: llc -mtriple=hexagon -enable-xqf-gen=true -enable-rem-conv=true \
 ; RUN: -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv79 -o /dev/null < %s
-; RUN: llc -march=hexagon -enable-xqf-gen=true -enable-rem-conv=true \
+; RUN: llc -mtriple=hexagon -enable-xqf-gen=true -enable-rem-conv=true \
 ; RUN: -mattr=+hvx-ieee-fp,+hvx-length128b,+hvxv81 -o /dev/null < %s
 
 

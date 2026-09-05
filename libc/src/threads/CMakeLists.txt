@@ -26,7 +26,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
-                            # the new thread's stack reliably.
+  # the new thread's stack reliably.
 )
 
 add_entrypoint_object(

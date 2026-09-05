@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=pipeliner -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+# A loop that loads a[i] and stores a[i+1] must get a loop-carried memory dependence
+# between the load and the store, so they are not reordered across iterations.
+
+# CHECK: SU([[LOAD:[0-9]+]]): {{.*}}GLOBAL_LOAD_DWORD_SADDR
+# CHECK: SU([[STORE:[0-9]+]]): GLOBAL_STORE_DWORD_SADDR
+# CHECK: ===== Loop Carried Edges Begin =====
+# CHECK: Loop carried edges from SU([[LOAD]])
+# CHECK-NEXT: Order
+# CHECK-NEXT: SU([[STORE]])
+# CHECK: Loop carried edges from SU([[STORE]])
+# CHECK-NEXT: Order
+# CHECK-NEXT: SU([[LOAD]])
+# CHECK: ===== Loop Carried Edges End =====
+
+---
+name:            swp_amdgpu_pipeline_loop_carried_mem
+tracksRegLiveness: true
+isSSA:           true
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+machineFunctionInfo:
+  isEntryFunction: true
+  argumentInfo:
+    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+body:             |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0(p4), 8, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    %3:sreg_32 = S_ADD_U32 %1.sub0, 4, implicit-def $scc
+    %4:sreg_32 = S_ADDC_U32 %1.sub1, 0, implicit-def $scc, implicit $scc
+    %5:sreg_64 = REG_SEQUENCE %3, %subreg.sub0, %4, %subreg.sub1
+    %6:sreg_32 = S_MOV_B32 0
+    %7:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+
+  bb.1:
+    successors: %bb.2, %bb.1
+
+    %8:sreg_64_xexec_xnull = PHI %5, %bb.0, %9, %bb.1
+    %10:sreg_32 = PHI %6, %bb.0, %11, %bb.1
+    %12:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR %8, %7, -4, 0, implicit $exec :: (load (s32), addrspace 1)
+    %13:vgpr_32 = nofpexcept V_ADD_F32_e32 1065353216, killed %12, implicit $mode, implicit $exec
+    %11:sreg_32 = S_ADD_I32 %10, 1, implicit-def dead $scc
+    GLOBAL_STORE_DWORD_SADDR %7, killed %13, %8, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    %14:sreg_32 = S_ADD_U32 %8.sub0, 4, implicit-def $scc
+    %15:sreg_32 = S_ADDC_U32 %8.sub1, 0, implicit-def $scc, implicit $scc
+    %9:sreg_64 = REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1
+    S_CMP_LT_I32 %11, %2, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...

@@ -23,13 +23,13 @@ struct foo test0(int expr) {
   return f;
 }
 
-// CIR: cir.func {{.*}} @test0(%[[ARG0:.*]]: !s32i {{.*}}) -> !rec_foo
+// CIR: cir.func {{.*}} @test0(%[[ARG0:.*]]: !s32i {{.*}}) -> !u64i
 // CIR:   %[[EXPR_ADDR:.*]] = cir.alloca "expr" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %[[ARG0]], %[[EXPR_ADDR]]
 // CIR:   %[[EXPR:.*]] = cir.load{{.*}} %[[EXPR_ADDR]]
 // CIR:   %[[IS_CONSTANT:.*]] = cir.is_constant %[[EXPR]] : !s32i -> !cir.bool
 
-// LLVM: define{{.*}} %struct.foo @test0(i32 {{.*}} %[[ARG0:.*]])
+// LLVM: define{{.*}} i64 @test0(i32 {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[EXPR_ADDR:.*]] = alloca i32
 // LLVM:   store i32 %[[ARG0]], ptr %[[EXPR_ADDR]]
 // LLVM:   %[[EXPR:.*]] = load i32, ptr %[[EXPR_ADDR]]

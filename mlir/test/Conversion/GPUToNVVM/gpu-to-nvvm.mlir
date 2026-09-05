@@ -128,7 +128,7 @@ gpu.module @test_module_4 {
     // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
     // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : i32
-    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]]  return_value_and_is_valid : f32 -> !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][0] : !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][1] : !llvm.struct<(f32, i1)>
     %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : f32
@@ -137,13 +137,13 @@ gpu.module @test_module_4 {
     // CHECK: %[[#THIRTY_TWO:]] = llvm.mlir.constant(32 : i32) : i32
     // CHECK: %[[#NUM_LANES:]] = llvm.sub %[[#THIRTY_TWO]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.lshr %[[#MINUS_ONE]], %[[#NUM_LANES]] : i32
-    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync up %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#NUM_LANES]] {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync up %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#NUM_LANES]]  return_value_and_is_valid : f32 -> !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][0] : !llvm.struct<(f32, i1)>
     // CHECK: llvm.extractvalue %[[#SHFL]][1] : !llvm.struct<(f32, i1)>
     %shflu, %predu = gpu.shuffle up %arg0, %arg1, %arg2 : f32
-    // CHECK: nvvm.shfl.sync down {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: nvvm.shfl.sync down {{.*}}  return_value_and_is_valid : f32 -> !llvm.struct<(f32, i1)>
     %shfld, %predd = gpu.shuffle down %arg0, %arg1, %arg2 : f32
-    // CHECK: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+    // CHECK: nvvm.shfl.sync idx {{.*}}  return_value_and_is_valid : f32 -> !llvm.struct<(f32, i1)>
     %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
 
     func.return %shfl, %shflu, %shfld, %shfli, %pred, %predu, %predd, %predi
@@ -660,7 +660,7 @@ gpu.module @test_module_29 {
   gpu.func @test_const_printf() {
     // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr
     // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<14 x i8>
-    // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
+    // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : i64) : i64
     // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<()> : (i64) -> !llvm.ptr
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
     gpu.printf "Hello, world\n"
@@ -680,7 +680,7 @@ gpu.module @test_module_29 {
     // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL1]] : !llvm.ptr
     // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<11 x i8>
     // CHECK-NEXT: %[[EXT:.+]] = llvm.fpext %[[ARG1]] : f32 to f64
-    // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
+    // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : i64) : i64
     // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<(i32, f64)> : (i64) -> !llvm.ptr
     // CHECK-NEXT: %[[EL0:.*]] = llvm.getelementptr %[[ALLOC]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f64)>
     // CHECK-NEXT: llvm.store %[[ARG0]], %[[EL0]] : i32, !llvm.ptr

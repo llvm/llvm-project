@@ -25,23 +25,23 @@ void test() {
 //       when we add alignment attributes to the load/store ops.
 
 // CHECK: define{{.*}} void @_Z4testv()
-// CHECK:    %[[I_PTR:.*]] = alloca i32, i64 1, align 4
-// CHECK:    %[[L_PTR:.*]] = alloca i64, i64 1, align 8
-// CHECK:    %[[F_PTR:.*]] = alloca float, i64 1, align 4
-// CHECK:    %[[D_PTR:.*]] = alloca double, i64 1, align 8
-// CHECK:    %[[B1_PTR:.*]] = alloca i8, i64 1, align 1
-// CHECK:    %[[B2_PTR:.*]] = alloca i8, i64 1, align 1
-// CHECK:    %[[CI_PTR:.*]] = alloca i32, i64 1, align 4
-// CHECK:    %[[CL_PTR:.*]] = alloca i64, i64 1, align 8
-// CHECK:    %[[CF_PTR:.*]] = alloca float, i64 1, align 4
-// CHECK:    %[[CD_PTR:.*]] = alloca double, i64 1, align 8
-// CHECK:    %[[CB1_PTR:.*]] = alloca i8, i64 1, align 1
-// CHECK:    %[[CB2_PTR:.*]] = alloca i8, i64 1, align 1
-// CHECK:    %[[UII_PTR:.*]] = alloca i32, i64 1, align 4
-// CHECK:    %[[UIL_PTR:.*]] = alloca i64, i64 1, align 8
-// CHECK:    %[[UIF_PTR:.*]] = alloca float, i64 1, align 4
-// CHECK:    %[[UID_PTR:.*]] = alloca double, i64 1, align 8
-// CHECK:    %[[UIB_PTR:.*]] = alloca i8, i64 1, align 1
+// CHECK:    %[[I_PTR:.*]] = alloca i32, align 4
+// CHECK:    %[[L_PTR:.*]] = alloca i64, align 8
+// CHECK:    %[[F_PTR:.*]] = alloca float, align 4
+// CHECK:    %[[D_PTR:.*]] = alloca double, align 8
+// CHECK:    %[[B1_PTR:.*]] = alloca i8, align 1
+// CHECK:    %[[B2_PTR:.*]] = alloca i8, align 1
+// CHECK:    %[[CI_PTR:.*]] = alloca i32, align 4
+// CHECK:    %[[CL_PTR:.*]] = alloca i64, align 8
+// CHECK:    %[[CF_PTR:.*]] = alloca float, align 4
+// CHECK:    %[[CD_PTR:.*]] = alloca double, align 8
+// CHECK:    %[[CB1_PTR:.*]] = alloca i8, align 1
+// CHECK:    %[[CB2_PTR:.*]] = alloca i8, align 1
+// CHECK:    %[[UII_PTR:.*]] = alloca i32, align 4
+// CHECK:    %[[UIL_PTR:.*]] = alloca i64, align 8
+// CHECK:    %[[UIF_PTR:.*]] = alloca float, align 4
+// CHECK:    %[[UID_PTR:.*]] = alloca double, align 8
+// CHECK:    %[[UIB_PTR:.*]] = alloca i8, align 1
 // CHECK:    store i32 1, ptr %[[I_PTR]], align 4
 // CHECK:    store i64 2, ptr %[[L_PTR]], align 8
 // CHECK:    store float 3.000000e+00, ptr %[[F_PTR]], align 4

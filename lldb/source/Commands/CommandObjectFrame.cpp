@@ -158,7 +158,7 @@ protected:
 
     result.GetValueObjectList().Append(valobj_sp);
     DumpValueObjectOptions::DeclPrintingHelper helper =
-        [&valobj_sp](ConstString type, ConstString var,
+        [&valobj_sp](llvm::StringRef type, llvm::StringRef var,
                      const DumpValueObjectOptions &opts,
                      Stream &stream) -> bool {
       const ValueObject::GetExpressionPathFormat format = ValueObject::

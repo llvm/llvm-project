@@ -42,6 +42,7 @@ GITHUB_JOB_TO_TRACK = {
         "Build and Test Linux": "premerge_linux",
         "Build and Test Linux AArch64": "premerge_linux_aarch64",
         "Build and Test Windows": "premerge_windows",
+        "Build and Test macOS arm64": "premerge_macos",
     },
     "github_libcxx_premerge_checks": {
         "stage1": "premerge_libcxx_stage1",

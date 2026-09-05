@@ -44,14 +44,14 @@ module m_firstprivate_derived_alloc_comp
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEn"}
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_6:.*]] = acc.firstprivate varPtr(%[[VAL_1]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) recipe(@firstprivatization_ref_rec__QMm_firstprivate_derived_alloc_compTpoint) -> !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>> {name = "a"}
+! CHECK:           %[[VAL_6:.*]] = acc.firstprivate varPtr(%[[VAL_1]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) recipe(@firstprivatization_ref_rec__QMm_firstprivate_derived_alloc_compTpoint) name("a") -> !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
 ! CHECK:           acc.parallel combined(loop) firstprivate(%[[VAL_6]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) {
 ! CHECK:             %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] dummy_scope %[[VAL_7]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>)
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
-! CHECK:             %[[VAL_12:.*]] = acc.private varPtr(%[[VAL_3]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK:             %[[VAL_12:.*]] = acc.private varPtr(%[[VAL_3]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK:             acc.loop combined(parallel) private(%[[VAL_12]] : !fir.ref<i32>) control(%[[VAL_14:.*]] : i32) = (%[[VAL_9]] : i32) to (%[[VAL_10]] : i32)  step (%[[VAL_11]] : i32) {
 ! CHECK:               %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:               fir.store %[[VAL_14]] to %[[VAL_13]]#0 : !fir.ref<i32>
@@ -62,7 +62,7 @@ module m_firstprivate_derived_alloc_comp
 ! CHECK:               %[[VAL_19:.*]] = hlfir.designate %[[VAL_17]] (%[[VAL_18]])  : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
 ! CHECK:               hlfir.assign %[[VAL_15]] to %[[VAL_19]] : f32, !fir.ref<f32>
 ! CHECK:               acc.yield
-! CHECK:             } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK:             } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:             acc.yield
 ! CHECK:           }
 ! CHECK:           return

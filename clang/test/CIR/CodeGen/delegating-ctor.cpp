@@ -50,8 +50,11 @@ DelegatingWithZeroing::DelegatingWithZeroing(int) : DelegatingWithZeroing() {}
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   cir.store{{.*}} %[[I_ARG]], %[[I_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !rec_DelegatingWithZeroing
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[THIS]] : !rec_DelegatingWithZeroing, !cir.ptr<!rec_DelegatingWithZeroing>
+// CIR:   %[[THIS_PTR_i8:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_DelegatingWithZeroing> -> !cir.ptr<!u8i>
+// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR:   %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:   %[[THIS_VOID_PTR:.*]] = cir.cast bitcast %[[THIS_PTR_i8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR:   cir.libc.memset %[[CONST_4]] bytes at %[[THIS_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 
 // LLVM: define {{.*}} void @_ZN21DelegatingWithZeroingC2Ei(ptr {{.*}} %[[THIS_ARG:.*]], i32 {{.*}} %[[I_ARG:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
@@ -59,7 +62,7 @@ DelegatingWithZeroing::DelegatingWithZeroing(int) : DelegatingWithZeroing() {}
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   store i32 %[[I_ARG]], ptr %[[I_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   store %struct.DelegatingWithZeroing zeroinitializer, ptr %[[THIS]]
+// LLVM:   call void @llvm.memset.p0.i64(ptr align 4 %[[THIS]], i8 0, i64 4, i1 false)
 
 // Note: OGCG elides the call to the default constructor.
 
@@ -91,7 +94,29 @@ public:
 Derived::Derived() : Derived(nullptr) { other(); }
 Derived::Derived(const void *inVoid) { squawk(); }
 
-// Note: OGCG emits the constructors in a different order.
+// CIR: cir.func {{.*}} @_ZN7DerivedC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}}, %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>> {{.*}})
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR:   %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
+// CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
+// CIR:   cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
+// CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
+// CIR:   %[[VTT:.*]] = cir.load {{.*}} %[[VTT_ADDR]]
+// CIR:   %[[NULLPTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR:   cir.call @_ZN7DerivedC2EPKv(%[[THIS]], %[[VTT]], %[[NULLPTR]]) : (!cir.ptr<!rec_Derived> {{.*}}, !cir.ptr<!cir.ptr<!void>> {{.*}}, !cir.ptr<!void> {{.*}}) -> ()
+// CIR:   cir.call @_Z5otherv() : () -> ()
+// CIR:   cir.return
+
+// LLVM: define {{.*}} void @_ZN7DerivedC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   %[[VTT_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// LLVM:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
+// LLVM:   call void @_ZN7DerivedC2EPKv(ptr {{.*}} %[[THIS]], ptr {{.*}} %[[VTT]], ptr {{.*}} null)
+// LLVM:   call void @_Z5otherv()
+// LLVM:   ret void
+
 // OGCG: define {{.*}} void @_ZN7DerivedC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
 // OGCG:   %[[VTT_ADDR:.*]] = alloca ptr
@@ -190,58 +215,22 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // OGCG:   call void %[[SQUAWK]](ptr {{.*}} %[[THIS]])
 // OGCG:   ret void
 
-// CIR: cir.func {{.*}} @_ZN7DerivedC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}}, %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>> {{.*}})
+// CIR: cir.func {{.*}} @_ZN7DerivedC1Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}})
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
-// CIR:   %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
-// CIR:   cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[VTT:.*]] = cir.load {{.*}} %[[VTT_ADDR]]
 // CIR:   %[[NULLPTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CIR:   cir.call @_ZN7DerivedC2EPKv(%[[THIS]], %[[VTT]], %[[NULLPTR]]) : (!cir.ptr<!rec_Derived> {{.*}}, !cir.ptr<!cir.ptr<!void>> {{.*}}, !cir.ptr<!void> {{.*}}) -> ()
+// CIR:   cir.call @_ZN7DerivedC1EPKv(%[[THIS]], %[[NULLPTR]]) : (!cir.ptr<!rec_Derived> {{.*}}, !cir.ptr<!void> {{.*}}) -> ()
 // CIR:   cir.call @_Z5otherv() : () -> ()
 // CIR:   cir.return
 
-// LLVM: define {{.*}} void @_ZN7DerivedC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
+// LLVM: define {{.*}} void @_ZN7DerivedC1Ev(ptr {{.*}} %[[THIS_ARG:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
-// LLVM:   %[[VTT_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
-// LLVM:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
-// LLVM:   call void @_ZN7DerivedC2EPKv(ptr {{.*}} %[[THIS]], ptr {{.*}} %[[VTT]], ptr {{.*}} null)
+// LLVM:   call void @_ZN7DerivedC1EPKv(ptr {{.*}} {{.*}} %[[THIS]], ptr {{.*}} null)
 // LLVM:   call void @_Z5otherv()
 // LLVM:   ret void
-
-// See above for the OGCG _ZN7DerivedC2Ev constructor.
-
-// CIR: cir.func {{.*}} @_ZN4BaseC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Base> {{.*}})
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
-// CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
-// CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[VTT_ADDR_POINT:.*]] = cir.vtable.address_point(@_ZTV4Base, address_point = <index = 0, offset = 2>) : !cir.vptr
-// CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
-// CIR:   cir.store{{.*}} %[[VTT_ADDR_POINT]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
-// CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
-// CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[VIRTUAL_FN_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
-// CIR:   %[[VIRTUAL_FN:.*]] = cir.load{{.*}} %[[VIRTUAL_FN_ADDR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
-// CIR:   cir.call %[[VIRTUAL_FN]](%[[THIS]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base> {{.*}}) -> ()
-// CIR:   cir.return
-
-// LLVM: define {{.*}} void @_ZN4BaseC2Ev(ptr {{.*}} %[[THIS_ARG:.*]])
-// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
-// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
-// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV4Base, i64 16), ptr %[[THIS]]
-// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
-// LLVM:   %[[SQUAWK_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i32 0
-// LLVM:   %[[SQUAWK:.*]] = load ptr, ptr %[[SQUAWK_ADDR]]
-// LLVM:   call void %[[SQUAWK]](ptr {{.*}} %[[THIS]])
-// LLVM:   ret void
-
-// The base constructor is emitted last for OGCG.
-// The _ZN7DerivedC1Ev constructor is emitted earlier for OGCG.
 
 // OGCG: define {{.*}} void @_ZN7DerivedC1Ev(ptr {{.*}} %[[THIS_ARG:.*]])
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
@@ -302,24 +291,30 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // OGCG:   call void %[[SQUAWK]](ptr {{.*}} %[[THIS]])
 // OGCG:   ret void
 
-// CIR: cir.func {{.*}} @_ZN7DerivedC1Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}})
+// CIR: cir.func {{.*}} @_ZN4BaseC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Base> {{.*}})
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[NULLPTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CIR:   cir.call @_ZN7DerivedC1EPKv(%[[THIS]], %[[NULLPTR]]) : (!cir.ptr<!rec_Derived> {{.*}}, !cir.ptr<!void> {{.*}}) -> ()
-// CIR:   cir.call @_Z5otherv() : () -> ()
+// CIR:   %[[VTT_ADDR_POINT:.*]] = cir.vtable.address_point(@_ZTV4Base, address_point = <index = 0, offset = 2>) : !cir.vptr
+// CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
+// CIR:   cir.store{{.*}} %[[VTT_ADDR_POINT]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
+// CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
+// CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:   %[[VIRTUAL_FN_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
+// CIR:   %[[VIRTUAL_FN:.*]] = cir.load{{.*}} %[[VIRTUAL_FN_ADDR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
+// CIR:   cir.call %[[VIRTUAL_FN]](%[[THIS]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base> {{.*}}) -> ()
 // CIR:   cir.return
 
-// LLVM: define {{.*}} void @_ZN7DerivedC1Ev(ptr {{.*}} %[[THIS_ARG:.*]])
+// LLVM: define {{.*}} void @_ZN4BaseC2Ev(ptr {{.*}} %[[THIS_ARG:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   call void @_ZN7DerivedC1EPKv(ptr {{.*}} {{.*}} %[[THIS]], ptr {{.*}} null)
-// LLVM:   call void @_Z5otherv()
+// LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV4Base, i64 16), ptr %[[THIS]]
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
+// LLVM:   %[[SQUAWK_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i32 0
+// LLVM:   %[[SQUAWK:.*]] = load ptr, ptr %[[SQUAWK_ADDR]]
+// LLVM:   call void %[[SQUAWK]](ptr {{.*}} %[[THIS]])
 // LLVM:   ret void
-
-// The _ZN7DerivedC1Ev constructor was emitted earlier for OGCG.
 
 // OGCG: define {{.*}} void @_ZN4BaseC2Ev(ptr {{.*}} %[[THIS_ARG:.*]])
 // OGCG:   %[[THIS_ADDR:.*]] = alloca ptr

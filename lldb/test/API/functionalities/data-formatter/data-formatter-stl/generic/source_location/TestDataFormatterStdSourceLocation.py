@@ -21,13 +21,11 @@ class StdSourceLocationTestCase(TestBase):
 
         loc_main = frame.FindVariable("loc_main")
         self.assertTrue(loc_main.GetError().Success())
-        self.assertRegex(loc_main.summary, r"main\.cpp\":6:\d+ \(\"int main\(\)\"\)")
+        self.assertRegex(loc_main.summary, r'main\.cpp":6:\d+ \(".*\bmain\b.*"\)')
 
         loc_foo = frame.FindVariable("loc_foo")
         self.assertTrue(loc_foo.GetError().Success())
-        self.assertRegex(
-            loc_foo.summary, r"main\.cpp\":3:\d+ \(\"std::source_location foo\(\)\"\)"
-        )
+        self.assertRegex(loc_foo.summary, r'main\.cpp":3:\d+ \(".*\bfoo\b.*"\)')
 
         loc_empty = frame.FindVariable("loc_empty")
         self.assertTrue(loc_empty.GetError().Success())
@@ -51,3 +49,15 @@ class StdSourceLocationTestCase(TestBase):
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
+        self.do_test()
+
+        for member in ("_File =", "_Function =", "_Line =", "_Column ="):
+            self.expect(
+                "frame variable loc_main loc_foo",
+                matching=False,
+                substrs=[member],
+            )

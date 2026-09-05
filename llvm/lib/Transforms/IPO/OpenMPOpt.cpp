@@ -1199,8 +1199,8 @@ private:
           InsertPointTy(ParentBB, ParentBB->end()), DL);
       OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
-      cantFail(
-          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
+      cantFail(OMPInfoCache.OMPBuilder.createBarrier({SeqAfterIP, DL},
+                                                     OMPD_parallel));
 
       UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
@@ -1314,8 +1314,9 @@ private:
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
           cantFail(OMPInfoCache.OMPBuilder.createBarrier(
-              InsertPointTy(NewCI->getParent(),
-                            NewCI->getNextNode()->getIterator()),
+              {InsertPointTy(NewCI->getParent(),
+                             NewCI->getNextNode()->getIterator()),
+               NewCI->getDebugLoc()},
               OMPD_parallel));
         }
 
@@ -1819,10 +1820,13 @@ private:
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
-      // unfortunate but we work around it for now.
+      // unfortunate but we work around it for now. No instruction is emitted
+      // here, so there is no debug location to preserve.
       if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
-        OMPInfoCache.OMPBuilder.updateToLocation(OpenMPIRBuilder::InsertPointTy(
-            &F.getEntryBlock(), F.getEntryBlock().begin()));
+        OMPInfoCache.OMPBuilder.updateToLocation(
+            {OpenMPIRBuilder::InsertPointTy(&F.getEntryBlock(),
+                                            F.getEntryBlock().begin()),
+             DebugLoc()});
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
       uint32_t SrcLocStrSize;
@@ -4150,11 +4154,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
       FunctionCallee BarrierFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_barrier_simple_spmd);
-      OMPInfoCache.OMPBuilder.updateToLocation(InsertPointTy(
-          RegionBarrierBB, RegionBarrierBB->getFirstInsertionPt()));
+      OMPInfoCache.OMPBuilder.updateToLocation(
+          {InsertPointTy(RegionBarrierBB,
+                         RegionBarrierBB->getFirstInsertionPt()),
+           DL});
       CallInst *Barrier =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
-      Barrier->setDebugLoc(DL);
       OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
 
       // Second barrier ensures workers have read broadcast values.
@@ -5103,8 +5108,17 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_for_static_loop_4u:
       case OMPRTL___kmpc_for_static_loop_8:
       case OMPRTL___kmpc_for_static_loop_8u:
-        handleStaticLoop(A, CB);
-        return;
+        // Parallel regions might be reached by these calls, as they take a
+        // callback argument potentially containing arbitrary user-provided
+        // code.
+        ReachedUnknownParallelRegions.insert(&CB);
+        // TODO: The presence of these calls on their own does not prevent a
+        // kernel from being SPMD-izable. We mark it as such because we need
+        // further changes in order to also consider the contents of the
+        // callbacks passed to them.
+        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+        SPMDCompatibilityTracker.insert(&CB);
+        break;
       default:
         // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
         // generally. However, they do not hide parallel regions.
@@ -5160,12 +5174,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         return indicatePessimisticFixpoint();
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
-      if (isStaticLoopRTL(It->getSecond())) {
-        handleStaticLoop(A, CB);
-        return StateBefore == getState() ? ChangeStatus::UNCHANGED
-                                         : ChangeStatus::CHANGED;
-      }
-
       if (It->getSecond() == OMPRTL___kmpc_parallel_60) {
         if (!handleParallel60(A, CB))
           return indicatePessimisticFixpoint();
@@ -5229,54 +5237,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
   /// Deal with a __kmpc_parallel_60 call (\p CB). Returns true if the call was
   /// handled, if a problem occurred, false is returned.
-  /// The __kmpc_*_static_loop_* runtime entries take the loop body as a
-  /// callback. Analyse it when it resolves to a function instead of assuming
-  /// it hides arbitrary parallelism.
-  void handleStaticLoop(Attributor &A, CallBase &CB) {
-    const unsigned int LoopBodyArgNo = 1;
-
-    auto *LoopBody = dyn_cast<Function>(
-        CB.getArgOperand(LoopBodyArgNo)->stripPointerCasts());
-    auto *BodyAA =
-        LoopBody
-            ? A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*LoopBody),
-                                       DepClassTy::OPTIONAL)
-            : nullptr;
-    if (!BodyAA || !BodyAA->getState().isValidState() ||
-        !BodyAA->ReachedKnownParallelRegions.isValidState() ||
-        !BodyAA->ReachedKnownParallelRegions.empty() ||
-        !BodyAA->ReachedUnknownParallelRegions.isValidState() ||
-        !BodyAA->ReachedUnknownParallelRegions.empty())
-      ReachedUnknownParallelRegions.insert(&CB);
-
-    // TODO: The presence of these calls on their own does not prevent a
-    // kernel from being SPMD-izable. We mark it as such because we need
-    // further changes in order to also consider the contents of the
-    // callbacks passed to them.
-    SPMDCompatibilityTracker.indicatePessimisticFixpoint();
-    SPMDCompatibilityTracker.insert(&CB);
-  }
-
-  static bool isStaticLoopRTL(RuntimeFunction RF) {
-    switch (RF) {
-    case OMPRTL___kmpc_distribute_static_loop_4:
-    case OMPRTL___kmpc_distribute_static_loop_4u:
-    case OMPRTL___kmpc_distribute_static_loop_8:
-    case OMPRTL___kmpc_distribute_static_loop_8u:
-    case OMPRTL___kmpc_distribute_for_static_loop_4:
-    case OMPRTL___kmpc_distribute_for_static_loop_4u:
-    case OMPRTL___kmpc_distribute_for_static_loop_8:
-    case OMPRTL___kmpc_distribute_for_static_loop_8u:
-    case OMPRTL___kmpc_for_static_loop_4:
-    case OMPRTL___kmpc_for_static_loop_4u:
-    case OMPRTL___kmpc_for_static_loop_8:
-    case OMPRTL___kmpc_for_static_loop_8u:
-      return true;
-    default:
-      return false;
-    }
-  }
-
   bool handleParallel60(Attributor &A, CallBase &CB) {
     const unsigned int NonWrapperFunctionArgNo = 5;
     const unsigned int WrapperFunctionArgNo = 6;

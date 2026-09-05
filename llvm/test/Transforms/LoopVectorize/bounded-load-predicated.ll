@@ -19,7 +19,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -114,7 +114,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
 ; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
-; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
+; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:
@@ -353,7 +353,7 @@ define i32 @clamped_load_predicated(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 127
 ; IC8-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC8:       [[VECTOR_PH]]:
-; IC8-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 32
+; IC8-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 31
 ; IC8-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC8:       [[VECTOR_BODY]]:
@@ -820,7 +820,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -915,7 +915,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC4-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
 ; IC4-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
-; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
+; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:
@@ -1154,7 +1154,7 @@ define i32 @clamped_load_predicated_ic_capped(ptr %A, i32 %n) {
 ; IC8-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 15
 ; IC8-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; IC8:       [[VECTOR_PH]]:
-; IC8-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 32
+; IC8-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 31
 ; IC8-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC8:       [[VECTOR_BODY]]:

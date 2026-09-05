@@ -539,3 +539,41 @@ func.func @test_dummy_scope_rematerialize() {
 // CHECK-DAG:   fir.address_of(@global_for_dummy_scope_remat)
 // CHECK-DAG:   %[[DECL_INNER:.*]] = fir.declare %{{.*}} {uniq_name = "global"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:   fir.call @use_ref(%[[DECL_INNER]])
+
+
+// -----
+
+// Test fir.absent rematerialization.
+func.func @test_absent_sink_1() {
+  %0 = fir.absent !fir.boxchar<1>
+  acc.serial {
+    fir.call @func_with_optional_boxchar_(%0) : (!fir.boxchar<1>) -> none
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_absent_sink_1
+// CHECK: acc.serial
+// CHECK: %[[BOX:.*]] = fir.absent !fir.boxchar<1>
+// CHECK: fir.call @func_with_optional_boxchar_(%[[BOX]]) : (!fir.boxchar<1>) -> none
+
+// -----
+
+// Test fir.absent rematerialization (used both inside and outside region).
+func.func @test_absent_sink_2() {
+  %0 = fir.absent !fir.boxchar<1>
+  fir.call @func_with_optional_boxchar_(%0) : (!fir.boxchar<1>) -> none
+  acc.serial {
+    fir.call @func_with_optional_boxchar_(%0) : (!fir.boxchar<1>) -> none
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_absent_sink_2
+// CHECK: %[[BOX1:.*]] = fir.absent !fir.boxchar<1>
+// CHECK: fir.call @func_with_optional_boxchar_(%[[BOX1]]) : (!fir.boxchar<1>) -> none
+// CHECK: acc.serial
+// CHECK: %[[BOX2:.*]] = fir.absent !fir.boxchar<1>
+// CHECK: fir.call @func_with_optional_boxchar_(%[[BOX2]]) : (!fir.boxchar<1>) -> none

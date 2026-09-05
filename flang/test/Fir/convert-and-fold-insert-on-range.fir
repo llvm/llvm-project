@@ -20,13 +20,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 //CHECK-SAME:  [
 //CHECK-SAME:    [#llvm.zero, 8, 20240719 : i32, 1 : i8, 28 : i8, 2 : i8, 0 : i8,
 //CHECK-SAME:      [
-//CHECK-SAME:        [1, 0 : index, 8]
+//CHECK-SAME:        [1, 0, 8]
 //CHECK-SAME:      ]
 //CHECK-SAME:    ],
 //CHECK-SAME:  [
 //CHECK-SAME:    [#llvm.zero, 8, 20240719 : i32, 1 : i8, 28 : i8, 2 : i8, 0 : i8,
 //CHECK-SAME:      [
-//CHECK-SAME:        [1, 0 : index, 8]
+//CHECK-SAME:        [1, 0, 8]
 //CHECK-SAME:      ]
 //CHECK-SAME:    ]) :
 //CHECK-SAME: !llvm.array<2 x struct<"sometype", (struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>>

@@ -2,7 +2,7 @@
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -test-lower-to-arm-sme -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
-// DEFINE:   -march=aarch64 -mattr=+sve,+sme-f64f64 \
+// DEFINE:   -march=aarch64 -mattr=+sme,+sme-f64f64 \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \
 // DEFINE:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 

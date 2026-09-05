@@ -267,6 +267,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
     llvm::reportFatalInternalError(
         "HLSL intangible types not yet Supported in ABI lowering library");
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+    llvm::reportFatalInternalError(
+        "SPIR-V types not yet supported in ABI lowering library");
 
     // Placeholder types should never reach ABI lowering.
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -401,7 +405,6 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
     uint64_t BaseOffset =
         Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
         8;
-
     BaseClasses.emplace_back(BaseType, BaseOffset);
   }
 
@@ -412,7 +415,6 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
         Layout.getVBaseClassOffset(VBaseRT->getAsCXXRecordDecl())
             .getQuantity() *
         8;
-
     VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset);
   }
 
@@ -564,8 +566,9 @@ void QualTypeMapper::computeFieldInfo(
       IsUnnamedBitField = FD->isUnnamedBitField();
     }
 
+    bool HasNoUniqueAddress = FD->hasAttr<NoUniqueAddressAttr>();
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,
-                        IsUnnamedBitField);
+                        IsUnnamedBitField, HasNoUniqueAddress);
     ++FieldIndex;
   }
 }

@@ -790,6 +790,39 @@ TEST(LiveIntervalTest, SplitAtMultiInstruction) {
       });
 }
 
+TEST(LiveIntervalTest, SplitAtMovesRegMaskInterference) {
+  // %0 is defined before and used after a call-clobber regmask, then split
+  // (with the regmask) into a new block, so %0 becomes block-local and still
+  // crosses the regmask. checkRegMaskInterference takes the single-MBB fast
+  // path over the per-block regmask slice, so a stale slice after splitAt
+  // makes it miss the clobber.
+  liveIntervalTest(
+      R"MIR(
+    successors: %bb.1
+    S_NOP 0
+    %0 = IMPLICIT_DEF
+    S_NOP 0, csr_amdgpu
+    S_NOP 0, implicit %0
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0
+)MIR",
+      [](MachineFunction &MF, LiveIntervalsWrapperPass &LISWrapper) {
+        LiveIntervals &LIS = LISWrapper.getLIS();
+        // Split before the def, moving the def, regmask, and use into a new
+        // block; %0 is then block-local and still crosses the regmask.
+        testSplitAt(MF, LIS, 0, 0);
+        LiveInterval &LI = LIS.getInterval(Register::index2VirtReg(0));
+        MachineBasicBlock *MBB = LIS.intervalIsInOneMBB(LI);
+        ASSERT_TRUE(MBB);
+        // The block %0 now lives in must own the moved regmask slot...
+        EXPECT_FALSE(LIS.getRegMaskSlotsInBlock(MBB->getNumber()).empty());
+        // ...so the allocator still sees the call-clobber interference.
+        BitVector UsableRegs(MF.getSubtarget().getRegisterInfo()->getNumRegs());
+        EXPECT_TRUE(LIS.checkRegMaskInterference(LI, UsableRegs));
+      });
+}
+
 TEST(LiveIntervalTest, RepairIntervals) {
   liveIntervalTest(
       R"MIR(

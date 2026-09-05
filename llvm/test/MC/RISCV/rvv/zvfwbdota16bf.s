@@ -10,12 +10,12 @@
 # CHECK-ENCODING: [0x57,0x70,0x80,0x1c]
 vsetvli zero, zero, e16alt, m1, ta, ma
 
-# CHECK-INST: vfwbdota.vv v8, v16, v12, 1
+# CHECK-INST: vfwbdota.vv v8, v16, v12, 8
 # CHECK-ENCODING: [0x77,0x14,0x16,0xb3]
 # CHECK-ERROR: instruction requires the following: 'Zvfwbdota16bf' (BF16 batched dot-product extension){{$}}
-vfwbdota.vv v8, v16, v12, 1
+vfwbdota.vv v8, v16, v12, 8
 
-# CHECK-INST: vfwbdota.vv v8, v16, v12, 2, v0.t
+# CHECK-INST: vfwbdota.vv v8, v16, v12, 16, v0.t
 # CHECK-ENCODING: [0x77,0x14,0x26,0xb1]
 # CHECK-ERROR: instruction requires the following: 'Zvfwbdota16bf' (BF16 batched dot-product extension){{$}}
-vfwbdota.vv v8, v16, v12, 2, v0.t
+vfwbdota.vv v8, v16, v12, 16, v0.t

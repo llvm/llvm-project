@@ -1,0 +1,11 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "x86.cpp"
+  },
+  "id_table": [],
+  "linkage_table": [],
+  "data": [],
+  "target_triple": "x86_64-apple-macosx",
+  "type": "TUSummary"
+}

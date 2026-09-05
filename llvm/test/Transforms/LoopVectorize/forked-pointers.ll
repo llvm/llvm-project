@@ -64,10 +64,10 @@ define void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base
 ; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = load float, ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x float> poison, float [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x float> [[TMP29]], float [[TMP18]], i32 1
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP19]], i32 2
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x float> [[TMP31]], float [[TMP20]], i32 3
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x float> poison, float [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x float> [[TMP29]], float [[TMP18]], i64 1
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP19]], i64 2
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x float> [[TMP31]], float [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[BASE1]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x float> [[TMP24]], ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

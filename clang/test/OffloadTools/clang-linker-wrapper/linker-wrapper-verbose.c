@@ -76,7 +76,7 @@
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL
 
 // SYCL: llvm-offload-binary{{.*}} {{.*}}.o --image=kind=sycl,triple=spirv64-unknown-unknown,arch=generic,file={{.*}}.o
-// SYCL: clang{{.*}} --target=spirv64-unknown-unknown {{.*}} --sycl-link {{.*}}-triple=spirv64-unknown-unknown{{.*}}-arch=
+// SYCL: clang{{.*}} --target=spirv64-unknown-unknown {{.*}} --sycl-link{{$}}
 // SYCL: llvm-offload-wrapper{{.*}} --kind=sycl --triple=x86_64-unknown-linux-gnu -o [[BC:.*]].bc {{.*}}.img
 // SYCL: clang{{.*}} --no-default-config --target=x86_64-unknown-linux-gnu -c -fPIC -o {{.*}}.sycl.image.wrapper{{.*}}.o [[BC]].bc
 

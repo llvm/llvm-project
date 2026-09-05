@@ -28,7 +28,6 @@ Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
       this->HasPtrField |= B.R->hasPtrField();
   }
   for (Base &V : VirtualBases) {
-    VirtualBaseMap[V.Decl] = &V;
     if (!this->HasPtrField)
       this->HasPtrField |= V.R->hasPtrField();
   }
@@ -83,9 +82,11 @@ const Record::Base *Record::findBase(unsigned Offset) const {
   return nullptr;
 }
 
-const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {
-  auto It = VirtualBaseMap.find(FD);
-  if (It == VirtualBaseMap.end())
-    return nullptr;
-  return It->second;
+const Record::Base *Record::findVirtualBase(const RecordDecl *FD) const {
+  if (auto *It = llvm::find_if(
+          VirtualBases,
+          [=](const Record::Base &B) -> bool { return B.Decl == FD; });
+      It != Bases.end())
+    return &*It;
+  return nullptr;
 }

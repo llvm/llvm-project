@@ -45,6 +45,69 @@ bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
   return isEmptyRecordForLayout(context, fd->getType());
 }
 
+bool clang::CIRGen::isEmptyRecordForABI(const ASTContext &context, QualType t) {
+  const auto *rd = t->getAsRecordDecl();
+  if (!rd)
+    return false;
+  if (rd->hasFlexibleArrayMember())
+    return false;
+
+  if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
+    // A vtable pointer is neither a base nor a field, so clang's predicate
+    // calls a polymorphic class empty and leans on its callers rejecting one as
+    // non-trivially-copyable beforehand.  This answer is read off the record
+    // type without that precondition, so rule it out here instead.
+    if (cxxrd->isDynamicClass())
+      return false;
+
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForABI(context, i.getType()))
+        return false;
+  }
+
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForABI(context, i))
+      return false;
+  return true;
+}
+
+bool clang::CIRGen::isEmptyFieldForABI(const ASTContext &context,
+                                       const FieldDecl *fd) {
+  // A zero-width bit-field holds no bits, so it holds no data.  Any other
+  // unnamed bit-field is real storage that the x86-64 classifier gives the
+  // eightbyte classes of a named bit-field, so it does hold data.
+  //
+  // FIXME: this needs an ABI compatibility check.  Clang used to ignore every
+  // unnamed bit-field here, and the older compatibility levels have to keep
+  // that answer once there is a switch to ask.
+  if (fd->isUnnamedBitField())
+    return fd->isZeroLengthBitField();
+
+  QualType ft = fd->getType();
+
+  // An array of empty records is empty, and a zero-length array always is.
+  bool wasArray = false;
+  while (const ConstantArrayType *at = context.getAsConstantArrayType(ft)) {
+    if (at->isZeroSize())
+      return true;
+    ft = at->getElementType();
+    wasArray = true;
+  }
+
+  const auto *rt = ft->getAsCanonical<RecordType>();
+  if (!rt)
+    return false;
+
+  // A C++ record field is never empty under the Itanium ABI unless
+  // [[no_unique_address]] makes it so, and that exception covers a record
+  // rather than an array of them.
+  if (isa<CXXRecordDecl>(rt->getDecl()) &&
+      (wasArray || !fd->hasAttr<NoUniqueAddressAttr>()))
+    return false;
+
+  return isEmptyRecordForABI(context, ft);
+}
+
 namespace {
 
 class AMDGPUABIInfo : public ABIInfo {
@@ -141,6 +204,14 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   //   MIPS
   // For everything else, we just prefer false unless we opt out.
   return false;
+}
+
+cir::CallingConv TargetCIRGenInfo::getDeviceKernelCallingConv() const {
+  // Device kernels are entered through a runtime API, not called as normal
+  // sub-functions, so a modified C calling convention is used.
+  assert(getABIInfo().cgt.getASTContext().getLangOpts().OpenCL &&
+         "Kernel calling convention only defined for OpenCL");
+  return cir::CallingConv::C;
 }
 
 clang::LangAS

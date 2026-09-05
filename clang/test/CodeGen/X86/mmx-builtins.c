@@ -194,12 +194,14 @@ __m64 test_mm_cvt_ps2pi(__m128 a) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvtps2dq(
   return _mm_cvt_ps2pi(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_cvt_ps2pi((__m128){-12.0f, +3.0f, +0.0f, +1.0f}), -12, 3));
 
 __m64 test_mm_cvtpd_pi32(__m128d a) {
   // CHECK-LABEL: test_mm_cvtpd_pi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvtpd2dq(
   return _mm_cvtpd_pi32(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_cvtpd_pi32((__m128d){+96.0, -24.0}), 96, -24));
 
 __m128 test_mm_cvtpi8_ps(__m64 a) {
   // CHECK-LABEL: test_mm_cvtpi8_ps
@@ -242,12 +244,15 @@ __m64 test_mm_cvtps_pi16(__m128 a) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.packssdw.128(<4 x i32> [[TMP0]],
   return _mm_cvtps_pi16(a);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_cvtps_pi16((__m128){+1.0f, -2.0f, +0.0f, -32768.0f}), 1, -2, 0, -32768));
 
 __m64 test_mm_cvtps_pi32(__m128 a) {
   // CHECK-LABEL: test_mm_cvtps_pi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvtps2dq(
   return _mm_cvtps_pi32(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_cvtps_pi32((__m128){+2.0f, 0.0f, 1.0f, -3.0f}), 2, 0));
+TEST_CONSTEXPR(match_v2si(_mm_cvtps_pi32((__m128){-7.0f, +4.0f, 0.0f, -18.0f}), -7, 4));
 
 __m128 test_mm_cvtpu8_ps(__m64 a) {
   // CHECK-LABEL: test_mm_cvtpu8_ps
@@ -282,12 +287,14 @@ __m64 test_mm_cvttpd_pi32(__m128d a) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvttpd2dq(
   return _mm_cvttpd_pi32(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_cvttpd_pi32((__m128d){-69.0, +32.0}), -69, 32));
 
 __m64 test_mm_cvttps_pi32(__m128 a) {
   // CHECK-LABEL: test_mm_cvttps_pi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvttps2dq(
   return _mm_cvttps_pi32(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_cvttps_pi32((__m128){+2.0f, -3.0f, +0.0f, +1.0f}), 2, -3));
 
 int test_mm_extract_pi16(__m64 a) {
   // CHECK-LABEL: test_mm_extract_pi16

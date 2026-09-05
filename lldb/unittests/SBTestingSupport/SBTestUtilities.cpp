@@ -11,10 +11,22 @@
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBTarget.h"
+#include "lldb/Host/Socket.h"
+#include "lldb/Host/common/TCPSocket.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
+
+bool lldb_private::HostSupportsListeningSockets() {
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock =
+      Socket::TcpListen("127.0.0.1:0");
+  if (sock)
+    return true;
+  llvm::consumeError(sock.takeError());
+  return false;
+}
 
 bool lldb_private::DebuggerSupportsLLVMTarget(llvm::StringRef target) {
   lldb::SBStructuredData data = lldb::SBDebugger::GetBuildConfiguration()

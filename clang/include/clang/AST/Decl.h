@@ -37,6 +37,7 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -2014,6 +2015,35 @@ enum class MultiVersionKind {
   TargetVersion
 };
 
+/// Kinds of C++ special members.
+enum class CXXSpecialMemberKind {
+  DefaultConstructor,
+  CopyConstructor,
+  MoveConstructor,
+  CopyAssignment,
+  MoveAssignment,
+  Destructor,
+  Invalid
+};
+
+/// Kinds of defaulted comparison operator functions.
+enum class DefaultedComparisonKind : unsigned char {
+  /// This is not a defaultable comparison operator.
+  None,
+  /// This is an operator== that should be implemented as a series of
+  /// subobject comparisons.
+  Equal,
+  /// This is an operator<=> that should be implemented as a series of
+  /// subobject comparisons.
+  ThreeWay,
+  /// This is an operator!= that should be implemented as a rewrite in terms
+  /// of a == comparison.
+  NotEqual,
+  /// This is an <, <=, >, or >= that should be implemented as a rewrite in
+  /// terms of a <=> comparison.
+  Relational,
+};
+
 /// Represents a function declaration or definition.
 ///
 /// Since a given function can be declared several times in a program,
@@ -2089,6 +2119,54 @@ public:
     void setDeletedMessage(StringLiteral *Message);
   };
 
+  /// For a defaulted function, the kind of defaulted function that it is.
+  class DefaultedFunctionKind {
+    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
+    unsigned SpecialMember : 8;
+    unsigned Comparison : 8;
+
+  public:
+    DefaultedFunctionKind()
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
+        : SpecialMember(llvm::to_underlying(CSM)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(DefaultedComparisonKind Comp)
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(Comp)) {}
+
+    bool isSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
+             CXXSpecialMemberKind::Invalid;
+    }
+    bool isComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison) !=
+             DefaultedComparisonKind::None;
+    }
+
+    explicit operator bool() const {
+      return isSpecialMember() || isComparison();
+    }
+
+    CXXSpecialMemberKind asSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember);
+    }
+    DefaultedComparisonKind asComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison);
+    }
+
+    /// Get the index of this function kind for use in diagnostics.
+    unsigned getDiagnosticIndex() const {
+      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
+                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
+                    "invalid should have highest index");
+      static_assert((unsigned)DefaultedComparisonKind::None == 0,
+                    "none should be equal to zero");
+      return SpecialMember + Comparison;
+    }
+  };
+
 private:
   /// A new[]'d array of pointers to VarDecls for the formal
   /// parameters of this function.  This is null if a prototype or if there are
@@ -2151,7 +2229,7 @@ private:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param InsertToken If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -2163,8 +2241,8 @@ private:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
+      TemplateArgumentList *TemplateArgs,
+      llvm::FoldingSetInsertToken InsertToken, TemplateSpecializationKind TSK,
       const TemplateArgumentListInfo *TemplateArgsAsWritten,
       SourceLocation PointOfInstantiation);
 
@@ -2372,6 +2450,19 @@ public:
 
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
   DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
+
+  /// Determine the kind of defaulting that would be done for a given function.
+  ///
+  /// If the function is both a default constructor and a copy / move
+  /// constructor (due to having a default argument for the first parameter),
+  /// this picks CXXSpecialMemberKind::DefaultConstructor.
+  ///
+  /// FIXME: Check that case is properly handled by all callers.
+  DefaultedFunctionKind getDefaultedFunctionKind() const;
+
+  DefaultedComparisonKind getDefaultedComparisonKind() const {
+    return getDefaultedFunctionKind().asComparison();
+  }
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -3101,7 +3192,7 @@ public:
   /// \param TemplateArgs the template arguments that produced this
   /// function template specialization from the template.
   ///
-  /// \param InsertPos If non-NULL, the position in the function template
+  /// \param InsertToken If set, the insert token in the function template
   /// specialization set where the function template specialization data will
   /// be inserted.
   ///
@@ -3113,12 +3204,12 @@ public:
   /// specialization was first instantiated.
   void setFunctionTemplateSpecialization(
       FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
-      void *InsertPos,
+      llvm::FoldingSetInsertToken InsertToken,
       TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
       TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
       SourceLocation PointOfInstantiation = SourceLocation()) {
     setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
-                                      InsertPos, TSK, TemplateArgsAsWritten,
+                                      InsertToken, TSK, TemplateArgsAsWritten,
                                       PointOfInstantiation);
   }
 

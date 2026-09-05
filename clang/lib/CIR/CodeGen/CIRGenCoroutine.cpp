@@ -15,6 +15,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -274,11 +275,15 @@ cir::CoroBeginOp CIRGenFunction::emitCoroBeginBuiltinCall(const CallExpr *e) {
   return coroBegin;
 }
 
-cir::CoroEndOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
-                                                      mlir::Value nullPtr) {
-  return cir::CoroEndOp::create(
-      cgm.getBuilder(), loc,
-      mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
+cir::CoroEndOp CIRGenFunction::emitCoroEndBuiltinCall(const CallExpr *e) {
+
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  llvm::SmallVector<mlir::Value, 3> args;
+  for (const Expr *arg : e->arguments())
+    args.push_back(emitScalarExpr(arg));
+  args.push_back(cir::TokenNoneOp::create(builder, loc));
+  return cir::CoroEndOp::create(builder, loc, {cgm.voidTy}, args);
 }
 
 cir::CoroFreeOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
@@ -302,6 +307,18 @@ cir::CoroFreeOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
 cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
   return cir::CoroSizeOp::create(cgm.getBuilder(), loc);
+}
+
+cir::CoroPromiseOp
+CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+
+  llvm::SmallVector<mlir::Value, 3> args;
+  for (const Expr *arg : e->arguments())
+    args.push_back(emitScalarExpr(arg));
+
+  auto coroPromise = cir::CoroPromiseOp::create(cgm.getBuilder(), loc, args);
+  return coroPromise;
 }
 
 static mlir::LogicalResult
@@ -358,23 +375,35 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
   mlir::Value storeAddr = coroFrame.getPointer();
   builder.CIRBaseBuilderTy::createStore(openCurlyLoc, nullPtrCst, storeAddr);
+  mlir::LogicalResult res = mlir::success();
   cir::IfOp::create(
       builder, openCurlyLoc, coroAlloc.getResult(),
       /*withElseRegion=*/false,
       /*thenBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
-        builder.CIRBaseBuilderTy::createStore(
-            loc, emitScalarExpr(s.getAllocate()), storeAddr);
+        mlir::Value allocatedPtr = emitScalarExpr(s.getAllocate());
+        builder.CIRBaseBuilderTy::createStore(loc, allocatedPtr, storeAddr);
+        // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
+        if (Stmt *retOnAllocFailure = s.getReturnStmtOnAllocFailure()) {
+          mlir::Value isPtrNull = builder.createPtrIsNull(allocatedPtr);
+          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+          cir::IfOp::create(builder, loc, isPtrNull, /*withElseRegion=*/false,
+                            [&](mlir::OpBuilder &b, mlir::Location loc) {
+                              res = emitStmt(retOnAllocFailure,
+                                             /*useCurrentScope=*/true);
+                              cir::UnreachableOp::create(builder, loc);
+                            });
+        }
         cir::YieldOp::create(builder, loc);
       });
+
+  if (res.failed())
+    return res;
+
   curCoro.data->coroBegin = cir::CoroBeginOp::create(
       cgm.getBuilder(), openCurlyLoc,
       mlir::ValueRange{
           curCoro.data->coroId.getResult(),
           cir::LoadOp::create(builder, openCurlyLoc, allocaTy, storeAddr)});
-
-  // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
-  if (s.getReturnStmtOnAllocFailure())
-    cgm.errorNYI("handle coroutine return alloc failure");
 
   {
     assert(!cir::MissingFeatures::generateDebugInfo());
@@ -504,10 +533,13 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       }
     }
   }
-  cir::CoroEndOp::create(
-      cgm.getBuilder(), openCurlyLoc,
-      mlir::ValueRange{builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc),
-                       builder.getBool(false, openCurlyLoc)});
+
+  cir::ConstantOp nullHandler =
+      builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc);
+  cir::ConstantOp noUnwind = builder.getBool(false, openCurlyLoc);
+  auto tkNone = cir::TokenNoneOp::create(builder, openCurlyLoc);
+  cir::CoroEndOp::create(builder, openCurlyLoc, nullHandler, noUnwind, tkNone);
+
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.

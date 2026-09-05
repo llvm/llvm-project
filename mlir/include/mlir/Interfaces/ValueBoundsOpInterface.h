@@ -460,7 +460,10 @@ protected:
   DenseMap<ValueDim, int64_t> valueDimToPosition;
 
   /// Worklist of values/shape dimensions that have not been processed yet.
-  std::queue<int64_t> worklist;
+  /// Entries are identified by ValueDim, not by constraint-set column.
+  /// Inserting a SetDim shifts symbol columns, so a queued column index would
+  /// go stale.
+  std::queue<ValueDim> worklist;
 
   /// Constraint system of equalities and inequalities.
   FlatLinearConstraints cstr;

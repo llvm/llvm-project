@@ -21,6 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
@@ -28,11 +29,45 @@
 
 namespace clang::CIRGen {
 
+/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
+/// markers. Mirror of CodeGenFunction::shouldEmitLifetimeMarkers.
+static bool shouldEmitLifetimeMarkers(const CodeGenOptions &cgOpts,
+                                      const LangOptions &langOpts) {
+
+  if (cgOpts.DisableLifetimeMarkers)
+    return false;
+
+  // Sanitizers may use markers.
+  if (cgOpts.SanitizeAddressUseAfterScope ||
+      langOpts.Sanitize.has(SanitizerKind::HWAddress) ||
+      langOpts.Sanitize.has(SanitizerKind::Memory) ||
+      langOpts.Sanitize.has(SanitizerKind::MemtagStack))
+    return true;
+
+  return cgOpts.OptimizationLevel != 0;
+}
+
+/// Does the statement tree rooted at \p s contain a label, switch, or indirect
+/// goto that could bypass a local's initialization? A coarse stand-in for
+/// classic CodeGen's per-decl bypass analysis (PR28267).
+static bool functionMightHaveBypass(const Stmt *s) {
+  if (!s)
+    return false;
+  if (isa<LabelStmt, SwitchStmt, IndirectGotoStmt>(s))
+    return true;
+  for (const Stmt *child : s->children())
+    if (functionMightHaveBypass(child))
+      return true;
+  return false;
+}
+
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
       curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
+  shouldEmitLifetimeMarkers = CIRGen::shouldEmitLifetimeMarkers(
+      cgm.getCodeGenOpts(), getContext().getLangOpts());
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -369,14 +404,17 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   LexicalScope *localScope = cgf.curLexScope;
 
-  const auto *fd = cast<clang::FunctionDecl>(cgf.curGD.getDecl());
+  // Synthesized functions (e.g. SYCL kernel caller entry points) have no
+  // FunctionDecl; the non-void flow-off-the-end handling below is guarded on
+  // fd.
+  const auto *fd = dyn_cast_or_null<clang::FunctionDecl>(cgf.curGD.getDecl());
 
   // In C++, flowing off the end of a non-void function is always undefined
   // behavior. In C, flowing off the end of a non-void function is undefined
   // behavior only if the non-existent return value is used by the caller.
   // That influences whether the terminating op is trap, unreachable, or
   // return.
-  if (cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
+  if (fd && cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
       !cgf.sawAsmBlock && !fd->getReturnType()->isVoidType() &&
       builder.getInsertionBlock() &&
       !previousOpIsNonYieldingCleanup(builder.getInsertionBlock())) {
@@ -651,7 +689,7 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
   return emitStmt(body, /*useCurrentScope=*/true);
 }
 
-static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
+void CIRGenFunction::eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
   // Remove any leftover blocks that are unreachable and empty, since they do
   // not represent unreachable code useful for warnings nor anything deemed
   // useful in general.
@@ -745,6 +783,9 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
       llvm::append_range(fnArgs, funcDecl->parameters());
 
+    if (shouldEmitLifetimeMarkers)
+      fnHasBypassStmt = functionMightHaveBypass(body);
+
     if (isa<CXXDestructorDecl>(funcDecl)) {
       emitDestructorBody(args);
     } else if (isa<CXXConstructorDecl>(funcDecl)) {
@@ -779,6 +820,9 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     finishFunction(bodyRange.getEnd());
   }
+
+  if (getLangOpts().OpenCL && funcDecl->hasAttr<DeviceKernelAttr>())
+    cgm.emitOpenCLKernelArgMetadata(fn, funcDecl);
 
   eraseEmptyAndUnusedBlocks(fn);
   return fn;
@@ -929,10 +973,21 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
+    bool needsVTableInit =
+        !CodeGenUtils::canSkipVTablePointerInitialization(getContext(), dtor);
+    // Launder 'this' if necessary.
+    if (needsVTableInit && cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0) {
+      cxxThisValue = cir::LaunderOp::create(
+          builder, getLoc(dtor->getBeginLoc()), loadCXXThis());
+    }
+
     // Enter the cleanup scopes for fields and non-virtual bases.
     enterDtorCleanups(dtor, Dtor_Base);
 
-    assert(!cir::MissingFeatures::vtableInitialization());
+    // Initialize the vtable pointers before entering the body.
+    if (needsVTableInit)
+      initializeVTablePointers(getLoc(dtor->getBeginLoc()), dtor->getParent());
 
     if (isTryBody) {
       cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
@@ -1321,11 +1376,11 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
       return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
-  if (builder.isInt8Ty(destPtr.getElementType())) {
-    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
-  }
+  if (!builder.isInt8Ty(destPtr.getElementType()))
+    destPtr = destPtr.withElementType(builder, uInt8Ty);
 
   // Get size and alignment info for this aggregate.
+  mlir::IntegerAttr sizeVal;
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
@@ -1335,6 +1390,8 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     } else {
       return;
     }
+  } else {
+    sizeVal = cgm.getSize(size);
   }
 
   // If the type contains a pointer to data member we can't memset it to zero.
@@ -1353,12 +1410,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     return;
   }
 
-  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
-  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
-  // respective address.
-  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr);
+  // Otherwise, just memset the whole thing to zero.  This is legal
+  // because in LLVM, all default initializers (other than the ones we just
+  // handled above, and the case handled below) are guaranteed to have a bit
+  // pattern of all zeros.
+  mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+  mlir::Value sizeValue =
+      builder.getConstAPInt(loc, cgm.uInt64Ty, sizeVal.getValue());
+  destPtr = destPtr.withElementType(builder, cgm.voidTy);
+  builder.createMemSet(loc, destPtr, zero, sizeValue);
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,

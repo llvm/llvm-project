@@ -1015,14 +1015,19 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   emitter.emitVarInt(numberingState.getNumber(op->getLoc()), "op location");
 
   // Emit the attributes of this operation.
-  DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+  DictionaryAttr attrs = op->getRawDictionaryAttrs();
   // Allow deployment to version <kNativePropertiesEncoding by merging inherent
   // attribute with the discardable ones. We should fail if there are any
   // conflicts. When properties are not used by the op, also store everything as
   // attributes.
-  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding ||
-      !op->getPropertiesStorage()) {
-    attrs = op->getAttrDictionary();
+  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding &&
+      op->getPropertiesStorage()) {
+    NamedAttrList allAttrs;
+    op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+      allAttrs.append(name, attr);
+    });
+    allAttrs.append(op->getDiscardableAttrDictionary().getValue());
+    attrs = allAttrs.getDictionary(op->getContext());
   }
   if (!attrs.empty()) {
     opEncodingMask |= bytecode::OpEncodingMask::kHasAttrs;

@@ -272,6 +272,26 @@ void *MyDialect::getRegisteredInterfaceForOp(TypeID typeID, StringAttr opName);
 For a more detail description of the expected usages of this hook, view the detailed 
 [interface documentation](../Interfaces.md/#dialect-fallback-for-opinterface).
 
+### Strict Property Assembly Formats
+
+Dialects can set `useStrictPropertiesInAssemblyFormat` to require declarative
+assembly formats for property-backed operations to account for all inherent
+attributes and properties:
+
+```tablegen
+def MyDialect : Dialect {
+  let useStrictPropertiesInAssemblyFormat = 1;
+}
+```
+
+This mode is disabled by default for now. When enabled, an operation format must
+either bind every inherent attribute and property directly in the format or
+include the `prop-dict` directive. Generated parsers also reject inherent
+attributes that arrive through `attr-dict`, so `attr-dict` only carries
+discardable attributes for these formats. See the
+[declarative assembly format](Operations.md/#declarative-assembly-format)
+documentation for the corresponding format requirements.
+
 ### Default Attribute/Type Parsers and Printers 
 
 When a dialect registers an Attribute or Type, it must also override the respective

@@ -12,60 +12,75 @@ function(add_orc_rt_unittest test_dirname)
 endfunction()
 
 add_orc_rt_unittest(CoreTests
-  AllocActionTest.cpp
-  BitmaskEnumTest.cpp
-  BootstrapInfoTest.cpp
-  CCallbackTest.cpp
-  CallSPSCITest.cpp
-  CallableTraitsHelperTest.cpp
-  CommandLineTest.cpp
-  CompilerTest.cpp
-  EndianTest.cpp
-  ErrorCAPITest.cpp
-  ErrorExceptionInteropTest.cpp
-  ErrorTest.cpp
-  ExecutorAddressTest.cpp
-  ExecutorProcessInfoTest.cpp
-  InProcessControllerAccessTest.cpp
-  IntervalMapTest.cpp
-  IntervalSetTest.cpp
-  LockedAccessTest.cpp
-  LoggingTest.cpp
-  MacroUtilsTest.cpp
-  MathTest.cpp
-  MemoryAccessSPSCITest.cpp
-  MemoryFlagsTest.cpp
-  NativeDylibManagerSPSCITest.cpp
-  NativeDylibManagerTest.cpp
-  QueueingRunnerTest.cpp
-  RTTITest.cpp
-  SPSAllocActionTest.cpp
-  SPSMemoryFlagsTest.cpp
-  SPSWrapperFunctionBufferTest.cpp
-  SPSWrapperFunctionTest.cpp
-  SessionTest.cpp
-  SimpleNativeMemoryMapSPSCITest.cpp
-  SimpleNativeMemoryMapTest.cpp
-  SimplePackedSerializationTest.cpp
-  SimpleSymbolTableTest.cpp
-  StandaloneMachOUnwindInfoRegistrarTest.cpp
-  StringExtrasTest.cpp
-  TaskGroupTest.cpp
-  ThreadPoolRunnerTest.cpp
-  WrapperFunctionBufferTest.cpp
-  bind-test.cpp
-  bit-test.cpp
-  iterator_range-test.cpp
-  move_only_function-test.cpp
-  scope_exit-test.cpp
-  span-test.cpp
+  support/AllocActionTest.cpp
+  support/BitmaskEnumTest.cpp
+  support/CAPICompileTest.c
+  support/CCallbackTest.cpp
+  support/CallableTraitsHelperTest.cpp
+  support/CompilerTest.cpp
+  support/EndianTest.cpp
+  support/ErrorCAPITest.cpp
+  support/ErrorExceptionInteropTest.cpp
+  support/ErrorTest.cpp
+  support/ExecutorAddressTest.cpp
+  support/IntervalMapTest.cpp
+  support/IntervalSetTest.cpp
+  support/LockedAccessTest.cpp
+  support/LoggingTest.cpp
+  support/MacroUtilsTest.cpp
+  support/MemoryFlagsTest.cpp
+  support/ProxyTest.cpp
+  support/RTTITest.cpp
+  support/StringExtrasTest.cpp
+  support/StringPoolTest.cpp
+  support/WrapperFunctionBufferTest.cpp
+  support/bind-test.cpp
+  support/bit-test.cpp
+  support/iterator_range-test.cpp
+  support/move_only_function-test.cpp
+  support/scope_exit-test.cpp
+  support/span-test.cpp
+
+  support/sps/SPSAllocActionTest.cpp
+  support/sps/SPSMemoryFlagsTest.cpp
+  support/sps/SPSWrapperFunctionBufferTest.cpp
+  support/sps/SPSWrapperFunctionTest.cpp
+  support/sps/SimplePackedSerializationTest.cpp
+
+  support/sys/ErrnoTest.cpp
+
+  bedrock/BootstrapInfoTest.cpp
+  bedrock/ExecutorProcessInfoTest.cpp
+  bedrock/InProcessControllerAccessTest.cpp
+  bedrock/NativeDylibManagerTest.cpp
+  bedrock/QueueingRunnerTest.cpp
+  bedrock/SessionTest.cpp
+  bedrock/SimpleNativeMemoryMapTest.cpp
+  bedrock/SimpleSymbolTableTest.cpp
+  bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
+  bedrock/TaskGroupTest.cpp
+  bedrock/ThreadPoolRunnerTest.cpp
+
+  bedrock/sps/CallSPSCITest.cpp
+  bedrock/sps/MemoryAccessSPSCITest.cpp
+  bedrock/sps/NativeDylibManagerSPSCITest.cpp
+  bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
+  bedrock/sps/SimpleRemoteCATest.cpp
+
+  bedrock/sys/CPUFeaturesTest.cpp
+  bedrock/sys/TargetTripleTest.cpp
+
+  tools/OptionParserTest.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 target_compile_options(CoreTests PRIVATE ${ORC_RT_COMPILE_FLAGS})
+# Cross-layer test helpers (CommonTestUtils.h, DirectCaller.h, ...) live at the
+# root of this directory, so tests in the layer subdirectories can include them
+# by bare name.
+target_include_directories(CoreTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(CoreTests PRIVATE
-  orc-rt-executor
-  orc-rt-executor-impl-headers
+  orc-rt-bedrock
   )
 
 # Build a shared library for NativeDylibManager tests.

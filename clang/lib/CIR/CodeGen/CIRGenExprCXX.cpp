@@ -1526,8 +1526,16 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
     auto deleteFn =
         mlir::FlatSymbolRefAttr::get(operatorDeleteFn.getSymNameAttr());
     UsualDeleteParams udp = operatorDelete->getUsualDeleteParams();
+    std::optional<uint64_t> align;
+
+    if (isAlignedAllocation(udp.Alignment)) {
+      CharUnits elementSize = cgm.getASTContext().getTypeSizeInChars(deleteTy);
+      align =
+          ptr.getAlignment().alignmentOfArrayElement(elementSize).getQuantity();
+    }
+
     auto deleteParams = cir::UsualDeleteParamsAttr::get(
-        builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
+        builder.getContext(), udp.Size, align,
         isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
 
     mlir::FlatSymbolRefAttr elementDtor;

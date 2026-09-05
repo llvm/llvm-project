@@ -48,7 +48,7 @@ bool isTransformationRegistered(llvm::StringRef Name);
 /// It's a fatal error if there is no transformation registered with the name.
 std::unique_ptr<Transformation>
 makeTransformation(llvm::StringRef Name, const WPASuite &Suite,
-                   SourceEditEmitter &Edits,
+                   const SSAFOptions &Opts, SourceEditEmitter &Edits,
                    TransformationReportEmitter &Report);
 
 /// Print the list of available Transformations.
@@ -56,8 +56,8 @@ void printAvailableTransformations(llvm::raw_ostream &OS);
 
 // Registry for adding new Transformation implementations.
 using TransformationRegistry =
-    llvm::Registry<Transformation, const WPASuite &, SourceEditEmitter &,
-                   TransformationReportEmitter &>;
+    llvm::Registry<Transformation, const WPASuite &, const SSAFOptions &,
+                   SourceEditEmitter &, TransformationReportEmitter &>;
 
 } // namespace clang::ssaf
 

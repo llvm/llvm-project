@@ -9,9 +9,10 @@
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 
 #include "llvm/ExecutionEngine/Orc/COFF.h"
+#include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
 
@@ -113,38 +114,37 @@ Error COFFVCRuntimeBootstrapper::initializeStaticVCRuntime(JITDylib &JD) {
   ExecutorAddr jit_scrt_initialize, jit_scrt_dllmain_before_initialize_c,
       jit_scrt_initialize_type_info,
       jit_scrt_initialize_default_local_stdio_options;
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
-          {{ES.intern("__scrt_initialize_crt"), &jit_scrt_initialize},
-           {ES.intern("__scrt_dllmain_before_initialize_c"),
-            &jit_scrt_dllmain_before_initialize_c},
-           {ES.intern("?__scrt_initialize_type_info@@YAXXZ"),
-            &jit_scrt_initialize_type_info},
-           {ES.intern("__scrt_initialize_default_local_stdio_options"),
-            &jit_scrt_initialize_default_local_stdio_options}}))
+  if (auto Err = lookupAndApply(
+          JD, {recordAddr("__scrt_initialize_crt", &jit_scrt_initialize),
+               recordAddr("__scrt_dllmain_before_initialize_c",
+                          &jit_scrt_dllmain_before_initialize_c),
+               recordAddr("?__scrt_initialize_type_info@@YAXXZ",
+                          &jit_scrt_initialize_type_info),
+               recordAddr("__scrt_initialize_default_local_stdio_options",
+                          &jit_scrt_initialize_default_local_stdio_options)}))
     return Err;
 
-  auto CallInt32Void = rt::sps::Int32VoidCaller::Create(ES);
-  if (!CallInt32Void)
-    return CallInt32Void.takeError();
+  CallInt32VoidProxy CallInt32Void;
+  CallInt32Int32Proxy CallInt32Int32;
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordProxy<sps::CallInt32VoidProxySpec>(&CallInt32Void),
+           recordProxy<sps::CallInt32Int32ProxySpec>(&CallInt32Int32)}))
+    return Err;
 
-  auto CallInt32Int32 = rt::sps::Int32Int32Caller::Create(ES);
-  if (!CallInt32Int32)
-    return CallInt32Int32.takeError();
-
-  auto R = (*CallInt32Int32)(jit_scrt_initialize, 0);
+  auto R = CallInt32Int32(ES, jit_scrt_initialize, 0);
   if (!R)
     return R.takeError();
 
   if (auto Err =
-          (*CallInt32Void)(jit_scrt_dllmain_before_initialize_c).takeError())
+          CallInt32Void(ES, jit_scrt_dllmain_before_initialize_c).takeError())
     return Err;
 
-  if (auto Err = (*CallInt32Void)(jit_scrt_initialize_type_info).takeError())
+  if (auto Err = CallInt32Void(ES, jit_scrt_initialize_type_info).takeError())
     return Err;
 
   if (auto Err =
-          (*CallInt32Void)(jit_scrt_initialize_default_local_stdio_options)
+          CallInt32Void(ES, jit_scrt_initialize_default_local_stdio_options)
               .takeError())
     return Err;
 

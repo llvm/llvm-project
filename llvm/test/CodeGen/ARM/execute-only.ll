@@ -58,6 +58,7 @@ define i32 @jump_table(i32 %c, i32 %a, i32 %b) #0 {
 ; CHECK-T1-NEXT: mov  pc, [[REG_ENTRY]]
 ; CHECK-T1:      .section .rodata,"a",%progbits
 ; CHECK-T1-NEXT: .p2align 2, 0x0
+; CHECK-T1-NEXT: .type	.LJTI1_0,%object
 ; CHECK-T1-NEXT: .LJTI1_0:
 ; CHECK-T1-NEXT: .long
 ; CHECK-T1-NEXT: .long

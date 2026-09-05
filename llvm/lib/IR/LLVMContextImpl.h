@@ -1396,6 +1396,32 @@ template <> struct MDNodeKeyImpl<DIObjCProperty> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIProperty> {
+  MDString *Name;
+  Metadata *File;
+  unsigned Line;
+  Metadata *Type;
+  Metadata *BackingStorage;
+
+  MDNodeKeyImpl(MDString *Name, Metadata *File, unsigned Line, Metadata *Type,
+                Metadata *BackingStorage)
+      : Name(Name), File(File), Line(Line), Type(Type),
+        BackingStorage(BackingStorage) {}
+  MDNodeKeyImpl(const DIProperty *N)
+      : Name(N->getRawName()), File(N->getRawFile()), Line(N->getLine()),
+        Type(N->getRawType()), BackingStorage(N->getRawBackingStorage()) {}
+
+  bool isKeyOf(const DIProperty *RHS) const {
+    return Name == RHS->getRawName() && File == RHS->getRawFile() &&
+           Line == RHS->getLine() && Type == RHS->getRawType() &&
+           BackingStorage == RHS->getRawBackingStorage();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Name, File, Line, Type, BackingStorage);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIImportedEntity> {
   unsigned Tag;
   Metadata *Scope;
@@ -1611,6 +1637,20 @@ public:
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
 
+  uint32_t NextMetadataPrintID = 0;
+
+  uint32_t allocateMetadataPrintID() { return NextMetadataPrintID++; }
+
+  void getAllMetadataNodes(SmallVectorImpl<MDNode *> &Nodes) const;
+
+  uint32_t getMetadataPrintID(const MDNode *N) const {
+    return N->getHeader().MetadataPrintID;
+  }
+
+  void setMetadataPrintID(MDNode *N, uint32_t ID) {
+    N->getHeader().MetadataPrintID = ID;
+  }
+
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
 #include "llvm/IR/Metadata.def"
@@ -1623,6 +1663,10 @@ public:
   // one object can destroy them.  Keep track of them here so we can delete
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
+
+  // Temporary nodes are caller-owned, but track live ones for persistent
+  // metadata print IDs.
+  DenseSet<MDNode *> TemporaryMDNodes;
 
   // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
   // ConstantRange. Since this is a dynamically sized class, it's not

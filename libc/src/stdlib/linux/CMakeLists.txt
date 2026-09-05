@@ -80,3 +80,42 @@ add_entrypoint_object(
     libc.src.__support.macros.null_check
     libc.src.stdlib.environ_internal
 )
+
+add_entrypoint_object(
+  system
+  SRCS
+    system.cpp
+  HDRS
+    ../system.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execle
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone3
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigaction
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.__support.OSUtil.linux.syscall_wrappers.wait4
+    libc.src.signal.linux.signal_utils
+    libc.src.unistd.environ
+)
+
+add_entrypoint_object(
+  getloadavg
+  SRCS
+    getloadavg.cpp
+  HDRS
+    ../getloadavg.h
+  DEPENDS
+    libc.hdr.types.struct_sysinfo
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sysinfo
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+

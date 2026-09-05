@@ -34,6 +34,7 @@ static bool LowerLoadInst(LoadInst *LI) {
 
 static bool LowerStoreInst(StoreInst *SI) {
   SI->setAtomic(AtomicOrdering::NotAtomic);
+  SI->setElementwise(false);
   return true;
 }
 

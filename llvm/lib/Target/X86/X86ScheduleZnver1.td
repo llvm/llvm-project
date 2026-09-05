@@ -267,10 +267,10 @@ defm : X86WriteRes<WriteFStoreY,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNT,      [ZnAGU,ZnFPU2], 8, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [ZnAGU], 1, [1], 1>;
-defm : X86WriteRes<WriteFMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
-defm : X86WriteRes<WriteFMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteFMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,12], 19>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,24], 42>;
+defm : X86WriteRes<WriteFMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,8], 10>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,12], 18>;
 
 defm : X86WriteRes<WriteFMove,         [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [ZnFPU], 1, [1], 1>;
@@ -386,10 +386,10 @@ defm : X86WriteRes<WriteVecStoreX,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreY,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreNT,      [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreNTY,     [ZnAGU], 1, [1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,12], 19>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,24], 42>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,8], 10>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,12], 18>;
 defm : X86WriteRes<WriteVecMove,         [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [ZnFPU], 2, [1], 2>;
@@ -706,9 +706,34 @@ def : SchedAlias<WriteBitTestSetRegRMW, ZnWriteBTRSCm>;
 
 // PDEP PEXT.
 // r,r,r.
-def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rr", "PEXT(32|64)rr")>;
 // r,r,m.
-def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rm", "PEXT(32|64)rm")>;
+def ZnWritePDEP32rr : SchedWriteRes<[ZnALU, ZnMultiplier]> {
+  let Latency = 53;
+  let NumMicroOps = 95;
+  let ReleaseAtCycles = [1, 53];
+}
+def : InstRW<[ZnWritePDEP32rr], (instrs PDEP32rr, PEXT32rr)>;
+
+def ZnWritePDEP32rm : SchedWriteRes<[ZnALU, ZnMultiplier, ZnAGU]> {
+  let Latency = 56;
+  let NumMicroOps = 96;
+  let ReleaseAtCycles = [1, 55, 1];
+}
+def : InstRW<[ZnWritePDEP32rm], (instrs PDEP32rm, PEXT32rm)>;
+
+def ZnWritePDEP64rr : SchedWriteRes<[ZnALU, ZnMultiplier]> {
+  let Latency = 86;
+  let NumMicroOps = 165;
+  let ReleaseAtCycles = [1, 86];
+}
+def : InstRW<[ZnWritePDEP64rr], (instrs PDEP64rr, PEXT64rr)>;
+
+def ZnWritePDEP64rm : SchedWriteRes<[ZnALU, ZnMultiplier, ZnAGU]> {
+  let Latency = 89;
+  let NumMicroOps = 166;
+  let ReleaseAtCycles = [1, 89, 1];
+}
+def : InstRW<[ZnWritePDEP64rm], (instrs PDEP64rm, PEXT64rm)>;
 
 // RCR RCL.
 // m,i.
@@ -920,8 +945,6 @@ def : InstRW<[WriteMicrocoded], (instregex "(V?)MASKMOVDQU(64)?")>;
 // ymm
 def : InstRW<[WriteMicrocoded],
                                (instregex "VPMASKMOVD(Y?)rm")>;
-// m, v,v.
-def : InstRW<[WriteMicrocoded], (instregex "VPMASKMOV(D|Q)(Y?)mr")>;
 
 // VPBROADCAST B/W.
 // x, m8/16.
