@@ -905,13 +905,16 @@ private:
 /// \p PSE is true.
 ///
 /// If necessary this method will version the stride of the pointer according
-/// to \p PtrToStride and therefore add further predicates to \p PSE.
+/// to \p PtrToStride and therefore add further predicates to \p PSE, except
+/// when \p Predicates is given, in which case, it adds the fresh predicates
+/// there instead of to \p PSE directly.
 ///
 /// \p PtrToStride provides the mapping between the pointer value and its
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
-LLVM_ABI const SCEV *
-replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                          const SymbolicStrideMap &PtrToStride, Value *Ptr);
+LLVM_ABI const SCEV *replaceSymbolicStrideSCEV(
+    PredicatedScalarEvolution &PSE, const Loop *Lp,
+    const SymbolicStrideMap &PtrToStride, Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// If \p AR is an affine AddRec for \p Lp with a constant step, return the
 /// step in units of \p AccessTy's allocation size. Returns std::nullopt if the
