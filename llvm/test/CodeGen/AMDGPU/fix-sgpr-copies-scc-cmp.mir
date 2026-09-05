@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefixes=CHECK,GFX9 %s
-# RUN: llc -mtriple=amdgcn -mcpu=bonaire -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefixes=CHECK,GFX7 %s
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefixes=CHECK,GFX9 %s
+# RUN: llc -mtriple=amdgpu7.00 -run-pass=si-fix-sgpr-copies -o - %s | FileCheck -check-prefixes=CHECK,GFX7 %s
 
 # A copy of a lane mask to SCC is lowered to an AND with EXEC, whose only
 # purpose is to define SCC. When the lane mask already has 0 in the bits of
