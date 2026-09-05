@@ -106,3 +106,44 @@ void foo(bool A1, bool A2, bool A3, bool A4) {
   // CHECK-FIXES-NEXT: X = A1 || (A2 && A3);
   // CHECK-FIXES-NEXT: X = A1 && (A2 || A3);
 }
+
+// Equality on a user-defined type is an overloaded operator, so its negation
+// must replace `==` with `!=`, rather than insert `!` before the left operand.
+namespace overloaded_comparisons {
+struct Entry {
+  struct String {
+    bool operator==(const String &) const;
+    bool operator!=(const String &) const;
+    bool operator<(const String &) const;
+    bool operator>(const String &) const;
+    bool operator<=(const String &) const;
+    bool operator>=(const String &) const;
+  };
+
+  String name;
+  String units;
+  int entry_type;
+
+  bool matches(const Entry &rhs) const {
+    return !(name == rhs.name && units == rhs.units &&
+             entry_type == rhs.entry_type);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:12: warning: boolean expression can be simplified by DeMorgan's theorem [readability-simplify-boolean-expr]
+  // CHECK-FIXES: return name != rhs.name || units != rhs.units ||
+  // CHECK-FIXES-NEXT:             entry_type != rhs.entry_type;
+
+  bool differsFrom(const Entry &rhs) const {
+    return !(name != rhs.name || entry_type != rhs.entry_type);
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: boolean expression can be simplified by DeMorgan's theorem [readability-simplify-boolean-expr]
+  // CHECK-FIXES: return name == rhs.name && entry_type == rhs.entry_type;
+
+  bool comparesTo(const Entry &rhs) const {
+    return !(name < rhs.name && units > rhs.units && name <= rhs.name &&
+             units >= rhs.units && entry_type < rhs.entry_type);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:12: warning: boolean expression can be simplified by DeMorgan's theorem [readability-simplify-boolean-expr]
+  // CHECK-FIXES: return name >= rhs.name || units <= rhs.units || name > rhs.name ||
+  // CHECK-FIXES-NEXT:             units < rhs.units || entry_type >= rhs.entry_type;
+};
+} // namespace overloaded_comparisons

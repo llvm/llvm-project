@@ -240,6 +240,10 @@ infrastructure are described first, followed by tool-specific sections.
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
 
+- Fixed {doc}`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
+  fixes when applying De Morgan's theorem to overloaded comparison operators.
+
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
 
