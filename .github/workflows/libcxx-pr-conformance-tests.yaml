@@ -61,6 +61,7 @@ jobs:
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
+        shell: bash
         run: |
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
@@ -180,6 +181,7 @@ jobs:
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
+        shell: bash
         run: |
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
