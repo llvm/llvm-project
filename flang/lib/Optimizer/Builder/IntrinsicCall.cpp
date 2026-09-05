@@ -8972,22 +8972,76 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
         (fir::isa_trivial(sourceType) ||
          mlir::isa<fir::RecordType>(sourceType)) &&
         fir::isa_trivial(moldType)) {
-      auto sourceSizeAndAlign = fir::getTypeSizeAndAlignment(
+      // Compare stored-representation widths, excluding outer tail padding
+      // from an unpacked RecordType.  This is distinct from STORAGE_SIZE,
+      // descriptor element extent, and the runtime TRANSFER copy width.
+      // Note: the runtime (TransferImpl) copies source.ElementBytes() bytes,
+      // which is the allocation size and may include tail padding.  The store-
+      // size comparison here is therefore *not* about matching the runtime's
+      // copy width; it is about selecting the correct inline path according to
+      // the standard's data-bit definition.
+      //
+      // Alignment is a separate concern: when the source alignment is less
+      // than the result type's alignment, the RecordType path below copies
+      // into a result-aligned alloca rather than loading directly from the
+      // source pointer.
+      auto sourceSizeAndAlign = fir::getTypeStoreSizeAndAlignment(
           loc, sourceType, builder.getDataLayout(), builder.getKindMap());
-      auto resultSizeAndAlign = fir::getTypeSizeAndAlignment(
+      auto resultSizeAndAlign = fir::getTypeStoreSizeAndAlignment(
           loc, resultType, builder.getDataLayout(), builder.getKindMap());
       if (sourceSizeAndAlign && resultSizeAndAlign &&
           sourceSizeAndAlign->first == resultSizeAndAlign->first) {
-        if (sourceType.isSignlessIntOrFloat() &&
-            resultType.isSignlessIntOrFloat()) {
-          mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
-          if (sourceType != resultType)
-            val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);
-          return val;
+        if (fir::isa_trivial(sourceType)) {
+          // Both source and result are trivial scalars of the same store
+          // size.  Use arith.bitcast for signless integer/float pairs;
+          // for other trivial types (e.g. unsigned integers) arith.bitcast
+          // is not available, so cast the source address and load.
+          if (sourceType.isSignlessIntOrFloat() &&
+              resultType.isSignlessIntOrFloat()) {
+            mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
+            if (sourceType != resultType)
+              val =
+                  mlir::arith::BitcastOp::create(builder, loc, resultType, val);
+            return val;
+          }
+          mlir::Type refTy = builder.getRefType(resultType);
+          mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+          return fir::LoadOp::create(builder, loc, cast);
         }
-        mlir::Type refTy = builder.getRefType(resultType);
-        mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
-        return fir::LoadOp::create(builder, loc, cast);
+        // The source is a RecordType.
+        //
+        // When sourceAlign >= resultAlign, a direct address cast and load is
+        // safe: the existing source storage satisfies the result type's
+        // alignment requirement.
+        //
+        // When sourceAlign < resultAlign (e.g. {i64,i16} is 8-byte aligned
+        // while x86_fp80 requires 16-byte alignment), loading resultType
+        // directly from sourceBase would assert an over-aligned address and
+        // produce undefined behaviour.  In that case, copy the store-size
+        // bytes into a result-typed alloca (which has resultType's natural
+        // alignment) using fir.copy (a non-overlapping byte copy, equivalent
+        // to memcpy), then load from the properly-aligned alloca.
+        //
+        // Note: fir.copy copies exactly sourceSizeAndAlign->first bytes (the
+        // store size, excluding outermost tail padding).  Inter-field padding
+        // bytes within the record are included in the store size and are
+        // therefore preserved, satisfying F2023 16.9.212.
+        if (sourceSizeAndAlign->second >= resultSizeAndAlign->second) {
+          mlir::Type refTy = builder.getRefType(resultType);
+          mlir::Value cast = builder.createConvert(loc, refTy, sourceBase);
+          return fir::LoadOp::create(builder, loc, cast);
+        }
+        mlir::Value tmp = fir::AllocaOp::create(builder, loc, resultType);
+        mlir::Type byteType = fir::SequenceType::get(
+            {static_cast<int64_t>(sourceSizeAndAlign->first)},
+            builder.getI8Type());
+        mlir::Type byteRefType = builder.getRefType(byteType);
+        mlir::Value sourceBytes =
+            builder.createConvert(loc, byteRefType, sourceBase);
+        mlir::Value resultBytes = builder.createConvert(loc, byteRefType, tmp);
+        fir::CopyOp::create(builder, loc, sourceBytes, resultBytes,
+                            /*noOverlap=*/true);
+        return fir::LoadOp::create(builder, loc, tmp);
       }
     }
   }

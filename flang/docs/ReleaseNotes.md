@@ -31,6 +31,48 @@ page](https://llvm.org/releases/).
 
 ## Bug Fixes
 
+- Fixed `fir::getTypeSizeAndAlignment` returning the wrong allocation size for
+  **packed derived types** (`SEQUENCE` types compiled with `PACK` / LLVM
+  packed-struct layout). Fields in a packed struct are placed back-to-back
+  using each component's allocation size (`alignTo(storeSize, ABIalign)`), not
+  its raw store size, and the struct ABI alignment is 1. For example, a packed
+  `{f80, i8}` on x86-64 now correctly reports 17 bytes instead of 11.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed `fir::getTypeSizeAndAlignment` omitting **tail padding** from unpacked
+  derived types. The returned size is now rounded up to the record's own ABI
+  alignment, matching the allocation extent used by array element strides, CUDA
+  shared-memory layout, and stack/heap allocation placement. For example,
+  `{i32, i8}` (store size 5 bytes, align 4) now correctly reports 8 bytes
+  instead of 5.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed a **`BIND(C)` / `VALUE` argument-passing ABI bug** on SystemZ and
+  PPC64le: derived types whose allocation size fits in a GPR were incorrectly
+  passed indirectly (by reference) instead of as an integer register value,
+  because `getTypeSizeAndAlignment` was returning the unpadded store size
+  rather than the allocation size. For example, `{i32, i8}` (allocation size
+  8 bytes) is now correctly passed as `i64` on SystemZ, and `{f128, i8}`
+  (allocation size 32 bytes) as `[4 x i64]` on PPC64le, matching the C ABI.
+  Fortran programs with `BIND(C)` `VALUE` derived-type arguments of these
+  shapes that interoperate with C were already producing incorrect results;
+  programs compiled entirely in Fortran that relied on the old (incorrect)
+  convention must be recompiled.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed the `TRANSFER` intrinsic inline path to compare **stored-representation
+  widths** (excluding outer tail padding) rather than allocation sizes when
+  deciding whether to inline a load instead of calling the runtime. This
+  prevents reading uninitialized tail-padding bytes into the result (wrong
+  inlining) and avoids incorrectly falling back to the runtime for records
+  whose store size matches the mold (missed inlining). The inline path now
+  also byte-copies record data into result-aligned storage so that internal
+  padding bytes (e.g. in `BIND(C)` records) are preserved, satisfying the
+  F2023 16.9.212 requirement that the result's physical representation be
+  identical to the source's when both have the same length.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+
 ## Non-comprehensive list of changes in this release
 
 - Added support for the OpenMP implementation-defined extension sentinels

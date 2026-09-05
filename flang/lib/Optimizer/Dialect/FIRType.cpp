@@ -1638,10 +1638,11 @@ void FIROpsDialect::registerTypes() {
       OpenMPPointerLikeModel<fir::LLVMPointerType>>(*getContext());
 }
 
-std::optional<std::pair<uint64_t, unsigned short>>
-fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
-                             const mlir::DataLayout &dl,
-                             const fir::KindMapping &kindMap) {
+static std::optional<std::pair<uint64_t, unsigned short>>
+getTypeSizeAndAlignmentImpl(mlir::Location loc, mlir::Type ty,
+                            const mlir::DataLayout &dl,
+                            const fir::KindMapping &kindMap,
+                            bool storeSizeOnly) {
   if (ty.isIntOrIndexOrFloat() ||
       mlir::isa<mlir::ComplexType, mlir::VectorType,
                 mlir::DataLayoutTypeInterface>(ty)) {
@@ -1650,7 +1651,8 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     return std::pair{size, alignment};
   }
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
-    auto result = getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
+    auto result = getTypeSizeAndAlignmentImpl(loc, seqTy.getEleTy(), dl,
+                                              kindMap, storeSizeOnly);
     if (!result)
       return result;
     auto [eleSize, eleAlign] = *result;
@@ -1661,8 +1663,37 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
     std::uint64_t size = 0;
     unsigned short align = 1;
+    if (recTy.isPacked()) {
+      // LLVM packed structs (<{ ... }>) place fields back-to-back with no
+      // inter-field alignment padding and no tail padding.  Each component
+      // still occupies its allocation size (llvm::alignTo(storeSize, ABI
+      // alignment)), because LLVM's packed StructLayout advances by
+      // getTypeAllocSize, not getTypeStoreSize.  For example, x86 f80 has
+      // store size 10 bytes but ABI alignment 16 bytes, so its allocation
+      // size is 16 bytes; a packed {f80, i8} therefore occupies 17 bytes,
+      // not 11.  The packed struct's own ABI alignment is always 1.
+      for (auto component : recTy.getTypeList()) {
+        // Use the component's allocation size (storeSizeOnly=false) regardless
+        // of the outer storeSizeOnly flag.  LLVM's packed StructLayout advances
+        // by getTypeAllocSize per field, so we need the allocation size of each
+        // component to reproduce the correct packed layout.  The outer
+        // storeSizeOnly flag is irrelevant here because packed structs have no
+        // tail padding; the struct's total size is the same whether or not tail
+        // rounding is requested.
+        auto result =
+            getTypeSizeAndAlignmentImpl(loc, component.second, dl, kindMap,
+                                        /*storeSizeOnly=*/false);
+        if (!result)
+          return result;
+        auto [compSize, compAlign] = *result;
+        size += llvm::alignTo(compSize, compAlign); // alloc size per field
+      }
+      // Packed structs have no tail padding regardless of storeSizeOnly.
+      return std::pair{size, static_cast<unsigned short>(1)};
+    }
     for (auto component : recTy.getTypeList()) {
-      auto result = getTypeSizeAndAlignment(loc, component.second, dl, kindMap);
+      auto result = getTypeSizeAndAlignmentImpl(loc, component.second, dl,
+                                                kindMap, storeSizeOnly);
       if (!result)
         return result;
       auto [compSize, compAlign] = *result;
@@ -1670,18 +1701,24 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
           llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
       align = std::max(align, compAlign);
     }
+    // Round up to the record's alignment to include outermost tail padding.
+    // storeSizeOnly suppresses only this final rounding; inter-field padding
+    // within the record is always included.
+    if (!storeSizeOnly)
+      size = llvm::alignTo(size, align);
     return std::pair{size, align};
   }
   if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
     mlir::Type intTy = mlir::IntegerType::get(
         logical.getContext(), kindMap.getLogicalBitsize(logical.getFKind()));
-    return getTypeSizeAndAlignment(loc, intTy, dl, kindMap);
+    return getTypeSizeAndAlignmentImpl(loc, intTy, dl, kindMap, storeSizeOnly);
   }
   if (auto character = mlir::dyn_cast<fir::CharacterType>(ty)) {
     mlir::Type intTy = mlir::IntegerType::get(
         character.getContext(),
         kindMap.getCharacterBitsize(character.getFKind()));
-    auto result = getTypeSizeAndAlignment(loc, intTy, dl, kindMap);
+    auto result =
+        getTypeSizeAndAlignmentImpl(loc, intTy, dl, kindMap, storeSizeOnly);
     if (!result)
       return result;
     auto [compSize, compAlign] = *result;
@@ -1690,6 +1727,22 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     return std::pair{compSize, compAlign};
   }
   return std::nullopt;
+}
+
+std::optional<std::pair<uint64_t, unsigned short>>
+fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                             const mlir::DataLayout &dl,
+                             const fir::KindMapping &kindMap) {
+  return getTypeSizeAndAlignmentImpl(loc, ty, dl, kindMap,
+                                     /*storeSizeOnly=*/false);
+}
+
+std::optional<std::pair<uint64_t, unsigned short>>
+fir::getTypeStoreSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                                  const mlir::DataLayout &dl,
+                                  const fir::KindMapping &kindMap) {
+  return getTypeSizeAndAlignmentImpl(loc, ty, dl, kindMap,
+                                     /*storeSizeOnly=*/true);
 }
 
 std::pair<std::uint64_t, unsigned short>
