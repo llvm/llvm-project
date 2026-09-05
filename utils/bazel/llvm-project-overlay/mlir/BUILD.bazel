@@ -5235,6 +5235,7 @@ cc_library(
         ":TensorDialect",
         ":TransformUtils",
         ":UBDialect",
+        ":ValueBoundsOpInterface",
         ":VectorDialect",
         ":VectorEnumsIncGen",
         ":VectorInterfaces",

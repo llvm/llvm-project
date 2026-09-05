@@ -39,4 +39,22 @@ def LowerVectorToFromElementsToShuffleTree
   let summary = "Lower `vector.to_elements` and `vector.from_elements` to a tree of `vector.shuffle` operations";
 }
 
+def VectorInferInBounds : Pass<"vector-infer-in-bounds", "func::FuncOp"> {
+  let summary = "Infer the `in_bounds` attribute of vector transfer operations";
+  let description = [{
+    Marks dimensions of `vector.transfer_read` and `vector.transfer_write`
+    operations as in-bounds when value-bounds analysis can prove that the
+    transfer, including its starting point, stays within the source.
+
+    The canonicalizer already handles transfers whose indices are constants.
+    This pass additionally handles indices that are loop induction variables,
+    or affine expressions of them, which is the common shape after tiling and
+    vectorization. That analysis is too expensive to run from a folder, so it
+    is opt-in here.
+
+    The pass only ever adds information: a dimension already marked in-bounds
+    is left untouched, and no dimension is ever marked out-of-bounds.
+  }];
+}
+
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_PASSES
