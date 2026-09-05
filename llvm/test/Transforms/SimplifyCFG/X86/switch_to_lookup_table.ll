@@ -36,9 +36,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.nodefaultnoholes = private unnamed_addr constant [4 x i32] [i32 55, i32 123, i32 0, i32 -1], align 4
 ; CHECK: @switch.table.nodefaultwithholes = private unnamed_addr constant [6 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 poison, i32 -1], align 4
 ; CHECK: @switch.table.threecases = private unnamed_addr constant [3 x i8] c"\0A\07\05", align 4
-; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i8] [i8 2, i8 2, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 1], align 4
+; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [4 x i8] c"\01\01\02\02", align 4
 ; CHECK: @switch.table.signed_overflow1 = private unnamed_addr constant [4 x i16] [i16 3333, i16 4444, i16 1111, i16 2222], align 4
-; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i16] [i16 3333, i16 4444, i16 poison, i16 2222], align 4
 ; CHECK: @switch.table.constant_hole_unreachable_default_firstundef = private unnamed_addr constant [5 x i8] [i8 undef, i8 poison, i8 1, i8 1, i8 1], align 4
 ; CHECK: @switch.table.constant_hole_unreachable_default_lastundef = private unnamed_addr constant [5 x i8] [i8 1, i8 poison, i8 1, i8 1, i8 undef], align 4
 ; CHECK: @switch.table.linearmap_hole_unreachable_default = private unnamed_addr constant [5 x i8] [i8 1, i8 poison, i8 5, i8 7, i8 9], align 4
@@ -1573,14 +1572,12 @@ end:
 define i32 @covered_switch_with_bit_tests(i3) !prof !0 {
 ; CHECK-LABEL: @covered_switch_with_bit_tests(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[TMP0:%.*]], -4
-; CHECK-NEXT:    [[SWITCH_MASKINDEX:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i8
-; CHECK-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i8 -61, [[SWITCH_MASKINDEX]]
-; CHECK-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i8 [[SWITCH_SHIFTED]] to i1
-; CHECK-NEXT:    br i1 [[SWITCH_LOBIT]], label [[SWITCH_LOOKUP:%.*]], label [[L6:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[TMP0:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i3 [[SWITCH_TABLEIDX]], -4
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_LOOKUP:%.*]], label [[L6:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.covered_switch_with_bit_tests, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i3 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr @switch.table.covered_switch_with_bit_tests, i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; CHECK-NEXT:    br label [[L6]]
@@ -1769,11 +1766,10 @@ define i32 @signed_overflow2(i8 %n) {
 ; CHECK-LABEL: @signed_overflow2(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], -2
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i16], ptr @switch.table.signed_overflow2, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[SWITCH_LOAD1:%.*]] = load i16, ptr [[SWITCH_GEP]], align 2
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = zext i16 [[SWITCH_LOAD1]] to i32
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nuw i2 [[TRUNC]], 1
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[SWITCH_IDX_CAST]], 1111
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 2222
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 start:
