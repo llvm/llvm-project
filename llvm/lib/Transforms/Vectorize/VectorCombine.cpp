@@ -3663,6 +3663,75 @@ generateInstLaneVectorFromOperand(ArrayRef<InstLane> Item, int Op) {
   return NItem;
 }
 
+// Handle cases where some profitable patterns can be recovered by swapping
+// some lanes on operands of commutative binops. Does not try to see through
+// shuffles.
+static std::optional<std::pair<SmallVector<InstLane>, SmallVector<InstLane>>>
+generateInstLaneVectorsFromCommutativeOperands(ArrayRef<InstLane> Item) {
+  auto *BO = dyn_cast<BinaryOperator>(Item.front().first);
+  if (!BO || !BO->isCommutative())
+    return std::nullopt;
+
+  SmallVector<InstLane> Op0 = generateInstLaneVectorFromOperand(Item, 0);
+  SmallVector<InstLane> Op1 = generateInstLaneVectorFromOperand(Item, 1);
+
+  // Tries to make all lanes on operand <ToSide> satisfy <Pred> by swapping some
+  // lanes. Poison fits anywhere. Decline when the predicate is satisfied
+  // without swapping, or already satisfied on the other side (prevent
+  // unnecessarily swapping whole operands)
+  auto TrySplit = [&](function_ref<bool(InstLane)> Pred, unsigned ToSide)
+      -> std::optional<
+          std::pair<SmallVector<InstLane>, SmallVector<InstLane>>> {
+    SmallVector<InstLane> NewOp0 = Op0, NewOp1 = Op1;
+    if (ToSide == 1)
+      std::swap(NewOp0, NewOp1);
+    bool Swapped = false, AlreadyOnOtherSide = true;
+    for (auto [L0, L1] : zip(NewOp0, NewOp1)) {
+      AlreadyOnOtherSide &= !L1.first || Pred(L1);
+      if (!L0.first || Pred(L0))
+        continue;
+      if (L1.first && !Pred(L1))
+        return std::nullopt;
+      std::swap(L0, L1);
+      Swapped = true;
+    }
+    if (!Swapped || AlreadyOnOtherSide)
+      return std::nullopt;
+    return std::make_pair(std::move(NewOp0), std::move(NewOp1));
+  };
+
+  // Use the first lanes of each operand as anchors to check against
+  SmallVector<InstLane> Anchors = {Op0.front(), Op1.front()};
+  SmallVector<Value *> Src = {Anchors[0].first, Anchors[1].first};
+
+  if (Src[0] && Src[0] == Src[1]) {
+    // Same source value: try to recover a splat. The only profitable pattern to
+    // recover here is binop(splat, identity), e.g.
+    //   <a[0]+a[0], a[1]+a[0], a[0]+a[2], a[0]+a[3]>
+    //   -> <a[0], a[1], a[2], a[3]> + <a[0], a[0], a[0], a[0]>
+    for (auto [ToSide, A] : enumerate(Anchors)) {
+      InstLane Anchor = A; // C++17 lambdas cannot capture a binding directly.
+      if (auto Split =
+              TrySplit([&](InstLane X) { return X == Anchor; }, ToSide))
+        return Split;
+    }
+  } else {
+    // Distinct source values: try to swap the same source value to one side.
+    // Any binop(identity/splat/constant, identity/splat/constant) on distinct
+    // sources falls on this path.
+    for (auto [ToSide, A] : enumerate(Anchors)) {
+      InstLane Anchor = A;
+      if (!Anchor.first)
+        continue;
+      if (auto Split = TrySplit(
+              [&](InstLane X) { return X.first == Anchor.first; }, ToSide))
+        return Split;
+    }
+  }
+
+  return std::nullopt;
+}
+
 /// Detect concat of multiple values into a vector
 static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
                          const TargetTransformInfo &TTI) {
@@ -3785,15 +3854,20 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
   auto *II = dyn_cast<IntrinsicInst>(I);
   unsigned NumOps = I->getNumOperands() - (II ? 1 : 0);
   SmallVector<Value *> Ops(NumOps);
+  std::optional<std::pair<SmallVector<InstLane>, SmallVector<InstLane>>> Split =
+      generateInstLaneVectorsFromCommutativeOperands(Item);
   for (unsigned Idx = 0; Idx < NumOps; Idx++) {
     if (II &&
         isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Idx, TTI)) {
       Ops[Idx] = II->getOperand(Idx);
       continue;
     }
-    Ops[Idx] = generateNewInstTree(
-        generateInstLaneVectorFromOperand(Item, Idx), &I->getOperandUse(Idx),
-        IdentityLeafs, SplatLeafs, ConcatLeafs, Builder, WorkList, TTI);
+    SmallVector<InstLane> OpItem =
+        Split ? (Idx == 0 ? Split->first : Split->second)
+              : generateInstLaneVectorFromOperand(Item, Idx);
+    Ops[Idx] =
+        generateNewInstTree(OpItem, &I->getOperandUse(Idx), IdentityLeafs,
+                            SplatLeafs, ConcatLeafs, Builder, WorkList, TTI);
     // Don't re-queue the operand of a bitcast we just regenerated. Doing so
     // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
     // which foldShuffleToIdentity then re-matches as the same superfluous
@@ -3946,6 +4020,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         if (auto *BO = dyn_cast<BinaryOperator>(FrontV);
             BO && BO->isIntDivRem())
           return false;
+        if (auto Split = generateInstLaneVectorsFromCommutativeOperands(Item)) {
+          Candidates.emplace_back(Split->first,
+                                  &cast<Instruction>(FrontV)->getOperandUse(0));
+          Candidates.emplace_back(Split->second,
+                                  &cast<Instruction>(FrontV)->getOperandUse(1));
+          continue;
+        }
         Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
                                 &cast<Instruction>(FrontV)->getOperandUse(0));
         Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
