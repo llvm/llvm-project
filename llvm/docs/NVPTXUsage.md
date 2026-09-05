@@ -440,8 +440,8 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.mbarrier.init(ptr %addr, i32 %count)
-declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %addr, i32 %count)
+declare void @llvm.nvvm.mbarrier.init.p0(ptr %addr, i32 %count, i32 immarg range(i32 0, 2) %layout)
+declare void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %addr, i32 %count, i32 immarg range(i32 0, 2) %layout)
 ```
 
 ##### Overview:
@@ -453,15 +453,44 @@ the range [1...2^20-1]. During initialization:
 
 - The tx-count and the current phase of the mbarrier object are set to 0.
 - The expected and pending arrival counts are set to `count`.
+- `%layout` is an immediate argument that accepts only
+`0` (`layout::v0`) or `1` (`layout::v1`).
 
 ##### Semantics:
 
-The `.shared` variant explicitly uses shared memory address space for
-the `addr` operand. If the `addr` does not fall within the
-shared::cta space, then the behavior of this intrinsic is undefined.
+The `addr` operand is overloaded and must point to either generic or
+shared::cta memory. When it is generic, the underlying address must fall
+within the shared::cta space, otherwise the behavior of this intrinsic
+is undefined.
 Performing `mbarrier.init` on a valid mbarrier object is undefined;
 use `mbarrier.inval` before reusing the memory for another mbarrier
 or any other purpose.
+
+An mbarrier object initialized with a particular layout must only be
+used with operations that support that layout; the layout of an existing
+mbarrier object can be queried with `llvm.nvvm.mbarrier.check_layout.*`.
+
+#### '`llvm.nvvm.mbarrier.check_layout`'
+
+##### Syntax:
+
+```llvm
+declare i1 @llvm.nvvm.mbarrier.check_layout.p3(ptr addrspace(3) %addr, i32 immarg %layout)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.mbarrier.check_layout.*`' intrinsics test whether the
+mbarrier object at `addr` was initialized with the layout named by
+`%layout`. They return `true` when the layout matches and `false`
+otherwise. `%layout` is an immediate argument that accepts only
+`0` (`layout::v0`) or `1` (`layout::v1`).
+
+##### Semantics:
+
+If the `addr` does not fall within the shared::cta space, then the behavior of
+this intrinsic is undefined. It is expected that `addr` was previously
+initialized using `mbarrier.init`; otherwise, the behavior is undefined.
 
 #### '`llvm.nvvm.mbarrier.inval`'
 

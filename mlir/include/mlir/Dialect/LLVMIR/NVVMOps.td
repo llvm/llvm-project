@@ -632,7 +632,10 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
 /// mbarrier.init instruction with generic pointer type
 def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
-                 I32:$count, PtxPredicate:$predicate)> {
+                 I32:$count,
+                 DefaultValuedAttr<ConfinedAttr<I32Attr,
+                   [IntMinValue<0>, IntMaxValue<1>]>, "0">:$layout,
+                 PtxPredicate:$predicate)> {
   let summary = "MBarrier Initialization Op";
   let description = [{
     The `nvvm.mbarrier.init` operation initializes an *mbarrier object* at the specified 
@@ -651,14 +654,21 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
       the behavior is undefined.
     - `count`: Integer specifying the number of threads that will participate in barrier
       synchronization. Must be in the range [1, 2²⁰ - 1].
+    - `layout`: Optional in-memory layout to initialize the *mbarrier object*
+      with. Only `0` (`layout::v0`) and `1` (`layout::v1`) are valid values.
+      When it is omitted, it defaults to `0`. The layout of an existing
+      *mbarrier object* can be queried with `nvvm.mbarrier.check_layout`.
     - `predicate`: Optional predicate for conditional execution.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
   }];
-  let assemblyFormat = "$addr `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
+  let assemblyFormat = "$addr `,` $count (`layout` `=` $layout^)? (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
 
   let extraClassDeclaration = [{
     bool hasIntrinsic() { if(getPredicate()) return false; return true; }
+
+    bool getAsmValues(RewriterBase &rewriter,
+      llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
 
     static mlir::NVVM::IDArgPair
     getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
@@ -668,7 +678,7 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
   string llvmBuilder = [{
     auto [id, args] = NVVM::MBarrierInitOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
@@ -693,6 +703,34 @@ def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval">,
   }];
 
   let assemblyFormat = "$addr attr-dict `:` type(operands)";
+}
+
+def NVVM_MBarrierCheckLayoutOp :
+    NVVM_SingleResultIntrinsicOp<"mbarrier.check_layout"> {
+  let summary = "MBarrier Check-Layout Operation";
+  let description = [{
+    The `nvvm.mbarrier.check_layout` operation tests whether the *mbarrier
+    object* at `addr` was initialized with the layout named by `layout`.
+
+    - `res`: An `i1` that is `true` when the *mbarrier object* has the queried
+      layout and `false` otherwise.
+
+    The operation takes the following operand and attribute:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The
+      `addr` must be a pointer to shared::cta memory.
+    - `layout`: The mbarrier layout version to test for. Only `0` and `1` are
+      valid values.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-check-layout)
+  }];
+
+  let results = (outs I1:$res);
+  let arguments = (ins
+    LLVM_PointerShared:$addr,
+    ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$layout);
+
+  let assemblyFormat =
+    "$addr `,` $layout attr-dict `:` type($addr) `->` type($res)";
 }
 
 def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx"> {

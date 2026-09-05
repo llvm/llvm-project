@@ -1421,6 +1421,13 @@ static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
   return F->getIntrinsicID();
 }
 
+static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
+  if (Name != "mbarrier.init" && Name != "mbarrier.init.shared")
+    return Intrinsic::not_intrinsic;
+
+  return Intrinsic::nvvm_mbarrier_init;
+}
+
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
   return Name.consume_front("local") || Name.consume_front("shared") ||
          Name.consume_front("global") || Name.consume_front("constant") ||
@@ -1991,6 +1998,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return NewFn != F;
+      }
+
+      // Upgrade mbarrier.init intrinsics missing the layout operand.
+      IID = shouldUpgradeNVPTXMBarrierInitIntrinsic(Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  F->getArg(0)->getType());
+        return true;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -6066,6 +6082,15 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
                                    Builder.getFalse()});
     break;
+  case Intrinsic::nvvm_mbarrier_init: {
+    SmallVector<Value *, 3> Args(CI->args());
+    // The .shared variant folded into the overloaded form without gaining an
+    // operand, so only the pre-layout two-argument form needs one appended.
+    if (Args.size() == 2)
+      Args.push_back(Builder.getInt32(0)); // layout = default(0)
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:

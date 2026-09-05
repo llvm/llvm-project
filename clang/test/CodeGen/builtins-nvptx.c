@@ -946,9 +946,9 @@ __device__ void nvvm_nanosleep(int d) {
 __device__ void nvvm_mbarrier(long long* addr, __attribute__((address_space(3))) long long* sharedAddr, int count, long long state) {
   #if __CUDA_ARCH__ >= 800
   __nvvm_mbarrier_init(addr, count);
-  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.init
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.init.p0
   __nvvm_mbarrier_init_shared(sharedAddr, count);
-  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.init.shared
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.init.p3
 
   __nvvm_mbarrier_inval(addr);
   // CHECK_PTX70_SM80: call void @llvm.nvvm.mbarrier.inval

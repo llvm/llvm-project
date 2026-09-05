@@ -162,6 +162,19 @@ defvar MAX_BLOCK_SIZE_X = 1024;
 defvar MAX_BLOCK_SIZE_Y = 1024;
 defvar MAX_BLOCK_SIZE_Z = 64;
 
+class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
+                list<LLVMType> param_types,
+                list<LLVMType> flags,
+                list<IntrinsicProperty> intr_properties,
+                string name = "">
+  : DefaultAttrsIntrinsic<
+        ret_types,
+        !listconcat(param_types, flags),
+        !listconcat(intr_properties,
+                    !foreach(i, !range(flags),
+                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
+        name>;
+
 // Helper class that concatenates list elements with
 // a given separator 'sep' and returns the result.
 // Handles empty strings.
@@ -2297,13 +2310,19 @@ def int_nvvm_cp_async_bulk_wait_group_read :
     Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // mbarrier
+
+def int_nvvm_mbarrier_init :
+    DefaultAttrsIntrinsicFlags<[],
+                               [llvm_anyptr_ty,  // mbar (generic or shared AS)
+                                llvm_i32_ty],    // count
+                               [llvm_i32_ty],    // layout
+              [IntrConvergent, Range<ArgIndex<2>, 0, 2>,
+               ArgInfo<ArgIndex<2>, [ArgName<"layout">,
+                                     ImmArgPrinter<"printMBarrierLayout">]>]>;
+
 foreach is_shared = [true, false] in {
   defvar mbarrier_ptr_ty = !if(is_shared, llvm_shared_ptr_ty, llvm_ptr_ty);
   defvar shared = !if(is_shared, "_shared", "");
-
-  def int_nvvm_mbarrier_init # shared : NVVMBuiltin,
-      Intrinsic<[], [mbarrier_ptr_ty, llvm_i32_ty],
-                [IntrConvergent, IntrNoCallback]>;
 
   def int_nvvm_mbarrier_inval # shared : NVVMBuiltin,
       Intrinsic<[], [mbarrier_ptr_ty],
@@ -2325,6 +2344,17 @@ foreach is_shared = [true, false] in {
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
     NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i64_ty]>;
+
+def int_nvvm_mbarrier_check_layout :
+    DefaultAttrsIntrinsicFlags<[llvm_i1_ty],
+                               [llvm_anyptr_ty], // mbar
+                               [llvm_i32_ty],   // layout
+                          [IntrReadMem, IntrNoCallback,
+                           Range<ArgIndex<1>, 0, 2>,
+                           ArgInfo<ArgIndex<1>,
+                                   [ArgName<"layout">,
+                                    ImmArgPrinter<"printMBarrierLayout">]>],
+                          "llvm.nvvm.mbarrier.check_layout">;
 
 // mbarrier.{expect_tx/complete_tx}
 foreach op = ["expect_tx", "complete_tx"] in {
@@ -3077,19 +3107,6 @@ foreach op = ["dec", "inc"] in
 // Exit
 def int_nvvm_exit : NVVMBuiltin,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
-
-class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
-                list<LLVMType> param_types,
-                list<LLVMType> flags,
-                list<IntrinsicProperty> intr_properties,
-                string name = "">
-  : DefaultAttrsIntrinsic<
-        ret_types,
-        !listconcat(param_types, flags),
-        !listconcat(intr_properties,
-                    !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
-        name>;
 
 // TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
 foreach dim = 1...5 in {

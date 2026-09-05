@@ -1399,14 +1399,14 @@ def DISCARD_GLOBAL_L2 : DISCARD_L2_INTRS<"global">;
 //-----------------------------------
 
 let Predicates = [SM80] in {
-  class MBARRIER_INIT<string AddrSpace, Intrinsic Intrin> :
+  class MBARRIER_INIT<NVPTXAddressSpace as> :
             BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$count),
-            "mbarrier.init" # AddrSpace # ".b64",
-            [(Intrin addr:$addr, i32:$count)]>;
+            "mbarrier.init" # as.Suffix # ".b64",
+            [(IntrinsicInAS<int_nvvm_mbarrier_init, as>
+                  addr:$addr, i32:$count, (i32 0))]>;
 
-  def MBARRIER_INIT : MBARRIER_INIT<"", int_nvvm_mbarrier_init>;
-  def MBARRIER_INIT_SHARED : MBARRIER_INIT<".shared",
-                                            int_nvvm_mbarrier_init_shared>;
+  def MBARRIER_INIT : MBARRIER_INIT<AddrSpaceGeneric>;
+  def MBARRIER_INIT_SHARED : MBARRIER_INIT<AddrSpaceShared>;
 
   class MBARRIER_INVAL<string AddrSpace, Intrinsic Intrin> :
             BasicNVPTXInst<(outs), (ins ADDR:$addr),
@@ -1473,6 +1473,23 @@ let Predicates = [SM80] in {
             BasicNVPTXInst<(outs B32:$res), (ins B64:$state),
             "mbarrier.pending_count.b64",
             [(set i32:$res, (int_nvvm_mbarrier_pending_count i64:$state))]>;
+}
+
+let Predicates = [PTX93, SM90] in {
+  class MBARRIER_INIT_LAYOUT<NVPTXAddressSpace as> :
+            BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$count),
+            "mbarrier.init.layout::v1" # as.Suffix # ".b64",
+            [(IntrinsicInAS<int_nvvm_mbarrier_init, as>
+                  addr:$addr, i32:$count, (i32 1))]>;
+
+  def MBARRIER_INIT_LAYOUT : MBARRIER_INIT_LAYOUT<AddrSpaceGeneric>;
+  def MBARRIER_INIT_LAYOUT_SHARED : MBARRIER_INIT_LAYOUT<AddrSpaceShared>;
+
+  def MBARRIER_CHECK_LAYOUT_SHARED :
+      NVPTXInst<(outs B1:$res), (ins ADDR:$addr, B32:$layout),
+                "mbarrier.check_layout.layout::v${layout}.shared.b64 $res, [$addr];",
+                [(set i1:$res,
+                  (int_nvvm_mbarrier_check_layout addr:$addr, i32:$layout))]>;
 }
 
 class MBAR_UTIL<string op, string scope,

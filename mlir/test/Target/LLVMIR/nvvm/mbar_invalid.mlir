@@ -136,3 +136,35 @@ llvm.func @mbarrier_try_wait_with_timelimit(%barrier: !llvm.ptr<3>, %phase: i32,
   llvm.return
 }
 
+// -----
+
+llvm.func @mbarrier_init_layout_too_large(%barrier: !llvm.ptr<3>, %count: i32) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  nvvm.mbarrier.init %barrier, %count layout = 2 : !llvm.ptr<3>, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_init_layout_negative(%barrier: !llvm.ptr<3>, %count: i32) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  nvvm.mbarrier.init %barrier, %count layout = -1 : !llvm.ptr<3>, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_check_layout_too_large(%barrier: !llvm.ptr<3>) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  %0 = nvvm.mbarrier.check_layout %barrier, 2 : !llvm.ptr<3> -> i1
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_check_layout_negative(%barrier: !llvm.ptr<3>) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  %0 = nvvm.mbarrier.check_layout %barrier, -1 : !llvm.ptr<3> -> i1
+  llvm.return
+}
+

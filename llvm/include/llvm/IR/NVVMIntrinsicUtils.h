@@ -156,7 +156,16 @@ enum class TensormapFillMode : uint8_t {
   OOB_NAN_FILL = 1,
 };
 
+// In-memory layout of an mbarrier object, as selected by the layout operand of
+// the llvm.nvvm.mbarrier.init and llvm.nvvm.mbarrier.check_layout intrinsics.
+enum class MBarrierLayout : uint8_t {
+  V0 = 0,
+  V1 = 1,
+};
+
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
 

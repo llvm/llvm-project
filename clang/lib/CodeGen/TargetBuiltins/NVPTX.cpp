@@ -1329,6 +1329,15 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
         Intrinsic::nvvm_barrier_cta_red_popc_aligned_all, {},
         {Builder.getInt32(0), Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
                                                    Builder.getInt32(0))});
+  case NVPTX::BI__nvvm_mbarrier_init:
+  case NVPTX::BI__nvvm_mbarrier_init_shared: {
+    // The intrinsic is overloaded on the pointer, so the two builtins differ
+    // only in the address space of their first argument.
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        Intrinsic::nvvm_mbarrier_init, {Ptr->getType()},
+        {Ptr, EmitScalarExpr(E->getArg(1)), Builder.getInt32(0)});
+  }
   default:
     return nullptr;
   }
