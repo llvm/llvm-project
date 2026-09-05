@@ -8296,6 +8296,42 @@ TEST_P(ImportAttributes, ImportC99NoThrowAttr) {
   checkImported(FromAttr->getAttrName(), ToAttr->getAttrName());
 }
 
+struct ImportMSInheritanceAttr : ASTImporterOptionSpecificTestBase {
+  std::vector<std::string> getExtraArgs() const override {
+    return {"--target=x86_64-pc-windows-msvc"};
+  }
+};
+
+// The implicit MSInheritanceAttr must be cloned onto an imported
+// redeclaration, since it becomes the most recent one and
+// getMSInheritanceModel() reads the attribute off of that.
+TEST_P(ImportMSInheritanceAttr, PropagatedOntoImportedRedecl) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      namespace NS { class Inner {}; }
+      struct HasPM { void (NS::Inner::*PM)(); };
+      )",
+      Lang_CXX17);
+  auto *ToInner = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("Inner"), isDefinition()));
+  ASSERT_TRUE(ToInner->hasAttr<MSInheritanceAttr>());
+
+  Decl *FromTU =
+      getTuDecl("namespace NS { class Inner; }", Lang_CXX17, "from.cc");
+  auto *FromInner = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner")));
+
+  auto *ToImportedInner = cast<CXXRecordDecl>(Import(FromInner, Lang_CXX17));
+  ASSERT_TRUE(ToImportedInner);
+
+  // The newly imported redeclaration must have become the most recent one.
+  ASSERT_EQ(ToImportedInner, ToInner->getMostRecentDecl());
+
+  EXPECT_TRUE(ToImportedInner->hasAttr<MSInheritanceAttr>());
+  EXPECT_EQ(ToImportedInner->getMSInheritanceModel(),
+            MSInheritanceModel::Single);
+}
+
 template <typename T>
 auto ExtendWithOptions(const T &Values, const std::vector<std::string> &Args) {
   auto Copy = Values;
@@ -10902,6 +10938,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportWithExternalSource,
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAttributes,
                          DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMSInheritanceAttr,
+                         ::testing::Values(std::vector<std::string>()));
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportInjectedClassNameType,
                          DefaultTestValuesForRunOptions);

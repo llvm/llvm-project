@@ -3401,6 +3401,21 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
   return D2;
 }
 
+static void importInheritableAttrs(ASTContext &Ctx, CXXRecordDecl *To,
+                                   CXXRecordDecl *Prev) {
+  if (!To || !Prev || To == Prev || To->hasAttr<MSInheritanceAttr>())
+    return;
+
+  for (Decl *R : Prev->redecls()) {
+    if (const auto *IA = R->getAttr<MSInheritanceAttr>()) {
+      auto *Clone = cast<InheritableAttr>(IA->clone(Ctx));
+      Clone->setInherited(true);
+      To->addAttr(Clone);
+      return;
+    }
+  }
+}
+
 ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
   bool IsFriendTemplate = false;
   if (auto *DCXX = dyn_cast<CXXRecordDecl>(D)) {
@@ -10035,6 +10050,12 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       else
         return ToAttrOrErr.takeError();
     }
+
+  // Now that ToD's own attributes have been imported above, carry over
+  // an MSInheritanceAttr from a previous redeclaration if ToD doesn't
+  // already have one of its own.
+  if (auto *RD = dyn_cast<CXXRecordDecl>(ToD))
+    importInheritableAttrs(getToContext(), RD, RD->getPreviousDecl());
 
   // Notify subclasses.
   Imported(FromD, ToD);
