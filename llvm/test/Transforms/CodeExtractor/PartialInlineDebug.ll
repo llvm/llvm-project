@@ -69,9 +69,9 @@ entry:
 ; CHECK: br label %if.then, !dbg ![[DBG6:[0-9]+]]
 
 ; CHECK: ![[DBG1]] = !DILocation(line: 10, column: 7,
-; CHECK: ![[DBG2]] = !DILocation(line: 10, column: 7,
+; CHECK: ![[DBG2]] = distinct !DILocation(line: 10, column: 7,
 ; CHECK: ![[DBG3]] = !DILocation(line: 110, column: 17,
-; CHECK: ![[DBG4]] = !DILocation(line: 110, column: 17,
+; CHECK: ![[DBG4]] = distinct !DILocation(line: 110, column: 17,
 ; CHECK: ![[DBG5]] = !DILocation(line: 110, column: 17,
 ; CHECK: ![[DBG6]] = !DILocation(line: 10, column: 7,
 

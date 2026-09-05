@@ -93,5 +93,5 @@ attributes #1 = { nounwind readnone }
 ; CHECK: [[FOO:![0-9]+]] = distinct !DISubprogram(name: "foo",
 ; CHECK: [[m23]] = !DILocalVariable(name: "x", arg: 1, scope: [[FOO]]
 ; CHECK: [[BAR:![0-9]+]] = distinct !DISubprogram(name: "bar",
-; CHECK: [[m24]] = !DILocation(line: 1, column: 17, scope: [[FOO]], inlinedAt: [[CALL_SITE:![0-9]+]])
+; CHECK: [[m24]] = distinct !DILocation(line: 1, column: 17, scope: [[FOO]], inlinedAt: [[CALL_SITE:![0-9]+]])
 ; CHECK: [[CALL_SITE]] = distinct !DILocation(line: 8, column: 14, scope: [[BAR]])
