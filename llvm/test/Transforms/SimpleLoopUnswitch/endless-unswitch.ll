@@ -28,23 +28,23 @@ define dso_local void @d() {
 ; CHECK-NEXT:    br label [[G_US:%.*]]
 ; CHECK:       g.us:
 ; CHECK-NEXT:    br label [[G_SPLIT_US6:%.*]]
-; CHECK:       for.cond1.us1:
+; CHECK:       g.split.us1:
+; CHECK-NEXT:    br label [[FOR_COND1_US2:%.*]]
+; CHECK:       for.cond1.us2:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr null, align 2
 ; CHECK-NEXT:    [[TOBOOL4_NOT_US:%.*]] = icmp eq i16 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL4_NOT_US]], label [[FOR_COND5_PREHEADER_US4:%.*]], label [[G_LOOPEXIT_US:%.*]]
-; CHECK:       for.cond5.us2:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND1_LOOPEXIT_US5:%.*]], label [[FOR_INC_US3:%.*]]
-; CHECK:       for.inc.us3:
-; CHECK-NEXT:    store i8 0, ptr @b, align 1
+; CHECK:       for.cond5.preheader.us3:
 ; CHECK-NEXT:    br label [[FOR_COND5_US2:%.*]]
-; CHECK:       for.cond5.preheader.us4:
+; CHECK:       for.cond5.us4:
+; CHECK-NEXT:    br i1 false, label [[FOR_COND1_LOOPEXIT_US5:%.*]], label [[FOR_INC_US3:%.*]]
+; CHECK:       for.inc.us5:
+; CHECK-NEXT:    store i8 0, ptr @b, align 1
 ; CHECK-NEXT:    br label [[FOR_COND5_US2]]
-; CHECK:       for.cond1.loopexit.us5:
-; CHECK-NEXT:    br label [[FOR_COND1_US1:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       for.cond1.loopexit.us6:
+; CHECK-NEXT:    br label [[FOR_COND1_US2]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       g.loopexit.us:
 ; CHECK-NEXT:    br label [[G_US]]
-; CHECK:       g.split.us6:
-; CHECK-NEXT:    br label [[FOR_COND1_US1]]
 ; CHECK:       for.end.split:
 ; CHECK-NEXT:    br label [[G:%.*]]
 ; CHECK:       g.loopexit:
@@ -121,23 +121,23 @@ define void @e(ptr %p) {
 ; CHECK-NEXT:    br label [[G_US:%.*]]
 ; CHECK:       g.us:
 ; CHECK-NEXT:    br label [[G_SPLIT_US6:%.*]]
-; CHECK:       for.cond1.us1:
+; CHECK:       g.split.us1:
+; CHECK-NEXT:    br label [[FOR_COND1_US2:%.*]]
+; CHECK:       for.cond1.us2:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TOBOOL4_NOT_US:%.*]] = trunc i16 [[TMP2]] to i1
 ; CHECK-NEXT:    br i1 [[TOBOOL4_NOT_US]], label [[FOR_COND5_PREHEADER_US4:%.*]], label [[G_LOOPEXIT_US:%.*]]
-; CHECK:       for.cond5.us2:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND1_LOOPEXIT_US5:%.*]], label [[FOR_INC_US3:%.*]]
-; CHECK:       for.inc.us3:
-; CHECK-NEXT:    store i8 0, ptr @b, align 1
+; CHECK:       for.cond5.preheader.us3:
 ; CHECK-NEXT:    br label [[FOR_COND5_US2:%.*]]
-; CHECK:       for.cond5.preheader.us4:
+; CHECK:       for.cond5.us4:
+; CHECK-NEXT:    br i1 false, label [[FOR_COND1_LOOPEXIT_US5:%.*]], label [[FOR_INC_US3:%.*]]
+; CHECK:       for.inc.us5:
+; CHECK-NEXT:    store i8 0, ptr @b, align 1
 ; CHECK-NEXT:    br label [[FOR_COND5_US2]]
-; CHECK:       for.cond1.loopexit.us5:
-; CHECK-NEXT:    br label [[FOR_COND1_US1:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       for.cond1.loopexit.us6:
+; CHECK-NEXT:    br label [[FOR_COND1_US2]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       g.loopexit.us:
 ; CHECK-NEXT:    br label [[G_US]]
-; CHECK:       g.split.us6:
-; CHECK-NEXT:    br label [[FOR_COND1_US1]]
 ; CHECK:       for.end.split:
 ; CHECK-NEXT:    br label [[G:%.*]]
 ; CHECK:       g.loopexit:

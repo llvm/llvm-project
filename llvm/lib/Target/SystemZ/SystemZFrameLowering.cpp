@@ -864,7 +864,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
 }
 
 bool SystemZELFFrameLowering::hasFPImpl(const MachineFunction &MF) const {
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
+  return (MF.disableFramePointerElim() ||
           MF.getFrameInfo().hasVarSizedObjects());
 }
 

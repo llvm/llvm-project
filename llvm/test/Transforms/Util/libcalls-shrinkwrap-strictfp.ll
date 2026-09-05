@@ -18,7 +18,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test_quiet_nan() {
   %1 = alloca double, align 8
-  store volatile double 0x7FF8000000000000, ptr %1, align 8
+  store volatile double +qnan, ptr %1, align 8
   %2 = tail call i32 @feclearexcept(i32 noundef 61)
   %3 = load volatile double, ptr %1, align 8
   %4 = call double @acos(double noundef %3)
@@ -38,7 +38,7 @@ ret:
 
 define void @test_quiet_nan_strictfp() strictfp {
   %1 = alloca double, align 8
-  store volatile double 0x7FF8000000000000, ptr %1, align 8
+  store volatile double +qnan, ptr %1, align 8
   %2 = tail call i32 @feclearexcept(i32 noundef 61) strictfp
   %3 = load volatile double, ptr %1, align 8
   %4 = call double @acos(double noundef %3) strictfp
