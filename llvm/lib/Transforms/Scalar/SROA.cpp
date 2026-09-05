@@ -4834,6 +4834,14 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
+static bool containsNonIntegralPointer(Type *Ty, const DataLayout &DL) {
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty))
+    return DL.isNonIntegralPointerType(PtrTy);
+  return llvm::any_of(Ty->subtypes(), [&](Type *SubTy) {
+    return containsNonIntegralPointer(SubTy, DL);
+  });
+}
+
 /// Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
@@ -5488,11 +5496,11 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // type?
   if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                P.beginOffset(), P.size())) {
-    // If the partition is an integer array that can be spanned by a legal
-    // integer type, prefer to represent it as a legal integer type because
-    // it's more likely to be promotable.
+    // If the partition is an array without non-integral pointers that can be
+    // spanned by a legal integer type, prefer to represent it as a legal
+    // integer type because it's more likely to be promotable.
     if (TypePartitionTy->isArrayTy() &&
-        TypePartitionTy->getArrayElementType()->isIntegerTy() &&
+        !containsNonIntegralPointer(TypePartitionTy, DL) &&
         DL.isLegalInteger(P.size() * 8))
       TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
     // There was no common type used, so we prefer integer widening promotion.
