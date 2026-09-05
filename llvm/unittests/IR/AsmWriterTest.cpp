@@ -240,10 +240,12 @@ TEST(AsmWriterTest, FunctionInstructionPrinterMatchesInstructionPrint) {
     define i32 @test(i32 %arg, ptr %ptr) {
     entry:
       %0 = add nsw i32 %arg, 1, !annotation !0
-      %named = call i32 @callee(i32 %0) [ "tag"(i32 %arg) ], !prof !1
+      %named = call i32 @callee(i32 %0) #0 [ "tag"(i32 %arg) ], !prof !1
       store atomic i32 %named, ptr %ptr release, align 4, !annotation !0
       ret i32 %named
     }
+
+    attributes #0 = { nounwind }
 
     !0 = !{!"attached metadata"}
     !1 = !{!"branch_weights", i32 10}
@@ -276,5 +278,56 @@ TEST(AsmWriterTest, FunctionInstructionPrinterMatchesInstructionPrint) {
 
     EXPECT_EQ(Expected, Actual);
   }
+}
+
+TEST(AsmWriterTest, FunctionInstructionPrinterOwnsCustomNames) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    %0 = type { i32 }
+
+    @0 = global i32 0
+
+    declare void @callee()
+
+    define i32 @test() {
+    entry:
+      %storage = alloca %0, align 4
+      %0 = load i32, ptr @0
+      call void @callee() #0
+      ret i32 %0
+    }
+
+    attributes #0 = { nounwind }
+  )",
+                                                  Err, Ctx);
+  ASSERT_TRUE(M);
+  Function &F = *M->getFunction("test");
+
+  std::string Actual;
+  raw_string_ostream OS(Actual);
+  ModuleSlotTracker MST(M.get());
+  FunctionInstructionPrinter Printer(
+      OS, MST, F, /*IsForDebug=*/false,
+      [State = std::make_unique<unsigned>(0)](raw_ostream &OS,
+                                              const Value &V) mutable {
+        ++*State;
+        OS << (isa<GlobalValue>(V) ? "@<global>" : "%<local>");
+      },
+      [State = std::make_unique<unsigned>(0)](raw_ostream &OS,
+                                              const Type &) mutable {
+        ++*State;
+        OS << "%<type>";
+      },
+      /*PrintCallAttributesInline=*/true);
+  for (const Instruction &I : instructions(F)) {
+    Printer.printInstruction(I);
+    OS << '\n';
+  }
+
+  EXPECT_EQ(Actual, "  %storage = alloca %<type>, align 4\n"
+                    "  %<local> = load i32, ptr @<global>, align 4\n"
+                    "  call void @callee() nounwind\n"
+                    "  ret i32 %<local>\n");
 }
 }

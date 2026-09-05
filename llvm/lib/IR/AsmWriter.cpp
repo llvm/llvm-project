@@ -549,8 +549,11 @@ namespace {
 
 class TypePrinting {
 public:
-  TypePrinting(const Module *M = nullptr)
-      : M(M), TypesIncorporated(M == nullptr) {}
+  TypePrinting(
+      const Module *M = nullptr,
+      FunctionInstructionPrinter::TypeNameCallback PrintTypeName = nullptr)
+      : M(M), TypesIncorporated(M == nullptr),
+        PrintTypeName(std::move(PrintTypeName)) {}
 
   TypePrinting(const TypePrinting &) = delete;
   TypePrinting &operator=(const TypePrinting &) = delete;
@@ -580,6 +583,7 @@ private:
   DenseMap<StructType *, unsigned> Type2Number;
 
   std::vector<StructType *> NumberedTypes;
+  FunctionInstructionPrinter::TypeNameCallback PrintTypeName;
 };
 
 } // end anonymous namespace
@@ -700,6 +704,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
 
     if (!STy->getName().empty())
       return printLLVMName(OS, STy->getName(), LocalPrefix);
+
+    if (PrintTypeName)
+      return PrintTypeName(OS, *STy);
 
     incorporateTypes();
     const auto I = Type2Number.find(STy);
@@ -1527,10 +1534,14 @@ struct AsmWriterContext {
   SlotTracker *Machine = nullptr;
   const Module *Context = nullptr;
   const ModuleSlotTracker *MST = nullptr;
+  FunctionInstructionPrinter::ValueNameCallback *PrintValueName = nullptr;
 
-  AsmWriterContext(TypePrinting *TP, SlotTracker *ST, const Module *M = nullptr,
-                   const ModuleSlotTracker *MST = nullptr)
-      : TypePrinter(TP), Machine(ST), Context(M), MST(MST) {}
+  AsmWriterContext(
+      TypePrinting *TP, SlotTracker *ST, const Module *M = nullptr,
+      const ModuleSlotTracker *MST = nullptr,
+      FunctionInstructionPrinter::ValueNameCallback *PrintValueName = nullptr)
+      : TypePrinter(TP), Machine(ST), Context(M), MST(MST),
+        PrintValueName(PrintValueName) {}
 
   static AsmWriterContext &getEmpty() {
     static AsmWriterContext EmptyCtx(nullptr, nullptr);
@@ -2854,6 +2865,12 @@ static void writeAsOperandInternal(raw_ostream &Out, const Value *V,
     return;
   }
 
+  if (WriterCtx.PrintValueName && (isa<GlobalValue>(V) || isa<Argument>(V) ||
+                                   isa<BasicBlock>(V) || isa<Instruction>(V))) {
+    (*WriterCtx.PrintValueName)(Out, *V);
+    return;
+  }
+
   char Prefix = '%';
   int Slot;
   auto *Machine = WriterCtx.Machine;
@@ -2969,18 +2986,25 @@ class AssemblyWriter {
   /// Synchronization scope names registered with LLVMContext.
   SmallVector<StringRef, 8> SSNs;
   DenseMap<const GlobalValueSummary *, GlobalValue::GUID> SummaryToGUIDMap;
+  FunctionInstructionPrinter::ValueNameCallback PrintValueName;
+  bool PrintCallAttributesInline = false;
 
 public:
   /// Construct an AssemblyWriter with an external SlotTracker
-  AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac, const Module *M,
-                 AssemblyAnnotationWriter *AAW, bool IsForDebug,
-                 bool ShouldPreserveUseListOrder = false);
+  AssemblyWriter(
+      formatted_raw_ostream &o, SlotTracker &Mac, const Module *M,
+      AssemblyAnnotationWriter *AAW, bool IsForDebug,
+      bool ShouldPreserveUseListOrder = false,
+      FunctionInstructionPrinter::ValueNameCallback PrintValueName = nullptr,
+      FunctionInstructionPrinter::TypeNameCallback PrintTypeName = nullptr,
+      bool PrintCallAttributesInline = false);
 
   AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                  const ModuleSummaryIndex *Index, bool IsForDebug);
 
   AsmWriterContext getContext() {
-    return AsmWriterContext(&TypePrinter, &Machine, TheModule);
+    return AsmWriterContext(&TypePrinter, &Machine, TheModule, nullptr,
+                            PrintValueName ? &PrintValueName : nullptr);
   }
 
   void printMDNodeBody(const MDNode *MD);
@@ -3005,6 +3029,7 @@ public:
   void writeMDNode(unsigned Slot, const MDNode *Node);
   void writeAttribute(const Attribute &Attr, bool InAttrGroup = false);
   void writeAttributeSet(const AttributeSet &AttrSet, bool InAttrGroup = false);
+  void writeCallAttributes(const AttributeSet &AttrSet);
   void writeAllAttributeGroups();
 
   void printTypeIdentities();
@@ -3061,15 +3086,22 @@ private:
 
 } // end anonymous namespace
 
-AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
-                               const Module *M, AssemblyAnnotationWriter *AAW,
-                               bool IsForDebug, bool ShouldPreserveUseListOrder)
-    : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
+AssemblyWriter::AssemblyWriter(
+    formatted_raw_ostream &o, SlotTracker &Mac, const Module *M,
+    AssemblyAnnotationWriter *AAW, bool IsForDebug,
+    bool ShouldPreserveUseListOrder,
+    FunctionInstructionPrinter::ValueNameCallback PrintValueName,
+    FunctionInstructionPrinter::TypeNameCallback PrintTypeName,
+    bool PrintCallAttributesInline)
+    : Out(o), TheModule(M), Machine(Mac),
+      TypePrinter(M, std::move(PrintTypeName)), AnnotationWriter(AAW),
       IsForDebug(IsForDebug),
       ShouldPreserveUseListOrder(
           PreserveAssemblyUseListOrder.getNumOccurrences()
               ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {
+              : ShouldPreserveUseListOrder),
+      PrintValueName(std::move(PrintValueName)),
+      PrintCallAttributesInline(PrintCallAttributesInline) {
   if (!TheModule)
     return;
   for (const GlobalObject &GO : TheModule->global_objects())
@@ -4526,6 +4558,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   if (I.hasName()) {
     printLLVMName(Out, &I);
     Out << " = ";
+  } else if (!I.getType()->isVoidTy() && PrintValueName) {
+    PrintValueName(Out, I);
+    Out << " = ";
   } else if (!I.getType()->isVoidTy()) {
     // Print out the def slot taken.
     int SlotNum = Machine.getLocalSlot(&I);
@@ -4773,7 +4808,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     Out << ')';
     if (PAL.hasFnAttrs())
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
+      writeCallAttributes(PAL.getFnAttrs());
 
     writeOperandBundles(CI);
   } else if (const auto *II = dyn_cast<InvokeInst>(&I)) {
@@ -4811,7 +4846,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     Out << ')';
     if (PAL.hasFnAttrs())
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
+      writeCallAttributes(PAL.getFnAttrs());
 
     writeOperandBundles(II);
 
@@ -4851,7 +4886,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     Out << ')';
     if (PAL.hasFnAttrs())
-      Out << " #" << Machine.getAttributeGroupSlot(PAL.getFnAttrs());
+      writeCallAttributes(PAL.getFnAttrs());
 
     writeOperandBundles(CBI);
 
@@ -5141,6 +5176,14 @@ void AssemblyWriter::writeAttributeSet(const AttributeSet &AttrSet,
   }
 }
 
+void AssemblyWriter::writeCallAttributes(const AttributeSet &AttrSet) {
+  Out << ' ';
+  if (PrintCallAttributesInline)
+    writeAttributeSet(AttrSet);
+  else
+    Out << '#' << Machine.getAttributeGroupSlot(AttrSet);
+}
+
 void AssemblyWriter::writeAllAttributeGroups() {
   std::vector<std::pair<AttributeSet, unsigned>> asVec;
   asVec.resize(Machine.as_size());
@@ -5403,7 +5446,10 @@ struct FunctionInstructionPrinter::Impl {
   std::unique_ptr<AssemblyWriter> Writer;
 
   Impl(raw_ostream &ROS, ModuleSlotTracker &MST, const Function &F,
-       bool IsForDebug)
+       bool IsForDebug,
+       FunctionInstructionPrinter::ValueNameCallback PrintValueName,
+       FunctionInstructionPrinter::TypeNameCallback PrintTypeName,
+       bool PrintCallAttributesInline)
       : F(F), Output(ROS), BufferOS(Buffer), FormattedOS(BufferOS) {
     FormattedOS.SetBufferSize(Buffer.capacity());
     MST.incorporateFunction(F);
@@ -5414,15 +5460,19 @@ struct FunctionInstructionPrinter::Impl {
       SlotTable = EmptySlotTable.get();
     }
     Writer = std::make_unique<AssemblyWriter>(
-        FormattedOS, *SlotTable, F.getParent(), nullptr, IsForDebug);
+        FormattedOS, *SlotTable, F.getParent(), nullptr, IsForDebug,
+        /*ShouldPreserveUseListOrder=*/false, std::move(PrintValueName),
+        std::move(PrintTypeName), PrintCallAttributesInline);
   }
 };
 
-FunctionInstructionPrinter::FunctionInstructionPrinter(raw_ostream &OS,
-                                                       ModuleSlotTracker &MST,
-                                                       const Function &F,
-                                                       bool IsForDebug)
-    : P(std::make_unique<Impl>(OS, MST, F, IsForDebug)) {}
+FunctionInstructionPrinter::FunctionInstructionPrinter(
+    raw_ostream &OS, ModuleSlotTracker &MST, const Function &F, bool IsForDebug,
+    ValueNameCallback PrintValueName, TypeNameCallback PrintTypeName,
+    bool PrintCallAttributesInline)
+    : P(std::make_unique<Impl>(
+          OS, MST, F, IsForDebug, std::move(PrintValueName),
+          std::move(PrintTypeName), PrintCallAttributesInline)) {}
 
 FunctionInstructionPrinter::~FunctionInstructionPrinter() = default;
 
