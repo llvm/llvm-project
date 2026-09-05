@@ -703,10 +703,10 @@ int main() {
 // CHECK-SPIR-NEXT:   }
 
 // CHECK-AMDGCN: #[[AMDGCN_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
-// CHECK-AMDGCN: #[[AMDGCN_ATTR1]] = { convergent nounwind }
+// CHECK-AMDGCN: #[[AMDGCN_ATTR1]] = { convergent nounwind "uniform-work-group-size" }
 //
 // CHECK-NVPTX: #[[NVPTX_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
-// CHECK-NVPTX: #[[NVPTX_ATTR1]] = { convergent nounwind }
+// CHECK-NVPTX: #[[NVPTX_ATTR1]] = { convergent nounwind "uniform-work-group-size" }
 //
 // CHECK-SPIR: #[[SPIR_ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"=
-// CHECK-SPIR: #[[SPIR_ATTR1]] = { convergent nounwind }
+// CHECK-SPIR: #[[SPIR_ATTR1]] = { convergent nounwind "uniform-work-group-size" }
