@@ -113,6 +113,95 @@
 // CHECK-NEXT:      "uri": "{{.*}}/foo.mlir"
 // CHECK-NEXT:    }
 // -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///locations.mlir",
+  "languageId":"mlir",
+  "version":1,
+  "text":"func.func @locations() {\n%valid = arith.constant true loc(\"bar.mlir\":2:3)\n%zero = arith.constant true loc(\"bar.mlir\":0:0)\n%max = arith.constant true loc(\"bar.mlir\":2147483648:2147483648)\n%bad_column = arith.constant true loc(\"bar.mlir\":1:4294967295)\n%bad_line = arith.constant true loc(\"bar.mlir\":4294967295:1)\nreturn\n}"
+}}}
+// -----
+{"jsonrpc":"2.0","id":4,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///locations.mlir"},
+  "position":{"line":1,"character":10}
+}}
+//      CHECK:  "id": 4
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 2,
+// CHECK-NEXT:          "line": 1
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 2,
+// CHECK-NEXT:          "line": 1
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/bar.mlir"
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// -----
+{"jsonrpc":"2.0","id":5,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///locations.mlir"},
+  "position":{"line":2,"character":10}
+}}
+//      CHECK:  "id": 5
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 0,
+// CHECK-NEXT:          "line": 0
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 0,
+// CHECK-NEXT:          "line": 0
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/bar.mlir"
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// -----
+{"jsonrpc":"2.0","id":6,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///locations.mlir"},
+  "position":{"line":3,"character":10}
+}}
+//      CHECK:  "id": 6
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 2147483647,
+// CHECK-NEXT:          "line": 2147483647
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 2147483647,
+// CHECK-NEXT:          "line": 2147483647
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/bar.mlir"
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// -----
+{"jsonrpc":"2.0","id":7,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///locations.mlir"},
+  "position":{"line":4,"character":20}
+}}
+//      CHECK:  "id": 7
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": []
+// -----
+{"jsonrpc":"2.0","id":8,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///locations.mlir"},
+  "position":{"line":5,"character":20}
+}}
+//      CHECK:  "id": 8
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": []
+// -----
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 // -----
 {"jsonrpc":"2.0","method":"exit"}
