@@ -39,10 +39,11 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
   mlir::omp::ParallelOperands clauseOps;
   OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
   ce.emitProcBind(clauseOps);
-  ce.emitNYI</*supported=*/OMPProcBindClause>(
+  ce.emitIf(clauseOps, llvm::omp::Directive::OMPD_parallel);
+  ce.emitNYI</*supported=*/OMPProcBindClause, OMPIfClause>(
       /*nyi=*/OpenMPNYIClauseList<
           OMPAllocateClause, OMPCopyinClause, OMPDefaultClause,
-          OMPFirstprivateClause, OMPIfClause, OMPNumThreadsClause,
+          OMPFirstprivateClause, OMPNumThreadsClause,
           OMPPrivateClause, OMPReductionClause, OMPSharedClause>{},
       llvm::omp::Directive::OMPD_parallel);
 
