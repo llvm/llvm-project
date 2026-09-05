@@ -1,47 +1,44 @@
-OpenMP Optimization Remarks
-===========================
+# OpenMP Optimization Remarks
 
-The :doc:`OpenMP-Aware optimization pass </optimizations/OpenMPOpt>` is able to
+The {doc}`OpenMP-Aware optimization pass </optimizations/OpenMPOpt>` is able to
 generate compiler remarks for performed and missed optimisations. To emit them,
-pass these options to the Clang invocation: ``-Rpass=openmp-opt
--Rpass-analysis=openmp-opt -Rpass-missed=openmp-opt``.  For more information and
+pass these options to the Clang invocation: `-Rpass=openmp-opt
+-Rpass-analysis=openmp-opt -Rpass-missed=openmp-opt`. For more information and
 features of the remark system, consult the clang documentation:
 
-+ `Clang options to emit optimization reports <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
-+ `Clang diagnostic and remark flags <https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags>`_
-+ The `-foptimization-record-file flag
-  <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-foptimization-record-file>`_
-  and the `-fsave-optimization-record flag
-  <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record>`_
+- [Clang options to emit optimization reports](https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports)
+- [Clang diagnostic and remark flags](https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags)
+- The [-foptimization-record-file flag](https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-foptimization-record-file)
+  and the [-fsave-optimization-record flag](https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record)
 
+## OpenMP Remarks
 
-OpenMP Remarks
---------------
+```{toctree}
+:hidden: true
+:maxdepth: 1
 
-.. toctree::
-   :hidden:
-   :maxdepth: 1
+OMP100
+OMP101
+OMP102
+OMP110
+OMP111
+OMP112
+OMP113
+OMP120
+OMP121
+OMP130
+OMP131
+OMP132
+OMP133
+OMP140
+OMP150
+OMP160
+OMP170
+OMP180
+OMP190
+```
 
-   OMP100
-   OMP101
-   OMP102
-   OMP110
-   OMP111
-   OMP112
-   OMP113
-   OMP120
-   OMP121
-   OMP130
-   OMP131
-   OMP132
-   OMP133
-   OMP140
-   OMP150
-   OMP160
-   OMP170
-   OMP180
-   OMP190
-
+```{eval-rst}
 .. list-table::
    :widths: 15 15 70
    :header-rows: 1
@@ -115,3 +112,5 @@ OpenMP Remarks
    * - :ref:`OMP190 <omp190>`
      - Optimization
      - Redundant barrier eliminated. (device only)
+```
+
