@@ -1464,8 +1464,9 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
           LoopUnrollAndJamPass(static_cast<int>(Level))));
     }
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
-        static_cast<int>(Level), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
-        PTO.ForgetAllSCEVInLoopUnroll)));
+        static_cast<int>(Level),
+        /*OnlyWhenForced=*/!PTO.LoopUnrolling, PTO.ForgetAllSCEVInLoopUnroll,
+        /*PrepareForLTO=*/isLTOPreLink(LTOPhase))));
     FPM.addPass(WarnMissedTransformationsPass());
     // Now that we are done with loop unrolling, be it either by LoopVectorizer,
     // or LoopUnroll passes, some variable-offset GEP's into alloca's could have
