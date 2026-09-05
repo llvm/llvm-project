@@ -25,10 +25,10 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(ptr add
 ; GCN-LABEL: test_sink_small_offset_global_atomic_csub_i32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-NEXT:    v_mbcnt_lo_u32_b32 v1, -1, 0
+; GCN-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_mov_b32 s4, exec_lo
-; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v1
+; GCN-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
