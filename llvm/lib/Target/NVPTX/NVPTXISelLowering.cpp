@@ -1128,8 +1128,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
-  setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
-
   // atom.b128 is legal in PTX but since we don't represent i128 as a legal
   // type, we need to custom lower it.
   setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
@@ -7636,8 +7634,9 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
-  // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
-  // by the weird FTZ behavior PTX atom.add has:
+  // Try to lower LLVM atomicrmw fadd/fsub to PTX atomic.add. Fsub is first
+  // expanded to an fadd with a negated operand. This is complicated by the
+  // weird FTZ behavior PTX atom.add has:
   //   - atom.add.f32 on global memory flushes denormals
   //   - atom.add.f32 on shared memory does not flush denormals
   //   - atom.add.f16 and atomic.add.bf16 never flush denormals
@@ -7647,8 +7646,13 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
-      AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+      (AI->getOperation() == AtomicRMWInst::BinOp::FAdd ||
+       AI->getOperation() == AtomicRMWInst::BinOp::FSub)) {
     const Function *F = AI->getFunction();
+    AtomicExpansionKind ExpansionKind =
+        AI->getOperation() == AtomicRMWInst::BinOp::FSub
+            ? AtomicExpansionKind::Expand
+            : AtomicExpansionKind::None;
 
     // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
@@ -7665,7 +7669,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         break;
       }
       if (UseNative)
-        return AtomicExpansionKind::None;
+        return ExpansionKind;
     }
 
     if (Ty->isHalfTy()) {
@@ -7675,14 +7679,14 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
                        DenormalMode::PreserveSign;
       if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
-        return AtomicExpansionKind::None;
+        return ExpansionKind;
     }
 
     if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
 
     if (Ty->isDoubleTy() && STI.hasAtomAddF64())
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
   }
 
   // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
@@ -7725,22 +7729,27 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   case AtomicRMWInst::BinOp::Max:
   case AtomicRMWInst::BinOp::Min:
   case AtomicRMWInst::BinOp::UMax:
-  case AtomicRMWInst::BinOp::UMin:
+  case AtomicRMWInst::BinOp::UMin: {
+    AtomicExpansionKind ExpansionKind =
+        AI->getOperation() == AtomicRMWInst::BinOp::Sub
+            ? AtomicExpansionKind::Expand
+            : AtomicExpansionKind::None;
     switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
     case 32:
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
     case 64:
       if (STI.hasAtomMinMax64())
-        return AtomicExpansionKind::None;
+        return ExpansionKind;
       return AtomicExpansionKind::CmpXChg;
     case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
     }
+  }
   case AtomicRMWInst::BinOp::UIncWrap:
   case AtomicRMWInst::BinOp::UDecWrap:
     switch (BitWidth) {
@@ -7812,9 +7821,13 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
           STI.getMinCmpXchgSizeInBits())
     return AtomicOrdering::Acquire;
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
-           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
-    return AtomicOrdering::Acquire;
+           RI &&
+           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+    AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
+    if (ExpansionKind == AtomicExpansionKind::None ||
+        ExpansionKind == AtomicExpansionKind::Expand)
+      return AtomicOrdering::Acquire;
+  }
 
   return AtomicOrdering::Monotonic;
 }
