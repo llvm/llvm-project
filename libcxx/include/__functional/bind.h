@@ -245,18 +245,20 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bind_r(_Gp&& __f, _BA&&... __bound_args)
       : base(std::forward<_Gp>(__f), std::forward<_BA>(__bound_args)...) {}
 
-  template <
-      class... _Args,
-      __enable_if_t<is_convertible<typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type, result_type>::value ||
-                        is_void<_Rp>::value,
-                    int> = 0>
+  template < class... _Args,
+             __enable_if_t<
+                 __is_core_convertible_rejecting_temporary<typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type,
+                                                           result_type>::value ||
+                     is_void<_Rp>::value,
+                 int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 result_type operator()(_Args&&... __args) {
     return std::__invoke_r<_Rp>(static_cast<base&>(*this), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args,
-            __enable_if_t<is_convertible<typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type,
-                                         result_type>::value ||
+            __enable_if_t<__is_core_convertible_rejecting_temporary<
+                              typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type,
+                              result_type>::value ||
                               is_void<_Rp>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 result_type operator()(_Args&&... __args) const {

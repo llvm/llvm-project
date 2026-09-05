@@ -43,6 +43,9 @@ constexpr bool test() {
         static_assert(!can_invoke_r<char*, decltype(f)>);        // missing argument
         static_assert(!can_invoke_r<int*,  decltype(f), int>);   // incompatible return type
         static_assert(!can_invoke_r<void,  decltype(f), void*>); // discard return type, invalid argument type
+
+        static_assert(!can_invoke_r<char* const&, decltype(f), int>); // binding to temporary
+        static_assert(!can_invoke_r<char*&&, decltype(f), int>);      // same as above
     }
 
     // Make sure invoke_r has the right noexcept specification
