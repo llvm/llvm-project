@@ -50,6 +50,7 @@ static_library("LLVMLoongArchCodeGen") {
     "LoongArchInstrInfo.cpp",
     "LoongArchLateBranchOpt.cpp",
     "LoongArchMCInstLower.cpp",
+    "LoongArchMemoryBarrierOpt.cpp",
     "LoongArchMergeBaseOffset.cpp",
     "LoongArchOptWInstrs.cpp",
     "LoongArchRegisterInfo.cpp",
