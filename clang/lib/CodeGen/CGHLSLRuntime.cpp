@@ -1500,9 +1500,19 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
         return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                       Semantic->getAttrName()->getName(),
                                       /* BuiltIn::VertexIndex */ 42);
-      else
-        return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                         Signature);
+    }
+  }
+
+  if (SemanticName == "SV_INSTANCEID") {
+    if (ST == Triple::EnvironmentType::Vertex) {
+      if (CGM.getTarget().getTriple().isSPIRV())
+        return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                      Semantic->getAttrName()->getName(),
+                                      /* BuiltIn::InstanceIndex */ 43);
+      return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
+                                      Signature);
     }
   }
 
