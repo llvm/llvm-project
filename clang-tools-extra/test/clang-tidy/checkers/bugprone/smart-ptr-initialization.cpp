@@ -305,6 +305,20 @@ public:
   }
 };
 
+struct Inner {
+  int *P = nullptr;
+};
+struct Outer {
+  Inner In;
+};
+
+void double_wrap_nested_fields(Outer &O) {
+  O.In.P = new int;
+  std::shared_ptr<int> First(O.In.P);
+  std::shared_ptr<int> Second(O.In.P);
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+}
+
 // test_new_expression_ok_in_global
 // FIXME: support it
 /*
