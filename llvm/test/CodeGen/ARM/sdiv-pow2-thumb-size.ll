@@ -23,8 +23,7 @@ define dso_local signext i16 @f0(i16 signext %F) local_unnamed_addr #0 {
 ;
 ; V6M-LABEL: f0:
 ; V6M:       @ %bb.0: @ %entry
-; V6M-NEXT:    uxth r1, r0
-; V6M-NEXT:    lsrs r1, r1, #15
+; V6M-NEXT:    lsrs r1, r0, #31
 ; V6M-NEXT:    adds r0, r0, r1
 ; V6M-NEXT:    sxth r0, r0
 ; V6M-NEXT:    asrs r0, r0, #1
@@ -115,16 +114,14 @@ attributes #0 = { minsize norecurse nounwind optsize readnone }
 define dso_local signext i16 @f4(i16 signext %F) {
 ; T2-LABEL: f4:
 ; T2:       @ %bb.0: @ %entry
-; T2-NEXT:    uxth r1, r0
-; T2-NEXT:    add.w r0, r0, r1, lsr #15
+; T2-NEXT:    add.w r0, r0, r0, lsr #31
 ; T2-NEXT:    sxth r0, r0
 ; T2-NEXT:    asrs r0, r0, #1
 ; T2-NEXT:    bx lr
 ;
 ; T1-LABEL: f4:
 ; T1:       @ %bb.0: @ %entry
-; T1-NEXT:    uxth r1, r0
-; T1-NEXT:    lsrs r1, r1, #15
+; T1-NEXT:    lsrs r1, r0, #31
 ; T1-NEXT:    adds r0, r0, r1
 ; T1-NEXT:    sxth r0, r0
 ; T1-NEXT:    asrs r0, r0, #1
@@ -132,8 +129,7 @@ define dso_local signext i16 @f4(i16 signext %F) {
 ;
 ; V6M-LABEL: f4:
 ; V6M:       @ %bb.0: @ %entry
-; V6M-NEXT:    uxth r1, r0
-; V6M-NEXT:    lsrs r1, r1, #15
+; V6M-NEXT:    lsrs r1, r0, #31
 ; V6M-NEXT:    adds r0, r0, r1
 ; V6M-NEXT:    sxth r0, r0
 ; V6M-NEXT:    asrs r0, r0, #1

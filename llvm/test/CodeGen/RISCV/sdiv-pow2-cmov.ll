@@ -7,7 +7,7 @@
 define signext i32 @sdiv2_32(i32 signext %0) {
 ; NOSFB-LABEL: sdiv2_32:
 ; NOSFB:       # %bb.0:
-; NOSFB-NEXT:    srliw a1, a0, 31
+; NOSFB-NEXT:    srli a1, a0, 63
 ; NOSFB-NEXT:    add a0, a0, a1
 ; NOSFB-NEXT:    sraiw a0, a0, 1
 ; NOSFB-NEXT:    ret
@@ -27,7 +27,7 @@ define signext i32 @sdiv2_32(i32 signext %0) {
 define signext i32 @sdivneg2_32(i32 signext %0) {
 ; NOSFB-LABEL: sdivneg2_32:
 ; NOSFB:       # %bb.0:
-; NOSFB-NEXT:    srliw a1, a0, 31
+; NOSFB-NEXT:    srli a1, a0, 63
 ; NOSFB-NEXT:    add a0, a0, a1
 ; NOSFB-NEXT:    sraiw a0, a0, 1
 ; NOSFB-NEXT:    neg a0, a0
@@ -91,7 +91,7 @@ define i64 @sdivneg2_64(i64 %0) {
 define signext i32 @srem2_32(i32 signext %0) {
 ; NOSFB-LABEL: srem2_32:
 ; NOSFB:       # %bb.0:
-; NOSFB-NEXT:    srliw a1, a0, 31
+; NOSFB-NEXT:    srli a1, a0, 63
 ; NOSFB-NEXT:    add a1, a1, a0
 ; NOSFB-NEXT:    andi a1, a1, -2
 ; NOSFB-NEXT:    subw a0, a0, a1
@@ -114,7 +114,7 @@ define signext i32 @srem2_32(i32 signext %0) {
 define signext i32 @sremneg2_32(i32 signext %0) {
 ; NOSFB-LABEL: sremneg2_32:
 ; NOSFB:       # %bb.0:
-; NOSFB-NEXT:    srliw a1, a0, 31
+; NOSFB-NEXT:    srli a1, a0, 63
 ; NOSFB-NEXT:    add a1, a1, a0
 ; NOSFB-NEXT:    andi a1, a1, -2
 ; NOSFB-NEXT:    subw a0, a0, a1

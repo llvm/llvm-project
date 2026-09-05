@@ -2102,6 +2102,28 @@ bool TargetLowering::SimplifyDemandedBits(
       if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
                                Depth + 1))
         return true;
+
+      // For sign bit shifts try to look through the intermediate operations.
+      // Zero any bits in InDemandedMask that are known leading zeroes in Op0.
+      // As we are shifting the sign bit, we can just increase the shift amount
+      // by the appropriate count to get those zeros.
+      unsigned Op0LZ = Known.countMinLeadingZeros();
+      unsigned NewShAmt = ShAmt + Op0LZ;
+      if (NewShAmt < BitWidth && Op0LZ) {
+        APInt Op0Mask = APInt::getBitsSet(
+            BitWidth, InDemandedMask.countTrailingZeros(), BitWidth - Op0LZ);
+        if (SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+                Op0, Op0Mask, DemandedElts, TLO.DAG, Depth + 1)) {
+          unsigned NumSignBits =
+              TLO.DAG.ComputeNumSignBits(DemandedOp0, DemandedElts, Depth + 1);
+          if (BitWidth - Op0Mask.countTrailingZeros() <= NumSignBits)
+            return TLO.CombineTo(
+                Op, TLO.DAG.getNode(
+                        ISD::SRL, dl, VT, DemandedOp0,
+                        TLO.DAG.getShiftAmountConstant(NewShAmt, VT, dl)));
+        }
+      }
+
       Known >>= ShAmt;
       // High bits known zero.
       Known.Zero.setHighBits(ShAmt);
