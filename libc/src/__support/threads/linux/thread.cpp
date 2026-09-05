@@ -33,6 +33,7 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
+#include "src/__support/elf/dynamic_blocks.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
@@ -500,6 +501,11 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   // different thread. The destructors of thread local and TSS objects should
   // be called by the thread which owns them.
   internal::call_atexit_callbacks();
+
+  // Anything this thread allocated for a module opened after it started is
+  // its own, so it goes back now. The callbacks above may have touched such a
+  // module's thread locals, so this comes after them.
+  elf::release_dynamic_thread_blocks();
 
   uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
   if (!attrib->detach_state.compare_exchange_strong(

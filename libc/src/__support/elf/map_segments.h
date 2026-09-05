@@ -40,6 +40,11 @@ struct MappedModule {
   // it lasts exactly as long as the module does. Null where the path was too
   // long to keep.
   const char *name = nullptr;
+  // The generation of the module set that opening this reached. An index
+  // freed by dlclose goes to the next dlopen, and a thread compares this with
+  // when it made its block for the index to tell whether the block was made
+  // for this module or for one that used to be there.
+  size_t generation = 0;
 };
 
 LIBC_INLINE int segment_protection(ElfW(Word) flags) {

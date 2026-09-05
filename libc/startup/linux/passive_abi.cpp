@@ -38,6 +38,8 @@ LIBC_NAMESPACE::elf::ModuleSet __llvm_libc_process_modules = {
     LIBC_NAMESPACE::elf::storage_tls_offsets,
     LIBC_NAMESPACE::elf::storage_references,
     /*count=*/0,
+    /*static_count=*/0,
+    /*generation=*/1,
     LIBC_NAMESPACE::elf::MAX_PROCESS_MODULES,
     /*page_size=*/4096,
     /*linked=*/false};

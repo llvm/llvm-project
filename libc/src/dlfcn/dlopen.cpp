@@ -75,22 +75,20 @@ LLVM_LIBC_FUNCTION(void *, dlopen, (const char *path, int)) {
     return nullptr;
   }
 
-  // Thread local storage in a newly opened object would have to be added to
-  // every thread that already exists, which needs a dynamic thread vector.
-  // Refusing is better than handing back a module whose thread locals alias
-  // something else.
-  if (loaded.value().module.tls() != nullptr) {
-    elf::unmap_module(loaded.value().mapping);
-    dl::set_error("shared object uses thread local storage");
-    return nullptr;
-  }
-
   const size_t index = set.count;
   set.modules[index] = loaded.value().module;
   set.mappings[index] = loaded.value().mapping;
+  // Nothing loaded now has a place in the block each thread already has, so
+  // there is no offset from a thread pointer to record. Each thread takes a
+  // block of its own for it, the first time it asks.
   set.tls_offsets[index] = 0;
   set.references[index] = 1;
   set.count = index + 1;
+  // A thread may still hold a block for a module that used to be at this
+  // index. Stamping it with the generation this reaches is what tells it that
+  // block is not for what is there now.
+  ++set.generation;
+  set.mappings[index].generation = set.generation;
 
   // Bind against everything now loaded, the new object included, so it can
   // refer to itself as well as to what was already there.

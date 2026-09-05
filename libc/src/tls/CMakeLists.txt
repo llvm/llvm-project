@@ -7,6 +7,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.hdr.types.size_t
+    libc.src.__support.elf.dynamic_blocks
     libc.src.__support.elf.passive_abi
     libc.src.__support.elf.thread_pointer
 )

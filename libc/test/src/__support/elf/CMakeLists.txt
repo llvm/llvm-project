@@ -168,3 +168,19 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.elf.run_path
 )
+
+if(LIBC_ENABLE_SHARED)
+  add_libc_test(
+    dtv_test
+    SUITE
+      libc-support-tests
+    SRCS
+      dtv_test.cpp
+    DEPENDS
+      libc.src.__support.elf.dtv
+      libc.src.__support.elf.load_module
+      libc.src.__support.elf.passive_abi
+    COMPILE_OPTIONS
+      -DLIBC_TEST_SHARED_OBJECT="$<TARGET_FILE:libc-shared>"
+  )
+endif()

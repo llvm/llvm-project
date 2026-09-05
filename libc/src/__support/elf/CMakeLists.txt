@@ -259,3 +259,36 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  dtv
+  HDRS
+    dtv.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.sys_mman_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.elf.module
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_object_library(
+  dynamic_blocks
+  SRCS
+    dynamic_blocks.cpp
+  HDRS
+    dynamic_blocks.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.elf.dtv
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
