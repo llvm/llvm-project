@@ -890,6 +890,8 @@ def ModFlagBehaviorMax
     : LLVM_EnumAttrCase<"Max", "max", "Max", 7>;
 def ModFlagBehaviorMin
     : LLVM_EnumAttrCase<"Min", "min", "Min", 8>;
+def ModFlagBehaviorIgnore
+    : LLVM_EnumAttrCase<"Ignore", "ignore", "Ignore", 9>;
 
 def ModFlagBehaviorAttr : LLVM_EnumAttr<
     "ModFlagBehavior",
@@ -897,7 +899,8 @@ def ModFlagBehaviorAttr : LLVM_EnumAttr<
     "LLVM Module Flag Behavior",
     [ModFlagBehaviorError, ModFlagBehaviorWarning, ModFlagBehaviorRequire,
      ModFlagBehaviorOverride, ModFlagBehaviorAppend,
-     ModFlagBehaviorAppendUnique, ModFlagBehaviorMax, ModFlagBehaviorMin]> {
+     ModFlagBehaviorAppendUnique, ModFlagBehaviorMax, ModFlagBehaviorMin,
+     ModFlagBehaviorIgnore]> {
   let cppNamespace = "::mlir::LLVM";
 }
 

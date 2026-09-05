@@ -675,11 +675,7 @@ std::optional<CodeModel::Model> Module::getCodeModel() const {
 }
 
 void Module::setCodeModel(CodeModel::Model CL) {
-  // Linking object files with different code models is undefined behavior
-  // because the compiler would have to generate additional code (to span
-  // longer jumps) if a larger code model is used with a smaller one.
-  // Therefore we will treat attempts to mix code models as an error.
-  setModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
+  setModuleFlag(ModFlagBehavior::Ignore, "Code Model", CL);
 }
 
 LongDoubleFormat Module::getLongDoubleFormat() const {
@@ -736,9 +732,7 @@ std::optional<uint64_t> Module::getLargeDataThreshold() const {
 }
 
 void Module::setLargeDataThreshold(uint64_t Threshold) {
-  // Since the large data threshold goes along with the code model, the merge
-  // behavior is the same.
-  setModuleFlag(ModFlagBehavior::Error, "Large Data Threshold",
+  setModuleFlag(ModFlagBehavior::Ignore, "Large Data Threshold",
                 ConstantInt::get(Type::getInt64Ty(Context), Threshold));
 }
 
