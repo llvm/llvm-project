@@ -31,6 +31,12 @@ page](https://llvm.org/releases/).
 
 ## Bug Fixes
 
+- `ERFC_SCALED` no longer aborts at run time when called on a `REAL(16)`
+  argument. The entry point was only compiled where `long double` is itself
+  binary128, so on x86-64 a program using it built and linked and then died
+  inside the runtime. It is now implemented over the quad-precision math
+  library, to an accuracy the existing shared approximation could not reach.
+
 ## Non-comprehensive list of changes in this release
 
 - Added support for the OpenMP implementation-defined extension sentinels
