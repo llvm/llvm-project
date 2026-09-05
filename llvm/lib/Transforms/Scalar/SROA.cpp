@@ -5488,13 +5488,6 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // type?
   if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                P.beginOffset(), P.size())) {
-    // If the partition is an integer array that can be spanned by a legal
-    // integer type, prefer to represent it as a legal integer type because
-    // it's more likely to be promotable.
-    if (TypePartitionTy->isArrayTy() &&
-        TypePartitionTy->getArrayElementType()->isIntegerTy() &&
-        DL.isLegalInteger(P.size() * 8))
-      TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
     // There was no common type used, so we prefer integer widening promotion.
     if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
       LogSelection("type-partition-int-widen", TypePartitionTy, nullptr, true);
