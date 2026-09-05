@@ -5446,7 +5446,11 @@ def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
 
 def CIR_AsmFlavor : CIR_I32EnumAttr<"AsmFlavor", "ATT or Intel",
                                     [I32EnumAttrCase<"x86_att", 0>,
-                                     I32EnumAttrCase<"x86_intel", 1>]>;
+                                     I32EnumAttrCase<"x86_intel", 1>]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
 def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
   let description = [{
@@ -5509,7 +5513,7 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          CIR_AsmFlavor:$asm_flavor, ArrayAttr:$operand_attrs,
+          CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
@@ -7020,7 +7024,11 @@ def CIR_AssumeBundleKind : CIR_I32EnumAttr<
   I32EnumAttrCase<"SeparateStorage", 2, "separate_storage">,
   I32EnumAttrCase<"Dereferenceable", 3, "dereferenceable">
 ]> {
+  let genSpecializedAttr = 0;
 }
+
+def CIR_AssumeBundleKindAttr
+    : CIR_EnumAttr<CIR_AssumeBundleKind, "assume_bundle">;
 
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
@@ -7048,7 +7056,7 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
 
   let arguments = (ins
     CIR_BoolType:$predicate,
-    DefaultValuedAttr<CIR_AssumeBundleKind,
+    DefaultValuedAttr<CIR_AssumeBundleKindAttr,
                       "::cir::AssumeBundleKind::None">:$bundle_kind,
     Variadic<CIR_AnyType>:$bundle_args
   );
@@ -8906,7 +8914,12 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Minimum", 11, "minimum">,
     I32EnumAttrCase<"MaximumNum", 12, "maximum_num">,
     I32EnumAttrCase<"MinimumNum", 13, "minimum_num">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_AtomicFetchKindAttr
+    : CIR_EnumAttr<CIR_AtomicFetchKind, "atomic_fetch">;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   AllTypesMatch<["result", "val"]>,
@@ -8956,7 +8969,7 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   let arguments = (ins
     Arg<CIR_PtrToIntOrFloatType, "", [MemRead, MemWrite]>:$ptr,
     CIR_AnyIntOrFloatType:$val,
-    CIR_AtomicFetchKind:$binop,
+    CIR_AtomicFetchKindAttr:$binop,
     Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     Arg<CIR_SyncScopeKindAttr, "synchronization scope">:$sync_scope,
     UnitAttr:$is_volatile,
@@ -8964,7 +8977,7 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   );
 
   let assemblyFormat = [{
-    $binop enum($mem_order)
+    enum($binop) enum($mem_order)
     `syncscope` `(` enum($sync_scope) `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
