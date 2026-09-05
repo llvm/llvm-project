@@ -1109,7 +1109,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   BasicBlock *InLoopSucc = cast<CondBrInst>(BB.getTerminator())
                                ->getSuccessor(ContinueOnTrue ? 0 : 1);
 
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
     return;
 
   BasicBlock *LoopPred = L->getLoopPredecessor();

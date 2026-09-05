@@ -718,12 +718,9 @@ define void @latch_postdec_negative_step_header_is_latch() {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[UGT]])
-; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], 5
-; CHECK-NEXT:    call void @use(i1 [[ULE]])
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[SGT]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 2
