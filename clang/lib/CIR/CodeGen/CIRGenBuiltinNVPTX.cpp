@@ -69,6 +69,23 @@ static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
       .getResult();
 }
 
+static mlir::Value emitBar0Reduction(CIRGenFunction &cgf, const CallExpr *expr,
+                                     llvm::StringRef intrinsicName,
+                                     bool returnsPred) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Type si32Ty = builder.getSInt32Ty();
+  mlir::Value zero = builder.getNullValue(si32Ty, loc);
+  mlir::Value pred = builder.createCompare(
+      loc, cir::CmpOpKind::ne, cgf.emitScalarExpr(expr->getArg(0)), zero);
+  mlir::Type resultTy = returnsPred ? mlir::Type(builder.getBoolTy()) : si32Ty;
+  mlir::Value result = builder.emitIntrinsicCallOp(
+      loc, intrinsicName, resultTy, mlir::ValueRange{zero, pred});
+  if (returnsPred)
+    result = builder.createBoolToInt(result, si32Ty);
+  return result;
+}
+
 static mlir::Value makeScopedAtomicRMW(CIRGenFunction &cgf,
                                        const CallExpr *expr,
                                        cir::AtomicFetchKind kind,
@@ -993,20 +1010,16 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
         mlir::ValueRange{emitScalarExpr(expr->getArg(0)),
                          emitScalarExpr(expr->getArg(1))});
   case NVPTX::BI__nvvm_bar0_and:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr,
+                             "nvvm.barrier.cta.red.and.aligned.all",
+                             /*returnsPred=*/true);
   case NVPTX::BI__nvvm_bar0_or:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr, "nvvm.barrier.cta.red.or.aligned.all",
+                             /*returnsPred=*/true);
   case NVPTX::BI__nvvm_bar0_popc:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr,
+                             "nvvm.barrier.cta.red.popc.aligned.all",
+                             /*returnsPred=*/false);
 
   default:
     return std::nullopt;
