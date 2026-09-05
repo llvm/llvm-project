@@ -182,6 +182,89 @@ def select_256: Immediate<i32, [{ return Imm >= 0 && Imm <= 255; }], "Select_256
   let DecoderMethod = "decodeSelect_256Operand";
 }
 
+// select_2 predicate - Immediate in the range [0,1]
+def Select_2_AsmOperand: ImmAsmOperand<"Select_2">;
+def select_2: Immediate<i32, [{ return Imm >= 0 && Imm <= 1; }], "Select_2_AsmOperand"> {
+  let EncoderMethod = "getSelect_2OpValue";
+  let DecoderMethod = "decodeSelect_2Operand";
+}
+
+// select_4 predicate - Immediate in the range [0,3]
+def Select_4_AsmOperand: ImmAsmOperand<"Select_4">;
+def select_4: Immediate<i32, [{ return Imm >= 0 && Imm <= 3; }], "Select_4_AsmOperand"> {
+  let EncoderMethod = "getSelect_4OpValue";
+  let DecoderMethod = "decodeSelect_4Operand";
+}
+
+// select_8 predicate - Immediate in the range [0,7]
+def Select_8_AsmOperand: ImmAsmOperand<"Select_8">;
+def select_8: Immediate<i32, [{ return Imm >= 0 && Imm <= 7; }], "Select_8_AsmOperand"> {
+  let EncoderMethod = "getSelect_8OpValue";
+  let DecoderMethod = "decodeSelect_8Operand";
+}
+
+// select_16 predicate - Immediate in the range [0,15]
+def Select_16_AsmOperand: ImmAsmOperand<"Select_16">;
+def select_16: Immediate<i32, [{ return Imm >= 0 && Imm <= 15; }], "Select_16_AsmOperand"> {
+  let EncoderMethod = "getSelect_16OpValue";
+  let DecoderMethod = "decodeSelect_16Operand";
+}
+/// --------------------------- ///
+// offset_16_16 predicate - 4-bit signed immediate in the range [-128,112] with an interval
+// of 16.
+def Offset_16_16_AsmOperand: ImmAsmOperand<"Offset_16_16">;
+def offset_16_16: Immediate<i32, [{ return (Imm >= -128 && Imm <= 112) && (Imm & 0xf == 0); }], "Offset_16_16_AsmOperand"> {
+  let EncoderMethod = "getOffset_16_16OpValue";
+  let DecoderMethod = "decodeOffset_16_16Operand";
+}
+
+// offset_256_8 predicate - 4-bit signed immediate in the range [-1024,1016] with an interval
+// of 8.
+def Offset_256_8_AsmOperand: ImmAsmOperand<"Offset_256_8">;
+def offset_256_8: Immediate<i32, [{ return (Imm >= -1024 && Imm <= 1016) && (Imm & 0x7 == 0); }], "Offset_256_8_AsmOperand"> {
+  let EncoderMethod = "getOffset_256_8OpValue";
+  let DecoderMethod = "decodeOffset_256_8Operand";
+}
+
+// offset_256_16 predicate - 8-bit signed immediate in the range [-2048,2032] with an interval
+// of 16.
+def Offset_256_16_AsmOperand: ImmAsmOperand<"Offset_256_16">;
+def offset_256_16: Immediate<i32, [{ return (Imm >= -2048 && Imm <= 2032) && (Imm & 0xf == 0); }], "Offset_256_16_AsmOperand"> {
+  let EncoderMethod = "getOffset_256_16OpValue";
+  let DecoderMethod = "decodeOffset_256_16Operand";
+}
+
+// offset_256_4 predicate - 4-bit signed immediate in the range [-512,508] with an interval
+// of 4.
+def Offset_256_4_AsmOperand: ImmAsmOperand<"Offset_256_4">;
+def offset_256_4: Immediate<i32, [{ return (Imm >= -512 && Imm <= 508) && (Imm & 0x3 == 0); }], "Offset_256_4_AsmOperand"> {
+  let EncoderMethod = "getOffset_256_4OpValue";
+  let DecoderMethod = "decodeOffset_256_4Operand";
+}
+
+// offset_128_2 predicate - 4-bit signed immediate in the range [0,254] with an interval
+// of 2.
+def Offset_128_2_AsmOperand: ImmAsmOperand<"Offset_128_2">;
+def offset_128_2: Immediate<i32, [{ return (Imm >= 0 && Imm <= 254) && (Imm & 0x1 == 0); }], "Offset_128_2_AsmOperand"> {
+  let EncoderMethod = "getOffset_128_2OpValue";
+  let DecoderMethod = "decodeOffset_128_2Operand";
+}
+
+// offset_128_1 predicate - 4-bit signed immediate in the range [0,127]
+def Offset_128_1_AsmOperand: ImmAsmOperand<"Offset_128_1">;
+def offset_128_1: Immediate<i32, [{ return Imm >= 0 && Imm <= 127; }], "Offset_128_1_AsmOperand"> {
+  let EncoderMethod = "getOffset_128_1OpValue";
+  let DecoderMethod = "decodeOffset_128_1Operand";
+}
+
+// offset_64_16 predicate - 4-bit signed immediate in the range [-512,496] with an interval
+// of 16.
+def Offset_64_16_AsmOperand: ImmAsmOperand<"Offset_64_16">;
+def offset_64_16: Immediate<i32, [{ return (Imm >= -512 && Imm <= 496) && (Imm & 0xf == 0); }], "Offset_64_16_AsmOperand"> {
+  let EncoderMethod = "getOffset_64_16OpValue";
+  let DecoderMethod = "decodeOffset_64_16Operand";
+}
+
 //===----------------------------------------------------------------------===//
 // Memory address operands
 //===----------------------------------------------------------------------===//
