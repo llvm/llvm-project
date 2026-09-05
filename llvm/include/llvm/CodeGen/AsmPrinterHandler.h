@@ -20,6 +20,7 @@
 namespace llvm {
 
 class AsmPrinter;
+class DILocation;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
@@ -71,6 +72,10 @@ public:
 
   /// Process beginning of an instruction.
   virtual void beginInstruction(const MachineInstr *MI) {}
+
+  /// Process beginning of an instruction parsed from an inline asm blob.
+  virtual void beginInlineAsmInstruction(const MachineInstr *MI,
+                                         const DILocation *Loc) {}
 
   /// Process end of an instruction.
   virtual void endInstruction() {}

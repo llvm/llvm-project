@@ -32,6 +32,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Token.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -667,19 +668,25 @@ int GCCAsmStmt::getNamedOperand(StringRef SymbolicName) const {
 /// AnalyzeAsmString - Analyze the asm string of the current asm, decomposing
 /// it into pieces.  If the asm string is erroneous, emit errors and return
 /// true, otherwise return false.
-unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
-                                const ASTContext &C, unsigned &DiagOffs) const {
+unsigned
+GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece> &Pieces,
+                             const ASTContext &C, unsigned &DiagOffs,
+                             SmallVectorImpl<unsigned> *SourceOffsets) const {
 
   std::string Str = getAsmString();
   const char *StrStart = Str.data();
   const char *StrEnd = Str.data() + Str.size();
   const char *CurPtr = StrStart;
+  if (SourceOffsets)
+    SourceOffsets->clear();
 
   // "Simple" inline asms have no constraints or operands, just convert the asm
   // string to escape $'s.
   if (isSimple()) {
     std::string Result;
     for (; CurPtr != StrEnd; ++CurPtr) {
+      if (SourceOffsets)
+        SourceOffsets->append(*CurPtr == '$' ? 2 : 1, CurPtr - StrStart);
       switch (*CurPtr) {
       case '$':
         Result += "$$";
@@ -710,6 +717,25 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       return 0;
     }
 
+    // Track the bytes produced by this conversion, including escapes and
+    // operand references. Flushing a literal into Pieces does not change its
+    // length; operand pieces contribute their LLVM template spelling.
+    unsigned SourceOffset = CurPtr - StrStart;
+    size_t OldStringSize = CurStringPiece.size();
+    size_t OldPiecesSize = Pieces.size();
+    auto RecordOffsets = llvm::scope_exit([&] {
+      if (!SourceOffsets)
+        return;
+      size_t NewSize = CurStringPiece.size();
+      for (size_t I = OldPiecesSize; I < Pieces.size(); ++I) {
+        const auto &Piece = Pieces[I];
+        NewSize += Piece.isString()
+                       ? Piece.getString().size()
+                       : llvm::utostr(Piece.getOperandNo()).size() +
+                             (Piece.getModifier() ? 5 : 1);
+      }
+      SourceOffsets->append(NewSize - OldStringSize, SourceOffset);
+    });
     char CurChar = *CurPtr++;
     switch (CurChar) {
     case '$': CurStringPiece += "$$"; continue;
@@ -869,12 +895,14 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 }
 
 /// Assemble final IR asm string (GCC-style).
-std::string GCCAsmStmt::generateAsmString(const ASTContext &C) const {
+std::string
+GCCAsmStmt::generateAsmString(const ASTContext &C,
+                              SmallVectorImpl<unsigned> *SourceOffsets) const {
   // Analyze the asm string to decompose it into its pieces.  We know that Sema
   // has already done this, so it is guaranteed to be successful.
   SmallVector<GCCAsmStmt::AsmStringPiece, 4> Pieces;
   unsigned DiagOffs;
-  AnalyzeAsmString(Pieces, C, DiagOffs);
+  AnalyzeAsmString(Pieces, C, DiagOffs, SourceOffsets);
 
   std::string AsmString;
   for (const auto &Piece : Pieces) {

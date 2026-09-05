@@ -2352,6 +2352,10 @@ const MDNode *MachineInstr::getLocCookieMD() const {
   return nullptr;
 }
 
+const MDNode *MachineInstr::getInlineAsmSourceLocMD() const {
+  return InlineAsm::getSourceLocMetadata(getLocCookieMD());
+}
+
 void MachineInstr::emitInlineAsmError(const Twine &Msg) const {
   assert(isInlineAsm());
   const MDNode *LocMD = getLocCookieMD();

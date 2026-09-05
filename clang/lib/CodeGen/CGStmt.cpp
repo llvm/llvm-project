@@ -26,6 +26,7 @@
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -2629,16 +2630,48 @@ CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
                             InputExpr->getExprLoc());
 }
 
+static llvm::MDNode *
+getAsmSrcLocInfo(ArrayRef<SourceLocation> SourceLocs, CodeGenFunction &CGF,
+                 ArrayRef<std::pair<unsigned, SourceLocation>> DebugLocs = {}) {
+  SmallVector<llvm::Metadata *, 8> Locs;
+  llvm::LLVMContext &Ctx = CGF.getLLVMContext();
+
+  for (SourceLocation Loc : SourceLocs) {
+    llvm::Constant *RawLoc =
+        llvm::ConstantInt::get(CGF.Int64Ty, Loc.getRawEncoding());
+    Locs.push_back(llvm::ConstantAsMetadata::get(RawLoc));
+  }
+
+  if (CGF.getDebugInfo() && CGF.CGM.getCodeGenOpts().EmitCodeView &&
+      !DebugLocs.empty()) {
+    SmallVector<llvm::Metadata *, 16> Entries;
+    Entries.push_back(llvm::MDString::get(Ctx, "inlineasm.dbg.offset"));
+    llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
+    for (auto [Offset, Loc] : DebugLocs) {
+      llvm::DebugLoc DL = CGF.SourceLocToDebugLoc(Loc);
+      Entries.push_back(llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(Int32Ty, Offset)));
+      Entries.push_back(llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(Int32Ty, DL ? DL.getLine() : 0)));
+      Entries.push_back(llvm::ConstantAsMetadata::get(
+          llvm::ConstantInt::get(Int32Ty, DL ? DL.getCol() : 0)));
+    }
+    Locs.push_back(llvm::MDNode::get(Ctx, Entries));
+  }
+
+  return llvm::MDNode::get(Ctx, Locs);
+}
+
 /// getAsmSrcLocInfo - Return the !srcloc metadata node to attach to an inline
 /// asm call instruction.  The !srcloc MDNode contains a list of constant
 /// integers which are the source locations of the start of each line in the
 /// asm.
-static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
-                                      CodeGenFunction &CGF) {
-  SmallVector<llvm::Metadata *, 8> Locs;
+static llvm::MDNode *getGCCAsmSrcLocInfo(const GCCAsmStmt &S,
+                                         const StringLiteral *Str,
+                                         CodeGenFunction &CGF) {
+  SmallVector<SourceLocation, 8> Locs;
   // Add the location of the first line to the MDNode.
-  Locs.push_back(llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-      CGF.Int64Ty, Str->getBeginLoc().getRawEncoding())));
+  Locs.push_back(Str->getBeginLoc());
   StringRef StrVal = Str->getString();
   if (!StrVal.empty()) {
     const SourceManager &SM = CGF.CGM.getContext().getSourceManager();
@@ -2649,15 +2682,85 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
     // Add the location of the start of each subsequent line of the asm to the
     // MDNode.
     for (unsigned i = 0, e = StrVal.size() - 1; i != e; ++i) {
-      if (StrVal[i] != '\n') continue;
+      if (StrVal[i] != '\n')
+        continue;
       SourceLocation LineLoc = Str->getLocationOfByte(
           i + 1, SM, LangOpts, CGF.getTarget(), &StartToken, &ByteOffset);
-      Locs.push_back(llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(CGF.Int64Ty, LineLoc.getRawEncoding())));
+      Locs.push_back(LineLoc);
     }
   }
 
-  return llvm::MDNode::get(CGF.getLLVMContext(), Locs);
+  SmallVector<std::pair<unsigned, SourceLocation>, 16> DebugLocs;
+  if (CGF.getDebugInfo() && CGF.CGM.getCodeGenOpts().EmitCodeView) {
+    SmallVector<unsigned, 64> SourceOffsets;
+    std::string Template =
+        S.generateAsmString(CGF.getContext(), &SourceOffsets);
+    assert(Template.size() == SourceOffsets.size());
+    const SourceManager &SM = CGF.CGM.getContext().getSourceManager();
+    unsigned StartToken = 0, ByteOffset = 0;
+    // Record word starts and punctuation without assuming a target-specific
+    // statement separator. In particular, ';' need not introduce a new line.
+    // Positions refer to the LLVM template, after Clang's escape conversion.
+    auto IsWordChar = [](char C) {
+      return llvm::isAlnum(C) || C == '_' || C == '.';
+    };
+    for (unsigned I = 0; I < Template.size(); ++I) {
+      if (llvm::isSpace(Template[I]) ||
+          (I && SourceOffsets[I] == SourceOffsets[I - 1]) ||
+          (I && IsWordChar(Template[I]) && IsWordChar(Template[I - 1])))
+        continue;
+      SourceLocation Loc =
+          Str->getLocationOfByte(SourceOffsets[I], SM, CGF.CGM.getLangOpts(),
+                                 CGF.getTarget(), &StartToken, &ByteOffset);
+      DebugLocs.emplace_back(I, Loc);
+    }
+  }
+  return getAsmSrcLocInfo(Locs, CGF, DebugLocs);
+}
+
+static llvm::MDNode *getMSAsmSrcLocInfo(const MSAsmStmt &S, StringRef AsmString,
+                                        CodeGenFunction &CGF) {
+  SmallVector<SourceLocation, 8> Locs;
+
+  MSAsmStmt &NonConstS = const_cast<MSAsmStmt &>(S);
+  ArrayRef<Token> AsmToks(NonConstS.getAsmToks(), NonConstS.getNumAsmToks());
+  bool IsNewStatement = true;
+  for (const Token &Tok : AsmToks) {
+    if (!IsNewStatement && (Tok.is(tok::kw_asm) || Tok.isAtStartOfLine()))
+      IsNewStatement = true;
+
+    if (IsNewStatement) {
+      if (Tok.is(tok::kw_asm))
+        continue;
+
+      Locs.push_back(Tok.getLocation());
+      IsNewStatement = false;
+      continue;
+    }
+
+    if (!Tok.is(tok::kw_asm))
+      IsNewStatement = false;
+  }
+
+  if (Locs.empty())
+    Locs.push_back(S.getAsmLoc());
+
+  size_t ExpectedLocs = AsmString.empty() ? 1 : AsmString.count('\n') + 1;
+  if (Locs.size() > ExpectedLocs)
+    Locs.truncate(ExpectedLocs);
+  while (Locs.size() < ExpectedLocs)
+    Locs.push_back(Locs.back());
+
+  SmallVector<std::pair<unsigned, SourceLocation>, 8> DebugLocs;
+  unsigned Offset = 0;
+  for (SourceLocation Loc : Locs) {
+    DebugLocs.emplace_back(Offset, Loc);
+    size_t End = AsmString.find('\n', Offset);
+    if (End == StringRef::npos)
+      break;
+    Offset = End + 1;
+  }
+  return getAsmSrcLocInfo(Locs, CGF, DebugLocs);
 }
 
 namespace clang {
@@ -3311,15 +3414,14 @@ void AsmConstraintsInfo::UpdateAsmCallInst(
   if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S);
       gccAsmStmt &&
       (SL = dyn_cast<StringLiteral>(gccAsmStmt->getAsmStringExpr()))) {
-    Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, CGF));
+    Result.setMetadata("srcloc", getGCCAsmSrcLocInfo(*gccAsmStmt, SL, CGF));
+  } else if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(&S)) {
+    Result.setMetadata("srcloc",
+                       getMSAsmSrcLocInfo(*msAsmStmt, AsmString, CGF));
   } else {
     // At least put the line number on MS inline asm blobs and GCC asm constexpr
     // strings.
-    llvm::Constant *Loc =
-        llvm::ConstantInt::get(CGF.Int64Ty, S.getAsmLoc().getRawEncoding());
-    Result.setMetadata("srcloc",
-                       llvm::MDNode::get(getLLVMContext(),
-                                         llvm::ConstantAsMetadata::get(Loc)));
+    Result.setMetadata("srcloc", getAsmSrcLocInfo({S.getAsmLoc()}, CGF));
   }
 
   // Make inline-asm calls Key for the debug info feature Key Instructions.
