@@ -1147,6 +1147,69 @@ inline GetElementPtr_match m_GetElementPtr(Type *&SourceElementType,
   return GetElementPtr_match(SourceElementType, Operands);
 }
 
+/// The parts of a load through a pointer selected between two bases:
+///
+///   load (gep (select Cond, TrueBase, FalseBase), Indices...)
+struct SelectedBaseLoadPattern {
+  VPValue *Addr = nullptr;
+  Type *SourceElementType = nullptr;
+  SmallVector<VPValue *> GEPOperands;
+  VPValue *Cond = nullptr;
+  VPValue *TrueBase = nullptr;
+  VPValue *FalseBase = nullptr;
+};
+
+/// Match a simple load through a GEP whose base pointer is selected per
+/// iteration between two distinct candidates.
+struct SelectedBaseLoad_match {
+  SelectedBaseLoadPattern &Pattern;
+
+  bool matchLoad(const Instruction *I, VPValue *Addr) const {
+    auto *LI = dyn_cast<LoadInst>(I);
+    if (!LI || !LI->isSimple())
+      return false;
+
+    if (!isa<VPWidenGEPRecipe, VPInstruction>(Addr))
+      return false;
+
+    Type *SourceElementTy = nullptr;
+    ArrayRef<VPValue *> GEPOperands;
+    if (!VPlanPatternMatch::match(
+            Addr, m_GetElementPtr(SourceElementTy, GEPOperands)) ||
+        GEPOperands.size() < 2)
+      return false;
+
+    VPValue *Cond = nullptr;
+    VPValue *TrueBase = nullptr;
+    VPValue *FalseBase = nullptr;
+    if (!VPlanPatternMatch::match(GEPOperands.front(),
+                                  m_Select(m_VPValue(Cond), m_VPValue(TrueBase),
+                                           m_VPValue(FalseBase))) ||
+        !Cond->getScalarType()->isIntegerTy(1) || TrueBase == FalseBase)
+      return false;
+
+    Pattern = {Addr, SourceElementTy, SmallVector<VPValue *>(GEPOperands),
+               Cond, TrueBase,        FalseBase};
+    return true;
+  }
+
+  bool match(const VPInstruction *Load) const {
+    if (Load->getOpcode() != Instruction::Load)
+      return false;
+    return matchLoad(dyn_cast_or_null<LoadInst>(Load->getUnderlyingInstr()),
+                     Load->getOperand(0));
+  }
+
+  bool match(const VPWidenLoadRecipe *Load) const {
+    return matchLoad(&Load->getIngredient(), Load->getAddr());
+  }
+};
+
+inline SelectedBaseLoad_match
+m_SelectedBaseLoad(SelectedBaseLoadPattern &Pattern) {
+  return {Pattern};
+}
+
 template <typename SubPattern_t> struct OneUse_match {
   SubPattern_t SubPattern;
 

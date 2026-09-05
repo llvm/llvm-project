@@ -612,6 +612,12 @@ struct VPlanTransforms {
                                          VPRecipeBuilder &RecipeBuilder,
                                          VPCostContext &CostCtx);
 
+  /// Widen loads through a pointer selected per iteration between two
+  /// loop-invariant bases into two masked consecutive loads and a select when
+  /// the replacement is legal and profitable according to VPlan recipe costs.
+  static void widenSelectedBaseLoads(VPlan &Plan, VFRange &Range,
+                                     VPCostContext &CostCtx);
+
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
   /// enabled by prior widening of consecutive memory operations for now.
