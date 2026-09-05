@@ -390,7 +390,7 @@ ninja install || exit /b 1
 :: check llvm_config is present & returns something
 %build_dir%/%filename%/bin/llvm-config.exe --bindir || exit /b 1
 cd ..
-7z a -ttar -so %filename%.tar %filename% | 7z a -txz -si %filename%.tar.xz
+7z a -ttar -so %filename%.tar %filename% | 7z a -txz -mmt -si %filename%.tar.xz
 
 exit /b 0
 
