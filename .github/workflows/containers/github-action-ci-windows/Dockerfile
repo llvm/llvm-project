@@ -57,9 +57,6 @@ RUN git clone --depth 1 --branch 2026.06.24 https://github.com/microsoft/vcpkg.g
     rmdir /S /Q C:\vcpkg\downloads && \
     rmdir /S /Q C:\vcpkg\.git
 
-# Testing requires psutil
-RUN pip install psutil
-
 # configure Python encoding
 ENV PYTHONIOENCODING=UTF-8
 
