@@ -25,6 +25,7 @@
 // RUN: %clang -std=c++20 --target=x86_64-windows-msvc -fmodule-file=b=%t/modb.pcm -S -emit-llvm %t/crossmod.cppm -o - | FileCheck %t/crossmod.cppm
 // RUN: %clang -std=c++20 --target=x86_64-windows-msvc -fmodule-file=b=%t/modb.pcm -S -emit-llvm %t/crossmod_val.cppm -o - | FileCheck %t/crossmod_val.cppm
 // RUN: %clang -std=c++20 --target=x86_64-windows-msvc -fmodule-file=b=%t/modb.pcm -S -emit-llvm %t/tmplcross.cppm -o - | FileCheck %t/tmplcross.cppm
+// RUN: %clang -std=c++20 --target=x86_64-windows-msvc -fmodule-file=b=%t/modb.pcm -S -emit-llvm %t/nonmodule_cross.cpp -o - | FileCheck %t/nonmodule_cross.cpp
 // RUN: %clang -std=c++20 --target=x86_64-windows-msvc -fmodule-output=%t/modc.pcm -c %t/modc.cppm -o %t/modc.o
 // RUN: %clang -std=c++20 --target=x86_64-windows-msvc -fmodule-file=c=%t/modc.pcm -S -emit-llvm %t/functmplcross.cppm -o - | FileCheck %t/functmplcross.cppm
 // RUN: %clang -std=c++20 --target=x86_64-windows-msvc -fmodule-output=%t/modd.pcm -c %t/modd.cppm -o %t/modd.o
@@ -272,6 +273,21 @@ export Box<int> makeBox() { return Box<int>(); }
 // CHECK-DAG: define {{.*}} @"??1?$Box@H@@UEAA@XZ::<!b>"(
 // CHECK-DAG: define {{.*}} @"?makeBox@@YA?AU?$Box@H@$$_Ab@@@XZ::<!a>"(
 // CHECK-DAG: @"??_R0?AU?$Box@H@$$_Ab@@@@8" =
+
+//--- nonmodule_cross.cpp
+import b;
+
+BFoo *takesBFromPlainTU(BFoo *p) { return p; }
+
+// A plain, non-module translation unit (no "export module" at all) that
+// imports a module and references its type: takesBFromPlainTU itself gets
+// no "::<!module>" suffix (it isn't module-owned), but BFoo -- which is --
+// still gets the "$$_Ab" embedded tag. MangleContextModule ends up null
+// here for the same reason it's always null for RTTI: the enclosing
+// entity just has no module of its own to compare against, so any
+// module-owned type reference is unconditionally tagged.
+// CHECK: define {{.*}} @"?takesBFromPlainTU@@YAPEAUBFoo@$$_Ab@@@PEAU1$$_A2@@@Z"(
+// CHECK-NOT: ::<!
 
 //--- modc.cppm
 export module c;

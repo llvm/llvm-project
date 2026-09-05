@@ -344,17 +344,9 @@ public:
   enum class TplArgKind { ClassNTTP, StructuralValue };
 
   // The module owning the entity `mangle(GlobalDecl, StringRef)` is
-  // currently mangling the top-level name of, or null if there is none
-  // (e.g. while mangling RTTI's bare QualType). mangleName consults this
-  // to decide whether an embedded record-type reference needs a
-  // "$$_A<module>" tag -- see MangleEmbeddedRecordModule.
+  // mangling the top-level name of, or null if there is none (e.g. RTTI).
+  // Consulted by mangleType(TagDecl*) for the "$$_A<module>" tag.
   Module *MangleContextModule = nullptr;
-
-  // Set by mangleType(TagDecl*) immediately before it calls mangleName, to
-  // mark that this is an embedded record-type reference rather than a
-  // top-level entity's own name. Cleared the first time mangleName checks
-  // it.
-  bool MangleEmbeddedRecordModule = false;
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_)
       : Context(C), Out(Out_), Structor(nullptr), StructorType(-1),
@@ -379,7 +371,7 @@ public:
   raw_ostream &getStream() const { return Out; }
 
   void mangle(GlobalDecl GD, StringRef Prefix = "?");
-  void mangleName(GlobalDecl GD);
+  void mangleName(GlobalDecl GD, bool Terminate = true);
   void mangleFunctionEncoding(GlobalDecl GD, bool ShouldMangle);
   void mangleVariableEncoding(const VarDecl *VD);
   void mangleMemberDataPointer(const CXXRecordDecl *RD, const ValueDecl *VD,
@@ -977,7 +969,7 @@ void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
                           MD->getSourceRange());
 }
 
-void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD) {
+void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD, bool Terminate) {
   // <name> ::= <unscoped-name> {[<named-scope>]+ | [<nested-name>]}? @
 
   // Always start with the unqualified name.
@@ -985,34 +977,10 @@ void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD) {
 
   mangleNestedName(GD);
 
-  if (MangleEmbeddedRecordModule) {
-    // Fire once, for the record itself, not for enclosing-scope components
-    // mangleNestedName may have just recursed into.
-    MangleEmbeddedRecordModule = false;
-    // <name> gains a "$$_A<module>@@" scope component when this record's
-    // owning module differs from MangleContextModule (always true for
-    // RTTI, which has none). The module name shares NameBackReferences
-    // with ordinary names: a fresh name needs its own name-terminating '@'
-    // plus the list terminator ("@@"); a back-reference digit has no '@'
-    // of its own, so it needs only the list terminator ("@").
-    if (const auto *ND = dyn_cast<NamedDecl>(GD.getDecl()))
-      if (Module *M = ND->getOwningModuleForLinkage())
-        if (M != MangleContextModule) {
-          Out << "$$_A";
-          StringRef Name = M->getPrimaryModuleInterfaceName();
-          BackRefVec::iterator Found = llvm::find(NameBackReferences, Name);
-          if (Found == NameBackReferences.end()) {
-            if (NameBackReferences.size() < 10)
-              NameBackReferences.push_back(std::string(Name));
-            Out << Name << "@@";
-          } else {
-            Out << (Found - NameBackReferences.begin()) << '@';
-          }
-        }
-  }
-
-  // Terminate the whole name with an '@'.
-  Out << '@';
+  // Terminate with '@', unless the caller (mangleType(TagDecl*)) wants to
+  // append more first and terminate it itself.
+  if (Terminate)
+    Out << '@';
 }
 
 void MicrosoftCXXNameMangler::mangleNumber(int64_t Number) {
@@ -3510,11 +3478,29 @@ void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
   const auto *Def = TD->getDefinition();
   TD = Def ? Def : TD->getFirstDecl();
   mangleTagTypeKind(TD->getTagKind());
-  // The only place a record type is mangled as an embedded reference
-  // (parameter, return type, RTTI's target type, ...) rather than as a
-  // top-level entity's own name -- see MangleContextModule.
-  MangleEmbeddedRecordModule = true;
-  mangleName(TD);
+  // A record referenced here (as opposed to being the top-level entity
+  // mangle(GlobalDecl) is naming) gets a "$$_A<module>" tag when its
+  // module differs from MangleContextModule -- always true for RTTI.
+  mangleName(TD, /*Terminate=*/false);
+  if (Module *M = TD->getOwningModuleForLinkage())
+    if (M != MangleContextModule) {
+      // Shares NameBackReferences with ordinary names: a fresh name needs
+      // its own '@' plus the list terminator ("@@"); a back-reference
+      // digit has no '@' of its own, so it needs only "@".
+      Out << "$$_A";
+      StringRef Name = M->getPrimaryModuleInterfaceName();
+      BackRefVec::iterator Found = llvm::find(NameBackReferences, Name);
+      if (Found == NameBackReferences.end()) {
+        if (NameBackReferences.size() < 10)
+          NameBackReferences.push_back(std::string(Name));
+        Out << Name << "@@";
+      } else {
+        Out << (Found - NameBackReferences.begin()) << '@';
+      }
+      Out << '@';
+      return;
+    }
+  Out << '@';
 }
 
 // If you add a call to this, consider updating isArtificialTagType() too.
