@@ -271,13 +271,6 @@ static cl::opt<bool> VectorizeOnceUsed(
     cl::desc("Use instructions with the single user as standalone "
              "vectorization seeds."));
 
-/// True when \p slp-vectorize-non-power-of-2 is enabled and \p NumElts is a
-/// supported non-power-of-2 width: \p NumElts + 1 must be a power of two
-/// (e.g. 3 or 7 lanes, i.e. almost a full power-of-2 register).
-static bool isAllowedNonPowerOf2VF(unsigned NumElts) {
-  return VectorizeNonPowerOf2 && has_single_bit(NumElts + 1);
-}
-
 /// Enables vectorization of copyable elements.
 static cl::opt<bool> VectorizeCopyableElements(
     "slp-copyable-elements", cl::init(true), cl::Hidden,
@@ -462,31 +455,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   // we have permutation of 2 vectors.
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc;
-}
-
-/// Returns number of parts, the type \p VecTy will be split at the codegen
-/// phase. If the type is going to be scalarized or does not uses whole
-/// registers, returns 1.
-static unsigned
-getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
-                 const unsigned Limit = std::numeric_limits<unsigned>::max()) {
-  if (isa<StructType>(VecTy))
-    return 1;
-  unsigned NumParts = TTI.getNumberOfParts(VecTy);
-  if (NumParts == 0 || NumParts >= Limit)
-    return 1;
-  unsigned Sz = getNumElements(VecTy);
-  unsigned ScalarSz = getNumElements(ScalarTy);
-  Type *ElementTy = toScalarizedTy(VecTy);
-  unsigned PWSz = getFullVectorNumberOfElements(TTI, ElementTy, Sz, SLPReVec);
-  if (NumParts >= Sz || PWSz % NumParts != 0 ||
-      (PWSz / NumParts) % ScalarSz != 0 ||
-      !hasFullVectorsOrPowerOf2(TTI, ElementTy, PWSz / NumParts, SLPReVec))
-    return 1;
-  const unsigned NumElts = PWSz / NumParts;
-  if (divideCeil(Sz, NumElts) != NumParts)
-    return 1;
-  return NumParts;
 }
 
 /// Bottom Up SLP Vectorizer.
@@ -923,7 +891,8 @@ public:
     auto [It, Inserted] =
         NumberOfPartsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
     if (Inserted)
-      It->second = ::getNumberOfParts(*TTI, VecTy, ScalarTy, Limit);
+      It->second = slpvectorizer::getNumberOfParts(*TTI, VecTy, ScalarTy,
+                                                   SLPReVec, Limit);
     return It->second;
   }
 
@@ -7254,11 +7223,11 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
       }
     }
     if (Sz == 2 && TE.getVectorFactor() == 4 &&
-        ::getNumberOfParts(
+        slpvectorizer::getNumberOfParts(
             *TTI,
             getWidenedType(getValueType(TE.Scalars.front(), SLPReVec),
                            2 * TE.getVectorFactor()),
-            getValueType(TE.Scalars.front(), SLPReVec)) == 1)
+            getValueType(TE.Scalars.front(), SLPReVec), SLPReVec) == 1)
       return std::nullopt;
     if (TE.ReuseShuffleIndices.size() % Sz != 0)
       return std::nullopt;
@@ -9169,7 +9138,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
     unsigned StartIdx = 0;
     SmallVector<int> CandidateVFs;
-    if (isAllowedNonPowerOf2VF(MaxVF))
+    if (isAllowedNonPowerOf2VF(MaxVF, VectorizeNonPowerOf2))
       CandidateVFs.push_back(MaxVF);
     for (int NumElts = getFloorFullVectorNumberOfElements(
              *TTI, Loads.front()->getType(), MaxVF, SLPReVec);
@@ -10754,9 +10723,10 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
     auto *UniquesVecTy =
         cast<VectorType>(getWidenedType(ScalarTy, NumUniqueScalarValues));
-    const unsigned NumParts = ::getNumberOfParts(TTI, VecTy, ScalarTy);
+    const unsigned NumParts =
+        slpvectorizer::getNumberOfParts(TTI, VecTy, ScalarTy, SLPReVec);
     const unsigned UniquesNumParts =
-        ::getNumberOfParts(TTI, UniquesVecTy, ScalarTy);
+        slpvectorizer::getNumberOfParts(TTI, UniquesVecTy, ScalarTy, SLPReVec);
     // No need to schedule scalars and only single register used? Use original
     // scalars, do not pack.
     if (!RequireScheduling) {
@@ -15026,10 +14996,10 @@ void BoUpSLP::transformNodes() {
           bool IsSplat = isSplat(Slice);
           bool IsTwoRegisterSplat = true;
           if (IsSplat && VF == 2) {
-            unsigned NumRegs2VF = ::getNumberOfParts(
+            unsigned NumRegs2VF = slpvectorizer::getNumberOfParts(
                 *TTI,
                 getWidenedType(getValueType(Slice.front(), SLPReVec), 2 * VF),
-                getValueType(Slice.front(), SLPReVec));
+                getValueType(Slice.front(), SLPReVec), SLPReVec);
             IsTwoRegisterSplat = NumRegs2VF == 2;
           }
           if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
@@ -16201,8 +16171,8 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts =
-        ::getNumberOfParts(TTI, MaskVecTy, ScalarTy, Mask.size());
+    unsigned NumParts = slpvectorizer::getNumberOfParts(
+        TTI, MaskVecTy, ScalarTy, SLPReVec, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -16217,8 +16187,8 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts =
-        ::getNumberOfParts(TTI, MaskVecTy, ScalarTy, Mask.size());
+    unsigned NumParts = slpvectorizer::getNumberOfParts(
+        TTI, MaskVecTy, ScalarTy, SLPReVec, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -26527,13 +26497,14 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           ::getNumberOfParts(*TTI, SI1->getType(),
-                              SI1->getType()->getElementType()) ==
-               ::getNumberOfParts(
+           slpvectorizer::getNumberOfParts(*TTI, SI1->getType(),
+                                           SI1->getType()->getElementType(),
+                                           SLPReVec) ==
+               slpvectorizer::getNumberOfParts(
                    *TTI,
                    getWidenedType(SI1->getType()->getElementType(),
                                   SM1.size() - LastUndefsCnt),
-                   SI1->getType()->getElementType());
+                   SI1->getType()->getElementType(), SLPReVec);
   };
   // Perform O(N^2) search over the gather/shuffle sequences and merge identical
   // instructions. TODO: We can further optimize this scan if we split the
@@ -29018,7 +28989,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     bool IsAllowedSize =
         hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(), ValOps.size(),
                                  SLPReVec) ||
-        isAllowedNonPowerOf2VF(ValOps.size());
+        isAllowedNonPowerOf2VF(ValOps.size(), VectorizeNonPowerOf2);
     if ((!IsAllowedSize && S && S.getOpcode() != Instruction::Load &&
          (!S.getMainOp()->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -29371,7 +29342,7 @@ bool StoreChainContext::initializeContext(
   // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF).
   unsigned NonPowerOf2VF = 0;
   unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
-  if (isAllowedNonPowerOf2VF(CandVF)) {
+  if (isAllowedNonPowerOf2VF(CandVF, VectorizeNonPowerOf2)) {
     NonPowerOf2VF = CandVF;
     assert(NonPowerOf2VF != MaxVF &&
            "Non-power-of-2 VF should not be equal to MaxVF");
@@ -30038,7 +30009,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF =
-      std::max<unsigned>(isAllowedNonPowerOf2VF(VL.size())
+      std::max<unsigned>(isAllowedNonPowerOf2VF(VL.size(), VectorizeNonPowerOf2)
                              ? VL.size()
                              : getFloorFullVectorNumberOfElements(
                                    *TTI, ScalarTy, VL.size(), SLPReVec),
@@ -30074,7 +30045,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
       if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF, SLPReVec) &&
-          (ActualVF != VL.size() || !isAllowedNonPowerOf2VF(ActualVF)))
+          (ActualVF != VL.size() ||
+           !isAllowedNonPowerOf2VF(ActualVF, VectorizeNonPowerOf2)))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
@@ -31414,7 +31386,7 @@ public:
         ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy,
                                                         ReduxWidth, SLPReVec);
         VectorType *Tp = cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-        NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+        NumParts = slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
         NumRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         while (NumParts > NumRegs) {
@@ -31422,7 +31394,8 @@ public:
           ReduxWidth = bit_floor(ReduxWidth - 1);
           VectorType *Tp =
               cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-          NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+          NumParts =
+              slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
           NumRegs =
               TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         }
@@ -31430,7 +31403,7 @@ public:
           ReduxWidth = bit_floor(ReduxWidth);
         return ReduxWidth;
       };
-      if (!isAllowedNonPowerOf2VF(ReduxWidth))
+      if (!isAllowedNonPowerOf2VF(ReduxWidth, VectorizeNonPowerOf2))
         ReduxWidth = GetVectorFactor(ReduxWidth);
       ReduxWidth = std::min(ReduxWidth, MaxElts);
 
@@ -31982,14 +31955,15 @@ public:
       ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy, ReduxWidth,
                                                       SLPReVec);
       Type *Tp = getWidenedType(ScalarTy, ReduxWidth);
-      unsigned NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+      unsigned NumParts =
+          slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
       unsigned NumRegs =
           TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
       while (NumParts > NumRegs) {
         assert(ReduxWidth > 0 && "ReduxWidth is unexpectedly 0.");
         ReduxWidth = bit_floor(ReduxWidth - 1);
         Type *Tp = getWidenedType(ScalarTy, ReduxWidth);
-        NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+        NumParts = slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
         NumRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
       }

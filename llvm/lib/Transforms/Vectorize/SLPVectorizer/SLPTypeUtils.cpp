@@ -125,4 +125,29 @@ bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
          Sz % NumParts == 0;
 }
 
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool VectorizeNonPowerOf2) {
+  return VectorizeNonPowerOf2 && has_single_bit(NumElts + 1);
+}
+
+unsigned getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy,
+                          Type *ScalarTy, bool ReVec, unsigned Limit) {
+  if (isa<StructType>(VecTy))
+    return 1;
+  unsigned NumParts = TTI.getNumberOfParts(VecTy);
+  if (NumParts == 0 || NumParts >= Limit)
+    return 1;
+  unsigned Sz = getNumElements(VecTy);
+  unsigned ScalarSz = getNumElements(ScalarTy);
+  Type *ElementTy = toScalarizedTy(VecTy);
+  unsigned PWSz = getFullVectorNumberOfElements(TTI, ElementTy, Sz, ReVec);
+  if (NumParts >= Sz || PWSz % NumParts != 0 ||
+      (PWSz / NumParts) % ScalarSz != 0 ||
+      !hasFullVectorsOrPowerOf2(TTI, ElementTy, PWSz / NumParts, ReVec))
+    return 1;
+  const unsigned NumElts = PWSz / NumParts;
+  if (divideCeil(Sz, NumElts) != NumParts)
+    return 1;
+  return NumParts;
+}
+
 } // namespace llvm::slpvectorizer
