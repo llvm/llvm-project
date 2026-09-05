@@ -19,7 +19,7 @@ module {
     }
     %in_operand_2 = tensor.empty() : tensor<64xf32>
     %out_operand_3 = tensor.empty() : tensor<64xf32>
-    %2 = linalg.add ins(%1#1, %in_operand_2 : tensor<64xf32>, tensor<64xf32>) outs(%out_operand_3 : tensor<64xf32>) -> tensor<64xf32>
+    %2 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%1#1, %in_operand_2 : tensor<64xf32>, tensor<64xf32>) outs(%out_operand_3 : tensor<64xf32>) -> tensor<64xf32>
     return %2 : tensor<64xf32>
   }
 }
@@ -28,7 +28,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %loop = transform.structured.match ops{["scf.for"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %add = transform.structured.match ops{["linalg.add"]} in %arg1
+    %add = transform.structured.match ops{["linalg.elementwise"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %a, %new_loop = transform.test.fuse_consumer %add into (%loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
@@ -50,7 +50,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[INSERT_MAT:.*]] = tensor.insert_slice %[[MAT_OUT]] into %[[FIRST_OUT_ARG]][%[[IV]]] [32] [1]
 //      CHECK:      %[[SLICE_OPERAND2:.*]] = tensor.extract_slice %0[%[[IV]]] [32] [1]
 //      CHECK:      %[[SLICE_OUT:.*]] = tensor.extract_slice %[[ELEM_OUT_ARG]][%[[IV]]] [32] [1]
-//      CHECK:      %[[ELEM_OUT:.*]] = linalg.add
+//      CHECK:      %[[ELEM_OUT:.*]] = linalg.elementwise
 // CHECK-SAME:              ins(%[[MAT_OUT]], %[[SLICE_OPERAND2]] :
 // CHECK-SAME:              outs(%[[SLICE_OUT]] :
 //      CHECK:      %[[INSERT_ELEM:.*]] = tensor.insert_slice %[[ELEM_OUT]] into %[[ELEM_OUT_ARG]][%[[IV]]] [32] [1]
@@ -73,7 +73,7 @@ module {
       }
       scf.yield %1 : tensor<?x?xf32>
     }
-    %2 = linalg.add ins(%0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+    %2 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
     return %2 : tensor<?x?xf32>
   }
 }
@@ -84,7 +84,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %loop0, %loop1 = transform.split_handle %loops
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %add = transform.structured.match ops{["linalg.add"]} in %arg1
+    %add = transform.structured.match ops{["linalg.elementwise"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %a, %new_loop0, %new_loop1 = transform.test.fuse_consumer %add into (%loop0, %loop1)
       : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
@@ -103,7 +103,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:     %[[OLD_INSERT_SLICE:.+]] = tensor.insert_slice %[[OPERAND1]] into %[[INIT10]]
 //  CHECK-DAG:     %[[OPERAND2:.+]] = tensor.extract_slice %[[ARG1]]
 //  CHECK-DAG:     %[[INIT:.+]] = tensor.extract_slice %[[INIT11]]
-//      CHECK:     %[[ADD:.+]] = linalg.add
+//      CHECK:     %[[ADD:.+]] = linalg.elementwise
 // CHECK-SAME:         ins(%[[OPERAND1]], %[[OPERAND2]] :
 // CHECK-SAME:         outs(%[[INIT]] :
 //      CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[ADD]] into %[[INIT11]]
@@ -129,14 +129,14 @@ module {
     }
     %in_operand_2 = tensor.empty() : tensor<64x64xf32>
     %out_operand_3 = tensor.empty() : tensor<64x64xf32>
-    %2 = linalg.add ins(%1#1, %in_operand_2 : tensor<64x64xf32>, tensor<64x64xf32>) outs(%out_operand_3 : tensor<64x64xf32>) -> tensor<64x64xf32>
+    %2 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%1#1, %in_operand_2 : tensor<64x64xf32>, tensor<64x64xf32>) outs(%out_operand_3 : tensor<64x64xf32>) -> tensor<64x64xf32>
     return %2 : tensor<64x64xf32>
   }
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %add = transform.structured.match ops{["linalg.add"]} in %arg1
+    %add = transform.structured.match ops{["linalg.elementwise"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
@@ -159,7 +159,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:              outs(%[[MAT_OUT_SLICE]] :
 //      CHECK:      %[[SLICE_OPERAND2:.*]] = tensor.extract_slice %[[OUT_INIT]][%[[IV1]], %[[IV2]]] [32, 32] [1, 1]
 //      CHECK:      %[[SLICE_OUT:.*]] = tensor.extract_slice %[[ELEM_OUT_ARG]][%[[IV1]], %[[IV2]]] [32, 32] [1, 1]
-//      CHECK:      %[[ELEM_OUT:.*]] = linalg.add
+//      CHECK:      %[[ELEM_OUT:.*]] = linalg.elementwise
 // CHECK-SAME:              ins(%[[MAT_OUT]], %[[SLICE_OPERAND2]] :
 // CHECK-SAME:              outs(%[[SLICE_OUT]] :
 //      CHECK:      scf.forall.in_parallel {
@@ -743,11 +743,11 @@ module {
         %extracted_slice_1 = tensor.extract_slice %arg4[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
         %extracted_slice_2 = tensor.extract_slice %arg0[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
         %extracted_slice_3 = tensor.extract_slice %arg1[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
-        %3 = linalg.add ins(%extracted_slice_2, %extracted_slice_3 : tensor<64x256xf32>, tensor<64x256xf32>) outs(%extracted_slice_1 : tensor<64x256xf32>) -> tensor<64x256xf32>
+        %3 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%extracted_slice_2, %extracted_slice_3 : tensor<64x256xf32>, tensor<64x256xf32>) outs(%extracted_slice_1 : tensor<64x256xf32>) -> tensor<64x256xf32>
         %insert_slice = tensor.insert_slice %3 into %arg4[%arg3, 0] [64, 256] [1, 1] : tensor<64x256xf32> into tensor<256x256xf32>
         scf.yield %insert_slice : tensor<256x256xf32>
     }
-    %4 = linalg.mul ins(%1, %arg2 : tensor<256x256xf32>, tensor<256x256xf32>) outs(%dest0 : tensor<256x256xf32>) -> tensor<256x256xf32>
+    %4 = linalg.elementwise kind=#linalg.elementwise_kind<mul> ins(%1, %arg2 : tensor<256x256xf32>, tensor<256x256xf32>) outs(%dest0 : tensor<256x256xf32>) -> tensor<256x256xf32>
     %5 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%1 : tensor<256x256xf32>) outs(%dest0 : tensor<256x256xf32>) -> tensor<256x256xf32>
     return %4, %5 : tensor<256x256xf32>, tensor<256x256xf32>
   }
@@ -755,13 +755,13 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %mulop = transform.structured.match ops{["linalg.mul"]} in %arg1
+    %mulop = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<mul>} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.for"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %fused_consumer, %new_loop = transform.test.fuse_consumer %mulop into (%loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %expop = transform.structured.match ops{["linalg.elementwise"]} in %arg1
+    %expop = transform.structured.match ops{["linalg.elementwise"]} attributes{kind = #linalg.elementwise_kind<exp>} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %fused_consumer_2, %new_loop_2 = transform.test.fuse_consumer %expop into (%new_loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
@@ -779,13 +779,13 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:          %[[ADD_OUT_SLICE:.*]] = tensor.extract_slice %[[FIRST_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
 //      CHECK:          %[[ADD_INS0_SLICE:.*]] = tensor.extract_slice %[[ARG0]][%[[IV1]], 0] [64, 256] [1, 1]
 //      CHECK:          %[[ADD_INS1_SLICE:.*]] = tensor.extract_slice %[[ARG1]][%[[IV1]], 0] [64, 256] [1, 1]
-//      CHECK:          %[[TILED_ADD_OUT:.*]] = linalg.add
+//      CHECK:          %[[TILED_ADD_OUT:.*]] = linalg.elementwise
 // CHECK-SAME:                ins(%[[ADD_INS0_SLICE]], %[[ADD_INS1_SLICE]] :
 // CHECK-SAME:                outs(%[[ADD_OUT_SLICE]] :
 //      CHECK:          %[[INSERT_ADD:.*]] = tensor.insert_slice %[[TILED_ADD_OUT]] into %[[FIRST_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
 //      CHECK:          %[[MUL_INS2_SLICE:.*]] = tensor.extract_slice %[[ARG2]][%[[IV1]], 0] [64, 256] [1, 1]
 //      CHECK:          %[[MUL_OUT_SLICE:.*]] = tensor.extract_slice %[[SECOND_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
-//      CHECK:          %[[TILED_MUL_OUT:.*]] = linalg.mul
+//      CHECK:          %[[TILED_MUL_OUT:.*]] = linalg.elementwise
 // CHECK-SAME:                ins(%[[TILED_ADD_OUT]], %[[MUL_INS2_SLICE]] :
 // CHECK-SAME:                outs(%[[MUL_OUT_SLICE]] :
 //      CHECK:          %[[EXP_OUT_SLICE:.*]] = tensor.extract_slice %[[THIRD_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
@@ -813,7 +813,7 @@ module {
       %extracted_slice = tensor.extract_slice %arg4[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
       %extracted_slice_0 = tensor.extract_slice %arg0[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
       %extracted_slice_1 = tensor.extract_slice %arg1[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
-      %4 = linalg.add ins(%extracted_slice_0, %extracted_slice_1 : tensor<64x256xf32>, tensor<64x256xf32>) outs(%extracted_slice : tensor<64x256xf32>) -> tensor<64x256xf32>
+      %4 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%extracted_slice_0, %extracted_slice_1 : tensor<64x256xf32>, tensor<64x256xf32>) outs(%extracted_slice : tensor<64x256xf32>) -> tensor<64x256xf32>
       %inserted_slice = tensor.insert_slice %4 into %arg4[%arg3, 0] [64, 256] [1, 1] : tensor<64x256xf32> into tensor<256x256xf32>
       scf.yield %inserted_slice : tensor<256x256xf32>
     }
@@ -849,7 +849,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:     %[[VAL_12:.*]] = tensor.extract_slice %[[VAL_10]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
 //      CHECK:     %[[VAL_13:.*]] = tensor.extract_slice %[[VAL_0]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
 //      CHECK:     %[[VAL_14:.*]] = tensor.extract_slice %[[VAL_1]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
-//      CHECK:     %[[VAL_15:.*]] = linalg.add ins(%[[VAL_13]], %[[VAL_14]] : tensor<64x256xf32>, tensor<64x256xf32>) outs(%[[VAL_12]] : tensor<64x256xf32>) -> tensor<64x256xf32>
+//      CHECK:     %[[VAL_15:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%[[VAL_13]], %[[VAL_14]] : tensor<64x256xf32>, tensor<64x256xf32>) outs(%[[VAL_12]] : tensor<64x256xf32>) -> tensor<64x256xf32>
 //      CHECK:     %[[VAL_16:.*]] = tensor.insert_slice %[[VAL_15]] into %[[VAL_10]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
 //      CHECK:     %[[VAL_17:.*]] = tensor.extract_slice %[[VAL_2]][0] [24] [1] : tensor<24xf32> to tensor<24xf32>
 //      CHECK:     %[[VAL_18:.*]] = tensor.extract_slice %[[VAL_11]]{{\[}}%[[VAL_9]], 0, 0] [64, 256, 24] [1, 1, 1]
