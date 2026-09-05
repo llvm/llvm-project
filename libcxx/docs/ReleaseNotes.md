@@ -1,4 +1,4 @@
-.. include:: ReleaseNotes/24.rst
+.. include:: ReleaseNotes/24.md
 
 .. Make sure to reference the non-live release notes in a toctree to avoid Sphinx errors.
 .. toctree::

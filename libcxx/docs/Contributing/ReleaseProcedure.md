@@ -14,7 +14,7 @@ Prepare the release
 It should be finished before the Release managers start branching the new
 release:
 
-* Make sure ``libcxx/docs/ReleaseNotes/<VERSION>.rst`` is up to date. Typically
+* Make sure ``libcxx/docs/ReleaseNotes/<VERSION>.md`` is up to date. Typically
   this file is updated when contributing patches. Still there might be some
   information added regarding the general improvements of larger projects.
 
@@ -45,7 +45,7 @@ After branching for an LLVM release:
 3. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
 4. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
 5. Create a release notes file for the next release from the previous ones and point to it from
-   ``libcxx/docs/ReleaseNotes.rst``. Remove entries that do not apply anymore, but keep in mind
+   ``libcxx/docs/ReleaseNotes.md``. Remove entries that do not apply anymore, but keep in mind
    that some entries (such as upcoming deprecations) may still apply, may need rewording and may
    also require follow up PRs to implement.
 6. Update the set of runners targeted by the CI on the release branch to ``llvm-premerge-libcxx-release-runners``, and
