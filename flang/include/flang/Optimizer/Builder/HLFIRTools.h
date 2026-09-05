@@ -619,6 +619,12 @@ bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
 /// that is subject to the WHERE mask control.
 bool isInsideHlfirWhereMaskedExpression(mlir::Region &region);
 
+/// Return true if \p mask is an element-wise equality comparison of
+/// \p searchArray against an invariant scalar (e.g. MASK = A == val).
+/// On success, \p targetVal is set to the invariant scalar operand.
+std::optional<mlir::Value> getEqualityMaskTarget(mlir::Value mask,
+                                                 mlir::Value searchArray);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
