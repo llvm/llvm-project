@@ -30,6 +30,7 @@ define fastcc double @bar(i32 %hash, double %x, double %y) nounwind {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-8, %esp
+; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    fldl 16(%ebp)
 ; CHECK-NEXT:    fldl 8(%ebp)
 ; CHECK-NEXT:    movl %ecx, %eax
@@ -50,6 +51,8 @@ define fastcc double @bar(i32 %hash, double %x, double %y) nounwind {
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:  .LBB1_5: # %bb16
 ; CHECK-NEXT:    faddp %st, %st(1)
+; CHECK-NEXT:    fstpl (%esp)
+; CHECK-NEXT:    fldl (%esp)
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

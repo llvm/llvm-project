@@ -23,8 +23,14 @@ define float @test_sqrt_f32(float %a) {
 ;
 ; X86-LABEL: test_sqrt_f32:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    flds (%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %res = call float @llvm.sqrt.f32(float %a)
   ret float %res
@@ -44,8 +50,14 @@ define double @test_sqrt_f64(double %a) {
 ;
 ; X86-LABEL: test_sqrt_f64:
 ; X86:       # %bb.0:
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
+; X86-NEXT:    fstpl (%esp)
+; X86-NEXT:    fldl (%esp)
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %res = call double @llvm.sqrt.f64(double %a)
   ret double %res

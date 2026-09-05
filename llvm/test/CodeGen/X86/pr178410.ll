@@ -11,13 +11,15 @@ define float @PR178410(ptr %p0) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl 4(%eax), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, (%esp)
-; X86-NEXT:    fildll (%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl

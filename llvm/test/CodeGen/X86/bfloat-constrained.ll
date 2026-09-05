@@ -123,23 +123,25 @@ define void @double_to_bfloat(double %0) strictfp {
 define void @add() strictfp {
 ; X86-LABEL: add:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    subl $28, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 32
 ; X86-NEXT:    movzwl a, %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extendbfsf2
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
 ; X86-NEXT:    wait
 ; X86-NEXT:    movzwl b, %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extendbfsf2
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; X86-NEXT:    faddp %st, %st(1)
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll __truncsfbf2
 ; X86-NEXT:    movw %ax, c
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;

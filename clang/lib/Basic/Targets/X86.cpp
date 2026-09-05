@@ -458,6 +458,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasJMPABS = true;
     } else if (Feature == "+branch-hint") {
       HasBranchHint = true;
+    } else if (Feature == "+x87-excess-precision") {
+      AllowX87ExcessPrecision = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)

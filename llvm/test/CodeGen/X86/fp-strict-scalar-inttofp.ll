@@ -80,16 +80,18 @@ define float @sitofp_i1tof32(i1 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i1tof32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    andb $1, %al
 ; X87-NEXT:    negb %al
 ; X87-NEXT:    movsbl %al, %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.sitofp.f32.i1(i1 %x,
@@ -139,13 +141,15 @@ define float @sitofp_i8tof32(i8 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i8tof32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.sitofp.f32.i8(i8 %x,
@@ -195,13 +199,15 @@ define float @sitofp_i16tof32(i16 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i16tof32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 %x,
@@ -247,13 +253,15 @@ define float @sitofp_i32tof32(i32 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i32tof32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x,
@@ -299,8 +307,14 @@ define float @sitofp_i64tof32(i64 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i64tof32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %x,
                                                metadata !"round.dynamic",
@@ -353,15 +367,17 @@ define float @uitofp_i1tof32(i1 %x) #0 {
 ;
 ; X87-LABEL: uitofp_i1tof32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    andb $1, %al
 ; X87-NEXT:    movzbl %al, %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.uitofp.f32.i1(i1 %x,
@@ -411,13 +427,15 @@ define float @uitofp_i8tof32(i8 %x) #0 {
 ;
 ; X87-LABEL: uitofp_i8tof32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.uitofp.f32.i8(i8 %x,
@@ -467,13 +485,15 @@ define float @uitofp_i16tof32(i16 %x) #0 {
 ;
 ; X87-LABEL: uitofp_i16tof32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 %x,
@@ -562,11 +582,13 @@ define float @uitofp_i32tof32(i32 %x) #0 {
 ; X87-NEXT:    movl %esp, %ebp
 ; X87-NEXT:    .cfi_def_cfa_register %ebp
 ; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    movl 8(%ebp), %eax
-; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
 ; X87-NEXT:    movl %ebp, %esp
 ; X87-NEXT:    popl %ebp
@@ -750,13 +772,15 @@ define double @sitofp_i8tof64(i8 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i8tof64:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %x,
@@ -818,13 +842,15 @@ define double @sitofp_i16tof64(i16 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i16tof64:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %x,
@@ -882,13 +908,15 @@ define double @sitofp_i32tof64(i32 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i32tof64:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %x,
@@ -934,8 +962,14 @@ define double @sitofp_i64tof64(i64 %x) #0 {
 ;
 ; X87-LABEL: sitofp_i64tof64:
 ; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %x,
                                                metadata !"round.dynamic",
@@ -1000,15 +1034,17 @@ define double @uitofp_i1tof64(i1 %x) #0 {
 ;
 ; X87-LABEL: uitofp_i1tof64:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    andb $1, %al
 ; X87-NEXT:    movzbl %al, %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call double @llvm.experimental.constrained.uitofp.f64.i1(i1 %x,
@@ -1070,13 +1106,15 @@ define double @uitofp_i8tof64(i8 %x) #0 {
 ;
 ; X87-LABEL: uitofp_i8tof64:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call double @llvm.experimental.constrained.uitofp.f64.i8(i8 %x,
@@ -1138,13 +1176,15 @@ define double @uitofp_i16tof64(i16 %x) #0 {
 ;
 ; X87-LABEL: uitofp_i16tof64:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
   %result = call double @llvm.experimental.constrained.uitofp.f64.i16(i16 %x,
@@ -1239,11 +1279,13 @@ define double @uitofp_i32tof64(i32 %x) #0 {
 ; X87-NEXT:    movl %esp, %ebp
 ; X87-NEXT:    .cfi_def_cfa_register %ebp
 ; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    movl 8(%ebp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
 ; X87-NEXT:    movl %ebp, %esp
 ; X87-NEXT:    popl %ebp

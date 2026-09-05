@@ -48,6 +48,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
     AVX2,
     AVX512F
   } SSELevel = NoSSE;
+  bool AllowX87ExcessPrecision = false;
   bool HasMMX = false;
   enum XOPEnum { NoXOP, SSE4A, FMA4, XOP } XOPLevel = NoXOP;
   enum AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
@@ -183,13 +184,16 @@ public:
   }
 
   LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
-    // X87 evaluates with 80 bits "long double" precision.
-    return SSELevel == NoSSE ? LangOptions::FPEvalMethodKind::FEM_Extended
-                             : LangOptions::FPEvalMethodKind::FEM_Source;
+    // X87 computes at 80 bits, but the backend rounds every f32/f64 result back
+    // to its own type unless -fexcess-precision=fast asked it not to.
+    return SSELevel == NoSSE && AllowX87ExcessPrecision
+               ? LangOptions::FPEvalMethodKind::FEM_Extended
+               : LangOptions::FPEvalMethodKind::FEM_Source;
   }
 
-  // EvalMethod `source` is not supported for targets with `NoSSE` feature.
-  bool supportSourceEvalMethod() const override { return SSELevel > NoSSE; }
+  bool supportSourceEvalMethod() const override {
+    return SSELevel > NoSSE || !AllowX87ExcessPrecision;
+  }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 

@@ -122,10 +122,10 @@ define double @maximum_double(double %x, double %y) nounwind {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fsts (%esp)
-; CHECK-NEXT:    flds (%esp)
-; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fsts {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    cmpl $0, (%esp)
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    je .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
@@ -301,11 +301,11 @@ define double @minimum_double(double %x, double %y) nounwind {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fsts (%esp)
-; CHECK-NEXT:    flds (%esp)
-; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fsts {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstps (%esp)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    cmpl (%esp), %eax
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    jo .LBB5_2
 ; CHECK-NEXT:  # %bb.1:
