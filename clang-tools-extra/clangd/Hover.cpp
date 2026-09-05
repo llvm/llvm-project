@@ -376,7 +376,12 @@ const Expr *getDefaultArg(const ParmVarDecl *PVD) {
 HoverInfo::Param toHoverInfoParam(const ParmVarDecl *PVD,
                                   const PrintingPolicy &PP) {
   HoverInfo::Param Out;
-  Out.Type = printType(PVD->getType(), PVD->getASTContext(), PP);
+  if (PVD->getASTContext().getLangOpts().HLSL)
+    Out.Type =
+        HoverInfo::PrintedType(PVD->getHLSLParamTypeAsWritten(PP).c_str());
+  else
+    Out.Type = printType(PVD->getType(), PVD->getASTContext(), PP);
+
   if (!PVD->getName().empty())
     Out.Name = PVD->getNameAsString();
   if (const Expr *DefArg = getDefaultArg(PVD)) {
@@ -697,7 +702,13 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   // Fill in types and params.
   if (const FunctionDecl *FD = getUnderlyingFunction(D))
     fillFunctionTypeAndParams(HI, D, FD, PP);
-  else if (const auto *VD = dyn_cast<ValueDecl>(D))
+  else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (PVD->getASTContext().getLangOpts().HLSL)
+      HI.Type =
+          HoverInfo::PrintedType(PVD->getHLSLParamTypeAsWritten(PP).c_str());
+    else
+      HI.Type = printType(PVD->getType(), Ctx, PP);
+  } else if (const auto *VD = dyn_cast<ValueDecl>(D))
     HI.Type = printType(VD->getType(), Ctx, PP);
   else if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D))
     HI.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
@@ -721,6 +732,10 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   }
 
   HI.Definition = printDefinition(D, PP, TB);
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D))
+    if (PVD->getASTContext().getLangOpts().HLSL)
+      HI.Definition =
+          PVD->getHLSLParamTypeAsWritten(PP) + " " + PVD->getNameAsString();
   return HI;
 }
 
