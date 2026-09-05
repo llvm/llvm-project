@@ -185,7 +185,7 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 // WIN64: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i32 %s.coerce) {{.*}} {
 // WIN64:   call void @"??1SmallWithDtor@@QEAA@XZ"
 // WIN64: }
-// WOA64: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i64 %s.coerce) {{.*}} {
+// WOA64: define dso_local void @"?small_arg_with_dtor@@YAXUSmallWithDtor@@@Z"(i32 %s.coerce) {{.*}} {
 // WOA64:   call void @"??1SmallWithDtor@@QEAA@XZ"(ptr {{[^,]*}} %s)
 // WOA64: }
 
@@ -197,10 +197,10 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 
 // Test that the eligible non-aggregate is passed directly, but returned
 // indirectly on ARM64 Windows.
-// WOA64: define dso_local void @"?small_arg_with_private_member@@YA?AUSmallWithPrivate@@U1@@Z"(ptr dead_on_unwind inreg noalias writable sret(%struct.SmallWithPrivate) align 4 %agg.result, i64 %s.coerce) {{.*}} {
+// WOA64: define dso_local void @"?small_arg_with_private_member@@YA?AUSmallWithPrivate@@U1@@Z"(ptr dead_on_unwind inreg noalias writable sret(%struct.SmallWithPrivate) align 4 %agg.result, i32 %s.coerce) {{.*}} {
 SmallWithPrivate small_arg_with_private_member(SmallWithPrivate s) { return s; }
 
-// WOA64: define dso_local i32 @"?small_arg_with_small_struct_with_private_member@@YA?AUSmallWithSmallWithPrivate@@U1@@Z"(i64 %s.coerce) {{.*}} {
+// WOA64: define dso_local i32 @"?small_arg_with_small_struct_with_private_member@@YA?AUSmallWithSmallWithPrivate@@U1@@Z"(i32 %s.coerce) {{.*}} {
 // WIN64: define dso_local i32 @"?small_arg_with_small_struct_with_private_member@@YA?AUSmallWithSmallWithPrivate@@U1@@Z"(i32 %s.coerce) {{.*}} {
 SmallWithSmallWithPrivate small_arg_with_small_struct_with_private_member(SmallWithSmallWithPrivate s) { return s; }
 

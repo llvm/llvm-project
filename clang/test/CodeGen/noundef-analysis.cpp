@@ -20,12 +20,12 @@ static void examineValue(int x) { sink = x; }
 
 // ENABLED-LABEL: @main(
 // ENABLED:    [[CALL:%.*]] = call noundef {{.*}}i32 @_Z19indirect_callee_inti(i32 noundef {{.*}}0)
-// ENABLED:    [[CALL1:%.*]] = call i32 @_Z21indirect_callee_union2u1(i64 {{.*}})
+// ENABLED:    [[CALL1:%.*]] = call i32 @_Z21indirect_callee_union2u1(i32 {{.*}})
 // ENABLED:    [[CALL2:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR4:[0-9]+]]
 // ENABLED:    call void @_ZL12examineValuei(i32 noundef {{.*}})
 // DISABLED-LABEL: @main(
 // DISABLED:    [[CALL:%.*]] = call {{.*}}i32 @_Z19indirect_callee_inti(i32 {{.*}}0)
-// DISABLED:    [[CALL1:%.*]] = call i32 @_Z21indirect_callee_union2u1(i64 {{.*}})
+// DISABLED:    [[CALL1:%.*]] = call i32 @_Z21indirect_callee_union2u1(i32 {{.*}})
 // DISABLED:    [[CALL2:%.*]] = call noalias nonnull ptr @_Znwm(i64 4) #[[ATTR4:[0-9]+]]
 // DISABLED:    call void @_ZL12examineValuei(i32 {{.*}})
 int main() {

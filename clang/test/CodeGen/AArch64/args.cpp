@@ -17,7 +17,7 @@ struct Empty {};
 
 // DARWIN: define{{.*}} i32 @empty_arg(i32 noundef %a)
 // C: define{{.*}} i32 @empty_arg(i32 noundef %a)
-// CXX: define{{.*}} i32 @empty_arg(i64 %e.coerce, i32 noundef %a)
+// CXX: define{{.*}} i32 @empty_arg(i8 %e.coerce, i32 noundef %a)
 EXTERNC int empty_arg(struct Empty e, int a) {
   return a;
 }
