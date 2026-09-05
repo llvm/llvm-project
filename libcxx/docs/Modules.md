@@ -13,8 +13,8 @@ considered stable nor complete
 This page contains information regarding C++23 module support in libc++.
 There are two kinds of modules available in Clang
 
-> - [Clang specific modules](https://clang.llvm.org/docs/Modules.html)
-> - [C++ modules](https://clang.llvm.org/docs/StandardCPlusPlusModules.html)
+- [Clang specific modules](https://clang.llvm.org/docs/Modules.html)
+- [C++ modules](https://clang.llvm.org/docs/StandardCPlusPlusModules.html)
 
 This page mainly discusses the C++ modules. In C++20 there are also header units,
 these are not part of this document.
@@ -37,58 +37,58 @@ on the availability of build systems with proper module support.
 
 ### What works
 
-> - Building BMIs
->
-> - Running tests using the `std` and `std.compat` module
->
-> - Using the `std` and `std.compat` module in external projects
->
-> - The following "parts disabled" configuration options are supported
->
->   - `LIBCXX_ENABLE_LOCALIZATION`
->   - `LIBCXX_ENABLE_WIDE_CHARACTERS`
->   - `LIBCXX_ENABLE_THREADS`
->   - `LIBCXX_ENABLE_FILESYSTEM`
->   - `LIBCXX_ENABLE_RANDOM_DEVICE`
->   - `LIBCXX_ENABLE_UNICODE`
->   - `LIBCXX_ENABLE_EXCEPTIONS` [^note-no-windows]
->
-> - A C++20 based extension
+- Building BMIs
 
-:::{note}
-[^note-no-windows]: This configuration will probably not work on Windows
+- Running tests using the `std` and `std.compat` module
+
+- Using the `std` and `std.compat` module in external projects
+
+- The following "parts disabled" configuration options are supported
+
+  - `LIBCXX_ENABLE_LOCALIZATION`
+  - `LIBCXX_ENABLE_WIDE_CHARACTERS`
+  - `LIBCXX_ENABLE_THREADS`
+  - `LIBCXX_ENABLE_FILESYSTEM`
+  - `LIBCXX_ENABLE_RANDOM_DEVICE`
+  - `LIBCXX_ENABLE_UNICODE`
+  - `LIBCXX_ENABLE_EXCEPTIONS` [^note-no-windows]
+
+- A C++20 based extension
+
+[^note-no-windows]:
+    This configuration will probably not work on Windows
     due to hard-coded compilation flags.
-:::
 
 ### Some of the current limitations
 
-> - There is no official build system support, libc++ has experimental CMake support
-> - Requires CMake 3.26 for C++20 support
-> - Requires CMake 3.26 for C++23 support
-> - Requires CMake 3.27 for C++26 support
-> - Requires Ninja 1.11
-> - Requires Clang 17
-> - The path to the compiler may not be a symlink, `clang-scan-deps` does
->   not handle that case properly
-> - Libc++ is not tested with modules instead of headers
-> - Clang:
->   : - Including headers after importing the `std` module may fail. This is
->       hard to solve and there is a work-around by first including all headers
->       [bug report](https://llvm.org/PR61465).
+- There is no official build system support, libc++ has experimental CMake support
+- Requires CMake 3.26 for C++20 support
+- Requires CMake 3.26 for C++23 support
+- Requires CMake 3.27 for C++26 support
+- Requires Ninja 1.11
+- Requires Clang 17
+- The path to the compiler may not be a symlink, `clang-scan-deps` does
+  not handle that case properly
+- Libc++ is not tested with modules instead of headers
+- Clang:
+
+  - Including headers after importing the `std` module may fail. This is
+    hard to solve and there is a work-around by first including all headers
+    [bug report](https://llvm.org/PR61465).
 
 ### Blockers
 
-> - libc++
->
->   - Currently the tests only test with modules enabled, but do not import
->     modules instead of headers. When converting tests to using modules there
->     are still failures. These are under investigation.
->   - It has not been determined how to fully test libc++ with modules instead
->     of headers.
->
-> - Clang
->
->   - Some concepts do not work properly [bug report](https://llvm.org/PR61465).
+- libc++
+
+  - Currently the tests only test with modules enabled, but do not import
+    modules instead of headers. When converting tests to using modules there
+    are still failures. These are under investigation.
+  - It has not been determined how to fully test libc++ with modules instead
+    of headers.
+
+- Clang
+
+  - Some concepts do not work properly [bug report](https://llvm.org/PR61465).
 
 ## Using in external projects
 
@@ -104,11 +104,11 @@ the build system.
 
 Currently there are two ways to build modules
 
-> - Use a local build of modules from the build directory. This requires
->   Clang 17 or later and CMake 3.26 or later.
-> - Use the installed modules. This requires Clang 18.1.2 or later and
->   a recent build of CMake. The CMake changes will be part of CMake 3.30. This
->   method requires you or your distribution to enable module installation.
+- Use a local build of modules from the build directory. This requires
+  Clang 17 or later and CMake 3.26 or later.
+- Use the installed modules. This requires Clang 18.1.2 or later and
+  a recent build of CMake. The CMake changes will be part of CMake 3.30. This
+  method requires you or your distribution to enable module installation.
 
 ### Using the local build
 
@@ -283,4 +283,3 @@ channel on [LLVM's Discord server](https://discord.gg/jzUbyP26tQ).
 
 If you think you've found a bug please it using the [LLVM bug tracker](https://github.com/llvm/llvm-project/issues). Please make sure the issue
 you found is not one of the known bugs or limitations on this page.
-

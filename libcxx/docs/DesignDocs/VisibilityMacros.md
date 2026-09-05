@@ -29,7 +29,7 @@ default visibility, thus removing the need for any annotations.
 
 : Mark a symbol as being part of our ABI. This includes functions that are part
   of the libc++ library, type information and other symbols. On Windows,
-  this macro applies `dllimport`/`dllexport` to the symbol, and on other
+  this macro applies {title-reference}`dllimport`/{title-reference}`dllexport` to the symbol, and on other
   platforms it gives the symbol default visibility. This macro should never be
   used on class templates. On classes it should only be used if the vtable
   lives in the built library.
@@ -37,14 +37,14 @@ default visibility, thus removing the need for any annotations.
 **\_LIBCPP_OVERRIDABLE_FUNC_VIS**
 
 : Mark a symbol as being exported by the libc++ library, but allow it to be
-  overridden locally. On non-Windows, this is equivalent to `_LIBCPP_FUNC_VIS`.
-  This macro is applied to all `operator new` and `operator delete` overloads.
+  overridden locally. On non-Windows, this is equivalent to {title-reference}`_LIBCPP_FUNC_VIS`.
+  This macro is applied to all {title-reference}`operator new` and {title-reference}`operator delete` overloads.
 
-  **Windows Behavior**: Any symbol marked `dllimport` cannot be overridden
-  locally, since `dllimport` indicates the symbol should be bound to a separate
-  DLL. All `operator new` and `operator delete` overloads are required to be
-  locally overridable, and therefore must not be marked `dllimport`. On Windows,
-  this macro therefore expands to `__declspec(dllexport)` when building the
+  **Windows Behavior**: Any symbol marked {title-reference}`dllimport` cannot be overridden
+  locally, since {title-reference}`dllimport` indicates the symbol should be bound to a separate
+  DLL. All {title-reference}`operator new` and {title-reference}`operator delete` overloads are required to be
+  locally overridable, and therefore must not be marked {title-reference}`dllimport`. On Windows,
+  this macro therefore expands to {title-reference}`__declspec(dllexport)` when building the
   library and has an empty definition otherwise.
 
 **\_LIBCPP_HIDE_FROM_ABI**
@@ -54,7 +54,7 @@ default visibility, thus removing the need for any annotations.
 
 **\_LIBCPP_HIDE_FROM_ABI_AFTER_V1**
 
-: Mark a function as being hidden from the ABI (per `_LIBCPP_HIDE_FROM_ABI`)
+: Mark a function as being hidden from the ABI (per {title-reference}`_LIBCPP_HIDE_FROM_ABI`)
   when libc++ is built with an ABI version after ABI v1. This macro is used to
   maintain ABI compatibility for symbols that have been historically exported
   by libc++ in v1 of the ABI, but that we don't want to export in the future.
@@ -77,16 +77,16 @@ default visibility, thus removing the need for any annotations.
   This macro is used to export the member functions produced by the explicit
   instantiation in the dylib.
 
-  **Windows Behavior**: `extern template` and `dllexport` are fundamentally
+  **Windows Behavior**: {title-reference}`extern template` and {title-reference}`dllexport` are fundamentally
   incompatible *on a class template* on Windows; the former suppresses
   instantiation, while the latter forces it. Specifying both on the same
   declaration makes the class template be instantiated, which is not desirable
-  inside headers. This macro therefore expands to `dllimport` outside of libc++
-  but nothing inside of it (rather than expanding to `dllexport`); instead, the
+  inside headers. This macro therefore expands to {title-reference}`dllimport` outside of libc++
+  but nothing inside of it (rather than expanding to {title-reference}`dllexport`); instead, the
   explicit instantiations themselves are marked as exported. Note that this
   applies *only* to extern *class* templates. Extern *function* templates obey
-  regular import/export semantics, and applying `dllexport` directly to the
-  extern template declaration (i.e. using `_LIBCPP_FUNC_VIS`) is the correct
+  regular import/export semantics, and applying {title-reference}`dllexport` directly to the
+  extern template declaration (i.e. using {title-reference}`_LIBCPP_FUNC_VIS`) is the correct
   thing to do for them.
 
 **\_LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS**
@@ -104,4 +104,3 @@ default visibility, thus removing the need for any annotations.
 - [[cfe-dev] Visibility in libc++ - 1](http://lists.llvm.org/pipermail/cfe-dev/2013-July/030610.html)
 - [[cfe-dev] Visibility in libc++ - 2](http://lists.llvm.org/pipermail/cfe-dev/2013-August/031195.html)
 - [[libcxx] Visibility fixes for Windows](http://lists.llvm.org/pipermail/cfe-commits/Week-of-Mon-20130805/085461.html)
-

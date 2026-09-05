@@ -225,9 +225,12 @@ DesignDocs/WindowsSupport
 
 - [LLVM Homepage](https://llvm.org/)
 - [libc++abi Homepage](http://libcxxabi.llvm.org/)
-- [LLVM Bug Tracker](https://github.com/llvm/llvm-project/labels/libc++/)
+- [LLVM Bug Tracker]
 - [libcxx-commits Mailing List](http://lists.llvm.org/mailman/listinfo/libcxx-commits)
-- [libc++ forum](https://discourse.llvm.org/c/runtimes/libcxx/)
-- [libc++ chat](https://discord.com/channels/636084430946959380/636732894974312448) ([invite link](https://discord.gg/xS7Z362))
+- [libc++ forum]
+- [libc++ chat] ([invite link](https://discord.gg/xS7Z362))
 - [Browse libc++ Sources](https://github.com/llvm/llvm-project/tree/main/libcxx/)
 
+[LLVM Bug Tracker]: https://github.com/llvm/llvm-project/labels/libc++/
+[libc++ forum]: https://discourse.llvm.org/c/runtimes/libcxx/
+[libc++ chat]: https://discord.com/channels/636084430946959380/636732894974312448

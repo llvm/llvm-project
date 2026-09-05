@@ -55,7 +55,7 @@ Google has measured performance improvements of up to 1.6% on some large server 
 
 This also affects null pointer optimization
 
-Clang's optimizer can now figure out when a `std::unique_ptr` is known to contain *non*-null.
+Clang's optimizer can now figure out when a {title-reference}`std::unique_ptr` is known to contain *non*-null.
 (Actually, this has been a *missed* optimization all along.)
 
 ```cpp
@@ -129,4 +129,3 @@ The following breakages were discovered by enabling this change and fixing the r
 >   In other words, `&foo` in callee and `&foo` in the caller are the same address.
 
 ASAN can be used to detect both of these.
-
