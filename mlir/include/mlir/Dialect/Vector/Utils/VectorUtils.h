@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Alignment.h"
 
 namespace mlir {
 
@@ -216,6 +217,15 @@ public:
 ///   * contain more than 1 scalable dimensions,
 /// are not linearizable.
 bool isLinearizableVector(VectorType type);
+
+/// Returns the alignment of an access to `memRefType` at `indices + offsets`,
+/// given that the access at `indices` is aligned to `alignment`. `offsets`
+/// apply to the trailing dimensions of the memref. Returns an empty alignment
+/// when `alignment` is empty, or when the byte distance between the two
+/// accesses is not static.
+llvm::MaybeAlign getAlignmentAfterOffset(llvm::MaybeAlign alignment,
+                                         MemRefType memRefType,
+                                         ArrayRef<int64_t> offsets);
 
 /// Creates a TransferReadOp from `source`.
 ///
