@@ -450,6 +450,27 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
 }
 
+def VectorAlwaysUnroll : Pass<"vector-always-unroll", "mlir::func::FuncOp"> {
+  let summary = "Tag inner loops of a vectorized loop nest for unrolling";
+  let description = [{
+    Lowering encodes the vectorization directives `!dir$ vector always`,
+    `!dir$ vector length`, and `!dir$ simd` as a loop annotation carrying
+    `vectorize.enable`. For each such loop, this pass attaches an
+    `llvm.loop.unroll.full` annotation to every `fir.do_loop` nested within it.
+    This allows llvm's vectorizer to properly handle this loop.
+
+    Because full unrolling of nested loops can cause multiplicative code-size
+    and compile-time growth, tagging is guarded by the cost heuristic:
+    `maxUnrollOps`, Loop nests with non constant trip counts are also skipped.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::LLVM::LLVMDialect" ];
+  let options = [
+    Option<"maxUnrollOps", "max-unroll-ops", "unsigned", /*default=*/"16384",
+           "Maximum estimated unrolled operation count that will be tagged "
+           "for full unrolling">,
+  ];
+}
+
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{

@@ -3873,6 +3873,11 @@ llvm::SmallVector<mlir::Region *> fir::DoLoopOp::getLoopRegions() {
   return {&getRegion()};
 }
 
+std::optional<llvm::APInt> fir::DoLoopOp::getStaticTripCount() {
+  return fir::computeTripCount(getLowerBound(), getUpperBound(), getStep(),
+                               /*inclusive=*/true);
+}
+
 /// Translate a value passed as an iter_arg to the corresponding block
 /// argument in the body of the loop.
 mlir::BlockArgument fir::DoLoopOp::iterArgToBlockArg(mlir::Value iterArg) {
@@ -5926,6 +5931,40 @@ std::optional<llvm::APInt> fir::getIntIfConstant(mlir::Value value) {
         return attr.getValue();
   }
   return {};
+}
+
+std::optional<llvm::APInt> fir::computeTripCount(mlir::Value lb, mlir::Value ub,
+                                                 mlir::Value step,
+                                                 bool inclusive) {
+  auto getConstant = [](mlir::Value v) -> std::optional<llvm::APInt> {
+    while (auto cvt = mlir::dyn_cast_or_null<fir::ConvertOp>(v.getDefiningOp()))
+      v = cvt.getValue();
+    return fir::getIntIfConstant(v);
+  };
+  std::optional<llvm::APInt> lbv = getConstant(lb);
+  std::optional<llvm::APInt> ubv = getConstant(ub);
+  std::optional<llvm::APInt> stepv = getConstant(step);
+  if (!lbv || !ubv || !stepv || stepv->isZero())
+    return std::nullopt;
+
+  unsigned width =
+      std::max({lbv->getBitWidth(), ubv->getBitWidth(), stepv->getBitWidth()}) +
+      2;
+  llvm::APInt lbi = lbv->sext(width);
+  llvm::APInt ubi = ubv->sext(width);
+  llvm::APInt stepi = stepv->sext(width);
+  llvm::APInt span = ubi - lbi + stepi;
+  if (!inclusive) {
+    llvm::APInt one(width, 1);
+    if (stepi.isNegative())
+      span += one;
+    else
+      span -= one;
+  }
+  llvm::APInt count = span.sdiv(stepi);
+  if (count.isNegative())
+    return llvm::APInt(width, 0);
+  return count;
 }
 
 bool fir::isDummyArgument(mlir::Value v) {

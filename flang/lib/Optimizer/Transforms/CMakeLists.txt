@@ -59,6 +59,7 @@ add_flang_library(FIRTransforms
   StackArrays.cpp
   StackReclaim.cpp
   VScaleAttr.cpp
+  VectorAlwaysUnroll.cpp
 
   DEPENDS
   CUFAttrs

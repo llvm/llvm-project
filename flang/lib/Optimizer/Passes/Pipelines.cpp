@@ -195,6 +195,11 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   if (pc.LoopVersioning)
     pm.addPass(fir::createLoopVersioning());
 
+  if (pc.OptLevel == llvm::OptimizationLevel::O2 ||
+      pc.OptLevel == llvm::OptimizationLevel::O3)
+    addPassConditionally(pm, disableVectorAlwaysUnroll,
+                         [&]() { return fir::createVectorAlwaysUnroll(); });
+
   pm.addPass(mlir::createCSEPass());
 
   // Unconditional and ahead of the array allocation placement below: under

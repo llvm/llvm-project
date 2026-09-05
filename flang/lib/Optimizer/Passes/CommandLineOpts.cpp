@@ -95,3 +95,6 @@ EnableOption(ConstantArgumentGlobalisation, "constant-argument-globalisation",
              "the local constant argument to global constant conversion");
 DisableOption(CompilerGeneratedNamesConversion, "compiler-generated-names",
               "replace special symbols in compiler generated names");
+
+DisableOption(VectorAlwaysUnroll, "vector-always-unroll",
+              "unroll inner loops under user vectorization directives");
