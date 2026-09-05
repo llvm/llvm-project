@@ -9,12 +9,12 @@
   .type foo, %function
 foo:
   cmp x0, x1
-  b.eq .Ltmp1
+  b.eq .Ltmp2
   adrp x1, jmptbl
   add x1, x1, :lo12:jmptbl
   ldrsw x2, [x1, x2, lsl #2]
   br x2
-  b .Ltmp1
+  b .Ltmp2
 .Ltmp2:
   add x0, x0, x1
   ret
