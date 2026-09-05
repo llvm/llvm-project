@@ -674,6 +674,22 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
                          const FieldDecl *>;
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
 
+  struct DiagDetails {
+    QualType Type;
+    SourceLocation Loc;
+  };
+
+  // Return diagnostics info for an 'ObjectAccess' stored on ObjectAccessPath
+  DiagDetails getObjectAccessDiagDetails(ObjectAccess o) {
+    if (auto *PVD = dyn_cast<const ParmVarDecl *>(o))
+      return {PVD->getType(), PVD->getLocation()};
+    if (auto *FD = dyn_cast<const FieldDecl *>(o))
+      return {FD->getType(), FD->getLocation()};
+    if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(o))
+      return {BS->getType(), BS->getBaseTypeLoc()};
+    llvm_unreachable("Unexpected type in ObjectAccess");
+  }
+
   void emitObjectAccessPathNotes() {
     for (auto Parent : llvm::reverse(ObjectAccessPath)) {
       if (auto *FD = Parent.dyn_cast<const FieldDecl *>()) {
@@ -697,6 +713,31 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
             << Param << Param->getType();
       }
     }
+  }
+
+  template <typename Func, typename... Ts>
+  void emitDiagnosticImpl(clang::diag::kind DiagId, Func additionalDiagnostics,
+                          Ts &&...Args) {
+    const DiagDetails &Detail =
+        getObjectAccessDiagDetails(ObjectAccessPath.back());
+    {
+      ((SemaSYCLRef.Diag(Detail.Loc, DiagId) << Detail.Type) << ... << Args);
+    }
+    additionalDiagnostics();
+    emitObjectAccessPathNotes();
+  }
+
+  template <typename Func, typename... Ts>
+  std::enable_if_t<std::is_invocable_v<Func>, void>
+  emitDiagnostic(clang::diag::kind DiagId, Func additionalDiagnostics,
+                 Ts &&...Args) {
+    emitDiagnosticImpl(DiagId, additionalDiagnostics,
+                       std::forward<Ts>(Args)...);
+  }
+
+  template <typename... Ts>
+  void emitDiagnostic(clang::diag::kind DiagId, Ts &&...Args) {
+    emitDiagnosticImpl(DiagId, [] {}, std::forward<Ts>(Args)...);
   }
 
 public:
@@ -738,18 +779,68 @@ public:
         return true;
       }
 
-      auto *DirectFieldParent = cast<const FieldDecl *>(DirectParent);
-      SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
-                       diag::err_bad_kernel_param_type)
-          << DirectFieldParent->getType();
-      emitObjectAccessPathNotes();
-
       // Don't visit the type of the reference since any further invalid
       // kernel parameter types contained within the referenced type
       // might not be relevant once the programmer addresses the
       // invalid use of a reference.
+      emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
+                     diag::InvalidSYCLKernelParamReason::ReferenceType);
       IsValid = false;
       return false;
+    }
+    if (Ty->isAtomicType()) {
+      emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
+                     diag::InvalidSYCLKernelParamReason::AtomicType);
+      IsValid = false;
+      return false;
+    }
+    if (Ty->isStructureTypeWithFlexibleArrayMember()) {
+      // Traversal to find FAM location:
+      std::function<void(QualType)> findFAM = [&](QualType Ty) {
+        const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+        // FAM can only be defined as the last element of a structure.
+        const FieldDecl *FAM = nullptr;
+        for (const FieldDecl *FD : RD->fields())
+          FAM = FD;
+        assert(FAM && "structure with flexible array member has no fields??");
+
+        if (FAM->getType()->isIncompleteArrayType())
+          SemaSYCLRef.Diag(FAM->getLocation(),
+                           diag::note_flexible_array_member_defined_here)
+              << FAM << RD;
+        else
+          findFAM(FAM->getType());
+        SemaSYCLRef.Diag(RD->getLocation(), diag::note_within_field_of_type)
+            << RD;
+      };
+
+      emitDiagnostic(
+          diag::err_sycl_kernel_bad_param_type, [&] { findFAM(Ty); },
+          diag::InvalidSYCLKernelParamReason::FAM);
+      IsValid = false;
+      return false;
+    }
+    // Disallow classes that inherit virtual base classes.
+    if (const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+      if (RD->getNumVBases() > 0) {
+        // Issue a diagnostic for virtual bases inherited by RD:
+        auto findVBases = [&] {
+          for (const CXXBaseSpecifier &VB : RD->vbases())
+            SemaSYCLRef.Diag(VB.getBaseTypeLoc(),
+                             diag::note_vbase_specifier_here)
+                << Ty << VB.getType();
+        };
+        emitDiagnostic(
+            diag::err_sycl_kernel_bad_param_type, [&] { findVBases(); },
+            diag::InvalidSYCLKernelParamReason::VirtualBase);
+        IsValid = false;
+        return false;
+      }
+    }
+    // Warn about pointer parameters in SYCL kernels if non-portable SYCL
+    // warnings are enabled.
+    if (Ty->isPointerType()) {
+      emitDiagnostic(diag::warn_sycl_kernel_param_has_ptr);
     }
     return true;
   }

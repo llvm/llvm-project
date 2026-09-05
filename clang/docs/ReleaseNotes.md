@@ -854,6 +854,14 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 #### Improvements
 
+- Added additional SYCL kernel parameter checks. Diagnostics are now issued for
+  the following kernel parameter types:
+  - Atomic types.
+  - Structs/classes with a flexible array members (FAM).
+  - Classes with virtual base classes.
+  - If `-Wnonportable-sycl` is enabled, warnings are issued for pointers as a
+    kernel parameter. 
+
 ## Additional Information
 
 A wide variety of additional information is available on the [Clang web
