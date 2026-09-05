@@ -28,8 +28,8 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-NEXT:    store i32 0, ptr [[D]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 7
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT1:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

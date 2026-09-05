@@ -21,8 +21,7 @@ define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP8]], <vscale x 4 x i1> [[TMP2]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD1]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE4]], [[PARTIAL_REDUCE]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i32> [[BIN_RDX]], <vscale x 4 x i32> [[PARTIAL_REDUCE4]]
-; CHECK-NEXT:    [[TMP6]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x i32> [[PARTIAL_REDUCE4]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP6]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> [[TMP2]], <vscale x 4 x i32> [[BIN_RDX]], <vscale x 4 x i32> [[PARTIAL_REDUCE4]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP7]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
@@ -120,8 +119,7 @@ define i32 @pred_reduction_sext(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP8]], <vscale x 4 x i1> [[TMP2]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = sext <vscale x 4 x i8> [[VP_OP_LOAD1]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE4]], [[PARTIAL_REDUCE]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i32> [[BIN_RDX]], <vscale x 4 x i32> [[PARTIAL_REDUCE4]]
-; CHECK-NEXT:    [[TMP6]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[PREDPHI]], <vscale x 4 x i32> [[PARTIAL_REDUCE4]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP6]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> [[TMP2]], <vscale x 4 x i32> [[BIN_RDX]], <vscale x 4 x i32> [[PARTIAL_REDUCE4]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP7]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]

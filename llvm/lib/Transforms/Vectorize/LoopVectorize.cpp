@@ -6675,11 +6675,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 
     // Convert a VPBlendRecipe backedge to a select.
     if (auto *Blend = dyn_cast<VPBlendRecipe>(PhiR->getBackedgeValue())) {
-      if (Blend->getNumIncomingValues() == 2 &&
-          Blend->getMask(0) == HeaderMask) {
-        auto *Sel = VPBuilder(Blend).createSelect(
-            Blend->getMask(0), Blend->getIncomingValue(0),
-            Blend->getIncomingValue(1), {}, "", *Blend);
+      VPValue *Update;
+      if (match(Blend, m_c_SelectLike(m_Specific(HeaderMask), m_VPValue(Update),
+                                      m_Specific(PhiR)))) {
+        auto *Sel = VPBuilder(Blend).createSelect(HeaderMask, Update, PhiR, {},
+                                                  "", *Blend);
         Blend->replaceAllUsesWith(Sel);
         Blend->eraseFromParent();
       }

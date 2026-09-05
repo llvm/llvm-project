@@ -1156,7 +1156,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 2
+; DEFAULT-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 4
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = add i64 [[TMP5]], -1
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[C1]], [[A2]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP6]], 1
@@ -1289,7 +1289,7 @@ loop.latch:
   store i8 %muladd.conv, ptr %gep.C, align 1
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, %n
-  br i1 %ec, label %exit, label %loop.header
+  br i1 %ec, label %exit, label %loop.header, !llvm.loop !4
 
 exit:
   ret void
@@ -1372,3 +1372,5 @@ attributes #3 = { "target-cpu"="neoverse-v2" }
 !1 = !{!"llvm.loop.vectorize.width", i32 8}
 !2 = !{!"llvm.loop.vectorize.scalable.disable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
+!4 = distinct !{!4, !5}
+!5 = !{!"llvm.loop.interleave.count", i32 1}
