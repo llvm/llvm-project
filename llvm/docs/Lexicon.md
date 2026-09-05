@@ -162,6 +162,13 @@ This document is a work in progress!
 :   Inter-Procedural Optimization. Refers to any variety of code optimization
     that occurs between procedures, functions or compilation units (modules).
 
+**IR**
+:   Intermediate Representation. LLVM IR is the common code representation
+    used throughout LLVM's compilation process. It is typed and based on
+    Static Single Assignment (SSA), with three equivalent forms: in-memory
+    IR, on-disk bitcode, and human-readable assembly. See the
+    {doc}`LLVM Language Reference Manual <LangRef>`.
+
 **ISel**
 :   Instruction Selection
 
