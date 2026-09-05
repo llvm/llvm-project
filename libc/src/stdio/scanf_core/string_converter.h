@@ -9,14 +9,14 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_STRING_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_STRING_CONVERTER_H
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/CPP/limits.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/alloc-checker.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
-#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <stddef.h>
 
@@ -47,7 +47,6 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
   }
 
   char *output;
- AllocChecker ac;
 #ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
   size_t alloc_size;
   if ((to_conv.flags & NO_WRITE) == 0 && (to_conv.flags & ALLOCATE) != 0) {
@@ -56,10 +55,9 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
     else
       alloc_size =
           (max_width < ALLOCATION_BASE) ? max_width + 1 : ALLOCATION_BASE;
-    output = new (ac) char[alloc_size];
-    if (!ac) {
+    output = reinterpret_cast<char *>(malloc(alloc_size));
+    if (!output)
       return ALLOCATION_FAILURE;
-    }
   } else {
     output = reinterpret_cast<char *>(to_conv.output_ptr);
   }
@@ -84,14 +82,12 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
         alloc_size *= ALLOCATION_SCALE;
         if (alloc_size > max_width + 1)
           alloc_size = max_width + 1;
-        char *tmp = new (ac) char[alloc_size];
-        if (!ac) {
-          delete[] output;
+        char *tmp = reinterpret_cast<char *>(realloc(output, alloc_size));
+        if (!tmp) {
+          free(output);
           reader->ungetc(cur_char);
           return ALLOCATION_FAILURE;
         }
-        inline_memcpy(tmp, output, i + 1);
-        delete[] output;
         output = tmp;
       }
 #endif
@@ -118,7 +114,7 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
   if (i == 0) {
 #ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
     if ((to_conv.flags & ALLOCATE) != 0 && output)
-      delete[] output;
+      free(output);
 #endif
     return MATCHING_FAILURE;
   }

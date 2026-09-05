@@ -108,7 +108,9 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
-    libc.src.__support.CPP.new
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
+    libc.hdr.free
     ${use_system_file}
 )
 
