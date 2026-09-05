@@ -43,6 +43,7 @@ add_mlir_library(MLIRAnalysis
   DataFlow/LivenessAnalysis.cpp
   DataFlow/SparseAnalysis.cpp
   DataFlow/StridedMetadataRangeAnalysis.cpp
+  DataFlow/UniformityAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
@@ -60,6 +61,7 @@ add_mlir_library(MLIRAnalysis
   MLIRInferIntRangeInterface
   MLIRInferStridedMetadataInterface
   MLIRInferTypeOpInterface
+  MLIRInferUniformityOpInterface
   MLIRLoopLikeInterface
   MLIRPresburger
   MLIRSideEffectInterfaces
