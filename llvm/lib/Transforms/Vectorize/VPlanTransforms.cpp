@@ -1699,33 +1699,6 @@ void VPlanTransforms::simplifyReverses(VPlan &Plan) {
         R.getVPSingleValue()->replaceAllUsesWith(X);
 }
 
-/// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
-/// header mask to be simplified further when tail folding, e.g. in
-/// optimizeEVLMasks.
-static void reassociateHeaderMask(VPlan &Plan) {
-  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
-  if (!HeaderMask)
-    return;
-
-  SmallVector<VPUser *> Worklist;
-  for (VPUser *U : HeaderMask->users())
-    if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
-      append_range(Worklist, cast<VPSingleDefRecipe>(U)->users());
-
-  while (!Worklist.empty()) {
-    auto *R = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
-    VPValue *X, *Y;
-    if (!R || !match(R, m_LogicalAnd(
-                            m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
-                            m_VPValue(Y))))
-      continue;
-    append_range(Worklist, R->users());
-    VPBuilder Builder(R);
-    R->replaceAllUsesWith(
-        Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
-  }
-}
-
 static std::optional<Instruction::BinaryOps>
 getUnmaskedDivRemOpcode(Intrinsic::ID ID) {
   switch (ID) {
@@ -2645,14 +2618,12 @@ bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
 void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(removeRedundantInductionCasts, Plan);
 
-  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
   RUN_VPLAN_PASS(simplifyBlends, Plan);
   RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
   RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
   RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
-  RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
   RUN_VPLAN_PASS(simplifyReverses, Plan);
