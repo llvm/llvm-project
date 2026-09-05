@@ -127,14 +127,16 @@ public:
   struct FileStyle {
     FileStyle()
         : IsActive(false), IgnoreMainLikeFunctions(false),
-          TypedefInheritAnonTagConfig(false) {}
+          TypedefInheritAnonTagConfig(false), AllowTrailingUnderscore(false) {}
     FileStyle(SmallVectorImpl<std::optional<NamingStyle>> &&Styles,
               HungarianNotationOption HNOption, bool IgnoreMainLike,
-              bool CheckAnonFieldInParent, bool TypedefInheritAnonTag)
+              bool CheckAnonFieldInParent, bool TypedefInheritAnonTag,
+              bool AllowTrailingUnderscore)
         : Styles(std::move(Styles)), HNOption(std::move(HNOption)),
           IsActive(true), IgnoreMainLikeFunctions(IgnoreMainLike),
           CheckAnonFieldInParentScope(CheckAnonFieldInParent),
-          TypedefInheritAnonTagConfig(TypedefInheritAnonTag) {}
+          TypedefInheritAnonTagConfig(TypedefInheritAnonTag),
+          AllowTrailingUnderscore(AllowTrailingUnderscore) {}
 
     ArrayRef<std::optional<NamingStyle>> getStyles() const {
       assert(IsActive);
@@ -157,6 +159,10 @@ public:
       return TypedefInheritAnonTagConfig;
     }
 
+    bool isAllowingTrailingUnderscore() const {
+      return AllowTrailingUnderscore;
+    }
+
   private:
     SmallVector<std::optional<NamingStyle>, 0> Styles;
     HungarianNotationOption HNOption;
@@ -164,6 +170,7 @@ public:
     bool IgnoreMainLikeFunctions;
     bool CheckAnonFieldInParentScope;
     bool TypedefInheritAnonTagConfig;
+    bool AllowTrailingUnderscore;
   };
 
   IdentifierNamingCheck::FileStyle
@@ -173,7 +180,7 @@ public:
   matchesStyle(StringRef Type, StringRef Name,
                const IdentifierNamingCheck::NamingStyle &Style,
                const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-               const NamedDecl *Decl) const;
+               const NamedDecl *Decl, bool AllowTrailingUnderscore) const;
 
   std::string
   fixupWithCase(StringRef Type, StringRef Name, const Decl *D,
@@ -185,7 +192,7 @@ public:
   fixupWithStyle(StringRef Type, StringRef Name,
                  const IdentifierNamingCheck::NamingStyle &Style,
                  const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-                 const Decl *D) const;
+                 const Decl *D, bool AllowTrailingUnderscore) const;
 
   StyleKind findStyleKind(
       const NamedDecl *D,
@@ -198,7 +205,8 @@ public:
       SourceLocation Location,
       ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
       const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-      StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) const;
+      StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit,
+      bool AllowTrailingUnderscore) const;
 
   bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
                                  bool IncludeMainLike) const;
