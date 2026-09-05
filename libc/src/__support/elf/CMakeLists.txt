@@ -176,6 +176,23 @@ add_header_library(
 )
 
 add_header_library(
+  search
+  HDRS
+    search.h
+  DEPENDS
+    libc.hdr.elf_macros
+    libc.hdr.link_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.elf.load_module
+    libc.src.__support.elf.module
+    libc.src.__support.elf.run_path
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+
+add_header_library(
   bind
   HDRS
     bind.h

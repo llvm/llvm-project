@@ -169,6 +169,16 @@ add_libc_test(
     libc.src.__support.elf.run_path
 )
 
+add_libc_test(
+  search_paths_test
+  SUITE
+    libc-support-tests
+  SRCS
+    search_paths_test.cpp
+  DEPENDS
+    libc.src.__support.elf.search
+)
+
 if(LIBC_ENABLE_SHARED)
   add_libc_test(
     dtv_test

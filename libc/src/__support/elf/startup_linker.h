@@ -24,6 +24,7 @@
 #include "src/__support/elf/module.h"
 #include "src/__support/elf/passive_abi.h"
 #include "src/__support/elf/run_path.h"
+#include "src/__support/elf/search.h"
 #include "src/__support/elf/startup_stack.h"
 #include "src/__support/elf/thread_pointer.h"
 #include "src/__support/elf/tls_block.h"
@@ -35,14 +36,11 @@ namespace elf {
 
 // How many objects one process may load at startup.
 constexpr size_t MAX_STARTUP_MODULES = MAX_PROCESS_MODULES;
-// Where a bare SONAME is looked for. There is no ld.so.cache: musl manages
-// without one and a glibc compatible cache format would buy nothing here.
-constexpr const char *DEFAULT_SEARCH_PATHS[] = {"/lib", "/usr/lib"};
 
 class StartupLinker {
 public:
   LIBC_INLINE StartupLinker(size_t page_size, char **envp)
-      : page_size_(page_size), library_path_(find_library_path(envp)) {}
+      : page_size_(page_size), library_path_(library_path_from(envp)) {}
 
   // Loads the executable's dependency graph, binds it, sets up thread local
   // storage and runs the initialisers. Returns false with a message already
@@ -156,99 +154,19 @@ private:
     return false;
   }
 
-  // LD_LIBRARY_PATH, without the value being copied anywhere: the environment
-  // outlives the loader.
-  LIBC_INLINE static const char *find_library_path(char **envp) {
-    if (envp == nullptr)
-      return nullptr;
-    const char key[] = "LD_LIBRARY_PATH=";
-    for (char **e = envp; *e != nullptr; ++e) {
-      const char *p = *e;
-      size_t i = 0;
-      for (; key[i] != '\0' && p[i] == key[i]; ++i)
-        ;
-      if (key[i] == '\0')
-        return p + i;
-    }
-    return nullptr;
-  }
-
-  // Tries `name` under each colon separated directory in `list`. `origin` is
-  // what $ORIGIN stands for in that list, and is null where the list may not
-  // use it.
-  LIBC_INLINE bool try_path_list(const char *list, const char *name,
-                                 LoadedModule &out,
-                                 const char *origin = nullptr) {
-    if (list == nullptr)
-      return false;
-    for (const char *segment = list; segment != nullptr;) {
-      const char *end = segment;
-      while (*end != '\0' && *end != ':')
-        ++end;
-      char dir[256];
-      const size_t length = static_cast<size_t>(end - segment);
-      if (length > 0 &&
-          expand_run_path(segment, length, origin, dir, sizeof(dir))) {
-        char path[256];
-        if (join(dir, name, path, sizeof(path))) {
-          auto loaded = load_module(path, page_size_);
-          if (loaded.has_value()) {
-            out = loaded.value();
-            return true;
-          }
-        }
-      }
-      segment = (*end == '\0') ? nullptr : end + 1;
-    }
-    return false;
-  }
-
-  // The search order a loader is expected to use: the requesting object's own
-  // run path, then LD_LIBRARY_PATH, then the system directories. `origin` is
-  // what $ORIGIN in `from`'s run path stands for, or null for the directory of
-  // its own name.
+  // The search order a loader is expected to use, which dlopen uses too.
+  // `origin` is what $ORIGIN in `from`'s run path stands for, or null for the
+  // directory of its own name.
   LIBC_INLINE bool load_dependency(const Module &from, const char *origin,
                                    const char *name) {
     if (count_ >= MAX_STARTUP_MODULES) {
       report("too many shared objects\n");
       return false;
     }
-    for (const char *p = name; *p != '\0'; ++p) {
-      if (*p == '/') {
-        auto loaded = load_module(name, page_size_);
-        if (!loaded.has_value())
-          return missing(name);
-        return remember(loaded.value());
-      }
-    }
-
-    LoadedModule loaded;
-    if (try_path_list(run_path(from), name, loaded,
-                      origin != nullptr ? origin : from.name()))
-      return remember(loaded);
-    if (try_path_list(library_path_, name, loaded))
-      return remember(loaded);
-    for (const char *dir : DEFAULT_SEARCH_PATHS) {
-      char path[256];
-      if (!join(dir, name, path, sizeof(path)))
-        continue;
-      auto found = load_module(path, page_size_);
-      if (found.has_value())
-        return remember(found.value());
-    }
-    return missing(name);
-  }
-
-  // DT_RUNPATH, or the older DT_RPATH when a module still carries one.
-  LIBC_INLINE static const char *run_path(const Module &module) {
-    const char *strings = module.strtab();
-    if (strings == nullptr)
-      return nullptr;
-    if (auto offset = module.dynamic().value(DT_RUNPATH))
-      return strings + *offset;
-    if (auto offset = module.dynamic().value(DT_RPATH))
-      return strings + *offset;
-    return nullptr;
+    auto loaded = find_and_load(name, &from, origin, library_path_, page_size_);
+    if (!loaded.has_value())
+      return missing(name);
+    return remember(loaded.value());
   }
 
   LIBC_INLINE bool remember(const LoadedModule &loaded) {
@@ -263,24 +181,6 @@ private:
     report(name);
     report("\n");
     return false;
-  }
-
-  LIBC_INLINE static bool join(const char *dir, const char *name, char *out,
-                               size_t capacity) {
-    size_t n = 0;
-    for (const char *p = dir; *p != '\0'; ++p) {
-      if (n + 2 >= capacity)
-        return false;
-      out[n++] = *p;
-    }
-    out[n++] = '/';
-    for (const char *p = name; *p != '\0'; ++p) {
-      if (n + 1 >= capacity)
-        return false;
-      out[n++] = *p;
-    }
-    out[n] = '\0';
-    return true;
   }
 
   LIBC_INLINE bool setup_tls() {

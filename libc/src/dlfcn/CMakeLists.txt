@@ -51,6 +51,9 @@ add_entrypoint_object(
   HDRS
     dlopen.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.newfstatat
+    libc.src.__support.elf.search
+    libc.src.unistd.environ
     libc.src.__support.CPP.mutex
     libc.src.__support.elf.passive_abi
     libc.src.__support.threads.mutex

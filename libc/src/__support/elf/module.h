@@ -61,6 +61,20 @@ public:
     }
   }
 
+  // Whether the given address falls in one of the module's mapped segments,
+  // which is how the module some code belongs to is found from a return
+  // address.
+  LIBC_INLINE bool contains(ElfW(Addr) address) const {
+    for (ElfW(Half) i = 0; i < phnum_; ++i) {
+      if (phdrs_[i].p_type != PT_LOAD)
+        continue;
+      const ElfW(Addr) start = load_bias_ + phdrs_[i].p_vaddr;
+      if (address >= start && address < start + phdrs_[i].p_memsz)
+        return true;
+    }
+    return false;
+  }
+
   LIBC_INLINE constexpr const char *name() const { return name_; }
   LIBC_INLINE constexpr ElfW(Addr) load_bias() const { return load_bias_; }
   LIBC_INLINE constexpr const ElfW(Phdr) * phdrs() const { return phdrs_; }
