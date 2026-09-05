@@ -642,6 +642,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
 
+- Fixed an assertion failure when `#embed` was used in the braced initializer
+  of an array new-expression, or of an array whose elements are of class type.
+  (#GH128985)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
