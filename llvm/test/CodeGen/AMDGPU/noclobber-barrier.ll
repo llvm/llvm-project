@@ -8,9 +8,10 @@
 @LDS = linkonce_odr hidden local_unnamed_addr addrspace(3) global i32 poison
 
 define amdgpu_kernel void @simple_barrier(ptr addrspace(1) %arg) {
-; CHECK-LABEL: @simple_barrier(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0:![0-9]+]]
+; CHECK-LABEL: define amdgpu_kernel void @simple_barrier(
+; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0:![0-9]+]]
 ; CHECK-NEXT:    fence syncscope("workgroup") release
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    fence syncscope("workgroup") acquire
@@ -52,17 +53,18 @@ bb:
 }
 
 define amdgpu_kernel void @memory_phi_no_clobber(ptr addrspace(1) %arg, i1 %cond) {
-; CHECK-LABEL: @memory_phi_no_clobber(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform [[META0]]
-; CHECK:       if.then:
+; CHECK-LABEL: define amdgpu_kernel void @memory_phi_no_clobber(
+; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]], !amdgpu.uniform [[META0]]
+; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
+; CHECK-NEXT:    br label %[[IF_END:.*]]
+; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1, !amdgpu.uniform [[META0]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I3:%.*]] = add i32 [[I2]], [[I]]
@@ -120,18 +122,19 @@ if.end:
 }
 
 define amdgpu_kernel void @memory_phi_clobber1(ptr addrspace(1) %arg, i1 %cond) {
-; CHECK-LABEL: @memory_phi_clobber1(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform [[META0]]
-; CHECK:       if.then:
+; CHECK-LABEL: define amdgpu_kernel void @memory_phi_clobber1(
+; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]], !amdgpu.uniform [[META0]]
+; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 3
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[GEP]], align 4
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
+; CHECK-NEXT:    br label %[[IF_END:.*]]
+; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1, !amdgpu.uniform [[META0]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I3:%.*]] = add i32 [[I2]], [[I]]
@@ -192,18 +195,19 @@ if.end:
 }
 
 define amdgpu_kernel void @memory_phi_clobber2(ptr addrspace(1) %arg, i1 %cond) {
-; CHECK-LABEL: @memory_phi_clobber2(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]], !amdgpu.uniform [[META0]]
-; CHECK:       if.then:
+; CHECK-LABEL: define amdgpu_kernel void @memory_phi_clobber2(
+; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]], !amdgpu.uniform [[META0]]
+; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
+; CHECK-NEXT:    br label %[[IF_END:.*]]
+; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 3
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[GEP]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1, !amdgpu.uniform [[META0]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I3:%.*]] = add i32 [[I2]], [[I]]
@@ -264,19 +268,20 @@ if.end:
 }
 
 define amdgpu_kernel void @no_clobbering_loop1(ptr addrspace(1) %arg, i1 %cc) {
-; CHECK-LABEL: @no_clobbering_loop1(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
-; CHECK:       while.cond:
+; CHECK-LABEL: define amdgpu_kernel void @no_clobbering_loop1(
+; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]], i1 [[CC:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1, !amdgpu.uniform [[META0]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I3:%.*]] = add i32 [[I2]], [[I]]
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 2
 ; CHECK-NEXT:    store i32 [[I3]], ptr addrspace(1) [[I4]], align 4
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.wave.barrier()
-; CHECK-NEXT:    br i1 [[CC:%.*]], label [[WHILE_COND]], label [[END:%.*]], !amdgpu.uniform [[META0]]
-; CHECK:       end:
+; CHECK-NEXT:    br i1 [[CC]], label %[[WHILE_COND]], label %[[END:.*]], !amdgpu.uniform [[META0]]
+; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_clobbering_loop1:
@@ -321,22 +326,23 @@ end:
 }
 
 define amdgpu_kernel void @no_clobbering_loop2(ptr addrspace(1) noalias %arg, ptr addrspace(1) noalias %out, i32 %n) {
-; CHECK-LABEL: @no_clobbering_loop2(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
-; CHECK:       while.cond:
-; CHECK-NEXT:    [[C:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[INC:%.*]], [[WHILE_COND]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ [[I]], [[BB]] ], [ [[I3:%.*]], [[WHILE_COND]] ]
+; CHECK-LABEL: define amdgpu_kernel void @no_clobbering_loop2(
+; CHECK-SAME: ptr addrspace(1) noalias [[ARG:%.*]], ptr addrspace(1) noalias [[OUT:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
+; CHECK-NEXT:    [[C:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[INC:%.*]], %[[WHILE_COND]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ [[I]], %[[BB]] ], [ [[I3:%.*]], %[[WHILE_COND]] ]
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i32 [[C]], !amdgpu.uniform [[META0]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I3]] = add i32 [[I2]], [[ACC]]
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.wave.barrier()
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[C]], 1
-; CHECK-NEXT:    [[CC:%.*]] = icmp eq i32 [[INC]], [[N:%.*]]
-; CHECK-NEXT:    br i1 [[CC]], label [[WHILE_COND]], label [[END:%.*]], !amdgpu.uniform [[META0]]
-; CHECK:       end:
-; CHECK-NEXT:    store i32 [[I3]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[CC:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[CC]], label %[[WHILE_COND]], label %[[END:.*]], !amdgpu.uniform [[META0]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    store i32 [[I3]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_clobbering_loop2:
@@ -382,19 +388,20 @@ end:
 }
 
 define amdgpu_kernel void @clobbering_loop(ptr addrspace(1) %arg, ptr addrspace(1) %out, i1 %cc) {
-; CHECK-LABEL: @clobbering_loop(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
-; CHECK:       while.cond:
+; CHECK-LABEL: define amdgpu_kernel void @clobbering_loop(
+; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]], ptr addrspace(1) [[OUT:%.*]], i1 [[CC:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
+; CHECK:       [[WHILE_COND]]:
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 1, !amdgpu.uniform [[META0]]
 ; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr addrspace(1) [[I1]], align 4
 ; CHECK-NEXT:    [[I3:%.*]] = add i32 [[I2]], [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 1
+; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 1
 ; CHECK-NEXT:    store i32 [[I3]], ptr addrspace(1) [[I4]], align 4
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.wave.barrier()
-; CHECK-NEXT:    br i1 [[CC:%.*]], label [[WHILE_COND]], label [[END:%.*]], !amdgpu.uniform [[META0]]
-; CHECK:       end:
+; CHECK-NEXT:    br i1 [[CC]], label %[[WHILE_COND]], label %[[END:.*]], !amdgpu.uniform [[META0]]
+; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: clobbering_loop:
@@ -438,9 +445,10 @@ end:
 }
 
 define amdgpu_kernel void @clobber_by_atomic_load(ptr addrspace(1) %arg) {
-; CHECK-LABEL: @clobber_by_atomic_load(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG:%.*]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-LABEL: define amdgpu_kernel void @clobber_by_atomic_load(
+; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]]) {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr addrspace(1) [[ARG]], align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 2, !amdgpu.uniform [[META0]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load atomic i32, ptr addrspace(1) [[GEP]] seq_cst, align 4, !amdgpu.noclobber [[META0]]
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG]], i64 3, !amdgpu.uniform [[META0]]
@@ -478,14 +486,12 @@ bb:
 }
 
 define protected amdgpu_kernel void @no_alias_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
-; CHECK-LABEL: @no_alias_store(
-; CHECK-NEXT:  entry:
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_store(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) @LDS, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_alias_store:
@@ -494,7 +500,6 @@ define protected amdgpu_kernel void @no_alias_store(ptr addrspace(1) %in, ptr ad
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    ds_write_b32 v0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
@@ -502,22 +507,17 @@ define protected amdgpu_kernel void @no_alias_store(ptr addrspace(1) %in, ptr ad
 ; GCN-NEXT:    s_endpgm
 entry:
   store i32 0, ptr addrspace(3) @LDS, align 4
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @may_alias_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
-; CHECK-LABEL: @may_alias_store(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4
+; CHECK-LABEL: define protected amdgpu_kernel void @may_alias_store(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -527,31 +527,24 @@ define protected amdgpu_kernel void @may_alias_store(ptr addrspace(1) %in, ptr a
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_store_dword v0, v0, s[2:3]
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
   store i32 0, ptr addrspace(1) %out, align 4
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @no_alias_volatile_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
-; CHECK-LABEL: @no_alias_volatile_store(
-; CHECK-NEXT:  entry:
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_volatile_store(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store volatile i32 0, ptr addrspace(3) @LDS, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_alias_volatile_store:
@@ -560,7 +553,6 @@ define protected amdgpu_kernel void @no_alias_volatile_store(ptr addrspace(1) %i
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    ds_write_b32 v0, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
@@ -568,20 +560,18 @@ define protected amdgpu_kernel void @no_alias_volatile_store(ptr addrspace(1) %i
 ; GCN-NEXT:    s_endpgm
 entry:
   store volatile i32 0, ptr addrspace(3) @LDS, align 4
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @no_alias_atomic_rmw_relaxed(ptr addrspace(1) %in, ptr addrspace(1) %out) {
-; CHECK-LABEL: @no_alias_atomic_rmw_relaxed(
-; CHECK-NEXT:  entry:
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_atomic_rmw_relaxed(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(3) @LDS, i32 5 monotonic, align 4
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_alias_atomic_rmw_relaxed:
@@ -603,15 +593,43 @@ entry:
   ret void
 }
 
+define protected amdgpu_kernel void @no_alias_atomic_cmpxchg_relaxed(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %swap) {
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_atomic_cmpxchg_relaxed(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]], i32 [[SWAP:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = cmpxchg ptr addrspace(3) @LDS, i32 7, i32 [[SWAP]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_atomic_cmpxchg_relaxed:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 7
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v2, s6
+; GCN-NEXT:    ds_cmpst_b32 v1, v0, v2
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    global_store_dword v1, v0, s[2:3]
+; GCN-NEXT:    s_endpgm
+entry:
+  %unused = cmpxchg ptr addrspace(3) @LDS, i32 7, i32 %swap monotonic monotonic
+  %ld = load i32, ptr addrspace(1) %in, align 4
+  store i32 %ld, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 define protected amdgpu_kernel void @no_alias_atomic_cmpxchg(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %swap) {
-; CHECK-LABEL: @no_alias_atomic_cmpxchg(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UNUSED:%.*]] = cmpxchg ptr addrspace(3) @LDS, i32 7, i32 [[SWAP:%.*]] seq_cst monotonic, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_atomic_cmpxchg(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]], i32 [[SWAP:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = cmpxchg ptr addrspace(3) @LDS, i32 7, i32 [[SWAP]] seq_cst monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_alias_atomic_cmpxchg:
@@ -624,7 +642,6 @@ define protected amdgpu_kernel void @no_alias_atomic_cmpxchg(ptr addrspace(1) %i
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN-NEXT:    ds_cmpst_b32 v1, v0, v2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -632,23 +649,18 @@ define protected amdgpu_kernel void @no_alias_atomic_cmpxchg(ptr addrspace(1) %i
 ; GCN-NEXT:    s_endpgm
 entry:
   %unused = cmpxchg ptr addrspace(3) @LDS, i32 7, i32 %swap seq_cst monotonic
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @no_alias_atomic_rmw(ptr addrspace(1) %in, ptr addrspace(1) %out) {
-; CHECK-LABEL: @no_alias_atomic_rmw(
-; CHECK-NEXT:  entry:
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_atomic_rmw(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(3) @LDS, i32 5 seq_cst, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_alias_atomic_rmw:
@@ -659,7 +671,6 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw(ptr addrspace(1) %in, p
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -667,22 +678,17 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw(ptr addrspace(1) %in, p
 ; GCN-NEXT:    s_endpgm
 entry:
   %unused = atomicrmw add ptr addrspace(3) @LDS, i32 5 seq_cst
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @may_alias_atomic_cmpxchg(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %swap) {
-; CHECK-LABEL: @may_alias_atomic_cmpxchg(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UNUSED:%.*]] = cmpxchg ptr addrspace(1) [[OUT:%.*]], i32 7, i32 [[SWAP:%.*]] seq_cst monotonic, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4
+; CHECK-LABEL: define protected amdgpu_kernel void @may_alias_atomic_cmpxchg(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]], i32 [[SWAP:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = cmpxchg ptr addrspace(1) [[OUT]], i32 7, i32 [[SWAP]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -695,31 +701,23 @@ define protected amdgpu_kernel void @may_alias_atomic_cmpxchg(ptr addrspace(1) %
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    global_atomic_cmpswap v2, v[0:1], s[2:3]
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_wbinvl1_vol
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    global_load_dword v0, v2, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_dword v2, v0, s[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
-  %unused = cmpxchg ptr addrspace(1) %out, i32 7, i32 %swap seq_cst monotonic
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
+  %unused = cmpxchg ptr addrspace(1) %out, i32 7, i32 %swap monotonic monotonic
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @may_alias_atomic_rmw(ptr addrspace(1) %in, ptr addrspace(1) %out) {
-; CHECK-LABEL: @may_alias_atomic_rmw(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(1) [[OUT:%.*]], i32 5 syncscope("agent") seq_cst, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4
+; CHECK-LABEL: define protected amdgpu_kernel void @may_alias_atomic_rmw(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(1) [[OUT]], i32 5 syncscope("agent") monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -730,33 +728,25 @@ define protected amdgpu_kernel void @may_alias_atomic_rmw(ptr addrspace(1) %in, 
 ; GCN-NEXT:    v_mov_b32_e32 v1, 5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_atomic_add v0, v1, s[2:3]
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_wbinvl1_vol
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
-  %unused = atomicrmw add ptr addrspace(1) %out, i32 5 syncscope("agent") seq_cst
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
+  %unused = atomicrmw add ptr addrspace(1) %out, i32 5 syncscope("agent") monotonic
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @no_alias_atomic_rmw_then_clobber(ptr addrspace(1) %in, ptr addrspace(1) %out, ptr addrspace(1) noalias %noalias) {
-; CHECK-LABEL: @no_alias_atomic_rmw_then_clobber(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[OUT:%.*]], align 4
-; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[NOALIAS:%.*]], align 4
-; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(3) @LDS, i32 5 seq_cst, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_atomic_rmw_then_clobber(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) noalias [[NOALIAS:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[NOALIAS]], align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(3) @LDS, i32 5 monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
 ; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -772,8 +762,6 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw_then_clobber(ptr addrsp
 ; GCN-NEXT:    global_store_dword v1, v2, s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    ds_add_u32 v1, v0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    global_load_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_dword v1, v0, s[2:3]
@@ -781,25 +769,20 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw_then_clobber(ptr addrsp
 entry:
   store i32 1, ptr addrspace(1) %out, align 4
   store i32 2, ptr addrspace(1) %noalias, align 4
-  %unused = atomicrmw add ptr addrspace(3) @LDS, i32 5 seq_cst
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
+  %unused = atomicrmw add ptr addrspace(3) @LDS, i32 5 monotonic
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
 }
 
 define protected amdgpu_kernel void @no_alias_atomic_rmw_then_no_alias_store(ptr addrspace(1) %in, ptr addrspace(1) %out, ptr addrspace(1) noalias %noalias) {
-; CHECK-LABEL: @no_alias_atomic_rmw_then_no_alias_store(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[NOALIAS:%.*]], align 4
-; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(3) @LDS, i32 5 seq_cst, align 4
-; CHECK-NEXT:    fence syncscope("workgroup") release
-; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    fence syncscope("workgroup") acquire
-; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN:%.*]], align 4, !amdgpu.noclobber [[META0]]
-; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-LABEL: define protected amdgpu_kernel void @no_alias_atomic_rmw_then_no_alias_store(
+; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) noalias [[NOALIAS:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[NOALIAS]], align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(3) @LDS, i32 5 monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store i32 [[LD]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; GCN-LABEL: no_alias_atomic_rmw_then_no_alias_store:
@@ -808,12 +791,10 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw_then_no_alias_store(ptr
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, 5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_store_dword v1, v0, s[6:7]
-; GCN-NEXT:    ds_add_u32 v1, v2
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_barrier
+; GCN-NEXT:    v_mov_b32_e32 v0, 5
+; GCN-NEXT:    ds_add_u32 v1, v0
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -821,10 +802,7 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw_then_no_alias_store(ptr
 ; GCN-NEXT:    s_endpgm
 entry:
   store i32 2, ptr addrspace(1) %noalias, align 4
-  %unused = atomicrmw add ptr addrspace(3) @LDS, i32 5 seq_cst
-  fence syncscope("workgroup") release
-  tail call void @llvm.amdgcn.s.barrier()
-  fence syncscope("workgroup") acquire
+  %unused = atomicrmw add ptr addrspace(3) @LDS, i32 5 monotonic
   %ld = load i32, ptr addrspace(1) %in, align 4
   store i32 %ld, ptr addrspace(1) %out, align 4
   ret void
@@ -843,7 +821,7 @@ define amdgpu_kernel void @fence_in_loop(ptr addrspace(3) %p3, ptr addrspace(1) 
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 ; GCN-LABEL: fence_in_loop:
-; GCN:       ; %bb.0: ; %bb
+; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
@@ -851,25 +829,535 @@ define amdgpu_kernel void @fence_in_loop(ptr addrspace(3) %p3, ptr addrspace(1) 
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    ds_write_b32 v1, v0
-; GCN-NEXT:  .LBB18_1: ; %bb1
+; GCN-NEXT:  .LBB19_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GCN-NEXT:    ; fake_use: $sgpr2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
-; GCN-NEXT:    s_cbranch_vccnz .LBB18_1
+; GCN-NEXT:    s_cbranch_vccnz .LBB19_1
 ; GCN-NEXT:  ; %bb.2: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
-bb:
+entry:
   store i32 0, ptr addrspace(3) %p3
-  br label %bb1
+  br label %loop
 
-bb1:
+loop:
   %i = load i32, ptr addrspace(1) %p1, align 4
   call void (...) @llvm.fake.use(i32 %i)
   fence release
-  br label %bb1
+  br label %loop
+}
+
+define amdgpu_kernel void @monotonic_load(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1) {
+; CHECK-LABEL: define amdgpu_kernel void @monotonic_load(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]]) {
+; CHECK-NEXT:    [[LD:%.*]] = load atomic i32, ptr addrspace(1) [[P1]] monotonic, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: monotonic_load:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3] glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %ld = load atomic i32, ptr addrspace(1) %p1 monotonic, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fence_release(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @fence_release(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    fence release
+; CHECK-NEXT:    store atomic i32 1, ptr addrspace(1) [[P1NA]] monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: fence_release:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[6:7]
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  fence release
+  store atomic i32 1, ptr addrspace(1) %p1na monotonic, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fence_acquire(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @fence_acquire(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[P1NA]] monotonic, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    fence acquire
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: fence_acquire:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(1) %p1na monotonic, align 4
+  fence acquire
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fence_acq_rel(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @fence_acq_rel(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[P1NA]] monotonic, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    fence acq_rel
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: fence_acq_rel:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(1) %p1na monotonic, align 4
+  fence acq_rel
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fence_seq_cst(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @fence_seq_cst(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[P1NA]] monotonic, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: fence_seq_cst:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(1) %p1na monotonic, align 4
+  fence seq_cst
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_store_release(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_store_release(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    store atomic i32 1, ptr addrspace(1) [[P1NA]] release, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_store_release:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[6:7]
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  store atomic i32 1, ptr addrspace(1) %p1na release, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @load_acquire(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @load_acquire(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[P1NA]] acquire, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: load_acquire:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    ; kill: killed $sgpr6_sgpr7
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[6:7] glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    ; kill: killed $sgpr2_sgpr3
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(1) %p1na acquire, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_rmw_acquire(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_rmw_acquire(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = atomicrmw add ptr addrspace(1) [[P1NA]], i32 1 acquire, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_rmw_acquire:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_atomic_add v0, v1, s[6:7]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = atomicrmw add ptr addrspace(1) %p1na, i32 1 acquire, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_rmw_acq_rel(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_rmw_acq_rel(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = atomicrmw add ptr addrspace(1) [[P1NA]], i32 1 acq_rel, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_rmw_acq_rel:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_atomic_add v0, v1, s[6:7]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = atomicrmw add ptr addrspace(1) %p1na, i32 1 acq_rel, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_rmw_release(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_rmw_release(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = atomicrmw add ptr addrspace(1) [[P1NA]], i32 1 release, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_rmw_release:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_atomic_add v0, v1, s[6:7]
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = atomicrmw add ptr addrspace(1) %p1na, i32 1 release, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_cmpxchg_acquire(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_cmpxchg_acquire(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = cmpxchg ptr addrspace(1) [[P1NA]], i32 1, i32 2 acquire monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_cmpxchg_acquire:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 2
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_atomic_cmpswap v2, v[0:1], s[6:7]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    global_load_dword v0, v2, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = cmpxchg ptr addrspace(1) %p1na, i32 1, i32 2 acquire monotonic
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_cmpxchg_acq_rel(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_cmpxchg_acq_rel(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = cmpxchg ptr addrspace(1) [[P1NA]], i32 1, i32 2 acq_rel monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_cmpxchg_acq_rel:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 2
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_atomic_cmpswap v2, v[0:1], s[6:7]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_wbinvl1_vol
+; GCN-NEXT:    global_load_dword v0, v2, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = cmpxchg ptr addrspace(1) %p1na, i32 1, i32 2 acq_rel monotonic
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_cmpxchg_release(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @no_alias_cmpxchg_release(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = cmpxchg ptr addrspace(1) [[P1NA]], i32 1, i32 2 release monotonic, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: no_alias_cmpxchg_release:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 2
+; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_atomic_cmpswap v2, v[0:1], s[6:7]
+; GCN-NEXT:    global_load_dword v0, v2, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = cmpxchg ptr addrspace(1) %p1na, i32 1, i32 2 release monotonic
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @load_acquire_one_as_same(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @load_acquire_one_as_same(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[P1NA]] syncscope("workgroup-one-as") acquire, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: load_acquire_one_as_same:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    ; kill: killed $sgpr6_sgpr7
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[6:7]
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    ; kill: killed $sgpr2_sgpr3
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(1) %p1na syncscope("workgroup-one-as") acquire, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @load_acquire_one_as_different(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(3) %p3) {
+; CHECK-LABEL: define amdgpu_kernel void @load_acquire_one_as_different(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(3) [[P3:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(3) [[P3]] syncscope("workgroup-one-as") acquire, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: load_acquire_one_as_different:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x34
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s6
+; GCN-NEXT:    ds_read_b32 v1, v1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(3) %p3 syncscope("workgroup-one-as") acquire, align 4
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fence_acquire_one_as_same(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(1) noalias %p1na) {
+; CHECK-LABEL: define amdgpu_kernel void @fence_acquire_one_as_same(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(1) noalias [[P1NA:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(1) [[P1NA]] monotonic, align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    fence syncscope("workgroup-one-as") acquire, !mmra [[META1:![0-9]+]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: fence_acquire_one_as_same:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(1) %p1na monotonic, align 4
+  fence syncscope("workgroup-one-as") acquire, !mmra !{!"amdgpu-synchronize-as", !"global"}
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fence_acquire_one_as_different(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1, ptr addrspace(3) %p3) {
+; CHECK-LABEL: define amdgpu_kernel void @fence_acquire_one_as_different(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]], ptr addrspace(3) [[P3:%.*]]) {
+; CHECK-NEXT:    [[ACQ:%.*]] = load atomic i32, ptr addrspace(3) [[P3]] monotonic, align 4
+; CHECK-NEXT:    fence syncscope("workgroup-one-as") acquire, !mmra [[META2:![0-9]+]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: fence_acquire_one_as_different:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x34
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    ds_read_b32 v0, v0
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %acq = load atomic i32, ptr addrspace(3) %p3 monotonic, align 4
+  fence syncscope("workgroup-one-as") acquire, !mmra !{!"amdgpu-synchronize-as", !"local"}
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
+}
+
+define amdgpu_kernel void @one_as_local_barrier(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1) {
+; CHECK-LABEL: define amdgpu_kernel void @one_as_local_barrier(
+; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]]) {
+; CHECK-NEXT:    fence syncscope("workgroup-one-as") release, !mmra [[META2]]
+; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    fence syncscope("workgroup-one-as") acquire, !mmra [[META2]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+; GCN-LABEL: one_as_local_barrier:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_barrier
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  fence syncscope("workgroup-one-as") release, !mmra !{!"amdgpu-synchronize-as", !"local"}
+  tail call void @llvm.amdgcn.s.barrier()
+  fence syncscope("workgroup-one-as") acquire, !mmra !{!"amdgpu-synchronize-as", !"local"}
+  %ld = load i32, ptr addrspace(1) %p1, align 4
+  store atomic i32 %ld, ptr addrspace(1) %out seq_cst, align 4
+  ret void
 }
 
 declare void @llvm.amdgcn.s.barrier()
 declare void @llvm.amdgcn.wave.barrier()
+;.
+; CHECK: [[META0]] = !{}
+; CHECK: [[META1]] = !{!"amdgpu-synchronize-as", !"global"}
+; CHECK: [[META2]] = !{!"amdgpu-synchronize-as", !"local"}
+;.
