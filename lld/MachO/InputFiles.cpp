@@ -1054,6 +1054,9 @@ template <class LP> void ObjFile::parse() {
                           c->nsyms);
     const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
     bool subsectionsViaSymbols = hdr->flags & MH_SUBSECTIONS_VIA_SYMBOLS;
+    if (config->warnMissingSubsectionsViaSymbols && !subsectionsViaSymbols &&
+        !sectionHeaders.empty())
+      warn(toString(this) + ": missing MH_SUBSECTIONS_VIA_SYMBOLS");
     parseSymbols<LP>(sectionHeaders, nList, strtab, subsectionsViaSymbols);
   }
 
