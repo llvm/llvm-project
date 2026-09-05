@@ -1688,6 +1688,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
 
+    if (F->arg_size() == 6 && !F->isVarArg()) {
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .Case("coro.id.retcon", Intrinsic::coro_id_retcon)
+              .Case("coro.id.retcon.once", Intrinsic::coro_id_retcon_once)
+              .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+    }
+
     break;
   }
   case 'd':
@@ -5718,6 +5731,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
 
+    break;
+  }
+
+  case Intrinsic::coro_id_retcon:
+  case Intrinsic::coro_id_retcon_once: {
+    SmallVector<Value *, 6> Args(CI->args());
+    NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
 
