@@ -712,6 +712,10 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
 }
 
 void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
+  // Target-specific global variable checks. Done first because this function
+  // returns early for a global without an initializer.
+  verifyAMDGPUGlobalVariable(*this, GV);
+
   Type *GVType = GV.getValueType();
 
   if (MaybeAlign A = GV.getAlign()) {

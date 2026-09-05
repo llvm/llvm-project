@@ -7622,6 +7622,10 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
       if (!DL.contains("-p9") && !DL.starts_with("p9"))
         Res.append("-p9:192:256:256:32");
+      // Add sizing for the VGPR address space (32-bit byte offset into the
+      // wave's vector registers).
+      if (!DL.contains("-p13") && !DL.starts_with("p13"))
+        Res.append("-p13:32:32");
     }
 
     // Upgrade the ELF mangling mode.

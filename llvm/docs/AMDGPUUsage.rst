@@ -1138,7 +1138,7 @@ supported for the ``amdgcn`` target.
      *reserved for future use*             10
      *reserved for future use*             11
      *reserved for downstream use (LLPC)*  12
-     *reserved for future use*             13
+     VGPR                                  13              N/A         VGPR             32      0xFFFFFFFF
      *reserved for future use*             14
      *reserved for future use*             16
      Streamout Registers                   128             N/A         GS_REGS
@@ -1352,6 +1352,23 @@ supported for the ``amdgcn`` target.
   constrains the stride of the pointer. That is, if you do an ``align 4`` load from
   a buffer strided pointer, this means that the base pointer is ``align(4)``, that
   the offset is a multiple of 4 bytes, and that the stride is a multiple of 4.
+
+**VGPR**
+  The VGPR address space presents a memory view of the wave's vector registers.
+  The 32-bit address is a byte address into the thread's view of vector
+  registers. For example, loading 4 bytes from address ``12`` reads the contents
+  of ``v3``. Storing 8 bytes to address ``32`` overwrites the contents of
+  ``v[8:9]``.
+
+  Use of this address space by frontends is strongly discouraged. It has unusual
+  and subtle lifetime rules due to the potential for interaction with normal
+  register allocation. It exists primarily for internal purposes of the backend,
+  such as promoting ``alloca`` instructions from the private address space into
+  VGPRs.
+
+  In particular, memory in this address space that was allocated by an
+  ``alloca`` is not visible while in a called function. Attempting to dereference
+  a pointer to such memory in a called function is undefined behavior.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
