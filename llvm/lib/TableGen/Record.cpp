@@ -70,7 +70,7 @@ struct detail::RecordKeeperImpl {
   BitInit TrueBitInit;
   BitInit FalseBitInit;
 
-  FoldingSet<ArgumentInit> TheArgumentInitPool;
+  UniquingSet<ArgumentInit> TheArgumentInitPool;
   UniquingSet<BitsInit> TheBitsInitPool;
   std::map<int64_t, IntInit *> TheIntInitPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitStringPool;
@@ -381,33 +381,15 @@ const Init *UnsetInit::convertInitializerTo(const RecTy *Ty) const {
   return this;
 }
 
-static void ProfileArgumentInit(FoldingSetNodeID &ID, const Init *Value,
-                                ArgAuxType Aux) {
-  auto I = Aux.index();
-  ID.AddInteger(I);
-  if (I == ArgumentInit::Positional)
-    ID.AddInteger(std::get<ArgumentInit::Positional>(Aux));
-  if (I == ArgumentInit::Named)
-    ID.AddPointer(std::get<ArgumentInit::Named>(Aux));
-  ID.AddPointer(Value);
-}
-
-void ArgumentInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileArgumentInit(ID, Value, Aux);
-}
-
 const ArgumentInit *ArgumentInit::get(const Init *Value, ArgAuxType Aux) {
-  FoldingSetNodeID ID;
-  ProfileArgumentInit(ID, Value, Aux);
-
-  RecordKeeper &RK = Value->getRecordKeeper();
-  detail::RecordKeeperImpl &RKImpl = RK.getImpl();
+  detail::RecordKeeperImpl &RK = Value->getRecordKeeper().getImpl();
   FoldingSetInsertToken Token;
-  if (const ArgumentInit *I = RKImpl.TheArgumentInitPool.lookup(ID, Token))
+  if (const ArgumentInit *I =
+          RK.TheArgumentInitPool.lookup({Value, Aux}, Token))
     return I;
 
-  ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value, Aux);
-  RKImpl.TheArgumentInitPool.insert(I, Token);
+  ArgumentInit *I = new (RK.Allocator) ArgumentInit(Value, Aux);
+  RK.TheArgumentInitPool.insert(I, Token);
   return I;
 }
 

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -530,7 +531,7 @@ public:
     return get(Value, Aux);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Init *, ArgAuxType> getKey() const { return {Value, Aux}; }
 
   const Init *resolveReferences(Resolver &R) const override;
   std::string getAsString() const override {
