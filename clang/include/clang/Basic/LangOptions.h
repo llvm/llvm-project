@@ -823,6 +823,10 @@ public:
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
 
+  /// Default for OffloadUniformBlock: false for OpenCL 2.0+ and HLSL, true
+  /// otherwise. OpenCL may opt in with -cl-uniform-work-group-size.
+  bool defaultOffloadUniformBlock() const;
+
   /// Return the OpenMP version.
   llvm::omp::Version getOpenMPVersion() const {
     return llvm::omp::Version(OpenMP);

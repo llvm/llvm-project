@@ -97,10 +97,10 @@ S A;
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { convergent noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR1]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR3]] = { convergent }
-// CHECK: attributes #[[ATTR4]] = { convergent nounwind }
+// CHECK: attributes #[[ATTR1]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// CHECK: attributes #[[ATTR3]] = { convergent "uniform-work-group-size" }
+// CHECK: attributes #[[ATTR4]] = { convergent nounwind "uniform-work-group-size" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"A", i32 0, i32 0}
 // CHECK: [[META1:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}

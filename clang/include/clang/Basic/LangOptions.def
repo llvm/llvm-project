@@ -272,7 +272,7 @@ LANGOPT(SYCLIsHost        , 1, 0, NotCompatible, "SYCL host compilation")
 ENUM_LANGOPT(SYCLVersion  , SYCLMajorVersion, 2, SYCL_None, NotCompatible, "Version of the SYCL standard used")
 
 LANGOPT(HIPUseNewLaunchAPI, 1, 0, NotCompatible, "Use new kernel launching API for HIP")
-LANGOPT(OffloadUniformBlock, 1, 0, NotCompatible, "Assume that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)")
+LANGOPT(OffloadUniformBlock, 1, 0, NotCompatible, "Assume that kernels are launched with uniform block sizes")
 LANGOPT(HIPStdPar, 1, 0, NotCompatible, "Enable Standard Parallel Algorithm Acceleration for HIP (experimental)")
 LANGOPT(HIPStdParInterposeAlloc, 1, 0, NotCompatible, "Replace allocations / deallocations with HIP RT calls when Standard Parallel Algorithm Acceleration for HIP is enabled (Experimental)")
 
