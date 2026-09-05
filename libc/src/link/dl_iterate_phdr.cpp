@@ -17,7 +17,9 @@
 #include "src/__support/CPP/mutex.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/common.h"
+#include "src/__support/elf/passive_abi.h"
 #include "src/__support/macros/config.h"
+#include "src/dlfcn/dl_internal.h"
 
 #include <elf.h>
 
@@ -52,16 +54,64 @@ struct dl_phdr_info create_module_info(ElfW(Ehdr) * header, const char *name) {
   return to_return;
 }
 
+// What a module's own headers say about it, for one the loader recorded. It
+// already knows where the headers are and where the module was put, so
+// nothing has to be worked out again.
+static struct dl_phdr_info info_for(const elf::Module &module,
+                                    const elf::ModuleSet &set) {
+  struct dl_phdr_info to_return;
+  to_return.dlpi_phdr = module.phdrs();
+  to_return.dlpi_phnum = module.phnum();
+  to_return.dlpi_addr = module.load_bias();
+  // The path it was loaded from, as glibc and musl report it. A caller such
+  // as a JVM finds its own library's directory from this.
+  const char *soname = module.soname();
+  to_return.dlpi_name = module.name() != nullptr ? module.name() : soname;
+  to_return.dlpi_adds = set.generation;
+  to_return.dlpi_subs = 0;
+  to_return.dlpi_tls_modid = 0;
+  to_return.dlpi_tls_data = nullptr;
+  return to_return;
+}
+
 LLVM_LIBC_FUNCTION(int, dl_iterate_phdr,
                    (__dl_iterate_phdr_callback_t callback, void *arg)) {
-  ElfW(Ehdr) *executable_header = reinterpret_cast<ElfW(Ehdr) *>(&__ehdr_start);
-  // The main executable is always reported with an empty name.
-  struct dl_phdr_info executable_info =
-      create_module_info(executable_header, "");
-  int executable_return_code =
-      callback(&executable_info, sizeof(executable_info), arg);
-  if (executable_return_code != 0)
-    return executable_return_code;
+  // Where a loader linked the process, what it loaded is what there is to
+  // report, and it left a record of all of it. An unwinder walks this to find
+  // the frame information of whatever module a return address is in, so a
+  // library left out of it is one nothing can unwind through.
+  const elf::ModuleSet *modules = elf::process_modules();
+  if (modules != nullptr && modules->linked) {
+    // dlopen and dlclose change the set under this lock, and a library that
+    // is unmapped or an array that is replaced part way through the walk
+    // would be read after it was gone. The load lock is not used, as it is
+    // held while the initialisers of a new library run, and one of them can
+    // be waiting for a thread that is here to unwind.
+    cpp::lock_guard lock(dl::dl_write_lock);
+    for (size_t i = 0; i < modules->count; ++i) {
+      struct dl_phdr_info info = info_for(modules->modules[i], *modules);
+      // The main executable is reported with an empty name, which is how a
+      // caller tells it from everything else. Its own headers cannot be
+      // reached from here: the linker defined symbol naming them means this
+      // library's, not the program's, so the record is what says where they
+      // are.
+      if (i == 0)
+        info.dlpi_name = "";
+      const int code = callback(&info, sizeof(info), arg);
+      if (code != 0)
+        return code;
+    }
+  } else {
+    // Nothing linked this, so the executable is all there is besides what the
+    // kernel mapped.
+    ElfW(Ehdr) *executable_header =
+        reinterpret_cast<ElfW(Ehdr) *>(&__ehdr_start);
+    struct dl_phdr_info executable_info =
+        create_module_info(executable_header, "");
+    const int code = callback(&executable_info, sizeof(executable_info), arg);
+    if (code != 0)
+      return code;
+  }
 
   cpp::optional<unsigned long> vdso_start_address = auxv::get(AT_SYSINFO_EHDR);
   if (!vdso_start_address)
