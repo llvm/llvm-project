@@ -128,6 +128,54 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
                                TrueMask, VLMAX);
       break;
     }
+    case ISD::ADD: {
+      // Turn (add X, C) into (sub X, -C) when a constant node holding -C
+      // already exists in the DAG, so both share one materialization. Do this
+      // before selection, while both are still ConstantSDNodes: by selection
+      // time -C may already have been selected into instructions.
+      //
+      // ADD is commutative, but getNode canonicalizes constants to the RHS, so
+      // the constant is always operand 1.
+      auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+      if (!N1C)
+        break;
+      MVT VT = N->getSimpleValueType(0);
+      if (VT != Subtarget->getXLenVT())
+        break;
+      int64_t Imm = N1C->getSExtValue();
+      // Only worthwhile for wide constants: values that fit in 32 bits take at
+      // most two instructions to materialize, matching the threshold used by
+      // selectNegImm. Skip INT64_MIN too, whose negation is itself.
+      if (isInt<32>(Imm) || Imm == INT64_MIN)
+        break;
+      // Reusing a register is free, so require only that -C is no more
+      // expensive to materialize than C.
+      int OrigCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                                /*CompressionCost=*/true);
+      int NegCost = RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
+                                               /*CompressionCost=*/true);
+      if (NegCost > OrigCost)
+        break;
+      // Only rewrite when -C is anchored by a use that is not itself an ADD, so
+      // -C is materialized regardless of this transform. If -C were only used
+      // by other ADDs, each of those could be rewritten to use C instead, and
+      // forcing -C here would leave both C and -C materialized.
+      bool HasNegConst = any_of(CurDAG->allnodes(), [&](const SDNode &Node) {
+        auto *C = dyn_cast<ConstantSDNode>(&Node);
+        if (!C || C->getSimpleValueType(0) != VT || C->getSExtValue() != -Imm)
+          return false;
+        return any_of(Node.users(), [](const SDNode *U) {
+          return U->getOpcode() != ISD::ADD;
+        });
+      });
+      if (!HasNegConst)
+        break;
+      SDLoc DL(N);
+      // getConstant uniques onto the existing -C node, so it is shared.
+      Result = CurDAG->getNode(ISD::SUB, DL, VT, N->getOperand(0),
+                               CurDAG->getConstant(-Imm, DL, VT));
+      break;
+    }
     }
 
     if (Result) {
