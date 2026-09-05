@@ -2805,9 +2805,9 @@ define i64 @test_vector_reduce_mul_v2i64(<2 x i64> %v) {
 ; GFX11-GISEL-LABEL: test_vector_reduce_mul_v2i64:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v2
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v6, v1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v0
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v5, 0
 ; GFX11-GISEL-NEXT:    v_mad_u64_u32 v[7:8], null, v4, v3, v[1:2]
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
