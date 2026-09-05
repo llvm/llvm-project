@@ -835,3 +835,31 @@ func.func @unsupported_transposed_store(%arg0: !smem_type,
   vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true], permutation_map = affine_map<(d0, d1)->(d1, d0)>} : vector<16x8xf16>, !smem_type
   return
 }
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d1, d0)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// A yield that terminates something other than an scf.for body is not
+// convertible.
+// CHECK-LABEL: func @no_convert_yield_of_scf_if
+// CHECK: scf.if
+// CHECK-NOT: nvgpu.
+func.func @no_convert_yield_of_scf_if(%arg0: memref<128x128xf16>, %arg1: memref<128x128xf16>, %arg2: memref<128x128xf16>, %cond: i1) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f16
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<128x128xf16>, vector<16x16xf16>
+  %r = scf.if %cond -> (vector<16x16xf16>) {
+    %a = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<128x128xf16>, vector<16x16xf16>
+    %b = vector.transfer_read %arg1[%c0, %c0], %cst {permutation_map = #map0, in_bounds = [true, true]} : memref<128x128xf16>, vector<16x16xf16>
+    %d = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %a, %b, %C : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16>
+    scf.yield %d : vector<16x16xf16>
+  } else {
+    scf.yield %C : vector<16x16xf16>
+  }
+  vector.transfer_write %r, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<16x16xf16>, memref<128x128xf16>
+  return
+}

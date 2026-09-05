@@ -297,8 +297,11 @@ extractStridedSliceSupportsMMAMatrixType(vector::ExtractStridedSliceOp op) {
 }
 
 static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
-  if (isa<scf::ForOp, scf::YieldOp>(op))
+  if (isa<scf::ForOp>(op))
     return true;
+  // A yield is only convertible as the terminator of an scf.for body.
+  if (isa<scf::YieldOp>(op))
+    return isa<scf::ForOp>(op->getParentOp());
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
     return useNvGpu ? nvgpu::canLowerToWarpMatrixOperation(transferRead)
                     : transferReadSupportsMMAMatrixType(transferRead);
