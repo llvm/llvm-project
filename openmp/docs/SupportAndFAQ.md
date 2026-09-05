@@ -112,15 +112,15 @@ For now, the answer is most likely *no*. Please see {ref}`build_offload_capable_
 
 For now, the answer is most likely *no*. Please see {ref}`build_offload_capable_compiler`.
 
-(math-and-complex-in-target-regions)=
+(math_and_complex_in_target_regions)=
 
-### Q: Does Clang support `<math.h>` and `<complex.h>` operations in OpenMP target on GPUs?
+### Q: Does Clang support {title-reference}`<math.h>` and {title-reference}`<complex.h>` operations in OpenMP target on GPUs?
 
 Yes, LLVM/Clang allows math functions and complex arithmetic inside of OpenMP
 target regions that are compiled for GPUs.
 
-Clang provides a set of wrapper headers that are found first when `math.h` and
-`complex.h`, for C, `cmath` and `complex`, for C++, or similar headers are
+Clang provides a set of wrapper headers that are found first when {title-reference}`math.h` and
+{title-reference}`complex.h`, for C, {title-reference}`cmath` and {title-reference}`complex`, for C++, or similar headers are
 included by the application. These wrappers will eventually include the system
 version of the corresponding header file after setting up a target device
 specific environment. The fact that the system header is included is important
@@ -128,7 +128,7 @@ because they differ based on the architecture and operating system and may
 contain preprocessor, variable, and function definitions that need to be
 available in the target region regardless of the targeted device architecture.
 However, various functions may require specialized device versions, e.g.,
-`sin`, and others are only available on certain devices, e.g., `__umul64hi`. To
+{title-reference}`sin`, and others are only available on certain devices, e.g., {title-reference}`__umul64hi`. To
 provide "native" support for math and complex on the respective architecture,
 Clang will wrap the "native" math functions, e.g., as provided by the device
 vendor, in an OpenMP begin/end declare variant. These functions will then be
@@ -276,7 +276,7 @@ clang++ openmp.cpp -fopenmp --offload-arch=gfx90a -Xoffload-linker -lc
 ```
 
 For more information on how this is implemented in LLVM/OpenMP's offloading
-runtime, refer to the [runtime documentation](libomptarget_libc).
+runtime, refer to the {ref}`runtime documentation <libomptarget_libc>`.
 
 ### Q: What command line options can I use for OpenMP?
 
@@ -308,4 +308,3 @@ compilations. Consider enabling `Ccache` with
 
 Feel free to post questions or browse old threads at
 [LLVM Discourse](https://discourse.llvm.org/c/runtimes/openmp/).
-

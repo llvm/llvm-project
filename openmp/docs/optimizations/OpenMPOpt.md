@@ -6,14 +6,14 @@ optimization pass will attempt to optimize the module with OpenMP-specific
 domain-knowledge. This pass is enabled by default at high optimization levels
 (O2 / O3) if compiling with OpenMP support enabled.
 
-(openmpopt)=
+(OpenMPOpt)=
 
 ## OpenMPOpt
 
-```{contents}
-:depth: 1
+:::{contents}
 :local: true
-```
+:depth: 1
+:::
 
 OpenMPOpt contains several OpenMP-Aware optimizations. This pass is run early on
 the entire Module, and later on the entire call graph. Most optimizations done
@@ -42,7 +42,8 @@ this it must either be placed in global or shared memory. This needs to be done
 every time a variable may potentially be shared in order to create correct
 OpenMP programs. Unfortunately, this has significant performance implications
 and is not needed in the majority of cases. For example, when Clang is
-generating code for this offloading region, it will see that the variable `x`
+generating code for this offloading region, it will see that the variable
+{title-reference}`x`
 escapes and is potentially shared. This will require globalizing the variable,
 which means it cannot reside in the registers on the device.
 
@@ -100,4 +101,3 @@ should be treated as a defect in the program.
 - 2021 OpenMP Webinar: "A Compiler's View of OpenMP" <https://youtu.be/eIMpgez61r4>
 - 2020 LLVM Developers’ Meeting: "(OpenMP) Parallelism-Aware Optimizations" <https://youtu.be/gtxWkeLCxmU>
 - 2019 EuroLLVM Developers’ Meeting: "Compiler Optimizations for (OpenMP) Target Offloading to GPUs" <https://youtu.be/3AbS82C3X30>
-

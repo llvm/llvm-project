@@ -1,4 +1,4 @@
-(openmp-runtimes)=
+(openmp_runtimes)=
 
 # LLVM/OpenMP Runtimes
 
@@ -17,7 +17,7 @@ For general information on debugging OpenMP target offloading applications, see
 An [early (2015) design document](https://raw.githubusercontent.com/llvm/llvm-project/main/openmp/runtime/doc/Reference.pdf)
 for the LLVM/OpenMP host runtime, aka. `libomp.so`, is available as a [pdf](https://raw.githubusercontent.com/llvm/llvm-project/main/openmp/runtime/doc/Reference.pdf).
 
-(libomp-environment-vars)=
+(libomp_environment_vars)=
 
 ### Environment Variables
 
@@ -65,21 +65,13 @@ is used.
 Enables (`true`) or disables (`false`) the dynamic adjustment of the
 number of threads.
 
-**Default:**
-
- 
-
-`false`
+**Default:** `false`
 
 #### OMP_MAX_ACTIVE_LEVELS
 
 The maximum number of levels of parallel nesting for the program.
 
-**Default:**
-
- 
-
-`1`
+**Default:** `1`
 
 #### OMP_NESTED
 
@@ -89,11 +81,7 @@ Deprecated. Please use `OMP_MAX_ACTIVE_LEVELS` to control nested parallelism
 
 Enables (`true`) or disables (`false`) nested parallelism.
 
-**Default:**
-
- 
-
-`false`
+**Default:** `false`
 
 #### OMP_NUM_THREADS
 
@@ -112,21 +100,9 @@ list is left out, it implies the normal default value for threads is used at the
 outer-most level. If the integer is left out of any other level, the number of
 threads for that level is inherited from the previous level.
 
-**Default:**
-
- The number of processors visible to the operating system on which the program is executed.
-
-**Syntax:**
-
- 
-
-`OMP_NUM_THREADS=value[,value]*`
-
-**Example:**
-
- 
-
-`OMP_NUM_THREADS=4,3`
+**Default:** The number of processors visible to the operating system on which the program is executed.\
+**Syntax:** `OMP_NUM_THREADS=value[,value]*`\
+**Example:** `OMP_NUM_THREADS=4,3`
 
 #### OMP_PLACES
 
@@ -232,35 +208,14 @@ primary thread is bound.
 If set to `spread`, the primary thread's partition is subdivided and threads
 are bound to single place successive sub-partitions.
 
-**Related environment variables:**
-
- 
-
-`KMP_AFFINITY`
-
- (overrides 
-
-`OMP_PROC_BIND`
-
-).
+**Related environment variables:** `KMP_AFFINITY` (overrides `OMP_PROC_BIND`).
 
 #### OMP_SCHEDULE
 
 Sets the run-time schedule type and an optional chunk size.
 
-**Default:**
-
- 
-
-`static`
-
-, no chunk size specified
-
-**Syntax:**
-
- 
-
-`OMP_SCHEDULE="kind[,chunk_size]"`
+**Default:** `static`, no chunk size specified\
+**Syntax:** `OMP_SCHEDULE="kind[,chunk_size]"`
 
 #### OMP_STACKSIZE
 
@@ -285,23 +240,8 @@ has no effect.
 - 32-bit architecture: `2M`
 - 64-bit architecture: `4M`
 
-**Related environment variables:**
-
- 
-
-`KMP_STACKSIZE`
-
- (overrides 
-
-`OMP_STACKSIZE`
-
-).
-
-**Example:**
-
- 
-
-`OMP_STACKSIZE=8M`
+**Related environment variables:** `KMP_STACKSIZE` (overrides `OMP_STACKSIZE`).\
+**Example:** `OMP_STACKSIZE=8M`
 
 #### OMP_THREAD_LIMIT
 
@@ -315,21 +255,8 @@ the team was reduced, but the program will continue.
 
 The `omp_get_thread_limit()` routine returns the value of the limit.
 
-**Default:**
-
- No enforced limit
-
-**Related environment variable:**
-
- 
-
-`KMP_ALL_THREADS`
-
- (overrides 
-
-`OMP_THREAD_LIMIT`
-
-).
+**Default:** No enforced limit\
+**Related environment variable:** `KMP_ALL_THREADS` (overrides `OMP_THREAD_LIMIT`).
 
 #### OMP_WAIT_POLICY
 
@@ -337,11 +264,7 @@ Decides whether threads spin (active) or yield (passive) while they are waiting.
 `OMP_WAIT_POLICY=active` is an alias for `KMP_LIBRARY=turnaround`, and
 `OMP_WAIT_POLICY=passive` is an alias for `KMP_LIBRARY=throughput`.
 
-**Default:**
-
- 
-
-`passive`
+**Default:** `passive`
 
 :::{note}
 Although the default is `passive`, unless the user has explicitly set
@@ -422,23 +345,8 @@ considered a separate level for the sort operations.
 
 The `offset` specifier indicates the starting position for thread assignment.
 
-**Default:**
-
- 
-
-`noverbose,warnings,respect,granularity=core,none`
-
-**Related environment variable:**
-
- 
-
-`OMP_PROC_BIND`
-
- (
-
-`KMP_AFFINITY`
-
- takes precedence)
+**Default:** `noverbose,warnings,respect,granularity=core,none`\
+**Related environment variable:** `OMP_PROC_BIND` (`KMP_AFFINITY` takes precedence)
 
 :::{note}
 On Windows with multiple processor groups, the norespect affinity modifier
@@ -467,8 +375,8 @@ and any affinity API calls.
 
 The following `modifiers` are ignored in `KMP_HIDDEN_HELPER_AFFINITY` and are only valid
 for `KMP_AFFINITY`:
-\* `respect` and `norespect`
-\* `reset` and `noreset`
+* `respect` and `norespect`
+* `reset` and `noreset`
 
 #### KMP_ALL_THREADS
 
@@ -479,21 +387,8 @@ message. If this limit is reached at the time an OpenMP parallel region begins,
 a one-time warning message may be generated indicating that the number of
 threads in the team was reduced, but the program will continue execution.
 
-**Default:**
-
- No enforced limit.
-
-**Related environment variable:**
-
- 
-
-`OMP_THREAD_LIMIT`
-
- (
-
-`KMP_ALL_THREADS`
-
- takes precedence)
+**Default:** No enforced limit.\
+**Related environment variable:** `OMP_THREAD_LIMIT` (`KMP_ALL_THREADS` takes precedence)
 
 #### KMP_BLOCKTIME
 
@@ -505,26 +400,14 @@ specify/change the units. Defaults units is milliseconds.
 
 Specify `infinite` for an unlimited wait time.
 
-**Default:**
-
- 200 milliseconds
-
-**Related Environment Variable:**
-
- 
-
-`KMP_LIBRARY`
-
-**Example:**
-
- 
-
-`KMP_BLOCKTIME=1ms`
+**Default:** 200 milliseconds\
+**Related Environment Variable:** `KMP_LIBRARY`\
+**Example:** `KMP_BLOCKTIME=1ms`
 
 #### KMP_CPUINFO_FILE
 
 Specifies an alternate file name for a file containing the machine topology
-description. The file must be in the same format as {file}`/proc/cpuinfo`.
+description. The file must be in the same format as `/proc/cpuinfo`.
 
 **Default:** None
 
@@ -537,17 +420,8 @@ a given parallel region, for a given data set and reduction operation, a
 floating point reduction done for an OpenMP reduction clause has a consistent
 floating point result from run to run, since round-off errors are identical.
 
-**Default:**
-
- 
-
-`false`
-
-**Example:**
-
- 
-
-`KMP_DETERMINISTIC_REDUCTION=true`
+**Default:** `false`\
+**Example:** `KMP_DETERMINISTIC_REDUCTION=true`
 
 #### KMP_DYNAMIC_MODE
 
@@ -607,37 +481,17 @@ An optional colon (:) can be specified at the beginning of the syntax to specify
 
 Supported unit IDs are not case-insensitive.
 
-`S`
+`S` - socket\
+`num_units` specifies the requested number of sockets.
 
- - socket
+`D` - die\
+`num_units` specifies the requested number of dies per socket.
 
-`num_units`
+`C` - core\
+`num_units` specifies the requested number of cores per die - if any - otherwise, per socket.
 
- specifies the requested number of sockets.
-
-`D`
-
- - die
-
-`num_units`
-
- specifies the requested number of dies per socket.
-
-`C`
-
- - core
-
-`num_units`
-
- specifies the requested number of cores per die - if any - otherwise, per socket.
-
-`T`
-
- - thread
-
-`num_units`
-
- specifies the requested number of HW threads per core.
+`T` - thread\
+`num_units` specifies the requested number of HW threads per core.
 
 :::{note}
 `num_units` can be left out or explicitly specified as `*` instead of a positive integer
@@ -650,7 +504,7 @@ e.g., `1s,*c` means use 1 socket and all the cores on that socket
 `attribute` - (Optional) An attribute differentiating resources at a particular level. The attributes available to users are:
 
 - **Core type** - On Intel architectures, this can be `intel_atom` or `intel_core`
-- **Core efficiency** - This is specified as `eff`{emphasis}`num` where {emphasis}`num` is a number from 0
+- **Core efficiency** - This is specified as `eff`*num* where *num* is a number from 0
   to the number of core efficiencies detected in the machine topology minus one.
   E.g., `eff0`. The greater the efficiency number the more performant the core. There may be
   more core efficiencies than core types and can be viewed by setting `KMP_AFFINITY=verbose`
@@ -755,21 +609,8 @@ of the OpenMP worker threads at the start of each parallel region.
 Selects the OpenMP run-time library execution mode. The values for this variable
 are `serial`, `turnaround`, or `throughput`.
 
-**Default:**
-
- 
-
-`throughput`
-
-**Related environment variable:**
-
- 
-
-`KMP_BLOCKTIME`
-
- and 
-
-`OMP_WAIT_POLICY`
+**Default:** `throughput`\
+**Related environment variable:** `KMP_BLOCKTIME` and `OMP_WAIT_POLICY`
 
 #### KMP_SETTINGS
 
@@ -813,7 +654,7 @@ Possible values are:
 - `cpuid_leaf4` (x86 only) - Decodes the APIC identifiers as specified in leaf 4
   of the cpuid instruction. The runtime will produce an error if the machine does not support leaf 4.
 - `cpuinfo` - If `KMP_CPUINFO_FILE` is not specified, forces OpenMP to
-  parse {file}`/proc/cpuinfo` to determine the topology (Linux only).
+  parse `/proc/cpuinfo` to determine the topology (Linux only).
   If `KMP_CPUINFO_FILE` is specified as described above, uses it (Windows or Linux).
 - `group` - Models the machine as a 2-level map, with level 0 specifying the
   different processors in a group, and level 1 specifying the different
@@ -849,7 +690,7 @@ OpenMP run-time library during program execution.
 
 ## LLVM/OpenMP Target Host Runtime (`libomptarget`)
 
-(libopenmptarget-environment-vars)=
+(libopenmptarget_environment_vars)=
 
 ### Environment Variables
 
@@ -913,7 +754,7 @@ freed after the device kernel exits. The default threshold value is `8KB`. If
 manager will be completely disabled.
 This has no effect on the host or shared memory managers.
 
-(libomptarget-info)=
+(libomptarget_info)=
 
 #### LIBOMPTARGET_INFO
 
@@ -1049,7 +890,7 @@ Info: Removing map entry with HstPtrBegin=0x00007fff0d259a40,
 
 From this information, we can see the OpenMP kernel being launched on the CUDA
 device with enough threads and blocks for all `1024` iterations of the loop in
-simplified {doc}`SPMD Mode <Offloading>`. The information from the OpenMP data
+simplified [SPMD Mode](Offloading.md). The information from the OpenMP data
 region shows the two arrays `X` and `Y` being copied from the host to the
 device. This creates an entry in the host-device mapping table associating the
 host pointers to the newly created device data. The data mappings in the OpenMP
@@ -1078,7 +919,7 @@ int main() {
 }
 ```
 
-(libopenmptarget-errors)=
+(libopenmptarget_errors)=
 
 ### Errors:
 
@@ -1178,12 +1019,12 @@ allocated using `malloc` and `free` for the CUDA plugin. This is necessary
 for some applications that allocate too much memory either through the user or
 globalization.
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 Offloading
-```
+:::
 
 #### LIBOMPTARGET_MAP_FORCE_ATOMIC
 
@@ -1215,7 +1056,7 @@ TR14's `attach(always)` map-type-modifier), thereby treating
 experimentation, or as a workaround for programs compiled without
 `-fopenmp-version=61`.
 
-(libomptarget-jit-opt-level)=
+(libomptarget_jit_opt_level)=
 
 #### LIBOMPTARGET_JIT_OPT_LEVEL
 
@@ -1238,7 +1079,7 @@ assembler in object format for the respective target. The JIT optimization
 pipeline and backend are skipped and only target specific post-processing is
 performed on the object file before it is loaded onto the device.
 
-(libomptarget-jit-replacement-module)=
+(libomptarget_jit_replacement_module)=
 
 #### LIBOMPTARGET_JIT_REPLACEMENT_MODULE
 
@@ -1252,7 +1093,7 @@ llvm tools (llvm-objdump), or, simply, by setting the
 {ref}`LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE` or
 {ref}`LIBOMPTARGET_JIT_POST_OPT_IR_MODULE` environment variables.
 
-(libomptarget-jit-pre-opt-ir-module)=
+(libomptarget_jit_pre_opt_ir_module)=
 
 #### LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE
 
@@ -1263,7 +1104,7 @@ which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 {ref}`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
 
-(libomptarget-jit-post-opt-ir-module)=
+(libomptarget_jit_post_opt_ir_module)=
 
 #### LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
 
@@ -1274,7 +1115,7 @@ which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 {ref}`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
 
-(libomptarget-jit-save-image-filename)=
+(libomptarget_jit_save_image_filename)=
 
 #### LIBOMPTARGET_JIT_SAVE_IMAGE_FILENAME
 
@@ -1309,7 +1150,7 @@ double-free.
 This environment variable determines how many stack traces of kernel launches
 are tracked to aid in error reporting, e.g., what asynchronous kernel failed.
 
-(libomptarget-kernel-record-replay)=
+(libomptarget_kernel_record_replay)=
 
 ### Kernel Record Replay
 
@@ -1398,7 +1239,7 @@ is provided below.
 - `LIBOMPTARGET_RECORD_DEVICE=<Num> (default 0)`
 - `LIBOMPTARGET_RECORD_OUTPUT=[TRUE/FALSE] (default TRUE)`
 
-(libomptarget-record)=
+(libomptarget_record)=
 
 #### LIBOMPTARGET_RECORD
 
@@ -1408,7 +1249,7 @@ overhead to the recorded program. When the recording is disabled, the following
 recording environment variables are not considered. The recording is disabled by
 default.
 
-(libomptarget-record-dir)=
+(libomptarget_record_dir)=
 
 #### LIBOMPTARGET_RECORD_DIR
 
@@ -1416,7 +1257,7 @@ This environment variable is used to specify the relative or absolute path to
 the directory where the recorded files will be stored. If omitted or empty, the
 files will be stored in current working directory.
 
-(libomptarget-record-report)=
+(libomptarget_record_report)=
 
 #### LIBOMPTARGET_RECORD_REPORT
 
@@ -1426,7 +1267,7 @@ report is emitted in the standard output. See
 {ref}`LIBOMPTARGET_RECORD_REPORT_FILENAME` to emit the report to a file. By
 default, no report is emitted.
 
-(libomptarget-record-report-filename)=
+(libomptarget_record_report_filename)=
 
 #### LIBOMPTARGET_RECORD_REPORT_FILENAME
 
@@ -1454,7 +1295,7 @@ recorded. The default device is `0`.
 This environment variable is used to instruct the runtime to record the output
 device memory snapshot into a file. The default value is `TRUE`.
 
-(libomptarget-plugin)=
+(libomptarget_plugin)=
 
 ## LLVM/OpenMP Target Host Runtime Plugins (`libomptarget.rtl.XXXX`)
 
@@ -1551,7 +1392,7 @@ queue. If this is disabled, each time a stream is requested a new HSA queue
 will be initialized, regardless of their utilization. Additionally, queues will
 be selected using round robin selection. The default value is `true`.
 
-(libomptarget-amdgpu-teams-per-cu)=
+(libomptarget_amdgpu_teams_per_cu)=
 
 #### LIBOMPTARGET_AMDGPU_TEAMS_PER_CU
 
@@ -1584,7 +1425,7 @@ HSA wait state within the AMDGPU plugin. For the duration of this value
 the HSA runtime may busy wait. This can reduce overall latency.
 The default value is `2000000`.
 
-(remote-offloading-plugin)=
+(remote_offloading_plugin)=
 
 ### Remote Offloading Plugin:
 
@@ -1644,7 +1485,7 @@ supported anymore. Please use the `dyn_groupprivate` clause instead, as
 shown in {ref}`libomptarget_dynamic_shared`.
 :::
 
-(libomptarget-libc)=
+(libomptarget_libc)=
 
 ### LLVM/OpenMP support for C library routines
 
@@ -1690,7 +1531,7 @@ PluginInterface --> Running an RPC server on device 0
 Hello World!
 ```
 
-(libomptarget-device)=
+(libomptarget_device)=
 
 ## LLVM/OpenMP Target Device Runtime (`libomptarget-ARCH-SUBARCH.bc`)
 
@@ -1698,7 +1539,7 @@ The target device runtime is an LLVM bitcode library that implements OpenMP
 runtime functions on the target device. It is linked with the device code's LLVM
 IR during compilation.
 
-(libomptarget-dynamic-shared)=
+(libomptarget_dynamic_shared)=
 
 ### Dynamic Shared Memory
 
@@ -1734,7 +1575,7 @@ void foo(int N) {
 }
 ```
 
-(libomptarget-device-allocator)=
+(libomptarget_device_allocator)=
 
 ### Device Allocation
 
@@ -1742,7 +1583,7 @@ The device runtime supports basic runtime allocation via the `omp_alloc`
 function. Currently, this allocates global memory for all default traits. Access
 modifiers are currently not supported and return a null pointer.
 
-(libomptarget-device-debugging)=
+(libomptarget_device_debugging)=
 
 ### Debugging
 
@@ -1762,4 +1603,3 @@ debugging features are supported.
 [chrome tracing]: https://www.chromium.org/developers/how-tos/trace-event-profiling-tool
 [llvm support library]: https://llvm.org/docs/SupportLibrary.html
 [speedscope app]: https://www.speedscope.app/
-

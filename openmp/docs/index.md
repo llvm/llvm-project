@@ -8,13 +8,13 @@ additions. Please post on the [Discourse forums (Runtimes -
 OpenMP)](https://discourse.llvm.org/c/runtimes/openmp/35)..
 :::
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 LLVM/OpenMP Documentation <self>
 Building
-```
+:::
 
 # Getting Started
 
@@ -42,12 +42,12 @@ multitude of available {ref}`OpenMP runtimes <openmp_runtimes>`.
 
 A high-level overview of OpenMP in LLVM can be found {doc}`here <design/Overview>`.
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 design/Overview
-```
+:::
 
 # OpenACC Support
 
@@ -57,12 +57,12 @@ being extended to serve as OpenACC runtimes. In some cases, Clang
 supports {doc}`OpenMP extensions <openacc/OpenMPExtensions>` to make
 the additional functionality also available in OpenMP applications.
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 openacc/Overview
-```
+:::
 
 # LLVM/OpenMP Optimizations
 
@@ -73,35 +73,35 @@ boundaries <optimizations/OpenMPUnawareOptimizations>`.
 
 In-depth discussion of the topic can be found {doc}`here <optimizations/Overview>`.
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 optimizations/Overview
-```
+:::
 
 # LLVM/OpenMP Optimization Remarks
 
 LLVM has an elaborate ecosystem around [analysis and optimization remarks](https://llvm.org/docs/Remarks.html) issues during
-compilation. The remarks can be enabled from the clang frontend [[1]][[1]] [[2]][[2]]
-in various formats [[3]][[3]] [[4]][[4]] to be used by tools, i.a., `opt-viewer` or
-`llvm-opt-report` (dated).
+compilation. The remarks can be enabled from the clang frontend [\[1\]][remarks-1] [\[2\]][remarks-2]
+in various formats [\[3\]][remarks-3] [\[4\]][remarks-4] to be used by tools, i.a., {title-reference}`opt-viewer` or
+{title-reference}`llvm-opt-report` (dated).
 
 The OpenMP optimizations in LLVM have been developed with remark support as a
 priority. For a list of OpenMP specific remarks and more information on them,
 please refer to {doc}`remarks/OptimizationRemarks`.
 
-- [[1]][[1]] <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>
-- [[2]][[2]] <https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags>
-- [[3]][[3]] <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-foptimization-record-file>
-- [[4]][[4]] <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record>
+- [\[1\]][remarks-1] <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>
+- [\[2\]][remarks-2] <https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags>
+- [\[3\]][remarks-3] <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-foptimization-record-file>
+- [\[4\]][remarks-4] <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record>
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 remarks/OptimizationRemarks
-```
+:::
 
 # OpenMP Command-Line Argument Reference
 
@@ -112,12 +112,12 @@ we also recommend the OpenMP
 page that offers a detailed overview of options specific to OpenMP. It also
 contains a list of OpenMP offloading related command-line arguments.
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 CommandLineArgumentReference
-```
+:::
 
 # Support, Getting Involved, and Frequently Asked Questions (FAQ)
 
@@ -128,12 +128,12 @@ the {doc}`Support and FAQ <SupportAndFAQ>` page.
 We also encourage everyone interested in OpenMP in LLVM to {doc}`get involved
 <SupportAndFAQ>`.
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 SupportAndFAQ
-```
+:::
 
 # Release Notes
 
@@ -141,15 +141,14 @@ The current (in-progress) release notes can be found {doc}`here <ReleaseNotes>` 
 release notes for releases, starting with LLVM 12, will be available on [the
 Download Page](https://releases.llvm.org/download.html).
 
-```{toctree}
+:::{toctree}
 :hidden: true
 :maxdepth: 1
 
 In-Progress ReleaseNotes <ReleaseNotes>
-```
+:::
 
-[[1]]: https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports
-[[2]]: https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags
-[[3]]: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-foptimization-record-file
-[[4]]: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record
-
+[remarks-1]: https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports
+[remarks-2]: https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags
+[remarks-3]: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-foptimization-record-file
+[remarks-4]: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record

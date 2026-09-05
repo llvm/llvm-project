@@ -35,7 +35,7 @@ OpenMP extensions:
 
 ## `ompx_hold` Map Type Modifier
 
-(ompx-holdexample)=
+(ompx-holdExample)=
 
 ### Example
 
@@ -54,7 +54,7 @@ associated region regardless of any `target exit data` directives
 executed during the call to `foo`. Thus, the presence assertion for
 `x` at the enclosed `target` construct cannot fail.
 
-(ompx-holdbehavior)=
+(ompx-holdBehavior)=
 
 ### Behavior
 
@@ -131,7 +131,7 @@ the runtime level. That is, OpenACC's dynamic reference count is
 OpenMP's dynamic reference count, and OpenACC's structured reference
 count is our OpenMP hold reference count extension.
 
-(atomicwithinteams)=
+(atomicWithinTeams)=
 
 ## `atomic` Strictly Nested Within `teams`
 
@@ -160,4 +160,3 @@ constructs. For example, the following is conforming OpenACC:
 #pragma acc atomic update
 x++;
 ```
-
