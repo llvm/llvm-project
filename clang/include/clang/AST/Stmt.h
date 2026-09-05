@@ -3538,11 +3538,16 @@ public:
   /// true, otherwise return false.  This handles canonicalization and
   /// translation of strings from GCC syntax to LLVM IR syntax, and handles
   //// flattening of named references like %[foo] to Operand AsmStringPiece's.
-  unsigned AnalyzeAsmString(SmallVectorImpl<AsmStringPiece> &Pieces,
-                            const ASTContext &C, unsigned &DiagOffs) const;
+  unsigned
+  AnalyzeAsmString(SmallVectorImpl<AsmStringPiece> &Pieces, const ASTContext &C,
+                   unsigned &DiagOffs,
+                   SmallVectorImpl<unsigned> *SourceOffsets = nullptr) const;
 
   /// Assemble final IR asm string.
-  std::string generateAsmString(const ASTContext &C) const;
+  /// If requested, map each output byte to an offset in getAsmString().
+  std::string
+  generateAsmString(const ASTContext &C,
+                    SmallVectorImpl<unsigned> *SourceOffsets = nullptr) const;
 
   //===--- Output operands ---===//
 

@@ -3177,6 +3177,14 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   maybeRecordLocation(DL, Asm->MF);
 }
 
+void CodeViewDebug::beginInlineAsmInstruction(const MachineInstr *MI,
+                                              const DILocation *Loc) {
+  if (!Asm || !CurFn || !MI || !Loc)
+    return;
+
+  maybeRecordLocation(DebugLoc(Loc), Asm->MF);
+}
+
 MCSymbol *CodeViewDebug::beginCVSubsection(DebugSubsectionKind Kind) {
   MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
            *EndLabel = MMI->getContext().createTempSymbol();
