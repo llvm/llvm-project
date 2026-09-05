@@ -925,25 +925,34 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // want to pull in our wrappers instead of the vendor headers.
   if (UsesLLVMOffloading) {
     if (UsesOffloadInclude && !NoBuiltinInc) {
-      auto AddOffloadHeadersInclude = [&](StringRef IncludeSubdir,
-                                          StringRef RuntimeHeader) {
-        SmallString<128> OffloadInclude(D.Dir);
-        llvm::sys::path::append(OffloadInclude, "..", "include", "offload");
+      SmallString<128> OffloadInclude(D.ResourceDir);
+      llvm::sys::path::append(OffloadInclude, "include",
+                              "llvm_offload_wrappers");
+      auto AddDeviceWrappersInclude = [&](StringRef IncludeSubdir,
+                                          StringRef Header) {
+        SmallString<128> IncludePath(OffloadInclude);
         if (!IncludeSubdir.empty())
-          llvm::sys::path::append(OffloadInclude, IncludeSubdir);
-        CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadInclude),
-                        "-include", Args.MakeArgString(RuntimeHeader)});
+          llvm::sys::path::append(IncludePath, IncludeSubdir);
+        CmdArgs.append({"-internal-isystem", Args.MakeArgString(IncludePath)});
+        if (!Header.empty())
+          CmdArgs.append({"-include", Args.MakeArgString(Header)});
       };
-      auto AddForcedInclude = [&](StringRef Header) {
-        CmdArgs.push_back("-include");
-        CmdArgs.push_back(Args.MakeArgString(Header));
+      auto AddOffloadHeadersInclude = [&](StringRef IncludeSubdir,
+                                          StringRef Header) {
+        SmallString<128> IncludePath(D.Dir);
+        llvm::sys::path::append(IncludePath, "..", "include", "offload");
+        if (!IncludeSubdir.empty())
+          llvm::sys::path::append(IncludePath, IncludeSubdir);
+        CmdArgs.append({"-internal-isystem", Args.MakeArgString(IncludePath)});
+        if (!Header.empty())
+          CmdArgs.append({"-include", Args.MakeArgString(Header)});
       };
-      AddForcedInclude("__clang_gpu_runtime_wrapper.h");
-      AddForcedInclude("__clang_gpu_builtin_vars.h");
-      AddForcedInclude("__clang_gpu_device_functions.h");
-      AddForcedInclude("__clang_gpu_intrinsics.h");
-      if (JA.isOffloading(Action::OFK_Cuda))
+      AddDeviceWrappersInclude("", "");
+      AddDeviceWrappersInclude("gpu", "device_functions.h");
+      if (JA.isOffloading(Action::OFK_Cuda)) {
+        AddDeviceWrappersInclude("cuda", "");
         AddOffloadHeadersInclude("cuda", "cuda_runtime.h");
+      }
       if (JA.isOffloading(Action::OFK_HIP) &&
           !Args.hasArg(options::OPT_nohipwrapperinc)) {
         // HIP code commonly includes this as "hip/hip_runtime.h".

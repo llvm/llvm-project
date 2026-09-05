@@ -34,3 +34,16 @@
 
 // LEGACY-DEFAULT-STREAM-NOT: LLVMOffloadKernelPerThreadDefaultStream.o
 // LEGACY-DEFAULT-STREAM: "-lLLVMOffloadKernel"
+
+// RUN: %clang -### -target x86_64-linux-gnu -foffload-via-llvm \
+// RUN:        -resource-dir=%S/Inputs/resource_dir \
+// RUN:        --offload-arch=sm_35 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix LLVM-OFFLOAD-INCLUDES %s
+
+// LLVM-OFFLOAD-INCLUDES: "-cc1" "-triple" "nvptx64-nvidia-cuda-llvm"
+// LLVM-OFFLOAD-INCLUDES-SAME: "-internal-isystem" "{{.*}}resource_dir{{/|\\\\}}include{{/|\\\\}}llvm_offload_wrappers"
+// LLVM-OFFLOAD-INCLUDES-SAME: "-internal-isystem" "{{.*}}resource_dir{{/|\\\\}}include{{/|\\\\}}llvm_offload_wrappers{{/|\\\\}}gpu"
+// LLVM-OFFLOAD-INCLUDES-SAME: "-include" "device_functions.h"
+// LLVM-OFFLOAD-INCLUDES-SAME: "-internal-isystem" "{{.*}}resource_dir{{/|\\\\}}include{{/|\\\\}}llvm_offload_wrappers{{/|\\\\}}cuda"
+// LLVM-OFFLOAD-INCLUDES-SAME: "-internal-isystem" "{{.*}}{{/|\\\\}}include{{/|\\\\}}offload{{/|\\\\}}cuda"
+// LLVM-OFFLOAD-INCLUDES-SAME: "-include" "cuda_runtime.h"
