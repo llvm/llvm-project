@@ -4478,7 +4478,7 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   string llvmBuilder = [{
     auto [id, args] = NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 

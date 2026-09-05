@@ -1168,53 +1168,102 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
-static Intrinsic::ID shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F,
-                                                        StringRef Name) {
-  if (Name.consume_front("cp.async.bulk.tensor.g2s.")) {
-    Intrinsic::ID ID =
-        StringSwitch<Intrinsic::ID>(Name)
-            .Case("im2col.3d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d)
-            .Case("im2col.4d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d)
-            .Case("im2col.5d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d)
-            .Case("tile.1d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d)
-            .Case("tile.2d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d)
-            .Case("tile.3d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d)
-            .Case("tile.4d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d)
-            .Case("tile.5d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d)
-            .Default(Intrinsic::not_intrinsic);
+// The TMA G2S (global-to-shared) tensor copy modes that have legacy
+// declarations requiring an auto-upgrade. The same set applies to the
+// cluster (g2s) and CTA (g2s_cta) variants.
+#define NVVM_TMA_G2S_MODES(M)                                                  \
+  M(tile_1d, "tile.1d")                                                        \
+  M(tile_2d, "tile.2d")                                                        \
+  M(tile_3d, "tile.3d")                                                        \
+  M(tile_4d, "tile.4d")                                                        \
+  M(tile_5d, "tile.5d")                                                        \
+  M(tile_gather4_2d, "tile.gather4.2d")                                        \
+  M(im2col_3d, "im2col.3d")                                                    \
+  M(im2col_4d, "im2col.4d")                                                    \
+  M(im2col_5d, "im2col.5d")                                                    \
+  M(im2col_w_3d, "im2col.w.3d")                                                \
+  M(im2col_w_4d, "im2col.w.4d")                                                \
+  M(im2col_w_5d, "im2col.w.5d")                                                \
+  M(im2col_w_128_3d, "im2col.w.128.3d")                                        \
+  M(im2col_w_128_4d, "im2col.w.128.4d")                                        \
+  M(im2col_w_128_5d, "im2col.w.128.5d")
 
-    if (ID == Intrinsic::not_intrinsic)
-      return ID;
+// Two legacy tails are:
+//
+//   arg1, arg2, .. i64 %ch, i1 %flag_mc, i1 %flag_ch
+//   arg1, arg2, .. i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group
+//
+// The current tail appends a trailing i32 %validate_pattern, so both
+// legacy tails are recognized by an i1 at parameter N-2.
+static Intrinsic::ID
+shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F, StringRef Name,
+                                   SmallVectorImpl<Type *> &OvlTys) {
+  if (!Name.consume_front("cp.async.bulk.tensor.g2s."))
+    return Intrinsic::not_intrinsic;
 
-    // These intrinsics may need upgrade for two reasons:
-    // (1) When the address-space of the first argument is shared[AS=3]
-    //     (and we upgrade it to use shared_cluster address-space[AS=7])
-    if (F->getArg(0)->getType()->getPointerAddressSpace() ==
-        NVPTXAS::ADDRESS_SPACE_SHARED)
-      return ID;
+#define G2S_ID(ID_SUFFIX, NAME)                                                \
+  .Case(NAME, Intrinsic::nvvm_cp_async_bulk_tensor_g2s_##ID_SUFFIX)
+  // clang-format off
+  Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                        NVVM_TMA_G2S_MODES(G2S_ID)
+                        .Default(Intrinsic::not_intrinsic);
+#undef G2S_ID
+  // clang-format on
+  if (ID == Intrinsic::not_intrinsic)
+    return ID;
 
-    // (2) When there are only two boolean flag arguments at the end:
-    //
-    // The last three parameters of the older version of these
-    // intrinsics are: arg1, arg2, .. i64 ch, i1 mc_flag, i1 ch_flag
-    //
-    // The newer version reads as:
-    // arg1, arg2, .. i64 ch, i1 mc_flag, i1 ch_flag, i32 cta_group_flag
-    //
-    // So, when the type of the [N-3]rd argument is "not i1", then
-    // it is the older version and we need to upgrade.
-    size_t FlagStartIndex = F->getFunctionType()->getNumParams() - 3;
-    Type *ArgType = F->getFunctionType()->getParamType(FlagStartIndex);
-    if (!ArgType->isIntegerTy(1))
-      return ID;
-  }
+  size_t NumParams = F->getFunctionType()->getNumParams();
 
-  return Intrinsic::not_intrinsic;
+  // Parameter N-2 is i1 for both legacy tails; the current tail ends
+  // with i32 %cta_group, i32 %validate_pattern, for which N-2 is i32.
+  if (!F->getFunctionType()->getParamType(NumParams - 2)->isIntegerTy(1))
+    return Intrinsic::not_intrinsic;
+
+  // The multicast mask is the parameter immediately before the i64
+  // cache-hint: N-4 for the 2-flag tail, N-5 for the 3-flag tail.
+  ArrayRef<Type *> Params = F->getFunctionType()->params();
+  size_t MaskIdx =
+      Params[NumParams - 1]->isIntegerTy(1) ? NumParams - 4 : NumParams - 5;
+  assert(Params[MaskIdx + 1]->isIntegerTy(64) &&
+         "expected the i64 cache-hint after the multicast mask");
+  Type *MaskTy = Params[MaskIdx];
+  assert(MaskTy->isIntegerTy(16) && "unexpected multicast mask type");
+  OvlTys.push_back(MaskTy);
+
+  return ID;
 }
 
+// The legacy tail is:
+//
+//   arg1, arg2, .. i64 %ch, i1 %flag_ch
+//
+// The current tail appends a trailing i32 %validate_pattern, so the
+// legacy tail is recognized by an i1 at parameter N-1.
+static Intrinsic::ID shouldUpgradeNVPTXTMAG2SCTAIntrinsics(Function *F,
+                                                           StringRef Name) {
+  if (!Name.consume_front("cp.async.bulk.tensor.g2s.cta."))
+    return Intrinsic::not_intrinsic;
+
+#define G2S_CTA_ID(ID_SUFFIX, NAME)                                            \
+  .Case(NAME, Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_##ID_SUFFIX)
+  // clang-format off
+  Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                        NVVM_TMA_G2S_MODES(G2S_CTA_ID)
+                        .Default(Intrinsic::not_intrinsic);
+#undef G2S_CTA_ID
+  // clang-format on
+  if (ID == Intrinsic::not_intrinsic)
+    return ID;
+
+  // Parameter N-1 is i1 for the legacy tail; the current tail ends
+  // with i32 %validate_pattern, for which N-1 is i32.
+  if (!F->getFunctionType()
+           ->getParamType(F->getFunctionType()->getNumParams() - 1)
+           ->isIntegerTy(1))
+    return Intrinsic::not_intrinsic;
+
+  return ID;
+}
 // The legacy TMA reduction intrinsics encode the reduction operator in their
 // name, while the current ones take it as an immediate argument. Map the
 // operator part of a legacy name to the corresponding immediate value.
@@ -1978,11 +2027,20 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade TMA copy G2S Intrinsics
-      IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name);
+      // Upgrade TMA copy G2S CTA intrinsics.
+      IID = shouldUpgradeNVPTXTMAG2SCTAIntrinsics(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade TMA copy G2S (cluster) intrinsics.
+      SmallVector<Type *, 1> OvlTys;
+      IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name, OvlTys);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OvlTys);
         return true;
       }
 
@@ -5941,30 +5999,22 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d: {
+  // clang-format off
+#define G2S_CLUSTER_CASE(ID_SUFFIX, NAME)                                      \
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_##ID_SUFFIX:
+  NVVM_TMA_G2S_MODES(G2S_CLUSTER_CASE)
+#undef G2S_CLUSTER_CASE
+  {
     SmallVector<Value *, 16> Args(CI->args());
-
-    // Create AddrSpaceCast to shared_cluster if needed.
-    // This handles case (1) in shouldUpgradeNVPTXTMAG2SIntrinsics().
     unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
     if (AS == NVPTXAS::ADDRESS_SPACE_SHARED)
       Args[0] = Builder.CreateAddrSpaceCast(
           Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
 
-    // Attach the flag argument for cta_group, with a
-    // default value of 0. This handles case (2) in
-    // shouldUpgradeNVPTXTMAG2SIntrinsics().
-    size_t NumArgs = CI->arg_size();
-    Value *FlagArg = CI->getArgOperand(NumArgs - 3);
-    if (!FlagArg->getType()->isIntegerTy(1))
-      Args.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
+    // Append the missing trailing arguments with default values (cta_group,
+    // validate_pattern).
+    while (Args.size() < NewFn->getFunctionType()->getNumParams())
+      Args.push_back(Builder.getInt32(0));
 
     NewCall = Builder.CreateCall(NewFn, Args);
     NewCall->takeName(CI);
@@ -5972,6 +6022,28 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
+
+#define G2S_CTA_CASE(ID_SUFFIX, NAME)                                          \
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_cta_##ID_SUFFIX:
+  NVVM_TMA_G2S_MODES(G2S_CTA_CASE)
+#undef G2S_CTA_CASE
+  {
+    SmallVector<Value *, 16> Args(CI->args());
+    // Append the missing trailing validate_pattern argument with default
+    // value 0.
+    assert(Args.size() + 1 == NewFn->getFunctionType()->getNumParams() &&
+            "expected only the trailing validate_pattern to be missing");
+    Args.push_back(Builder.getInt32(0));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
+#undef NVVM_TMA_G2S_MODES
+    // clang-format on
+
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_2d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_3d:

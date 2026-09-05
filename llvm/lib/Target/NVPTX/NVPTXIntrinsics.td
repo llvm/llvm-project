@@ -677,58 +677,94 @@ def CTAGroupFlags : Operand<i32> {
 def tma_cta_group_imm0 : TImmLeaf<i32, [{return Imm == 0;}]>;
 def tma_cta_group_imm_any : TImmLeaf<i32, [{return Imm >= 0;}]>;
 
+def TMAValidateDataFlags : Operand<i32> {
+  let PrintMethod = "printTMAValidateDataFlags";
+}
+
+// Matches validate pattern values 0-5. The 1-5 values are Rubin-only
+// validate patterns. 0 denotes disabled validate pattern (default).
+def tma_validate_data_imm : TImmLeaf<i32, [{
+  return Imm == 0 || (Imm >= 1 && Imm <= 5 &&
+                      Subtarget->hasFeature(NVPTX::SM107f));
+}]>;
+
 multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred,
                                TImmLeaf cta_group_type = tma_cta_group_imm_any> {
   defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
-  defvar asm_str_base = "$cg [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
-
+  defvar asm_str_base = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
   defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
   defvar im2col_str = TMA_IM2COL_UTIL<dim, mode>.base_str;
-  defvar asm_str = !if(!empty(im2col_str),
-                       asm_str_base,
-                       asm_str_base # ", {{" # im2col_str # "}}");
-
+  defvar asm_str = !if(!empty(im2col_str), asm_str_base, asm_str_base # ", {{" # im2col_str # "}}");
   defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
+
   defvar inst_name = "cp.async.bulk.tensor"
                      # "." # dim_val # "d"
                      # "." # "shared::cluster.global"
                      # "." # !subst("_", "::", mode)
-                     # "." # "mbarrier::complete_tx::bytes";
+                     # "." # "mbarrier::complete_tx::bytes"
+                     # "$validate" # "$cg";
+
+  defvar ins_dag_base = !con(
+                          (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
+                          dims_dag, im2col_dag);
+  defvar ins_tail = (ins CTAGroupFlags:$cg, TMAValidateDataFlags:$validate);
+
+  defvar ins_dag         = !con(ins_dag_base, ins_tail);
+  defvar ins_dag_ch      = !con(ins_dag_base, (ins B64:$ch), ins_tail);
+  defvar ins_dag_mc16    = !con(ins_dag_base, (ins B16:$mc), ins_tail);
+  defvar ins_dag_mc16_ch = !con(ins_dag_base, (ins B16:$mc), (ins B64:$ch), ins_tail);
+  defvar ins_dag_mc32    = !con(ins_dag_base, (ins B32:$mc), ins_tail);
+  defvar ins_dag_mc32_ch = !con(ins_dag_base, (ins B32:$mc), (ins B64:$ch), ins_tail);
+
   defvar intr = !cast<Intrinsic>(
                   "int_nvvm_cp_async_bulk_tensor_g2s_" # mode # "_" # dim_val # "d");
-
-  defvar ins_dag = !con(
-                     (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
-                     dims_dag, im2col_dag,
-                     (ins B16:$mc, B64:$ch, CTAGroupFlags:$cg));
 
   defvar intr_dag_base = !con(
                          (intr addr:$dst, addr:$mbar, B64:$tmap),
                          !setdagop(dims_dag, intr),
-                         !setdagop(im2col_dag, intr),
-                         (intr B16:$mc, B64:$ch));
-  defvar intr_dag_no_hints   = !con(intr_dag_base, (intr 0,  0,  cta_group_type:$cg));
-  defvar intr_dag_with_mc    = !con(intr_dag_base, (intr -1, 0,  cta_group_type:$cg));
-  defvar intr_dag_with_ch    = !con(intr_dag_base, (intr 0, -1,  cta_group_type:$cg));
-  defvar intr_dag_with_mc_ch = !con(intr_dag_base, (intr -1, -1, cta_group_type:$cg));
+                         !setdagop(im2col_dag, intr));
+  defvar intr_tail = (intr cta_group_type:$cg, tma_validate_data_imm:$validate);
 
-  def "" : NVPTXInst<(outs), ins_dag,
-             inst_name # asm_str # ";",
-             [intr_dag_no_hints]>,
-             Requires<pred>;
-  def _MC : NVPTXInst<(outs), ins_dag,
-              inst_name # ".multicast::cluster" # asm_str # ", $mc;",
-              [intr_dag_with_mc]>,
-              Requires<pred>;
-  def _CH : NVPTXInst<(outs), ins_dag,
-              inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
-              [intr_dag_with_ch]>,
-              Requires<pred>;
-  def _MC_CH : NVPTXInst<(outs), ins_dag,
-                 inst_name # ".multicast::cluster.L2::cache_hint" # asm_str # ", $mc, $ch;",
-                 [intr_dag_with_mc_ch]>,
-                 Requires<pred>;
+  defvar intr_dag_no_hints   = !con(intr_dag_base, (intr (i16 srcvalue), (i64 srcvalue), 0,  0),  intr_tail);
+  defvar intr_dag_with_mc    = !con(intr_dag_base, (intr B16:$mc, (i64 srcvalue), -1, 0),  intr_tail);
+  defvar intr_dag_with_ch    = !con(intr_dag_base, (intr (i16 srcvalue), B64:$ch, 0, -1),  intr_tail);
+  defvar intr_dag_with_mc_ch = !con(intr_dag_base, (intr B16:$mc, B64:$ch, -1, -1), intr_tail);
+  defvar intr_dag_no_mc32_ch      = !con(intr_dag_base, (intr (i32 srcvalue), (i64 srcvalue), 0,  0),  intr_tail);
+  defvar intr_dag_with_mc32       = !con(intr_dag_base, (intr i32:$mc, (i64 srcvalue), -1, 0),  intr_tail);
+  defvar intr_dag_no_mc32_with_ch = !con(intr_dag_base, (intr (i32 srcvalue), B64:$ch, 0, -1),  intr_tail);
+  defvar intr_dag_with_mc32_ch    = !con(intr_dag_base, (intr i32:$mc, B64:$ch, -1, -1), intr_tail);
+
+  let Predicates = pred in {
+    def "" : NVPTXInst<(outs), ins_dag,
+              inst_name # asm_str # ";",
+              [intr_dag_no_hints]>;
+    def _MC : NVPTXInst<(outs), ins_dag_mc16,
+                inst_name # ".multicast::cluster" # asm_str # ", $mc;",
+                [intr_dag_with_mc]>;
+    def _CH : NVPTXInst<(outs), ins_dag_ch,
+                inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
+                [intr_dag_with_ch]>;
+    def _MC_CH : NVPTXInst<(outs), ins_dag_mc16_ch,
+                  inst_name # ".multicast::cluster.L2::cache_hint" # asm_str # ", $mc, $ch;",
+                  [intr_dag_with_mc_ch]>;
+  }
+
+  // The 32-bit multicast variants are only supported on the Rubin family.
+  let Predicates = [hasRubinFamilySupport] in {
+    def _NO_MC32_CH : NVPTXInst<(outs), ins_dag,
+                        inst_name # asm_str # ";",
+                        [intr_dag_no_mc32_ch]>;
+    def _MC32 : NVPTXInst<(outs), ins_dag_mc32,
+                  inst_name # ".multicast::cluster::32b" # asm_str # ", $mc;",
+                  [intr_dag_with_mc32]>;
+    def _NO_MC32_WITH_CH : NVPTXInst<(outs), ins_dag_ch,
+                            inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
+                            [intr_dag_no_mc32_with_ch]>;
+    def _MC32_CH : NVPTXInst<(outs), ins_dag_mc32_ch,
+                    inst_name # ".multicast::cluster::32b.L2::cache_hint" # asm_str # ", $mc, $ch;",
+                    [intr_dag_with_mc32_ch]>;
+  }
 }
 
 foreach dim = 1...5 in {
@@ -759,45 +795,45 @@ multiclass TMA_TENSOR_G2S_CTA_INTR<int dim, string mode, list<Predicate> pred = 
   defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_DAG_UTIL<dim>.base_str;
   defvar asm_str_base = " [$dst], [$tmap, {{" # dims_str # "}}], [$mbar]";
-
   defvar im2col_dag = TMA_IM2COL_UTIL<dim, mode>.ins_dag;
   defvar im2col_str = TMA_IM2COL_UTIL<dim, mode>.base_str;
-  defvar asm_str = !if(!empty(im2col_str),
-                       asm_str_base,
-                       asm_str_base # ", {{" # im2col_str # "}}");
-
-  defvar ins_dag = !con(
-                     (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
-                     dims_dag, im2col_dag,
-                     (ins B64:$ch));
-
+  defvar asm_str = !if(!empty(im2col_str),asm_str_base, asm_str_base # ", {{" # im2col_str # "}}");
   defvar dim_val = TMA_DIMS_UTIL<dim, mode>.num_dims;
-  defvar intr = !cast<Intrinsic>(
-                  "int_nvvm_cp_async_bulk_tensor_g2s_cta_" # mode # "_" # dim_val # "d");
-  defvar intr_dag = !con(
-                      (intr addr:$dst, addr:$mbar, B64:$tmap),
-                      !setdagop(dims_dag, intr),
-                      !setdagop(im2col_dag, intr),
-                      (intr B64:$ch, 0));
-  defvar intr_dag_with_ch = !con(
-                              (intr addr:$dst, addr:$mbar, B64:$tmap),
-                              !setdagop(dims_dag, intr),
-                              !setdagop(im2col_dag, intr),
-                              (intr B64:$ch, -1));
+
   defvar inst_name = "cp.async.bulk.tensor"
                      # "." # dim_val # "d"
                      # "." # "shared::cta.global"
                      # "." # !subst("_", "::", mode)
-                     # "." # "mbarrier::complete_tx::bytes";
+                     # "." # "mbarrier::complete_tx::bytes"
+                     # "$validate";
 
-  def "" : NVPTXInst<(outs), ins_dag,
-             inst_name # asm_str # ";",
-             [intr_dag]>,
-             Requires<pred>;
-  def _CH : NVPTXInst<(outs), ins_dag,
-              inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
-              [intr_dag_with_ch]>,
-              Requires<pred>;
+  defvar ins_dag_base = !con(
+                          (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
+                          dims_dag, im2col_dag);
+  defvar ins_dag = !con(ins_dag_base, (ins TMAValidateDataFlags:$validate));
+  defvar ins_dag_ch =
+      !con(ins_dag_base, (ins B64:$ch, TMAValidateDataFlags:$validate));
+
+  defvar intr = !cast<Intrinsic>(
+                  "int_nvvm_cp_async_bulk_tensor_g2s_cta_" # mode # "_" # dim_val # "d");
+
+  defvar intr_dag_base = !con(
+                      (intr addr:$dst, addr:$mbar, B64:$tmap),
+                      !setdagop(dims_dag, intr),
+                      !setdagop(im2col_dag, intr));
+  defvar intr_dag = !con(intr_dag_base,
+                      (intr (i64 srcvalue), 0, tma_validate_data_imm:$validate));
+  defvar intr_dag_with_ch = !con(intr_dag_base,
+                              (intr B64:$ch, -1, tma_validate_data_imm:$validate));
+
+  let Predicates = pred in {
+    def "" : NVPTXInst<(outs), ins_dag,
+              inst_name # asm_str # ";",
+              [intr_dag]>;
+    def _CH : NVPTXInst<(outs), ins_dag_ch,
+                inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
+                [intr_dag_with_ch]>;
+  }
 }
 foreach dim = 1...5 in {
   defm TMA_G2S_CTA_TILE_ # dim # "D"
@@ -827,12 +863,14 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
   defvar intr = !cast<Intrinsic>(
                   "int_nvvm_cp_async_bulk_tensor_s2g_" # mode # "_" # dim_val # "d");
 
-  defvar intr_dag = !con((intr addr:$src, B64:$tmap),
-                         !setdagop(dims_dag, intr),
-                         (intr B64:$ch, 0));
-  defvar intr_dag_with_ch = !con((intr addr:$src, B64:$tmap),
-                                 !setdagop(dims_dag, intr),
-                                 (intr B64:$ch, -1));
+  defvar ins_dag_base = !con((ins ADDR:$src, B64:$tmap), dims_dag);
+  defvar ins_dag = ins_dag_base;
+  defvar ins_dag_ch = !con(ins_dag_base, (ins B64:$ch));
+
+  defvar intr_dag_base = !con((intr addr:$src, B64:$tmap),
+                              !setdagop(dims_dag, intr));
+  defvar intr_dag = !con(intr_dag_base, (intr (i64 srcvalue), 0));
+  defvar intr_dag_with_ch = !con(intr_dag_base, (intr B64:$ch, -1));
 
   // Fix-up the asm_str when it is im2col/scatter4.
   defvar mode_asm_str = TMA_S2G_MODE_ASM_UTIL<mode>.ret;
@@ -842,13 +880,11 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
                   # "." # mode_asm_str
                   # ".bulk_group";
 
-  def "" : NVPTXInst<(outs),
-             !con((ins ADDR:$src, B64:$tmap), dims_dag, (ins B64:$ch)),
+  def "" : NVPTXInst<(outs), ins_dag,
              prefix # asm_str # ";",
              [intr_dag]>,
              Requires<pred>;
-  def _CH : NVPTXInst<(outs),
-              !con((ins ADDR:$src, B64:$tmap), dims_dag, (ins B64:$ch)),
+  def _CH : NVPTXInst<(outs), ins_dag_ch,
               prefix # ".L2::cache_hint" # asm_str # ", $ch;",
               [intr_dag_with_ch]>,
               Requires<pred>;
@@ -965,6 +1001,148 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode,
               [intr_dag_ch]>;
   }
 }
+
+// TMA Copy from Global to Shared memory (Cluster) with Override Global Address.
+multiclass NVPTX_CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<int dim, string mode, string override> {
+  defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
+  defvar num_dims = TMA_DIMS_UTIL<dim, mode>.num_dims;
+  defvar suffix = base.override_suffix;
+  // The override_addr_dim / override_addr_dim_stride variants support only 32-bit multicast.
+  defvar supports_mc16 = base.is_override_addr;
+  defvar asm_operands = " [$dst], [$tmap, $override_addr, " #
+                        base.tensor_size_component # "{{" # base.dims_str #
+                        "}}], [$mbar]" # base.im2col_component;
+
+  defvar inst_name = "cp.async.bulk.tensor." # num_dims #
+                     "d.shared::cluster.global." # !subst("_", "::", mode) #
+                     ".mbarrier::complete_tx::bytes" # "$validate" # "$cg";
+
+  defvar ins_dag_base = !con(
+      (ins ADDR:$dst, ADDR:$mbar, B64:$tmap, B64:$override_addr),
+      base.tensor_size_dag, base.lower_stride_dag, base.upper_stride_dag,
+      base.dims_dag, base.im2col_dag);
+  defvar ins_tail = (ins CTAGroupFlags:$cg, TMAValidateDataFlags:$validate);
+
+  defvar ins_dag         = !con(ins_dag_base, ins_tail);
+  defvar ins_dag_ch      = !con(ins_dag_base, (ins B64:$ch), ins_tail);
+  defvar ins_dag_mc16    = !con(ins_dag_base, (ins B16:$mc), ins_tail);
+  defvar ins_dag_mc16_ch = !con(ins_dag_base, (ins B16:$mc), (ins B64:$ch), ins_tail);
+  defvar ins_dag_mc32    = !con(ins_dag_base, (ins B32:$mc), ins_tail);
+  defvar ins_dag_mc32_ch = !con(ins_dag_base, (ins B32:$mc), (ins B64:$ch), ins_tail);
+
+  defvar intr = !cast<Intrinsic>(
+      "int_nvvm_cp_async_bulk_tensor_g2s_" # mode # "_" # override # "_" #
+      num_dims # "d");
+
+  defvar intr_dag_base = !con(
+      (intr addr:$dst, addr:$mbar, B64:$tmap, B64:$override_addr),
+      !setdagop(base.tensor_size_dag, intr),
+      !setdagop(base.lower_stride_dag, intr),
+      !setdagop(base.upper_stride_dag, intr),
+      !setdagop(base.dims_dag, intr),
+      !setdagop(base.im2col_dag, intr));
+  defvar intr_tail = (intr tma_cta_group_imm_any:$cg, tma_validate_data_imm:$validate);
+
+  defvar intr_dag_no_mc16_ch      = !con(intr_dag_base, (intr (i16 srcvalue), (i64 srcvalue), 0,  0),  intr_tail);
+  defvar intr_dag_with_mc16       = !con(intr_dag_base, (intr B16:$mc, (i64 srcvalue), -1, 0),  intr_tail);
+  defvar intr_dag_no_mc16_with_ch = !con(intr_dag_base, (intr (i16 srcvalue), B64:$ch, 0, -1),  intr_tail);
+  defvar intr_dag_with_mc16_ch    = !con(intr_dag_base, (intr B16:$mc, B64:$ch, -1, -1), intr_tail);
+  defvar intr_dag_no_mc32_ch      = !con(intr_dag_base, (intr (i32 srcvalue), (i64 srcvalue), 0,  0),  intr_tail);
+  defvar intr_dag_with_mc32       = !con(intr_dag_base, (intr i32:$mc, (i64 srcvalue), -1, 0),  intr_tail);
+  defvar intr_dag_no_mc32_with_ch = !con(intr_dag_base, (intr (i32 srcvalue), B64:$ch, 0, -1),  intr_tail);
+  defvar intr_dag_with_mc32_ch    = !con(intr_dag_base, (intr i32:$mc, B64:$ch, -1, -1), intr_tail);
+
+  let Predicates = [hasRubinFamilySupport] in {
+    if supports_mc16 then {
+      def _NO_MC16_CH : NVPTXInst<(outs), ins_dag,
+                          inst_name # suffix # asm_operands # ";",
+                          [intr_dag_no_mc16_ch]>;
+      def _MC16 : NVPTXInst<(outs), ins_dag_mc16,
+                    inst_name # ".multicast::cluster" # suffix # asm_operands # ", $mc;",
+                    [intr_dag_with_mc16]>;
+      def _NO_MC16_WITH_CH : NVPTXInst<(outs), ins_dag_ch,
+                              inst_name # ".L2::cache_hint" # suffix # asm_operands # ", $ch;",
+                              [intr_dag_no_mc16_with_ch]>;
+      def _MC16_CH : NVPTXInst<(outs), ins_dag_mc16_ch,
+                      inst_name # ".multicast::cluster.L2::cache_hint" # suffix # asm_operands # ", $mc, $ch;",
+                      [intr_dag_with_mc16_ch]>;
+    }
+    def _NO_MC32_CH : NVPTXInst<(outs), ins_dag,
+                        inst_name # suffix # asm_operands # ";",
+                        [intr_dag_no_mc32_ch]>;
+    def _MC32 : NVPTXInst<(outs), ins_dag_mc32,
+                  inst_name # ".multicast::cluster::32b" # suffix # asm_operands # ", $mc;",
+                  [intr_dag_with_mc32]>;
+    def _NO_MC32_WITH_CH : NVPTXInst<(outs), ins_dag_ch,
+                            inst_name # ".L2::cache_hint" # suffix # asm_operands # ", $ch;",
+                            [intr_dag_no_mc32_with_ch]>;
+    def _MC32_CH : NVPTXInst<(outs), ins_dag_mc32_ch,
+                    inst_name # ".multicast::cluster::32b.L2::cache_hint" # suffix # asm_operands # ", $mc, $ch;",
+                    [intr_dag_with_mc32_ch]>;
+  }
+}
+
+// TMA Copy from Global to Shared memory (CTA) with Override Global Address.
+multiclass NVPTX_CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<int dim, string mode, string override> {
+  defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
+  defvar num_dims = TMA_DIMS_UTIL<dim, mode>.num_dims;
+  defvar suffix = base.override_suffix;
+  defvar asm_str = " [$dst], [$tmap, $override_addr, " #
+                   base.tensor_size_component # "{{" # base.dims_str #
+                   "}}], [$mbar]" # base.im2col_component;
+
+  defvar inst_name = "cp.async.bulk.tensor." # num_dims #
+                     "d.shared::cta.global." # !subst("_", "::", mode) #
+                     ".mbarrier::complete_tx::bytes" # "$validate";
+
+  defvar ins_dag_base = !con(
+      (ins ADDR:$dst, ADDR:$mbar, B64:$tmap, B64:$override_addr),
+      base.tensor_size_dag, base.lower_stride_dag, base.upper_stride_dag,
+      base.dims_dag, base.im2col_dag);
+  defvar ins_dag = !con(ins_dag_base, (ins TMAValidateDataFlags:$validate));
+  defvar ins_dag_ch = !con(ins_dag_base, (ins B64:$ch, TMAValidateDataFlags:$validate));
+
+  defvar intr = !cast<Intrinsic>(
+      "int_nvvm_cp_async_bulk_tensor_g2s_cta_" # mode # "_" # override # "_" #
+      num_dims # "d");
+
+  defvar intr_dag_base = !con(
+      (intr addr:$dst, addr:$mbar, B64:$tmap, B64:$override_addr),
+      !setdagop(base.tensor_size_dag, intr),
+      !setdagop(base.lower_stride_dag, intr),
+      !setdagop(base.upper_stride_dag, intr),
+      !setdagop(base.dims_dag, intr),
+      !setdagop(base.im2col_dag, intr));
+
+  defvar intr_dag = !con(intr_dag_base, (intr (i64 srcvalue), 0, tma_validate_data_imm:$validate));
+  defvar intr_dag_with_ch = !con(intr_dag_base, (intr B64:$ch, -1, tma_validate_data_imm:$validate));
+
+  let Predicates = [hasRubinFamilySupport] in {
+    def "" : NVPTXInst<(outs), ins_dag,
+              inst_name # suffix # asm_str # ";",
+              [intr_dag]>;
+    def _CH : NVPTXInst<(outs), ins_dag_ch,
+               inst_name # ".L2::cache_hint" # suffix # asm_str # ", $ch;",
+               [intr_dag_with_ch]>;
+  }
+}
+
+// TMA Copy from Global to Shared memory (G2S / G2S CTA) with Override Global Address.
+foreach dim = 1...5 in {
+  foreach mode = TMA_MODES_UTIL<dim, /*includeW128=*/1>.modes in {
+    foreach override = TMAOverrideHandler<dim, mode>.applicable_overrides in {
+      defvar suffix = dim # "D_" # !toupper(mode # "_" # override);
+      defm G2S_ # suffix
+          : NVPTX_CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<dim, mode, override>;
+      defm G2S_CTA_ # suffix
+          : NVPTX_CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<dim, mode, override>;
+    }
+  }
+}
+defm G2S_2D_TILE_GATHER4_OVERRIDE_ADDR
+    : NVPTX_CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<5, "tile_gather4", "override_addr">;
+defm G2S_CTA_2D_TILE_GATHER4_OVERRIDE_ADDR
+    : NVPTX_CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<5, "tile_gather4", "override_addr">;
 
 def TMAReductionFlags : Operand<i32> {
   let PrintMethod = "printTmaReductionMode";
