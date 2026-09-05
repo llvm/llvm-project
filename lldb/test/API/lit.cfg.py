@@ -297,6 +297,9 @@ if is_configured("lldb_executable"):
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
 
+if is_configured("fortran_test_compiler"):
+    dotest_cmd += ["--fortran-compiler", config.fortran_test_compiler]
+
 if is_configured("dsymutil"):
     dotest_cmd += ["--dsymutil", config.dsymutil]
 
