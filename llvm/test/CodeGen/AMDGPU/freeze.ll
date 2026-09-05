@@ -16227,11 +16227,11 @@ define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_b64 v[4:5], v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.h, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 3
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -16508,14 +16508,14 @@ define void @freeze_v3i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_b96 v[4:6], v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v4
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 2, v4.l
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.h, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 2, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 7
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off
@@ -16847,19 +16847,18 @@ define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_b128 v[4:7], v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
-; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v4
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s1, 0, v6
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, s1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 2, v4.l
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v5.l
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 3, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 2, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.h, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0, 1, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 3, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 15
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off

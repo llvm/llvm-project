@@ -525,9 +525,9 @@ define <2 x i1> @test85(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GCN-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v3.l, v1.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_le_f16_e64 s0, v3.l, v1.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, s0
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test85:
@@ -561,9 +561,9 @@ define <2 x i1> @test86(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v3.l, v1.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e64 s0, v3.l, v1.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, s0
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test86:
@@ -621,9 +621,9 @@ define <2 x i1> @test88(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v3.l, v1.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_gt_f16_e64 s0, v3.l, v1.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, s0
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test88:
@@ -705,9 +705,9 @@ define <2 x i1> @test91(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GCN-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GCN-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0.l, v2.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GCN-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v3.l, v1.l
-; GCN-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cmp_lt_f16_e64 s0, v3.l, v1.l
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GCN-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0, 1, s0
 ; GCN-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-FAKE16-LABEL: test91:
