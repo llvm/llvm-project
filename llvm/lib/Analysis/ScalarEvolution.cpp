@@ -1123,7 +1123,7 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
             SCEVPtrToAddrExpr(ID.Intern(SCEVAllocator), U, Ty);
         UniqueSCEVs.insert(S, Token);
         S->computeAndSetCanonical(*this);
-        registerUser(S, U);
+        registerUser(S, {U});
         return static_cast<const SCEV *>(S);
       });
   assert(IntOp->getType()->isIntegerTy() &&
@@ -3083,7 +3083,7 @@ const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
     S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator), LHS, RHS);
     UniqueSCEVs.insert(S, Token);
     S->computeAndSetCanonical(*this);
-    registerUser(S, ArrayRef<SCEVUse>({LHS, RHS}));
+    registerUser(S, {LHS, RHS});
   }
   return S;
 }
@@ -3481,8 +3481,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   assert(LHS->getType() == RHS->getType() &&
          "SCEVUDivExpr operand types don't match!");
 
-  if (SCEV *S =
-          findExistingSCEVInCache(scUDivExpr, ArrayRef<SCEVUse>({LHS, RHS})))
+  if (SCEV *S = findExistingSCEVInCache(scUDivExpr, {LHS, RHS}))
     return S;
 
   // 0 udiv Y == 0
@@ -15577,16 +15576,6 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
     : SE(SE), L(L) {
   SmallVector<const SCEVPredicate*, 4> Empty;
   Preds = std::make_unique<SCEVUnionPredicate>(Empty, SE);
-}
-
-void ScalarEvolution::registerUser(const SCEV *User,
-                                   ArrayRef<const SCEV *> Ops) {
-  for (const auto *Op : Ops)
-    // We do not expect that forgetting cached data for SCEVConstants will ever
-    // open any prospects for sharpening or introduce any correctness issues,
-    // so we don't bother storing their dependencies.
-    if (!isa<SCEVConstant>(Op))
-      SCEVUsers[Op].insert(User);
 }
 
 void ScalarEvolution::registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops) {
