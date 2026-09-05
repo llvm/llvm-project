@@ -5102,6 +5102,8 @@ static bool isMaskedByExecImpl(const SIInstrInfo &TII,
     return true;
   if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc) && Recurse(1) && Recurse(2))
     return true;
+  // TODO: Sometimes we encounter "reg = S_CSELECT -1, 0". If Reg has no other
+  // uses this could be optimized to "reg = S_CSELECT $exec, 0".
 
   // Roll back, so that a caller that succeeds by another route is not left
   // depending on definitions it does not actually use.
