@@ -139,7 +139,8 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MIPS1-PSX-NEXT:    bnez $1, $BB0_2
 ; MIPS1-PSX-NEXT:    nop
 ; MIPS1-PSX-NEXT:  # %bb.1: # %entry
-; MIPS1-PSX-NEXT:    ldc1 $f0, 16($sp)
+; MIPS1-PSX-NEXT:    lwc1 $f0, 16($sp)
+; MIPS1-PSX-NEXT:    lwc1 $f1, 20($sp)
 ; MIPS1-PSX-NEXT:    jr $ra
 ; MIPS1-PSX-NEXT:    nop
 ; MIPS1-PSX-NEXT:  $BB0_2:
