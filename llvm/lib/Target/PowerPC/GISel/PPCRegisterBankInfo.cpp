@@ -88,10 +88,10 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = Ty.getSizeInBits();
     switch (Size) {
     case 128:
-      OperandsMapping = getValueMapping(PMI_VEC128);
+      OperandsMapping = getValueMapping(PPC::PMI_VEC128);
       break;
     default:
-      OperandsMapping = getValueMapping(PMI_GPR64);
+      OperandsMapping = getValueMapping(PPC::PMI_GPR64);
       break;
     }
     break;
@@ -107,13 +107,13 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
            "Unsupported floating point types!\n");
     switch (Size) {
     case 32:
-      OperandsMapping = getValueMapping(PMI_FPR32);
+      OperandsMapping = getValueMapping(PPC::PMI_FPR32);
       break;
     case 64:
-      OperandsMapping = getValueMapping(PMI_FPR64);
+      OperandsMapping = getValueMapping(PPC::PMI_FPR64);
       break;
     case 128:
-      OperandsMapping = getValueMapping(PMI_VEC128);
+      OperandsMapping = getValueMapping(PPC::PMI_VEC128);
       break;
     }
     break;
@@ -122,16 +122,18 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned CmpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
 
     OperandsMapping = getOperandsMapping(
-        {getValueMapping(PMI_CR), nullptr,
-         getValueMapping(CmpSize == 32 ? PMI_FPR32 : PMI_FPR64),
-         getValueMapping(CmpSize == 32 ? PMI_FPR32 : PMI_FPR64)});
+        {getValueMapping(PPC::PMI_CR4), nullptr,
+         getValueMapping(CmpSize == 32 ? PPC::PMI_FPR32 : PPC::PMI_FPR64),
+         getValueMapping(CmpSize == 32 ? PPC::PMI_FPR32 : PPC::PMI_FPR64)});
     break;
   }
   case TargetOpcode::G_CONSTANT:
-    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GPR64), nullptr});
+    OperandsMapping =
+        getOperandsMapping({getValueMapping(PPC::PMI_GPR64), nullptr});
     break;
   case TargetOpcode::G_CONSTANT_POOL:
-    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GPR64), nullptr});
+    OperandsMapping =
+        getOperandsMapping({getValueMapping(PPC::PMI_GPR64), nullptr});
     break;
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FPTOSI: {
@@ -139,8 +141,8 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
 
     OperandsMapping = getOperandsMapping(
-        {getValueMapping(PMI_GPR64),
-         getValueMapping(Size == 32 ? PMI_FPR32 : PMI_FPR64)});
+        {getValueMapping(PPC::PMI_GPR64),
+         getValueMapping(Size == 32 ? PPC::PMI_FPR32 : PPC::PMI_FPR64)});
     break;
   }
   case TargetOpcode::G_UITOFP:
@@ -148,9 +150,9 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     Register SrcReg = MI.getOperand(0).getReg();
     unsigned Size = getSizeInBits(SrcReg, MRI, TRI);
 
-    OperandsMapping =
-        getOperandsMapping({getValueMapping(Size == 32 ? PMI_FPR32 : PMI_FPR64),
-                            getValueMapping(PMI_GPR64)});
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(Size == 32 ? PPC::PMI_FPR32 : PPC::PMI_FPR64),
+         getValueMapping(PPC::PMI_GPR64)});
     break;
   }
   case TargetOpcode::G_LOAD: {
@@ -168,12 +170,12 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  return onlyUsesFP(UseMI, MRI, TRI);
                }))
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(Size == 64 ? PMI_FPR64 : PMI_FPR32),
-           getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PPC::PMI_FPR64 : PPC::PMI_FPR32),
+           getValueMapping(PPC::PMI_GPR64)});
     else
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(Size == 64 ? PMI_GPR64 : PMI_GPR32),
-           getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PPC::PMI_GPR64 : PPC::PMI_GPR32),
+           getValueMapping(PPC::PMI_GPR64)});
     break;
   }
   case TargetOpcode::G_STORE: {
@@ -182,12 +184,12 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     if (onlyDefinesFP(*DefMI, MRI, TRI))
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(Size == 64 ? PMI_FPR64 : PMI_FPR32),
-           getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PPC::PMI_FPR64 : PPC::PMI_FPR32),
+           getValueMapping(PPC::PMI_GPR64)});
     else
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(Size == 64 ? PMI_GPR64 : PMI_GPR32),
-           getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PPC::PMI_GPR64 : PPC::PMI_GPR32),
+           getValueMapping(PPC::PMI_GPR64)});
     break;
   }
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {

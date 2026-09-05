@@ -29,13 +29,12 @@ protected:
 #define GET_TARGET_REGBANK_INFO_CLASS
 #include "X86GenRegisterBankInfo.def"
 
-  static RegisterBankInfo::PartialMapping PartMappings[];
   static RegisterBankInfo::ValueMapping ValMappings[];
 
-  static PartialMappingIdx getPartialMappingIdx(const MachineInstr &MI,
-                                                const LLT &Ty, bool isFP);
+  static X86::PartialMappingIdx getPartialMappingIdx(const MachineInstr &MI,
+                                                     const LLT &Ty, bool isFP);
   static const RegisterBankInfo::ValueMapping *
-  getValueMapping(PartialMappingIdx Idx, unsigned NumOperands);
+  getValueMapping(X86::PartialMappingIdx Idx, unsigned NumOperands);
 };
 
 class TargetRegisterInfo;
@@ -50,17 +49,16 @@ private:
                                                    bool isFP) const;
 
   /// Track the bank of each instruction operand(register)
-  static void
-  getInstrPartialMappingIdxs(const MachineInstr &MI,
-                             const MachineRegisterInfo &MRI, const bool isFP,
-                             SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx);
+  static void getInstrPartialMappingIdxs(
+      const MachineInstr &MI, const MachineRegisterInfo &MRI, const bool isFP,
+      SmallVectorImpl<X86::PartialMappingIdx> &OpRegBankIdx);
 
   /// Construct the instruction ValueMapping from PartialMappingIdxs
   /// \return true if mapping succeeded.
-  static bool
-  getInstrValueMapping(const MachineInstr &MI,
-                       const SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx,
-                       SmallVectorImpl<const ValueMapping *> &OpdsMapping);
+  static bool getInstrValueMapping(
+      const MachineInstr &MI,
+      const SmallVectorImpl<X86::PartialMappingIdx> &OpRegBankIdx,
+      SmallVectorImpl<const ValueMapping *> &OpdsMapping);
 
   // Maximum recursion depth for hasFPConstraints.
   const unsigned MaxFPRSearchDepth = 2;

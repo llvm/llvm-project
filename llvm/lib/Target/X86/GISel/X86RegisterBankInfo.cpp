@@ -138,7 +138,7 @@ bool X86RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   return hasFPConstraints(MI, MRI, TRI, Depth);
 }
 
-X86GenRegisterBankInfo::PartialMappingIdx
+X86::PartialMappingIdx
 X86GenRegisterBankInfo::getPartialMappingIdx(const MachineInstr &MI,
                                              const LLT &Ty, bool isFP) {
   const MachineFunction *MF = MI.getMF();
@@ -152,15 +152,15 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const MachineInstr &MI,
     switch (Ty.getSizeInBits()) {
     case 1:
     case 8:
-      return PMI_GPR8;
+      return X86::PMI_GPR8;
     case 16:
-      return PMI_GPR16;
+      return X86::PMI_GPR16;
     case 32:
-      return PMI_GPR32;
+      return X86::PMI_GPR32;
     case 64:
-      return PMI_GPR64;
+      return X86::PMI_GPR64;
     case 128:
-      return PMI_VEC128;
+      return X86::PMI_VECR128;
       break;
     default:
       llvm_unreachable("Unsupported register size.");
@@ -168,41 +168,41 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const MachineInstr &MI,
   } else if (Ty.isScalar()) {
     switch (Ty.getSizeInBits()) {
     case 32:
-      return HasSSE1 ? PMI_FP32 : PMI_PSR32;
+      return HasSSE1 ? X86::PMI_VECR32 : X86::PMI_PSR32;
     case 64:
-      return HasSSE2 ? PMI_FP64 : PMI_PSR64;
+      return HasSSE2 ? X86::PMI_VECR64 : X86::PMI_PSR64;
     case 128:
-      return PMI_VEC128;
+      return X86::PMI_VECR128;
     case 80:
-      return PMI_PSR80;
+      return X86::PMI_PSR80;
     default:
       llvm_unreachable("Unsupported register size.");
     }
   } else {
     switch (Ty.getSizeInBits()) {
     case 128:
-      return PMI_VEC128;
+      return X86::PMI_VECR128;
     case 256:
-      return PMI_VEC256;
+      return X86::PMI_VECR256;
     case 512:
-      return PMI_VEC512;
+      return X86::PMI_VECR512;
     default:
       llvm_unreachable("Unsupported register size.");
     }
   }
 
-  return PMI_None;
+  return X86::PMI_None;
 }
 
 void X86RegisterBankInfo::getInstrPartialMappingIdxs(
     const MachineInstr &MI, const MachineRegisterInfo &MRI, const bool isFP,
-    SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx) {
+    SmallVectorImpl<X86::PartialMappingIdx> &OpRegBankIdx) {
 
   unsigned NumOperands = MI.getNumOperands();
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     auto &MO = MI.getOperand(Idx);
     if (!MO.isReg() || !MO.getReg().isVirtual())
-      OpRegBankIdx[Idx] = PMI_None;
+      OpRegBankIdx[Idx] = X86::PMI_None;
     else
       OpRegBankIdx[Idx] =
           getPartialMappingIdx(MI, MRI.getType(MO.getReg()), isFP);
@@ -211,7 +211,7 @@ void X86RegisterBankInfo::getInstrPartialMappingIdxs(
 
 bool X86RegisterBankInfo::getInstrValueMapping(
     const MachineInstr &MI,
-    const SmallVectorImpl<PartialMappingIdx> &OpRegBankIdx,
+    const SmallVectorImpl<X86::PartialMappingIdx> &OpRegBankIdx,
     SmallVectorImpl<const ValueMapping *> &OpdsMapping) {
 
   unsigned NumOperands = MI.getNumOperands();
@@ -287,7 +287,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
 
   unsigned NumOperands = MI.getNumOperands();
-  SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
+  SmallVector<X86::PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
 
   switch (Opc) {
   case TargetOpcode::G_FSQRT:
@@ -340,8 +340,8 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     assert((Size == 32 || Size == 64 || Size == 80) &&
            "Unsupported size for G_FCMP");
     auto FpRegBank = getPartialMappingIdx(MI, Ty1, /* isFP= */ true);
-    OpRegBankIdx = {PMI_GPR8,
-                    /* Predicate */ PMI_None, FpRegBank, FpRegBank};
+    OpRegBankIdx = {X86::PMI_GPR8,
+                    /* Predicate */ X86::PMI_None, FpRegBank, FpRegBank};
     break;
   }
   case TargetOpcode::G_FABS:
@@ -428,7 +428,8 @@ X86RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_IMPLICIT_DEF: {
-    // we going to try to map 32/64/80 bit to PMI_FP32/PMI_FP64/PMI_FP80
+    // we going to try to map 32/64/80 bit to
+    // X86::PMI_VECR32/X86::PMI_VECR64/X86::PMI_VECR80
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64 && Size != 80)
       break;
@@ -436,7 +437,7 @@ X86RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
     unsigned NumOperands = MI.getNumOperands();
 
     // Track the bank of each register, use FP mapping (all scalars in VEC)
-    SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
+    SmallVector<X86::PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);
 
     // Finally construct the computed mapping.

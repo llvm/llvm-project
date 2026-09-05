@@ -18,4 +18,6 @@ def FPRRegBank : RegisterBank<"FPR", [VSSRC]>;
 /// Vector Registers
 def VECRegBank : RegisterBank<"VEC", [VSRC]>;
 /// Condition Registers
+// There is no 4 bit length register class, use an artifical one.
+let ExtraPartMappings = [[4]] in
 def CRRegBank : RegisterBank<"CR", [CRRC]>;

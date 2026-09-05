@@ -23,6 +23,9 @@
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include <set>
+#include <tuple>
+
 #define DEBUG_TYPE "register-bank-emitter"
 
 using namespace llvm;
@@ -38,6 +41,9 @@ private:
 
   /// The register classes that are covered by the register bank.
   RegisterClassesTy RCs;
+
+  /// Extra register classes that must appear in mapping tables.
+  RegisterClassesTy ExtraArtificialRCs;
 
   /// The register class with the largest register size.
   std::vector<const CodeGenRegisterClass *> RCsWithLargestRegSize;
@@ -111,6 +117,8 @@ class RegisterBankEmitter {
 private:
   const CodeGenTarget Target;
   const RecordKeeper &Records;
+  using PartSizeT = std::tuple</*Size*/ unsigned, /*Offset*/ unsigned>;
+  SmallDenseMap<const RegisterBank *, std::set<PartSizeT>> BankPartSizes;
 
   void emitHeader(raw_ostream &OS, StringRef TargetName,
                   ArrayRef<RegisterBank> Banks);
@@ -118,6 +126,12 @@ private:
                                ArrayRef<RegisterBank> Banks);
   void emitBaseClassImplementation(raw_ostream &OS, StringRef TargetName,
                                    ArrayRef<RegisterBank> Banks);
+  void initBankPartSizes(ArrayRef<RegisterBank> Banks,
+                         const CodeGenRegBank &RegisterClassHierarchy);
+  void emitRBIHeader(raw_ostream &OS, ArrayRef<RegisterBank> Banks);
+  void emitRBIPartialMappings(raw_ostream &OS, ArrayRef<RegisterBank> Banks);
+  static std::string buildPartialMapIdxEnumName(const RegisterBank &Bank,
+                                                const PartSizeT &PartSize);
 
 public:
   RegisterBankEmitter(const RecordKeeper &R) : Target(R), Records(R) {}
@@ -143,6 +157,8 @@ void RegisterBankEmitter::emitHeader(raw_ostream &OS, StringRef TargetName,
     OS << "  " << Bank.getEnumeratorName() << " = " << ID++ << ",\n";
   OS << "  NumRegisterBanks,\n"
      << "};\n";
+
+  emitRBIHeader(OS, Banks);
 }
 
 /// Emit declarations of the <Target>GenRegisterBankInfo class.
@@ -258,6 +274,9 @@ void RegisterBankEmitter::emitBaseClassImplementation(
          << Bank.getCoverageArrayName() << ", /* NumRegClasses */ "
          << RegisterClassHierarchy.getRegClasses().size() << ");\n";
     }
+
+    OS << '\n';
+    emitRBIPartialMappings(OS, Banks);
   } // End target namespace.
 
   OS << "\nconst RegisterBank *" << TargetName
@@ -377,6 +396,125 @@ void RegisterBankEmitter::emitBaseClassImplementation(
         "}\n";
 }
 
+void RegisterBankEmitter::initBankPartSizes(
+    ArrayRef<RegisterBank> Banks,
+    const CodeGenRegBank &RegisterClassHierarchy) {
+  for (const auto &Bank : Banks) {
+    std::set<PartSizeT> &CurrentBankPartSizes = BankPartSizes[&Bank];
+    for (const auto *RC : Bank.register_classes()) {
+      // The Size field of RegisterClass is spill size.
+      if (const Record *RCDef = RC->getDef()) {
+        if (int64_t Size = RCDef->getValueAsInt("Size"); Size > 0)
+          CurrentBankPartSizes.insert({Size, 0});
+      }
+      // use RegTypes to deduce part sizes.
+      for (auto &VTs : RC->getValueTypes()) {
+        for (const auto &[HwMode, VT] : VTs) {
+          if (!VT.isScalableVT())
+            CurrentBankPartSizes.insert({VT.getSizeInBits(), 0});
+        }
+
+        for (const auto &SubRegIndex :
+             RegisterClassHierarchy.getSubRegIndices()) {
+          if (SubRegIndex.Artificial)
+            continue;
+          if (const CodeGenRegisterClass *SubRC =
+                  RC->getSubClassWithSubReg(&SubRegIndex);
+              SubRC && !SubRC->Artificial) {
+            for (auto [HwMode, SubIdxRange] : SubRegIndex.Range) {
+              int SignedOffset = SubIdxRange.Offset;
+              // skip when offset can be different
+              if (SignedOffset < 0)
+                continue;
+              CurrentBankPartSizes.insert(
+                  {SubIdxRange.Size, SubIdxRange.Offset});
+            }
+          }
+        }
+      }
+    }
+
+    // Handle manually specified partial mappings, because
+    // thses register classes may contain artificial register
+    // classes or with unexpected sizes, e.g. 4 in PowerPC.
+    const ListInit *ExtraPartMappingsInits =
+        Bank.getDef().getValueAsListInit("ExtraPartMappings");
+    for (const auto *ExtraPartMappingsInit :
+         ExtraPartMappingsInits->getElements()) {
+      const auto *ExtraPart = cast<ListInit>(ExtraPartMappingsInit);
+      if (ExtraPart->empty())
+        continue;
+      unsigned Size = cast<IntInit>(ExtraPart->getElement(0))->getValue();
+      unsigned Offset = 0;
+      if (ExtraPart->size() > 1) {
+        if (const IntInit *OffsetInit = cast<IntInit>(ExtraPart->getElement(1)))
+          Offset = OffsetInit->getValue();
+      }
+      CurrentBankPartSizes.insert({Size, Offset});
+    }
+  }
+}
+
+std::string RegisterBankEmitter::buildPartialMapIdxEnumName(
+    const RegisterBank &Bank, const RegisterBankEmitter::PartSizeT &PartSize) {
+  auto [Size, Offset] = PartSize;
+  std::string EnumName;
+  raw_string_ostream RSO(EnumName);
+  RSO << "PMI_" << Bank.getName();
+  if (Offset != 0)
+    RSO << Offset << '_';
+  RSO << Size;
+  return RSO.str();
+}
+
+void RegisterBankEmitter::emitRBIHeader(raw_ostream &OS,
+                                        ArrayRef<RegisterBank> Banks) {
+
+  OS << "\n// naming convention: PMI_<BankName>[<StartIdx>_]<Length> \n"
+        "enum PartialMappingIdx {\n"
+        "  PMI_None = -1,\n";
+  for (const auto &Bank : Banks) {
+    std::set<PartSizeT> PartSizeSet = BankPartSizes[&Bank];
+    if (PartSizeSet.empty())
+      continue;
+    OS << '\n';
+    for (const auto &PartSize : PartSizeSet) {
+      std::string EnumName = buildPartialMapIdxEnumName(Bank, PartSize);
+      OS << "  " << EnumName << ",\n";
+    }
+
+    OS << "  PMI_First" << Bank.getName() << " = "
+       << buildPartialMapIdxEnumName(Bank, *PartSizeSet.begin()) << ",\n";
+    OS << "  PMI_Last" << Bank.getName() << " = "
+       << buildPartialMapIdxEnumName(Bank, *PartSizeSet.rbegin()) << ",\n";
+  }
+  OS << "};\n";
+}
+
+void RegisterBankEmitter::emitRBIPartialMappings(raw_ostream &OS,
+                                                 ArrayRef<RegisterBank> Banks) {
+
+  OS << "constexpr RegisterBankInfo::PartialMapping PartMappings[] = {\n"
+        "    // StartIdx, Length, RegBank\n";
+  size_t Idx = 0;
+  for (const auto &Bank : Banks) {
+    OS << '\n';
+    std::set<PartSizeT> PartSizeSet = BankPartSizes[&Bank];
+    for (auto [Size, Offset] : PartSizeSet) {
+      OS << "    // " << Idx++ << ", PMI_" << Bank.getName();
+      if (Offset != 0)
+        OS << Offset << '_';
+      OS << Size << ":  " << Bank.getName();
+      if (Offset > 0)
+        OS << ' ' << Offset << " to " << Size + Offset - 1 << ',';
+      OS << ' ' << Size << "-bit value.\n"
+         << "    {" << Offset << ", " << Size << ", "
+         << Bank.getInstanceVarName() << "},\n";
+    }
+  }
+  OS << "};\n";
+}
+
 void RegisterBankEmitter::run(raw_ostream &OS) {
   StringRef TargetName = Target.getName();
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
@@ -422,6 +560,7 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   }
 
   Timer.startTimer("Emit output");
+  initBankPartSizes(Banks, RegisterClassHierarchy);
   emitSourceFileHeader("Register Bank Source Fragments", OS);
   emitHeader(OS, TargetName, Banks);
   emitBaseClassDefinition(OS, TargetName, Banks);

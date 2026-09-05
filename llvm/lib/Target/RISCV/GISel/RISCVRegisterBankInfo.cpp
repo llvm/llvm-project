@@ -26,32 +26,6 @@
 namespace llvm {
 namespace RISCV {
 
-const RegisterBankInfo::PartialMapping PartMappings[] = {
-    // clang-format off
-    {0, 32, GPRBRegBank},
-    {0, 64, GPRBRegBank},
-    {0, 16, FPRBRegBank},
-    {0, 32, FPRBRegBank},
-    {0, 64, FPRBRegBank},
-    {0, 64, VRBRegBank},
-    {0, 128, VRBRegBank},
-    {0, 256, VRBRegBank},
-    {0, 512, VRBRegBank},
-    // clang-format on
-};
-
-enum PartialMappingIdx {
-  PMI_GPRB32 = 0,
-  PMI_GPRB64 = 1,
-  PMI_FPRB16 = 2,
-  PMI_FPRB32 = 3,
-  PMI_FPRB64 = 4,
-  PMI_VRB64 = 5,
-  PMI_VRB128 = 6,
-  PMI_VRB256 = 7,
-  PMI_VRB512 = 8,
-};
-
 const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // Invalid value mapping.
     {nullptr, 0},

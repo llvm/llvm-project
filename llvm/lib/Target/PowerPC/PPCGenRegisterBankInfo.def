@@ -12,22 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
-const RegisterBankInfo::PartialMapping PPCGenRegisterBankInfo::PartMappings[]{
-    /* StartIdx, Length, RegBank */
-    // 0: GPR 32-bit value.
-    {0, 32, PPC::GPRRegBank},
-    // 1: GPR 64-bit value.
-    {0, 64, PPC::GPRRegBank},
-    // 2: FPR 32-bit value
-    {0, 32, PPC::FPRRegBank},
-    // 3: FPR 64-bit value
-    {0, 64, PPC::FPRRegBank},
-    // 4: 128-bit vector (VSX, Altivec)
-    {0, 128, PPC::VECRegBank},
-    // 5: CR 4-bit value
-    {0, 4, PPC::CRRegBank},
-};
-
 // ValueMappings.
 // Pointers to the entries in this array are returned by getValueMapping() and
 // getCopyMapping().
@@ -44,45 +28,45 @@ const RegisterBankInfo::ValueMapping PPCGenRegisterBankInfo::ValMappings[]{
     // 0: invalid
     {nullptr, 0},
     // 1: GPR 32-bit value.
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&PPC::PartMappings[PPC::PMI_GPR32], 1},
+    {&PPC::PartMappings[PPC::PMI_GPR32], 1},
+    {&PPC::PartMappings[PPC::PMI_GPR32], 1},
     // 4: GPR 64-bit value.
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&PPC::PartMappings[PPC::PMI_GPR64], 1},
+    {&PPC::PartMappings[PPC::PMI_GPR64], 1},
+    {&PPC::PartMappings[PPC::PMI_GPR64], 1},
     // 7: FPR 32-bit value.
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
+    {&PPC::PartMappings[PPC::PMI_FPR32], 1},
+    {&PPC::PartMappings[PPC::PMI_FPR32], 1},
+    {&PPC::PartMappings[PPC::PMI_FPR32], 1},
     // 10: FPR 64-bit value.
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    {&PPC::PartMappings[PPC::PMI_FPR64], 1},
+    {&PPC::PartMappings[PPC::PMI_FPR64], 1},
+    {&PPC::PartMappings[PPC::PMI_FPR64], 1},
     // 13: 128-bit vector.
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_VEC128 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_VEC128 - PMI_Min], 1},
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_VEC128 - PMI_Min], 1},
+    {&PPC::PartMappings[PPC::PMI_VEC128], 1},
+    {&PPC::PartMappings[PPC::PMI_VEC128], 1},
+    {&PPC::PartMappings[PPC::PMI_VEC128], 1},
     // 16: CR 4-bit value.
-    {&PPCGenRegisterBankInfo::PartMappings[PMI_CR - PMI_Min], 1},
+    {&PPC::PartMappings[PPC::PMI_CR4], 1},
 };
 
 // TODO Too simple!
 const RegisterBankInfo::ValueMapping *
-PPCGenRegisterBankInfo::getValueMapping(PartialMappingIdx RBIdx) {
-  assert(RBIdx != PartialMappingIdx::PMI_None && "No mapping needed for that");
+PPCGenRegisterBankInfo::getValueMapping(PPC::PartialMappingIdx RBIdx) {
+  assert(RBIdx != PPC::PartialMappingIdx::PMI_None &&
+         "No mapping needed for that");
 
-  unsigned ValMappingIdx = RBIdx - PMI_Min;
+  unsigned ValMappingIdx = RBIdx;
 
   return &ValMappings[1 + 3 * ValMappingIdx];
 }
 
-const PPCGenRegisterBankInfo::PartialMappingIdx
-  PPCGenRegisterBankInfo::BankIDToCopyMapIdx[]{
-    PMI_None,
-    PMI_FPR64,  // FPR
-    PMI_GPR64,  // GPR
-    PMI_VEC128, // VEC
+const PPC::PartialMappingIdx PPCGenRegisterBankInfo::BankIDToCopyMapIdx[]{
+    PPC::PMI_None,
+    PPC::PMI_FPR64,  // FPR
+    PPC::PMI_GPR64,  // GPR
+    PPC::PMI_VEC128, // VEC
 };
 
 // TODO Too simple!
@@ -91,10 +75,10 @@ PPCGenRegisterBankInfo::getCopyMapping(unsigned DstBankID, unsigned SrcBankID,
                                        unsigned Size) {
   assert(DstBankID < PPC::NumRegisterBanks && "Invalid bank ID");
   assert(SrcBankID < PPC::NumRegisterBanks && "Invalid bank ID");
-  PartialMappingIdx DstRBIdx = BankIDToCopyMapIdx[DstBankID];
-  PartialMappingIdx SrcRBIdx = BankIDToCopyMapIdx[SrcBankID];
-  assert(DstRBIdx != PMI_None && "No such mapping");
-  assert(SrcRBIdx != PMI_None && "No such mapping");
+  PPC::PartialMappingIdx DstRBIdx = BankIDToCopyMapIdx[DstBankID];
+  PPC::PartialMappingIdx SrcRBIdx = BankIDToCopyMapIdx[SrcBankID];
+  assert(DstRBIdx != PPC::PMI_None && "No such mapping");
+  assert(SrcRBIdx != PPC::PMI_None && "No such mapping");
 
   if (DstRBIdx == SrcRBIdx)
     return getValueMapping(DstRBIdx);
@@ -104,7 +88,7 @@ PPCGenRegisterBankInfo::getCopyMapping(unsigned DstBankID, unsigned SrcBankID,
   //       GPRs, FPRs and vectors. It currently only handles bitcasting to
   //       the same type and has only mainly been tested for bitcasting
   //       between different vector types.
-  unsigned ValMappingIdx = DstRBIdx - PMI_Min;
+  unsigned ValMappingIdx = DstRBIdx;
 
   return &ValMappings[1 + 3 * ValMappingIdx];
 }

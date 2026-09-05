@@ -21,25 +21,6 @@
 
 #include "WebAssemblyGenRegisterBank.inc"
 
-namespace llvm {
-namespace WebAssembly {
-enum PartialMappingIdx {
-  PMI_None = -1,
-  PMI_I32 = 1,
-  PMI_I64,
-  PMI_F32,
-  PMI_F64,
-  PMI_Min = PMI_I32,
-};
-
-const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, I32RegBank},
-                                                      {0, 64, I64RegBank},
-                                                      {0, 32, F32RegBank},
-                                                      {0, 64, F64RegBank}};
-
-} // namespace WebAssembly
-} // namespace llvm
-
 using namespace llvm;
 
 WebAssemblyRegisterBankInfo::WebAssemblyRegisterBankInfo(
@@ -78,15 +59,15 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     if (Ty.isInteger() || (Ty.isPointer() && Ty.getAddressSpace() == 0)) {
       if (OpSize[Idx] == 32) {
-        OpRegBankIdx[Idx] = WebAssembly::PMI_I32;
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I32RegBank32;
       } else if (OpSize[Idx] == 64) {
-        OpRegBankIdx[Idx] = WebAssembly::PMI_I64;
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I64RegBank64;
       }
     } else if (Ty.isFloatIEEE()) {
       if (OpSize[Idx] == 32) {
-        OpRegBankIdx[Idx] = WebAssembly::PMI_F32;
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F32RegBank32;
       } else if (OpSize[Idx] == 64) {
-        OpRegBankIdx[Idx] = WebAssembly::PMI_F64;
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F64RegBank64;
       }
     }
   }
@@ -102,9 +83,8 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         return getInvalidInstructionMapping();
       }
 
-      const auto &Mapping = getValueMapping(
-          &WebAssembly::PartMappings[OpRegBankIdx[Idx] - WebAssembly::PMI_Min],
-          1);
+      const auto &Mapping =
+          getValueMapping(&WebAssembly::PartMappings[OpRegBankIdx[Idx]], 1);
 
       if (!Mapping.isValid())
         return getInvalidInstructionMapping();

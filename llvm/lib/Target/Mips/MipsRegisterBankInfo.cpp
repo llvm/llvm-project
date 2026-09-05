@@ -24,21 +24,6 @@
 
 namespace llvm {
 namespace Mips {
-enum PartialMappingIdx {
-  PMI_GPR32,
-  PMI_GPR64,
-  PMI_SPR,
-  PMI_DPR,
-  PMI_MSA,
-  PMI_Min = PMI_GPR32,
-};
-
-const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, GPRBRegBank},
-                                                      {0, 64, GPRBRegBank},
-                                                      {0, 32, FPRBRegBank},
-                                                      {0, 64, FPRBRegBank},
-                                                      {0, 128, FPRBRegBank}};
-
 enum ValueMappingIdx {
   InvalidIdx = 0,
   GPR32Idx = 1,
@@ -52,25 +37,25 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // invalid
     {nullptr, 0},
     // up to 3 operands in GPRs; 32 bit.
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
+    {&PartMappings[PMI_GPRB32], 1},
     // up to 3 operands in GPRs; 64 bit.
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1},
-    {&PartMappings[PMI_GPR64 - PMI_Min], 1},
+    {&PartMappings[PMI_GPRB64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
+    {&PartMappings[PMI_GPRB64], 1},
     // up to 3 operands in FPRs - single precission
-    {&PartMappings[PMI_SPR - PMI_Min], 1},
-    {&PartMappings[PMI_SPR - PMI_Min], 1},
-    {&PartMappings[PMI_SPR - PMI_Min], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
+    {&PartMappings[PMI_FPRB32], 1},
     // up to 3 operands in FPRs - double precission
-    {&PartMappings[PMI_DPR - PMI_Min], 1},
-    {&PartMappings[PMI_DPR - PMI_Min], 1},
-    {&PartMappings[PMI_DPR - PMI_Min], 1},
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
+    {&PartMappings[PMI_FPRB64], 1},
     // up to 3 operands in FPRs - MSA
-    {&PartMappings[PMI_MSA - PMI_Min], 1},
-    {&PartMappings[PMI_MSA - PMI_Min], 1},
-    {&PartMappings[PMI_MSA - PMI_Min], 1}};
+    {&PartMappings[PMI_FPRB128], 1},
+    {&PartMappings[PMI_FPRB128], 1},
+    {&PartMappings[PMI_FPRB128], 1}};
 
 } // end namespace Mips
 } // end namespace llvm
