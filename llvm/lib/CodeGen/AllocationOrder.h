@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 namespace llvm {
 
@@ -28,7 +29,11 @@ class VirtRegMap;
 class LiveRegMatrix;
 
 class LLVM_LIBRARY_VISIBILITY AllocationOrder {
-  const SmallVector<MCPhysReg, 16> Hints;
+  // Used as storage for both Hints and CustomOrder if the Order received in the
+  // constructor needs to be altered. [0, NumHints) contains regular hints. If a
+  // custom order is present, [NumHints, end) contains the custom order.
+  const SmallVector<MCPhysReg, 16> HintsAndCustomOrder;
+  const int NumHints;
   ArrayRef<MCPhysReg> Order;
   // How far into the Order we can iterate. This is 0 if the AllocationOrder is
   // constructed with HardHints = true, Order.size() otherwise. While
@@ -38,6 +43,10 @@ class LLVM_LIBRARY_VISIBILITY AllocationOrder {
   // relatively small.
   // IterationLimit defines an invalid iterator position.
   const int IterationLimit;
+
+  ArrayRef<MCPhysReg> hints() const {
+    return ArrayRef<MCPhysReg>(HintsAndCustomOrder).take_front(NumHints);
+  }
 
 public:
   /// Forward iterator for an AllocationOrder.
@@ -54,7 +63,7 @@ public:
     /// Return the next physical register in the allocation order.
     MCRegister operator*() const {
       if (Pos < 0)
-        return AO.Hints.end()[Pos];
+        return AO.HintsAndCustomOrder[AO.NumHints + Pos];
       assert(Pos < AO.IterationLimit);
       return AO.Order[Pos];
     }
@@ -85,16 +94,26 @@ public:
                                 const RegisterClassInfo &RegClassInfo,
                                 const LiveRegMatrix *Matrix);
 
+  /// Create an AllocationOrder from HintsAndCustomOrder that contains NumHints
+  /// Hints optionally followed by a custom order. When that custom order is
+  /// present it becomes the allocation order otherwise Order is used as-is.
+  AllocationOrder(SmallVector<MCPhysReg, 16> &&HintsAndCustomOrder,
+                  int NumHints, ArrayRef<MCPhysReg> Order, bool HardHints)
+      : HintsAndCustomOrder(std::move(HintsAndCustomOrder)), NumHints(NumHints),
+        Order(static_cast<int>(this->HintsAndCustomOrder.size()) > NumHints
+                  ? ArrayRef<MCPhysReg>(this->HintsAndCustomOrder)
+                        .drop_front(NumHints)
+                  : Order),
+        IterationLimit(HardHints ? 0 : static_cast<int>(this->Order.size())) {}
+
   /// Create an AllocationOrder given the Hints, Order, and HardHints values.
   /// Use the create method above - the ctor is for unittests.
   AllocationOrder(SmallVector<MCPhysReg, 16> &&Hints, ArrayRef<MCPhysReg> Order,
                   bool HardHints)
-      : Hints(std::move(Hints)), Order(Order),
-        IterationLimit(HardHints ? 0 : static_cast<int>(Order.size())) {}
+      : AllocationOrder(std::move(Hints), static_cast<int>(Hints.size()), Order,
+                        HardHints) {}
 
-  Iterator begin() const {
-    return Iterator(*this, -(static_cast<int>(Hints.size())));
-  }
+  Iterator begin() const { return Iterator(*this, -NumHints); }
 
   Iterator end() const { return Iterator(*this, IterationLimit); }
 
@@ -115,7 +134,7 @@ public:
     assert(!Reg.isPhysical() ||
            Reg.id() <
                static_cast<uint32_t>(std::numeric_limits<MCPhysReg>::max()));
-    return Reg.isPhysical() && is_contained(Hints, Reg.id());
+    return Reg.isPhysical() && is_contained(hints(), Reg.id());
   }
 };
 
