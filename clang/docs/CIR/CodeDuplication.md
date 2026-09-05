@@ -58,8 +58,8 @@ implementing refactorings that make sense independent of the code sharing
 problem.
 
 We have discussed various ways that major classes such as CGCXXABI/CIRGenCXXABI
-could be refactored to allow parts of there implementation to be shared today
-through inheritence and templated base classes. However, this may prove to be
+could be refactored to allow parts of their implementation to be shared today
+through inheritance and templated base classes. However, this may prove to be
 wasted effort when the permanent solution is developed. Also, deferring this
 kind of intertwined implementation prevents introducing cross-dependencies that
 would make it more difficult to remove one IR code generation implementation
