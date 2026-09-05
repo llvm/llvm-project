@@ -1,0 +1,4 @@
+# Extended FROSTT tensor with a coordinate that does not fit in uint8_t.
+2 1
+300 1
+300 1 1.0
