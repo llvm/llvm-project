@@ -153,32 +153,14 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 /// the 'A' arm was selected.
 static Value *foldSelectAndOrSubset(SelectInst &SI,
                                     InstCombiner::BuilderTy &Builder) {
-  auto *Cmp = dyn_cast<ICmpInst>(SI.getCondition());
-  if (!Cmp)
-    return nullptr;
-  ICmpInst::Predicate Pred = Cmp->getPredicate();
-  if (!ICmpInst::isEquality(Pred))
-    return nullptr;
-
-  // Match '(and A, B)' compared against 'B' (a test that B's bits are a subset
-  // of A's). The 'and' may be on either side of the compare, and its operands
-  // may be commuted.
-  Value *A = nullptr, *B = nullptr;
-  auto MatchSubsetTest = [&](Value *MaybeAnd, Value *Other) {
-    Value *X, *Y;
-    if (!match(MaybeAnd, m_And(m_Value(X), m_Value(Y))))
-      return false;
-    if (X == Other)
-      A = Y;
-    else if (Y == Other)
-      A = X;
-    else
-      return false;
-    B = Other;
-    return true;
-  };
-  if (!MatchSubsetTest(Cmp->getOperand(0), Cmp->getOperand(1)) &&
-      !MatchSubsetTest(Cmp->getOperand(1), Cmp->getOperand(0)))
+  // Match '(and A, B)' compared for equality against 'B' (a test that B's bits
+  // are a subset of A's). B is bound from the non-'and' side first so that the
+  // commutative 'and' matcher can find it in either operand position.
+  CmpPredicate Pred;
+  Value *A, *B;
+  if (!match(SI.getCondition(),
+             m_c_ICmp(Pred, m_Value(B), m_c_And(m_Value(A), m_Deferred(B)))) ||
+      !ICmpInst::isEquality(Pred))
     return nullptr;
 
   // The arm selected when (A & B) == B must be 'A' (which equals 'A | B' under
