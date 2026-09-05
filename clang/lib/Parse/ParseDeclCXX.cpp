@@ -877,8 +877,9 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   Decl *DeclFromDeclSpec = nullptr;
   TypeResult TypeAlias =
       ParseTypeName(nullptr,
-                    TemplateInfo.Kind != ParsedTemplateKind::NonTemplate ? DeclaratorContext::AliasTemplate
-                                      : DeclaratorContext::AliasDecl,
+                    TemplateInfo.Kind != ParsedTemplateKind::NonTemplate
+                        ? DeclaratorContext::AliasTemplate
+                        : DeclaratorContext::AliasDecl,
                     AS, &DeclFromDeclSpec, &Attrs);
   if (OwnedType)
     *OwnedType = DeclFromDeclSpec;
@@ -1661,63 +1662,31 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       Tok.isOneOf(
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
 #include "clang/Basic/BuiltinTraits.inc"
-          tok::kw___is_abstract,
-          tok::kw___is_aggregate,
-          tok::kw___is_arithmetic,
-          tok::kw___is_array,
-          tok::kw___is_assignable,
-          tok::kw___is_base_of,
-          tok::kw___is_bounded_array,
-          tok::kw___is_class,
-          tok::kw___is_complete_type,
-          tok::kw___is_compound,
-          tok::kw___is_const,
-          tok::kw___is_constructible,
-          tok::kw___is_convertible,
-          tok::kw___is_convertible_to,
-          tok::kw___is_destructible,
-          tok::kw___is_empty,
-          tok::kw___is_enum,
-          tok::kw___is_floating_point,
-          tok::kw___is_final,
-          tok::kw___is_function,
-          tok::kw___is_fundamental,
-          tok::kw___is_integral,
-          tok::kw___is_interface_class,
-          tok::kw___is_literal,
-          tok::kw___is_lvalue_expr,
-          tok::kw___is_lvalue_reference,
-          tok::kw___is_member_function_pointer,
-          tok::kw___is_member_object_pointer,
-          tok::kw___is_member_pointer,
-          tok::kw___is_nothrow_assignable,
-          tok::kw___is_nothrow_constructible,
-          tok::kw___is_nothrow_convertible,
-          tok::kw___is_nothrow_destructible,
-          tok::kw___is_object,
-          tok::kw___is_pod,
-          tok::kw___is_pointer,
-          tok::kw___is_polymorphic,
-          tok::kw___is_reference,
-          tok::kw___is_rvalue_expr,
-          tok::kw___is_rvalue_reference,
-          tok::kw___is_same,
-          tok::kw___is_scalar,
-          tok::kw___is_scoped_enum,
-          tok::kw___is_sealed,
-          tok::kw___is_signed,
-          tok::kw___is_standard_layout,
-          tok::kw___is_trivial,
+          tok::kw___is_abstract, tok::kw___is_aggregate,
+          tok::kw___is_arithmetic, tok::kw___is_array, tok::kw___is_assignable,
+          tok::kw___is_base_of, tok::kw___is_bounded_array, tok::kw___is_class,
+          tok::kw___is_complete_type, tok::kw___is_compound, tok::kw___is_const,
+          tok::kw___is_constructible, tok::kw___is_convertible,
+          tok::kw___is_convertible_to, tok::kw___is_destructible,
+          tok::kw___is_empty, tok::kw___is_enum, tok::kw___is_floating_point,
+          tok::kw___is_final, tok::kw___is_function, tok::kw___is_fundamental,
+          tok::kw___is_integral, tok::kw___is_interface_class,
+          tok::kw___is_literal, tok::kw___is_lvalue_expr,
+          tok::kw___is_lvalue_reference, tok::kw___is_member_function_pointer,
+          tok::kw___is_member_object_pointer, tok::kw___is_member_pointer,
+          tok::kw___is_nothrow_assignable, tok::kw___is_nothrow_constructible,
+          tok::kw___is_nothrow_convertible, tok::kw___is_nothrow_destructible,
+          tok::kw___is_object, tok::kw___is_pod, tok::kw___is_pointer,
+          tok::kw___is_polymorphic, tok::kw___is_reference,
+          tok::kw___is_rvalue_expr, tok::kw___is_rvalue_reference,
+          tok::kw___is_same, tok::kw___is_scalar, tok::kw___is_scoped_enum,
+          tok::kw___is_sealed, tok::kw___is_signed,
+          tok::kw___is_standard_layout, tok::kw___is_trivial,
           tok::kw___is_trivially_equality_comparable,
           tok::kw___is_trivially_assignable,
-          tok::kw___is_trivially_constructible,
-          tok::kw___is_trivially_copyable,
-          tok::kw___is_unbounded_array,
-          tok::kw___is_union,
-          tok::kw___is_unsigned,
-          tok::kw___is_void,
-          tok::kw___is_volatile
-      ))
+          tok::kw___is_trivially_constructible, tok::kw___is_trivially_copyable,
+          tok::kw___is_unbounded_array, tok::kw___is_union,
+          tok::kw___is_unsigned, tok::kw___is_void, tok::kw___is_volatile))
     // GNU libstdc++ 4.2 and libc++ use certain intrinsic names as the
     // name of struct templates, but some are keywords in GCC >= 4.3
     // and Clang. Therefore, when we see the token sequence "struct
@@ -2290,7 +2259,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // C, since definitions are not permitted in this context in C++.
   if (TUK == TagUseKind::Definition &&
       (getLangOpts().CPlusPlus || !isTypeSpecifier(DSC)) &&
-      (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate || !isValidAfterTypeSpecifier(false))) {
+      (TemplateInfo.Kind != ParsedTemplateKind::NonTemplate ||
+       !isValidAfterTypeSpecifier(false))) {
     if (Tok.isNot(tok::semi)) {
       const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
       ExpectAndConsume(tok::semi, diag::err_expected_after,
@@ -4543,7 +4513,10 @@ bool Parser::ParseCXX11AttributeArgs(
                     ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
     // Eat the left paren, then skip to the ending right paren.
     ConsumeParen();
-    SkipUntil(tok::r_paren);
+    if (!SkipUntil(tok::r_paren, StopAtUnbalanced)) {
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+      SkipUntil(tok::r_paren, StopAtSemi);
+    }
     return false;
   }
 

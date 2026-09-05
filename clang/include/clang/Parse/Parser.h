@@ -316,7 +316,8 @@ public:
   /// [C]     translation-unit external-declaration
   /// [C++]   top-level-declaration-seq[opt]
   /// [C++20] global-module-fragment[opt] module-declaration
-  ///                 top-level-declaration-seq[opt] private-module-fragment[opt]
+  ///                 top-level-declaration-seq[opt]
+  ///                 private-module-fragment[opt]
   /// \endverbatim
   ///
   /// Note that in C, it is an error if there is no first declaration.
@@ -570,7 +571,9 @@ public:
     StopAtSemi = 1 << 0, ///< Stop skipping at semicolon
     /// Stop skipping at specified token, but don't skip the token itself
     StopBeforeMatch = 1 << 1,
-    StopAtCodeCompletion = 1 << 2 ///< Stop at code completion
+    StopAtCodeCompletion = 1 << 2, ///< Stop at code completion
+    /// Do not swallow an unmatched ')', ']', or '}'.
+    StopAtUnbalanced = 1 << 3
   };
 
   friend constexpr SkipUntilFlags operator|(SkipUntilFlags L,
@@ -1020,15 +1023,16 @@ private:
   ///
   /// \verbatim
   ///       function-definition: [C99 6.9.1]
-  ///         decl-specs      declarator declaration-list[opt] compound-statement
+  ///         decl-specs      declarator declaration-list[opt]
+  ///         compound-statement
   /// [C90] function-definition: [C99 6.7.1] - implicit int result
-  /// [C90]   decl-specs[opt] declarator declaration-list[opt] compound-statement
+  /// [C90]   decl-specs[opt] declarator declaration-list[opt]
+  /// compound-statement
   ///
   ///       declaration: [C99 6.7]
   ///         declaration-specifiers init-declarator-list[opt] ';'
-  /// [!C99]  init-declarator-list ';'                   [TODO: warn in c99 mode]
-  /// [OMP]   threadprivate-directive
-  /// [OMP]   allocate-directive                         [TODO]
+  /// [!C99]  init-declarator-list ';'                   [TODO: warn in c99
+  /// mode] [OMP]   threadprivate-directive [OMP]   allocate-directive [TODO]
   /// \endverbatim
   ///
   DeclGroupPtrTy ParseDeclOrFunctionDefInternal(ParsedAttributes &Attrs,
@@ -1046,10 +1050,11 @@ private:
   ///
   /// \verbatim
   ///       function-definition: [C99 6.9.1]
-  ///         decl-specs      declarator declaration-list[opt] compound-statement
+  ///         decl-specs      declarator declaration-list[opt]
+  ///         compound-statement
   /// [C90] function-definition: [C99 6.7.1] - implicit int result
-  /// [C90]   decl-specs[opt] declarator declaration-list[opt] compound-statement
-  /// [C++] function-definition: [C++ 8.4]
+  /// [C90]   decl-specs[opt] declarator declaration-list[opt]
+  /// compound-statement [C++] function-definition: [C++ 8.4]
   ///         decl-specifier-seq[opt] declarator ctor-initializer[opt]
   ///         function-body
   /// [C++] function-definition: [C++ 8.4]
@@ -1842,9 +1847,7 @@ private:
   /// [C++] initializer:
   /// [C++]   '=' initializer-clause
   /// [C++]   '(' expression-list ')'
-  /// [C++0x] '=' 'default'                                                [TODO]
-  /// [C++0x] '=' 'delete'
-  /// [C++0x] braced-init-list
+  /// [C++0x] '=' 'default' [TODO] [C++0x] '=' 'delete' [C++0x] braced-init-list
   /// \endverbatim
   ///
   /// According to the standard grammar, =default and =delete are function
@@ -1961,9 +1964,11 @@ private:
   ///       enum-specifier: [C99 6.7.2.2]
   ///         'enum' identifier[opt] '{' enumerator-list '}'
   ///[C99/C++]'enum' identifier[opt] '{' enumerator-list ',' '}'
-  /// [GNU]   'enum' attributes[opt] identifier[opt] '{' enumerator-list ',' [opt]
+  /// [GNU]   'enum' attributes[opt] identifier[opt] '{' enumerator-list ','
+  /// [opt]
   ///                                                 '}' attributes[opt]
-  /// [MS]    'enum' __declspec[opt] identifier[opt] '{' enumerator-list ',' [opt]
+  /// [MS]    'enum' __declspec[opt] identifier[opt] '{' enumerator-list ','
+  /// [opt]
   ///                                                 '}'
   ///         'enum' identifier
   /// [GNU]   'enum' attributes[opt] identifier
@@ -1972,8 +1977,9 @@ private:
   /// [C++11] enum-head '{' enumerator-list ','  '}'
   ///
   ///       enum-head: [C++11]
-  ///         enum-key attribute-specifier-seq[opt] identifier[opt] enum-base[opt]
-  ///         enum-key attribute-specifier-seq[opt] nested-name-specifier
+  ///         enum-key attribute-specifier-seq[opt] identifier[opt]
+  ///         enum-base[opt] enum-key attribute-specifier-seq[opt]
+  ///         nested-name-specifier
   ///             identifier enum-base[opt]
   ///
   ///       enum-key: [C++11]
@@ -2454,8 +2460,8 @@ private:
 
   /// Parse the contents of the "objc_bridge_related" attribute.
   /// \verbatim
-  /// objc_bridge_related '(' related_class ',' opt-class_method ',' opt-instance_method ')'
-  /// related_class:
+  /// objc_bridge_related '(' related_class ',' opt-class_method ','
+  /// opt-instance_method ')' related_class:
   ///     Identifier
   ///
   /// opt-class_method:
@@ -2640,9 +2646,9 @@ private:
     AR_CXX11AttributesParsed = 1 << 2,
     AR_DeclspecAttributesParsed = 1 << 3,
     AR_AllAttributesParsed = AR_GNUAttributesParsed | AR_CXX11AttributesParsed |
-                             AR_DeclspecAttributesParsed,
-    AR_VendorAttributesParsed =
-        AR_GNUAttributesParsed | AR_DeclspecAttributesParsed
+        AR_DeclspecAttributesParsed,
+    AR_VendorAttributesParsed = AR_GNUAttributesParsed |
+        AR_DeclspecAttributesParsed
   };
 
   /// ParseTypeQualifierListOpt
@@ -3416,8 +3422,10 @@ private:
   ///       struct-or-union-specifier: [C99 6.7.2.1]
   ///         struct-or-union identifier[opt] '{' struct-contents '}'
   ///         struct-or-union identifier
-  /// [GNU]   struct-or-union attributes[opt] identifier[opt] '{' struct-contents
-  ///                                                         '}' attributes[opt]
+  /// [GNU]   struct-or-union attributes[opt] identifier[opt] '{'
+  /// struct-contents
+  ///                                                         '}'
+  ///                                                         attributes[opt]
   /// [GNU]   struct-or-union attributes[opt] identifier
   ///       struct-or-union:
   ///         'struct'
@@ -3489,8 +3497,8 @@ private:
   ///         decl-specifier-seq[opt] member-declarator-list[opt] ';'
   ///         function-definition ';'[opt]
   /// [C++26] friend-type-declaration
-  ///         ::[opt] nested-name-specifier template[opt] unqualified-id ';'[TODO]
-  ///         using-declaration                                            [TODO]
+  ///         ::[opt] nested-name-specifier template[opt] unqualified-id
+  ///         ';'[TODO] using-declaration [TODO]
   /// [C++0x] static_assert-declaration
   ///         template-declaration
   /// [GNU]   '__extension__' member-declaration
@@ -3956,8 +3964,9 @@ private:
   /// [GNU]   '__PRETTY_FUNCTION__'
   /// [GNU]   '(' compound-statement ')'
   /// [GNU]   '__builtin_va_arg' '(' assignment-expression ',' type-name ')'
-  /// [GNU]   '__builtin_offsetof' '(' type-name ',' offsetof-member-designator')'
-  /// [GNU]   '__builtin_choose_expr' '(' assign-expr ',' assign-expr ','
+  /// [GNU]   '__builtin_offsetof' '(' type-name ','
+  /// offsetof-member-designator')' [GNU]   '__builtin_choose_expr' '('
+  /// assign-expr ',' assign-expr ','
   ///                                     assign-expr ')'
   /// [GNU]   '__builtin_FILE' '(' ')'
   /// [CLANG] '__builtin_FILE_NAME' '(' ')'
@@ -3973,21 +3982,19 @@ private:
   /// [OBJC]  '\@protocol' '(' identifier ')'
   /// [OBJC]  '\@encode' '(' type-name ')'
   /// [OBJC]  objc-string-literal
-  /// [C++]   simple-type-specifier '(' expression-list[opt] ')'      [C++ 5.2.3]
-  /// [C++11] simple-type-specifier braced-init-list                  [C++11 5.2.3]
-  /// [C++]   typename-specifier '(' expression-list[opt] ')'         [C++ 5.2.3]
-  /// [C++11] typename-specifier braced-init-list                     [C++11 5.2.3]
-  /// [C++]   'const_cast' '<' type-name '>' '(' expression ')'       [C++ 5.2p1]
-  /// [C++]   'dynamic_cast' '<' type-name '>' '(' expression ')'     [C++ 5.2p1]
-  /// [C++]   'reinterpret_cast' '<' type-name '>' '(' expression ')' [C++ 5.2p1]
-  /// [C++]   'static_cast' '<' type-name '>' '(' expression ')'      [C++ 5.2p1]
-  /// [C++]   'typeid' '(' expression ')'                             [C++ 5.2p1]
-  /// [C++]   'typeid' '(' type-id ')'                                [C++ 5.2p1]
-  /// [C++]   'this'          [C++ 9.3.2]
-  /// [G++]   unary-type-trait '(' type-id ')'
-  /// [G++]   binary-type-trait '(' type-id ',' type-id ')'           [TODO]
-  /// [EMBT]  array-type-trait '(' type-id ',' integer ')'
-  /// [clang] '^' block-literal
+  /// [C++]   simple-type-specifier '(' expression-list[opt] ')' [C++ 5.2.3]
+  /// [C++11] simple-type-specifier braced-init-list [C++11 5.2.3] [C++]
+  /// typename-specifier '(' expression-list[opt] ')'         [C++ 5.2.3]
+  /// [C++11] typename-specifier braced-init-list [C++11 5.2.3] [C++]
+  /// 'const_cast' '<' type-name '>' '(' expression ')'       [C++ 5.2p1] [C++]
+  /// 'dynamic_cast' '<' type-name '>' '(' expression ')'     [C++ 5.2p1] [C++]
+  /// 'reinterpret_cast' '<' type-name '>' '(' expression ')' [C++ 5.2p1] [C++]
+  /// 'static_cast' '<' type-name '>' '(' expression ')'      [C++ 5.2p1] [C++]
+  /// 'typeid' '(' expression ')'                             [C++ 5.2p1] [C++]
+  /// 'typeid' '(' type-id ')'                                [C++ 5.2p1] [C++]
+  /// 'this'          [C++ 9.3.2] [G++]   unary-type-trait '(' type-id ')' [G++]
+  /// binary-type-trait '(' type-id ',' type-id ')'           [TODO] [EMBT]
+  /// array-type-trait '(' type-id ',' integer ')' [clang] '^' block-literal
   ///
   ///       constant: [C99 6.4.4]
   ///         integer-constant
@@ -4153,8 +4160,9 @@ private:
   /// \verbatim
   ///       primary-expression: [C99 6.5.1]
   /// [GNU]   '__builtin_va_arg' '(' assignment-expression ',' type-name ')'
-  /// [GNU]   '__builtin_offsetof' '(' type-name ',' offsetof-member-designator')'
-  /// [GNU]   '__builtin_choose_expr' '(' assign-expr ',' assign-expr ','
+  /// [GNU]   '__builtin_offsetof' '(' type-name ','
+  /// offsetof-member-designator')' [GNU]   '__builtin_choose_expr' '('
+  /// assign-expr ',' assign-expr ','
   ///                                     assign-expr ')'
   /// [GNU]   '__builtin_types_compatible_p' '(' type-name ',' type-name ')'
   /// [GNU]   '__builtin_FILE' '(' ')'
@@ -4886,16 +4894,8 @@ private:
   /// \verbatim
   ///       simple-type-specifier:
   ///         '::'[opt] nested-name-specifier[opt] type-name
-  ///         '::'[opt] nested-name-specifier 'template' simple-template-id [TODO]
-  ///         char
-  ///         wchar_t
-  ///         bool
-  ///         short
-  ///         int
-  ///         long
-  ///         signed
-  ///         unsigned
-  ///         float
+  ///         '::'[opt] nested-name-specifier 'template' simple-template-id
+  ///         [TODO] char wchar_t bool short int long signed unsigned float
   ///         double
   ///         void
   /// [GNU]   typeof-specifier
@@ -5563,7 +5563,8 @@ private:
   ///     '<' objc-type-parameter (',' objc-type-parameter)* '>'
   ///
   ///   objc-type-parameter:
-  ///     objc-type-parameter-variance? identifier objc-type-parameter-bound[opt]
+  ///     objc-type-parameter-variance? identifier
+  ///     objc-type-parameter-bound[opt]
   ///
   ///   objc-type-parameter-bound:
   ///     ':' type-name
@@ -5834,8 +5835,8 @@ private:
   ///     objc-keyword-selector objc-keyword-decl
   ///
   ///   objc-keyword-decl:
-  ///     objc-selector ':' objc-type-name objc-keyword-attributes[opt] identifier
-  ///     objc-selector ':' objc-keyword-attributes[opt] identifier
+  ///     objc-selector ':' objc-type-name objc-keyword-attributes[opt]
+  ///     identifier objc-selector ':' objc-keyword-attributes[opt] identifier
   ///     ':' objc-type-name objc-keyword-attributes[opt] identifier
   ///     ':' objc-keyword-attributes[opt] identifier
   ///
@@ -5909,7 +5910,8 @@ private:
   /// \verbatim
   /// objc-scalar-literal : '@' scalar-literal
   ///                        ;
-  /// scalar-literal : | numeric-constant			/* any numeric constant. */
+  /// scalar-literal : | numeric-constant			/* any numeric
+  /// constant. */
   ///                    ;
   /// \endverbatim
   ExprResult ParseObjCNumericLiteral(SourceLocation AtLoc);
@@ -6053,11 +6055,13 @@ private:
   /// \verbatim
   ///  objc-try-catch-statement:
   ///    @try compound-statement objc-catch-list[opt]
-  ///    @try compound-statement objc-catch-list[opt] @finally compound-statement
+  ///    @try compound-statement objc-catch-list[opt] @finally
+  ///    compound-statement
   ///
   ///  objc-catch-list:
   ///    @catch ( parameter-declaration ) compound-statement
-  ///    objc-catch-list @catch ( catch-parameter-declaration ) compound-statement
+  ///    objc-catch-list @catch ( catch-parameter-declaration )
+  ///    compound-statement
   ///  catch-parameter-declaration:
   ///     parameter-declaration
   ///     '...' [OBJC2]
@@ -6454,7 +6458,8 @@ private:
   /// Parses an OpenMP context selector set.
   ///
   /// \verbatim
-  /// <trait-set-selector-name> '=' '{' <trait-selector> [, <trait-selector>]* '}'
+  /// <trait-set-selector-name> '=' '{' <trait-selector> [, <trait-selector>]*
+  /// '}'
   /// \endverbatim
   void parseOMPContextSelectorSet(OMPTraitSet &TISet,
                                   llvm::StringMap<SourceLocation> &SeenSets);
@@ -6559,8 +6564,8 @@ private:
   ///        annot_pragma_openmp_end
   ///
   ///       declare-mapper-directive:
-  ///         annot_pragma_openmp 'declare' 'mapper' '(' [<mapper-identifer> ':']
-  ///         <type> <var> ')' [<clause>[[,] <clause>] ... ]
+  ///         annot_pragma_openmp 'declare' 'mapper' '(' [<mapper-identifer>
+  ///         ':'] <type> <var> ')' [<clause>[[,] <clause>] ... ]
   ///         annot_pragma_openmp_end
   ///
   ///       declare-simd-directive:
@@ -6592,8 +6597,8 @@ private:
   ///       declare-reduction-directive:
   ///        annot_pragma_openmp 'declare' 'reduction'
   ///        '(' <reduction_id> ':' <type> {',' <type>} ':' <expression> ')'
-  ///        ['initializer' '(' ('omp_priv' '=' <expression>)|<function_call> ')']
-  ///        annot_pragma_openmp_end
+  ///        ['initializer' '(' ('omp_priv' '=' <expression>)|<function_call>
+  ///        ')'] annot_pragma_openmp_end
   /// \endverbatim
   /// <reduction_id> is either a base language identifier or one of the
   /// following operators: '+', '-', '*', '&', '|', '^', '&&' and '||'.
@@ -6608,8 +6613,8 @@ private:
   ///
   /// \verbatim
   ///       declare-mapper-directive:
-  ///         annot_pragma_openmp 'declare' 'mapper' '(' [<mapper-identifier> ':']
-  ///         <type> <var> ')' [<clause>[[,] <clause>] ... ]
+  ///         annot_pragma_openmp 'declare' 'mapper' '(' [<mapper-identifier>
+  ///         ':'] <type> <var> ')' [<clause>[[,] <clause>] ... ]
   ///         annot_pragma_openmp_end
   /// \endverbatim
   /// <mapper-identifier> and <var> are base language identifiers.
@@ -6657,8 +6662,8 @@ private:
   ///         annot_pragma_openmp_end
   ///
   ///       declare-mapper-directive:
-  ///         annot_pragma_openmp 'declare' 'mapper' '(' [<mapper-identifer> ':']
-  ///         <type> <var> ')' [<clause>[[,] <clause>] ... ]
+  ///         annot_pragma_openmp 'declare' 'mapper' '(' [<mapper-identifer>
+  ///         ':'] <type> <var> ')' [<clause>[[,] <clause>] ... ]
   ///         annot_pragma_openmp_end
   ///
   ///       executable-directive:
@@ -6831,7 +6836,8 @@ private:
   ///
   /// \verbatim
   ///    schedule-clause:
-  ///      'schedule' '(' [ modifier [ ',' modifier ] ':' ] kind [',' expression ]
+  ///      'schedule' '(' [ modifier [ ',' modifier ] ':' ] kind [',' expression
+  ///      ]
   ///      ')'
   ///
   ///    if-clause:
@@ -7015,7 +7021,8 @@ private:
   ///
   /// \verbatim
   /// init-clause:
-  ///   init([interop-modifier, ]interop-type[[, interop-type] ... ]:interop-var)
+  ///   init([interop-modifier, ]interop-type[[, interop-type] ...
+  ///   ]:interop-var)
   ///
   /// destroy-clause:
   ///   destroy(interop-var)
@@ -7069,10 +7076,10 @@ public:
   bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);
 
   /// Parse map-type-modifiers in map clause.
-  /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] [map-type] : ] list)
-  /// where, map-type-modifier ::= always | close | mapper(mapper-identifier) |
-  /// present
-  /// where, map-type ::= alloc | delete | from | release | to | tofrom
+  /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] [map-type] : ]
+  /// list) where, map-type-modifier ::= always | close |
+  /// mapper(mapper-identifier) | present where, map-type ::= alloc | delete |
+  /// from | release | to | tofrom
   bool parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data);
 
   /// Parses 'omp begin declare variant' directive.
@@ -7294,8 +7301,7 @@ public:
   /// MisleadingIndentationChecker on an else active, this location is invalid.
   SourceLocation MisleadingIndentationElseLoc;
 
-  private:
-
+private:
   /// Flags describing a context in which we're parsing a statement.
   enum class ParsedStmtContext {
     /// This context permits declarations in language modes where declarations
@@ -7538,9 +7544,8 @@ public:
   ///       for-statement: [C99 6.8.5.3]
   ///         'for' '(' expr[opt] ';' expr[opt] ';' expr[opt] ')' statement
   ///         'for' '(' declaration expr[opt] ';' expr[opt] ')' statement
-  /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt] ')'
-  /// [C++]       statement
-  /// [C++0x] 'for'
+  /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt]
+  /// ')' [C++]       statement [C++0x] 'for'
   ///             'co_await'[opt]    [Coroutines]
   ///             '(' for-range-declaration ':' for-range-initializer ')'
   ///             statement
@@ -7685,7 +7690,8 @@ public:
   ///
   ///   exception-declaration:
   ///     attribute-specifier-seq[opt] type-specifier-seq declarator
-  ///     attribute-specifier-seq[opt] type-specifier-seq abstract-declarator[opt]
+  ///     attribute-specifier-seq[opt] type-specifier-seq
+  ///     abstract-declarator[opt]
   ///     '...'
   /// \endverbatim
   ///
@@ -8167,7 +8173,8 @@ private:
   ///
   /// \verbatim
   ///       template-declaration: [C++ temp]
-  ///         'export'[opt] 'template' '<' template-parameter-list '>' declaration
+  ///         'export'[opt] 'template' '<' template-parameter-list '>'
+  ///         declaration
   ///
   ///       template-declaration: [C++2a]
   ///         template-head declaration
@@ -8964,7 +8971,7 @@ private:
   ///         ptr-operator:
   ///           '*' cv-qualifier-seq[opt]
   ///           '&'
-  /// [C++0x]   '&&'                                                        [TODO]
+  /// [C++0x]   '&&' [TODO]
   ///           '::'[opt] nested-name-specifier '*' cv-qualifier-seq[opt]
   ///
   ///         cv-qualifier-seq:
@@ -8979,16 +8986,15 @@ private:
   ///
   ///         id-expression:
   ///           unqualified-id
-  ///           qualified-id                                                [TODO]
+  ///           qualified-id [TODO]
   ///
   ///         unqualified-id:
   ///           identifier
   ///           operator-function-id
   ///           conversion-function-id
   ///           literal-operator-id
-  ///           '~' class-name                                              [TODO]
-  ///           '~' decltype-specifier                                      [TODO]
-  ///           template-id                                                 [TODO]
+  ///           '~' class-name [TODO]
+  ///           '~' decltype-specifier [TODO] template-id [TODO]
   /// \endverbatim
   ///
   TPResult TryParseDeclarator(bool mayBeAbstract, bool mayHaveIdentifier = true,
@@ -9005,8 +9011,9 @@ private:
   ///   parameter-declaration-list ',' parameter-declaration
   ///
   /// parameter-declaration:
-  ///   attribute-specifier-seq[opt] decl-specifier-seq declarator attributes[opt]
-  ///   attribute-specifier-seq[opt] decl-specifier-seq declarator attributes[opt]
+  ///   attribute-specifier-seq[opt] decl-specifier-seq declarator
+  ///   attributes[opt] attribute-specifier-seq[opt] decl-specifier-seq
+  ///   declarator attributes[opt]
   ///     '=' assignment-expression
   ///   attribute-specifier-seq[opt] decl-specifier-seq abstract-declarator[opt]
   ///     attributes[opt]
