@@ -35,6 +35,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
+#include "llvm/LTO/LTOConfigBitcode.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -1567,8 +1568,15 @@ Error ThinBackendProc::emitFiles(
     OS = std::move(FileOS);
   }
 
-  writeIndexToFile(CombinedIndex, *OS, &ModuleToSummariesForIndex,
-                   &DeclarationSummaries);
+  if (Conf.Dtlto) {
+    if (Error Err = writeIndexWithLTOConfigToFile(CombinedIndex, Conf, *OS,
+                                                  &ModuleToSummariesForIndex,
+                                                  &DeclarationSummaries))
+      return Err;
+  } else {
+    writeIndexToFile(CombinedIndex, *OS, &ModuleToSummariesForIndex,
+                     &DeclarationSummaries);
+  }
 
   // Emit imports files if requested, using callback if provided.
   if (Conf.GetImportsListOutputArray) {

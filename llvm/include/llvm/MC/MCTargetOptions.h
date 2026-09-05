@@ -37,6 +37,8 @@ class StringRef;
 
 class MCTargetOptions {
 public:
+  // When adding fields, update the structured binding and serialization in
+  // llvm/lib/LTO/TargetOptionsBitcode.cpp.
   enum AsmInstrumentation {
     AsmInstrumentationNone,
     AsmInstrumentationAddress

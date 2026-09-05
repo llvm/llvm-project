@@ -40,6 +40,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/LTO/LTOBackend.h"
+#include "llvm/LTO/LTOConfigBitcode.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -1314,7 +1315,28 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
     return std::make_unique<CachedFileStream>(std::move(OS),
                                               CGOpts.ObjectFilenameForDebug);
   };
-  lto::Config Conf;
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> IndexBuffer =
+      CI.getVirtualFileSystem().getBufferForFile(CGOpts.ThinLTOIndexFile);
+  if (!IndexBuffer) {
+    errs() << "Error loading LTO config from index file '"
+           << CGOpts.ThinLTOIndexFile
+           << "': " << IndexBuffer.getError().message() << '\n';
+    return;
+  }
+  Expected<std::optional<lto::Config>> SerializedConf =
+      lto::readLTOConfigFromSummaryIndexIfPresent(
+          (*IndexBuffer)->getMemBufferRef());
+  if (!SerializedConf) {
+    logAllUnhandledErrors(SerializedConf.takeError(), errs(),
+                          "Error loading LTO config from index file '" +
+                              CGOpts.ThinLTOIndexFile + "': ");
+    return;
+  }
+
+  bool HasSerializedConf = SerializedConf->has_value();
+  lto::Config Conf =
+      HasSerializedConf ? std::move(**SerializedConf) : lto::Config();
   if (CGOpts.SaveTempsFilePrefix != "") {
     if (Error E = Conf.addSaveTemps(CGOpts.SaveTempsFilePrefix + ".",
                                     /* UseInputModulePath */ false)) {
@@ -1324,47 +1346,48 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
       });
     }
   }
-  Conf.CPU = TOpts.CPU;
-  Conf.CodeModel = getCodeModel(CGOpts);
-  Conf.MAttrs = TOpts.Features;
-  Conf.RelocModel = CGOpts.RelocationModel;
-  std::optional<CodeGenOptLevel> OptLevelOrNone =
-      CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
-  assert(OptLevelOrNone && "Invalid optimization level!");
-  Conf.CGOptLevel = *OptLevelOrNone;
-  Conf.OptLevel = CGOpts.OptimizationLevel;
-  initTargetOptions(CI, Diags, Conf.Options);
-  Conf.SampleProfile = std::move(SampleProfile);
-  Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
-  Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
-  Conf.PTO.LoopFusion = CGOpts.FuseLoops;
-  // For historical reasons, loop interleaving is set to mirror setting for loop
-  // unrolling.
-  Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;
-  Conf.PTO.LoopVectorization = CGOpts.VectorizeLoop;
-  Conf.PTO.SLPVectorization = CGOpts.VectorizeSLP;
-  // Only enable CGProfilePass when using integrated assembler, since
-  // non-integrated assemblers don't recognize .cgprofile section.
-  Conf.PTO.CallGraphProfile = !CGOpts.DisableIntegratedAS;
+  if (!HasSerializedConf) {
+    Conf.CPU = TOpts.CPU;
+    Conf.CodeModel = getCodeModel(CGOpts);
+    Conf.MAttrs = TOpts.Features;
+    Conf.RelocModel = CGOpts.RelocationModel;
+    std::optional<CodeGenOptLevel> OptLevelOrNone =
+        CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
+    assert(OptLevelOrNone && "Invalid optimization level!");
+    Conf.CGOptLevel = *OptLevelOrNone;
+    Conf.OptLevel = CGOpts.OptimizationLevel;
+    initTargetOptions(CI, Diags, Conf.Options);
+    Conf.SampleProfile = std::move(SampleProfile);
+    Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
+    Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
+    Conf.PTO.LoopFusion = CGOpts.FuseLoops;
+    // For historical reasons, loop interleaving mirrors loop unrolling.
+    Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;
+    Conf.PTO.LoopVectorization = CGOpts.VectorizeLoop;
+    Conf.PTO.SLPVectorization = CGOpts.VectorizeSLP;
+    // Only enable CGProfilePass when using integrated assembler, since
+    // non-integrated assemblers don't recognize .cgprofile section.
+    Conf.PTO.CallGraphProfile = !CGOpts.DisableIntegratedAS;
 
-  // Context sensitive profile.
-  if (CGOpts.hasProfileCSIRInstr()) {
-    Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = getProfileGenName(CGOpts);
-  } else if (CGOpts.hasProfileCSIRUse()) {
-    Conf.RunCSIRInstr = false;
-    Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);
+    // Context sensitive profile.
+    if (CGOpts.hasProfileCSIRInstr()) {
+      Conf.RunCSIRInstr = true;
+      Conf.CSIRProfile = getProfileGenName(CGOpts);
+    } else if (CGOpts.hasProfileCSIRUse()) {
+      Conf.RunCSIRInstr = false;
+      Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);
+    }
+
+    Conf.ProfileRemapping = std::move(ProfileRemapping);
+    Conf.DebugPassManager = CGOpts.DebugPassManager;
+    Conf.VerifyEach = CGOpts.VerifyEach;
+    Conf.RemarksWithHotness = CGOpts.DiagnosticsWithHotness;
+    Conf.RemarksFilename = CGOpts.OptRecordFile;
+    Conf.RemarksPasses = CGOpts.OptRecordPasses;
+    Conf.RemarksFormat = CGOpts.OptRecordFormat;
+    Conf.SplitDwarfFile = CGOpts.SplitDwarfFile;
+    Conf.SplitDwarfOutput = CGOpts.SplitDwarfOutput;
   }
-
-  Conf.ProfileRemapping = std::move(ProfileRemapping);
-  Conf.DebugPassManager = CGOpts.DebugPassManager;
-  Conf.VerifyEach = CGOpts.VerifyEach;
-  Conf.RemarksWithHotness = CGOpts.DiagnosticsWithHotness;
-  Conf.RemarksFilename = CGOpts.OptRecordFile;
-  Conf.RemarksPasses = CGOpts.OptRecordPasses;
-  Conf.RemarksFormat = CGOpts.OptRecordFormat;
-  Conf.SplitDwarfFile = CGOpts.SplitDwarfFile;
-  Conf.SplitDwarfOutput = CGOpts.SplitDwarfOutput;
   for (auto &Plugin : CI.getPassPlugins())
     Conf.LoadedPassPlugins.push_back(Plugin.get());
   switch (Action) {

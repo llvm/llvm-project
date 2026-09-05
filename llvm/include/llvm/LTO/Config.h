@@ -46,7 +46,9 @@ struct Config {
     ELF,
   };
   // Note: when adding fields here, consider whether they need to be added to
-  // computeLTOCacheKey in LTO.cpp.
+  // computeLTOCacheKey in LTO.cpp. The structured binding in
+  // LTOConfigBitcode.cpp will also require the field to be explicitly handled
+  // or documented as non-serializable.
   std::string CPU;
   TargetOptions Options;
   std::vector<std::string> MAttrs;
