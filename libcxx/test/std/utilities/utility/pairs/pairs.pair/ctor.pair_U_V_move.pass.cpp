@@ -244,5 +244,15 @@ int main(int, char**)
     }
 #endif
 
+// Test construction prohibition of introduced by https://wg21.link/P2255R2.
+#if TEST_STD_VER >= 23
+  test_pair_rv<int&&, char, false>();
+  test_pair_rv<const int&, char, false>();
+  test_pair_rv<ConvertingType&&, int, false>();
+  test_pair_rv<const ConvertingType&, char, false>();
+  test_pair_rv<ExplicitTypes::ConvertingType&&, int, false>();
+  test_pair_rv<const ExplicitTypes::ConvertingType&, int, false>();
+#endif // TEST_STD_VER >= 23
+
   return 0;
 }

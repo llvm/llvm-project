@@ -17,11 +17,14 @@
 
 #include <array>
 #include <cassert>
+#include <complex>
 #include <ranges>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include "test_macros.h"
 
 namespace my_ns{
 
@@ -138,6 +141,48 @@ constexpr bool test() {
       static_assert(!std::is_convertible_v<std::tuple<FromExplicit, FromExplicit>, std::pair<To, To>>);
     }
   }
+
+  // Test construction prohibition of introduced by https://wg21.link/P2255R2.
+
+  // Test tuple.
+  {
+    static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, std::tuple<char, long>>);
+    static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, const std::tuple<char, long>&>);
+    static_assert(!std::is_convertible_v<std::tuple<char, long>, std::pair<const int&, const long&>>);
+    static_assert(!std::is_convertible_v<const std::tuple<char, long>&, std::pair<const int&, const long&>>);
+
+    static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, std::tuple<int, short>>);
+    static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, const std::tuple<int, short>&>);
+    static_assert(!std::is_convertible_v<std::tuple<int, short>, std::pair<const int&, const long&>>);
+    static_assert(!std::is_convertible_v<const std::tuple<char, short>&, std::pair<const int&, const long&>>);
+  }
+  // Test array.
+  {
+    static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, std::array<int, 2>>);
+    static_assert(!std::is_constructible_v<std::pair<const long&, const int&>, std::array<int, 2>>);
+    static_assert(!std::is_constructible_v<std::pair<const int&, const long&>, const std::array<int, 2>&>);
+    static_assert(!std::is_constructible_v<std::pair<const long&, const int&>, const std::array<int, 2>&>);
+
+    static_assert(!std::is_convertible_v<std::array<int, 2>, std::pair<const int&, const long&>>);
+    static_assert(!std::is_convertible_v<std::array<int, 2>, std::pair<const long&, const int&>>);
+    static_assert(!std::is_convertible_v<const std::array<int, 2>&, std::pair<const int&, const long&>>);
+    static_assert(!std::is_convertible_v<const std::array<int, 2>&, std::pair<const long&, const int&>>);
+  }
+#if TEST_STD_VER >= 26
+  // Test complex.
+  {
+    static_assert(!std::is_constructible_v<std::pair<const double&, const float&>, std::complex<float>>);
+    static_assert(!std::is_constructible_v<std::pair<const float&, const double&>, std::complex<float>>);
+    static_assert(!std::is_convertible_v<std::complex<float>, std::pair<const double&, const float&>>);
+    static_assert(!std::is_convertible_v<std::complex<float>, std::pair<const float&, const double&>>);
+
+    static_assert(!std::is_constructible_v<std::pair<const double&, const long double&>, const std::complex<double>&>);
+    static_assert(!std::is_constructible_v<std::pair<const long double&, const double&>, const std::complex<double>&>);
+    static_assert(!std::is_convertible_v<const std::complex<double>&, std::pair<const double&, const long double&>>);
+    static_assert(!std::is_convertible_v<const std::complex<double>&, std::pair<const long double&, const double&>>);
+  }
+#endif // TEST_STD_VER >= 26
+
   return true;
 }
 
