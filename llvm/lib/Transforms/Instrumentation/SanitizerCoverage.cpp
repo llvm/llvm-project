@@ -15,14 +15,18 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -46,6 +50,8 @@ const char SanCovTracePCIndirName[] = "__sanitizer_cov_trace_pc_indir";
 const char SanCovTracePCName[] = "__sanitizer_cov_trace_pc";
 const char SanCovTracePCEntryName[] = "__sanitizer_cov_trace_pc_entry";
 const char SanCovTracePCExitName[] = "__sanitizer_cov_trace_pc_exit";
+const char SanCovTraceArgsName[] = "__sanitizer_cov_trace_args";
+const char SanCovTraceRetName[] = "__sanitizer_cov_trace_ret";
 const char SanCovTraceCmp1[] = "__sanitizer_cov_trace_cmp1";
 const char SanCovTraceCmp2[] = "__sanitizer_cov_trace_cmp2";
 const char SanCovTraceCmp4[] = "__sanitizer_cov_trace_cmp4";
@@ -157,6 +163,15 @@ static cl::opt<bool> ClGEPTracing("sanitizer-coverage-trace-geps",
                                   cl::Hidden);
 
 static cl::opt<bool>
+    ClTraceArgs("sanitizer-coverage-trace-args",
+                   cl::desc("Dataflow tracing of function arguments"),
+                   cl::Hidden);
+
+static cl::opt<bool>
+    ClTraceRet("sanitizer-coverage-trace-ret",
+                  cl::desc("Dataflow tracing of return values"), cl::Hidden);
+
+static cl::opt<bool>
     ClPruneBlocks("sanitizer-coverage-prune-blocks",
                   cl::desc("Reduce the number of instrumented blocks"),
                   cl::Hidden, cl::init(true));
@@ -226,10 +241,13 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
                                            ClStackDepthCallbackMin.getValue());
   Options.TraceLoads |= ClLoadTracing;
   Options.TraceStores |= ClStoreTracing;
+  Options.TraceArgs |= ClTraceArgs;
+  Options.TraceRet |= ClTraceRet;
   Options.GatedCallbacks |= ClGatedCallbacks;
   if (!Options.TracePCGuard && !Options.TracePC && !Options.TracePCEntryExit &&
       !Options.Inline8bitCounters && !Options.StackDepth &&
-      !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores)
+      !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores &&
+      !Options.TraceArgs && !Options.TraceRet)
     Options.TracePCGuard = true; // TracePCGuard is default.
   Options.CollectControlFlow |= ClCollectCF;
   return Options;
@@ -265,6 +283,8 @@ private:
   void InjectTraceForLoadsAndStores(Function &F, ArrayRef<LoadInst *> Loads,
                                     ArrayRef<StoreInst *> Stores);
   void InjectTraceForExits(Function &F);
+  void InjectTraceForArgs(Function &F);
+  void InjectTraceForRet(Function &F);
   void InjectTraceForSwitch(Function &F,
                             ArrayRef<Instruction *> SwitchTraceTargets,
                             Value *&FunctionGateCmp);
@@ -298,6 +318,7 @@ private:
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
   FunctionCallee SanCovTracePCEntry, SanCovTracePCExit;
+  FunctionCallee SanCovTraceArgsFunc, SanCovTraceRetFunc;
   std::array<FunctionCallee, 4> SanCovTraceCmpFunction;
   std::array<FunctionCallee, 4> SanCovTraceConstCmpFunction;
   std::array<FunctionCallee, 5> SanCovLoadFunction;
@@ -542,6 +563,16 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   SanCovTracePCGuard =
       M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, PtrTy);
 
+  // __sanitizer_cov_trace_args(i64 pc, i32 arg_idx, i32 arg_size, ptr arg, ptr
+  // offsets, i32 num_fields)
+  SanCovTraceArgsFunc =
+      M.getOrInsertFunction(SanCovTraceArgsName, VoidTy, Int64Ty, Int32Ty,
+                            Int32Ty, PtrTy, PtrTy, Int32Ty);
+  // __sanitizer_cov_trace_ret(i64 pc, i32 ret_size, ptr ret_val, ptr offsets,
+  // i32 num_fields)
+  SanCovTraceRetFunc = M.getOrInsertFunction(
+      SanCovTraceRetName, VoidTy, Int64Ty, Int32Ty, PtrTy, PtrTy, Int32Ty);
+
   SanCovStackDepthCallback =
       M.getOrInsertFunction(SanCovStackDepthCallbackName, VoidTy);
 
@@ -767,6 +798,12 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
 
   if (Options.TracePCEntryExit)
     InjectTraceForExits(F);
+
+  if (Options.TraceArgs)
+    InjectTraceForArgs(F);
+
+  if (Options.TraceRet)
+    InjectTraceForRet(F);
 }
 
 GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
@@ -1265,4 +1302,468 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
   FunctionCFsArray->setInitializer(
       ConstantArray::get(ArrayType::get(PtrTy, CFs.size()), CFs));
   FunctionCFsArray->setConstant(true);
+}
+
+// Helper: Given a DIType, resolve typedefs/qualifiers to the underlying type.
+static DIType *stripDITypedefs(DIType *Ty) {
+  while (Ty) {
+    if (auto *Derived = dyn_cast<DIDerivedType>(Ty)) {
+      unsigned Tag = Derived->getTag();
+      if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
+          Tag == dwarf::DW_TAG_volatile_type ||
+          Tag == dwarf::DW_TAG_restrict_type) {
+        Ty = Derived->getBaseType();
+        continue;
+      }
+      // pointer type - stop
+      break;
+    }
+    break;
+  }
+  return Ty;
+}
+
+// Helper: If Ty is a pointer to a struct (DICompositeType) or a struct
+// directly, collect byte offsets of all scalar members. Returns the offsets
+// array global and num_fields.
+static std::pair<GlobalVariable *, unsigned>
+getStructFieldOffsets(DIType *Ty, Module &M, const DataLayout &DL) {
+  if (!Ty)
+    return {nullptr, 0};
+
+  Ty = stripDITypedefs(Ty);
+
+  DICompositeType *Composite = nullptr;
+
+  // Case 1: pointer to struct
+  if (auto *PtrTy = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    if (PtrTy->getTag() == dwarf::DW_TAG_pointer_type) {
+      DIType *PointeeTy = stripDITypedefs(PtrTy->getBaseType());
+      Composite = dyn_cast_or_null<DICompositeType>(PointeeTy);
+    }
+  }
+  // Case 2: direct struct type (for reassembled by-value args)
+  if (!Composite)
+    Composite = dyn_cast_or_null<DICompositeType>(Ty);
+
+  if (!Composite || Composite->getTag() != dwarf::DW_TAG_structure_type)
+    return {nullptr, 0};
+
+  SmallVector<uint64_t, 16> Offsets;
+  for (auto *Element : Composite->getElements()) {
+    auto *Member = dyn_cast<DIDerivedType>(Element);
+    if (!Member || Member->getTag() != dwarf::DW_TAG_member)
+      continue;
+    uint64_t OffsetBits = Member->getOffsetInBits();
+    uint64_t SizeBits = Member->getSizeInBits();
+    if (SizeBits == 0)
+      continue;
+    // Record byte offset and size in bytes as pairs: [offset, size]
+    Offsets.push_back(OffsetBits / 8);
+    Offsets.push_back(SizeBits / 8);
+  }
+
+  if (Offsets.empty())
+    return {nullptr, 0};
+
+  // Enhance #4: Compute type name hash from struct name
+  uint64_t TypeHash = 0;
+  if (auto Name = Composite->getName(); !Name.empty()) {
+    // Simple FNV-1a hash of the struct name
+    TypeHash = 0xcbf29ce484222325ULL;
+    for (char C : Name) {
+      TypeHash ^= (uint64_t)(unsigned char)C;
+      TypeHash *= 0x100000001b3ULL;
+    }
+  }
+
+  // Layout: [type_hash, off0, sz0, off1, sz1, ...]
+  // We pass &array[1] as the offsets pointer, so kernel can read array[0] as
+  // hash
+  LLVMContext &C = M.getContext();
+  Type *I64Ty = Type::getInt64Ty(C);
+  SmallVector<Constant *, 16> OffsetConstants;
+  OffsetConstants.push_back(
+      ConstantInt::get(I64Ty, TypeHash)); // index 0 = hash
+  for (uint64_t V : Offsets)
+    OffsetConstants.push_back(ConstantInt::get(I64Ty, V));
+
+  ArrayType *ArrTy = ArrayType::get(I64Ty, OffsetConstants.size());
+  auto *GV = new GlobalVariable(M, ArrTy, true, GlobalVariable::PrivateLinkage,
+                                ConstantArray::get(ArrTy, OffsetConstants),
+                                "__sancov_offsets_");
+  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  return {GV, (unsigned)(Offsets.size() / 2)};
+}
+
+// x86 uses RBX as the frame base pointer for a realigned stack. A function whose
+// inline asm reads/writes/clobbers RBX cannot also use it as the base pointer -- the
+// backend rejects it ("Interference usage of base pointer/frame pointer"). The
+// trace-args/trace-ret spill allocas below escape (their address is passed to the
+// trace call), so ASAN redzones them, forcing 32-byte frame realignment => a base
+// pointer. In a function that already ties up RBX in inline asm (e.g. CPUID's "=b",
+// RDTSC's "~{rbx}") that is a hard error. Detect it and skip the escaping spill for
+// such functions (the arg/ret is traced as a null pointer instead). The base-pointer
+// register is spelled {rbx}/{ebx}/{bx} (and byte views {bl}/{bh}) in constraint codes.
+static bool functionInlineAsmUsesBasePointerX86(const Function &F) {
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB) {
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || !CB->isInlineAsm())
+        continue;
+      const auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand());
+      if (!IA)
+        continue;
+      for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints())
+        for (StringRef Code : CI.Codes)
+          if (Code == "{rbx}" || Code == "{ebx}" || Code == "{bx}" ||
+              Code == "{bl}" || Code == "{bh}")
+            return true;
+    }
+  return false;
+}
+
+void ModuleSanitizerCoverage::InjectTraceForArgs(Function &F) {
+  // SP may be null: a function compiled WITHOUT debug info (-g) carries no
+  // #dbg_value records, so the source-argument map below stays empty and the
+  // SrcArgs.empty() fallback traces each IR argument directly (no source-level
+  // struct-field offsets). This lets trace-args work on userspace / optimized
+  // code built without -g, not just debug kernels.
+  DISubprogram *SP = F.getSubprogram();
+  // Only guards x86; on other targets there is no RBX base-pointer interference.
+  const bool SkipSpill = TargetTriple.getArch() == Triple::x86_64 &&
+                         functionInlineAsmUsesBasePointerX86(F);
+
+  BasicBlock &EntryBB = F.getEntryBlock();
+  Instruction *InsertPt = &*EntryBB.getFirstInsertionPt();
+  InstrumentationIRBuilder IRB(InsertPt);
+
+  // Get PC as the function address cast to i64
+  Value *PC = IRB.CreatePtrToInt(&F, Int64Ty);
+
+  // Build source-level argument map from debug variable records.
+  // DILocalVariable::getArg() gives the 1-based source parameter number,
+  // which is ABI-stable: unaffected by sret insertion or struct decomposition.
+  //
+  // We scan ALL debug records in the entry block because ABI lowering may
+  // decompose one source argument into derived values (e.g., trunc of a
+  // coerced i64 into two i32 fragments). findDbgValues on the Argument
+  // alone would miss those derived values.
+  struct SourceArg {
+    DILocalVariable *Var = nullptr;
+    DIType *Ty = nullptr;
+    SmallVector<std::pair<Value *, uint64_t>, 2> Fragments; // {val, bit_off}
+  };
+  DenseMap<unsigned, SourceArg> SrcArgs;
+
+  // Record a fragment for a source parameter, ignoring exact (value, offset)
+  // duplicates. The same #dbg_value can be reached more than once (found via
+  // the argument in pass 1 and again while walking the block in pass 2, or
+  // simply duplicated by an earlier pass); without this a single scalar arg
+  // with a repeated record would look like a multi-fragment struct and be
+  // needlessly reassembled.
+  auto addFragment = [](SourceArg &SA, Value *V, uint64_t BitOff) {
+    for (const auto &Existing : SA.Fragments)
+      if (Existing.first == V && Existing.second == BitOff)
+        return;
+    SA.Fragments.push_back({V, BitOff});
+  };
+
+  // Pass 1: direct argument debug records (batched scan)
+  SmallVector<DbgVariableRecord *, 16> AllDVRs;
+  for (auto &Arg : F.args()) {
+    AllDVRs.clear();
+    findDbgValues(&Arg, AllDVRs);
+    for (auto *DVR : AllDVRs) {
+      DILocalVariable *Var = DVR->getVariable();
+      if (!Var || !Var->getArg())
+        continue;
+      unsigned SrcIdx = Var->getArg();
+      auto &SA = SrcArgs[SrcIdx];
+      SA.Var = Var;
+      SA.Ty = Var->getType();
+      uint64_t FragBitOff = 0;
+      if (auto Frag = DVR->getExpression()->getFragmentInfo())
+        FragBitOff = Frag->OffsetInBits;
+      addFragment(SA, &Arg, FragBitOff);
+    }
+  }
+
+  // Pass 2: scan entry block for debug records on derived values
+  // (handles struct coercion where debug info points at trunc/extract, not arg)
+  for (auto &I : EntryBB) {
+    for (auto &DVR : I.getDbgRecordRange()) {
+      auto *DVar = dyn_cast<DbgVariableRecord>(&DVR);
+      if (!DVar)
+        continue;
+      DILocalVariable *Var = DVar->getVariable();
+      if (!Var || !Var->getArg())
+        continue;
+      unsigned SrcIdx = Var->getArg();
+      // Skip if pass 1 already found a direct argument reference for this param
+      auto It = SrcArgs.find(SrcIdx);
+      if (It != SrcArgs.end() && !It->second.Fragments.empty() &&
+          isa<Argument>(It->second.Fragments[0].first))
+        continue;
+      Value *V = DVar->getValue();
+      if (!V || isa<Argument>(V))
+        continue; // Direct args handled in pass 1
+      // A #dbg_value may point at a value that does NOT dominate the entry-block
+      // terminator where the trace call is inserted (debug records are exempt from
+      // SSA dominance). Using such a value as ArgPtr emits IR that fails the verifier
+      // ("Instruction does not dominate all uses") and, with -disable-llvm-verifier
+      // (kernel builds), reaches codegen and crashes RegisterCoalescer::reMaterializeDef.
+      // The insertion point is the entry terminator, so a value defined in the entry
+      // block dominates it; anything else (a later-block instruction, e.g. a field
+      // getelementptr) does not -> skip it and let the dead-arg fallback emit a null
+      // trace for this param.
+      if (auto *VI = dyn_cast<Instruction>(V))
+        if (VI->getParent() != &EntryBB)
+          continue;
+      auto &SA = SrcArgs[SrcIdx];
+      SA.Var = Var;
+      SA.Ty = Var->getType();
+      uint64_t FragBitOff = 0;
+      if (auto Frag = DVar->getExpression()->getFragmentInfo())
+        FragBitOff = Frag->OffsetInBits;
+      addFragment(SA, V, FragBitOff);
+    }
+  }
+
+  // Fallback: if no debug records found (compiled without -g or stripped),
+  // use the original TypeArray-based indexing.
+  if (SrcArgs.empty()) {
+    unsigned ArgIdx = 0;
+    for (auto &Arg : F.args()) {
+      // Skip ABI-inserted hidden args that don't correspond to source params
+      if (Arg.hasStructRetAttr())
+        continue;
+      DIType *ArgDIType = nullptr;
+      if (SP && SP->getType()) {
+        auto TypeArray = SP->getType()->getTypeArray();
+        if (ArgIdx + 1 < TypeArray.size())
+          ArgDIType = TypeArray[ArgIdx + 1];
+      }
+      auto [OffsetsGV, NumFields] = getStructFieldOffsets(ArgDIType, M, *DL);
+      Value *ArgPtr;
+      bool Spilled = false;
+      if (Arg.getType()->isPointerTy()) {
+        ArgPtr = &Arg;
+      } else if (SkipSpill) {
+        ArgPtr = Constant::getNullValue(PtrTy); // base-pointer asm: no escaping spill
+      } else {
+        AllocaInst *Alloca = IRB.CreateAlloca(Arg.getType());
+        IRB.CreateStore(&Arg, Alloca);
+        ArgPtr = Alloca;
+        Spilled = true;
+      }
+      unsigned ArgByteSize =
+          Arg.getType()->isPointerTy() ? DL->getPointerSize()
+          : Spilled                    ? DL->getTypeStoreSize(Arg.getType())
+                                       : 0;
+      Value *OffsetsPtr = Constant::getNullValue(PtrTy);
+      if (OffsetsGV) {
+        Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                            ConstantInt::get(Int64Ty, 1)};
+        OffsetsPtr = IRB.CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                           OffsetsGV, Indices);
+      }
+      IRB.CreateCall(SanCovTraceArgsFunc,
+                     {PC, ConstantInt::get(Int32Ty, ArgIdx),
+                      ConstantInt::get(Int32Ty, ArgByteSize), ArgPtr,
+                      OffsetsPtr, ConstantInt::get(Int32Ty, NumFields)});
+      ArgIdx++;
+    }
+    return;
+  }
+
+  // Emit one trace call per source-level argument, sorted by source position.
+  // Place trace calls before the entry block terminator so all values dominate.
+  SmallVector<unsigned, 8> SortedKeys;
+  for (auto &[K, _] : SrcArgs)
+    SortedKeys.push_back(K);
+  llvm::sort(SortedKeys);
+
+  // Use InstrumentationIRBuilder so the inserted calls inherit a synthetic
+  // !dbg location. In a function that carries debug info (which this pass
+  // requires), a plain IRBuilder would emit callee-bearing calls with no
+  // location and trip the verifier under -g and LTO.
+  InstrumentationIRBuilder TraceIRB(EntryBB.getTerminator());
+
+  for (unsigned SrcIdx : SortedKeys) {
+    auto &SA = SrcArgs[SrcIdx];
+    auto [OffsetsGV, NumFields] = getStructFieldOffsets(SA.Ty, M, *DL);
+
+    Value *ArgPtr;
+    unsigned ArgByteSize;
+
+    if (SA.Fragments.size() == 1) {
+      // Single IR arg for this source param (common case: pointers, scalars)
+      Value *V = SA.Fragments[0].first;
+      if (V->getType()->isPointerTy()) {
+        ArgPtr = V;
+        ArgByteSize = DL->getPointerSize();
+      } else if (SkipSpill) {
+        ArgPtr = Constant::getNullValue(PtrTy); // base-pointer asm: no escaping spill
+        ArgByteSize = 0;
+      } else {
+        AllocaInst *Alloca = IRB.CreateAlloca(V->getType());
+        TraceIRB.CreateStore(V, Alloca);
+        ArgPtr = Alloca;
+        ArgByteSize = DL->getTypeStoreSize(V->getType());
+      }
+    } else if (SkipSpill) {
+      ArgPtr = Constant::getNullValue(PtrTy); // base-pointer asm: no escaping spill
+      ArgByteSize = 0;
+    } else {
+      // Multiple IR args for one source param (ABI struct decomposition).
+      // Reassemble fragments into a stack slot matching the source layout.
+      unsigned TotalBits = 0;
+      for (auto &[V, BitOff] : SA.Fragments) {
+        unsigned End = BitOff + DL->getTypeSizeInBits(V->getType());
+        if (End > TotalBits)
+          TotalBits = End;
+      }
+      unsigned TotalBytes = (TotalBits + 7) / 8;
+      AllocaInst *Slot =
+          IRB.CreateAlloca(ArrayType::get(IRB.getInt8Ty(), TotalBytes));
+      Slot->setAlignment(Align(8));
+      TraceIRB.CreateMemSet(Slot, TraceIRB.getInt8(0), TotalBytes,
+                            Slot->getAlign());
+      for (auto &[V, BitOff] : SA.Fragments) {
+        unsigned ByteOff = BitOff / 8;
+        Value *Ptr = TraceIRB.CreateGEP(TraceIRB.getInt8Ty(), Slot,
+                                        ConstantInt::get(Int32Ty, ByteOff));
+        TraceIRB.CreateAlignedStore(V, Ptr, Align(1));
+      }
+      ArgPtr = Slot;
+      ArgByteSize = TotalBytes;
+    }
+
+    Value *OffsetsPtr = Constant::getNullValue(PtrTy);
+    if (OffsetsGV) {
+      Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                          ConstantInt::get(Int64Ty, 1)};
+      OffsetsPtr = TraceIRB.CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                              OffsetsGV, Indices);
+    }
+    // Report 0-based source arg index
+    TraceIRB.CreateCall(SanCovTraceArgsFunc,
+                        {PC, ConstantInt::get(Int32Ty, SrcIdx - 1),
+                         ConstantInt::get(Int32Ty, ArgByteSize), ArgPtr,
+                         OffsetsPtr, ConstantInt::get(Int32Ty, NumFields)});
+  }
+
+  // Dead-arg fallback: if the DISubroutineType indicates more source params
+  // than we found via debug records (e.g., arg optimized away entirely at -O2),
+  // emit a null-pointer trace so consumers know the argument existed.
+  if (SP && SP->getType()) {
+    auto TypeArray = SP->getType()->getTypeArray();
+    unsigned NumSrcParams = TypeArray.size() > 0 ? TypeArray.size() - 1 : 0;
+    for (unsigned I = 1; I <= NumSrcParams; ++I) {
+      if (!SrcArgs.count(I)) {
+        // This source param had no debug record — likely optimized away
+        DIType *ArgDIType = TypeArray[I];
+        auto [OffsetsGV, NumFields] = getStructFieldOffsets(ArgDIType, M, *DL);
+        Value *OffsetsPtr = Constant::getNullValue(PtrTy);
+        if (OffsetsGV) {
+          Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                              ConstantInt::get(Int64Ty, 1)};
+          OffsetsPtr = TraceIRB.CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                                  OffsetsGV, Indices);
+        }
+        // Pass null pointer — kernel will record 0xBADADD85 for all fields
+        TraceIRB.CreateCall(
+            SanCovTraceArgsFunc,
+            {PC, ConstantInt::get(Int32Ty, I - 1),
+             ConstantInt::get(Int32Ty, 0),
+             Constant::getNullValue(PtrTy), OffsetsPtr,
+             ConstantInt::get(Int32Ty, NumFields)});
+      }
+    }
+  }
+}
+
+void ModuleSanitizerCoverage::InjectTraceForRet(Function &F) {
+  DISubprogram *SP = F.getSubprogram();
+
+  // On x86, skip the escaping return-value spill in functions whose inline asm ties up
+  // the base pointer (RBX): the spill alloca is ASAN-redzoned -> stack realignment ->
+  // base pointer, which the backend rejects against the asm's RBX use ("Interference
+  // usage of base pointer/frame pointer"). Such returns are traced as a null pointer.
+  const bool SkipSpill = TargetTriple.getArch() == Triple::x86_64 &&
+                         functionInlineAsmUsesBasePointerX86(F);
+
+  // Get return type debug info
+  DIType *RetDIType = nullptr;
+  if (SP && SP->getType()) {
+    auto TypeArray = SP->getType()->getTypeArray();
+    if (TypeArray.size() > 0)
+      RetDIType = TypeArray[0];
+  }
+
+  auto [OffsetsGV, NumFields] = getStructFieldOffsets(RetDIType, M, *DL);
+
+  // A struct returned by value may be lowered to an indirect return: the IR
+  // function returns void and writes the result into a caller-provided buffer
+  // passed as a hidden `sret` pointer. In that case the ReturnInst carries no
+  // value, so trace the sret buffer instead. This keeps the return path
+  // symmetric with the argument path, which deliberately skips the same sret
+  // pointer as a non-source argument.
+  Argument *SRetArg = nullptr;
+  for (Argument &A : F.args()) {
+    if (A.hasStructRetAttr()) {
+      SRetArg = &A;
+      break;
+    }
+  }
+
+  EscapeEnumerator EE(F, "sancov_trace_ret");
+  while (IRBuilder<> *AtExit = EE.Next()) {
+    InstrumentationIRBuilder::ensureDebugInfo(*AtExit, F);
+
+    Value *PC = AtExit->CreatePtrToInt(&F, Int64Ty);
+
+    // Get the return value
+    auto *RI = dyn_cast<ReturnInst>(AtExit->GetInsertPoint());
+    Value *RetVal = nullptr;
+    if (RI)
+      RetVal = RI->getReturnValue();
+
+    Value *RetPtr;
+    unsigned RetByteSize = 0;
+    if (RetVal && RetVal->getType()->isPointerTy()) {
+      RetPtr = RetVal;
+      RetByteSize = DL->getPointerSize();
+    } else if (RetVal && !RetVal->getType()->isVoidTy() && !SkipSpill) {
+      AllocaInst *Alloca = AtExit->CreateAlloca(RetVal->getType());
+      AtExit->CreateStore(RetVal, Alloca);
+      RetPtr = Alloca;
+      RetByteSize = DL->getTypeStoreSize(RetVal->getType());
+    } else if (SRetArg) {
+      // Indirect (sret) return: the value lives in the caller-provided buffer.
+      RetPtr = SRetArg;
+      if (Type *ElemTy = SRetArg->getParamStructRetType())
+        RetByteSize = DL->getTypeStoreSize(ElemTy);
+      else
+        RetByteSize = DL->getPointerSize();
+    } else {
+      RetPtr = Constant::getNullValue(PtrTy);
+    }
+
+    Value *OffsetsPtr;
+    if (OffsetsGV) {
+      Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                          ConstantInt::get(Int64Ty, 1)};
+      OffsetsPtr = AtExit->CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                             OffsetsGV, Indices);
+    } else {
+      OffsetsPtr = Constant::getNullValue(PtrTy);
+    }
+    Value *NF = ConstantInt::get(Int32Ty, NumFields);
+    Value *RetSizeVal = ConstantInt::get(Int32Ty, RetByteSize);
+
+    AtExit->CreateCall(SanCovTraceRetFunc,
+                       {PC, RetSizeVal, RetPtr, OffsetsPtr, NF});
+  }
 }

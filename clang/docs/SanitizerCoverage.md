@@ -333,6 +333,86 @@ void __sanitizer_cov_store8(uint64_t *addr);
 void __sanitizer_cov_store16(__int128 *addr);
 ```
 
+## Tracking function arguments and return values
+
+With `-fsanitize-coverage=trace-args` and `-fsanitize-coverage=trace-ret`
+the compiler will insert callbacks at function entry and before return instructions
+to track function arguments and return values, respectively.
+
+These flags are designed for the Linux kernel's KCOV dataflow subsystem, which uses
+the callbacks to capture struct field values for memory corruption analysis.
+
+When debug info is available (`-g`), the compiler uses `DICompositeType` metadata
+to extract struct field layouts (byte offset and size pairs). A FNV-1a hash of the
+struct type name is prepended to the offsets array for identification.
+
+Debug info is *not* required. Without `-g` the pass falls back to tracing each IR
+argument (and the return value) directly as an opaque scalar: `offsets` is null and
+`num_fields` is zero, so struct fields are not decomposed, but the value itself is
+still reported. This keeps `trace-args`/`trace-ret` usable on optimized userspace
+or Rust code built without debug info; only the source-level field breakdown is lost.
+
+The argument value is read at the function-entry insertion point, which precedes the
+prologue stores of the incoming arguments to their stack slots at `-O0`. Build with
+optimization (`-O1` or higher) for the reported argument values to be meaningful;
+return values are captured correctly at any optimization level.
+
+`arg_idx` is the *source-level* parameter index, not the IR argument position.
+The two diverge whenever the ABI rewrites the argument list, and the reported index
+follows the source. Specifically, the pass maps IR values back to source parameters
+through `DILocalVariable::getArg()`, which the frontend assigns before ABI lowering:
+
+- Hidden ABI-inserted pointers (a struct-return `sret` pointer, a C++ `this`
+  that has no source entry) carry no `arg` number and are not counted.
+- A by-value struct that the ABI coerces or splits into several IR arguments is
+  reassembled from its `DW_OP_LLVM_fragment` pieces into a single stack slot in
+  source layout, so one source parameter yields one callback rather than N.
+
+For return values, a by-value struct that is lowered to an indirect (`sret`)
+return produces an IR function that returns `void`; the `trace-ret` callback
+then reports the caller-provided `sret` buffer as the return value, so indirect
+returns are captured rather than dropped.
+
+Both flags imply edge coverage when used alone.
+
+```c++
+// Called at function entry, once per source-level argument.
+// pc: address of the instrumented function
+// arg_idx: zero-based source-level argument index (ABI-stable; hidden
+//          sret/this pointers are not counted)
+// arg_size: size of the argument in bytes
+// ptr: pointer to the argument value (stack-spilled for scalars, reassembled
+//      into a stack slot for ABI-decomposed structs)
+// offsets: array of [byte_offset, byte_size] pairs for struct fields (null if not a struct)
+// num_fields: number of struct fields (0 if not a struct)
+void __sanitizer_cov_trace_args(uint64_t pc, uint32_t arg_idx, uint32_t arg_size,
+                                void *ptr, uint64_t *offsets, uint32_t num_fields);
+
+// Called before each return instruction.
+// pc: address of the instrumented function
+// ret_size: size of the return value in bytes
+// ptr: pointer to the return value (stack-spilled for scalars; the sret
+//      buffer for indirect struct returns; null for void)
+// offsets: array of [byte_offset, byte_size] pairs for struct fields (null if not a struct)
+// num_fields: number of struct fields (0 if not a struct)
+void __sanitizer_cov_trace_ret(uint64_t pc, uint32_t ret_size,
+                               void *ptr, uint64_t *offsets, uint32_t num_fields);
+```
+
+Both `ptr` and `offsets` may be null (a value the pass could not spill, a void
+return); a consumer must null-check before dereferencing.
+
+### x86 base-pointer note
+
+To report a scalar value, the pass may spill it to a stack slot and pass the slot
+address. On x86-64, a function whose inline assembly clobbers the base pointer
+(`rbx`/`ebx`/`bx`, e.g. a `cpuid` with an `=b` constraint, or `rdtsc`)
+cannot also take an escaping, stack-realigned spill slot without the base pointer and
+the realignment interfering. For those functions the pass skips the spill and passes a
+null `ptr` for that scalar (the `pc`/`arg_idx` are still reported); struct
+arguments already backed by an `alloca` are unaffected. This detection is
+x86-specific; other targets always spill.
+
 ## Tracing control flow
 
 With `-fsanitize-coverage=control-flow` the compiler will create a table to collect
