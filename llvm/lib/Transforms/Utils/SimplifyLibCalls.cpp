@@ -3292,6 +3292,57 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
   return ConstantFP::get(CI->getType(), Difference);
 }
 
+Value *LibCallSimplifier::optimizeILogB(CallInst *CI, IRBuilderBase &B) {
+  // Prevent the optimization from re-triggering and causing the fixpoint error.
+  if (CI->use_empty())
+    return nullptr;
+
+  Value *X = CI->getArgOperand(0);
+  Type *FTy = X->getType();
+
+  // Restricted to standard IEEE floats, doubles and fp128
+  if (!FTy->isFloatTy() && !FTy->isDoubleTy() && !FTy->isFP128Ty())
+    return nullptr;
+
+  SimplifyQuery SQ(DL, TLI, DT, AC, CI,
+                   /*UseInstrInfo*/ true, /*CanUseUndef*/ true, DC);
+  KnownFPClass Known = computeKnownFPClass(X, fcAllFlags, SQ);
+
+  // This optimization works on normal floating point arguments. In the future,
+  // if computing known bits for floating point numbers is possible, then the
+  // optimization can work on subnormals with the MSB of the mantissa set.
+  bool IsNormal =
+      Known.isKnownAlways(fcNormal) && Known.KnownFPClasses != fcNone;
+  if (!IsNormal)
+    return nullptr;
+
+  const fltSemantics &Sem = FTy->getFltSemantics();
+  unsigned BitWidth = APFloat::semanticsSizeInBits(Sem);
+  unsigned MantissaBits = APFloat::semanticsPrecision(Sem) - 1;
+  unsigned ExponentBias = 1 - APFloat::semanticsMinExponent(Sem);
+
+  IntegerType *IntTy = B.getIntNTy(BitWidth);
+  Value *Bits = B.CreateBitCast(X, IntTy);
+
+  // Clear the sign bit.
+  Value *SignMask = ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
+  Value *NoSign = B.CreateAnd(Bits, SignMask, "ilogb.nosign");
+
+  Value *Shifted = B.CreateLShr(NoSign, MantissaBits, "ilogb.exp");
+  Value *Result = B.CreateSub(Shifted, ConstantInt::get(IntTy, ExponentBias),
+                              "ilogb.result");
+
+  // ilogb returns int, the float's bit-width integer may not match that.
+  Type *RetTy = CI->getType();
+  unsigned RetWidth = RetTy->getIntegerBitWidth();
+
+  if (RetWidth < BitWidth)
+    return B.CreateTrunc(Result, RetTy);
+  if (RetWidth > BitWidth)
+    return B.CreateSExt(Result, RetTy);
+  return Result;
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -4267,6 +4318,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_nanf:
   case LibFunc_nanl:
     return optimizeNaN(CI);
+  case LibFunc_ilogb:
+  case LibFunc_ilogbf:
+  case LibFunc_ilogbl:
+    return optimizeILogB(CI, Builder);
   default:
     return nullptr;
   }
