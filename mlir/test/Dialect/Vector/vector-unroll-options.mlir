@@ -602,9 +602,6 @@ func.func @vector_constant_mask() -> vector<16x16xi1> {
 
 // -----
 
-// A tile lying entirely outside the mask in one dim must be emitted as an
-// all-zeros mask: `constant_mask` rejects a mix of zero and non-zero sizes.
-
 func.func @vector_constant_mask_empty_tile() -> vector<16x16xi1> {
   %0 = vector.constant_mask [4, 10] : vector<16x16xi1>
   return %0 : vector<16x16xi1>
@@ -619,9 +616,6 @@ func.func @vector_constant_mask_empty_tile() -> vector<16x16xi1> {
 //   CHECK-NOT:   vector.constant_mask [0,
 
 // -----
-
-// The target shape used by this test pass is fixed at rank 2, so a rank-3 op
-// exercises the leading-unit-dim padding. See #217175.
 
 func.func @vector_create_mask_rank_mismatch(%size1: index) -> vector<2x8x8xi1> {
   %c8 = arith.constant 8 : index
@@ -918,8 +912,6 @@ func.func @deinterleave_2d(%v: vector<4x8xi32>) -> (vector<4x4xi32>, vector<4x4x
 
 // -----
 
-// TargetShape [2, 2] has a lower rank than the reduced source <2x2x4>, so it
-// applies to the trailing dimensions and is padded to [1, 2, 2].
 func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: vector<2x2xf32>) -> vector<2x2xf32> {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [2] : vector<2x2x4xf32> to vector<2x2xf32>
   return %0 : vector<2x2xf32>
