@@ -121,6 +121,10 @@ public:
   // increasing ILP and preserving VGPRs.
   bool KnownExcessRP = false;
 
+  // Whether nodes still in Pending may be selected in the current region.
+  // Queue maintenance remains enabled.
+  bool AllowPendingCandidates = true;
+
   // An error margin is necessary because of poor performance of the generic RP
   // tracker and can be adjusted up for tuning heuristics to try and more
   // aggressively reduce register pressure.

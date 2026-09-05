@@ -84,6 +84,9 @@ static cl::opt<unsigned> PendingQueueLimit(
         "Max (Available+Pending) size to inspect pending queue (0 disables)"),
     cl::init(256));
 
+// Heuristic maximum VGPR pressure increase used near register limits.
+static constexpr unsigned MaxVGPRPressureInc = 16;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 #define DUMP_MAX_REG_PRESSURE
 static cl::opt<bool> PrintMaxRPRegUsageBeforeScheduler(
@@ -386,7 +389,6 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   // only for VGPRs or only for SGPRs.
 
   // FIXME: Better heuristics to determine whether to prefer SGPRs or VGPRs.
-  const unsigned MaxVGPRPressureInc = 16;
   bool ShouldTrackVGPRs = VGPRPressure + MaxVGPRPressureInc >= VGPRExcessLimit;
   bool ShouldTrackSGPRs = !ShouldTrackVGPRs && SGPRPressure >= SGPRExcessLimit;
 
@@ -442,10 +444,13 @@ static bool shouldCheckPending(SchedBoundary &Zone,
 }
 
 static SUnit *pickOnlyChoice(SchedBoundary &Zone,
-                             const TargetSchedModel *SchedModel) {
-  // pickOnlyChoice() releases pending instructions and checks for new hazards.
+                             const TargetSchedModel *SchedModel,
+                             bool AllowPendingCandidates) {
+  // Keep queue maintenance and hazard checks active when nodes still in
+  // Pending are excluded from candidate selection.
   SUnit *OnlyChoice = Zone.pickOnlyChoice();
-  if (!shouldCheckPending(Zone, SchedModel) || Zone.Pending.empty())
+  if (!AllowPendingCandidates || !shouldCheckPending(Zone, SchedModel) ||
+      Zone.Pending.empty())
     return OnlyChoice;
 
   return nullptr;
@@ -512,7 +517,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
     }
   }
 
-  if (!shouldCheckPending(Zone, SchedModel))
+  if (!AllowPendingCandidates || !shouldCheckPending(Zone, SchedModel))
     return;
 
   LLVM_DEBUG(dbgs() << "Pending Q:\n");
@@ -544,11 +549,11 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
                                                bool &PickedPending) {
   // Schedule as far as possible in the direction of no choice. This is most
   // efficient, but also provides the best heuristics for CriticalPSets.
-  if (SUnit *SU = pickOnlyChoice(Bot, SchedModel)) {
+  if (SUnit *SU = pickOnlyChoice(Bot, SchedModel, AllowPendingCandidates)) {
     IsTopNode = false;
     return SU;
   }
-  if (SUnit *SU = pickOnlyChoice(Top, SchedModel)) {
+  if (SUnit *SU = pickOnlyChoice(Top, SchedModel, AllowPendingCandidates)) {
     IsTopNode = true;
     return SU;
   }
@@ -648,7 +653,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
   do {
     PickedPending = false;
     if (RegionPolicy.OnlyTopDown) {
-      SU = pickOnlyChoice(Top, SchedModel);
+      SU = pickOnlyChoice(Top, SchedModel, AllowPendingCandidates);
       if (!SU) {
         CandPolicy NoPolicy;
         TopCand.reset(NoPolicy);
@@ -660,7 +665,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
       }
       IsTopNode = true;
     } else if (RegionPolicy.OnlyBottomUp) {
-      SU = pickOnlyChoice(Bot, SchedModel);
+      SU = pickOnlyChoice(Bot, SchedModel, AllowPendingCandidates);
       if (!SU) {
         CandPolicy NoPolicy;
         BotCand.reset(NoPolicy);
@@ -1831,6 +1836,32 @@ bool GCNSchedStage::initGCNRegion() {
   }
 
   PressureBefore = DAG.Pressure[RegionIdx];
+
+  S.AllowPendingCandidates = true;
+
+  // Only adjust the initial max-occupancy schedule, and do not override the
+  // explicit scheduling policy of an IGLP region.
+  if (StageID == GCNSchedStageID::OccInitialSchedule && ST.hasGFX90AInsts() &&
+      !DAG.RegionsWithIGLPInstrs[RegionIdx]) {
+    unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
+    unsigned RegionOccupancy =
+        std::min(DAG.MinOccupancy,
+                 PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize));
+
+    // Pending candidates may extend live ranges. Round the estimate to the
+    // hardware allocation granule and keep the final block for the current
+    // occupancy in reserve. At one wave there is no lower occupancy to protect.
+    if (RegionOccupancy > 1) {
+      unsigned UnifiedVGPRPressure =
+          PressureBefore.getVGPRNum(/*UnifiedVGPRFile=*/true);
+      unsigned EstimatedUnifiedVGPRPressure =
+          alignTo(UnifiedVGPRPressure + MaxVGPRPressureInc + S.ErrorMargin,
+                  ST.getVGPRAllocGranule(DynamicVGPRBlockSize));
+      unsigned MaxVGPRs =
+          ST.getMaxNumVGPRs(RegionOccupancy, DynamicVGPRBlockSize);
+      S.AllowPendingCandidates = EstimatedUnifiedVGPRPressure < MaxVGPRs;
+    }
+  }
 
   LLVM_DEBUG(
       dbgs() << "Pressure before scheduling:\nRegion live-ins:"
