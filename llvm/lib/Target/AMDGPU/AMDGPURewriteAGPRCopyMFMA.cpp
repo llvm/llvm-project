@@ -611,8 +611,34 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 
     ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
 
+    // The stack slot's LiveInterval may be discontiguous: a slot can be live
+    // in memory around a spill store and around a much later reload. Once
+    // we unspill the slot into a register, however, the value must reside in
+    // that register continuously from its first reference to its last. Checking
+    // interference against the slot's discontiguous interval could let us pick
+    // a PhysReg that is busy inside a gap, corrupting it. Instead, check
+    // interference over the contiguous hull the replacement register will
+    // occupy.
+    //
+    // The index-based checkInterference only consults the assigned-vreg matrix;
+    // it does not account for fixed (reg-unit) or regmask interference. Build a
+    // hull LiveInterval so we can additionally query those, ensuring we never
+    // reassign into a register clobbered by a fixed def or a call inside the
+    // hull's gap. Avoid calling checkInterference with the hull interval, as
+    // it may return stale results when a temporary interval is reused across
+    // slots.
+    LiveInterval HullLI(LI->reg(), LI->weight());
+    VNInfo *HullVNI =
+        HullLI.getNextValue(LI->beginIndex(), LIS.getVNInfoAllocator());
+    HullLI.addSegment(
+        LiveInterval::Segment(LI->beginIndex(), LI->endIndex(), HullVNI));
+
     for (MCPhysReg PhysReg : AllocOrder) {
-      if (LRM.checkInterference(*LI, PhysReg) != LiveRegMatrix::IK_Free)
+      if (LRM.checkInterference(LI->beginIndex(), LI->endIndex(), PhysReg))
+        continue;
+
+      if (LRM.checkRegUnitInterference(HullLI, PhysReg) ||
+          LRM.checkRegMaskInterference(HullLI, PhysReg))
         continue;
 
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
