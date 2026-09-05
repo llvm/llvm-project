@@ -31240,6 +31240,9 @@ public:
           // Last chance to try to vectorize alternate node.
           SmallVector<Value *> Op1, Op2;
           BoUpSLP::OrdersType ReorderIndices;
+          // canBuildSplitNode() relies on VectorizableTree(), make sure to
+          // clear here since it may contain leftover state from prior attempts.
+          V.deleteTree();
           if (MainOp && AltOp &&
               V.canBuildSplitNode(Ops, OpS, Op1, Op2, ReorderIndices)) {
             if (LocalReducedVals.empty()) {
