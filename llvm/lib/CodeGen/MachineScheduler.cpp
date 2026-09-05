@@ -248,6 +248,20 @@ static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
 static cl::opt<unsigned> ReadyListLimit("misched-limit", cl::Hidden,
   cl::desc("Limit ready list to N instructions"), cl::init(256));
 
+static cl::opt<unsigned> PressureGateWindows(
+    "misched-pressure-gate-windows", cl::Hidden,
+    cl::desc("Skip the RegExcess/RegCritical heuristics in regions at least "
+             "this many out-of-order windows long whose pressure is already "
+             "over the limit and whose issue time already covers their "
+             "critical path (0 disables)"),
+    cl::init(2));
+
+static cl::opt<unsigned> PressureGateMinInstrs(
+    "misched-pressure-gate-min-instrs", cl::Hidden,
+    cl::desc("Never skip the RegExcess/RegCritical heuristics in regions "
+             "smaller than this, whatever the out-of-order window says"),
+    cl::init(600));
+
 static cl::opt<bool> EnableRegPressure("misched-regpressure", cl::Hidden,
   cl::desc("Enable register pressure scheduling."), cl::init(true));
 
@@ -3739,9 +3753,17 @@ void GenericScheduler::checkAcyclicLatency() {
     return;
 
   // Scaled number of cycles per loop iteration.
-  unsigned IterCount =
-    std::max(Rem.CyclicCritPath * SchedModel->getLatencyFactor(),
-             Rem.RemIssueCount);
+  //
+  // The model above calls for the loop's resource height, so use the critical
+  // resource rather than RemIssueCount. The latter counts micro-ops against
+  // the front end, which for a region bottlenecked on one execution port
+  // underestimates how long an iteration takes - several-fold for wide vector
+  // code that can only issue to a couple of ports - and so overstates how
+  // many iterations must be in flight.
+  unsigned OtherCritIdx = 0;
+  unsigned ResourceHeight = Bot.getOtherResourceCount(OtherCritIdx);
+  unsigned IterCount = std::max(
+      Rem.CyclicCritPath * SchedModel->getLatencyFactor(), ResourceHeight);
   // Scaled acyclic critical path.
   unsigned AcyclicCount = Rem.CriticalPath * SchedModel->getLatencyFactor();
   // InFlightCount = (AcyclicPath / IterCycles) * InstrPerLoop
@@ -3750,7 +3772,27 @@ void GenericScheduler::checkAcyclicLatency() {
   unsigned BufferLimit =
     SchedModel->getMicroOpBufferSize() * SchedModel->getMicroOpFactor();
 
-  Rem.IsAcyclicLatencyLimited = InFlightCount > BufferLimit;
+  // The InFlightCount estimate above only means something once the acyclic
+  // path actually spans more than one iteration. If a single iteration takes
+  // at least as long to issue as the acyclic path takes to complete, that path
+  // is covered by the iteration's own issue time and no cross-iteration
+  // overlap is needed to hide it.
+  //
+  // Without this check the test degenerates for any loop body larger than the
+  // micro-op buffer: for an issue-bound loop IterCount == RemIssueCount, so
+  // InFlightCount collapses to AcyclicCount and the condition reduces to
+  // "acyclic critical path > MicroOpBufferSize / IssueWidth" - a threshold of
+  // a few tens of cycles, which every large loop exceeds whether or not
+  // latency is what limits it.
+  //
+  // Only refine the estimate where it models a real reorder buffer.  For
+  // MicroOpBufferSize <= 1 the value is a sentinel for an in-order target
+  // rather than a size, BufferLimit is degenerate, and treating such loops as
+  // latency limited is the deliberate policy for those targets.
+  bool SpansIterations = !SchedModel->getMCSchedModel()->isOutOfOrder() ||
+                         AcyclicCount > IterCount;
+
+  Rem.IsAcyclicLatencyLimited = SpansIterations && InFlightCount > BufferLimit;
 
   LLVM_DEBUG(
       dbgs() << "IssueCycles="
@@ -3760,6 +3802,73 @@ void GenericScheduler::checkAcyclicLatency() {
              << " InFlight=" << InFlightCount / SchedModel->getMicroOpFactor()
              << "m BufferLim=" << SchedModel->getMicroOpBufferSize() << "m\n";
       if (Rem.IsAcyclicLatencyLimited) dbgs() << "  ACYCLIC LATENCY LIMIT\n");
+}
+
+/// Decide whether scheduling this region for register pressure can achieve
+/// anything.
+///
+/// RegExcess and RegCritical are consulted before clustering, resource
+/// balancing, latency and source order in tryCandidate(), so whenever either
+/// fires it decides the schedule outright. That ordering is right when a
+/// different order could keep the region inside the register file, because
+/// then avoiding a spill is worth more than any of those.
+///
+/// It is not right when the region is already over the limit and is issue
+/// bound. Then some values have to be spilled whichever order is chosen, and
+/// there is no dependence height left to recover by reordering either, so the
+/// heuristics can only replace the incoming order with a greedy minimum-peak
+/// order. That lowers the peak slightly without removing the spills.
+///
+/// The size condition is expressed in multiples of the target's out-of-order
+/// window rather than as a fixed instruction count. A region that fits in the
+/// window is one the hardware reorders for itself, so a poor static order
+/// costs little there. A region many windows long is one the hardware cannot
+/// see across, so the static order is what the machine executes, and a greedy
+/// choice made with no lookahead compounds over all of it.
+void GenericScheduler::checkPressureIsActionable() {
+  PressureActionable = true;
+  if (!PressureGateWindows || !DAG->isTrackingPressure())
+    return;
+
+  // MicroOpBufferSize is 0 or 1 for in-order targets, where it is a sentinel
+  // rather than a window size - isOutOfOrder() is the predicate that means
+  // "the hardware reorders for itself". In-order targets are never gated:
+  // they are the ones that most need the scheduler.
+  if (!SchedModel->getMCSchedModel()->isOutOfOrder())
+    return;
+  // Two conditions, because neither alone is enough. The window ratio is the
+  // argument for the gate, but MicroOpBufferSize varies by a factor of two
+  // across models, so a ratio that is right for a large buffer is far too
+  // permissive on a small one and starts catching mid-size regions where the
+  // pressure heuristics do pay. The absolute floor keeps the gate to regions
+  // that are large in their own right.
+  unsigned Window = SchedModel->getMicroOpBufferSize();
+  if (NumRegionInstrs <
+      std::max(PressureGateWindows * Window, PressureGateMinInstrs.getValue()))
+    return;
+
+  // Nothing to gate if the region already fits in the register file.
+  if (DAG->getRegionCriticalPSets().empty())
+    return;
+
+  // Only when throughput, not dependence height, sets the pace. If the
+  // critical path dominates there is still latency to win back by reordering,
+  // and that is worth the risk.
+  //
+  // Compare against the region's critical *resource*, not against
+  // RemIssueCount: the latter measures micro-ops against the front end, which
+  // for a loop bottlenecked on one execution port badly underestimates how
+  // long the region takes and makes an obviously throughput-bound loop look
+  // latency bound.
+  unsigned OtherCritIdx = 0;
+  unsigned CritResCount = Bot.getOtherResourceCount(OtherCritIdx);
+  if (!checkResourceLimit(SchedModel->getLatencyFactor(), CritResCount,
+                          Rem.CriticalPath, /*AfterSchedNode=*/false))
+    return;
+
+  PressureActionable = false;
+  LLVM_DEBUG(dbgs() << "  Pressure heuristics disabled: " << NumRegionInstrs
+                    << " instrs, over the limit, issue bound\n");
 }
 
 void GenericScheduler::registerRoots() {
@@ -3779,6 +3888,8 @@ void GenericScheduler::registerRoots() {
     Rem.CyclicCritPath = DAG->computeCyclicCriticalPath();
     checkAcyclicLatency();
   }
+
+  checkPressureIsActionable();
 }
 
 bool llvm::tryPressure(const PressureChange &TryP, const PressureChange &CandP,
@@ -3955,17 +4066,15 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Avoid exceeding the target's limit.
-  if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.Excess,
-                                               Cand.RPDelta.Excess,
-                                               TryCand, Cand, RegExcess, TRI,
-                                               DAG->MF))
+  if (PressureActionable && DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
+                  RegExcess, TRI, DAG->MF))
     return TryCand.Reason != NoCand;
 
   // Avoid increasing the max critical pressure in the scheduled region.
-  if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CriticalMax,
-                                               Cand.RPDelta.CriticalMax,
-                                               TryCand, Cand, RegCritical, TRI,
-                                               DAG->MF))
+  if (PressureActionable && DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
+                  TryCand, Cand, RegCritical, TRI, DAG->MF))
     return TryCand.Reason != NoCand;
 
   // We only compare a subset of features when comparing nodes between
