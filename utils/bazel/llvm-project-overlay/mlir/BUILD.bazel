@@ -4634,6 +4634,23 @@ cc_library(
 )
 
 cc_library(
+    name = "ABI",
+    srcs = [
+        "lib/ABI/ABITypeMapper.cpp",
+        "lib/ABI/Targets/Test/TestTarget.cpp",
+    ],
+    hdrs = glob(["include/mlir/ABI/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":DataLayoutInterfaces",
+        ":FunctionInterfaces",
+        ":IR",
+        "//llvm:ABI",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "InliningUtils",
     srcs = ["lib/Transforms/Utils/InliningUtils.cpp"],
     hdrs = ["include/mlir/Transforms/InliningUtils.h"],
