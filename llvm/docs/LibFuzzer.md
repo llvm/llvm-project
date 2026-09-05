@@ -661,9 +661,11 @@ is expensive.
 By default (`-detect_leaks=1`) libFuzzer will count the number of
 `malloc` and `free` calls when executing every mutation.
 If the numbers don't match (which by itself doesn't mean there is a leak)
-libFuzzer will invoke the more expensive [LeakSanitizer]
+libFuzzer will re-execute the input to verify the mismatch and then invoke
+the more expensive [LeakSanitizer]
 pass and if the actual leak is found, it will be reported with the reproducer
-and the process will exit.
+and the process will exit. The verification re-executions are not fuzzing
+runs and do not count towards `-runs`.
 
 If your target has massive leaks and the leak detection is disabled
 you will eventually run out of RAM (see the `-rss_limit_mb` flag).
