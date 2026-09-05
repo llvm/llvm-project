@@ -229,6 +229,113 @@ static Value *createWhileLO(IRBuilder<> &Builder, unsigned ElementSizeInBits,
       WhileLO, {Start, End, Builder.getInt32(VectorScale)}, "pac.mask");
 }
 
+/// Returns the multi-vector load/store intrinsic ID for \p VectorScale.
+static Intrinsic::ID getPNLoadStoreIntrinsic(unsigned VectorScale,
+                                             bool IsLoad) {
+  if (VectorScale == 2)
+    return IsLoad ? Intrinsic::aarch64_sve_ld1_pn_x2
+                  : Intrinsic::aarch64_sve_st1_pn_x2;
+  if (VectorScale == 4)
+    return IsLoad ? Intrinsic::aarch64_sve_ld1_pn_x4
+                  : Intrinsic::aarch64_sve_st1_pn_x4;
+  llvm_unreachable("unsupported predicate-as-counter scale");
+}
+
+/// If \p UserI is a masked-load user of the original loop mask, rewrite it to
+/// a masked multi-vector load (using the predicate-as-counter) if the load
+/// access size matches the predicate-as-counter element size.
+static bool tryRewriteMaskedLoadUser(Instruction &UserI,
+                                     const MaskRewriteCandidate &C,
+                                     Value *Count) {
+  auto *II = dyn_cast<IntrinsicInst>(&UserI);
+  if (!II || II->getIntrinsicID() != Intrinsic::masked_load)
+    return false;
+
+  unsigned ElementSizeInBits =
+      getScalarSizeInBits(II->getModule()->getDataLayout(), II->getType());
+  if (ElementSizeInBits != C.ElementSizeInBits)
+    return false;
+
+  if (!isa<PoisonValue, UndefValue>(II->getArgOperand(2)))
+    return false;
+
+  IRBuilder<> Builder(II);
+  Builder.SetCurrentDebugLocation(II->getDebugLoc());
+
+  ElementCount LegalEC = getSVEElementCount(C.ElementSizeInBits);
+  Type *ScalarType = II->getType()->getScalarType();
+  auto *WideDataTy = VectorType::get(ScalarType, LegalEC * C.VectorScale);
+  auto *LegalDataTy = VectorType::get(ScalarType, LegalEC);
+
+  Module *M = II->getModule();
+  FunctionCallee LD1 = Intrinsic::getOrInsertDeclaration(
+      M, getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/true),
+      {LegalDataTy, II->getArgOperand(0)->getType()});
+  auto *PNLoad =
+      Builder.CreateCall(LD1, {Count, II->getArgOperand(0)}, "pac.ld1");
+
+  // Copy pointer parameter attributes.
+  for (Attribute ParamAttr : II->getParamAttributes(0))
+    PNLoad->addParamAttr(1, ParamAttr);
+
+  // Concatenate all results into the original wide value.
+  Value *WideData = PoisonValue::get(WideDataTy);
+  for (unsigned Slice = 0; Slice != C.VectorScale; ++Slice) {
+    Value *Part = Builder.CreateExtractValue(PNLoad, Slice, "pac.data");
+    WideData = Builder.CreateInsertVector(WideDataTy, WideData, Part,
+                                          Slice * LegalEC.getKnownMinValue(),
+                                          "pac.vec");
+  }
+
+  II->replaceAllUsesWith(WideData);
+  II->eraseFromParent();
+  return true;
+}
+
+/// If \p UserI is a masked-store user of the original loop mask, rewrite it to
+/// a masked multi-vector store (using the predicate-as-counter) if the store
+/// access size matches the predicate-as-counter element size.
+static bool tryRewriteMaskedStoreUser(Instruction &UserI,
+                                      const MaskRewriteCandidate &C,
+                                      Value *Count) {
+  auto *II = dyn_cast<IntrinsicInst>(&UserI);
+  if (!II || II->getIntrinsicID() != Intrinsic::masked_store)
+    return false;
+
+  unsigned ElementSizeInBits = getScalarSizeInBits(
+      II->getModule()->getDataLayout(), II->getArgOperand(0)->getType());
+  if (ElementSizeInBits != C.ElementSizeInBits)
+    return false;
+
+  IRBuilder<> Builder(II);
+  Builder.SetCurrentDebugLocation(II->getDebugLoc());
+
+  Type *ScalarType = II->getArgOperand(0)->getType()->getScalarType();
+  ElementCount LegalEC = getSVEElementCount(C.ElementSizeInBits);
+  auto *LegalDataTy = VectorType::get(ScalarType, LegalEC);
+
+  SmallVector<Value *, 6> StoreArgs;
+  for (unsigned Slice = 0; Slice != C.VectorScale; ++Slice)
+    StoreArgs.push_back(Builder.CreateExtractVector(
+        LegalDataTy, II->getArgOperand(0), Slice * LegalEC.getKnownMinValue(),
+        "pac.data"));
+  StoreArgs.push_back(Count);
+  StoreArgs.push_back(II->getArgOperand(1));
+
+  Module *M = II->getModule();
+  FunctionCallee ST1 = Intrinsic::getOrInsertDeclaration(
+      M, getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/false),
+      {LegalDataTy, II->getArgOperand(1)->getType()});
+  auto *PNStore = Builder.CreateCall(ST1, StoreArgs);
+
+  // Copy pointer parameter attributes.
+  for (Attribute ParamAttr : II->getParamAttributes(1))
+    PNStore->addParamAttr(C.VectorScale + 1, ParamAttr);
+
+  II->eraseFromParent();
+  return true;
+}
+
 /// If \p UserI is an extractelement use of the original loop mask, attempt to
 /// rewrite it to `extractelement(pext(count, 0), idx)` if the extract index is
 /// known to be within the first mask section (which means pext index = 0). If
@@ -464,7 +571,9 @@ bool AArch64PredicateAsCounterLoopRewrites::rewriteCandidate(
     Value *WideMask = nullptr;
     for (Use *U : UsesToRewrite) {
       auto *UserI = cast<Instruction>(U->getUser());
-      if (tryRewriteExtractElement(*UserI, C, Count))
+      if (tryRewriteMaskedLoadUser(*UserI, C, Count) ||
+          tryRewriteMaskedStoreUser(*UserI, C, Count) ||
+          tryRewriteExtractElement(*UserI, C, Count))
         continue;
 
       if (!WideMask) {
