@@ -45,6 +45,10 @@ def _get_current_team(team_name, teams) -> Optional[github.Team.Team]:
     return None
 
 
+def _team_has_members(team: github.Team.Team) -> bool:
+    return team.get_members().totalCount > 0
+
+
 def escape_description(str):
     # If the description of an issue/pull request is empty, the Github API
     # library returns None instead of an empty string. Handle this here to
@@ -155,6 +159,9 @@ class PRSubscriber:
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
+        if not _team_has_members(team):
+            print(f"team {team.slug} has no members, skip subscribers")
+            return True
 
         # GitHub limits comments to 65,536 characters, let's limit the diff
         # and the file list to 20kB each.
