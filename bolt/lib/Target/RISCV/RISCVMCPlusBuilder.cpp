@@ -28,6 +28,14 @@ using namespace bolt;
 
 namespace {
 
+bool isValidCallJALR(const MCInst &Inst) {
+  if (Inst.getOpcode() != RISCV::JALR || MCPlus::getNumPrimeOperands(Inst) != 3)
+    return false;
+
+  return Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm();
+}
+
 class RISCVMCPlusBuilder : public MCPlusBuilder {
   bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
   unsigned regSize() const { return isRV64() ? 8 : 4; }
@@ -563,7 +571,9 @@ public:
   }
 
   bool isCallAuipc(const MCInst &Inst) const {
-    if (Inst.getOpcode() != RISCV::AUIPC)
+    if (Inst.getOpcode() != RISCV::AUIPC ||
+        MCPlus::getNumPrimeOperands(Inst) != 2 || !Inst.getOperand(0).isReg() ||
+        Inst.getOperand(0).getReg() == RISCV::X0)
       return false;
 
     const auto &ImmOp = Inst.getOperand(1);
@@ -584,10 +594,9 @@ public:
   }
 
   bool isRISCVCall(const MCInst &First, const MCInst &Second) const override {
-    if (!isCallAuipc(First))
+    if (!isCallAuipc(First) || !isValidCallJALR(Second))
       return false;
 
-    assert(Second.getOpcode() == RISCV::JALR);
     return true;
   }
 
