@@ -4611,6 +4611,28 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     if (Index == 0 && !Ty->getScalarType()->isIntegerTy())
       return 0;
 
+    // SVE has no scalar move to an arbitrary lane above the low 128-bit portion
+    // of a Z register, e.g. there is no equivalent of "mov z0.d[9], d0".
+    // Fixed-length vectors wider than 128 bits therefore need
+    // [splice]/index/pred/splat/cmp/pred-mov when scalarizing inserts for those
+    // lanes, so model them as more expensive than ordinary NEON lane accesses.
+    // Extracts to integer types require extra mov from FPR -> GPR.
+    if (ST->useSVEForFixedLengthVectors() && isa<FixedVectorType>(Ty) &&
+        !Ty->isBFloatTy()) {
+      InstructionCost Cost = CostKind == TTI::TCK_CodeSize
+                                 ? 1
+                                 : ST->getVectorInsertExtractBaseCost();
+      unsigned LowElts = AArch64::SVEBitsPerBlock / Ty->getScalarSizeInBits();
+      if (Index >= LowElts) {
+        if (Opcode == Instruction::InsertElement)
+          Cost += 3;
+        else if (Opcode == Instruction::ExtractElement &&
+                 Ty->getScalarType()->isIntegerTy())
+          Cost += 1;
+      }
+      return Cost;
+    }
+
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
@@ -5761,12 +5783,17 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       return InstructionCost::getInvalid();
   }
 
+  auto LT = getTypeLegalizationCost(VecTy);
+  unsigned MaxNativeInterleaveFactor = TLI->getMaxSupportedInterleaveFactor();
   // Vectorization for masked interleaved accesses is only enabled for scalable
-  // VF.
-  if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps))
+  // VF. For fixed-length SVE, avoid non-native interleave factor because
+  // the generic fallback costs wide fixed-vector shuffles too optimistically.
+  if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps ||
+                                 (Factor > MaxNativeInterleaveFactor &&
+                                  TLI->useSVEForFixedLengthVectorVT(LT.second))))
     return InstructionCost::getInvalid();
 
-  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  if (!UseMaskForGaps && Factor <= MaxNativeInterleaveFactor) {
     ElementCount EC = VecVTy->getElementCount();
     auto *SubVecTy = VectorType::get(VecVTy->getElementType(),
                                      EC.divideCoefficientBy(Factor));
