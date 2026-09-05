@@ -488,6 +488,19 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                    convertType(paramVar->getType()), paramLoc, alignment,
                    /*insertIntoFnEntryBlock=*/true);
 
+
+
+    mlir::ptr::MemorySpaceAttrInterface srcAddrSpace = getCIRAllocaAddressSpace();
+    mlir::ptr::MemorySpaceAttrInterface destAddrSpace =
+        cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                   paramVar->getType().getAddressSpace());
+    if (srcAddrSpace != destAddrSpace) {
+      mlir::Type destPtrTy = builder.getPointerTo(
+          (cast<cir::PointerType>(addrVal.getType())).getPointee(),
+          destAddrSpace);
+      addrVal = performAddrSpaceCast(addrVal, destPtrTy);
+    }
+
     declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
             /*isParam=*/true);
 
