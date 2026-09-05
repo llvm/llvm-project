@@ -49,6 +49,16 @@ protected:
           *static_cast<ol_platform_handle_t *>(PropValue) = Platform;
           return OL_SUCCESS;
         });
+
+    EXPECT_CALL(Helper.Mock.get(),
+                olGetDeviceInfo(_, OL_DEVICE_INFO_DRIVER_ID, _, _))
+        .WillRepeatedly([](ol_device_handle_t /*Device*/,
+                           ol_device_info_t /*PropName*/, size_t PropSize,
+                           void *PropValue) -> ol_result_t {
+          EXPECT_EQ(PropSize, sizeof(uint32_t));
+          *static_cast<uint32_t *>(PropValue) = 0;
+          return OL_SUCCESS;
+        });
   }
 
   void TearDown() override {

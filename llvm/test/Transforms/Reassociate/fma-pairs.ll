@@ -409,16 +409,13 @@ define double @const_addend(ptr %x, ptr %y) {
 define double @hidden_fadd_tree(double %acc, double %a, double %b, double %c, double %d, double %e, double %f) {
 ; CHECK-LABEL: define double @hidden_fadd_tree(
 ; CHECK-SAME: double [[ACC:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], double [[E:%.*]], double [[F:%.*]]) {
-; CHECK-NEXT:    [[ACC0:%.*]] = fadd fast double [[A]], [[B]]
-; CHECK-NEXT:    [[ACC1:%.*]] = fadd fast double [[C]], [[D]]
-; CHECK-NEXT:    [[ACC2:%.*]] = fadd fast double [[B]], [[C]]
-; CHECK-NEXT:    [[ACC3:%.*]] = fadd fast double [[A]], [[D]]
-; CHECK-NEXT:    [[ACC4:%.*]] = fadd fast double [[ACC0]], [[ACC1]]
-; CHECK-NEXT:    [[ACC5:%.*]] = fadd fast double [[ACC2]], [[ACC3]]
-; CHECK-NEXT:    [[ACC6:%.*]] = fadd fast double [[ACC4]], [[ACC5]]
 ; CHECK-NEXT:    [[M0:%.*]] = fmul fast double [[F]], [[E]]
-; CHECK-NEXT:    [[ACC7:%.*]] = fadd fast double [[M0]], [[ACC6]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd fast double [[ACC7]], [[ACC]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast double [[B]], [[A]]
+; CHECK-NEXT:    [[REASS_ADD4:%.*]] = fadd fast double [[REASS_ADD]], [[C]]
+; CHECK-NEXT:    [[REASS_ADD5:%.*]] = fadd fast double [[REASS_ADD4]], [[D]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast double [[REASS_ADD5]], 2.000000e+00
+; CHECK-NEXT:    [[ACC7:%.*]] = fadd fast double [[M0]], [[ACC]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd fast double [[ACC7]], [[REASS_MUL]]
 ; CHECK-NEXT:    ret double [[RESULT]]
 ;
   %acc0 = fadd fast double %a, %b
@@ -440,12 +437,11 @@ define double @nested_fma_subtraction(double %acc, double %a, double %b, double 
 ; CHECK-LABEL: define double @nested_fma_subtraction(
 ; CHECK-SAME: double [[ACC:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], double [[E:%.*]], double [[F:%.*]]) {
 ; CHECK-NEXT:    [[M0:%.*]] = fmul fast double [[B]], [[A]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[F]], [[E]]
-; CHECK-NEXT:    [[M0_NEG:%.*]] = fmul fast double [[M0]], -1.000000e+00
 ; CHECK-NEXT:    [[M1_NEG_NEG:%.*]] = fmul fast double [[D]], [[C]]
-; CHECK-NEXT:    [[M2_NEG:%.*]] = fmul fast double [[M2]], -1.000000e+00
-; CHECK-NEXT:    [[SUB_NEG:%.*]] = fadd fast double [[ACC]], [[M0_NEG]]
-; CHECK-NEXT:    [[ADD_NEG:%.*]] = fadd fast double [[M1_NEG_NEG]], [[SUB_NEG]]
+; CHECK-NEXT:    [[M2_NEG1:%.*]] = fmul fast double [[F]], [[E]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast double [[M2_NEG1]], [[M0]]
+; CHECK-NEXT:    [[M2_NEG:%.*]] = fmul fast double -1.000000e+00, [[REASS_ADD]]
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = fadd fast double [[ACC]], [[M1_NEG_NEG]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = fadd fast double [[M2_NEG]], [[ADD_NEG]]
 ; CHECK-NEXT:    ret double [[RESULT]]
 ;
@@ -458,3 +454,29 @@ define double @nested_fma_subtraction(double %acc, double %a, double %b, double 
   ret double %result
 }
 
+
+define float @multi_use_fmul_addend(float %a, float %c, float %d, float %e, float %f) {
+; CHECK-LABEL: define float @multi_use_fmul_addend(
+; CHECK-SAME: float [[A:%.*]], float [[C:%.*]], float [[D:%.*]], float [[E:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[AC:%.*]] = fmul fast float [[C]], [[A]]
+; CHECK-NEXT:    [[AD:%.*]] = fmul fast float [[D]], [[A]]
+; CHECK-NEXT:    [[AE:%.*]] = fmul fast float [[E]], [[A]]
+; CHECK-NEXT:    [[E_SUM:%.*]] = fadd fast float [[AD]], [[AC]]
+; CHECK-NEXT:    [[T1:%.*]] = fmul fast float [[E_SUM]], [[E]]
+; CHECK-NEXT:    [[F_SUM0:%.*]] = fadd fast float [[AD]], [[AC]]
+; CHECK-NEXT:    [[F_SUM:%.*]] = fadd fast float [[F_SUM0]], [[AE]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul fast float [[F_SUM]], [[F]]
+; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[T2]], [[T1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %ac = fmul fast float %a, %c
+  %ad = fmul fast float %a, %d
+  %ae = fmul fast float %a, %e
+  %e.sum = fadd fast float %ad, %ac
+  %t1 = fmul fast float %e.sum, %e
+  %f.sum0 = fadd fast float %ae, %ad
+  %f.sum = fadd fast float %f.sum0, %ac
+  %t2 = fmul fast float %f.sum, %f
+  %r = fadd fast float %t1, %t2
+  ret float %r
+}

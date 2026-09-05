@@ -2,9 +2,11 @@ import os
 import os.path
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import requireSocketPermission
 from lldbsuite.test.gdbclientutils import *
 
 
+@requireSocketPermission  # setUp binds a listening socket for the mock server
 class GDBRemoteTestBase(TestBase):
     """
     Base class for GDB client tests.

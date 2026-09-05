@@ -17,7 +17,8 @@
 // RUN:   -module-names=M,N -o %t/deps.json
 // RUN: FileCheck %s < %t/scan.log
 
-// CHECK: [{{[0-9]+\.[0-9]+}}] [[#PID:]] [[#TID1:]]: init_compiler_instance_with_context:{{.*}}
+// CHECK: [{{[0-9]+\.[0-9]+}}] [[#PID:]] [[#TID1:]]: logging_start
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: init_compiler_instance_with_context:{{.*}}
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: start scan_by_name: M
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: timestamp_read: {{.*}}[[MPCMFILE:.*\.pcm]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: pcm_read_cached: {{.*}}[[MPCMFILE]]
@@ -46,6 +47,7 @@
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: timestamp_read: {{.*}}[[NPCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: pcm_finalized: {{.*}}[[NPCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: finish scan_by_name: N
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID1]]: logging_end
 
 //--- cdb.json.template
 [{

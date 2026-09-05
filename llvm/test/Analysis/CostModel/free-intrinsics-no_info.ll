@@ -7,7 +7,7 @@ define i32 @trivially_free() {
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %alloca = alloca i8, align 1
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = call i32 @llvm.annotation.i32.p0(i32 undef, ptr undef, ptr undef, i32 undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.assume(i1 undef)
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !3)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !{{[0-9]+}})
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.sideeffect()
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = call ptr @llvm.invariant.start.p0(i64 1, ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.invariant.end.p0(ptr undef, i64 1, ptr undef)
@@ -27,7 +27,7 @@ define i32 @trivially_free() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %alloca = alloca i8, align 1
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = call i32 @llvm.annotation.i32.p0(i32 undef, ptr undef, ptr undef, i32 undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.assume(i1 undef)
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !3)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !{{[0-9]+}})
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.sideeffect()
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = call ptr @llvm.invariant.start.p0(i64 1, ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.invariant.end.p0(ptr undef, i64 1, ptr undef)

@@ -323,6 +323,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf128
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
@@ -344,11 +345,13 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsf128
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fdim
     libc.src.math.fdimf
+    libc.src.math.fdimf128
     libc.src.math.fdiml
     libc.src.math.fdiv
     libc.src.math.fdivl
@@ -365,7 +368,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaxf
     libc.src.math.fmaxf128
     libc.src.math.fmaximum
+    libc.src.math.fmaximum_mag_numf128
+    libc.src.math.fmaximum_magf128
     libc.src.math.fmaximumf
+    libc.src.math.fmaximumf128
     libc.src.math.fmaximuml
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_magf
@@ -375,13 +381,17 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_mag_numl
     libc.src.math.fmaximum_num
     libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf128
     libc.src.math.fmaximum_numl
     libc.src.math.fmaxl
     libc.src.math.fmin
     libc.src.math.fminf
     libc.src.math.fminf128
     libc.src.math.fminimum
+    libc.src.math.fminimum_mag_numf128
+    libc.src.math.fminimum_magf128
     libc.src.math.fminimumf
+    libc.src.math.fminimumf128
     libc.src.math.fminimuml
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_magf
@@ -391,6 +401,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag_numl
     libc.src.math.fminimum_num
     libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf128
     libc.src.math.fminimum_numl
     libc.src.math.fminl
     libc.src.math.fmod
@@ -431,6 +442,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ldexpl
     libc.src.math.lgamma
     libc.src.math.lgamma_r
+    libc.src.math.lgammaf
     libc.src.math.llogb
     libc.src.math.llogbf
     libc.src.math.llogbl

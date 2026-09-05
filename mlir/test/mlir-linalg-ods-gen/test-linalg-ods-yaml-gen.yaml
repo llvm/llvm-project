@@ -183,7 +183,7 @@ structured_op: !LinalgStructuredOpConfig
 
 #       IMPL:  Test2Op::hasDynamicIndexingMaps() { return true; }
 #       IMPL:  Test2Op::verifyIndexingMapRequiredAttributes()
-#       IMPL:  auto attr = op->getAttrOfType<DenseElementsAttr>("strides")
+#       IMPL:  op->getInherentAttrOfType<DenseElementsAttr>("strides")
 #       IMPL:  "incorrect element type for index attribute 'strides'"
 #       IMPL:  "incorrect shape for index attribute 'strides'"
 #       IMPL:  void Test2Op::regionBuilder(ImplicitLocOpBuilder &b,

@@ -477,8 +477,15 @@ private:
   SPIRVTypeInst getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
                                SPIRV::FPEncoding::FPEncoding FPEncode);
 
+  SPIRVTypeInst getOpTypeVectorImpl(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                    MachineIRBuilder &MIRBuilder,
+                                    bool IsLongVectorEXT = false);
+
   SPIRVTypeInst getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                 MachineIRBuilder &MIRBuilder);
+
+  SPIRVTypeInst getOpTypeVectorIdEXT(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                     MachineIRBuilder &MIRBuilder);
 
   SPIRVTypeInst getOpTypeArray(uint32_t NumElems, SPIRVTypeInst ElemType,
                                MachineIRBuilder &MIRBuilder,
@@ -732,7 +739,8 @@ public:
   // mappings.
   void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);
 
-  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
+  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg,
+                       bool CanUseAnyVectorRank);
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };

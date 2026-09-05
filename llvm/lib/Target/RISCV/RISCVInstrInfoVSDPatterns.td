@@ -271,22 +271,6 @@ multiclass VPatBinaryFPSDNode_VV_VF_RM<SDPatternOperator vop, string instruction
   }
 }
 
-multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_name,
-                                   bit isSEWAware = 0> {
-  foreach fvti = AllFloatVectors in
-    let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
-                                (fvti.Vector fvti.RegClass:$rs1))),
-              (!cast<Instruction>(
-                           !if(isSEWAware,
-                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW,
-                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX))
-                           (fvti.Vector (IMPLICIT_DEF)),
-                           fvti.RegClass:$rs1,
-                           (fvti.Scalar fvti.ScalarRegClass:$rs2),
-                           fvti.AVL, fvti.Log2SEW, TA_MA)>;
-}
-
 multiclass VPatBinaryFPSDNode_R_VF_RM<SDPatternOperator vop, string instruction_name,
                                       list<VTypeInfo> vtilist = AllFloatVectors,
                                       bit isSEWAware = 0> {
@@ -1532,6 +1516,30 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+}
+
+// Match vselect with a splat that is a bitcast integer splat of the
+// floating-point type (e.g. when the scalar type doesn't have native
+// FP splat support, such as f16 or bf16).
+foreach fvti = !listconcat(AllFP16Vectors, AllBF16Vectors) in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                    (fvti.Vector (bitconvert
+                                      (ivti.Vector (SplatPat XLenVT:$rs1)))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, GPR:$rs1, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                    (fvti.Vector (bitconvert
+                                      (ivti.Vector (SplatPat_simm5 simm5:$rs1)))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, simm5:$rs1, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
+  }
 }
 
 // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions

@@ -20,7 +20,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__canonicalize_select_pinf_rhs(i1 
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.canonicalize.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
-  %select = select i1 %cond, float %x, float 0x7FF0000000000000
+  %select = select i1 %cond, float %x, float +inf
   %canon = call float @llvm.canonicalize.f32(float %select)
   ret float %canon
 }

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
@@ -86,6 +87,21 @@ private:
                               StringToOffsetTable &OffsetTable) const;
 
   void emitGetInitRuntimeLibcallNames(raw_ostream &OS) const;
+
+  // Emit the sorted per-predicate `setAvailable` tables/loops. The
+  // always-available bucket emits at \p BaseIndent; each predicated bucket is
+  // wrapped in `if (pred)`. \p Receiver prefixes the calls ("Info." for the
+  // standalone library functions, empty otherwise).
+  void
+  emitPredicateGroups(raw_ostream &OS, const Record *R,
+                      DenseMap<PredicateWithCC, LibcallsWithCC> &Pred2Funcs,
+                      SetVector<PredicateWithCC> &PredicateSorter,
+                      unsigned BaseIndent, StringRef Receiver) const;
+
+  // Emit a file-local `setAvailableLibFuncs_<name>` for all LibcallLibrary defs
+  // sharing \p Name, each gated by its own availability predicate.
+  void emitLibraryFunction(raw_ostream &OS, StringRef Name,
+                           ArrayRef<const Record *> Libs) const;
 
   void emitSystemRuntimeLibrarySetCalls(raw_ostream &OS) const;
 
@@ -371,15 +387,248 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
   emitNameMatchHashTable(OS, Table);
 }
 
+void RuntimeLibcallEmitter::emitPredicateGroups(
+    raw_ostream &OS, const Record *R,
+    DenseMap<PredicateWithCC, LibcallsWithCC> &Pred2Funcs,
+    SetVector<PredicateWithCC> &PredicateSorter, unsigned BaseIndent,
+    StringRef Receiver) const {
+  SmallVector<PredicateWithCC, 0> SortedPredicates =
+      PredicateSorter.takeVector();
+
+  llvm::sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
+    StringRef AName = A.Availability ? A.Availability->getName() : "";
+    StringRef BName = B.Availability ? B.Availability->getName() : "";
+    if (AName != BName)
+      return AName < BName;
+    // Break name ties on the calling convention for a deterministic order.
+    StringRef ACC = A.CallingConv ? A.CallingConv->getName() : "";
+    StringRef BCC = B.CallingConv ? B.CallingConv->getName() : "";
+    return ACC < BCC;
+  });
+
+  for (PredicateWithCC Entry : SortedPredicates) {
+    AvailabilityPredicate SubsetPredicate(Entry.Availability);
+    unsigned IndentDepth = BaseIndent;
+
+    auto It = Pred2Funcs.find(Entry);
+    if (It == Pred2Funcs.end())
+      continue;
+
+    // Shared-core deduplication can empty a bucket.
+    if (It->second.LibcallImpls.empty())
+      continue;
+
+    if (!SubsetPredicate.isAlwaysAvailable()) {
+      IndentDepth = BaseIndent + 2;
+
+      OS << indent(IndentDepth);
+      SubsetPredicate.emitIf(OS);
+    }
+
+    LibcallsWithCC &FuncsWithCC = It->second;
+
+    std::vector<const RuntimeLibcallImpl *> &Funcs = FuncsWithCC.LibcallImpls;
+
+    // Records which impls are available, not which is selected, so a libcall
+    // may have more than one. Order is irrelevant (each entry is a setAvailable
+    // call); sort by the provided libcall, breaking ties on the impl enum for a
+    // deterministic total order.
+    llvm::sort(Funcs, [](const RuntimeLibcallImpl *A,
+                         const RuntimeLibcallImpl *B) {
+      return std::make_pair(A->getProvides()->getEnumVal(), A->getEnumVal()) <
+             std::make_pair(B->getProvides()->getEnumVal(), B->getEnumVal());
+    });
+
+    OS << indent(IndentDepth + 2)
+       << "static const RTLIB::LibcallImpl LibraryCalls";
+    SubsetPredicate.emitTableVariableNameSuffix(OS);
+    if (FuncsWithCC.CallingConv)
+      OS << '_' << FuncsWithCC.CallingConv->getName();
+
+    OS << "[] = {\n";
+    for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
+      OS << indent(IndentDepth + 6);
+      LibCallImpl->emitEnumEntry(OS);
+      OS << ", // " << LibCallImpl->getLibcallFuncName() << '\n';
+    }
+
+    OS << indent(IndentDepth + 2) << "};\n\n"
+       << indent(IndentDepth + 2)
+       << "for (const RTLIB::LibcallImpl Impl : LibraryCalls";
+    SubsetPredicate.emitTableVariableNameSuffix(OS);
+    if (FuncsWithCC.CallingConv)
+      OS << '_' << FuncsWithCC.CallingConv->getName();
+
+    OS << ") {\n"
+       << indent(IndentDepth + 4) << Receiver << "setAvailable(Impl);\n";
+
+    if (FuncsWithCC.CallingConv) {
+      StringRef CCEnum =
+          FuncsWithCC.CallingConv->getValueAsString("CallingConv");
+      OS << indent(IndentDepth + 4) << Receiver
+         << "setLibcallImplCallingConv(Impl, " << CCEnum << ");\n";
+    }
+
+    OS << indent(IndentDepth + 2) << "}\n";
+    OS << '\n';
+
+    if (!SubsetPredicate.isAlwaysAvailable()) {
+      OS << indent(IndentDepth);
+      SubsetPredicate.emitEndIf(OS);
+      OS << '\n';
+    }
+  }
+}
+
+// Emit the linker name \p Name as a C++ identifier suffix, replacing characters
+// invalid in an identifier (e.g. the '-' in "compiler-rt") with '_'.
+static void emitLibFuncSuffix(raw_ostream &OS, StringRef Name) {
+  for (char C : Name)
+    OS << (isAlnum(C) || C == '_' ? C : '_');
+}
+
+void RuntimeLibcallEmitter::emitLibraryFunction(
+    raw_ostream &OS, StringRef Name, ArrayRef<const Record *> Libs) const {
+  // File-local; referenced only from the driver in the same fragment.
+  OS << "static void setAvailableLibFuncs_";
+  emitLibFuncSuffix(OS, Name);
+  OS << "(llvm::RTLIB::RuntimeLibcallsInfo &Info, const llvm::Triple &TT, "
+        "ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, "
+        "EABI EABIVersion, StringRef ABIName, "
+        "LongDoubleFormat LongDoubleFormat) {\n";
+
+  // Per-variant expansion. Unconditional impls are tracked separately for
+  // cross-variant deduplication.
+  struct ExpandedLibrary {
+    const Record *Lib;
+    DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
+    SetVector<PredicateWithCC> PredicateSorter;
+    SetVector<const RuntimeLibcallImpl *> Unconditional;
+  };
+
+  SmallVector<ExpandedLibrary, 2> Expanded;
+  for (const Record *Lib : Libs) {
+    ExpandedLibrary EL;
+    EL.Lib = Lib;
+
+    // Expand this library's members with a library-local Func2Preds.
+    SetTheory Sets;
+    DenseMap<const RuntimeLibcallImpl *,
+             std::pair<std::vector<const Record *>, const Record *>>
+        Func2Preds;
+    Sets.addExpander("LibcallImpls", std::make_unique<LibcallPredicateExpander>(
+                                         Libcalls, Func2Preds));
+
+    SetTheory::RecSet Elements;
+    Sets.evaluate(Lib->getValueInit("Impls"), Elements, Lib->getLoc());
+
+    EL.PredicateSorter.insert(
+        PredicateWithCC()); // No predicate or CC override first.
+
+    for (const Record *Elt : Elements) {
+      const RuntimeLibcallImpl *LibCallImpl =
+          Libcalls.getRuntimeLibcallImpl(Elt);
+      if (!LibCallImpl) {
+        PrintError(Lib, "entry for LibcallLibrary is not a RuntimeLibcallImpl");
+        PrintNote(Elt->getLoc(), "invalid entry `" + Elt->getName() + "`");
+        continue;
+      }
+
+      auto It = Func2Preds.find(LibCallImpl);
+      if (It == Func2Preds.end()) {
+        EL.Pred2Funcs[PredicateWithCC()].LibcallImpls.push_back(LibCallImpl);
+        EL.Unconditional.insert(LibCallImpl);
+        continue;
+      }
+
+      for (const Record *Pred : It->second.first) {
+        const Record *CC = It->second.second;
+        PredicateWithCC Key(Pred, CC);
+        auto &Entry = EL.Pred2Funcs[Key];
+        Entry.LibcallImpls.push_back(LibCallImpl);
+        Entry.CallingConv = CC;
+        EL.PredicateSorter.insert(Key);
+      }
+    }
+
+    Expanded.push_back(std::move(EL));
+  }
+
+  // Impls unconditional in every variant are emitted once and stripped from
+  // each variant, so the shared core is not repeated.
+  SetVector<const RuntimeLibcallImpl *> SharedCore;
+  if (Expanded.size() > 1) {
+    for (const RuntimeLibcallImpl *Impl : Expanded.front().Unconditional) {
+      if (all_of(drop_begin(Expanded), [&](const ExpandedLibrary &EL) {
+            return EL.Unconditional.contains(Impl);
+          }))
+        SharedCore.insert(Impl);
+    }
+  }
+
+  if (!SharedCore.empty()) {
+    // Emit the shared core once, then strip it from every variant.
+    DenseMap<PredicateWithCC, LibcallsWithCC> CorePred2Funcs;
+    SetVector<PredicateWithCC> CoreSorter;
+    CoreSorter.insert(PredicateWithCC());
+    for (const RuntimeLibcallImpl *Impl : SharedCore)
+      CorePred2Funcs[PredicateWithCC()].LibcallImpls.push_back(Impl);
+    emitPredicateGroups(OS, Libs.front(), CorePred2Funcs, CoreSorter,
+                        /*BaseIndent=*/0, /*Receiver=*/"Info.");
+
+    for (ExpandedLibrary &EL : Expanded) {
+      auto &Funcs = EL.Pred2Funcs[PredicateWithCC()].LibcallImpls;
+      llvm::erase_if(Funcs, [&](const RuntimeLibcallImpl *Impl) {
+        return SharedCore.contains(Impl);
+      });
+    }
+  }
+
+  // Emit each variant under its own Pred.
+  for (ExpandedLibrary &EL : Expanded) {
+    AvailabilityPredicate LibPred(EL.Lib->getValueAsDef("Pred"));
+
+    if (!LibPred.isAlwaysAvailable()) {
+      OS << indent(2);
+      LibPred.emitIf(OS);
+    } else {
+      // Own block scope so per-variant `LibraryCalls` tables do not collide.
+      OS << indent(2) << "{\n";
+    }
+
+    emitPredicateGroups(OS, EL.Lib, EL.Pred2Funcs, EL.PredicateSorter,
+                        /*BaseIndent=*/2, /*Receiver=*/"Info.");
+
+    if (!LibPred.isAlwaysAvailable()) {
+      OS << indent(2);
+      LibPred.emitEndIf(OS);
+    } else {
+      OS << indent(2) << "}\n";
+    }
+  }
+
+  OS << "}\n\n";
+}
+
 void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     raw_ostream &OS) const {
+  // Emit one function per distinct library name; same-named defs merge.
+  //
+  // TODO: SystemRuntimeLibrary does not yet dispatch to these
+  MapVector<StringRef, std::vector<const Record *>> LibsByName;
+  for (const Record *Lib : Records.getAllDerivedDefinitions("LibcallLibrary"))
+    LibsByName[Lib->getValueAsString("LibraryName")].push_back(Lib);
+
+  for (const auto &[Name, Libs] : LibsByName)
+    emitLibraryFunction(OS, Name, Libs);
+
+  ArrayRef<const Record *> AllLibs =
+      Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
+
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
         "FloatABI::ABIType FloatABI, EABI EABIVersion, "
         "StringRef ABIName, LongDoubleFormat LongDoubleFormat) {\n";
-
-  ArrayRef<const Record *> AllLibs =
-      Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
 
   for (const Record *R : AllLibs) {
     OS << '\n';
@@ -474,86 +723,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     OS << "\n    });\n"
           "    AvailableLibcallImpls = SystemAvailableImpls;\n\n";
 
-    SmallVector<PredicateWithCC, 0> SortedPredicates =
-        PredicateSorter.takeVector();
-
-    llvm::sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
-      StringRef AName = A.Availability ? A.Availability->getName() : "";
-      StringRef BName = B.Availability ? B.Availability->getName() : "";
-      if (AName != BName)
-        return AName < BName;
-      // Break ties on the calling convention so predicates that share a name
-      // but differ in calling convention emit in a deterministic order.
-      StringRef ACC = A.CallingConv ? A.CallingConv->getName() : "";
-      StringRef BCC = B.CallingConv ? B.CallingConv->getName() : "";
-      return ACC < BCC;
-    });
-
-    for (PredicateWithCC Entry : SortedPredicates) {
-      AvailabilityPredicate SubsetPredicate(Entry.Availability);
-      unsigned IndentDepth = 2;
-
-      auto It = Pred2Funcs.find(Entry);
-      if (It == Pred2Funcs.end())
-        continue;
-
-      if (!SubsetPredicate.isAlwaysAvailable()) {
-        IndentDepth = 4;
-
-        OS << indent(IndentDepth);
-        SubsetPredicate.emitIf(OS);
-      }
-
-      LibcallsWithCC &FuncsWithCC = It->second;
-
-      std::vector<const RuntimeLibcallImpl *> &Funcs = FuncsWithCC.LibcallImpls;
-
-      // This table records which implementations are available, not which one
-      // is selected, so a libcall may legitimately have more than one available
-      // implementation
-      stable_sort(Funcs, [](const RuntimeLibcallImpl *A,
-                            const RuntimeLibcallImpl *B) {
-        return A->getProvides()->getEnumVal() < B->getProvides()->getEnumVal();
-      });
-
-      OS << indent(IndentDepth + 2)
-         << "static const RTLIB::LibcallImpl LibraryCalls";
-      SubsetPredicate.emitTableVariableNameSuffix(OS);
-      if (FuncsWithCC.CallingConv)
-        OS << '_' << FuncsWithCC.CallingConv->getName();
-
-      OS << "[] = {\n";
-      for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
-        OS << indent(IndentDepth + 6);
-        LibCallImpl->emitEnumEntry(OS);
-        OS << ", // " << LibCallImpl->getLibcallFuncName() << '\n';
-      }
-
-      OS << indent(IndentDepth + 2) << "};\n\n"
-         << indent(IndentDepth + 2)
-         << "for (const RTLIB::LibcallImpl Impl : LibraryCalls";
-      SubsetPredicate.emitTableVariableNameSuffix(OS);
-      if (FuncsWithCC.CallingConv)
-        OS << '_' << FuncsWithCC.CallingConv->getName();
-
-      OS << ") {\n" << indent(IndentDepth + 4) << "setAvailable(Impl);\n";
-
-      if (FuncsWithCC.CallingConv) {
-        StringRef CCEnum =
-            FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
-           << CCEnum << ");\n";
-      }
-
-      OS << indent(IndentDepth + 2) << "}\n";
-      OS << '\n';
-
-      if (!SubsetPredicate.isAlwaysAvailable()) {
-        OS << indent(IndentDepth);
-        SubsetPredicate.emitEndIf(OS);
-        OS << '\n';
-      }
-    }
+    emitPredicateGroups(OS, R, Pred2Funcs, PredicateSorter, /*BaseIndent=*/2,
+                        /*Receiver=*/"");
 
     OS << indent(4) << "return;\n" << indent(2);
     TopLevelPredicate.emitEndIf(OS);

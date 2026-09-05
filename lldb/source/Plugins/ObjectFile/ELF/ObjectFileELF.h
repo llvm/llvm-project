@@ -128,6 +128,12 @@ public:
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
+  lldb_private::FileSpecList GetReExportedLibraries() override;
+
+  bool ReExportedLibrariesShadowLocalDefinitions() const override {
+    return true;
+  }
+
   lldb_private::Address
   GetImageInfoAddress(lldb_private::Target *target) override;
 

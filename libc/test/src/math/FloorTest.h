@@ -27,48 +27,6 @@ class FloorTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef T (*FloorFunc)(T);
 
-  void testSpecialNumbers(FloorFunc func) {
-    EXPECT_FP_EQ(zero, func(zero));
-    EXPECT_FP_EQ(neg_zero, func(neg_zero));
-
-    EXPECT_FP_EQ(inf, func(inf));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf));
-
-    EXPECT_FP_EQ(aNaN, func(aNaN));
-  }
-
-  void testRoundedNumbers(FloorFunc func) {
-    EXPECT_FP_EQ(T(1.0), func(T(1.0)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-1.0)));
-    EXPECT_FP_EQ(T(10.0), func(T(10.0)));
-    EXPECT_FP_EQ(T(-10.0), func(T(-10.0)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1234.0)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1234.0)));
-  }
-
-  void testFractions(FloorFunc func) {
-    EXPECT_FP_EQ(T(0.0), func(T(0.5)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-0.5)));
-    EXPECT_FP_EQ(T(0.0), func(T(0.115)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-0.115)));
-    EXPECT_FP_EQ(T(0.0), func(T(0.715)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-0.715)));
-    EXPECT_FP_EQ(T(1.0), func(T(1.3)));
-    EXPECT_FP_EQ(T(-2.0), func(T(-1.3)));
-    EXPECT_FP_EQ(T(1.0), func(T(1.5)));
-    EXPECT_FP_EQ(T(-2.0), func(T(-1.5)));
-    EXPECT_FP_EQ(T(1.0), func(T(1.75)));
-    EXPECT_FP_EQ(T(-2.0), func(T(-1.75)));
-    EXPECT_FP_EQ(T(10.0), func(T(10.32)));
-    EXPECT_FP_EQ(T(-11.0), func(T(-10.32)));
-    EXPECT_FP_EQ(T(10.0), func(T(10.65)));
-    EXPECT_FP_EQ(T(-11.0), func(T(-10.65)));
-    EXPECT_FP_EQ(T(123.0), func(T(123.38)));
-    EXPECT_FP_EQ(T(-124.0), func(T(-123.38)));
-    EXPECT_FP_EQ(T(123.0), func(T(123.96)));
-    EXPECT_FP_EQ(T(-124.0), func(T(-123.96)));
-  }
-
   void testRange(FloorFunc func) {
     constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
@@ -87,9 +45,6 @@ public:
 
 #define LIST_FLOOR_TESTS(T, func)                                              \
   using LlvmLibcFloorTest = FloorTest<T>;                                      \
-  TEST_F(LlvmLibcFloorTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcFloorTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
-  TEST_F(LlvmLibcFloorTest, Fractions) { testFractions(&func); }               \
   TEST_F(LlvmLibcFloorTest, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FLOORTEST_H

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -70,11 +71,12 @@ static std::optional<StringRef> getSubArchSpelling(const Record *Rec) {
   return Rec->getValueAsOptionalString("SubArchSpelling");
 }
 
-// Emit a subarch enumerator suffix for a spelling, converting '.' to '_' and
-// upcasing, e.g. "4.67q" -> "4_67Q".
+// Emit a subarch enumerator suffix for a spelling, dropping '.' and upcasing,
+// e.g. "12.50s" -> "1250S", matching the sibling name-derived enumerators.
 static void emitSpellingSuffix(raw_ostream &OS, StringRef Spelling) {
   for (char C : Spelling)
-    OS << static_cast<char>((C == '.') ? '_' : toUpper(C));
+    if (C != '.')
+      OS << static_cast<char>(toUpper(C));
 }
 
 // Derive the Triple::SubArchType for a canonical GPU record. A pseudo target
@@ -111,7 +113,9 @@ static void emitArchFamily(raw_ostream &OS, const Record *Rec) {
   OS << "gfx" << Rec->getValueAsListOfInts("IsaVersion")[0];
 }
 
-// Emit the canonical GPU name for a variant (empty for a non-variant GPU).
+// Emit the canonical GPU name for a variant (empty for a non-variant GPU). The
+// stepping is the trailing single hex character of the device name (validated
+// by emitIsaVersion).
 static void emitBaseName(raw_ostream &OS, const Record *Rec) {
   if (!getSubArchSpelling(Rec))
     return;
@@ -132,20 +136,30 @@ static void emitIsaVersion(raw_ostream &OS, const Record *Rec, char Open,
                         "IsaVersion");
   }
 
-  OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
-}
+  // Each component is stored in a uint8_t field, and the stepping is
+  // additionally spelled as a single lowercase hex digit in the device and
+  // subarch names. Reject out-of-range values.
+  for (int64_t Component : V) {
+    if (!isUInt<8>(Component)) {
+      PrintFatalError(Rec->getLoc(),
+                      "GPU '" + Rec->getValueAsString("Name") +
+                          "' IsaVersion components must each fit in a byte");
+    }
+  }
 
-// Emit the triple subarch name for a concrete GPU, e.g. gfx90c / [9, 0, 12] ->
-// "amdgpu9.0c" (stepping is a single lowercase hex digit).
-static void emitConcreteSubArchTripleName(raw_ostream &OS, const Record *Rec) {
-  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
-
-  // Assuming emitIsaVersion validated the number of elements.
-  if (V[2] < 0 || V[2] > 15) {
+  if (!isUInt<4>(V[2])) {
     PrintFatalError(Rec->getLoc(), "GPU '" + Rec->getValueAsString("Name") +
                                        "' stepping must be a single hex digit");
   }
 
+  OS << Open << V[0] << ", " << V[1] << ", " << V[2] << Close;
+}
+
+// Emit the triple subarch name for a concrete GPU, e.g. gfx90c / [9, 0, 12] ->
+// "amdgpu9.0c". The stepping is spelled as a single lowercase hex digit
+// (validated by emitIsaVersion).
+static void emitConcreteSubArchTripleName(raw_ostream &OS, const Record *Rec) {
+  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
   OS << "amdgpu" << V[0] << '.' << V[1] << hexdigit(V[2], /*LowerCase=*/true);
 }
 
@@ -532,6 +546,38 @@ emitFeatureBitset(raw_ostream &OS, const Record *GPU,
   OS << "})";
 }
 
+// The value of the SubtargetFeature in \p GPU's closure that sets \p FieldName,
+// or \p Default if it has none. Two features setting the same field to
+// different values is an error: SubtargetFeature silently takes the larger.
+static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
+                               int64_t Default) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+
+  const Record *Found = nullptr;
+  int64_t Value = Default;
+  for (const Record *F : Closure) {
+    if (F->getValueAsString("FieldName") != FieldName)
+      continue;
+
+    int64_t V;
+    if (!to_integer(F->getValueAsString("Value"), V)) {
+      PrintFatalError(F->getLoc(), "feature '" + F->getValueAsString("Name") +
+                                       "' must have an integer value");
+    }
+    if (Found && V != Value) {
+      PrintFatalError(GPU->getLoc(),
+                      "GPU '" + GPU->getValueAsString("Name") +
+                          "' gets conflicting '" + FieldName +
+                          "' values from '" + Found->getValueAsString("Name") +
+                          "' and '" + F->getValueAsString("Name") + "'");
+    }
+    Found = F;
+    Value = V;
+  }
+  return Value;
+}
+
 /// Emit a GPUInfo table indexed by (GPUKind - AMDGPUFirstGPUKind). Name and
 /// family strings are stored as offsets into the shared \p Names table.
 static void
@@ -565,7 +611,10 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     SmallString<16> BaseName;
     raw_svector_ostream BaseNameOS(BaseName);
     emitBaseName(BaseNameOS, R);
-    OS << Names.GetOrAddStringOffset(BaseName) << "},\n";
+    OS << Names.GetOrAddStringOffset(BaseName) << ", "
+       << getFeatureValue(R, "MaxWavesPerEU", 10) << ", "
+       << getFeatureValue(R, "AddressableLocalMemorySize", 32768) << ", "
+       << getFeatureValue(R, "LDSBankCount", 32) << "},\n";
   }
   OS << "};\n"
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";

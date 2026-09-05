@@ -15,14 +15,14 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <vector>
 
 namespace llvm {
-
-class DWARFDebugFrame;
 
 namespace dwarf {
 class FDE;
@@ -37,9 +37,22 @@ class BinaryFunction;
 /// BinaryFunction, as well as rewriting CFI sections.
 class CFIReaderWriter {
 public:
-  explicit CFIReaderWriter(BinaryContext &BC, const DWARFDebugFrame &EHFrame);
+  /// Construct from an .eh_frame that has been parsed for its frame index only
+  /// (see DWARFDebugFrame::parse with ParseCFIProgram=false). \p EHFrameData is
+  /// the extractor over the same .eh_frame contents, retained so that each
+  /// function's CFI program can be parsed on demand in fillCFIInfoFor().
+  CFIReaderWriter(BinaryContext &BC, std::unique_ptr<DWARFDebugFrame> EHFrame,
+                  DWARFDataExtractor EHFrameData);
 
   bool fillCFIInfoFor(BinaryFunction &Function) const;
+
+  /// Release the parsed .eh_frame index once no more CFI needs to be read
+  /// (i.e. after disassembly). generateEHFrameHeader() operates on frames
+  /// passed to it and does not depend on this state.
+  void releaseFrameData() {
+    FDEs.clear();
+    EHFrame.reset();
+  }
 
   /// Generate .eh_frame_hdr from old and new .eh_frame sections.
   ///
@@ -58,6 +71,11 @@ public:
 
 private:
   BinaryContext &BC;
+  /// The .eh_frame parsed for its index only (no CFI instruction programs).
+  std::unique_ptr<DWARFDebugFrame> EHFrame;
+  /// Extractor over the .eh_frame contents, used to parse individual CFI
+  /// programs on demand in fillCFIInfoFor().
+  DWARFDataExtractor EHFrameData;
   FDEsMap FDEs;
 };
 

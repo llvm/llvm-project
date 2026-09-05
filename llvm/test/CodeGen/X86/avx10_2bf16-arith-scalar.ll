@@ -11,25 +11,17 @@ define bfloat @fadd_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BF16-LABEL: fadd_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVXNECONVERT-LABEL: fadd_bf16:
 ; AVXNECONVERT:       # %bb.0: # %entry
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVXNECONVERT-NEXT:    shll $16, %ecx
-; AVXNECONVERT-NEXT:    vmovd %ecx, %xmm0
-; AVXNECONVERT-NEXT:    shll $16, %eax
-; AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
-; AVXNECONVERT-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNECONVERT-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    retq
 entry:
@@ -47,40 +39,24 @@ define bfloat @dont_fuse_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ;
 ; AVX512BF16-LABEL: dont_fuse_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm2, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %edx
-; AVX512BF16-NEXT:    shll $16, %edx
-; AVX512BF16-NEXT:    vmovd %edx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm1
-; AVX512BF16-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; AVX512BF16-NEXT:    vmovd %xmm0, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm2, %xmm1
 ; AVX512BF16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVXNECONVERT-LABEL: dont_fuse_bf16:
 ; AVXNECONVERT:       # %bb.0: # %entry
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm2, %eax
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm1, %edx
-; AVXNECONVERT-NEXT:    shll $16, %edx
-; AVXNECONVERT-NEXT:    vmovd %edx, %xmm0
-; AVXNECONVERT-NEXT:    shll $16, %ecx
-; AVXNECONVERT-NEXT:    vmovd %ecx, %xmm1
-; AVXNECONVERT-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNECONVERT-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; AVXNECONVERT-NEXT:    vmovd %xmm0, %ecx
-; AVXNECONVERT-NEXT:    shll $16, %ecx
-; AVXNECONVERT-NEXT:    vmovd %ecx, %xmm0
-; AVXNECONVERT-NEXT:    shll $16, %eax
-; AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm2, %xmm1
 ; AVXNECONVERT-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    retq
@@ -98,25 +74,17 @@ define bfloat @fsub_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BF16-LABEL: fsub_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVXNECONVERT-LABEL: fsub_bf16:
 ; AVXNECONVERT:       # %bb.0: # %entry
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVXNECONVERT-NEXT:    shll $16, %ecx
-; AVXNECONVERT-NEXT:    vmovd %ecx, %xmm0
-; AVXNECONVERT-NEXT:    shll $16, %eax
-; AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
-; AVXNECONVERT-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNECONVERT-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    retq
 entry:
@@ -132,25 +100,17 @@ define bfloat @fmul_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BF16-LABEL: fmul_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVXNECONVERT-LABEL: fmul_bf16:
 ; AVXNECONVERT:       # %bb.0: # %entry
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVXNECONVERT-NEXT:    shll $16, %ecx
-; AVXNECONVERT-NEXT:    vmovd %ecx, %xmm0
-; AVXNECONVERT-NEXT:    shll $16, %eax
-; AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
-; AVXNECONVERT-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNECONVERT-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    retq
 entry:
@@ -166,25 +126,17 @@ define bfloat @fdiv_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BF16-LABEL: fdiv_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVXNECONVERT-LABEL: fdiv_bf16:
 ; AVXNECONVERT:       # %bb.0: # %entry
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVXNECONVERT-NEXT:    shll $16, %ecx
-; AVXNECONVERT-NEXT:    vmovd %ecx, %xmm0
-; AVXNECONVERT-NEXT:    shll $16, %eax
-; AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
-; AVXNECONVERT-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNECONVERT-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    retq
 entry:
@@ -200,18 +152,14 @@ define bfloat @fsqrt_bf16(bfloat %a) nounwind {
 ;
 ; AVX512BF16-LABEL: fsqrt_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVXNECONVERT-LABEL: fsqrt_bf16:
 ; AVXNECONVERT:       # %bb.0: # %entry
-; AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNECONVERT-NEXT:    shll $16, %eax
-; AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
+; AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNECONVERT-NEXT:    retq

@@ -20,17 +20,18 @@
 #include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/BinaryFormat/ELF.h"
 
-// System includes - They have to be included after framework includes because
-// they define some macros which collide with variable names in other modules
 #include <mutex>
 #include <optional>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <sys/ptrace.h>
 #include <sys/uio.h>
 
 #ifndef HWCAP_PACA

@@ -193,16 +193,16 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
     return 0;
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  // FIXME: We should do a more thorough check to make sure that we're not
-  // overlapping with any invalid ranges (e.g. Read 0x100 - 0x200 but there's an
-  // invalid range 0x180 - 0x280). `FindEntryThatContains` has an implementation
-  // that takes a range, but it only checks to see if the argument is contained
-  // by an existing invalid range. It cannot check if the argument contains
-  // invalid ranges and cannot check for overlaps.
-  if (m_invalid_ranges.FindEntryThatContains(addr)) {
+
+  if (const InvalidRanges::Entry *invalid =
+          m_invalid_ranges.FindEntryThatIntersects(
+              InvalidRanges::Entry(addr, dst_len))) {
+    const addr_t invalid_addr = invalid->GetRangeBase();
     error = Status::FromErrorStringWithFormat(
-        "memory read failed for 0x%" PRIx64, addr);
-    return 0;
+        "memory read failed for 0x%" PRIx64, invalid_addr);
+    if (invalid_addr <= addr)
+      return 0;
+    dst_len = invalid_addr - addr;
   }
 
   // Check the L1 cache for a range that contains the entire memory read.

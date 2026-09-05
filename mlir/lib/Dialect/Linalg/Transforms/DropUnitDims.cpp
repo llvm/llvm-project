@@ -988,14 +988,28 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
     SmallVector<Type, 1> collapsedResultTy;
     if (isa<RankedTensorType>(collapsedInit.getType()))
       collapsedResultTy.push_back(collapsedInit.getType());
-    auto collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
-                                      ValueRange{collapsedLhs, collapsedRhs},
-                                      ValueRange{collapsedInit});
-    for (auto attr : contractionOp->getAttrs()) {
+    ToOpTy collapsedOp;
+    if constexpr (std::is_same_v<FromOpTy, BatchMatmulOp> &&
+                  std::is_same_v<ToOpTy, MatmulOp>) {
+      if (TypeFnAttr castAttr = contractionOp.getCastAttr()) {
+        collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                     ValueRange{collapsedLhs, collapsedRhs},
+                                     ValueRange{collapsedInit}, castAttr);
+      } else {
+        collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                     ValueRange{collapsedLhs, collapsedRhs},
+                                     ValueRange{collapsedInit});
+      }
+    } else {
+      collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                   ValueRange{collapsedLhs, collapsedRhs},
+                                   ValueRange{collapsedInit});
+    }
+    for (auto attr : contractionOp->getDiscardableAttrDictionary()) {
       if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName ||
           attr.getName() == "indexing_maps")
         continue;
-      collapsedOp->setAttr(attr.getName(), attr.getValue());
+      collapsedOp->setDiscardableAttr(attr.getName(), attr.getValue());
     }
 
     auto results = contractionOp.getResults();

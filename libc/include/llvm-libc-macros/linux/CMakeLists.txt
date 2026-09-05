@@ -47,6 +47,12 @@ add_header(
 )
 
 add_header(
+  sys_mount_macros
+  HDR
+    sys-mount-macros.h
+)
+
+add_header(
   sys_personality_macros
   HDR
     sys-personality-macros.h
@@ -74,6 +80,12 @@ add_header(
   net_if_macros
   HDR
     net-if-macros.h
+)
+
+add_header(
+  netdb_macros
+  HDR
+    netdb-macros.h
 )
 
 add_header(

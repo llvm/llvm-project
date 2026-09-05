@@ -1047,6 +1047,28 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      if (Name.consume_front("convert.from.svbool")) {
+        // 'aarch64.sve.convert.from.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->getReturnType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_to_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
+      if (Name.consume_front("convert.to.svbool")) {
+        // 'aarch64.sve.convert.to.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->arg_begin()->getType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_from_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -1366,6 +1388,27 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
+  FunctionType *NewFnTy = Intrinsic::getType(F->getContext(), IID);
+  FunctionType *OldFnTy = F->getFunctionType();
+  auto IsOldBF16StorageTy = [](Type *OldTy, Type *NewTy) {
+    return OldTy->getScalarType()->isIntegerTy() &&
+           OldTy->getPrimitiveSizeInBits() == NewTy->getPrimitiveSizeInBits();
+  };
+
+  if (!IsOldBF16StorageTy(OldFnTy->getReturnType(), NewFnTy->getReturnType()))
+    return false;
+
+  if (OldFnTy->getNumParams() != NewFnTy->getNumParams())
+    return false;
+
+  for (unsigned I = 0, E = OldFnTy->getNumParams(); I != E; ++I)
+    if (!IsOldBF16StorageTy(OldFnTy->getParamType(I), NewFnTy->getParamType(I)))
+      return false;
+
+  return true;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
                                                            StringRef Name) {
   if (!Name.consume_front("tcgen05.mma."))
@@ -1592,6 +1635,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           NewFn = nullptr;
           return true;
         }
+      }
+
+      if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+        NewFn = nullptr;
+        return true;
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -1881,9 +1929,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       // Check for nvvm intrinsics that need a return type adjustment.
-      if (!F->getReturnType()->getScalarType()->isBFloatTy()) {
+      {
         Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
-        if (IID != Intrinsic::not_intrinsic) {
+        if (IID != Intrinsic::not_intrinsic &&
+            isLegacyNVPTXBF16IntSignature(F, IID)) {
           NewFn = nullptr;
           return true;
         }
@@ -3191,7 +3240,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
-        !F->getReturnType()->getScalarType()->isBFloatTy()) {
+        isLegacyNVPTXBF16IntSignature(F, IID)) {
       rename(F);
       Function *NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
       SmallVector<Value *, 2> Args;
@@ -5149,6 +5198,21 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->takeName(CI);
     return NewCall;
   }
+  }
+
+  if (Name.starts_with("fcmp.") || Name.starts_with("icmp.")) {
+    Value *LHS = CI->getArgOperand(0);
+    Value *RHS = CI->getArgOperand(1);
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue());
+    Value *Cmp = Builder.CreateCmp(Pred, LHS, RHS);
+    CallInst *NewCall = Builder.CreateIntrinsicWithoutFolding(
+        CI->getType(), Intrinsic::amdgcn_ballot, Cmp);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
   }
 
   AtomicRMWInst::BinOp RMWOp =

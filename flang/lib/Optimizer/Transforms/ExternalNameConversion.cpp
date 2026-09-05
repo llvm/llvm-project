@@ -78,8 +78,8 @@ void ExternalNameConversionPass::runOnOperation() {
   mlir::SymbolTable symbolTable(op);
 
   auto processFctOrGlobal = [&](mlir::Operation &funcOrGlobal) {
-    auto symName = funcOrGlobal.getAttrOfType<mlir::StringAttr>(
-        mlir::SymbolTable::getSymbolAttrName());
+    auto symName =
+        mlir::cast<mlir::SymbolOpInterface>(&funcOrGlobal).getNameAttr();
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {
       // Check if this is a private function that would conflict with a common

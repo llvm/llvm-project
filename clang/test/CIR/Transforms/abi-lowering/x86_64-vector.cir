@@ -117,7 +117,7 @@ module attributes {
 // LLVM: define <4 x float> @v128(<4 x float> %{{[^,)]+}})
 // LLVM: define double @v64(double %{{[^,)]+}})
 // LLVM: define i32 @v32(i32 %{{[^,)]+}})
-// LLVM: define void @v256(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM: define void @v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM: define void @take_ff(<2 x float> %{{[^,)]+}})
 // LLVM: define <2 x float> @ret_ff()
 // LLVM: define void @take_farr(<2 x float> %{{[^,)]+}})

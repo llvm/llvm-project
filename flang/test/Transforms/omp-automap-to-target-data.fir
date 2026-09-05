@@ -3,8 +3,8 @@
 
 module {
   fir.global
-      @_QMtestEarr{omp.declare_target = #omp.declaretarget<device_type = (any),
-                       capture_clause = (enter), automap = true>} target
+      @_QMtestEarr{omp.declare_target = #omp.declaretarget<device_type = any,
+                       capture_clause = enter, automap = true>} target
                        : !fir.box<!fir.heap<!fir.array<?xi32>>>
 
   func.func @automap() {

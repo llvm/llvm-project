@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineModuleSlotTracker.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -443,12 +444,18 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
 void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
   if (MMI) {
+    M->renumberMetadataForAssembly();
     printMIR(ROS, *M);
     for (Function &F : *M) {
-      if (auto *MF = MMI->getMachineFunction(F))
+      if (auto *MF = MMI->getMachineFunction(F)) {
+        MachineModuleSlotTracker MST(
+            [&](const Function &F) { return MMI->getMachineFunction(F); }, MF);
+        MST.renumberMetadataForAssembly();
         printMIR(ROS, *MMI, *MF);
+      }
     }
   } else {
+    M->renumberMetadataForAssembly();
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
              /*ShouldPreserveUseListOrder=*/true);
   }
@@ -680,6 +687,9 @@ static uint64_t computeIRComplexityScoreImpl(const Function &F) {
           ++Score;
       } else if (const auto *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
         if (PDI->isDisjoint())
+          ++Score;
+      } else if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
+        if (ASC->hasNonNull())
           ++Score;
       } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
         if (GEP->isInBounds())

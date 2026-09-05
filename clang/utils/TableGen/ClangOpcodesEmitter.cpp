@@ -232,7 +232,7 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N,
     OS << "  Text.Op = PrintName(\"" << ID << "\");\n";
     for (const auto *Arg : R->getValueAsListOfDefs("Args"))
       OS << "  Text.Args.push_back(printArg<" << Arg->getValueAsString("Name")
-         << ">(P, PC));\n";
+         << ">(PC));\n";
 
     OS << "  break;\n";
   });

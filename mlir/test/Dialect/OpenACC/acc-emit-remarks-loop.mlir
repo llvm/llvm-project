@@ -14,7 +14,7 @@ func.func @vector_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -34,7 +34,7 @@ func.func @gang_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -54,7 +54,7 @@ func.func @worker_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_y]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -72,7 +72,7 @@ func.func @sequential_loop() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[sequential]>}
       acc.yield
-    } {origin = "acc.kernels"}
+    } <{origin = "acc.kernels"}>
   }
   return
 }
@@ -95,7 +95,7 @@ func.func @block_and_vector() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -112,7 +112,7 @@ func.func @scf_for_sequential() {
       scf.for %iv = %c0 to %c4 step %c1 {
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -129,7 +129,7 @@ func.func @collapse_loop() {
       scf.for %iv = %c0 to %c4 step %c1 {
       } {acc.par_dims = #acc<par_dims[sequential]>, acc.collapse_count = 2 : i64}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -149,7 +149,7 @@ func.func @percent_separator() {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -170,7 +170,7 @@ func.func @acc_routine_gang_vector_loop() attributes {acc.specialized_routine = 
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
