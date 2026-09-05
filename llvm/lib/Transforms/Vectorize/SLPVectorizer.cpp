@@ -13651,7 +13651,47 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind);
+                                       const TTI::TargetCostKind CostKind,
+                                       InstructionCost *UnfusedCost = nullptr);
+
+/// \returns true if contracting \p FMul into an fma with its user is worth
+/// more than the wide loads a vector node over the multiplication would
+/// fold its operands into. \p FMACost and \p UnfusedCost are what
+/// canConvertToFMA measured for the scalar pair, so the saving the veto buys
+/// is the difference between them.
+static bool preferFMAOverVectorNode(const Value *FMul, InstructionCost FMACost,
+                                    InstructionCost UnfusedCost,
+                                    const TargetTransformInfo &TTI,
+                                    TTI::TargetCostKind CostKind) {
+  const auto *FMulI = dyn_cast<Instruction>(FMul);
+  if (!FMulI)
+    return true;
+  Type *ScalarTy = FMulI->getType();
+  unsigned ScalarBits = ScalarTy->getPrimitiveSizeInBits();
+  unsigned RegBits =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+          .getFixedValue();
+  unsigned VF = ScalarBits ? RegBits / ScalarBits : 0;
+  if (VF < 2)
+    return true;
+  Type *VecTy = getWidenedType(ScalarTy, VF);
+  InstructionCost LoadSaving = 0;
+  for (const Value *Op : FMulI->operands()) {
+    const auto *LI = dyn_cast<LoadInst>(Op);
+    if (!LI || !LI->isSimple())
+      continue;
+    unsigned AS = LI->getPointerAddressSpace();
+    LoadSaving += VF * TTI.getMemoryOpCost(Instruction::Load, ScalarTy,
+                                           LI->getAlign(), AS, CostKind) -
+                  TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
+                                      AS, CostKind);
+  }
+  if (!LoadSaving.isValid() || LoadSaving <= 0)
+    return true;
+  if (!UnfusedCost.isValid() || !FMACost.isValid())
+    return true;
+  return (UnfusedCost - FMACost) * VF >= LoadSaving;
+}
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
@@ -14450,13 +14490,16 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
 }
 
 /// Check if we can convert fadd/fsub sequence to FMAD.
-/// \returns Cost of the FMAD, if conversion is possible, invalid cost otherwise.
+/// \returns Cost of the FMAD, if conversion is possible, invalid cost
+/// otherwise. If \p UnfusedCost is given, it receives the cost of the sequence
+/// without the contraction.
 static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        const InstructionsState &S,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind) {
+                                       const TTI::TargetCostKind CostKind,
+                                       InstructionCost *UnfusedCost) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
@@ -14554,6 +14597,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   Type *Ty = VL.front()->getType();
   IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty}, FMF);
   FMACost += NumOps * TTI.getIntrinsicInstrCost(ICA, CostKind);
+  if (UnfusedCost)
+    *UnfusedCost = FMulPlusFAddCost;
   return FMACost < FMulPlusFAddCost ? FMACost : InstructionCost::getInvalid();
 }
 
@@ -33255,14 +33300,18 @@ bool SLPVectorizerPass::tryToVectorize(
     return false;
   // Skip potential FMA candidates and collect them for a retry after all other
   // instructions in the block have been processed.
-  if (!AllowFMACandidates &&
-      (I->getOpcode() == Instruction::FAdd ||
-       I->getOpcode() == Instruction::FSub) &&
-      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI,
-                      R.getCostKind())
-          .isValid()) {
-    FMACandidates.insert(I);
-    return false;
+  if (!AllowFMACandidates && (I->getOpcode() == Instruction::FAdd ||
+                              I->getOpcode() == Instruction::FSub)) {
+    InstructionCost UnfusedCost = InstructionCost::getInvalid();
+    InstructionCost FMACost =
+        canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI,
+                        R.getCostKind(), &UnfusedCost);
+    if (FMACost.isValid() &&
+        preferFMAOverVectorNode(I->getOperand(0), FMACost, UnfusedCost, *TTI,
+                                R.getCostKind())) {
+      FMACandidates.insert(I);
+      return false;
+    }
   }
 
   Value *P = I->getParent();
@@ -34540,10 +34589,15 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
     if (I.getOpcode() == Instruction::FMul) {
       auto *U = cast<Instruction>(I.user_back());
       if (InstructionsState S = getSameOpcode(U, *TLI);
-          S && S.isAddSubLikeOp() &&
-          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R.getCostKind())
-              .isValid())
-        continue;
+          S && S.isAddSubLikeOp()) {
+        InstructionCost UnfusedCost = InstructionCost::getInvalid();
+        InstructionCost FMACost = canConvertToFMA(
+            U, S, *DT, *DL, *TTI, *TLI, R.getCostKind(), &UnfusedCost);
+        if (FMACost.isValid() &&
+            preferFMAOverVectorNode(&I, FMACost, UnfusedCost, *TTI,
+                                    R.getCostKind()))
+          continue;
+      }
     }
     // The keys are hashes, so the groups are numbered by the first seed to
     // keep the order deterministic.

@@ -2,10 +2,12 @@
 ; RUN: opt -S --passes=slp-vectorizer -mtriple=x86_64-unknown-linux-gnu -mcpu=znver4 < %s | FileCheck %s
 
 ; A one-use fmul is left scalar so the backend can fuse it, but only operand 0
-; of the fadd/fsub is checked. The same fmul is kept or gathered depending on
-; which side it sits on. To be addressed in a follow-up.
+; of the fadd/fsub is checked. The operand 1 cases never reach the FMA veto.
+; To be addressed in a follow-up. Here the veto is declined even when reached
+; because both fmul operands fold into wide loads whose saving outweighs the
+; lost fma, so every case vectorizes alike.
 
-; Both fmuls are operand 1, so they gather and cannot fuse.
+; Both fmuls are operand 1, so the veto is never reached and they vectorize.
 define double @fmul_rhs_fadd(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fmul_rhs_fadd(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -77,24 +79,22 @@ entry:
   ret double %sub1
 }
 
-; Operand 0 is the one checked, so these stay scalar and fuse.
+; Operand 0 is the one checked, so these reach the veto. The two wide loads
+; make the vector form cheaper and the veto is declined.
 define double @fmul_lhs_fadd(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fmul_lhs_fadd(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[Y8:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 8
 ; CHECK-NEXT:    [[Z8:%.*]] = getelementptr inbounds nuw i8, ptr [[Z]], i64 8
-; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
-; CHECK-NEXT:    [[MUL0:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
 ; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
-; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X8]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y8]], align 8
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul reassoc nsz contract double [[Y1]], [[X1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z8]], align 8
 ; CHECK-NEXT:    [[ZSUM:%.*]] = fadd reassoc nsz contract double [[Z0]], [[Z1]]
+; CHECK-NEXT:    [[MUL0:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[ADD0:%.*]] = fadd reassoc nsz contract double [[MUL0]], [[ZSUM]]
+; CHECK-NEXT:    [[MUL1:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd reassoc nsz contract double [[MUL1]], [[ADD0]]
 ; CHECK-NEXT:    ret double [[ADD1]]
 ;
@@ -116,7 +116,41 @@ entry:
   ret double %add1
 }
 
-; A second use blocks fusion anyway, so gathering is right here.
+; Only one fmul operand is a load, so the wide-load saving cannot outweigh
+; the lost fma and the veto keeps everything scalar.
+define double @fmul_lhs_fadd_one_load(ptr %x, double %a, ptr %z) {
+; CHECK-LABEL: define double @fmul_lhs_fadd_one_load(
+; CHECK-SAME: ptr [[X:%.*]], double [[A:%.*]], ptr [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[Z8:%.*]] = getelementptr inbounds nuw i8, ptr [[Z]], i64 8
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[MUL0:%.*]] = fmul reassoc nsz contract double [[X0]], [[A]]
+; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X8]], align 8
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul reassoc nsz contract double [[X1]], [[A]]
+; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z8]], align 8
+; CHECK-NEXT:    [[ZSUM:%.*]] = fadd reassoc nsz contract double [[Z0]], [[Z1]]
+; CHECK-NEXT:    [[ADD0:%.*]] = fadd reassoc nsz contract double [[MUL0]], [[ZSUM]]
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd reassoc nsz contract double [[MUL1]], [[ADD0]]
+; CHECK-NEXT:    ret double [[ADD1]]
+;
+entry:
+  %x8 = getelementptr inbounds nuw i8, ptr %x, i64 8
+  %z8 = getelementptr inbounds nuw i8, ptr %z, i64 8
+  %x0 = load double, ptr %x, align 8
+  %mul0 = fmul reassoc nsz contract double %x0, %a
+  %z0 = load double, ptr %z, align 8
+  %x1 = load double, ptr %x8, align 8
+  %mul1 = fmul reassoc nsz contract double %x1, %a
+  %z1 = load double, ptr %z8, align 8
+  %zsum = fadd reassoc nsz contract double %z0, %z1
+  %add0 = fadd reassoc nsz contract double %mul0, %zsum
+  %add1 = fadd reassoc nsz contract double %mul1, %add0
+  ret double %add1
+}
+
+; A second use blocks fusion anyway, so vectorizing is right here.
 define double @fmul_rhs_fadd_multi_use(ptr %x, ptr %y, ptr %z, ptr %out) {
 ; CHECK-LABEL: define double @fmul_rhs_fadd_multi_use(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
