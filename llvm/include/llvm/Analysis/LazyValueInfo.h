@@ -118,6 +118,12 @@ namespace llvm {
                              BasicBlock *NewSucc);
 
     /// Remove information related to this value from the cache.
+    ///
+    /// Cached information for the transitive users of \p V is dropped as well:
+    /// it may have been derived from \p V, and callers reach this interface
+    /// precisely when \p V is about to be replaced or has changed. Note that
+    /// this must be called *before* the IR is modified, while the use list of
+    /// \p V is still intact.
     LLVM_ABI void forgetValue(Value *V);
 
     /// Inform the analysis cache that we have erased a block.

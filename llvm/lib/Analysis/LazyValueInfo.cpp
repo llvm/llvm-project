@@ -505,8 +505,20 @@ public:
   }
 
   /// This is part of the update interface to remove information related to this
-  /// value from the cache.
-  void forgetValue(Value *V) { TheCache.eraseValue(V); }
+  /// value, and to its transitive users, from the cache.
+  void forgetValue(Value *V) {
+    SmallVector<Value *, 8> Worklist{V};
+    SmallPtrSet<Value *, 8> Visited{V};
+    while (!Worklist.empty()) {
+      Value *Cur = Worklist.pop_back_val();
+      TheCache.eraseValue(Cur);
+      // A cached lattice element for a user may have been derived from Cur, so
+      // it is no longer valid either.
+      for (User *U : Cur->users())
+        if (isa<Instruction>(U) && Visited.insert(U).second)
+          Worklist.push_back(U);
+    }
+  }
 
   /// This is part of the update interface to inform the cache
   /// that a block has been deleted.
