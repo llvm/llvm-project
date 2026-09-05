@@ -27720,14 +27720,19 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  // Use software guarded branch for large code model non-indirect calls
-  // Tail call to external symbol will have a null CLI.CB and we need another
-  // way to determine the callsite type
-  bool NeedSWGuarded = false;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
-    NeedSWGuarded = true;
+  // Tail calls need software guarded branch (X7) when cf-protection-branch is
+  // active: PseudoTAIL expands to JALR X0, X6, 0 which lpad rejects, while
+  // PseudoTAILX7 expands to JALR X0, X7, 0 which lpad accepts.
+  // Non-tail calls only need SW_GUARDED in Large code model: in non-Large,
+  // PseudoCALL uses X1 (JALR X1, X1, 0) which lpad accepts as a return address.
+  bool NeedSWGuardedTail = false;
+  bool NeedSWGuardedCall = false;
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
+      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol)) {
+    NeedSWGuardedTail = true;
+    if (getTargetMachine().getCodeModel() == CodeModel::Large)
+      NeedSWGuardedCall = true;
+  }
 
   // Use special pseudo for returns_twice calls (e.g., setjmp) when
   // cf-protection-branch is enabled, to ensure LPAD is inserted after the call.
@@ -27738,7 +27743,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
     unsigned CallOpc =
-        NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+        NeedSWGuardedTail ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
     SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -27750,7 +27755,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   unsigned CallOpc;
   // FIXME: Large Code Model + Zicfilp: SW_GUARDED_CALL takes priority over
   // LPAD_CALL for returns_twice calls, breaking LPAD alignment.
-  if (NeedSWGuarded)
+  if (NeedSWGuardedCall)
     CallOpc = RISCVISD::SW_GUARDED_CALL;
   else if (NeedLpadCall && CLI.CB->isIndirectCall())
     CallOpc = RISCVISD::LPAD_CALL_INDIRECT;

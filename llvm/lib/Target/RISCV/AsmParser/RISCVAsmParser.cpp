@@ -217,6 +217,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
+  ParseStatus parseTailCallSymbol(OperandVector &Operands);
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
   ParseStatus parseJALOffset(OperandVector &Operands);
   ParseStatus parseVTypeI(OperandVector &Operands);
@@ -618,6 +619,8 @@ public:
     return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
            VK == RISCV::S_CALL_PLT;
   }
+
+  bool isTailCallSymbol() const { return isCallSymbol(); }
 
   bool isPseudoJumpSymbol() const {
     int64_t Imm;
@@ -2403,6 +2406,40 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
       return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
   } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement)) {
     // Avoid parsing the register in `call rd, foo` as a call symbol.
+    return ParseStatus::NoMatch;
+  } else {
+    Lex();
+  }
+
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
+  RISCV::Specifier Kind = RISCV::S_CALL_PLT;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  Res = MCSymbolRefExpr::create(Sym, getContext());
+  Res = MCSpecifierExpr::create(Res, Kind, getContext());
+  Operands.push_back(RISCVOperand::createExpr(Res, S, E, isRV64()));
+  return ParseStatus::Success;
+}
+
+// Like parseCallSymbol but allows the symbol to be followed by a comma
+// (for "tail address, register" form where the symbol is not the last operand).
+ParseStatus RISCVAsmParser::parseTailCallSymbol(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const MCExpr *Res;
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+  std::string Identifier(getTok().getIdentifier());
+
+  if (getLexer().peekTok().is(AsmToken::At)) {
+    Lex();
+    Lex();
+    StringRef PLT;
+    SMLoc Loc = getLoc();
+    if (getParser().parseIdentifier(PLT) || PLT != "plt")
+      return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
+  } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement) &&
+             !getLexer().peekTok().is(AsmToken::Comma)) {
     return ParseStatus::NoMatch;
   } else {
     Lex();

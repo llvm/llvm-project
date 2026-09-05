@@ -218,6 +218,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
 * Added support for `Sspmp`, `Sspmpen` and `Smpmpdeleg` extensions.
+* Added support for `tail offset, rt` form that takes an optional destination
+  register.
 
 ### Changes to the WebAssembly Backend
 
