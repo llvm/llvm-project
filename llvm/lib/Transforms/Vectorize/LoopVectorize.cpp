@@ -3432,6 +3432,13 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
     return CM_EpilogueAllowed;
   }
 
+  if (ForcePartialAliasingVectorization) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with alias masking",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
   // We can apply tail-folding on the vectorized epilogue loop.
   return CM_EpilogueNotNeededFoldTail;
 }
@@ -8345,7 +8352,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     SmallVector<Instruction *> InstsToMove = preparePlanForEpilogueVectorLoop(
         BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, LVP, Config,
         *PSE.getSE(), ResumeValues);
-    LVP.attachRuntimeChecks(BestEpiPlan, Checks, HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     // Save the status of epilogue tail-folding:
     const bool IsTailFolded = BestEpiPlan.hasTailFolded();
