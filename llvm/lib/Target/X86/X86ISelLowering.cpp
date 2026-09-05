@@ -2593,7 +2593,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
@@ -2607,7 +2609,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
       setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
@@ -2627,14 +2631,31 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
     setOperationAction(ISD::FMA, MVT::bf16, Custom);
 
-    setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
-    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
-    SetFPMinMaxAction(MVT::v32bf16);
+    setOperationAction(ISD::FFLOOR, MVT::bf16, Custom);
+    setOperationAction(ISD::FCEIL, MVT::bf16, Custom);
+    setOperationAction(ISD::FTRUNC, MVT::bf16, Custom);
+    setOperationAction(ISD::FRINT, MVT::bf16, Custom);
+    setOperationAction(ISD::FNEARBYINT, MVT::bf16, Custom);
+    setOperationAction(ISD::FROUNDEVEN, MVT::bf16, Custom);
+
+    if (Subtarget.useAVX512Regs()) {
+      setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
+      setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+      SetFPMinMaxAction(MVT::v32bf16);
+
+      setOperationAction(ISD::FFLOOR, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FNEARBYINT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v32bf16, Legal);
+    }
+
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setOperationAction(ISD::FADD, VT, Legal);
       setOperationAction(ISD::FSUB, VT, Legal);
@@ -2643,6 +2664,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
       setOperationAction(ISD::SETCC, VT, Custom);
+      setOperationAction(ISD::FFLOOR, VT, Legal);
+      setOperationAction(ISD::FCEIL, VT, Legal);
+      setOperationAction(ISD::FTRUNC, VT, Legal);
+      setOperationAction(ISD::FRINT, VT, Legal);
+      setOperationAction(ISD::FNEARBYINT, VT, Legal);
+      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       SetFPMinMaxAction(VT);
     }
     for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
@@ -34804,12 +34831,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FMUL:
   case ISD::FSQRT:
   case ISD::FDIV:
-  case ISD::FMA: {
+  case ISD::FMA:
+  case ISD::FFLOOR:
+  case ISD::FCEIL:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN: {
     assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
-    // AVX10.2 has no scalar bf16 arithmetic instructions, and bf16 is a
-    // soft-promoted-half type, so scalar ops would otherwise be promoted to
-    // f32. Instead widen each operand to a v8bf16 vector, perform the legal
-    // packed operation, and extract the low element afterwards.
+    // AVX10.2 has no scalar bf16 arithmetic or round-to-integer instructions,
+    // and bf16 is a soft-promoted-half type, so scalar ops would otherwise be
+    // promoted to f32. Instead widen each operand to a v8bf16 vector, perform
+    // the legal packed operation, and extract the low element afterwards.
     SmallVector<SDValue, 3> VecOps;
     for (const SDValue &Op : N->ops()) {
       SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
