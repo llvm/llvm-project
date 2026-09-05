@@ -60,51 +60,50 @@ Changes the layout of {cpp:type}`std::vector` from pointer-based to size-based.
 
 libc++ supports two different data layouts for {cpp:type}`std::vector`:
 
-```{eval-rst}
-.. list-table::
-  :header-rows: 1
+:::{list-table}
+:header-rows: 1
 
-  * - **Layout**
-    - ABI
-    - Description
-  * - Pointer-based layout
-    - Stable ABI (default)
-    - :cpp:type:`std::vector` uses three pointers to manage its state:
+* - **Layout**
+  - ABI
+  - Description
+* - Pointer-based layout
+  - Stable ABI (default)
+  - {cpp:type}`std::vector` uses three pointers to manage its state:
 
-        * A pointer to the beginning of the buffer (:cpp:expr:`begin_`);
-        * A pointer to where the next element should be inserted (:cpp:expr:`end_`); and
-        * A pointer to the end of the buffer (:cpp:expr:`cap_`).
+    * A pointer to the beginning of the buffer ({cpp:expr}`begin_`);
+    * A pointer to where the next element should be inserted ({cpp:expr}`end_`); and
+    * A pointer to the end of the buffer ({cpp:expr}`cap_`).
 
-      This layout causes :cpp:type:`vector`'s implementation details to be pointer-oriented.
-      The following methods are of particular interest:
+    This layout causes {cpp:type}`vector`'s implementation details to be pointer-oriented.
+    The following methods are of particular interest:
 
-        * :cpp:expr:`vector::size()` returns :cpp:expr:`end_ - begin_`;
-        * :cpp:expr:`vector::capacity()` returns :cpp:expr:`cap_ - begin_`; and
-        * :cpp:expr:`vector::end()` returns :cpp:expr:`end_`.
+    * {cpp:expr}`vector::size()` returns {cpp:expr}`end_ - begin_`;
+    * {cpp:expr}`vector::capacity()` returns {cpp:expr}`cap_ - begin_`; and
+    * {cpp:expr}`vector::end()` returns {cpp:expr}`end_`.
 
-      This is the original layout for libc++'s :cpp:type:`std::vector` implementation, and
-      is the default layout as a result.
+    This is the original layout for libc++'s {cpp:type}`std::vector` implementation, and
+    is the default layout as a result.
 
-  * - Size-based layout
-    - Unstable ABI (opt-in)
-    - :cpp:type:`std::vector` uses a pointer and two integers to manage its state:
+* - Size-based layout
+  - Unstable ABI (opt-in)
+  - {cpp:type}`std::vector` uses a pointer and two integers to manage its state:
 
-        * A pointer to the beginning of the buffer (:cpp:expr:`begin_`);
-        * An integer storing how many elements are in the vector (:cpp:expr:`size_`); and
-        * An integer storing how many elements the vector can potentially hold before needing
-          to reallocate (:cpp:expr:`capacity_`).
+    * A pointer to the beginning of the buffer ({cpp:expr}`begin_`);
+    * An integer storing how many elements are in the vector ({cpp:expr}`size_`); and
+    * An integer storing how many elements the vector can potentially hold before needing
+      to reallocate ({cpp:expr}`capacity_`).
 
-        This layout causes :cpp:type:`vector`'s implementation details to be integer-oriented.
-        The following methods are of particular interest:
+    This layout causes {cpp:type}`vector`'s implementation details to be integer-oriented.
+    The following methods are of particular interest:
 
-        * :cpp:expr:`vector::size()` returns :cpp:expr:`size_`;
-        * :cpp:expr:`vector::capacity()` returns :cpp:expr:`cap_`; and
-        * :cpp:expr:`vector::end()` returns :cpp:expr:`begin_ + size_`.
+    * {cpp:expr}`vector::size()` returns {cpp:expr}`size_`;
+    * {cpp:expr}`vector::capacity()` returns {cpp:expr}`cap_`; and
+    * {cpp:expr}`vector::end()` returns {cpp:expr}`begin_ + size_`.
 
-      This layout is opt-in, and is incompatible with the pointer-based layout. It has the
-      potential for significant performance improvements, especially when combined with
-      :ref:`hardening`.
-```
+    This layout is opt-in, and is incompatible with the pointer-based layout. It has the
+    potential for significant performance improvements, especially when combined with
+    {ref}`hardening`.
+:::
 
 ### `_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT`
 
@@ -145,8 +144,8 @@ flags like `-fexceptions`, which **do** change the observable behaviour. libc++ 
 compiled with specific flags only and makes no guarantees for any of the flags not listed below.
 
 The flags allowed (in any combination) are:
-\- `-f[no-]exceptions`
-\- `-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE{_FAST,_EXTENSIVE,_DEBUG,_NONE}`
+- `-f[no-]exceptions`
+- `-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE{_FAST,_EXTENSIVE,_DEBUG,_NONE}`
 
 Note that this does not provide any guarantees about user-defined functions, but only that the libc++ functions linked
 behave as the flags say.

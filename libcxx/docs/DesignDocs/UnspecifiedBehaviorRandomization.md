@@ -24,7 +24,7 @@ algorithms and optimizations to the containers.
 
 For example, as of LLVM version 13, libcxx sorting algorithm takes
 [O(n^2) worst case](https://llvm.org/PR20837) but according
-to the standard its worst case should be `O(n log n)`. This effort helps users
+to the standard its worst case should be {title-reference}`O(n log n)`. This effort helps users
 to gradually fix their tests while updating to new faster algorithms.
 
 ## Design
@@ -74,4 +74,3 @@ results, for example, for caching.
   : partition
 
 Patches welcome.
-

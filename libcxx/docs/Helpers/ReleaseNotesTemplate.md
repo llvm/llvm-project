@@ -1,9 +1,9 @@
 # Libc++ XX.YY.ZZ (In-Progress) Release Notes
 
-```{contents}
+:::{contents}
 :depth: 2
 :local: true
-```
+:::
 
 Written by the [Libc++ Team](https://libcxx.llvm.org)
 
@@ -44,4 +44,3 @@ NOTE: THIS SHOULD BE POPULATED FROM THE PREVIOUS RELEASE'S UPCOMING DEPRECATIONS
 ### ABI Affecting Changes
 
 ### Build System Changes
-

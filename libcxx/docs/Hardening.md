@@ -2,9 +2,9 @@
 
 # Hardening Modes
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 (using-hardening-modes)=
 
@@ -113,8 +113,8 @@ categories are considered internal to the library and subject to change.
 - `valid-input-range` -- checks that ranges (whether expressed as an iterator
   pair, an iterator and a sentinel, an iterator and a count, or
   a `std::range`) given as input to library functions are valid:
-  \- the sentinel is reachable from the begin iterator;
-  \- TODO(hardening): both iterators refer to the same container.
+  - the sentinel is reachable from the begin iterator;
+  - TODO(hardening): both iterators refer to the same container.
 
   ("input" here refers to "an input given to an algorithm", not to an iterator
   category)
@@ -171,64 +171,63 @@ categories are considered internal to the library and subject to change.
 
 ## Mapping between the hardening modes and the assertion categories
 
-```{eval-rst}
-.. list-table::
-    :header-rows: 1
-    :widths: auto
+:::{list-table}
+:header-rows: 1
+:widths: auto
 
-    * - Category name
-      - ``fast``
-      - ``extensive``
-      - ``debug``
-    * - ``valid-element-access``
-      - ✅
-      - ✅
-      - ✅
-    * - ``valid-input-range``
-      - ✅
-      - ✅
-      - ✅
-    * - ``non-null``
-      - ❌
-      - ✅
-      - ✅
-    * - ``non-overlapping-ranges``
-      - ❌
-      - ✅
-      - ✅
-    * - ``valid-deallocation``
-      - ❌
-      - ✅
-      - ✅
-    * - ``valid-external-api-call``
-      - ❌
-      - ✅
-      - ✅
-    * - ``compatible-allocator``
-      - ❌
-      - ✅
-      - ✅
-    * - ``argument-within-domain``
-      - ❌
-      - ✅
-      - ✅
-    * - ``pedantic``
-      - ❌
-      - ✅
-      - ✅
-    * - ``semantic-requirement``
-      - ❌
-      - ❌
-      - ✅
-    * - ``internal``
-      - ❌
-      - ❌
-      - ✅
-    * - ``uncategorized``
-      - ❌
-      - ✅
-      - ✅
-```
+* - Category name
+  - `fast`
+  - `extensive`
+  - `debug`
+* - `valid-element-access`
+  - ✅
+  - ✅
+  - ✅
+* - `valid-input-range`
+  - ✅
+  - ✅
+  - ✅
+* - `non-null`
+  - ❌
+  - ✅
+  - ✅
+* - `non-overlapping-ranges`
+  - ❌
+  - ✅
+  - ✅
+* - `valid-deallocation`
+  - ❌
+  - ✅
+  - ✅
+* - `valid-external-api-call`
+  - ❌
+  - ✅
+  - ✅
+* - `compatible-allocator`
+  - ❌
+  - ✅
+  - ✅
+* - `argument-within-domain`
+  - ❌
+  - ✅
+  - ✅
+* - `pedantic`
+  - ❌
+  - ✅
+  - ✅
+* - `semantic-requirement`
+  - ❌
+  - ❌
+  - ✅
+* - `internal`
+  - ❌
+  - ❌
+  - ✅
+* - `uncategorized`
+  - ❌
+  - ✅
+  - ✅
+:::
 
 :::{note}
 At the moment, each subsequent hardening mode is a strict superset of the
@@ -419,9 +418,8 @@ CMake configuration time. The available options are:
   to the library.
 
   ABI impact: changes the layout of `std::unique_ptr<T[]>`, and the representation
-
-  : of a few library types that use `std::unique_ptr` internally, such as
-    the unordered containers.
+  of a few library types that use `std::unique_ptr` internally, such as
+  the unordered containers.
 
 - `_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY` -- changes the iterator type of `std::array` to a
   bounded iterator that keeps track of whether it's within the bounds of the container and asserts it
@@ -465,87 +463,86 @@ The second character of an ABI tag encodes the assertion semantic:
 
 ## Hardened containers status
 
-```{eval-rst}
-.. list-table::
-    :header-rows: 1
-    :widths: auto
+:::{list-table}
+:header-rows: 1
+:widths: auto
 
-    * - Name
-      - Member functions
-      - Iterators (ABI-dependent)
-    * - ``span``
-      - ✅
-      - ✅
-    * - ``string_view``
-      - ✅
-      - ✅
-    * - ``array``
-      - ✅
-      - ❌
-    * - ``vector``
-      - ✅
-      - ✅ (see note)
-    * - ``string``
-      - ✅
-      - ✅ (see note)
-    * - ``list``
-      - ✅
-      - ❌
-    * - ``forward_list``
-      - ✅
-      - ❌
-    * - ``deque``
-      - ✅
-      - ❌
-    * - ``map``
-      - ❌
-      - ❌
-    * - ``set``
-      - ❌
-      - ❌
-    * - ``multimap``
-      - ❌
-      - ❌
-    * - ``multiset``
-      - ❌
-      - ❌
-    * - ``unordered_map``
-      - Partial
-      - Partial
-    * - ``unordered_set``
-      - Partial
-      - Partial
-    * - ``unordered_multimap``
-      - Partial
-      - Partial
-    * - ``unordered_multiset``
-      - Partial
-      - Partial
-    * - ``mdspan``
-      - ✅
-      - ❌
-    * - ``optional``
-      - ✅
-      - ✅
-    * - ``function``
-      - ❌
-      - N/A
-    * - ``variant``
-      - N/A
-      - N/A
-    * - ``any``
-      - N/A
-      - N/A
-    * - ``expected``
-      - ✅
-      - N/A
-    * - ``valarray``
-      - Partial
-      - N/A
-    * - ``bitset``
-      - ✅
-      - N/A
-```
+* - Name
+  - Member functions
+  - Iterators (ABI-dependent)
+* - `span`
+  - ✅
+  - ✅
+* - `string_view`
+  - ✅
+  - ✅
+* - `array`
+  - ✅
+  - ❌
+* - `vector`
+  - ✅
+  - ✅ (see note)
+* - `string`
+  - ✅
+  - ✅ (see note)
+* - `list`
+  - ✅
+  - ❌
+* - `forward_list`
+  - ✅
+  - ❌
+* - `deque`
+  - ✅
+  - ❌
+* - `map`
+  - ❌
+  - ❌
+* - `set`
+  - ❌
+  - ❌
+* - `multimap`
+  - ❌
+  - ❌
+* - `multiset`
+  - ❌
+  - ❌
+* - `unordered_map`
+  - Partial
+  - Partial
+* - `unordered_set`
+  - Partial
+  - Partial
+* - `unordered_multimap`
+  - Partial
+  - Partial
+* - `unordered_multiset`
+  - Partial
+  - Partial
+* - `mdspan`
+  - ✅
+  - ❌
+* - `optional`
+  - ✅
+  - ✅
+* - `function`
+  - ❌
+  - N/A
+* - `variant`
+  - N/A
+  - N/A
+* - `any`
+  - N/A
+  - N/A
+* - `expected`
+  - ✅
+  - N/A
+* - `valarray`
+  - Partial
+  - N/A
+* - `bitset`
+  - ✅
+  - N/A
+:::
 
 Note: for `vector` and `string`, the iterator does not check for
 invalidation (accesses made via an invalidated iterator still lead to undefined
@@ -563,4 +560,3 @@ Please see {ref}`Testing documentation <testing-hardening-assertions>`.
   contains some of the design rationale.
 
 [odr issues]: https://en.cppreference.com/w/cpp/language/definition#:~:text=is%20ill%2Dformed.-,One%20Definition%20Rule,-Only%20one%20definition
-

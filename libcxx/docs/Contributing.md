@@ -154,7 +154,7 @@ updated list from the failed build at
 Look for the failed build and select the `artifacts` tab. There, download the
 abilist for the platform, e.g.:
 
-- C++\<version>.
+- `C++<version>`.
 - macOS X86_64 and macOS arm64 for the Apple platform.
 
 ## Pre-commit CI
@@ -182,7 +182,7 @@ are used to build libc++ and execute its tests.
 Unless specified otherwise, the configurations:
 
 - use a nightly build of the `main` branch of Clang,
-- execute the tests using the language C++\<latest>. This is the version
+- execute the tests using the language `C++<latest>`. This is the version
   "developed" by the C++ committee.
 
 :::{note}
@@ -336,4 +336,3 @@ Contains the jobs executed in the CI. This file contains the version
 information of the jobs being executed. Since this script differs between the
 `main` and `release` branch, both branches can use different compiler
 versions.
-

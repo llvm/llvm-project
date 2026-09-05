@@ -1,8 +1,8 @@
 # Extended C++03 Support
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Overview
 
@@ -43,4 +43,3 @@ in new code.
 This section will be updated once the libc++ developer community has further discussed the
 future of C++03 with libc++.
 :::
-

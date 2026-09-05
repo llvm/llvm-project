@@ -2,9 +2,9 @@
 
 # Feature Test Macro Support
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Overview
 

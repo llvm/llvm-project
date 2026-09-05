@@ -2,13 +2,12 @@
 
 # libc++ C++26 Status
 
-```{eval-rst}
-.. include:: ../Helpers/Styles.md
-```
+:::{include} ../Helpers/Styles.md
+:::
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Overview
 
@@ -33,6 +32,13 @@ The groups that have contributed papers:
 ## Paper Status
 
 ```{eval-rst}
+.. role:: notstarted
+.. role:: nothingtodo
+.. role:: inprogress
+.. role:: inreview
+.. role:: partial
+.. role:: complete
+
 .. csv-table::
    :file: Cxx26Papers.csv
    :header-rows: 1
@@ -42,9 +48,9 @@ The groups that have contributed papers:
 ## Library Working Group Issues Status
 
 ```{eval-rst}
+
 .. csv-table::
    :file: Cxx26Issues.csv
    :header-rows: 1
    :widths: auto
 ```
-

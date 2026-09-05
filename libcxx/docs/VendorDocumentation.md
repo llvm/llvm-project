@@ -38,7 +38,7 @@ $ ninja -C build install-cxx install-cxxabi install-unwind                      
 ```
 
 :::{note}
-See {ref}`Vendor Configuration Options` below for more configuration options.
+See [Vendor Configuration Options](#vendor-configuration-options) below for more configuration options.
 :::
 
 After building the various `install-XXX` targets, shared libraries for libc++, libc++abi and
@@ -186,7 +186,7 @@ C Standard Libraries don't always provide all the usual bells and whistles.
 Whether to include support for time zones in the library. Disabling
 time zone support can be useful when porting to platforms that don't
 ship the IANA time zone database. When time zones are not supported,
-time zone support in \<chrono> will be disabled.
+time zone support in `<chrono>` will be disabled.
 :::
 
 :::{option} LIBCXX_INSTALL_LIBRARY_DIR:PATH
@@ -652,4 +652,3 @@ removed from the library. The minimum header version can be set with the CMake v
 
 [libc++abi]: http://libcxxabi.llvm.org/
 [libcxxrt]: https://github.com/libcxxrt/libcxxrt
-

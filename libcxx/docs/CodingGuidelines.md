@@ -137,7 +137,7 @@ possible. They do force more eager evaluation though, which can be a problem in 
 
 ## Apply `[[nodiscard]]` where relevant
 
-Libc++ adds `[[nodiscard]]` whenever relevant to catch potential bugs. The standards committee has decided to \_not\_
+Libc++ adds `[[nodiscard]]` whenever relevant to catch potential bugs. The standards committee has decided to *not*
 have a recommended practice where to put them, so libc++ applies it whenever it makes sense to catch potential bugs.
 
 `[[nodiscard]]` should be applied to functions
@@ -163,9 +163,10 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
   in the presence of future optimizations.
 
 `[[nodiscard]]` should not be applied to functions if Clang already diagnoses unused results, for example:
-\- conversion functions
-\- equality operators
-\- relational operators
+
+- conversion functions
+- equality operators
+- relational operators
 
 Applications of `[[nodiscard]]` are code like any other code, so we aim to test them on public interfaces. This can be
 done with a `.verify.cpp` test. Many examples are available. Just look for tests with the suffix
@@ -209,4 +210,3 @@ after the function they are measuring, with a few transformations to help filter
 When multiple benchmarks measure the same function under different circumstances, we add context as a parenthesis
 after the function signature. For example, `std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)`
 would be the allocator-aware move constructor for `std::vector<bool>` in the case of equal allocators.
-

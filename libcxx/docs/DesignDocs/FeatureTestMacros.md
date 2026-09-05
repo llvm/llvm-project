@@ -1,8 +1,8 @@
 # Feature Test Macros
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Overview
 
@@ -18,22 +18,21 @@ different dialects, and they may or may not be implemented by libc++. In order t
 track all of these conditions correctly and easily, we want a Single Source of
 Truth (SSoT) that defines each feature test macro, its values, the headers it
 lives in, and whether or not it is implemented by libc++. From this SSoA we
-have enough information to automatically generate the `<version>` header,
+have enough information to automatically generate the {title-reference}`<version>` header,
 the tests, and the documentation.
 
-Therefore we maintain a SSoA in `libcxx/utils/generate_feature_test_macro_components.py`
+Therefore we maintain a SSoA in {title-reference}`libcxx/utils/generate_feature_test_macro_components.py`
 which doubles as a script to generate the following components:
 
-- The `<version>` header.
-- The version tests under `support.limits.general`.
+- The {title-reference}`<version>` header.
+- The version tests under {title-reference}`support.limits.general`.
 - Documentation of libc++'s implementation of each macro.
 
 ## Usage
 
-The `generate_feature_test_macro_components.py` script is used to track and
+The {title-reference}`generate_feature_test_macro_components.py` script is used to track and
 update feature test macros in libc++.
 
 Whenever a feature test macro is added or changed, the table should be updated
 and the script should be re-ran. The script will clobber the existing test files,
-the documentation and the `<version>` header.
-
+the documentation and the {title-reference}`<version>` header.

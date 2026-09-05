@@ -2,9 +2,9 @@
 
 # Testing libc++
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Getting Started
 
@@ -107,10 +107,10 @@ custom site configuration, simply point the CMake build to it using
 will be used instead. That file can use CMake variables inside it to make
 configuration easier.
 
-> ```bash
-> $ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
-> $ libcxx/utils/libcxx-lit <build> -sv libcxx/test # will use your custom config file
-> ```
+```bash
+$ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
+$ libcxx/utils/libcxx-lit <build> -sv libcxx/test # will use your custom config file
+```
 
 ### Additional tools
 
@@ -313,17 +313,19 @@ written to `stderr`.
 This macro is in a different header as `assert_macros.h` since it pulls in
 additional headers.
 
-> % note: This macro can only be used in test using C++20 or newer. The macro
-> % was added at a time where most of libc++'s C++17 support was complete.
-> % Since it is not expected to add this to existing tests no effort was
-> % taken to make it work in earlier language versions.
+:::{note}
+This macro can only be used in test using C++20 or newer. The macro
+was added at a time where most of libc++'s C++17 support was complete.
+Since it is not expected to add this to existing tests no effort was
+taken to make it work in earlier language versions.
+:::
 
 ### Test names
 
 The names of test files have meaning for the libc++-specific configuration of
 Lit. Based on the pattern that matches the name of a test file, Lit will test
-the code contained therein in different ways. Refer to the [Lit Meaning of libc++
-Test Filenames][lit meaning of libc++ test filenames] when determining the names for new test files.
+the code contained therein in different ways. Refer to the {ref}`Lit Meaning of libc++
+Test Filenames <lit-meaning-of-libc-test-filenames>` when determining the names for new test files.
 
 (lit-meaning-of-libc-test-filenames)=
 
@@ -386,7 +388,7 @@ Test Filenames][lit meaning of libc++ test filenames] when determining the names
 #### Custom Directives
 
 Lit has many directives built in (e.g., `DEFINE`, `UNSUPPORTED`). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
-writing tests easier. See [libc++-specific Lit Directives] for more information about the `FILE_DEPENDENCIES`, `ADDITIONAL_COMPILE_FLAGS`, and `MODULE_DEPENDENCIES` libc++-specific directives.
+writing tests easier. See {ref}`libc++-specific Lit Directives <libc-specific-lit-directives>` for more information about the `FILE_DEPENDENCIES`, `ADDITIONAL_COMPILE_FLAGS`, and `MODULE_DEPENDENCIES` libc++-specific directives.
 
 (libc-specific-lit-directives)=
 
@@ -410,7 +412,7 @@ writing tests easier. See [libc++-specific Lit Directives] for more information 
      - ``// ADDITIONAL_COMPILE_FLAGS: flag1 flag2 ...``
      - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
        substitution for the test that contains it. This libc++-specific Lit directive makes it possible to add special compilation flags without having to resort to writing a ``.sh.cpp`` test (see
-       `Lit Meaning of libc++ Test Filenames`_), more powerful but perhaps overkill.
+       :ref:`Lit Meaning of libc++ Test Filenames <lit-meaning-of-libc-test-filenames>`), more powerful but perhaps overkill.
    * - ``MODULE_DEPENDENCIES``
      - ``// MODULE_DEPENDENCIES: std std.compat``
      - This directive will build the required C++23 standard library
@@ -563,4 +565,3 @@ effect logs one, i.e. `enforce` or `observe`.
 
 [google benchmark]: https://github.com/google/benchmark
 [lit command guide]: https://llvm.org/docs/CommandGuide/lit.html
-

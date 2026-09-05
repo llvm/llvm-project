@@ -13,9 +13,12 @@
 import sys, os
 from datetime import date
 
+from docutils import nodes
+
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
 globals().update(common_conf(tags, markdown=Markdown.ALWAYS))
+myst_enable_extensions += ["deflist"]
 
 # -- General configuration -----------------------------------------------------
 
@@ -193,7 +196,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("contents", "libc++", "libc++ Documentation", ["LLVM project"], 1)]
+man_pages = [("index", "libc++", "libc++ Documentation", ["LLVM project"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -234,3 +237,15 @@ intersphinx_mapping = {}
 
 # Enable this if you want TODOs to show up in the generated documentation.
 todo_include_todos = True
+
+
+def _flatten_table_spans_for_man(app, doctree, docname):
+    if app.builder.name != "man":
+        return
+    for entry in doctree.findall(nodes.entry):
+        entry.attributes.pop("morecols", None)
+        entry.attributes.pop("morerows", None)
+
+
+def setup(app):
+    app.connect("doctree-resolved", _flatten_table_spans_for_man)
