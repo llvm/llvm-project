@@ -2378,6 +2378,10 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
       context_.Say(source,
           "A variable that is part of a common block may not be specified as a list item in an ALLOCATE directive, except implicitly via the named common block"_err_en_US);
     }
+    if (version >= 60 && IsDummy(symbol)) {
+      context_.Say(source,
+          "A dummy argument may not appear in a declarative ALLOCATE directive"_err_en_US);
+    }
   }};
 
   for (const parser::OmpArgument &arg : beginSpec.Arguments().v) {
