@@ -22831,6 +22831,57 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
 }
 
+static bool hasCVTNEPS2BF16(const X86Subtarget &Subtarget) {
+  return (Subtarget.hasBF16() && Subtarget.hasVLX()) ||
+         Subtarget.hasAVXNECONVERT();
+}
+
+/// VCVTNEPS2BF16 always flushes input and output denormals to zero. Since f32
+/// and bf16 have the same exponent range, a normal f32 cannot produce a bf16
+/// denormal. The instruction is therefore valid when f32 input denormals are
+/// flushed while preserving their sign.
+static bool canUseCVTNEPS2BF16(const X86Subtarget &Subtarget,
+                               const SelectionDAG &DAG) {
+  return hasCVTNEPS2BF16(Subtarget) &&
+         DAG.getDenormalMode(MVT::f32).Input == DenormalMode::PreserveSign;
+}
+
+/// Round f32 values (scalar or vector) to bf16 using integer arithmetic,
+/// producing the bf16 bit pattern as i16 (or vXi16). This is round to nearest
+/// even, quiets NaNs and, unlike VCVTNEPS2BF16, handles denormals exactly. It
+/// mirrors the bf16 expansion in TargetLowering::expandFP_ROUND.
+static SDValue expandF32ToBF16Bits(SDValue Src, const SDLoc &DL,
+                                   SelectionDAG &DAG,
+                                   const X86TargetLowering &TLI) {
+  EVT SrcVT = Src.getValueType();
+  assert(SrcVT.getScalarType() == MVT::f32 && "Expected f32 source");
+  EVT I32VT = SrcVT.changeTypeToInteger();
+  EVT I16VT = I32VT.changeElementType(*DAG.getContext(), MVT::i16);
+
+  SDValue Bits = DAG.getBitcast(I32VT, Src);
+  SDValue IsNaN = DAG.getSetCC(
+      DL, TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT),
+      Src, Src, ISD::SETUO);
+
+  // Round to nearest even: add 0x7fff plus the lsb of the result.
+  SDValue Lsb = DAG.getNode(ISD::SRL, DL, I32VT, Bits,
+                            DAG.getShiftAmountConstant(16, I32VT, DL));
+  Lsb = DAG.getNode(ISD::AND, DL, I32VT, Lsb, DAG.getConstant(1, DL, I32VT));
+  SDValue Bias =
+      DAG.getNode(ISD::ADD, DL, I32VT, Lsb, DAG.getConstant(0x7fff, DL, I32VT));
+  SDValue Rounded = DAG.getNode(ISD::ADD, DL, I32VT, Bits, Bias);
+
+  // Set the quiet bit on NaNs instead of rounding, which could turn a NaN
+  // into an infinity.
+  SDValue NaN = DAG.getNode(ISD::OR, DL, I32VT, Bits,
+                            DAG.getConstant(0x400000, DL, I32VT));
+
+  SDValue Res = DAG.getSelect(DL, I32VT, IsNaN, NaN, Rounded);
+  Res = DAG.getNode(ISD::SRL, DL, I32VT, Res,
+                    DAG.getShiftAmountConstant(16, I32VT, DL));
+  return DAG.getNode(ISD::TRUNCATE, DL, I16VT, Res);
+}
+
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -22885,11 +22936,16 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (VT.getScalarType() == MVT::bf16) {
-    if (SVT.getScalarType() == MVT::f32 &&
-        ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
-         Subtarget.hasAVXNECONVERT()))
+    if (SVT.getScalarType() != MVT::f32)
+      return SDValue();
+    if (canUseCVTNEPS2BF16(Subtarget, DAG))
       return Op;
-    return SDValue();
+    if (IsStrict || !hasCVTNEPS2BF16(Subtarget))
+      return SDValue();
+    // The instruction is unusable in this denormal mode. Expand with integer
+    // arithmetic rather than scalarizing into libcalls.
+    SDValue Res = expandF32ToBF16Bits(In, DL, DAG, *this);
+    return DAG.getBitcast(VT, Res);
   }
 
   if (VT.getScalarType() == MVT::f16 && !Subtarget.hasFP16()) {
@@ -23028,14 +23084,20 @@ SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
   SDLoc DL(Op);
 
   MVT SVT = Op.getOperand(0).getSimpleValueType();
-  if (SVT == MVT::f32 && ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
-                          Subtarget.hasAVXNECONVERT())) {
-    SDValue Res;
-    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Op.getOperand(0));
-    Res = DAG.getNode(X86ISD::CVTNEPS2BF16, DL, MVT::v8bf16, Res);
-    Res = DAG.getBitcast(MVT::v8i16, Res);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, Res,
-                       DAG.getVectorIdxConstant(0, DL));
+  if (SVT == MVT::f32) {
+    if (canUseCVTNEPS2BF16(Subtarget, DAG)) {
+      SDValue Res;
+      Res =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4f32, Op.getOperand(0));
+      Res = DAG.getNode(X86ISD::CVTNEPS2BF16, DL, MVT::v8bf16, Res);
+      Res = DAG.getBitcast(MVT::v8i16, Res);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, Res,
+                         DAG.getVectorIdxConstant(0, DL));
+    }
+    // The instruction is unusable in this denormal mode. Expand with integer
+    // arithmetic rather than a libcall.
+    if (hasCVTNEPS2BF16(Subtarget))
+      return expandF32ToBF16Bits(Op.getOperand(0), DL, DAG, *this);
   }
 
   MakeLibCallOptions CallOptions;
