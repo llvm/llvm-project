@@ -75,6 +75,24 @@ static Instruction *getContextInstForUse(Use &U) {
   return UserI;
 }
 
+/// Returns the closest program point dominating all uses of \p I, or nullptr if
+/// \p I has no uses or all of them are in unreachable blocks.
+static Instruction *findCommonDominatorOfUses(Instruction &I,
+                                              DominatorTree &DT) {
+  Instruction *CommonDom = nullptr;
+  unsigned NumUses = 0;
+  for (Use &U : I.uses()) {
+    ++NumUses;
+    if (NumUses == 16)
+      return nullptr;
+    Instruction *UserI = getContextInstForUse(U);
+    CommonDom =
+        CommonDom ? DT.findNearestCommonDominator(CommonDom, UserI) : UserI;
+  }
+  // Uses in unreachable blocks are not in the dominator tree.
+  return CommonDom && DT.getNode(CommonDom->getParent()) ? CommonDom : nullptr;
+}
+
 namespace {
 using Entry = ConstraintSystem::Entry;
 using RowTy = ConstraintSystem::RowTy;
@@ -111,21 +129,28 @@ struct FactOrCheck {
     ConditionTy Cond;
   };
 
-  /// A pre-condition that must hold for the current fact to be added to the
-  /// system.
-  ConditionTy DoesHold;
+  union {
+    /// A pre-condition that must hold for the current fact to be added to the
+    /// system. Only used by condition facts.
+    ConditionTy DoesHold;
+
+    /// Context instruction for the point where conditions are checked for
+    /// InstCheck simplifications.
+    Instruction *ContextInst;
+  };
 
   unsigned NumIn;
   unsigned NumOut;
   EntryTy Ty;
 
-  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst)
-      : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        Ty(Ty) {}
+  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst,
+              Instruction *ContextInst = nullptr)
+      : Inst(Inst), ContextInst(ContextInst ? ContextInst : Inst),
+        NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()), Ty(Ty) {}
 
   FactOrCheck(DomTreeNode *DTN, Use *U)
-      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        Ty(EntryTy::UseCheck) {}
+      : U(U), ContextInst(nullptr), NumIn(DTN->getDFSNumIn()),
+        NumOut(DTN->getDFSNumOut()), Ty(EntryTy::UseCheck) {}
 
   FactOrCheck(DomTreeNode *DTN, CmpPredicate Pred, Value *Op0, Value *Op1,
               ConditionTy Precond = {})
@@ -146,8 +171,11 @@ struct FactOrCheck {
     return FactOrCheck(DTN, U);
   }
 
-  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I) {
-    return FactOrCheck(EntryTy::InstCheck, DTN, I);
+  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I,
+                              Instruction *ContextInst = nullptr) {
+    assert((ContextInst ? ContextInst : I)->getParent() == DTN->getBlock() &&
+           "anchoring instruction must be in DTN's block");
+    return FactOrCheck(EntryTy::InstCheck, DTN, I, ContextInst);
   }
 
   bool isCheck() const {
@@ -158,7 +186,7 @@ struct FactOrCheck {
     assert(!isConditionFact());
     if (Ty == EntryTy::UseCheck)
       return getContextInstForUse(*U);
-    return Inst;
+    return ContextInst;
   }
 
   Instruction *getInstructionToSimplify() const {
@@ -1510,10 +1538,12 @@ void State::addInfoFor(BasicBlock &BB) {
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
 
-    // Queue instructions whose flags may be strengthened based on the facts
-    // that hold on entry to BB.
+    // Queue instructions whose flags may be strengthened, checked at the
+    // closest point dominating all uses.
     if (canStrengthenFlags(&I))
-      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), &I));
+      if (Instruction *CommonDom = findCommonDominatorOfUses(I, DT))
+        WorkList.push_back(FactOrCheck::getCheck(
+            DT.getNode(CommonDom->getParent()), &I, CommonDom));
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
