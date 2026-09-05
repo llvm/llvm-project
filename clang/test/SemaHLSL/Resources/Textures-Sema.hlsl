@@ -1,4 +1,12 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -fsyntax-only -finclude-default-header -verify=expected,offset,dim1 \
+// RUN:   -DHAS_OFFSET -DOFFSET_ARG="1" -DTEXTURE=Texture1D -DCOORD_TYPE=float \
+// RUN:   %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -fsyntax-only -finclude-default-header -verify=expected,offset,dim1 \
+// RUN:   -DHAS_OFFSET -DOFFSET_ARG="1" -DTEXTURE=Texture1DArray \
+// RUN:   -DCOORD_TYPE=float2 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -fsyntax-only -finclude-default-header -verify=expected,offset,dim2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_ARG="int2(1, 2)" -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_TYPE=float2 %s
@@ -30,6 +38,7 @@
 //   dim2               diagnostics naming a 2-component offset or location
 //                      vector
 //   nooffset           diagnostics for types that have no offset overloads
+//   dim1               diagnostics naming a scalar offset or location
 //   dim3               diagnostics naming a 3-component offset or location
 //                      vector
 //
@@ -66,7 +75,8 @@ void main(COORD_TYPE loc) {
 
   t.Sample(s, loc, OFFSET_ARG, 1.0);
 
-  // expected-error@+4 {{no matching member function for call to 'Sample'}}
+  // expected-error@+5 {{no matching member function for call to 'Sample'}}
+  // dim1-note@*:* {{candidate function not viable: no known conversion from 'SamplerState' to 'int' for 3rd argument}}
   // dim2-note@*:* {{candidate function not viable: no known conversion from 'SamplerState' to 'vector<int, 2>' (vector of 2 'int' values) for 3rd argument}}
   // expected-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
   // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 3 were provided}}

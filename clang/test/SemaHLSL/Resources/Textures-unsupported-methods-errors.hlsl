@@ -1,9 +1,23 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
+// RUN:   -DTEXTURE=Texture1D -DCOORD_TYPE=float -DGRAD_TYPE=float \
+// RUN:   -DOFFSET_TYPE=int -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
+// RUN:   -DTEXTURE=Texture1DArray -DCOORD_TYPE=float2 -DGRAD_TYPE=float \
+// RUN:   -DOFFSET_TYPE=int -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture2D \
 // RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float2 -DOFFSET_TYPE=int2 -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture1D \
+// RUN:   -DCOORD_TYPE=float -DGRAD_TYPE=float -DOFFSET_TYPE=int -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture2DArray \
 // RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float2 -DOFFSET_TYPE=int2 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture1DArray \
+// RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float -DOFFSET_TYPE=int -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_SAMPLE -DHAS_GATHER -DHAS_LOD \
 // RUN:   -DLOAD_ARG="int4(0, 0, 0, 0)" -DINDEX_ARG="uint3(0, 0, 0)" \
@@ -31,7 +45,8 @@
 //   HAS_GATHER         defined for types that have the Gather* methods
 //   HAS_LOD            defined for types that have CalculateLevelOfDetail*
 //
-// Writable (UAV) textures have no sampling, gathering or LOD methods.
+// Writable (UAV) textures have no sampling, gathering or LOD methods, and
+// 1D textures have no gathering methods.
 
 TEXTURE<float4> Tex;
 SamplerState Samp;

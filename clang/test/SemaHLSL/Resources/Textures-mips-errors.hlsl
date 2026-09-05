@@ -3,13 +3,25 @@
 // RUN:   -DTEXTURE=Texture2D -DINDEX_TYPE=int2 -DHAS_MIPS -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture1D -DINDEX_TYPE=int -DHAS_MIPS -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=Texture2DArray -DINDEX_TYPE=int3 -DHAS_MIPS -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=Texture1DArray -DINDEX_TYPE=int2 -DHAS_MIPS -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=RWTexture2D -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=RWTexture1D -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=RWTexture2DArray -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
+// RUN:   -DTEXTURE=RWTexture1DArray -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -emit-llvm-only -disable-llvm-passes -finclude-default-header \
 // RUN:   -DTEXTURE=TextureCube -verify %s

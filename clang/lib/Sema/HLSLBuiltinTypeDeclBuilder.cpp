@@ -88,6 +88,12 @@ convertParamModifierToParamABI(HLSLParamModifierAttr::Spelling Modifier) {
   }
 }
 
+QualType getVectorOrScalarType(ASTContext &AST, QualType Ty,
+                               uint32_t NumElements) {
+  assert(NumElements > 0 && "Cannot create a zero-element type");
+  return NumElements > 1 ? AST.getExtVectorType(Ty, NumElements) : Ty;
+}
+
 QualType getInoutParameterType(ASTContext &AST, QualType Ty) {
   assert(!Ty->isReferenceType() &&
          "Pointer and reference types cannot be inout or out parameters");
@@ -689,24 +695,27 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::concat(V Vec, S Scalar,
                                                            QualType ResultTy) {
   assert(ResultTy->isVectorType() && "The result type must be a vector type.");
   Expr *VecExpr = convertPlaceholder(Vec);
-  auto *VecTy = VecExpr->getType()->castAs<VectorType>();
   Expr *ScalarExpr = convertPlaceholder(Scalar);
-
-  // Save the vector to a local variable to avoid evaluating the placeholder
-  // multiple times or sharing the AST node.
-  LocalVar VecVar("vec_tmp", VecTy->desugar());
-  declareLocalVar(VecVar);
-  assign(VecVar, VecExpr);
-
-  QualType EltTy = VecTy->getElementType();
-  unsigned NumElts = VecTy->getNumElements();
 
   ASTContext &AST = getASTContext();
   SmallVector<Expr *, 4> Elts;
-  for (unsigned I = 0; I < NumElts; ++I) {
-    Elts.push_back(new (AST) ArraySubscriptExpr(
-        convertPlaceholder(VecVar), DeclBuilder.getConstantIntExpr(I), EltTy,
-        VK_PRValue, OK_Ordinary, SourceLocation()));
+  if (const auto *VecTy = VecExpr->getType()->getAs<VectorType>()) {
+    // Save the vector to a local variable to avoid evaluating the placeholder
+    // multiple times or sharing the AST node.
+    LocalVar VecVar("vec_tmp", VecTy->desugar());
+    declareLocalVar(VecVar);
+    assign(VecVar, VecExpr);
+
+    QualType EltTy = VecTy->getElementType();
+    unsigned NumElts = VecTy->getNumElements();
+
+    for (unsigned I = 0; I < NumElts; ++I) {
+      Elts.push_back(new (AST) ArraySubscriptExpr(
+          convertPlaceholder(VecVar), DeclBuilder.getConstantIntExpr(I), EltTy,
+          VK_PRValue, OK_Ordinary, SourceLocation()));
+    }
+  } else {
+    Elts.push_back(VecExpr);
   }
   Elts.push_back(ScalarExpr);
 
@@ -1456,9 +1465,7 @@ BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim,
   if (Dim != ResourceDimension::Unknown)
     VecSize = getResourceDimensions(Dim) + (IsArray ? 1 : 0);
 
-  QualType IndexTy = VecSize > 1
-                         ? AST.getExtVectorType(AST.UnsignedIntTy, VecSize)
-                         : AST.UnsignedIntTy;
+  QualType IndexTy = getVectorOrScalarType(AST, AST.UnsignedIntTy, VecSize);
 
   DeclarationName Subscript =
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
@@ -1492,7 +1499,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   uint32_t VecSize =
       getResourceDimensions(Dim) + (getResourceAttrs().IsArray ? 1 : 0);
   QualType IntTy = AST.IntTy;
-  QualType IndexTy = VecSize > 1 ? AST.getExtVectorType(IntTy, VecSize) : IntTy;
+  QualType IndexTy = getVectorOrScalarType(AST, IntTy, VecSize);
   QualType CoordLevelTy = AST.getExtVectorType(IntTy, VecSize + 1);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
@@ -1606,8 +1613,8 @@ BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 2 : 1);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
-  QualType LocationTy = AST.getExtVectorType(IntTy, CoordSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
+  QualType LocationTy = getVectorOrScalarType(AST, IntTy, CoordSize);
   QualType ReturnType = getHandleElementType();
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1638,7 +1645,7 @@ BuiltinTypeDeclBuilder::addRWTextureLoadMethods(ResourceDimension Dim,
   ASTContext &AST = Record->getASTContext();
   // A UAV binds a single mip slice: no mip component, no offset overload.
   uint32_t CoordSize = getResourceDimensions(Dim) + (IsArray ? 1 : 0);
-  QualType LocationTy = AST.getExtVectorType(AST.IntTy, CoordSize);
+  QualType LocationTy = getVectorOrScalarType(AST, AST.IntTy, CoordSize);
   QualType ReturnType = getHandleElementType();
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1662,8 +1669,8 @@ BuiltinTypeDeclBuilder::addTextureLoadMSMethods(ResourceDimension Dim,
   // Multisampled textures use a plain location (no mip/LOD component).
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
-  QualType LocationTy = AST.getExtVectorType(IntTy, CoordSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
+  QualType LocationTy = getVectorOrScalarType(AST, IntTy, CoordSize);
   QualType ReturnType = getHandleElementType();
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1812,9 +1819,9 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T Sample(SamplerState s, float2 location)
@@ -1882,9 +1889,9 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleBias(SamplerState s, float2 location, float bias)
@@ -1957,10 +1964,10 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
-  QualType OffsetFloatTy = AST.getExtVectorType(FloatTy, OffsetSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
+  QualType OffsetFloatTy = getVectorOrScalarType(AST, FloatTy, OffsetSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy)
@@ -2037,9 +2044,9 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleLevel(SamplerState s, float2 location, float lod)
@@ -2083,9 +2090,9 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value)
@@ -2160,9 +2167,9 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
@@ -2253,7 +2260,7 @@ BuiltinTypeDeclBuilder::addCalculateLodMethods(ResourceDimension Dim) {
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
   uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType LocationTy = AST.getExtVectorType(FloatTy, VecSize);
+  QualType LocationTy = getVectorOrScalarType(AST, FloatTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // float CalculateLevelOfDetail(SamplerState s, float2 location)
@@ -2304,9 +2311,9 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType LocationTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(LocationTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, LocationTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // Overloads for Gather, GatherRed, GatherGreen, GatherBlue, GatherAlpha
@@ -2362,9 +2369,9 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
   uint32_t OffsetSize = getResourceDimensions(Dim);
   uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType CoordTy = getVectorOrScalarType(AST, FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = getVectorOrScalarType(AST, IntTy, OffsetSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // Overloads for GatherCmp, GatherCmpRed, GatherCmpGreen, GatherCmpBlue,
