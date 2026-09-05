@@ -4340,18 +4340,44 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
   if (!status.succeeded())
     return status;
 
+  SmallVector<Value> boundForDim;
+  for (auto [dim, handle] :
+       llvm::zip_equal(getMaskBoundDims(), getMaskBounds())) {
+    auto payloadValues = state.getPayloadValues(handle);
+    if (!llvm::hasSingleElement(payloadValues)) {
+      return emitSilenceableFailure(getLoc())
+             << "expected exactly one payload value for each mask bound";
+    }
+    if (static_cast<size_t>(dim) >= boundForDim.size())
+      boundForDim.resize(dim + 1);
+    boundForDim[dim] = *payloadValues.begin();
+  }
+
   // TODO: Check that the correct number of vectorSizes was provided.
   for (Operation *target : targets) {
     if (!linalg::hasVectorizationImpl(target)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
-    FailureOr<VectorizationResult> vectorResults =
-        linalg::vectorize(rewriter, target, vectorSizes, getScalableSizes(),
-                          getVectorizeNdExtract().value_or(false),
-                          /*flatten1DDepthwiseConv=*/false,
-                          getAssumeDynamicDimsMatchVecSizes().value_or(false),
-                          getCreateNamedContraction().value_or(false));
+    SmallVector<Value> maskBounds(boundForDim);
+    if (!maskBounds.empty()) {
+      if (auto linalgTarget = dyn_cast<linalg::LinalgOp>(target)) {
+        int64_t numLoops = linalgTarget.getNumLoops();
+        if (static_cast<int64_t>(maskBounds.size()) > numLoops) {
+          return mlir::emitSilenceableFailure(target->getLoc())
+                 << "mask bound dim " << maskBounds.size() - 1
+                 << " is out of range for an iteration space of rank "
+                 << numLoops;
+        }
+        maskBounds.resize(numLoops);
+      }
+    }
+    FailureOr<VectorizationResult> vectorResults = linalg::vectorize(
+        rewriter, target, vectorSizes, getScalableSizes(),
+        getVectorizeNdExtract().value_or(false),
+        /*flatten1DDepthwiseConv=*/false,
+        getAssumeDynamicDimsMatchVecSizes().value_or(false),
+        getCreateNamedContraction().value_or(false), maskBounds);
     if (failed(vectorResults)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
@@ -4366,6 +4392,7 @@ void transform::VectorizeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTargetMutable(), effects);
   onlyReadsHandle(getVectorSizesMutable(), effects);
+  onlyReadsHandle(getMaskBoundsMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -4379,6 +4406,22 @@ LogicalResult transform::VectorizeOp::verify() {
     return emitOpError("expected same number of vector sizes (")
            << getStaticVectorSizes().size() << ") and scalable sizes ("
            << getScalableSizes().size() << ")";
+  if (getMaskBounds().size() != getMaskBoundDims().size())
+    return emitOpError("expected same number of mask bounds (")
+           << getMaskBounds().size() << ") and mask bound dims ("
+           << getMaskBoundDims().size() << ")";
+  llvm::SmallDenseSet<int64_t> seenDims;
+  for (int64_t dim : getMaskBoundDims()) {
+    if (dim < 0)
+      return emitOpError("mask bound dim must be non-negative, got ") << dim;
+    if (!getStaticVectorSizes().empty() &&
+        dim >= static_cast<int64_t>(getStaticVectorSizes().size()))
+      return emitOpError("mask bound dim ")
+             << dim << " is out of range for " << getStaticVectorSizes().size()
+             << " vector sizes";
+    if (!seenDims.insert(dim).second)
+      return emitOpError("duplicate mask bound for dim ") << dim;
+  }
   return success();
 }
 

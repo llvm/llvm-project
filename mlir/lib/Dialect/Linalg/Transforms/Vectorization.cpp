@@ -33,6 +33,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -225,7 +226,8 @@ struct VectorizationState {
   LogicalResult initState(RewriterBase &rewriter, LinalgOp linalgOp,
                           ArrayRef<int64_t> inputVectorSizes,
                           ArrayRef<bool> inputScalableVecDims,
-                          bool assumeDynamicDimsMatchVecSizes = false);
+                          bool assumeDynamicDimsMatchVecSizes = false,
+                          ArrayRef<Value> inputMaskBounds = {});
 
   /// Returns the canonical vector shape used to vectorize the iteration space.
   ArrayRef<int64_t> getCanonicalVecShape() const { return canonicalVecShape; }
@@ -342,6 +344,18 @@ private:
   /// shapes. Use this flag with care and only for cases where you are
   /// confident the assumption holds.
   bool assumeDynamicDimsMatchVecSizes = false;
+
+  /// Caller-provided mask upper bounds, one per iteration space dimension.
+  /// A non-null entry forces masking of that dimension with the
+  /// given bound. The opposite of `assumeDynamicDimsMatchVecSizes`:
+  /// it allows masking static dims.
+  SmallVector<Value> maskBounds;
+
+  /// Returns the caller-provided mask bound for `vecDim`, or a null Value if
+  /// none was provided.
+  Value getMaskBound(unsigned vecDim) const {
+    return vecDim < maskBounds.size() ? maskBounds[vecDim] : Value();
+  }
 };
 
 LogicalResult
@@ -349,6 +363,11 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                   LinalgOp linalgOp) {
   // TODO: Support 0-d vectors.
   for (int vecDim = 0, end = canonicalVecShape.size(); vecDim < end; ++vecDim) {
+    if (Value bound = getMaskBound(vecDim)) {
+      iterSpaceValueSizes.push_back(bound);
+      continue;
+    }
+
     if (ShapedType::isStatic(iterSpaceStaticSizes[vecDim])) {
       // Create constant index op for static dimensions.
       iterSpaceValueSizes.push_back(arith::ConstantIndexOp::create(
@@ -383,8 +402,10 @@ LogicalResult VectorizationState::initState(RewriterBase &rewriter,
                                             LinalgOp linalgOp,
                                             ArrayRef<int64_t> inputVectorSizes,
                                             ArrayRef<bool> inputScalableVecDims,
-                                            bool assumeDimsMatchVec) {
+                                            bool assumeDimsMatchVec,
+                                            ArrayRef<Value> inputMaskBounds) {
   assumeDynamicDimsMatchVecSizes = assumeDimsMatchVec;
+  maskBounds.assign(inputMaskBounds.begin(), inputMaskBounds.end());
   // Initialize the insertion point.
   rewriter.setInsertionPoint(linalgOp);
 
@@ -465,8 +486,20 @@ Value VectorizationState::getOrCreateMaskFor(
   // operation.
   // TODO: Improve this check. Only projected permutation indexing maps are
   // supported.
+  //
+  // A mask bound explicitly requests masking. Re-route dims with a mask bound
+  // to dynamic dim handling. Track which bounded dims to not skip masking.
+  SmallVector<int64_t> effectiveStaticSizes(iterSpaceStaticSizes);
+  SmallVector<int64_t> isBoundedDim(iterSpaceStaticSizes.size(), 0);
+  for (auto [vecDim, size] : llvm::enumerate(effectiveStaticSizes)) {
+    if (getMaskBound(vecDim)) {
+      size = ShapedType::kDynamic;
+      isBoundedDim[vecDim] = 1;
+    }
+  }
+
   SmallVector<int64_t> permutedStaticSizes =
-      applyPermutationMap<int64_t>(maskingMap, iterSpaceStaticSizes);
+      applyPermutationMap<int64_t>(maskingMap, ArrayRef(effectiveStaticSizes));
   auto maskType = getCanonicalVecType(rewriter.getI1Type(), maskingMap);
   auto maskShape = maskType.getShape();
 
@@ -478,7 +511,11 @@ Value VectorizationState::getOrCreateMaskFor(
     return Value();
   }
 
-  if (assumeDynamicDimsMatchVecSizes) {
+  // A bound on a not accessed says nothing about it.
+  bool hasMaskBound = llvm::is_contained(
+      applyPermutationMap<int64_t>(maskingMap, ArrayRef(isBoundedDim)), 1);
+
+  if (assumeDynamicDimsMatchVecSizes && !hasMaskBound) {
     // While for _dynamic_ dim sizes we can _assume_ that the corresponding
     // vector sizes match, we still need to check the _static_ dim sizes. Only
     // then we can be 100% sure that masking is not required.
@@ -2529,6 +2566,49 @@ vectorizeScalableVectorPrecondition(Operation *op,
       isa<linalg::BatchMmt4DOp>(op) || hasReductionIterator(linalgOp));
 }
 
+/// Verify bounds: one per iteration space dimension, index-typed
+///  and not wider than their vector dim. Accept non-static boundaries.
+static LogicalResult
+vectorizeMaskBoundsPrecondition(Operation *op, ArrayRef<int64_t> vectorSizes,
+                                ArrayRef<Value> inputMaskBounds) {
+  if (inputMaskBounds.empty())
+    return success();
+
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp) {
+    LDBG() << "Mask bounds are only supported for LinalgOp";
+    return failure();
+  }
+
+  if (inputMaskBounds.size() != linalgOp.getNumLoops()) {
+    LDBG() << "Mask bounds size (" << inputMaskBounds.size()
+           << ") does not match the iteration space rank ("
+           << linalgOp.getNumLoops() << ")";
+    return failure();
+  }
+
+  for (auto [dim, bound] : llvm::enumerate(inputMaskBounds)) {
+    if (!bound)
+      continue;
+    if (!bound.getType().isIndex()) {
+      LDBG() << "Mask bound for dim " << dim << " is not index-typed";
+      return failure();
+    }
+    if (dim >= vectorSizes.size())
+      continue;
+    FailureOr<int64_t> boundUb = ValueBoundsConstraintSet::computeConstantBound(
+        presburger::BoundType::UB, bound, /*stopCondition=*/nullptr,
+        ValueBoundsOptions{/*closedUB=*/true});
+    if (succeeded(boundUb) && *boundUb > vectorSizes[dim]) {
+      LDBG() << "Mask bound for dim " << dim << " has upper bound " << *boundUb
+             << ", which exceeds the vector size " << vectorSizes[dim];
+      return failure();
+    }
+  }
+
+  return success();
+}
+
 LogicalResult mlir::linalg::vectorizeOpPrecondition(
     Operation *op, ArrayRef<int64_t> inputVectorSizes,
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
@@ -2586,7 +2666,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
     RewriterBase &rewriter, Operation *op, ArrayRef<int64_t> inputVectorSizes,
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
     bool flatten1DDepthwiseConv, bool assumeDynamicDimsMatchVecSizes,
-    bool createNamedContraction) {
+    bool createNamedContraction, ArrayRef<Value> inputMaskBounds) {
   LDBG() << "Attempting to vectorize: " << *op;
   LDBG() << "Input vector sizes: " << llvm::interleaved(inputVectorSizes);
   LDBG() << "Input scalable vector dims: "
@@ -2599,12 +2679,18 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
     return failure();
   }
 
+  if (failed(vectorizeMaskBoundsPrecondition(op, inputVectorSizes,
+                                             inputMaskBounds))) {
+    LDBG() << "Mask bounds pre-conditions failed";
+    return failure();
+  }
+
   // Initialize vectorization state.
   VectorizationState state(rewriter);
   if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
-    if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
-                               inputScalableVecDims,
-                               assumeDynamicDimsMatchVecSizes))) {
+    if (failed(state.initState(
+            rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
+            assumeDynamicDimsMatchVecSizes, inputMaskBounds))) {
       LDBG() << "Vectorization state couldn't be initialized";
       return failure();
     }

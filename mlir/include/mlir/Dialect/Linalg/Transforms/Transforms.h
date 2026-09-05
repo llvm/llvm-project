@@ -1009,13 +1009,18 @@ struct VectorizationResult {
 /// shapes.
 /// Optionally, `createNamedContraction` can force compatible contractions to be
 /// vectorized directly to vector.contract operation.
+/// `inputMaskBounds`, if provided, must match the rank of the iteration space.
+/// A non-null entry forces masking of the corresponding iteration space
+/// dimension using that value as the mask upper bound, even when the dimension
+/// is statically sized.
 FailureOr<VectorizationResult>
 vectorize(RewriterBase &rewriter, Operation *op,
           ArrayRef<int64_t> inputVectorSizes = {},
           ArrayRef<bool> inputScalableVecDims = {},
           bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false,
           bool assumeDynamicDimsMatchVecSizes = false,
-          bool createNamedContraction = false);
+          bool createNamedContraction = false,
+          ArrayRef<Value> inputMaskBounds = {});
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
