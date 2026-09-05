@@ -2186,13 +2186,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     while (MaybeParseHLSLAnnotations(D))
       ;
 
-  if (Tok.is(tok::kw_requires)) {
+  if (Tok.is(tok::kw_requires) || getContractSpecifierKind()) {
     TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
     // With abbreviated function templates - we need to explicitly add depth to
     // account for the implicit template parameter list induced by the template.
     if (!TemplateInfo.TemplateParams && D.getInventedTemplateParameterList())
       ++CurTemplateDepthTracker;
-    ParseTrailingRequiresClauseWithScope(D);
+    ParseFunctionContractSpecifiersAndConstraints(D);
   }
 
   // Save late-parsed attributes for now; they need to be parsed in the
@@ -2441,8 +2441,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       //    init-declarator:
       //	      declarator initializer[opt]
       //        declarator requires-clause
-      if (Tok.is(tok::kw_requires))
-        ParseTrailingRequiresClauseWithScope(D);
+      if (Tok.is(tok::kw_requires) || getContractSpecifierKind())
+        ParseFunctionContractSpecifiersAndConstraints(D);
       Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
       D.complete(ThisDecl);
       if (ThisDecl)

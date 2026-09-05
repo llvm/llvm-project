@@ -28,6 +28,9 @@
 #ifndef CXX20_KEYWORD
 #define CXX20_KEYWORD(X,Y) KEYWORD(X,KEYCXX20|(Y))
 #endif
+#ifndef CXX26_KEYWORD
+#define CXX26_KEYWORD(X,Y) KEYWORD(X,KEYCXX26|(Y))
+#endif
 #ifndef C99_KEYWORD
 #define C99_KEYWORD(X,Y) KEYWORD(X,KEYC99|(Y))
 #endif
@@ -278,6 +281,7 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   KEYNOCXX - This is a keyword in every non-C++ dialect.
 //   KEYCXX11 - This is a C++ keyword introduced to C++ in C++11
 //   KEYCXX20 - This is a C++ keyword introduced to C++ in C++20
+//   KEYCXX26 - This is a C++ keyword introduced to C++ in C++26
 //   KEYMODULES - This is a keyword if the C++ extensions for modules
 //                are enabled.
 //   KEYGNU   - This is a keyword if GNU extensions are enabled
@@ -420,6 +424,9 @@ CXX11_KEYWORD(noexcept              , 0)
 CXX11_KEYWORD(nullptr               , KEYC23)
 CXX11_KEYWORD(static_assert         , KEYMSCOMPAT|KEYC23)
 CXX11_KEYWORD(thread_local          , KEYC23)
+
+// C++26 keyword.
+CXX26_KEYWORD(contract_assert         , 0)
 
 // C++20 / coroutines keywords
 COROUTINES_KEYWORD(co_await)
@@ -931,6 +938,7 @@ ANNOTATION(embed)
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
 #undef MODULES_KEYWORD
+#undef CXX26_KEYWORD
 #undef CXX20_KEYWORD
 #undef CXX11_KEYWORD
 #undef KEYWORD

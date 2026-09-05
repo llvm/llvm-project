@@ -2763,6 +2763,17 @@ private:
       const Declarator &D, const DeclSpec &DS,
       std::optional<Sema::CXXThisScopeRAII> &ThisScope);
 
+  enum class ContractSpecifierKind { Pre, Post };
+  std::optional<ContractSpecifierKind> getContractSpecifierKind();
+  void ParseContractSpecifiers(Declarator &D);
+  /// Parse the trailing requires-clause and function contract specifiers.
+  ///
+  /// \param ParametersAlreadyInScope whether the parameters are already in an
+  /// active function prototype scope. This can be true for lambdas, which
+  /// always build their function prototype scope.
+  void ParseFunctionContractSpecifiersAndConstraints(
+      Declarator &D, bool ParametersAlreadyInScope = false);
+
   /// ParseRefQualifier - Parses a member function ref-qualifier. Returns
   /// true if a ref-qualifier is found.
   bool ParseRefQualifier(bool &RefQualifierIsLValueRef,
@@ -2887,6 +2898,10 @@ private:
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
 
+  /// C++26 contextual keywords.
+  mutable IdentifierInfo *Ident_pre;
+  mutable IdentifierInfo *Ident_post;
+
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
   /// parsed after the corresponding top-level class is complete.
@@ -2992,7 +3007,6 @@ private:
                                      bool MayBeFollowedByDirectInit);
 
   /// Parse a requires-clause as part of a function declaration.
-  void ParseTrailingRequiresClauseWithScope(Declarator &D);
   void ParseTrailingRequiresClause(Declarator &D);
 
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,
@@ -7597,6 +7611,11 @@ public:
   /// Note: this lets the caller parse the end ';'.
   ///
   StmtResult ParseBreakStatement();
+
+  /// Parse a C++26 contract-assertion statement.
+  /// TODO: Currently the AST result of contracts is not support, its predicate
+  /// will be parsed and the corresponding AST result will be discarded.
+  StmtResult ParseContractAssertStatement();
 
   /// ParseReturnStatement
   /// \verbatim

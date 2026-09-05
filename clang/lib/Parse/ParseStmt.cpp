@@ -158,6 +158,11 @@ Retry:
         getCurScope(), SemaCodeCompletion::PCC_Statement);
     return StmtError();
 
+  case tok::kw_contract_assert:
+    Res = ParseContractAssertStatement();
+    SemiError = "contract_assert";
+    break;
+
   case tok::identifier:
   ParseIdentifier: {
     Token Next = NextToken();
@@ -2460,6 +2465,35 @@ StmtResult Parser::ParseContinueStatement() {
 
 StmtResult Parser::ParseBreakStatement() {
   return ParseBreakOrContinueStatement(/*IsContinue=*/false);
+}
+
+StmtResult Parser::ParseContractAssertStatement() {
+  assert(Tok.is(tok::kw_contract_assert) && "expected contract_assert");
+  if (!getLangOpts().Contracts)
+    Diag(Tok, diag::err_contracts_disabled);
+  SourceLocation ContractAssertLoc = ConsumeToken();
+
+  ParsedAttributes Attrs(AttrFactory);
+  MaybeParseCXX11Attributes(Attrs);
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, "contract_assert")) {
+    SkipUntil(tok::semi, StopBeforeMatch);
+    return Actions.ActOnNullStmt(ContractAssertLoc,
+                                 /*HasLeadingEmptyMacro=*/false);
+  }
+
+  EnterExpressionEvaluationContext Evaluated(
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+  ExprResult Predicate = ParseConditionalExpression();
+  if (Predicate.isInvalid())
+    T.skipToEnd();
+  else
+    T.consumeClose();
+
+  // TODO: Now we don't build AST node for contracts.
+  return Actions.ActOnNullStmt(ContractAssertLoc,
+                               /*HasLeadingEmptyMacro=*/false);
 }
 
 StmtResult Parser::ParseReturnStatement() {

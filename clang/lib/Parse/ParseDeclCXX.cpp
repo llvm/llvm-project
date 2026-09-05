@@ -2563,8 +2563,9 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
     LateParsedAttrList &LateParsedAttrs) {
   // member-declarator:
-  //   declarator virt-specifier-seq[opt] pure-specifier[opt]
-  //   declarator requires-clause
+  //   declarator virt-specifier-seq[opt]
+  //     function-contract-specifier-seq[opt] pure-specifier[opt]
+  //   declarator requires-clause function-contract-specifier-seq[opt]
   //   declarator brace-or-equal-initializer[opt]
   //   identifier attribute-specifier-seq[opt] ':' constant-expression
   //       brace-or-equal-initializer[opt]
@@ -2591,21 +2592,30 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     BitfieldSize = ParseConstantExpression();
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
-  } else if (Tok.is(tok::kw_requires)) {
-    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
-    // With abbreviated function templates - we need to explicitly add depth to
-    // account for the implicit template parameter list induced by the template.
-    if (DeclaratorInfo.getTemplateParameterLists().empty() &&
-        DeclaratorInfo.getInventedTemplateParameterList())
-      ++CurTemplateDepthTracker;
-    ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
-    ParseOptionalCXX11VirtSpecifierSeq(
-        VS, getCurrentClass().IsInterface,
-        DeclaratorInfo.getDeclSpec().getFriendSpecLoc());
-    if (!VS.isUnset())
-      MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(DeclaratorInfo,
-                                                              VS);
+    // Requires clause can't follow 'override' but contracts can follow
+    // 'override'. Even if we don't support virtual functions with contractcs,
+    // we should diagnose at the sema stage instead of the parser stage.
+    if (Tok.isNot(tok::kw_requires)) {
+      ParseOptionalCXX11VirtSpecifierSeq(
+          VS, getCurrentClass().IsInterface,
+          DeclaratorInfo.getDeclSpec().getFriendSpecLoc());
+      if (!VS.isUnset())
+        MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(DeclaratorInfo,
+                                                                VS);
+    }
+
+    if (Tok.is(tok::kw_requires) || getContractSpecifierKind()) {
+      TemplateParameterDepthRAII CurTemplateDepthTracker(
+          TemplateParameterDepth);
+      // With abbreviated function templates - we need to explicitly add depth
+      // to account for the implicit template parameter list induced by the
+      // template.
+      if (DeclaratorInfo.getTemplateParameterLists().empty() &&
+          DeclaratorInfo.getInventedTemplateParameterList())
+        ++CurTemplateDepthTracker;
+      ParseFunctionContractSpecifiersAndConstraints(DeclaratorInfo);
+    }
   }
 
   // If a simple-asm-expr is present, parse it.
@@ -4162,49 +4172,17 @@ TypeResult Parser::ParseTrailingReturnType(SourceRange &Range,
                                    : DeclaratorContext::TrailingReturn);
 }
 
-void Parser::ParseTrailingRequiresClauseWithScope(Declarator &D) {
-  assert(Tok.is(tok::kw_requires) && "expected requires");
-
-  // C++23 [basic.scope.namespace]p1:
-  //   For each non-friend redeclaration or specialization whose target scope
-  //   is or is contained by the scope, the portion after the declarator-id,
-  //   class-head-name, or enum-head-name is also included in the scope.
-  // C++23 [basic.scope.class]p1:
-  //   For each non-friend redeclaration or specialization whose target scope
-  //   is or is contained by the scope, the portion after the declarator-id,
-  //   class-head-name, or enum-head-name is also included in the scope.
-  //
-  // FIXME: We should really be calling ParseTrailingRequiresClause in
-  // ParseDirectDeclarator, when we are already in the declarator scope.
-  // This would also correctly suppress access checks for specializations
-  // and explicit instantiations, which we currently do not do.
-  CXXScopeSpec &SS = D.getCXXScopeSpec();
-  DeclaratorScopeObj DeclScopeObj(*this, SS);
-  if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
-    DeclScopeObj.EnterDeclaratorScope();
-
-  ParseScope ParamScope(this, Scope::DeclScope |
-                                  Scope::FunctionDeclarationScope |
-                                  Scope::FunctionPrototypeScope);
-
-  ParseTrailingRequiresClause(D);
-}
-
 void Parser::ParseTrailingRequiresClause(Declarator &D) {
+  // The caller need to set up the scope for the parameters and init 'this'
+  // scope fro declarator if relevant.
+
   assert(Tok.is(tok::kw_requires) && "expected requires");
   assert(
       getCurScope()->isFunctionPrototypeScope() &&
       "trailing requires-clause must be parsed in a function prototype scope");
 
   SourceLocation RequiresKWLoc = ConsumeToken();
-
-  ExprResult TrailingRequiresClause;
-  Actions.ActOnStartTrailingRequiresClause(getCurScope(), D);
-
-  std::optional<Sema::CXXThisScopeRAII> ThisScope;
-  InitCXXThisScopeForDeclaratorIfRelevant(D, D.getDeclSpec(), ThisScope);
-
-  TrailingRequiresClause =
+  ExprResult TrailingRequiresClause =
       ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true);
 
   TrailingRequiresClause =
@@ -4242,6 +4220,142 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
       SkipUntil({tok::equal, tok::l_brace, tok::arrow, tok::kw_try, tok::comma},
                 StopAtSemi | StopBeforeMatch);
   }
+}
+
+std::optional<Parser::ContractSpecifierKind>
+Parser::getContractSpecifierKind() {
+  if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
+    return std::nullopt;
+
+  if (!Ident_pre) {
+    Ident_pre = &PP.getIdentifierTable().get("pre");
+    Ident_post = &PP.getIdentifierTable().get("post");
+  }
+
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
+  if (II == Ident_pre)
+    return ContractSpecifierKind::Pre;
+  if (II == Ident_post)
+    return ContractSpecifierKind::Post;
+  return std::nullopt;
+}
+
+void Parser::ParseContractSpecifiers(Declarator &D) {
+  assert(getContractSpecifierKind() && "expected a contract specifier");
+
+  if (!getLangOpts().CPlusPlus26)
+    Diag(Tok, diag::err_contracts_require_cxx26);
+  else if (!getLangOpts().Contracts)
+    Diag(Tok, diag::err_contracts_disabled);
+
+  const bool IsFunction = D.isDeclarationOfFunction() &&
+                          (D.isFunctionDeclarationContext() ||
+                           D.getContext() == DeclaratorContext::LambdaExpr);
+  if (!IsFunction)
+    Diag(Tok, diag::err_contract_specifier_not_function);
+
+  while (std::optional<ContractSpecifierKind> Kind =
+             getContractSpecifierKind()) {
+    const bool IsPost = *Kind == ContractSpecifierKind::Post;
+    ConsumeToken();
+
+    ParsedAttributes Attrs(AttrFactory);
+    MaybeParseCXX11Attributes(Attrs);
+
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+    if (T.expectAndConsume(diag::err_expected_lparen_after,
+                           IsPost ? "post" : "pre"))
+      return;
+
+    // !IsFunction is diagnosed before, avoid confusing diagnostics.
+    if (!IsFunction) {
+      T.skipToEnd();
+      continue;
+    }
+
+    // FIXME: We should accept attribute for the result binding, e.g.,
+    // post(r [[attr]] : expr).
+    std::optional<ParseScope> ResultNameScope;
+    if (IsPost && Tok.is(tok::identifier) && NextToken().is(tok::colon)) {
+      IdentifierInfo *ResultName = Tok.getIdentifierInfo();
+      SourceLocation ResultNameLoc = ConsumeToken();
+      ConsumeToken();
+
+      ResultNameScope.emplace(this, Scope::DeclScope);
+      Actions.ActOnPostConditionResultName(getCurScope(), ResultName,
+                                           ResultNameLoc);
+    }
+
+    EnterExpressionEvaluationContext Evaluated(
+        Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+    ExprResult Predicate = ParseConditionalExpression();
+    ResultNameScope.reset();
+    if (Predicate.isInvalid())
+      T.skipToEnd();
+    else
+      T.consumeClose();
+  }
+}
+
+void Parser::ParseFunctionContractSpecifiersAndConstraints(
+    Declarator &D, bool ParametersAlreadyInScope) {
+  assert((Tok.is(tok::kw_requires) || getContractSpecifierKind()) &&
+         "expected a trailing requires-clause or contract specifier");
+
+  auto ParseSpecifiersAndConstraints = [&] {
+    if (!ParametersAlreadyInScope)
+      Actions.ActOnStartTrailingRequiresClauseOrContractSpecifier(getCurScope(),
+                                                                  D);
+
+    const DeclSpec *MethodDS = &D.getDeclSpec();
+    if (D.isFunctionDeclarator() && D.getFunctionTypeInfo().MethodQualifiers)
+      MethodDS = D.getFunctionTypeInfo().MethodQualifiers;
+    std::optional<Sema::CXXThisScopeRAII> ThisScope;
+    InitCXXThisScopeForDeclaratorIfRelevant(D, *MethodDS, ThisScope);
+
+    if (Tok.is(tok::kw_requires)) {
+      ParseTrailingRequiresClause(D);
+    }
+
+    while (getContractSpecifierKind()) {
+      ParseContractSpecifiers(D);
+
+      // If we meet requires after contracts, emit a nice diagnostics and
+      // recovering compilation.
+      if (Tok.is(tok::kw_requires)) {
+        Diag(Tok, diag::err_requires_clause_must_precede_contract_specifiers);
+        ParseTrailingRequiresClause(D);
+      }
+    }
+  };
+
+  if (ParametersAlreadyInScope) {
+    ParseSpecifiersAndConstraints();
+    return;
+  }
+
+  // C++23 [basic.scope.namespace]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  // C++23 [basic.scope.class]p1:
+  //   For each non-friend redeclaration or specialization whose target scope
+  //   is or is contained by the scope, the portion after the declarator-id,
+  //   class-head-name, or enum-head-name is also included in the scope.
+  //
+  // FIXME: We should really parse these in ParseDirectDeclarator, when we are
+  // already in the declarator scope. This would also correctly suppress access
+  // checks for specializations and explicit instantiations, which we currently
+  // do not do.
+  CXXScopeSpec &SS = D.getCXXScopeSpec();
+  DeclaratorScopeObj DeclScopeObj(*this, SS);
+  if (SS.isValid() && Actions.ShouldEnterDeclaratorScope(getCurScope(), SS))
+    DeclScopeObj.EnterDeclaratorScope();
+
+  ParseScope ParamScope(this, Scope::DeclScope |
+                                  Scope::FunctionDeclarationScope |
+                                  Scope::FunctionPrototypeScope);
+  ParseSpecifiersAndConstraints();
 }
 
 Sema::ParsingClassState Parser::PushParsingClass(Decl *ClassDecl,
