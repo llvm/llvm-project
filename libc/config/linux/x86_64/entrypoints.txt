@@ -291,6 +291,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vasprintf
+    libc.src.stdio.getline
+    libc.src.stdio.getdelim
 
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create
