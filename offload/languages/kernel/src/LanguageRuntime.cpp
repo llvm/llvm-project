@@ -23,6 +23,7 @@
 #include "Types.h"
 
 #include "OffloadAPI.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <cassert>
 #include <cstdio>
@@ -46,31 +47,30 @@ Error_t Free(void *DevPtr) {
 Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
   StateTy &State = StateTy::get();
   ThreadStateTy &ThreadState = ThreadStateTy::get();
-  ol_queue_handle_t Queue = ThreadState.getDefaultQueue();
-
+  if (Kind != MemcpyHostToHost) {
+    ol_result_t Result = waitOnBlockingStreams(State, ThreadState);
+    if (Result != OL_SUCCESS)
+      return convertAndSetLastError(Result);
+  }
+  ol_device_handle_t Device = ThreadState.getDefaultDevice();
+  ol_device_handle_t Host = State.getHostDevice();
+  StreamTy *DefaultStream = ThreadState.getDefaultStream();
+  ol_queue_handle_t Queue = DefaultStream->Queue;
   ol_result_t Result;
   switch (Kind) {
   case MemcpyHostToHost: {
-    ol_device_handle_t Host = State.getHostDevice();
     Result = olMemcpy(nullptr, Dst, Host, const_cast<void *>(Src), Host, Size);
     break;
   }
   case MemcpyHostToDevice: {
-    ol_device_handle_t Device = ThreadState.getDefaultDevice();
-    ol_device_handle_t Host = State.getHostDevice();
     Result = olMemcpy(Queue, Dst, Device, const_cast<void *>(Src), Host, Size);
     break;
   }
   case MemcpyDeviceToHost: {
-    ol_device_handle_t Device = ThreadState.getDefaultDevice();
-    ol_device_handle_t Host = State.getHostDevice();
-
     Result = olMemcpy(Queue, Dst, Host, const_cast<void *>(Src), Device, Size);
     break;
   }
   case MemcpyDeviceToDevice: {
-    ol_device_handle_t Device = ThreadState.getDefaultDevice();
-
     Result =
         olMemcpy(Queue, Dst, Device, const_cast<void *>(Src), Device, Size);
     break;
@@ -82,16 +82,16 @@ Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
   if (Result != OL_SUCCESS)
     return convertAndSetLastError(Result);
 
-  Result = olSyncQueue(Queue);
+  Result = DefaultStream->sync();
   return convertAndSetLastError(Result);
 }
 
 Error_t DeviceSynchronize() {
   // TODO: This is not correct. We likely want to pipe this through to the
   // plugins.
-  ThreadStateTy &ThreadState = ThreadStateTy::get();
-  ol_queue_handle_t Queue = ThreadState.getDefaultQueue();
-  ol_result_t Result = olSyncQueue(Queue);
+  StreamTy *DefaultStream = ThreadStateTy::get().getDefaultStream();
+  ol_result_t Result =
+      DefaultStream ? DefaultStream->sync() : olSyncQueue(nullptr);
   return convertAndSetLastError(Result);
 }
 
@@ -193,11 +193,14 @@ Error_t StreamDestroy(Stream_t Stream) {
 }
 
 Error_t StreamSynchronize(Stream_t Stream) {
-  ol_queue_handle_t Queue;
-  Error_t Err = getQueueFromStream(Stream, &Queue);
-  if (Err != Success)
-    return setLastError(Err);
-  ol_result_t Result = olSyncQueue(Queue);
+  if (!Stream)
+    return setLastError(ErrorInvalidValue);
+
+  StreamTy *InternalStream = toInternalStream(Stream);
+  if (!StateTy::get().isStreamRegistered(InternalStream))
+    return setLastError(ErrorInvalidResourceHandle);
+
+  ol_result_t Result = InternalStream->sync();
   return convertAndSetLastError(Result);
 }
 

@@ -69,8 +69,6 @@ int main(int argc, char **argv) {
 
   if (hipStreamSynchronize(Stream) != hipSuccess)
     return 1;
-  if (hipDeviceSynchronize() != hipSuccess)
-    return 1;
   if (hipMemcpy(&StreamResult, StreamPtr, sizeof(int), hipMemcpyDeviceToHost) !=
       hipSuccess)
     return 1;
@@ -84,6 +82,10 @@ int main(int argc, char **argv) {
   // CHECK: default result: 17
 
   if (hipStreamDestroy(Stream) != hipSuccess)
+    return 1;
+  if (hipStreamDestroy(BlockingStream) != hipSuccess)
+    return 1;
+  if (hipStreamDestroy(NonBlockingStream) != hipSuccess)
     return 1;
   print_error("destroyed stream destroy", hipStreamDestroy(Stream));
   // CHECK: destroyed stream destroy value: 4

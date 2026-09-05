@@ -70,8 +70,6 @@ int main(int argc, char **argv) {
 
   if (cudaStreamSynchronize(Stream) != cudaSuccess)
     return 1;
-  if (cudaDeviceSynchronize() != cudaSuccess)
-    return 1;
   if (cudaMemcpy(&StreamResult, StreamPtr, sizeof(int),
                  cudaMemcpyDeviceToHost) != cudaSuccess)
     return 1;
@@ -85,6 +83,10 @@ int main(int argc, char **argv) {
   // CHECK: default result: 17
 
   if (cudaStreamDestroy(Stream) != cudaSuccess)
+    return 1;
+  if (cudaStreamDestroy(BlockingStream) != cudaSuccess)
+    return 1;
+  if (cudaStreamDestroy(NonBlockingStream) != cudaSuccess)
     return 1;
   print_error("destroyed stream destroy", cudaStreamDestroy(Stream));
   // CHECK: destroyed stream destroy value: 4
