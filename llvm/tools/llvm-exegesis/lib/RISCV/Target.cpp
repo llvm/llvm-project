@@ -736,6 +736,8 @@ public:
   generateInstructionVariants(const Instruction &Instr,
                               unsigned MaxConfigsPerOpcode) const override;
 
+  unsigned getStackScratchSpaceBytes() const override;
+
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Turn AVL operand of physical registers into virtual registers.
     PM.add(exegesis::createRISCVPreprocessingPass());
@@ -808,26 +810,7 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
                                              unsigned Offset) const {
   // TODO: for now we ignore Offset because have no way
   // to detect it in instruction.
-  auto &I = IT.getInstr();
-
-  auto MemOpIt =
-      find_if(I.Operands, [](const Operand &Op) { return Op.isMemory(); });
-  assert(MemOpIt != I.Operands.end() &&
-         "Instruction must have memory operands");
-
-  const Operand &MemOp = *MemOpIt;
-
-  assert(MemOp.isReg() && "Memory operand expected to be register");
-
-  unsigned Opcode = I.getOpcode();
-  if (Opcode == RISCV::C_LDSP || Opcode == RISCV::C_LWSP ||
-      Opcode == RISCV::C_SDSP || Opcode == RISCV::C_SWSP) {
-    IT.getValueFor(I.Operands[0]) = MCOperand::createReg(RISCV::X2);
-    // Force base register to SP (X2)
-    IT.getValueFor(MemOp) = MCOperand::createReg(RISCV::X2);
-    return;
-  }
-
+  const Operand &MemOp = IT.getMemOpReg();
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
 }
 
@@ -888,6 +871,13 @@ ExegesisRISCVTarget::generateInstructionVariants(
       IT.getValueFor(Op) = MCOperand::createReg(ScratchMemoryReg);
     }
   return {IT};
+}
+
+unsigned ExegesisRISCVTarget::getStackScratchSpaceBytes() const {
+  // The largest offset a stack-pointer-relative compressed access can encode
+  // is 504 (C_SDSP, uimm9_lsb000), so reserving 512 bytes keeps every such
+  // access inside the frame whatever offset the generator picks.
+  return 512;
 }
 
 } // anonymous namespace
