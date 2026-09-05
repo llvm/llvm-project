@@ -595,3 +595,145 @@ entry:
   %and = and <4 x i1> %sel, %b
   ret <4 x i1> %and
 }
+
+; x <u 13 => bit 4 is clear => (x & 16) == 0 is true
+define i8 @test_mask_implied_equal(i8 %x) {
+; CHECK-LABEL: @test_mask_implied_equal(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 13
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp1 = icmp ult i8 %x, 13
+  %mask = and i8 %x, 16
+  %cmp2 = icmp eq i8 %mask, 0
+  %inner = select i1 %cmp2, i8 1, i8 2
+  %r = select i1 %cmp1, i8 %inner, i8 0
+  ret i8 %r
+}
+
+define i8 @test_mask_implied_swapped_equal(i8 %x) {
+; CHECK-LABEL: @test_mask_implied_swapped_equal(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 13
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp1 = icmp ult i8 %x, 13
+  %mask = and i8 16, %x
+  %cmp2 = icmp eq i8 %mask, 0
+  %inner = select i1 %cmp2, i8 1, i8 2
+  %r = select i1 %cmp1, i8 %inner, i8 0
+  ret i8 %r
+}
+
+define i8 @test_mask_no_implication_fail(i8 %x) {
+; CHECK-LABEL: @test_mask_no_implication_fail(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 20
+; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[X]], 16
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASK]], 0
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[CMP2]], i8 1, i8 2
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i8 [[INNER]], i8 0
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp1 = icmp ult i8 %x, 20
+  %mask = and i8 %x, 16
+  %cmp2 = icmp eq i8 %mask, 0
+  %inner = select i1 %cmp2, i8 1, i8 2
+  %r = select i1 %cmp1, i8 %inner, i8 0
+  ret i8 %r
+}
+
+define i8 @test_mask_boundary_true(i8 %x) {
+; CHECK-LABEL: @test_mask_boundary_true(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 16
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP1]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp1 = icmp ult i8 %x, 16
+  %mask = and i8 %x, 16
+  %cmp2 = icmp eq i8 %mask, 0
+  %inner = select i1 %cmp2, i8 1, i8 2
+  %r = select i1 %cmp1, i8 %inner, i8 0
+  ret i8 %r
+}
+
+define i8 @test_mask_boundary_fail(i8 %x) {
+; CHECK-LABEL: @test_mask_boundary_fail(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[X:%.*]], 17
+; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[X]], 16
+; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[MASK]], 0
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[CMP2_NOT]], i8 2, i8 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i8 [[INNER]], i8 0
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp1 = icmp ult i8 %x, 17
+  %mask = and i8 %x, 16
+  %cmp2 = icmp ne i8 %mask, 0
+  %inner = select i1 %cmp2, i8 1, i8 2
+  %r = select i1 %cmp1, i8 %inner, i8 0
+  ret i8 %r
+}
+
+define <2 x i8> @test_mask_splat_true(<2 x i8> %x) {
+; CHECK-LABEL: @test_mask_splat_true(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[X:%.*]], splat (i8 13)
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[CMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %cmp1 = icmp ult <2 x i8> %x, splat (i8 13)
+  %mask = and <2 x i8> %x, splat (i8 16)
+  %cmp2 = icmp eq <2 x i8> %mask, zeroinitializer
+  %inner = select <2 x i1> %cmp2, <2 x i8> splat (i8 1), <2 x i8> splat (i8 2)
+  %r = select <2 x i1> %cmp1, <2 x i8> %inner, <2 x i8> zeroinitializer
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @test_mask_splat_fail(<2 x i8> %x) {
+; CHECK-LABEL: @test_mask_splat_fail(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[X:%.*]], splat (i8 20)
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i8> [[X]], splat (i8 16)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i8> [[MASK]], zeroinitializer
+; CHECK-NEXT:    [[INNER:%.*]] = select <2 x i1> [[CMP2]], <2 x i8> splat (i8 1), <2 x i8> splat (i8 2)
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP1]], <2 x i8> [[INNER]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %cmp1 = icmp ult <2 x i8> %x, splat (i8 20)
+  %mask = and <2 x i8> %x, splat (i8 16)
+  %cmp2 = icmp eq <2 x i8> %mask, zeroinitializer
+  %inner = select <2 x i1> %cmp2, <2 x i8> splat (i8 1), <2 x i8> splat (i8 2)
+  %r = select <2 x i1> %cmp1, <2 x i8> %inner, <2 x i8> zeroinitializer
+  ret <2 x i8> %r
+}
+
+define i8 @test_mask_signed_true(i8 %x) {
+;
+; CHECK-LABEL: @test_mask_signed_true(
+; CHECK-NEXT:    [[CMP1_INV:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP1_INV]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp1 = icmp sgt i8 %x, -1
+  %mask = and i8 %x, -128
+  %cmp2 = icmp eq i8 %mask, 0
+  %inner = select i1 %cmp2, i8 1, i8 2
+  %r = select i1 %cmp1, i8 %inner, i8 0
+  ret i8 %r
+}
+
+define i8 @test_mask_signed_fail(i8 %x) {
+; CHECK-LABEL: @test_mask_signed_fail(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[X:%.*]], 13
+; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[X]], 16
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[MASK]], 0
+; CHECK-NEXT:    [[INNER:%.*]] = select i1 [[CMP2]], i8 1, i8 2
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], i8 [[INNER]], i8 0
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cmp1 = icmp slt i8 %x, 13
+  %mask = and i8 %x, 16
+  %cmp2 = icmp eq i8 %mask, 0
+  %inner = select i1 %cmp2, i8 1, i8 2
+  %r = select i1 %cmp1, i8 %inner, i8 0
+  ret i8 %r
+}
+
+

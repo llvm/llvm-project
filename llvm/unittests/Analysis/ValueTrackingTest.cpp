@@ -2678,6 +2678,49 @@ TEST_F(ValueTrackingTest, IsImpliedConditionOr2) {
   EXPECT_EQ(isImpliedCondition(A, A4, DL, false), std::nullopt);
 }
 
+TEST_F(ValueTrackingTest, IsImpliedConditionBitMask) {
+  parseAssembly(R"(
+    define void @test(i32 %x) {
+      %A = icmp ult i32 %x, 13
+      ; x u< 13 => bits 4 and above are zero
+      %masked = and i32 %x, 16
+      %A2 = icmp eq i32 %masked, 0
+      %A3 = icmp ne i32 %masked, 0
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_EQ(isImpliedCondition(A, A2, DL, true), true);
+  EXPECT_EQ(isImpliedCondition(A, A3, DL, true), false);
+}
+
+TEST_F(ValueTrackingTest, IsImpliedConditionBitMaskNoImplication) {
+  parseAssembly(R"(
+    define void @test(i32 %x) {
+      %A = icmp ult i32 %x, 20
+      ; bit 4 is set in 16..19 => nothing implied
+      %masked = and i32 %x, 16
+      %A2 = icmp eq i32 %masked, 0
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_EQ(isImpliedCondition(A, A2, DL, true), std::nullopt);
+}
+
+TEST_F(ValueTrackingTest, IsImpliedConditionBitMaskSigned) {
+  parseAssembly(R"(
+    define void @test(i32 %x) {
+      %A = icmp sgt i32 %x, -1
+      %masked = and i32 %x, -2147483648
+      %A2 = icmp eq i32 %masked, 0
+      ret void
+    }
+  )");
+  const DataLayout &DL = M->getDataLayout();
+  EXPECT_EQ(isImpliedCondition(A, A2, DL, true), true);
+}
+
 TEST_F(ComputeKnownBitsTest, KnownNonZeroShift) {
   // %q is known nonzero without known bits.
   // Because %q is nonzero, %A[0] is known to be zero.
