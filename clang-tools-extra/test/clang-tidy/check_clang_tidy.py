@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 #
 # ===-----------------------------------------------------------------------===#
 #
@@ -37,6 +37,9 @@ or
 
 Notes
 -----
+  Failed-fix dumps use the Unix ``diff`` command (not ``git diff``); ensure
+  ``diff`` is available on PATH.
+
   -std=c++(98|11|14|17|20)-or-later:
     This flag will cause multiple runs within the same check_clang_tidy
     execution. Make sure you don't have shared state across these runs.
