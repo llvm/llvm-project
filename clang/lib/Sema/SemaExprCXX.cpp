@@ -4251,10 +4251,14 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     DeclarationName DeleteName = Context.DeclarationNames.getCXXOperatorName(
                                       ArrayForm ? OO_Array_Delete : OO_Delete);
 
+    bool IsComplete = isCompleteType(StartLoc, Pointee);
+    TypeAwareAllocationMode PassTypeIdentity =
+        ShouldUseTypeAwareOperatorNewOrDelete();
+
     if (PointeeRD) {
-      ImplicitDeallocationParameters IDP = {
-          Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
-          AlignedAllocationMode::No, SizedDeallocationMode::No};
+      ImplicitDeallocationParameters IDP = {Pointee, PassTypeIdentity,
+                                            AlignedAllocationMode::No,
+                                            SizedDeallocationMode::No};
       if (!UseGlobal &&
           FindDeallocationFunction(StartLoc, PointeeRD, DeleteName,
                                    OperatorDelete, IDP))
@@ -4301,7 +4305,6 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         return ExprError();
       }
 
-      bool IsComplete = isCompleteType(StartLoc, Pointee);
       bool CanProvideSize =
           IsComplete && (!ArrayForm || UsualArrayDeleteWantsSize ||
                          Pointee.isDestructedType());
@@ -4309,8 +4312,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
       // Look for a global declaration.
       ImplicitDeallocationParameters IDP = {
-          Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
-          alignedAllocationModeFromBool(Overaligned),
+          Pointee, PassTypeIdentity, alignedAllocationModeFromBool(Overaligned),
           sizedDeallocationModeFromBool(CanProvideSize)};
       OperatorDelete = FindUsualDeallocationFunction(StartLoc, IDP, DeleteName);
       if (!OperatorDelete)
@@ -4338,11 +4340,17 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     unsigned AddressParamIdx = 0;
     if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
+      if (!IsComplete) {
+        Diag(StartLoc, diag::err_type_aware_delete_incomplete) << Pointee;
+        return ExprError();
+      }
       QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
       if (RequireCompleteType(StartLoc, TypeIdentity,
                               diag::err_incomplete_type))
         return ExprError();
       AddressParamIdx = 1;
+    } else if (!IsComplete && isTypeAwareAllocation(PassTypeIdentity)) {
+      Diag(StartLoc, diag::warn_type_aware_delete_incomplete) << Pointee;
     }
 
     // Convert the operand to the type of the first parameter of operator

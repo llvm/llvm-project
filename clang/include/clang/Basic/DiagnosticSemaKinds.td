@@ -10417,6 +10417,13 @@ def err_destroying_operator_delete_not_usual : Error<
 def err_type_aware_destroying_operator_delete : Error<
   "destroying delete is not permitted to be type aware">;
 
+def warn_type_aware_delete_incomplete : Warning<
+  "type-aware deallocation is not used for deletion of "
+  "pointer to incomplete type %0">,
+  InGroup<DeleteIncomplete>;
+def err_type_aware_delete_incomplete : Error<
+  "type-aware deallocation function matches incomplete type %0; "
+  "the type must be complete to use type-aware deallocation">;
 def warn_ext_type_aware_allocators : ExtWarn<
   "type aware allocators are a Clang extension">, InGroup<DiagGroup<"ext-cxx-type-aware-allocators">>;
 def err_type_aware_allocator_missing_matching_operator : Error<
