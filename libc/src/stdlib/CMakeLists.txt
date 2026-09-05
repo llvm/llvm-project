@@ -340,6 +340,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.utility
     libc.src.string.memory_utils.inline_memcpy
 )
 

@@ -1,9 +1,14 @@
-//===-- Data structures for sorting routines --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Data structures for sorting routines.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_DATA_H
@@ -11,6 +16,7 @@
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/cstddef.h"
+#include "src/__support/CPP/utility/swap.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
@@ -63,11 +69,8 @@ public:
       elem_j += BLOCK_SIZE;
     }
 
-    for (size_t n = 0; n < elem_size_rem; ++n) {
-      cpp::byte tmp = elem_i[n];
-      elem_i[n] = elem_j[n];
-      elem_j[n] = tmp;
-    }
+    for (size_t n = 0; n < elem_size_rem; ++n)
+      cpp::swap(elem_i[n], elem_j[n]);
   }
 
   LIBC_INLINE size_t len() const { return array_len; }
