@@ -133,6 +133,8 @@ features cannot lower the translation-unit ABI level;
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
