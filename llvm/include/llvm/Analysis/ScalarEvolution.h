@@ -1153,6 +1153,10 @@ public:
   /// def-use chain linking it to a loop.
   LLVM_ABI void forgetValue(Value *V);
 
+  /// Batched forgetValue: invalidates all \p Values in one shared def-use walk,
+  /// avoiding the redundant re-traversal of overlapping users.
+  LLVM_ABI void forgetValues(ArrayRef<Value *> Values);
+
   /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
   /// such that it may no longer be trivial.
   LLVM_ABI void forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V);
