@@ -17,7 +17,31 @@ inline namespace __attribute__((__abi_tag__)) {}
 
 inline namespace N __attribute__((__abi_tag__)) {}
 
-} // namespcace N2
+} // namespace N2
+
+namespace N3 {
+inline namespace AbsentOld {}
+inline namespace AbsentOld __attribute__((__abi_tag__)) {}
+// expected-error@-1 {{'abi_tag' AbsentOld is ignored, applying no 'abi_tag'}}
+// expected-note@-3 {{previous declaration is here}}
+
+inline namespace AbsentNew __attribute__((__abi_tag__)) {}
+inline namespace AbsentNew {}
+// expected-error@-1 {{absent 'abi_tag' attribute is ignored, applying 'abi_tag' AbsentNew}}
+// expected-note@-3 {{previous declaration is here}}
+
+inline namespace Different __attribute__((abi_tag("A"))) {}
+inline namespace Different __attribute__((abi_tag("B"))) {}
+// expected-error@-1 {{'abi_tag' B is ignored, applying 'abi_tag' A}}
+// expected-note@-3 {{previous declaration is here}}
+inline namespace Different __attribute__((abi_tag("A"))) {}
+// No error as we compare with the canonical namespace decl, not with the previous one.
+
+inline namespace MultipleTags __attribute__((abi_tag("A", "B"))) {}
+inline namespace MultipleTags __attribute__((abi_tag("X", "Y", "B"))) {}
+// expected-error@-1 {{'abi_tag' B, X, Y is ignored, applying 'abi_tag' A, B}}
+// expected-note@-3 {{previous declaration is here}}
+} // namespace N3
 
 __attribute__((abi_tag("B", "A"))) extern int a1;
 

@@ -482,6 +482,11 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- Added `-Wabi-tag` to diagnose when the `abi_tag` attribute spelled on a
+  namespace declaration doesn't match the one actually applied, which is taken
+  from the first declaration of that namespace. The diagnostic is an error by
+  default and can be downgraded with `-Wno-error=abi-tag`.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
