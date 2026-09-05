@@ -519,7 +519,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
+                          "--options-file="},
       Exec, CmdArgs, Inputs, Output));
 }
 
@@ -586,7 +586,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
+                          "--options-file="},
       Exec, CmdArgs, Inputs, Output));
 }
 
@@ -684,9 +684,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this,
-      ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
+      JA, *this, ResponseFileSupport::AtFileUTF8(),
       Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper")),
       CmdArgs, Inputs, Output));
 }
