@@ -443,10 +443,6 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *SRI;
 
-  /// Per-candidate cache of the src2 "needs VGPR" decision, computed once
-  /// and reused on-demand.
-  DenseMap<const MachineInstr *, bool> Src2NeedsVGPRCache;
-
   /// Do a speculative rewrite and collect copy locations. The speculative
   /// rewrite allows us to calculate the RP of the code after the rewrite, and
   /// the copy locations allow us to calculate the total cost of copies required
@@ -486,11 +482,12 @@ private:
   void findReachingUses(const MachineInstr *DefMI, LiveIntervals *LIS,
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
-  /// Returns true if the src2 register with reaching defs \p Src2ReachingDefs
-  /// has a use other than a group MFMA (in \p RewriteSet) or a copy, which
-  /// would keep it in VGPR form rather than let it be reclassified to AGPR.
-  bool hasUseRequiringVGPR(ArrayRef<SlotIndex> Src2ReachingDefs,
-                           const SmallPtrSetImpl<MachineInstr *> &RewriteSet);
+  /// Returns true if \p Reg (a rewrite candidate's dst or src2, selected by
+  /// \p IsDst) can be wholly reclassified to AGPR without creating an illegal
+  /// VALU AGPR access.
+  bool isRecolorSafe(Register Reg, ArrayRef<MachineOperand *> DstReachingUses,
+                     const SmallPtrSetImpl<MachineInstr *> &RewriteCandsSet,
+                     bool IsDst);
 
 public:
   bool initGCNSchedStage() override;
