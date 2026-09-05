@@ -3265,33 +3265,6 @@ Value *LibCallSimplifier::optimizeRemquo(CallInst *CI, IRBuilderBase &B) {
   return ConstantFP::get(CI->getType(), Rem);
 }
 
-/// Constant folds fdim
-Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
-  // Cannot perform the fold unless the call has attribute memory(none)
-  if (!CI->doesNotAccessMemory())
-    return nullptr;
-
-  // TODO : Handle undef values
-  // Propagate poison if any
-  if (isa<PoisonValue>(CI->getArgOperand(0)))
-    return CI->getArgOperand(0);
-  if (isa<PoisonValue>(CI->getArgOperand(1)))
-    return CI->getArgOperand(1);
-
-  const APFloat *X, *Y;
-  // Check if both values are constants
-  if (!match(CI->getArgOperand(0), m_APFloat(X)) ||
-      !match(CI->getArgOperand(1), m_APFloat(Y)))
-    return nullptr;
-
-  // C99 fdim(x, y) = (x > y) ? x - y : +0.
-  if (X->compare(*Y) != APFloat::cmpGreaterThan && !X->isNaN() && !Y->isNaN())
-    return ConstantFP::getZero(CI->getType());
-  APFloat Difference = *X;
-  Difference.subtract(*Y, RoundingMode::NearestTiesToEven);
-  return ConstantFP::get(CI->getType(), Difference);
-}
-
 //===----------------------------------------------------------------------===//
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -4235,10 +4208,6 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     if (hasFloatVersion(M, CI->getCalledFunction()->getName()))
       return optimizeBinaryDoubleFP(CI, Builder, TLI);
     return nullptr;
-  case LibFunc_fdim:
-  case LibFunc_fdimf:
-  case LibFunc_fdiml:
-    return optimizeFdim(CI, Builder);
   case LibFunc_fminf:
   case LibFunc_fmin:
   case LibFunc_fminl:

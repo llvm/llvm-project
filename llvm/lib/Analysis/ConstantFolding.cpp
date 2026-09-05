@@ -2144,6 +2144,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "exp2f" || Name == "erf" || Name == "erff";
   case 'f':
     return Name == "fabs" || Name == "fabsf" ||
+           Name == "fdim" || Name == "fdimf" || Name == "fdiml" ||
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'i':
@@ -3391,6 +3392,20 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
     break;
+  case LibFunc_fdim:
+  case LibFunc_fdimf:
+  case LibFunc_fdiml:
+    if (TLI->has(Func)) {
+        // C99 fdim(x, y) = (x > y) ? x - y : +0.
+      if (!Op1V.isNaN() && !Op2V.isNaN() &&
+          Op1V.compare(Op2V) != APFloat::cmpGreaterThan){
+        return ConstantFP::getZero(Ty);
+      }
+      APFloat Difference = Op1V;
+      Difference.subtract(Op2V, RoundingMode::NearestTiesToEven);
+      return ConstantFP::get(Ty, Difference);
+    }
+    break;
   case LibFunc_fmod:
   case LibFunc_fmodf:
     if (TLI->has(Func)) {
@@ -3419,6 +3434,19 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(atan2, Op1V, Op2V, Ty);
     break;
+  case LibFunc_fdim:
+  case LibFunc_fdimf:
+  case LibFunc_fdiml:
+    if (TLI->has(Func)) {
+      APFloat Difference = Op1V;
+      Difference.subtract(Op2V, RoundingMode::NearestTiesToEven);
+
+      APFloat MaxVal =
+        maximum(Difference, APFloat::getZero(Ty->getFltSemantics()));
+      return ConstantFP::get(Ty->getContext(), MaxVal);
+    }
+    break;
+
   case LibFunc_nextafter:
   case LibFunc_nextafterf:
   case LibFunc_nexttoward:
@@ -4906,7 +4934,10 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         }
         break;
       }
-
+      case LibFunc_fdim:
+      case LibFunc_fdimf:
+      case LibFunc_fdiml:
+        return true;
       case LibFunc_fmodl:
       case LibFunc_fmod:
       case LibFunc_fmodf:
