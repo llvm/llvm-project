@@ -761,6 +761,21 @@ enum EpilogueLowering {
 
 enum class AliasMaskingStatus { NotDecided, Disabled, Enabled };
 
+/// Information about a truncation of an induction phi or its update that can
+/// be represented as an induction in the truncated type.
+struct OptimizableIVTruncateInfo {
+  /// The original induction phi.
+  PHINode *Phi = nullptr;
+  /// The induction update being truncated, or nullptr if the phi is truncated
+  /// directly.
+  Instruction *Update = nullptr;
+
+  OptimizableIVTruncateInfo() = default;
+
+  OptimizableIVTruncateInfo(PHINode *Phi, Instruction *Update)
+      : Phi(Phi), Update(Update) {}
+};
+
 /// LoopVectorizationCostModel - estimates the expected speedups due to
 /// vectorization.
 /// In many cases vectorization is not profitable. This can happen because of
@@ -939,11 +954,39 @@ public:
 
   /// Return True if instruction \p I is an optimizable truncate whose operand
   /// is an induction variable. Such a truncate will be removed by adding a new
-  /// induction variable with the destination type.
-  bool isOptimizableIVTruncate(Instruction *I, ElementCount VF) {
+  /// induction variable with the destination type. On success, \p IVInfo, if
+  /// non-null, receives the matched phi and update.
+  bool isOptimizableIVTruncate(Instruction *I, ElementCount VF,
+                               OptimizableIVTruncateInfo *IVInfo = nullptr) {
     // If the instruction is not a truncate, return false.
     auto *Trunc = dyn_cast<TruncInst>(I);
     if (!Trunc)
+      return false;
+
+    OptimizableIVTruncateInfo Info;
+    Info.Phi = dyn_cast<PHINode>(Trunc->getOperand(0));
+    if (!Info.Phi) {
+      auto *Update = dyn_cast<Instruction>(Trunc->getOperand(0));
+      if (!Update || (Update->getOpcode() != Instruction::Add &&
+                      Update->getOpcode() != Instruction::Sub))
+        return false;
+
+      auto *Phi = dyn_cast<PHINode>(Update->getOperand(0));
+      if (!Phi || !isa<ConstantInt>(Update->getOperand(1)))
+        return false;
+
+      Info.Update = Update;
+      Info.Phi = Phi;
+    }
+
+    if (!Legal->isInductionPhi(Info.Phi))
+      return false;
+
+    if (Info.Update &&
+        (Info.Update !=
+             Info.Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()) ||
+         !isa<ConstantInt>(
+             Legal->getInductionVars().lookup(Info.Phi).getStartValue())))
       return false;
 
     // Get the source and destination types of the truncate.
@@ -955,12 +998,13 @@ public:
     // update instruction to each iteration of the loop. We exclude from this
     // check the primary induction variable since it will need an update
     // instruction regardless.
-    Value *Op = Trunc->getOperand(0);
-    if (Op != Legal->getPrimaryInduction() && TTI.isTruncateFree(SrcTy, DestTy))
+    if (Info.Phi != Legal->getPrimaryInduction() &&
+        TTI.isTruncateFree(SrcTy, DestTy))
       return false;
 
-    // If the truncated value is not an induction variable, return false.
-    return Legal->isInductionPhi(Op);
+    if (IVInfo)
+      *IVInfo = Info;
+    return true;
   }
 
   /// Collects the instructions to scalarize for each predicated instruction in
@@ -5419,11 +5463,13 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       }
     }
     IVInsts.push_back(IV);
-    for (User *U : IV->users()) {
-      auto *CI = cast<Instruction>(U);
-      if (!CostCtx.CM.isOptimizableIVTruncate(CI, VF))
-        continue;
-      IVInsts.push_back(CI);
+    for (Instruction *IVorUpdate : {cast<Instruction>(IV), IVInc}) {
+      for (User *U : IVorUpdate->users()) {
+        auto *CI = cast<Instruction>(U);
+        if (!CostCtx.CM.isOptimizableIVTruncate(CI, VF))
+          continue;
+        IVInsts.push_back(CI);
+      }
     }
 
     for (Instruction *IVInst : IVInsts) {
@@ -6014,18 +6060,38 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
 
   // Determine whether \p K is a truncation based on an induction variable that
   // can be optimized.
+  OptimizableIVTruncateInfo IVInfo;
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-          bind_front(&LoopVectorizationCostModel::isOptimizableIVTruncate, CM,
-                     I),
+          [&](ElementCount VF) {
+            return CM.isOptimizableIVTruncate(I, VF, &IVInfo);
+          },
           Range))
     return nullptr;
 
-  auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
-      VPI->getOperand(0)->getDefiningRecipe());
+  VPValue *IVOp = VPI->getOperand(0);
+  if (IVInfo.Update) {
+    VPRecipeBase *UpdateR = IVOp->getDefiningRecipe();
+    if (!UpdateR)
+      return nullptr;
+    IVOp = UpdateR->getOperand(0);
+  }
+  auto *WidenIV = dyn_cast_or_null<VPWidenIntOrFpInductionRecipe>(
+      IVOp->getDefiningRecipe());
+  if (!WidenIV)
+    return nullptr;
+
   PHINode *Phi = WidenIV->getPHINode();
   VPValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
-
+  if (IVInfo.Update) {
+    // The narrowed induction starts one update ahead of the phi.
+    const APInt &Offset =
+        cast<ConstantInt>(IVInfo.Update->getOperand(1))->getValue();
+    const APInt &StartV = cast<ConstantInt>(Start->getValue())->getValue();
+    Start = Plan.getConstantInt(IVInfo.Update->getOpcode() == Instruction::Sub
+                                    ? StartV - Offset
+                                    : StartV + Offset);
+  }
   // Wrap flags from the original induction do not apply to the truncated type,
   // so do not propagate them.
   VPIRFlags Flags = VPIRFlags::WrapFlagsTy(false, false);
@@ -7491,8 +7557,34 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
+      auto *WideIV = cast<VPWidenInductionRecipe>(&R);
+      PHINode *IndPhi = WideIV->getPHINode();
       ResumeV = IRPhiToResumeForEpi.at(IndPhi)->getUnderlyingValue();
+
+      // A recipe built for a truncated induction update starts one step ahead
+      // of its phi, so shift the resume value by the same offset. Other
+      // transforms may re-type the start value, which is not an offset.
+      auto *IndStart = dyn_cast<ConstantInt>(
+          WideIV->getInductionDescriptor().getStartValue());
+      auto *RecipeStart =
+          dyn_cast<ConstantInt>(WideIV->getStartValue()->getValue());
+      if (IndStart && RecipeStart && RecipeStart != IndStart &&
+          RecipeStart->getType() == IndStart->getType()) {
+        APInt Offset = RecipeStart->getValue() - IndStart->getValue();
+        if (auto *ResumeI = dyn_cast<Instruction>(ResumeV)) {
+          BasicBlock::iterator IP =
+              isa<PHINode>(ResumeI) ? ResumeI->getParent()->getFirstNonPHIIt()
+                                    : std::next(ResumeI->getIterator());
+          IRBuilder<> Builder(ResumeI->getParent(), IP);
+          ResumeV = Builder.CreateAdd(
+              ResumeV, ConstantInt::get(ResumeV->getType(), Offset));
+          InstsToMove.push_back(cast<Instruction>(ResumeV));
+        } else {
+          ResumeV =
+              ConstantInt::get(ResumeV->getType(),
+                               cast<ConstantInt>(ResumeV)->getValue() + Offset);
+        }
+      }
     }
     assert(ResumeV && "Must have a resume value");
     VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);

@@ -1033,45 +1033,23 @@ exit:
 }
 
 define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
-; DEFAULT-LABEL: define void @redundant_branch_and_tail_folding(
-; DEFAULT-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
-; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
-; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
-; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
-; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 1)
-; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <4 x i64> [[TMP1]] to <4 x i32>
-; DEFAULT-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2]], i64 3
-; DEFAULT-NEXT:    store i32 [[TMP4]], ptr [[DST]], align 4
-; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
-; DEFAULT:       [[SCALAR_PH]]:
-;
-; PRED-LABEL: define void @redundant_branch_and_tail_folding(
-; PRED-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
-; PRED-NEXT:  [[PRED_STORE_IF:.*]]:
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE:.*]]
-; PRED:       [[PRED_STORE_CONTINUE]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PRED_STORE_IF]] ], [ [[IV_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
-; PRED-NEXT:    br i1 [[C]], label %[[PRED_STORE_CONTINUE2]], label %[[PRED_STORE_IF1:.*]]
-; PRED:       [[PRED_STORE_IF1]]:
-; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; PRED:       [[PRED_STORE_CONTINUE2]]:
-; PRED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; PRED-NEXT:    [[TMP8:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
-; PRED-NEXT:    store i32 [[TMP8]], ptr [[DST]], align 4
-; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
-; PRED-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE]]
-; PRED:       [[EXIT]]:
-; PRED-NEXT:    ret void
+; COMMON-LABEL: define void @redundant_branch_and_tail_folding(
+; COMMON-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*]]:
+; COMMON-NEXT:    br label %[[LOOP_HEADER:.*]]
+; COMMON:       [[LOOP_HEADER]]:
+; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COMMON-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; COMMON:       [[THEN]]:
+; COMMON-NEXT:    br label %[[LOOP_LATCH]]
+; COMMON:       [[LOOP_LATCH]]:
+; COMMON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; COMMON-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
+; COMMON-NEXT:    store i32 [[T]], ptr [[DST]], align 4
+; COMMON-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 21
+; COMMON-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
 ;
 entry:
   br label %loop.header
@@ -1194,7 +1172,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    store <vscale x 4 x i8> [[TMP68]], ptr [[TMP24]], align 1
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N25:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N25]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
