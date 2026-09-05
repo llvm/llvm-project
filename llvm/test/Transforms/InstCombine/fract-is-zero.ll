@@ -22,15 +22,8 @@ declare void @use.f32(float)
 define i1 @pos_with_clamp(float %x) {
 ; CHECK-LABEL: define i1 @pos_with_clamp(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FL:%.*]] = call float @llvm.floor.f32(float [[X]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz float [[X]], [[FL]]
-; CHECK-NEXT:    [[CLAMP:%.*]] = call nsz float @llvm.minnum.f32(float [[SUB]], float f0x3F7FFFFF)
-; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[ISNAN]], float [[X]], float [[CLAMP]]
-; CHECK-NEXT:    [[FA:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[FA]], +inf
-; CHECK-NEXT:    [[FRACZERO:%.*]] = fcmp oeq float [[COND]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISINF]], [[FRACZERO]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %fl = call float @llvm.floor.f32(float %x)
@@ -49,14 +42,8 @@ define i1 @pos_with_clamp(float %x) {
 define i1 @pos_no_clamp(float %x) {
 ; CHECK-LABEL: define i1 @pos_no_clamp(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FL:%.*]] = call float @llvm.floor.f32(float [[X]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz float [[X]], [[FL]]
-; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[ISNAN]], float [[X]], float [[SUB]]
-; CHECK-NEXT:    [[FA:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[FA]], +inf
-; CHECK-NEXT:    [[FRACZERO:%.*]] = fcmp oeq float [[COND]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISINF]], [[FRACZERO]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %fl = call float @llvm.floor.f32(float %x)
@@ -74,15 +61,8 @@ define i1 @pos_no_clamp(float %x) {
 define i1 @pos_or_commuted(float %x) {
 ; CHECK-LABEL: define i1 @pos_or_commuted(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[FL:%.*]] = call float @llvm.floor.f32(float [[X]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz float [[X]], [[FL]]
-; CHECK-NEXT:    [[CLAMP:%.*]] = call nsz float @llvm.minnum.f32(float [[SUB]], float f0x3F7FFFFF)
-; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[ISNAN]], float [[X]], float [[CLAMP]]
-; CHECK-NEXT:    [[FA:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[FA]], +inf
-; CHECK-NEXT:    [[FRACZERO:%.*]] = fcmp oeq float [[COND]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[FRACZERO]], [[ISINF]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %fl = call float @llvm.floor.f32(float %x)
@@ -100,15 +80,8 @@ define i1 @pos_or_commuted(float %x) {
 define <2 x i1> @pos_vector(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x i1> @pos_vector(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[FL:%.*]] = call <2 x float> @llvm.floor.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz <2 x float> [[X]], [[FL]]
-; CHECK-NEXT:    [[CLAMP:%.*]] = call nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[SUB]], <2 x float> splat (float f0x3F7FFFFF))
-; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno <2 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[ISNAN]], <2 x float> [[X]], <2 x float> [[CLAMP]]
-; CHECK-NEXT:    [[FA:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq <2 x float> [[FA]], splat (float +inf)
-; CHECK-NEXT:    [[FRACZERO:%.*]] = fcmp oeq <2 x float> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[ISINF]], [[FRACZERO]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.trunc.v2f32(<2 x float> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq <2 x float> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %fl = call <2 x float> @llvm.floor.v2f32(<2 x float> %x)
@@ -126,15 +99,8 @@ define <2 x i1> @pos_vector(<2 x float> %x) {
 define <vscale x 2 x i1> @pos_scalable(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: define <vscale x 2 x i1> @pos_scalable(
 ; CHECK-SAME: <vscale x 2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[FL:%.*]] = call <vscale x 2 x float> @llvm.floor.nxv2f32(<vscale x 2 x float> [[X]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz <vscale x 2 x float> [[X]], [[FL]]
-; CHECK-NEXT:    [[CLAMP:%.*]] = call nsz <vscale x 2 x float> @llvm.minnum.nxv2f32(<vscale x 2 x float> [[SUB]], <vscale x 2 x float> splat (float f0x3F7FFFFF))
-; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno <vscale x 2 x float> [[X]], zeroinitializer
-; CHECK-NEXT:    [[COND:%.*]] = select <vscale x 2 x i1> [[ISNAN]], <vscale x 2 x float> [[X]], <vscale x 2 x float> [[CLAMP]]
-; CHECK-NEXT:    [[FA:%.*]] = call <vscale x 2 x float> @llvm.fabs.nxv2f32(<vscale x 2 x float> [[X]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq <vscale x 2 x float> [[FA]], splat (float +inf)
-; CHECK-NEXT:    [[FRACZERO:%.*]] = fcmp oeq <vscale x 2 x float> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <vscale x 2 x i1> [[ISINF]], [[FRACZERO]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x float> @llvm.trunc.nxv2f32(<vscale x 2 x float> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq <vscale x 2 x float> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %fl = call <vscale x 2 x float> @llvm.floor.nxv2f32(<vscale x 2 x float> %x)
@@ -152,15 +118,8 @@ define <vscale x 2 x i1> @pos_scalable(<vscale x 2 x float> %x) {
 define i1 @pos_double(double %x) {
 ; CHECK-LABEL: define i1 @pos_double(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[FL:%.*]] = call double @llvm.floor.f64(double [[X]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz double [[X]], [[FL]]
-; CHECK-NEXT:    [[CLAMP:%.*]] = call nsz double @llvm.minnum.f64(double [[SUB]], double f0x3FEFFFFFFFFFFFFF)
-; CHECK-NEXT:    [[ISNAN:%.*]] = fcmp uno double [[X]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[ISNAN]], double [[X]], double [[CLAMP]]
-; CHECK-NEXT:    [[FA:%.*]] = call double @llvm.fabs.f64(double [[X]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq double [[FA]], +inf
-; CHECK-NEXT:    [[FRACZERO:%.*]] = fcmp oeq double [[COND]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISINF]], [[FRACZERO]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.trunc.f64(double [[X]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq double [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %fl = call double @llvm.floor.f64(double %x)
