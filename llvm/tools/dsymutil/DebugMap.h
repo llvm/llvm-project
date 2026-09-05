@@ -108,18 +108,12 @@ public:
 ///             DIE.discardSubtree();
 ///     }
 /// }
-class DebugMap : public DebugMapFilter {
+class DebugMap {
   Triple BinaryTriple;
   std::string BinaryPath;
   std::vector<uint8_t> BinaryUUID;
   using ObjectContainer = std::vector<std::unique_ptr<DebugMapObject>>;
-
-  ObjectContainer &getObjects() {
-    return reinterpret_cast<ObjectContainer &>(Objects);
-  }
-  const ObjectContainer &getObjects() const {
-    return reinterpret_cast<const ObjectContainer &>(Objects);
-  }
+  ObjectContainer Objects;
 
   /// For YAML IO support.
   ///@{
@@ -139,9 +133,9 @@ public:
     return make_range(begin(), end());
   }
 
-  const_iterator begin() const { return getObjects().begin(); }
+  const_iterator begin() const { return Objects.begin(); }
 
-  const_iterator end() const { return getObjects().end(); }
+  const_iterator end() const { return Objects.end(); }
 
   unsigned getNumberOfObjects() const { return Objects.size(); }
 
