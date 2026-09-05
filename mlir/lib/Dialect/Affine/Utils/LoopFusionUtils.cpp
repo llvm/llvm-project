@@ -596,15 +596,12 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
   if (storeLoadFwdGuaranteed) {
     // Subtract from operation count the loads/store we expect load/store
     // forwarding to remove.
-    unsigned storeCount = 0;
     llvm::SmallDenseSet<Value, 4> storeMemrefs;
     srcForOp.walk([&](AffineWriteOpInterface storeOp) {
       storeMemrefs.insert(storeOp.getMemRef());
-      ++storeCount;
+      if (auto forOp = dyn_cast_or_null<AffineForOp>(storeOp->getParentOp()))
+        --computeCostMap[forOp];
     });
-    // Subtract out any store ops in single-iteration src slice loop nest.
-    if (storeCount > 0)
-      computeCostMap[insertPointParent] = -storeCount;
     // Subtract out any load users of 'storeMemrefs' nested below
     // 'insertPointParent'.
     for (Value memref : storeMemrefs) {
