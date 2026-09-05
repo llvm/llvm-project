@@ -1670,16 +1670,6 @@ static SDValue peekFNeg(SDValue Val) {
   return Val;
 }
 
-static SDValue peekFPSignOps(SDValue Val) {
-  if (Val.getOpcode() == ISD::FNEG)
-    Val = Val.getOperand(0);
-  if (Val.getOpcode() == ISD::FABS)
-    Val = Val.getOperand(0);
-  if (Val.getOpcode() == ISD::FCOPYSIGN)
-    Val = Val.getOperand(0);
-  return Val;
-}
-
 SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
     const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS, SDValue True,
     SDValue False, SDValue CC, DAGCombinerInfo &DCI) const {

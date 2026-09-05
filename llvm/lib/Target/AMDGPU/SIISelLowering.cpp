@@ -18915,6 +18915,125 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return getCanonicalConstantFP(DCI.DAG, SDLoc(N), N->getValueType(0), F);
 }
 
+SDValue
+SITargetLowering::performFrexpSelectCombine(SDNode *N,
+                                            DAGCombinerInfo &DCI) const {
+  // This optimization only applies when the hardware handles inf/nan correctly.
+  if (Subtarget->hasFractBug())
+    return SDValue();
+
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+
+  // Identify which operand is the frexp result and which is the zero constant.
+  // Pattern 1: select cond, 0, frexp_result (cond true -> return 0)
+  // Pattern 2: select cond, frexp_result, 0 (cond false -> return 0)
+  SDValue FrexpVal;
+  SDValue ZeroVal;
+  bool CondSelectsZero; // If true, condition=true selects zero
+
+  // Check if FrexpVal comes from ISD::FFREXP (exponent result only) or
+  // amdgcn_frexp_exp intrinsic. We cannot optimize frexp_mant because
+  // V_FREXP_MANT returns its input for Inf/NaN, not zero.
+  SDValue FrexpInput;
+  auto isFrexpExp = [&FrexpInput](SDValue V) {
+    // ISD::FFREXP returns {mant, exp} - only optimize if using the exp result
+    // (result number 1).
+    if (V.getOpcode() == ISD::FFREXP && V.getResNo() == 1) {
+      FrexpInput = V.getOperand(0);
+      return true;
+    }
+    if (sd_match(V, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
+                        m_Value(FrexpInput))))
+      return true;
+    return false;
+  };
+
+  if (isFrexpExp(FalseVal)) {
+    FrexpVal = FalseVal;
+    ZeroVal = TrueVal;
+    CondSelectsZero = true;
+  } else if (isFrexpExp(TrueVal)) {
+    FrexpVal = TrueVal;
+    ZeroVal = FalseVal;
+    CondSelectsZero = false;
+  } else {
+    return SDValue();
+  }
+
+  // frexp_exp returns integer, so check for integer zero.
+  if (!isNullConstant(ZeroVal))
+    return SDValue();
+
+  // The frexp intrinsics ignore sign, so we can strip sign ops when comparing.
+  SDValue FrexpInputStripped = peekFPSignOps(FrexpInput);
+
+  bool IsNonFiniteTest = false;
+
+  // Handle SETCC conditions for inf/nan tests.
+  // The canonical form of these checks is fcmp + fabs.
+  if (Cond.getOpcode() == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    SDValue CondLHS = Cond.getOperand(0);
+    SDValue CondRHS = Cond.getOperand(1);
+
+    // Check if LHS is fabs(FrexpInput) - required for infinity comparisons.
+    SDValue FAbsInput;
+    bool LHSIsFabs = sd_match(CondLHS, m_FAbs(m_Value(FAbsInput)));
+    bool LHSMatchesFrexp =
+        (CondLHS == FrexpInput) ||
+        (LHSIsFabs && peekFPSignOps(FAbsInput) == FrexpInputStripped) ||
+        (peekFPSignOps(CondLHS) == FrexpInputStripped);
+    bool RHSMatchesFrexp = (CondRHS == FrexpInput) ||
+                           (peekFPSignOps(CondRHS) == FrexpInputStripped);
+
+    if (CC == ISD::SETUO) {
+      // fcmp uno x, y - true if either x or y is NaN
+      // We can only fold if the non-frexp operand is known to never be NaN,
+      // otherwise the comparison could be true due to the other operand.
+      // Special case: fcmp uno x, x (same operand) is a valid NaN test.
+      SelectionDAG &DAG = DCI.DAG;
+      if (LHSMatchesFrexp &&
+          (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+        IsNonFiniteTest = CondSelectsZero;
+      else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
+        IsNonFiniteTest = CondSelectsZero;
+    } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) && LHSMatchesFrexp &&
+               LHSIsFabs &&
+               sd_match(CondRHS,
+                        m_SpecificFP(APFloat::getInf(
+                            CondRHS.getValueType().getFltSemantics())))) {
+      // fcmp oeq/ueq fabs(x), +inf - true if x is inf (or inf/nan for ueq)
+      IsNonFiniteTest = CondSelectsZero;
+    } else if ((CC == ISD::SETONE || CC == ISD::SETUNE) && LHSMatchesFrexp &&
+               LHSIsFabs &&
+               sd_match(CondRHS,
+                        m_SpecificFP(APFloat::getInf(
+                            CondRHS.getValueType().getFltSemantics())))) {
+      // fcmp one/une fabs(x), +inf - true if x is NOT inf
+      IsNonFiniteTest = !CondSelectsZero;
+    } else if (CC == ISD::SETO) {
+      // fcmp ord x, y - true if both are NOT NaN
+      // We can only fold if the non-frexp operand is known to never be NaN,
+      // otherwise the comparison could be false due to the other operand.
+      // Special case: fcmp ord x, x (same operand) is a valid not-NaN test.
+      SelectionDAG &DAG = DCI.DAG;
+      if (LHSMatchesFrexp &&
+          (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+        IsNonFiniteTest = !CondSelectsZero;
+      else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
+        IsNonFiniteTest = !CondSelectsZero;
+    }
+  }
+
+  if (!IsNonFiniteTest)
+    return SDValue();
+
+  // The select can be eliminated - just return the frexp result directly.
+  return FrexpVal;
+}
+
 SDValue SITargetLowering::performSelectCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
 
@@ -19047,6 +19166,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::SELECT:
+    if (auto Res = performFrexpSelectCombine(N, DCI))
+      return Res;
     if (auto Res = performSelectCombine(N, DCI))
       return Res;
     break;
