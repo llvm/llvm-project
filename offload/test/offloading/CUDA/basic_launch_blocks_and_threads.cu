@@ -19,7 +19,6 @@ __global__ void incrementCounter(int *A) {
 }
 
 int main(int argc, char **argv) {
-  int DevNo = 0;
   int *Ptr, I;
   cudaMalloc(&Ptr, sizeof(int));
   printf("Ptr %p\n", Ptr);
@@ -27,6 +26,7 @@ int main(int argc, char **argv) {
   int Zero = 0;
   cudaMemcpy(Ptr, &Zero, sizeof(int), cudaMemcpyHostToDevice);
   incrementCounter<<<7, 6>>>(Ptr);
+  cudaDeviceSynchronize();
   cudaMemcpy(&I, Ptr, sizeof(int), cudaMemcpyDeviceToHost);
   printf("I: %i\n", I);
   // CHECK: I: 42
