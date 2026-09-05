@@ -385,6 +385,7 @@ function(build_nanobind_lib)
         -Wno-deprecated-literal-operator
         -Wno-nested-anon-types
         -Wno-unused-parameter
+	-Wno-unused-template
         -Wno-zero-length-array
         -Wno-missing-field-initializers
         ${eh_rtti_enable})
@@ -1055,6 +1056,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
         -Wno-deprecated-literal-operator
         -Wno-nested-anon-types
         -Wno-unused-parameter
+	-Wno-unused-template
         -Wno-zero-length-array
         -Wno-missing-field-initializers)
   endif()
