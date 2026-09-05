@@ -719,3 +719,18 @@ func.func @launch_cooperative() {
   }
   return
 }
+
+// -----
+
+llvm.func @kernel_argument(%arg0: !llvm.ptr {llvm.align = 16 : i64, llvm.noalias}) {
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%arg1, %arg2, %arg3) in (%arg7 = %c1, %arg8 = %c1, %arg9 = %c1)
+             threads(%arg4, %arg5, %arg6) in (%arg10 = %c1, %arg11 = %c1, %arg12 = %c1) {
+    "test.consume"(%arg0) : (!llvm.ptr) -> ()
+    gpu.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: gpu.func @kernel_argument_kernel(
+// CHECK-SAME: %{{.*}}: !llvm.ptr {llvm.align = 16 : i64, llvm.noalias}
