@@ -34,10 +34,7 @@ define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end)
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[END]], -1
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], [[START]]
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP8]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP5]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP11]]
