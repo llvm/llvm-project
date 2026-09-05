@@ -131,11 +131,10 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
 /// same rank as `originalShape`.
 ///
 /// The native/target shape returned by `getTargetShape` is only required to
-/// divide the *trailing* dimensions of the op being unrolled (see
-/// `computeShapeRatio`), so it may have a smaller rank than the op itself.
-/// Tiling with the padded shape is equivalent - the leading dimensions are
-/// simply unrolled one element at a time - and keeps the offsets, sizes and
-/// strides rank-aligned with the op's vector type.
+/// divide the *trailing* dimensions of the op being unrolled, so it may have a
+/// smaller rank than the op itself.
+/// Tiling with the padded shape is equivalent and keeps the offsets, sizes
+/// and strides rank-aligned with the op's vector type.
 static SmallVector<int64_t>
 padTargetShapeToRank(ArrayRef<int64_t> targetShape,
                      ArrayRef<int64_t> originalShape) {
@@ -1091,9 +1090,7 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
     VectorType resultType = createMaskOp.getVectorType();
     SmallVector<int64_t> originalSize = *createMaskOp.getShapeForUnroll();
     // The logic below assumes a 1-1 correspondence between the unroll shape and
-    // the op's mask operands, so pad the target shape with leading unit
-    // dimensions when it has a smaller rank than the op (as is done in
-    // `UnrollElementwisePattern`).
+    // the op's mask operands, so pad the target shape with leading unit dims.
     SmallVector<int64_t> unrollShape =
         padTargetShapeToRank(*targetShape, originalSize);
     Location loc = createMaskOp.getLoc();
@@ -1189,9 +1186,7 @@ struct UnrollConstantMaskPattern
     VectorType resultType = constantMaskOp.getVectorType();
     SmallVector<int64_t> originalSize = *constantMaskOp.getShapeForUnroll();
     // The logic below assumes a 1-1 correspondence between the unroll shape and
-    // the op's mask dimensions, so pad the target shape with leading unit
-    // dimensions when it has a smaller rank than the op (as is done in
-    // `UnrollElementwisePattern`).
+    // the op's mask dimensions, so pad the target shape with leading unit dims.
     SmallVector<int64_t> unrollShape =
         padTargetShapeToRank(*targetShape, originalSize);
     Location loc = constantMaskOp.getLoc();
