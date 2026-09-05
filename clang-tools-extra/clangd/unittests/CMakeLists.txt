@@ -36,6 +36,7 @@ add_unittest(ClangdUnitTests ClangdTests
   ASTSignalsTests.cpp
   BackgroundIndexTests.cpp
   CallHierarchyTests.cpp
+  CallHierarchyMultipleCallersTest.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
   ClangdLSPServerTests.cpp
