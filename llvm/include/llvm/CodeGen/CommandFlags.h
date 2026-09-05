@@ -60,8 +60,6 @@ LLVM_ABI CodeGenFileType getFileType();
 
 LLVM_ABI FramePointerKind getFramePointerUsage();
 
-LLVM_ABI bool getEnableNoTrappingFPMath();
-
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFPMath();
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFP32Math();
 

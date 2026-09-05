@@ -781,8 +781,7 @@ void ARMAsmPrinter::emitAttributes() {
     if (unsigned TagVal = Ex->getZExtValue())
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, TagVal);
   } else if (checkFunctionsAttributeConsistency(*MMI->getModule(),
-                                                "no-trapping-math", "true") ||
-             TM.Options.NoTrappingFPMath)
+                                                "no-trapping-math", "true"))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
   else {
