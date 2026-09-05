@@ -41390,8 +41390,17 @@ static SDValue combineX86ShuffleChain(
   // Depth threshold above which we can efficiently use variable mask shuffles.
   int VariableCrossLaneShuffleDepth =
       Subtarget.hasFastVariableCrossLaneShuffle() ? 1 : 2;
+  // A 256-bit per-lane variable shuffle is at least as cheap as the two fixed
+  // shuffles it replaces on every AVX2 implementation, so don't make one wait
+  // for a deeper chain when only the tuning flag is missing. The AVX2 CPUs that
+  // do not set it (bdver4, knl/knm, sierraforest) each share a scheduling model
+  // with one that does, and generic tuning is conservative here on behalf of
+  // pre-AVX2 parts, which this AVX2-gated case cannot apply to.
   int VariablePerLaneShuffleDepth =
-      Subtarget.hasFastVariablePerLaneShuffle() ? 1 : 2;
+      (Subtarget.hasFastVariablePerLaneShuffle() ||
+       (RootSizeInBits == 256 && Subtarget.hasAVX2()))
+          ? 1
+          : 2;
   AllowVariableCrossLaneMask &=
       (Depth >= VariableCrossLaneShuffleDepth) || NumVariableMasks;
   AllowVariablePerLaneMask &=
