@@ -5670,9 +5670,10 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
-InstructionCost LoopVectorizationPlanner::cost(
-    VPlan &Plan, ElementCount VF, VPRegisterUsage *RU,
-    LoopVectorizationCostModel &EnabledCM) const {
+InstructionCost
+LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
+                               VPRegisterUsage *RU,
+                               LoopVectorizationCostModel &EnabledCM) const {
   VPCostContext CostCtx(*TLI, Plan, EnabledCM, Config,
                         /*ReusePrintingSlotTracker=*/true);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
@@ -8339,8 +8340,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   VPlan &BestPlan = *BestPlanPtr;
   // Consider vectorizing the epilogue too if it's profitable.
-  std::unique_ptr<VPlan> EpiPlan = LVP.selectBestEpiloguePlan(
-      BestPlan, VF.Width, IC, ScalarEpilogueAllowed);
+  std::unique_ptr<VPlan> EpiPlan =
+      LVP.selectBestEpiloguePlan(BestPlan, VF.Width, IC, ScalarEpilogueAllowed);
   bool HasBranchWeights =
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   if (EpiPlan) {
