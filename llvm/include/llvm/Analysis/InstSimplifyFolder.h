@@ -115,6 +115,16 @@ public:
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     return simplifyCastInst(Op, V, DestTy, SQ);

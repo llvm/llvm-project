@@ -1867,6 +1867,14 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         I = new ShuffleVectorInst(Ops[0], Ops[1], Ops[2], "constexpr",
                                   InsertBB);
         break;
+      case Instruction::BitExtract:
+        I = BitExtractInst::Create(BC->getType(), Ops[0], Ops[1], "constexpr",
+                                   InsertBB);
+        break;
+      case Instruction::BitInsert:
+        I = BitInsertInst::Create(Ops[0], Ops[1], Ops[2], "constexpr",
+                                  InsertBB);
+        break;
       default:
         llvm_unreachable("Unhandled bitcode constant");
       }
@@ -5639,6 +5647,43 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid insert element record");
       I = InsertElementInst::Create(Vec, Elt, Idx);
       ResTypeID = VecTypeID;
+      InstructionList.push_back(I);
+      break;
+    }
+
+    case bitc::FUNC_CODE_INST_BITINSERT: { // BITINSERT: [ty, opval, opval,
+                                           // opval]
+      unsigned OpNum = 0;
+      Value *Base, *Val, *Offset;
+      unsigned BaseTypeID, ValTypeID, OffsetTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Base, BaseTypeID,
+                           CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Val, ValTypeID, CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
+                           CurBB))
+        return error("Invalid bitinsert record");
+      I = BitInsertInst::Create(Base, Val, Offset);
+      ResTypeID = BaseTypeID;
+      InstructionList.push_back(I);
+      break;
+    }
+
+    case bitc::FUNC_CODE_INST_BITEXTRACT: { // BITEXTRACT: [ty, opval, opval]
+      unsigned OpNum = 0;
+      if (Record.empty())
+        return error("Record is empty for bitextract");
+      unsigned TypeID = Record[OpNum++];
+      Type *ResTy = getTypeByID(TypeID);
+      if (!ResTy)
+        return error("Invalid bitextract result type");
+      Value *Src, *Offset;
+      unsigned SrcTypeID, OffsetTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Src, SrcTypeID, CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
+                           CurBB))
+        return error("Invalid bitextract record");
+      I = BitExtractInst::Create(ResTy, Src, Offset);
+      ResTypeID = TypeID;
       InstructionList.push_back(I);
       break;
     }

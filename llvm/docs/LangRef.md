@@ -11590,6 +11590,111 @@ The truth table used for the '`xor`' instruction is:
 <result> = xor i32 %V, -1          ; yields i32:result = ~%V
 ```
 
+### Byte Operations
+
+Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
+
+(i_bitextract)=
+
+#### '`bitextract`' Instruction
+
+##### Syntax:
+
+```
+<result> = bitextract <ty>, <bty> <source>, i32 <offset>
+```
+
+##### Overview:
+
+The '`bitextract`' instruction reads a contiguous range of bits from a
+{ref}`byte type <t_byte>` value and returns them as a value of type `ty`.
+
+##### Arguments:
+
+`<ty>` is any {ref}`single value type <t_single_value>` and specifies
+the result type. The first operand, `source`, must be a value of
+{ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving
+the bit position at which the extraction begins within `source`.
+
+{ref}`Target extension types <t_target_type>` are not permitted as the
+result type `ty`.
+
+```{note}
+Vector types are not currently supported as the result type.
+```
+
+##### Semantics:
+
+The result is the bit range `source[offset : offset + bitwidth(ty))`,
+reinterpreted as a value of type `ty` as if by a {ref}`bitcast <i_bitcast>`.
+Bit `0` is the least significant bit of `source`.
+
+If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
+{ref}`poison value <poisonvalues>` is returned.
+
+##### Example:
+
+```text
+%result = bitextract i8, b32 %src, i32 24 ; Extract the 8 most-significant bits (bits [24..31]) of %src and return an 8-bit integer
+
+%result = bitextract i1, b32 %src, i32 5  ; Extract a single bit (bit 5) of %src and return it as an i1
+
+%result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
+
+%result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
+```
+
+(i_bitinsert)=
+
+#### '`bitinsert`' Instruction
+
+##### Syntax:
+```
+<result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+```
+##### Overview:
+
+The '`bitinsert`' instruction writes a contiguous range of bits from a
+{ref}`single value type <t_single_value>` value into a {ref}`byte type <t_byte>`
+value and returns the result as a value of the same byte type.
+
+##### Arguments:
+
+`<ty>` is any {ref}`single value type <t_single_value>` and specifies the
+type of the value to insert. The first operand, `base`, must be a value of
+{ref}`byte type <t_byte>`. The second operand, `val`, must be a value of
+type `ty`. The `offset` operand is an `i32` giving the bit position
+at which the insertion begins within `base`.
+
+{ref}`Target extension types <t_target_type>` are not permitted as the
+type `ty` of the value to insert.
+
+```{note}
+Vector types are not currently supported as the type of the value
+to insert.
+```
+
+##### Semantics:
+
+The result is `base` with the bit range `[offset : offset + bitwidth(ty))`
+replaced by the bits of `val`, reinterpreted as if by a {ref}`bitcast <i_bitcast>`.
+Bit `0` is the least significant bit of `base`.
+
+If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
+{ref}`poison value <poisonvalues>` is returned.
+
+##### Example:
+
+```text
+%result = bitinsert b32 %x, i8 %y, i32 3 ; Inserts the %y bits into %x with an offset of 3
+
+%result = bitinsert b32 %x, i1 %flag, i32 7 ; Inserts a single bit (%flag) into bit 7 of %x, leaving all other bits unchanged
+
+%result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
+
+%result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
+```
+
 ### Vector Operations
 
 LLVM supports several instructions to represent vector operations in a
