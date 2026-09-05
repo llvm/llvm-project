@@ -261,6 +261,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Miscellaneous
 
+- Fixed clang-tidy adding an unwanted blank line when automatically inserting
+  a missing `#include`, which stopped `clang-format` and `llvm-include-order`
+  from being able to sort it correctly afterward.
+
 ### Improvements to include-fixer
 
 ### Improvements to clang-include-fixer
