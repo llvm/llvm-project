@@ -4491,6 +4491,51 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
   setOutputAddress(SymbolInfo->Address);
   setOutputSize(SymbolInfo->Size);
 
+  // Move the dynamic relocations that supplied LSDA type table entries onto
+  // the re-emitted table. Otherwise the loader keeps patching the original
+  // copy, which is no longer read, and a zero entry means catch-all to the
+  // personality routine.
+  //
+  // The emitted section has no input address, so match it on the output range.
+  auto findOutputSection = [&](uint64_t Address) -> BinarySection * {
+    for (BinarySection &Section : BC.sections()) {
+      const uint64_t Start = Section.getOutputAddress();
+      if (Start && Address >= Start &&
+          Address < Start + Section.getOutputSize())
+        return &Section;
+    }
+    return nullptr;
+  };
+
+  for (auto &KV : getLSDATypeTableDynRelocs()) {
+    LSDATypeTableDynRelocTy &DynReloc = KV.second;
+    if (DynReloc.OutputLabels.empty())
+      continue;
+
+    // The relocation is moved, not copied: .rela.dyn is rewritten in place and
+    // cannot grow. SplitFunctions keeps the EH ranges of such a function in a
+    // single fragment so that only one copy of the table is emitted.
+    assert(DynReloc.OutputLabels.size() == 1 &&
+           "LSDA type table emitted more than once");
+
+    ErrorOr<BinarySection &> InputSection =
+        BC.getSectionForAddress(DynReloc.InputAddress);
+    assert(InputSection && "Cannot find input LSDA section");
+    std::optional<Relocation> Moved = InputSection->takeDynamicRelocationAt(
+        DynReloc.InputAddress - InputSection->getAddress());
+    assert(Moved && "Cannot find LSDA type table dynamic relocation");
+
+    for (MCSymbol *SlotLabel : DynReloc.OutputLabels) {
+      const auto SlotInfo = Linker.lookupSymbolInfo(SlotLabel->getName());
+      assert(SlotInfo && "Cannot find LSDA type table entry symbol");
+      BinarySection *OutputSection = findOutputSection(SlotInfo->Address);
+      assert(OutputSection && "Cannot find emitted LSDA section");
+      OutputSection->addDynamicRelocation(
+          SlotInfo->Address - OutputSection->getOutputAddress(), Moved->Symbol,
+          Moved->Type, Moved->Addend, Moved->Value);
+    }
+  }
+
   if (BC.HasRelocations || isInjected()) {
     if (hasConstantIsland()) {
       const auto IslandLabelSymInfo =

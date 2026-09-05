@@ -339,6 +339,12 @@ Error BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
     for (unsigned Index = 1; Index <= MaxTypeIndex; ++Index) {
       uint64_t TTEntry = TypeTableStart - Index * TTypeEncodingSize;
       const uint64_t TTEntryAddress = TTEntry + LSDASectionAddress;
+
+      // An entry supplied by a dynamic relocation reads as zero here. Record
+      // it so the relocation can be re-created against the re-emitted table.
+      if (const Relocation *Rel = BC.getDynamicRelocationAt(TTEntryAddress))
+        LSDATypeTableDynRelocs[Index - 1] = {*Rel, TTEntryAddress, {}};
+
       uint64_t TypeAddress =
           *Data.getEncodedPointer(&TTEntry, TTypeEncoding, TTEntryAddress);
       if ((TTypeEncoding & DW_EH_PE_pcrel) && (TypeAddress == TTEntryAddress))
