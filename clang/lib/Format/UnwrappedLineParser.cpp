@@ -95,13 +95,17 @@ std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line) {
 
 class ScopedLineState {
 public:
+  // With \c DiscardLines, the lines added while in scope are discarded.
   ScopedLineState(UnwrappedLineParser &Parser,
-                  bool SwitchToPreprocessorLines = false)
-      : Parser(Parser), OriginalLines(Parser.CurrentLines) {
+                  bool SwitchToPreprocessorLines = false,
+                  bool DiscardLines = false)
+      : Parser(Parser), OriginalLines(Parser.CurrentLines),
+        DiscardLines(DiscardLines) {
     if (SwitchToPreprocessorLines)
       Parser.CurrentLines = &Parser.PreprocessorDirectives;
     else if (!Parser.Line->Tokens.empty())
       Parser.CurrentLines = &Parser.Line->Tokens.back().Children;
+    OriginalNumLines = Parser.CurrentLines->size();
     PreBlockLine = std::move(Parser.Line);
     Parser.Line = std::make_unique<UnwrappedLine>();
     Parser.Line->Level = PreBlockLine->Level;
@@ -115,6 +119,8 @@ public:
     if (!Parser.Line->Tokens.empty())
       Parser.addUnwrappedLine();
     assert(Parser.Line->Tokens.empty());
+    if (DiscardLines)
+      Parser.CurrentLines->truncate(OriginalNumLines);
     Parser.Line = std::move(PreBlockLine);
     if (Parser.CurrentLines == &Parser.PreprocessorDirectives)
       Parser.AtEndOfPPLine = true;
@@ -126,6 +132,8 @@ private:
 
   std::unique_ptr<UnwrappedLine> PreBlockLine;
   SmallVectorImpl<UnwrappedLine> *OriginalLines;
+  size_t OriginalNumLines;
+  bool DiscardLines;
 };
 
 class CompoundStatementIndenter {
@@ -170,6 +178,7 @@ void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
   IncludeGuard = getIncludeGuardState(Style.IndentPPDirectives);
   IncludeGuardToken = nullptr;
+  ParsedPPDirectives.clear();
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
@@ -1099,6 +1108,28 @@ void UnwrappedLineParser::conditionalCompilationEnd() {
     PPChainBranchIndex.pop();
   if (!PPStack.empty())
     PPStack.pop_back();
+}
+
+UnwrappedLineParser::PPState UnwrappedLineParser::savePPState() const {
+  return {PPStack,
+          PPBranchLevel,
+          PPLevelBranchIndex,
+          PPLevelBranchCount,
+          PPChainBranchIndex,
+          IncludeGuard,
+          IncludeGuardToken,
+          AtEndOfPPLine};
+}
+
+void UnwrappedLineParser::restorePPState(const PPState &State) {
+  PPStack = State.PPStack;
+  PPBranchLevel = State.PPBranchLevel;
+  PPLevelBranchIndex = State.PPLevelBranchIndex;
+  PPLevelBranchCount = State.PPLevelBranchCount;
+  PPChainBranchIndex = State.PPChainBranchIndex;
+  IncludeGuard = State.IncludeGuard;
+  IncludeGuardToken = State.IncludeGuardToken;
+  AtEndOfPPLine = State.AtEndOfPPLine;
 }
 
 void UnwrappedLineParser::parsePPIf(bool IfDef) {
@@ -5049,10 +5080,15 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       }
       distributeComments(Comments, FormatTok);
       Comments.clear();
+      // If the directive was parsed before the token stream was rewound (see
+      // parseMacroCall()), its lines were kept. Parse it again only for its
+      // effect on the preprocessor bookkeeping and discard the new lines.
+      const bool ParsedBefore = !ParsedPPDirectives.insert(FormatTok).second;
       // If there is an unfinished unwrapped line, we flush the preprocessor
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
-      ScopedLineState BlockState(*this, SwitchToPreprocessorLines);
+      ScopedLineState BlockState(*this, SwitchToPreprocessorLines,
+                                 /*DiscardLines=*/ParsedBefore);
       assert((LevelDifference >= 0 ||
               static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
              "LevelDifference makes Line->Level negative");
@@ -5094,6 +5130,11 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         !Line->InPPDirective) {
       FormatToken *ID = FormatTok;
       unsigned Position = Tokens->getPosition();
+      // Parsing the arguments of the call may parse preprocessor directives,
+      // which are parsed again if the token stream is rewound because the
+      // arguments are discarded. The preprocessor bookkeeping is restored
+      // whenever that happens.
+      const auto SavedPPState = savePPState();
 
       // To correctly parse the code, we need to replace the tokens of the macro
       // call with its expansion.
@@ -5102,7 +5143,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       bool OldInExpansion = InExpansion;
       InExpansion = true;
       // We parse the macro call into a new line.
-      auto Args = parseMacroCall();
+      auto Args = parseMacroCall(SavedPPState);
       InExpansion = OldInExpansion;
       assert(Line->Tokens.front().Tok == ID);
       // And remember the unexpanded macro call tokens.
@@ -5137,6 +5178,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Tokens->setPosition(Position);
         // Not nextToken(), which would push the stale FormatTok onto the line.
         FormatTok = Tokens->getNextToken();
+        restorePPState(SavedPPState);
         assert(!Args && Macros.objectLike(ID->TokenText));
       }
       if ((!Args && Macros.objectLike(ID->TokenText)) ||
@@ -5167,6 +5209,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         });
         Tokens->setPosition(Position);
         FormatTok = ID;
+        restorePPState(SavedPPState);
       }
     }
 
@@ -5196,7 +5239,7 @@ void pushTokens(Iterator Begin, Iterator End,
 } // namespace
 
 std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
-UnwrappedLineParser::parseMacroCall() {
+UnwrappedLineParser::parseMacroCall(const PPState &SavedPPState) {
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>> Args;
   assert(Line->Tokens.empty());
   // Not nextToken(), which would already expand a directly following macro
@@ -5255,6 +5298,7 @@ UnwrappedLineParser::parseMacroCall() {
   Line->Tokens.resize(1);
   Tokens->setPosition(Position);
   FormatTok = Tok;
+  restorePPState(SavedPPState);
   return {};
 }
 
