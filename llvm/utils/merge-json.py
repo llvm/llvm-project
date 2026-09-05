@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """A command line utility to merge two JSON files.
 
 This is a python program that merges two JSON files into a single one. The
