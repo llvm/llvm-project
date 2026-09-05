@@ -6,99 +6,10 @@ define i1 @all_32(ptr %input) {
 ; CHECK-LABEL: define i1 @all_32(
 ; CHECK-SAME: ptr [[INPUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[INPUT]], align 1
-; CHECK-NEXT:    [[ARRAYIDX22_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX22_I]], align 1, !range [[RNG0:![0-9]+]], !noundef [[META1:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX8:%.*]] = and i8 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX25_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 9
-; CHECK-NEXT:    [[ARRAYIDX28_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 10
-; CHECK-NEXT:    [[ARRAYIDX31_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 11
-; CHECK-NEXT:    [[TMP53:%.*]] = load i8, ptr [[ARRAYIDX31_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[LOADEDV32_I:%.*]] = trunc nuw i8 [[TMP53]] to i1
-; CHECK-NEXT:    [[ARRAYIDX34_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 12
-; CHECK-NEXT:    [[ARRAYIDX37_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 13
-; CHECK-NEXT:    [[ARRAYIDX40_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 14
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX40_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[LOADEDV41_I:%.*]] = trunc nuw i8 [[TMP4]] to i1
-; CHECK-NEXT:    [[ARRAYIDX43_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 15
-; CHECK-NEXT:    [[ARRAYIDX46_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 16
-; CHECK-NEXT:    [[ARRAYIDX49_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 17
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[ARRAYIDX49_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[LOADEDV50_I:%.*]] = trunc nuw i8 [[TMP5]] to i1
-; CHECK-NEXT:    [[ARRAYIDX52_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 18
-; CHECK-NEXT:    [[ARRAYIDX55_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 19
-; CHECK-NEXT:    [[ARRAYIDX58_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 20
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[ARRAYIDX58_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[LOADEDV59_I:%.*]] = trunc nuw i8 [[TMP6]] to i1
-; CHECK-NEXT:    [[ARRAYIDX61_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 21
-; CHECK-NEXT:    [[ARRAYIDX64_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 22
-; CHECK-NEXT:    [[ARRAYIDX67_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 23
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX67_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[LOADEDV68_I:%.*]] = trunc nuw i8 [[TMP7]] to i1
-; CHECK-NEXT:    [[ARRAYIDX70_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 24
-; CHECK-NEXT:    [[ARRAYIDX73_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 25
-; CHECK-NEXT:    [[ARRAYIDX76_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 26
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX76_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[LOADEDV77_I:%.*]] = trunc nuw i8 [[TMP8]] to i1
-; CHECK-NEXT:    [[ARRAYIDX79_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 27
-; CHECK-NEXT:    [[ARRAYIDX82_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 28
-; CHECK-NEXT:    [[ARRAYIDX85_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 29
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[ARRAYIDX85_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[LOADEDV86_I:%.*]] = trunc nuw i8 [[TMP9]] to i1
-; CHECK-NEXT:    [[ARRAYIDX88_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 30
-; CHECK-NEXT:    [[ARRAYIDX91_I:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 31
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[ARRAYIDX28_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[ARRAYIDX25_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX37_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[ARRAYIDX34_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[ARRAYIDX46_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX43_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[ARRAYIDX55_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr [[ARRAYIDX52_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[ARRAYIDX64_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load i8, ptr [[ARRAYIDX61_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP20:%.*]] = load i8, ptr [[ARRAYIDX73_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i8, ptr [[ARRAYIDX70_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i8, ptr [[ARRAYIDX82_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load i8, ptr [[ARRAYIDX79_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[ARRAYIDX91_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP25:%.*]] = load i8, ptr [[ARRAYIDX88_I]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[TMP26:%.*]] = and i8 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP27:%.*]] = and i8 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP28:%.*]] = and i8 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    [[TMP29:%.*]] = and i8 [[TMP16]], [[TMP17]]
-; CHECK-NEXT:    [[TMP30:%.*]] = and i8 [[TMP18]], [[TMP19]]
-; CHECK-NEXT:    [[TMP31:%.*]] = and i8 [[TMP20]], [[TMP21]]
-; CHECK-NEXT:    [[TMP32:%.*]] = and i8 [[TMP24]], [[TMP25]]
-; CHECK-NEXT:    [[TMP33:%.*]] = and i8 [[TMP22]], [[TMP23]]
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x i8> poison, i8 [[TMP33]], i64 0
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <8 x i8> [[TMP34]], i8 [[TMP32]], i64 1
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <8 x i8> [[TMP35]], i8 [[TMP31]], i64 2
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <8 x i8> [[TMP36]], i8 [[TMP30]], i64 3
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <8 x i8> [[TMP37]], i8 [[TMP29]], i64 4
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <8 x i8> [[TMP38]], i8 [[TMP28]], i64 5
-; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <8 x i8> [[TMP39]], i8 [[TMP27]], i64 6
-; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <8 x i8> [[TMP40]], i8 [[TMP26]], i64 7
-; CHECK-NEXT:    [[TMP42:%.*]] = icmp ne <8 x i8> [[TMP41]], zeroinitializer
-; CHECK-NEXT:    [[TMP43:%.*]] = trunc nuw i8 [[OP_RDX8]] to i1
-; CHECK-NEXT:    [[TMP44:%.*]] = freeze <8 x i1> [[TMP42]]
-; CHECK-NEXT:    [[TMP45:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP44]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP45]], i1 [[LOADEDV86_I]], i1 false
-; CHECK-NEXT:    [[TMP46:%.*]] = freeze i1 [[LOADEDV77_I]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP46]], i1 [[LOADEDV68_I]], i1 false
-; CHECK-NEXT:    [[TMP47:%.*]] = freeze i1 [[LOADEDV59_I]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP47]], i1 [[LOADEDV50_I]], i1 false
-; CHECK-NEXT:    [[TMP48:%.*]] = freeze i1 [[LOADEDV41_I]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[TMP48]], i1 [[LOADEDV32_I]], i1 false
-; CHECK-NEXT:    [[TMP49:%.*]] = freeze i1 [[OP_RDX]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = select i1 [[TMP49]], i1 [[OP_RDX1]], i1 false
-; CHECK-NEXT:    [[TMP50:%.*]] = freeze i1 [[OP_RDX2]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = select i1 [[TMP50]], i1 [[OP_RDX3]], i1 false
-; CHECK-NEXT:    [[TMP51:%.*]] = freeze i1 [[OP_RDX4]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = select i1 [[TMP51]], i1 [[OP_RDX5]], i1 false
-; CHECK-NEXT:    [[TMP52:%.*]] = freeze i1 [[OP_RDX6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP52]], i1 [[TMP43]], i1 false
+; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[INPUT]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <32 x i8> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.and.v32i8(<32 x i8> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
 entry:
@@ -220,31 +131,10 @@ define i1 @or_16(ptr %input) {
 ; CHECK-LABEL: define i1 @or_16(
 ; CHECK-SAME: ptr [[INPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[INPUT]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP0]])
-; CHECK-NEXT:    [[T7:%.*]] = trunc nuw i8 [[TMP1]] to i1
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[P8]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[P9:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 9
-; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[P9]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[O9:%.*]] = or i8 [[TMP11]], [[TMP2]]
-; CHECK-NEXT:    [[C9:%.*]] = icmp ne i8 [[O9]], 0
-; CHECK-NEXT:    [[P10:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 10
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[P10]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i8> [[TMP4]] to <4 x i1>
-; CHECK-NEXT:    [[P14:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 14
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[P14]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[T14:%.*]] = trunc nuw i8 [[TMP6]] to i1
-; CHECK-NEXT:    [[P15:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 15
-; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[P15]], align 1, !range [[RNG0]], !noundef [[META1]]
-; CHECK-NEXT:    [[T15:%.*]] = trunc nuw i8 [[TMP7]] to i1
-; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP9]], i1 true, i1 [[T14]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[T15]], i1 true, i1 [[T7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = freeze i1 [[OP_RDX]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP10]], i1 true, i1 [[OP_RDX1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[OP_RDX2]], i1 true, i1 [[C9]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[INPUT]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <16 x i8> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
 entry:
@@ -384,17 +274,16 @@ define i1 @and_9(ptr %input) {
 ; CHECK-LABEL: define i1 @and_9(
 ; CHECK-SAME: ptr [[INPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[INPUT]], align 1, !range [[RNG0]], !noundef [[META1]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 1
-; CHECK-NEXT:    [[OP_RDX:%.*]] = load i8, ptr [[P2]], align 1, !range [[RNG0]], !noundef [[META1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[P2]], align 1, !range [[RNG0:![0-9]+]], !noundef [[META1:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[INPUT]], align 1
+; CHECK-NEXT:    [[P9:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[P9]], align 1, !range [[RNG0]], !noundef [[META1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <8 x i8> [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> [[TMP3]])
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i8 [[OP_RDX]], [[TMP2]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[OP_RDX1]], 0
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load <8 x i8>, ptr [[P3]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i8> [[TMP6]] to <8 x i1>
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP7]], i1 [[C1]], i1 false
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = and i8 [[OP_RDX1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i8 [[OP_RDX2]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
 entry:
