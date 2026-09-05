@@ -2006,21 +2006,20 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // Store-load forwarding distance.
 
   // Maximum vector factor.
-  uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 =
-      std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
-               MaxStoreLoadForwardSafeDistanceInBits);
+  uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 = std::min<uint64_t>(
+      VectorizerParams::MaxVectorWidth, MaxStoreLoadForwardSafeNumElements);
 
   // Compute the smallest VF at which the store and load would be misaligned
   // and recent enough to still be in the store buffer.
-  for (uint64_t VF = 2 * TypeByteSize;
-       VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
-    if (isStoreLoadForwardingConflict(Distance, VF, TypeByteSize, VF)) {
+  for (uint64_t VF = 2; VF <= VectorizerParams::MaxVectorWidth; VF *= 2) {
+    if (isStoreLoadForwardingConflict(Distance, VF * TypeByteSize, TypeByteSize,
+                                      VF * TypeByteSize)) {
       MaxVFWithoutSLForwardIssuesPowerOf2 = (VF >> 1);
       break;
     }
   }
 
-  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2 * TypeByteSize) {
+  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2) {
     LLVM_DEBUG(
         dbgs() << "LAA: Distance " << Distance
                << " that could cause a store-load forwarding conflict\n");
@@ -2029,14 +2028,12 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
 
   if (CommonStride &&
       MaxVFWithoutSLForwardIssuesPowerOf2 <
-          MaxStoreLoadForwardSafeDistanceInBits &&
-      MaxVFWithoutSLForwardIssuesPowerOf2 !=
-          VectorizerParams::MaxVectorWidth * TypeByteSize) {
-    uint64_t MaxVF =
-        bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride);
-    uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-    MaxStoreLoadForwardSafeDistanceInBits =
-        std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+          MaxStoreLoadForwardSafeNumElements &&
+      MaxVFWithoutSLForwardIssuesPowerOf2 != VectorizerParams::MaxVectorWidth) {
+    uint64_t MaxVF = bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 *
+                               TypeByteSize / CommonStride);
+    MaxStoreLoadForwardSafeNumElements =
+        std::min(MaxStoreLoadForwardSafeNumElements, MaxVF);
 
     if (MaxVF < 2) {
       LLVM_DEBUG(
@@ -2521,7 +2518,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   if (CheckCompletelyBeforeOrAfter())
     return Dependence::NoDep;
 
-  MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
+  MaxSafeNumElements = std::min(MaxSafeNumElements, MaxVF);
   return Dependence::BackwardVectorizable;
 }
 
@@ -3284,12 +3281,13 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
     OS.indent(Depth) << "Memory dependences are safe";
     const MemoryDepChecker &DC = getDepChecker();
     if (!DC.isSafeForAnyVectorWidth())
-      OS << " with a maximum safe vector width of "
-         << DC.getMaxSafeVectorWidthInBits() << " bits";
+      OS << " with a maximum safe number of elements to operate on equal to "
+         << DC.getMaxSafeNumElements();
     if (!DC.isSafeForAnyStoreLoadForwardDistances()) {
-      uint64_t SLDist = DC.getStoreLoadForwardSafeDistanceInBits();
-      OS << ", with a maximum safe store-load forward width of " << SLDist
-         << " bits";
+      uint64_t SLDist = DC.getStoreLoadForwardSafeNumElements();
+      OS << ", with a maximum safe store-load forward number of elements to "
+            "operate on equal to "
+         << SLDist;
     }
     if (PtrRtChecking->Need)
       OS << " with run-time checks";

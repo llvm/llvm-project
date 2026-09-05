@@ -142,7 +142,7 @@ exit:
 define void @backward_dep_known_distance_less_than_btc(ptr %A) {
 ; CHECK-LABEL: 'backward_dep_known_distance_less_than_btc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 4064 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 127
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->

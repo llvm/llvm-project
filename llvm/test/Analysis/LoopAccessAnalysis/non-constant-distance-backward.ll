@@ -79,7 +79,7 @@ exit:
 define void @backward_min_distance_120(ptr %A, i64 %N) {
 ; CHECK-LABEL: 'backward_min_distance_120'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 120 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 15
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i8, ptr %gep, align 4 ->
@@ -200,7 +200,7 @@ exit:
 define void @backward_min_distance_128(ptr %A, i64 %N) {
 ; CHECK-LABEL: 'backward_min_distance_128'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 16
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i8, ptr %gep, align 4 ->
@@ -321,7 +321,7 @@ exit:
 define void @backward_min_distance_256(ptr %A, i64 %N) {
 ; CHECK-LABEL: 'backward_min_distance_256'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 256 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 32
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i8, ptr %gep, align 4 ->
@@ -347,7 +347,7 @@ define void @backward_min_distance_256(ptr %A, i64 %N) {
 ;
 ; VW128-LABEL: 'backward_min_distance_256'
 ; VW128-NEXT:    loop:
-; VW128-NEXT:      Memory dependences are safe with a maximum safe vector width of 256 bits
+; VW128-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 32
 ; VW128-NEXT:      Dependences:
 ; VW128-NEXT:        BackwardVectorizable:
 ; VW128-NEXT:            %l = load i8, ptr %gep, align 4 ->
