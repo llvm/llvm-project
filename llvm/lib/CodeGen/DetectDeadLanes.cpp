@@ -496,7 +496,7 @@ DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
   bool Again = false;
   // Mark operands as dead/unused.
   for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
+    for (MachineInstr &MI : MBB.instrs()) {
       for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg())
           continue;
