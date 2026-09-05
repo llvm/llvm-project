@@ -11,6 +11,7 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.errno.errno
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(

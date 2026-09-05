@@ -8,6 +8,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.limits
     libc.include.math
     libc.include.setjmp
+    libc.include.signal
     libc.include.stdlib
     libc.include.string
     libc.include.strings
