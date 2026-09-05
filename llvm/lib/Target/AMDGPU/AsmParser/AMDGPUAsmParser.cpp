@@ -6376,8 +6376,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start, "directive requires gfx8+", IDRange);
       if (!isUInt<1>(Val))
         return OutOfRangeError(ValRange);
-      bool XnackOn = getTargetStreamer().getTargetID()->isXnackOnOrAny() ||
-                     getSTI().hasFeature(AMDGPU::FeatureXNACK);
+      bool XnackOn = getTargetStreamer().getTargetID()->isXnackOnOrAny();
       if (Val != XnackOn) {
         return getParser().Error(
             IDRange.Start,

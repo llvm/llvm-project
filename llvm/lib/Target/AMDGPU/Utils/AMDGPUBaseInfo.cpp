@@ -1086,75 +1086,11 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 
 TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
                               StringRef FeatureString) {
-  TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
-                    STI.getFeatureBits().test(FeatureXNACKOnOffModes)
-                        ? TargetIDSetting::Any
-                        : TargetIDSetting::Unsupported,
-                    STI.getFeatureBits().test(FeatureSupportsSRAMECC)
-                        ? TargetIDSetting::Any
-                        : TargetIDSetting::Unsupported);
-
-  // Check if xnack or sramecc is explicitly enabled or disabled.  In the
-  // absence of the target features we assume we must generate code that can run
-  // in any environment.
-  SubtargetFeatures Features(FeatureString);
-  std::optional<bool> XnackRequested;
-  std::optional<bool> SramEccRequested;
-
-  for (const std::string &Feature : Features.getFeatures()) {
-    if (Feature == "+xnack")
-      XnackRequested = true;
-    else if (Feature == "-xnack")
-      XnackRequested = false;
-    else if (Feature == "+sramecc")
-      SramEccRequested = true;
-    else if (Feature == "-sramecc")
-      SramEccRequested = false;
-  }
-
-  // Only allow changing xnack setting if the target supports on/off modes.
-  // Targets without on/off mode support keep their initial setting
-  // (Unsupported).
-
-  bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
-  bool SramEccSupported = TargetID.isSramEccSupported();
-
-  if (XnackRequested) {
-    if (XnackSupported) {
-      TargetID.setXnackSetting(*XnackRequested ? TargetIDSetting::On
-                                               : TargetIDSetting::Off);
-    } else {
-      // If a specific xnack setting was requested and this GPU does not support
-      // xnack emit a warning. Setting will remain set to "Unsupported".
-      if (*XnackRequested) {
-        errs() << "warning: xnack 'On' was requested for a processor that does "
-                  "not support it!\n";
-      } else {
-        errs() << "warning: xnack 'Off' was requested for a processor that "
-                  "does not support it!\n";
-      }
-    }
-  }
-
-  if (SramEccRequested) {
-    if (SramEccSupported) {
-      TargetID.setSramEccSetting(*SramEccRequested ? TargetIDSetting::On
-                                                   : TargetIDSetting::Off);
-    } else {
-      // If a specific sramecc setting was requested and this GPU does not
-      // support sramecc emit a warning. Setting will remain set to
-      // "Unsupported".
-      if (*SramEccRequested) {
-        errs() << "warning: sramecc 'On' was requested for a processor that "
-                  "does not support it!\n";
-      } else {
-        errs() << "warning: sramecc 'Off' was requested for a processor that "
-                  "does not support it!\n";
-      }
-    }
-  }
-
-  return TargetID;
+  // In codegen the mode comes from module flags and FeatureString is empty, so
+  // the processor defaults apply. The assembler has no target directive, so it
+  // pins the mode via the +xnack/-xnack/+sramecc/-sramecc feature string.
+  return TargetID::createFromSubtargetFeatures(STI.getTargetTriple(),
+                                               STI.getCPU(), FeatureString);
 }
 
 namespace IsaInfo {
@@ -1344,12 +1280,6 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
   }
 
   return ExtraSGPRs;
-}
-
-unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
-                          bool FlatScrUsed) {
-  return getNumExtraSGPRs(STI, VCCUsed, FlatScrUsed,
-                          STI.getFeatureBits().test(AMDGPU::FeatureXNACK));
 }
 
 static unsigned getGranulatedNumRegisterBlocks(unsigned NumRegs,
@@ -2473,7 +2403,10 @@ unsigned getDynamicVGPRBlockSize(const Function &F) {
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureXNACK);
+  // Only hardwired-on xnack (gfx1250) is knowable from the subtarget alone;
+  // toggleable targets take their mode from the TargetID.
+  return STI.hasFeature(AMDGPU::FeatureSupportsXNACK) &&
+         !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {

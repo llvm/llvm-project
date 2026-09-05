@@ -215,12 +215,6 @@ unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
 unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
                           bool FlatScrUsed, bool XNACKUsed);
 
-/// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// STI when the given special registers are used. XNACK is inferred from
-/// \p STI.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
-                          bool FlatScrUsed);
-
 /// \returns Number of SGPR blocks needed for given subtarget \p STI when
 /// \p NumSGPRs are used. \p NumSGPRs should already include any special
 /// register counts.

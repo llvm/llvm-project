@@ -1014,6 +1014,13 @@ consumed by the AMDGPU backend during code generation.
        produce an error. Modules with **any** (absent flag) are compatible
        with any setting.
 
+       XNACK is disabled if ``SH_MEM_CONFIG.ADDRESS_MODE = GPUVM`` on chips
+       that support XNACK. The current default kernel driver setting is XNACK
+       disabled on the graphics ring and XNACK enabled on the compute ring.
+       If XNACK is enabled, the VMEM latency can be worse. If XNACK is
+       disabled, the 2 SGPRs otherwise reserved for the XNACK mask can be used
+       for general purposes.
+
    * - ``amdgpu.sramecc``
      - ``i32``
      - Error

@@ -348,6 +348,14 @@ public:
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
 
+  /// Construct a TargetID for triple \p TT and processor \p CPU, taking the
+  /// xnack/sramecc modes from the subtarget \p FeatureString (a comma-separated
+  /// "+xnack,-sramecc" list). Unspecified modes keep the processor's default.
+  /// The assembler uses this because it has no target directive to carry the
+  /// mode.
+  static TargetID createFromSubtargetFeatures(const Triple &TT, StringRef CPU,
+                                              StringRef FeatureString);
+
   /// Returns true if \p Other denotes the same target as *this, i.e. the same
   /// processor and xnack/sramecc settings on a compatible triple. This is a
   /// semantic equality that looks through spelling differences.
