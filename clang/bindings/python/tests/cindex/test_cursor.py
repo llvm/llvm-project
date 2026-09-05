@@ -9,6 +9,7 @@ from clang.cindex import (
     TemplateArgumentKind,
     TranslationUnit,
     TypeKind,
+    UnaryOperator,
     conf,
 )
 
@@ -985,6 +986,54 @@ int d_noninline;
         for op, typ in operators.items():
             c = get_cursor(tu, op)
             assert c.binary_operator == typ
+
+    def test_unaryop(self):
+        tu = get_tu(
+            """
+                void func(void) {
+                int a = 0;
+                a++;
+                ++a;
+                a--;
+                --a;
+                *(&a);
+                +a;
+                -a;
+                !a;
+                ~a;
+                float _Complex b;
+                __real b;
+                __imag b;
+                __extension__ a;
+            }""",
+            lang="cpp",
+        )
+
+        operators = {
+            "&": UnaryOperator.AddrOf,
+            "*": UnaryOperator.Deref,
+            "+": UnaryOperator.Plus,
+            "-": UnaryOperator.Minus,
+            "~": UnaryOperator.Not,
+            "!": UnaryOperator.LNot,
+            "__real": UnaryOperator.Real,
+            "__imag": UnaryOperator.Imag,
+            "__extension__": UnaryOperator.Extension,
+        }
+
+        for op, typ in operators.items():
+            c = get_cursor(tu, op)
+            assert c.unary_operator == typ
+
+        shoulds = (
+            UnaryOperator.PostInc,
+            UnaryOperator.PreInc,
+            UnaryOperator.PostDec,
+            UnaryOperator.PreDec,
+        )
+        haves = list(next(tu.cursor.get_children()).get_children())[1:]
+        for should_be, has in zip(shoulds, haves):
+            assert should_be == has
 
     def test_from_result_null(self):
         tu = get_tu("int a = 1+2;", lang="cpp")
