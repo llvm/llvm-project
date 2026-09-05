@@ -9,105 +9,89 @@ define <4 x i32> @pdep_v4i32(<4 x i32> %val, <4 x i32> %mask) nounwind {
 ; SLOW-ZNVER-LABEL: pdep_v4i32:
 ; SLOW-ZNVER:       # %bb.0:
 ; SLOW-ZNVER-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; SLOW-ZNVER-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; SLOW-ZNVER-NEXT:    vpxor %xmm2, %xmm1, %xmm2
-; SLOW-ZNVER-NEXT:    vmovq %rax, %xmm3
-; SLOW-ZNVER-NEXT:    vpaddd %xmm2, %xmm2, %xmm4
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm4, %xmm2
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm3, %xmm4, %xmm5
-; SLOW-ZNVER-NEXT:    vmovq %xmm5, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; SLOW-ZNVER-NEXT:    vmovq %xmm5, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm5
-; SLOW-ZNVER-NEXT:    vpand %xmm1, %xmm5, %xmm2
-; SLOW-ZNVER-NEXT:    vpandn %xmm4, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vpxor %xmm2, %xmm1, %xmm6
-; SLOW-ZNVER-NEXT:    vpsrld $1, %xmm2, %xmm7
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm5, %xmm4
-; SLOW-ZNVER-NEXT:    vpor %xmm7, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
+; SLOW-ZNVER-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; SLOW-ZNVER-NEXT:    vpaddd %xmm3, %xmm3, %xmm5
+; SLOW-ZNVER-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,255,255,0,0,0,0,255,255,255,255,0,0,0,0]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm5, %xmm6
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm4
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm6, %xmm7
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm6, %xmm6
 ; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm7[0],xmm4[1],xmm7[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm3, %xmm5, %xmm7
-; SLOW-ZNVER-NEXT:    vmovq %xmm7, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[3,3,3,3]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm7
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm6[0],xmm4[0],xmm6[1],xmm4[1]
+; SLOW-ZNVER-NEXT:    vpandn %xmm5, %xmm4, %xmm5
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm5, %xmm7
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm6
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm8
 ; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; SLOW-ZNVER-NEXT:    vmovq %xmm7, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm7
-; SLOW-ZNVER-NEXT:    vpand %xmm6, %xmm7, %xmm4
-; SLOW-ZNVER-NEXT:    vpandn %xmm5, %xmm7, %xmm7
-; SLOW-ZNVER-NEXT:    vpxor %xmm4, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vpsrld $2, %xmm4, %xmm8
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm5
-; SLOW-ZNVER-NEXT:    vpor %xmm6, %xmm8, %xmm6
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm8 = xmm7[1,1,1,1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm8
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1]
+; SLOW-ZNVER-NEXT:    vpandn %xmm5, %xmm6, %xmm5
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm5, %xmm8
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm7
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm9
 ; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm8[0],xmm5[1],xmm8[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm3, %xmm7, %xmm8
-; SLOW-ZNVER-NEXT:    vmovq %xmm8, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm8 = xmm7[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vmovq %xmm8, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm8
-; SLOW-ZNVER-NEXT:    vpand %xmm6, %xmm8, %xmm5
-; SLOW-ZNVER-NEXT:    vpandn %xmm7, %xmm8, %xmm7
-; SLOW-ZNVER-NEXT:    vpxor %xmm5, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vpsrld $4, %xmm5, %xmm9
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm8
-; SLOW-ZNVER-NEXT:    vpor %xmm6, %xmm9, %xmm6
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[1,1,1,1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm9
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
+; SLOW-ZNVER-NEXT:    vpandn %xmm5, %xmm7, %xmm5
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm5, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm8
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm9, %xmm10
 ; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm3, %xmm7, %xmm9
-; SLOW-ZNVER-NEXT:    vmovq %xmm9, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vmovq %xmm9, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vpand %xmm6, %xmm8, %xmm9
-; SLOW-ZNVER-NEXT:    vpandn %xmm7, %xmm8, %xmm7
-; SLOW-ZNVER-NEXT:    vpxor %xmm6, %xmm9, %xmm6
-; SLOW-ZNVER-NEXT:    vpsrld $8, %xmm9, %xmm10
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm3, %xmm7, %xmm11
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm8
-; SLOW-ZNVER-NEXT:    vpor %xmm6, %xmm10, %xmm6
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm10
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm3
-; SLOW-ZNVER-NEXT:    vmovq %xmm11, %rax
 ; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm10[0],xmm8[1],xmm10[1]
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vmovq %xmm3, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm3
-; SLOW-ZNVER-NEXT:    vpand %xmm6, %xmm3, %xmm3
-; SLOW-ZNVER-NEXT:    vpslld $16, %xmm0, %xmm6
-; SLOW-ZNVER-NEXT:    vpand %xmm3, %xmm6, %xmm6
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm10
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpandn %xmm5, %xmm8, %xmm5
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm5, %xmm10
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm2
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm10, %xmm11
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm3
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm2[0],xmm9[0],xmm2[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpand %xmm1, %xmm4, %xmm9
+; SLOW-ZNVER-NEXT:    vpxor %xmm1, %xmm9, %xmm4
+; SLOW-ZNVER-NEXT:    vpsrld $1, %xmm9, %xmm5
+; SLOW-ZNVER-NEXT:    vpor %xmm5, %xmm4, %xmm4
+; SLOW-ZNVER-NEXT:    vpand %xmm4, %xmm6, %xmm5
+; SLOW-ZNVER-NEXT:    vpxor %xmm5, %xmm4, %xmm4
+; SLOW-ZNVER-NEXT:    vpsrld $2, %xmm5, %xmm6
+; SLOW-ZNVER-NEXT:    vpor %xmm6, %xmm4, %xmm4
+; SLOW-ZNVER-NEXT:    vpand %xmm4, %xmm7, %xmm6
+; SLOW-ZNVER-NEXT:    vpxor %xmm6, %xmm4, %xmm4
+; SLOW-ZNVER-NEXT:    vpsrld $4, %xmm6, %xmm7
+; SLOW-ZNVER-NEXT:    vpor %xmm7, %xmm4, %xmm4
+; SLOW-ZNVER-NEXT:    vpand %xmm4, %xmm8, %xmm7
+; SLOW-ZNVER-NEXT:    vpxor %xmm7, %xmm4, %xmm4
+; SLOW-ZNVER-NEXT:    vpsrld $8, %xmm7, %xmm8
+; SLOW-ZNVER-NEXT:    vpor %xmm4, %xmm8, %xmm4
+; SLOW-ZNVER-NEXT:    vpand %xmm4, %xmm3, %xmm3
+; SLOW-ZNVER-NEXT:    vpslld $16, %xmm0, %xmm4
+; SLOW-ZNVER-NEXT:    vpand %xmm3, %xmm4, %xmm4
 ; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm3, %xmm0
-; SLOW-ZNVER-NEXT:    vpor %xmm6, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm9, %xmm3
+; SLOW-ZNVER-NEXT:    vpor %xmm4, %xmm0, %xmm0
+; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm7, %xmm3
 ; SLOW-ZNVER-NEXT:    vpslld $8, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    vpand %xmm0, %xmm9, %xmm0
+; SLOW-ZNVER-NEXT:    vpand %xmm7, %xmm0, %xmm0
+; SLOW-ZNVER-NEXT:    vpor %xmm0, %xmm3, %xmm0
+; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm6, %xmm3
+; SLOW-ZNVER-NEXT:    vpslld $4, %xmm0, %xmm0
+; SLOW-ZNVER-NEXT:    vpand %xmm6, %xmm0, %xmm0
 ; SLOW-ZNVER-NEXT:    vpor %xmm0, %xmm3, %xmm0
 ; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm5, %xmm3
-; SLOW-ZNVER-NEXT:    vpslld $4, %xmm0, %xmm0
+; SLOW-ZNVER-NEXT:    vpslld $2, %xmm0, %xmm0
 ; SLOW-ZNVER-NEXT:    vpand %xmm5, %xmm0, %xmm0
 ; SLOW-ZNVER-NEXT:    vpor %xmm0, %xmm3, %xmm0
-; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm4, %xmm3
-; SLOW-ZNVER-NEXT:    vpslld $2, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    vpand %xmm4, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    vpor %xmm0, %xmm3, %xmm0
-; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm2, %xmm3
+; SLOW-ZNVER-NEXT:    vpandn %xmm0, %xmm9, %xmm3
 ; SLOW-ZNVER-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; SLOW-ZNVER-NEXT:    vpand %xmm0, %xmm9, %xmm0
 ; SLOW-ZNVER-NEXT:    vpor %xmm0, %xmm3, %xmm0
 ; SLOW-ZNVER-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; SLOW-ZNVER-NEXT:    retq
@@ -115,96 +99,80 @@ define <4 x i32> @pdep_v4i32(<4 x i32> %val, <4 x i32> %mask) nounwind {
 ; SLOW-BDVER4-LABEL: pdep_v4i32:
 ; SLOW-BDVER4:       # %bb.0:
 ; SLOW-BDVER4-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; SLOW-BDVER4-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; SLOW-BDVER4-NEXT:    vpxor %xmm2, %xmm1, %xmm2
-; SLOW-BDVER4-NEXT:    vpaddd %xmm2, %xmm2, %xmm4
-; SLOW-BDVER4-NEXT:    vmovq %rax, %xmm2
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm4, %xmm3
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm4, %xmm5
-; SLOW-BDVER4-NEXT:    vmovq %xmm5, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; SLOW-BDVER4-NEXT:    vmovq %xmm5, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm5
-; SLOW-BDVER4-NEXT:    vpand %xmm1, %xmm5, %xmm3
-; SLOW-BDVER4-NEXT:    vpandn %xmm4, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vpxor %xmm3, %xmm1, %xmm6
-; SLOW-BDVER4-NEXT:    vpsrld $1, %xmm3, %xmm7
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm4
-; SLOW-BDVER4-NEXT:    vpor %xmm7, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
+; SLOW-BDVER4-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; SLOW-BDVER4-NEXT:    vpaddd %xmm3, %xmm3, %xmm5
+; SLOW-BDVER4-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,255,255,0,0,0,0,255,255,255,255,0,0,0,0]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm5, %xmm6
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm4
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm6, %xmm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm6, %xmm6
 ; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm7[0],xmm4[1],xmm7[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm5, %xmm7
-; SLOW-BDVER4-NEXT:    vmovq %xmm7, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; SLOW-BDVER4-NEXT:    vmovq %xmm7, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm7
-; SLOW-BDVER4-NEXT:    vpand %xmm6, %xmm7, %xmm4
-; SLOW-BDVER4-NEXT:    vpandn %xmm5, %xmm7, %xmm7
-; SLOW-BDVER4-NEXT:    vpxor %xmm4, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vpsrld $2, %xmm4, %xmm8
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm5
-; SLOW-BDVER4-NEXT:    vpor %xmm6, %xmm8, %xmm6
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm8 = xmm7[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm8[0],xmm5[1],xmm8[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm8
-; SLOW-BDVER4-NEXT:    vmovq %xmm8, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm8 = xmm7[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vmovq %xmm8, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm8
-; SLOW-BDVER4-NEXT:    vpand %xmm6, %xmm8, %xmm5
-; SLOW-BDVER4-NEXT:    vpandn %xmm7, %xmm8, %xmm7
-; SLOW-BDVER4-NEXT:    vpxor %xmm5, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vpsrld $4, %xmm5, %xmm9
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm8
-; SLOW-BDVER4-NEXT:    vpor %xmm6, %xmm9, %xmm6
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm9
-; SLOW-BDVER4-NEXT:    vmovq %xmm9, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vmovq %xmm9, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vpand %xmm6, %xmm8, %xmm9
-; SLOW-BDVER4-NEXT:    vpandn %xmm7, %xmm8, %xmm7
-; SLOW-BDVER4-NEXT:    vpxor %xmm6, %xmm9, %xmm6
-; SLOW-BDVER4-NEXT:    vpsrld $8, %xmm9, %xmm10
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm11
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm8
-; SLOW-BDVER4-NEXT:    vpor %xmm6, %xmm10, %xmm6
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm10, %xmm10
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm2
-; SLOW-BDVER4-NEXT:    vpslld $16, %xmm0, %xmm7
-; SLOW-BDVER4-NEXT:    vmovq %xmm11, %rax
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm7
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm6[0],xmm4[0],xmm6[1],xmm4[1]
+; SLOW-BDVER4-NEXT:    vpandn %xmm5, %xmm4, %xmm5
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm5, %xmm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm6
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm8
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1]
+; SLOW-BDVER4-NEXT:    vpandn %xmm5, %xmm6, %xmm5
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm5, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm9
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
+; SLOW-BDVER4-NEXT:    vpandn %xmm5, %xmm7, %xmm5
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm5, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm9, %xmm10
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
 ; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm10[0],xmm8[1],xmm10[1]
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vmovq %xmm2, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm2
-; SLOW-BDVER4-NEXT:    vpand %xmm6, %xmm2, %xmm2
-; SLOW-BDVER4-NEXT:    vpcmov %xmm2, %xmm0, %xmm7, %xmm0
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm10
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpandn %xmm5, %xmm8, %xmm5
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm5, %xmm10
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm2
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm10, %xmm11
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm3
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm9[0],xmm2[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpand %xmm1, %xmm4, %xmm9
+; SLOW-BDVER4-NEXT:    vpxor %xmm1, %xmm9, %xmm4
+; SLOW-BDVER4-NEXT:    vpsrld $1, %xmm9, %xmm5
+; SLOW-BDVER4-NEXT:    vpor %xmm5, %xmm4, %xmm4
+; SLOW-BDVER4-NEXT:    vpand %xmm4, %xmm6, %xmm5
+; SLOW-BDVER4-NEXT:    vpxor %xmm5, %xmm4, %xmm4
+; SLOW-BDVER4-NEXT:    vpsrld $2, %xmm5, %xmm6
+; SLOW-BDVER4-NEXT:    vpor %xmm6, %xmm4, %xmm4
+; SLOW-BDVER4-NEXT:    vpand %xmm4, %xmm7, %xmm6
+; SLOW-BDVER4-NEXT:    vpxor %xmm6, %xmm4, %xmm4
+; SLOW-BDVER4-NEXT:    vpsrld $4, %xmm6, %xmm7
+; SLOW-BDVER4-NEXT:    vpor %xmm7, %xmm4, %xmm4
+; SLOW-BDVER4-NEXT:    vpand %xmm4, %xmm8, %xmm7
+; SLOW-BDVER4-NEXT:    vpxor %xmm7, %xmm4, %xmm4
+; SLOW-BDVER4-NEXT:    vpsrld $8, %xmm7, %xmm8
+; SLOW-BDVER4-NEXT:    vpor %xmm4, %xmm8, %xmm4
+; SLOW-BDVER4-NEXT:    vpslld $16, %xmm0, %xmm8
+; SLOW-BDVER4-NEXT:    vpand %xmm4, %xmm2, %xmm2
+; SLOW-BDVER4-NEXT:    vpcmov %xmm2, %xmm0, %xmm8, %xmm0
 ; SLOW-BDVER4-NEXT:    vpslld $8, %xmm0, %xmm2
-; SLOW-BDVER4-NEXT:    vpcmov %xmm9, %xmm0, %xmm2, %xmm0
+; SLOW-BDVER4-NEXT:    vpcmov %xmm7, %xmm0, %xmm2, %xmm0
 ; SLOW-BDVER4-NEXT:    vpslld $4, %xmm0, %xmm2
-; SLOW-BDVER4-NEXT:    vpcmov %xmm5, %xmm0, %xmm2, %xmm0
+; SLOW-BDVER4-NEXT:    vpcmov %xmm6, %xmm0, %xmm2, %xmm0
 ; SLOW-BDVER4-NEXT:    vpslld $2, %xmm0, %xmm2
-; SLOW-BDVER4-NEXT:    vpcmov %xmm4, %xmm0, %xmm2, %xmm0
+; SLOW-BDVER4-NEXT:    vpcmov %xmm5, %xmm0, %xmm2, %xmm0
 ; SLOW-BDVER4-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
-; SLOW-BDVER4-NEXT:    vpcmov %xmm3, %xmm0, %xmm2, %xmm0
+; SLOW-BDVER4-NEXT:    vpcmov %xmm9, %xmm0, %xmm2, %xmm0
 ; SLOW-BDVER4-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; SLOW-BDVER4-NEXT:    retq
 ;
@@ -234,167 +202,137 @@ define <4 x i32> @pdep_v4i32(<4 x i32> %val, <4 x i32> %mask) nounwind {
 define <8 x i32> @pdep_v8i32(<8 x i32> %val, <8 x i32> %mask) nounwind {
 ; SLOW-ZNVER-LABEL: pdep_v8i32:
 ; SLOW-ZNVER:       # %bb.0:
+; SLOW-ZNVER-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,255,255,0,0,0,0,255,255,255,255,0,0,0,0]
 ; SLOW-ZNVER-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; SLOW-ZNVER-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; SLOW-ZNVER-NEXT:    vpxor %ymm2, %ymm1, %ymm2
-; SLOW-ZNVER-NEXT:    vpaddd %ymm2, %ymm2, %ymm4
-; SLOW-ZNVER-NEXT:    vmovq %rax, %xmm2
-; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm4, %xmm3
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm5
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm3, %xmm6
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm3
-; SLOW-ZNVER-NEXT:    vmovq %xmm6, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm6 = xmm4[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vmovq %xmm3, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm4, %xmm5
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm4, %xmm6
-; SLOW-ZNVER-NEXT:    vmovq %xmm6, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm6 = xmm4[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vmovq %xmm6, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm3, %ymm5, %ymm3
-; SLOW-ZNVER-NEXT:    vpandn %ymm4, %ymm3, %ymm5
+; SLOW-ZNVER-NEXT:    vpaddd %ymm2, %ymm2, %ymm5
+; SLOW-ZNVER-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm5, %xmm4
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm7 = xmm4[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm4, %xmm6
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm4, %xmm7
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[3,3,3,3]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm4, %xmm7
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm4, %xmm6
 ; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm4, %xmm4
-; SLOW-ZNVER-NEXT:    vmovq %xmm7, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vmovq %xmm4, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm6, %xmm4
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm6
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm5, %xmm7
-; SLOW-ZNVER-NEXT:    vmovq %xmm7, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vmovq %xmm7, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm6, %xmm6
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm8
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm7[0],xmm4[1],xmm7[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm5, %xmm7
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm8
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm6
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm8
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1]
 ; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm4, %ymm6, %ymm4
 ; SLOW-ZNVER-NEXT:    vpandn %ymm5, %ymm4, %ymm6
 ; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm6, %xmm5
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm8 = xmm5[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm7
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm8[0],xmm7[1],xmm8[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm5, %xmm8
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[3,3,3,3]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm5, %xmm8
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm7
 ; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm5
-; SLOW-ZNVER-NEXT:    vmovq %xmm8, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm8 = xmm6[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm7, %xmm7
-; SLOW-ZNVER-NEXT:    vmovq %xmm5, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm7, %xmm5
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm7
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm8[0],xmm7[1],xmm8[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm8
-; SLOW-ZNVER-NEXT:    vmovq %xmm8, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm8 = xmm6[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm7, %xmm7
-; SLOW-ZNVER-NEXT:    vmovq %xmm8, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm7, %xmm7
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm8[0],xmm5[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm6, %xmm8
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm7[0],xmm5[1],xmm7[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm6, %xmm7
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm9
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
 ; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm5, %ymm7, %ymm5
 ; SLOW-ZNVER-NEXT:    vpandn %ymm6, %ymm5, %ymm7
 ; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm7, %xmm6
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm9 = xmm6[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm8
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm9
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[3,3,3,3]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm6, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm6, %xmm8
 ; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-ZNVER-NEXT:    vmovq %xmm9, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vmovq %xmm6, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm6
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm8
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm9
-; SLOW-ZNVER-NEXT:    vmovq %xmm9, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vmovq %xmm9, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm8
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm9, %xmm10
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm9[0],xmm6[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm10[0],xmm8[1],xmm10[1]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm7, %xmm9
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm9, %xmm10
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm7, %xmm8
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm10[0],xmm8[1],xmm10[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm10
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
 ; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm6, %ymm8, %ymm6
-; SLOW-ZNVER-NEXT:    vpandn %ymm7, %ymm6, %ymm7
-; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm7, %xmm8
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm11
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm10 = xmm8[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm9
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm10, %xmm10
+; SLOW-ZNVER-NEXT:    vpandn %ymm7, %ymm6, %ymm8
+; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm8, %xmm7
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm7, %xmm10
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm7, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm10, %xmm11
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm10
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm10[0],xmm7[1],xmm10[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm8, %xmm10
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm10, %xmm11
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm8, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm10
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm11
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm11[0],xmm10[0],xmm11[1],xmm10[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm7, %ymm9, %ymm7
+; SLOW-ZNVER-NEXT:    vpandn %ymm8, %ymm7, %ymm8
+; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm8, %xmm9
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm8, %xmm13
+; SLOW-ZNVER-NEXT:    vpsrlq $32, %xmm9, %xmm11
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm9, %xmm10
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm11, %xmm12
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm11, %xmm11
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm10[0],xmm12[0],xmm10[1],xmm12[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm3, %xmm13, %xmm12
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm3, %xmm13, %xmm3
 ; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm10[0],xmm9[1],xmm10[1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $1, %xmm2, %xmm8, %xmm10
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm8 = xmm8[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-ZNVER-NEXT:    vmovq %xmm10, %rax
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[1,1,1,1]
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm10, %xmm10
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm9, %xmm9
-; SLOW-ZNVER-NEXT:    vmovq %xmm8, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm9, %xmm8
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm9
-; SLOW-ZNVER-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[3,3,3,3]
-; SLOW-ZNVER-NEXT:    vmovq %xmm11, %rax
-; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm2
-; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm10[0],xmm9[1],xmm10[1]
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm9, %xmm9
-; SLOW-ZNVER-NEXT:    vmovq %xmm2, %rax
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %eax, %xmm9, %xmm2
-; SLOW-ZNVER-NEXT:    vpand %ymm1, %ymm3, %ymm9
-; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm8, %ymm2, %ymm7
-; SLOW-ZNVER-NEXT:    vpxor %ymm1, %ymm9, %ymm3
+; SLOW-ZNVER-NEXT:    vpclmulqdq $17, %xmm2, %xmm8, %xmm10
+; SLOW-ZNVER-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm2
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm10[0],xmm12[0],xmm10[1],xmm12[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SLOW-ZNVER-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm10[0],xmm2[1],xmm10[1]
+; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm9, %ymm2, %ymm3
+; SLOW-ZNVER-NEXT:    vpand %ymm1, %ymm4, %ymm9
+; SLOW-ZNVER-NEXT:    vpxor %ymm1, %ymm9, %ymm4
 ; SLOW-ZNVER-NEXT:    vpsrld $1, %ymm9, %ymm8
-; SLOW-ZNVER-NEXT:    vpor %ymm3, %ymm8, %ymm3
+; SLOW-ZNVER-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-ZNVER-NEXT:    vpand %ymm4, %ymm5, %ymm5
+; SLOW-ZNVER-NEXT:    vpxor %ymm5, %ymm4, %ymm4
+; SLOW-ZNVER-NEXT:    vpsrld $2, %ymm5, %ymm8
+; SLOW-ZNVER-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-ZNVER-NEXT:    vpand %ymm4, %ymm6, %ymm6
+; SLOW-ZNVER-NEXT:    vpxor %ymm6, %ymm4, %ymm4
+; SLOW-ZNVER-NEXT:    vpsrld $4, %ymm6, %ymm8
+; SLOW-ZNVER-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-ZNVER-NEXT:    vpand %ymm4, %ymm7, %ymm7
+; SLOW-ZNVER-NEXT:    vpxor %ymm7, %ymm4, %ymm4
+; SLOW-ZNVER-NEXT:    vpsrld $8, %ymm7, %ymm8
+; SLOW-ZNVER-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-ZNVER-NEXT:    vpand %ymm4, %ymm3, %ymm3
+; SLOW-ZNVER-NEXT:    vpslld $16, %ymm0, %ymm4
 ; SLOW-ZNVER-NEXT:    vpand %ymm3, %ymm4, %ymm4
-; SLOW-ZNVER-NEXT:    vpxor %ymm4, %ymm3, %ymm3
-; SLOW-ZNVER-NEXT:    vpsrld $2, %ymm4, %ymm8
-; SLOW-ZNVER-NEXT:    vpor %ymm3, %ymm8, %ymm3
-; SLOW-ZNVER-NEXT:    vpand %ymm3, %ymm5, %ymm5
-; SLOW-ZNVER-NEXT:    vpxor %ymm5, %ymm3, %ymm3
-; SLOW-ZNVER-NEXT:    vpsrld $4, %ymm5, %ymm8
-; SLOW-ZNVER-NEXT:    vpor %ymm3, %ymm8, %ymm3
-; SLOW-ZNVER-NEXT:    vpand %ymm3, %ymm6, %ymm6
-; SLOW-ZNVER-NEXT:    vpxor %ymm6, %ymm3, %ymm3
-; SLOW-ZNVER-NEXT:    vpsrld $8, %ymm6, %ymm8
-; SLOW-ZNVER-NEXT:    vpor %ymm3, %ymm8, %ymm3
-; SLOW-ZNVER-NEXT:    vpand %ymm3, %ymm7, %ymm3
-; SLOW-ZNVER-NEXT:    vpslld $16, %ymm0, %ymm7
-; SLOW-ZNVER-NEXT:    vpand %ymm3, %ymm7, %ymm7
 ; SLOW-ZNVER-NEXT:    vpandn %ymm0, %ymm3, %ymm0
-; SLOW-ZNVER-NEXT:    vpor %ymm7, %ymm0, %ymm0
-; SLOW-ZNVER-NEXT:    vpandn %ymm0, %ymm6, %ymm3
+; SLOW-ZNVER-NEXT:    vpor %ymm4, %ymm0, %ymm0
+; SLOW-ZNVER-NEXT:    vpandn %ymm0, %ymm7, %ymm3
 ; SLOW-ZNVER-NEXT:    vpslld $8, %ymm0, %ymm0
+; SLOW-ZNVER-NEXT:    vpand %ymm7, %ymm0, %ymm0
+; SLOW-ZNVER-NEXT:    vpor %ymm0, %ymm3, %ymm0
+; SLOW-ZNVER-NEXT:    vpandn %ymm0, %ymm6, %ymm3
+; SLOW-ZNVER-NEXT:    vpslld $4, %ymm0, %ymm0
 ; SLOW-ZNVER-NEXT:    vpand %ymm6, %ymm0, %ymm0
 ; SLOW-ZNVER-NEXT:    vpor %ymm0, %ymm3, %ymm0
 ; SLOW-ZNVER-NEXT:    vpandn %ymm0, %ymm5, %ymm3
-; SLOW-ZNVER-NEXT:    vpslld $4, %ymm0, %ymm0
-; SLOW-ZNVER-NEXT:    vpand %ymm5, %ymm0, %ymm0
-; SLOW-ZNVER-NEXT:    vpor %ymm0, %ymm3, %ymm0
-; SLOW-ZNVER-NEXT:    vpandn %ymm0, %ymm4, %ymm3
 ; SLOW-ZNVER-NEXT:    vpslld $2, %ymm0, %ymm0
-; SLOW-ZNVER-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; SLOW-ZNVER-NEXT:    vpand %ymm5, %ymm0, %ymm0
 ; SLOW-ZNVER-NEXT:    vpor %ymm0, %ymm3, %ymm0
 ; SLOW-ZNVER-NEXT:    vpandn %ymm0, %ymm9, %ymm3
 ; SLOW-ZNVER-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
@@ -405,162 +343,132 @@ define <8 x i32> @pdep_v8i32(<8 x i32> %val, <8 x i32> %mask) nounwind {
 ;
 ; SLOW-BDVER4-LABEL: pdep_v8i32:
 ; SLOW-BDVER4:       # %bb.0:
+; SLOW-BDVER4-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,255,255,0,0,0,0,255,255,255,255,0,0,0,0]
 ; SLOW-BDVER4-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; SLOW-BDVER4-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; SLOW-BDVER4-NEXT:    vpxor %ymm2, %ymm1, %ymm2
-; SLOW-BDVER4-NEXT:    vpaddd %ymm2, %ymm2, %ymm4
-; SLOW-BDVER4-NEXT:    vmovq %rax, %xmm2
-; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm4, %xmm3
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm6 = xmm3[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm5
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm3, %xmm6
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm3, %xmm3
-; SLOW-BDVER4-NEXT:    vmovq %xmm6, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm6 = xmm4[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vmovq %xmm3, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm3
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm4, %xmm5
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm6[0],xmm5[1],xmm6[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm4, %xmm6
-; SLOW-BDVER4-NEXT:    vmovq %xmm6, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm6 = xmm4[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vmovq %xmm6, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm3, %ymm5, %ymm3
-; SLOW-BDVER4-NEXT:    vpandn %ymm4, %ymm3, %ymm5
-; SLOW-BDVER4-NEXT:    vpand %ymm1, %ymm3, %ymm3
+; SLOW-BDVER4-NEXT:    vpaddd %ymm2, %ymm2, %ymm5
+; SLOW-BDVER4-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm5, %xmm4
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm7 = xmm4[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm4, %xmm6
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm4, %xmm7
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[3,3,3,3]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm4, %xmm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm4, %xmm6
 ; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm4, %xmm4
-; SLOW-BDVER4-NEXT:    vmovq %xmm7, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vmovq %xmm4, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm6, %xmm4
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm6
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm7[0],xmm6[1],xmm7[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm5, %xmm7
-; SLOW-BDVER4-NEXT:    vmovq %xmm7, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm7 = xmm5[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vmovq %xmm7, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm6, %xmm6
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm7[0],xmm4[1],xmm7[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm5, %xmm7
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm7, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm6
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm7, %xmm7
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm8
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm7[0],xmm6[0],xmm7[1],xmm6[1]
 ; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm4, %ymm6, %ymm4
 ; SLOW-BDVER4-NEXT:    vpandn %ymm5, %ymm4, %ymm6
 ; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm6, %xmm5
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm8 = xmm5[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm7
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm8[0],xmm7[1],xmm8[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm5, %xmm8
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[3,3,3,3]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm5, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm5, %xmm7
 ; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm5, %xmm5
-; SLOW-BDVER4-NEXT:    vmovq %xmm8, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm8 = xmm6[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm7, %xmm7
-; SLOW-BDVER4-NEXT:    vmovq %xmm5, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm7, %xmm5
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm7
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm8[0],xmm7[1],xmm8[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm8
-; SLOW-BDVER4-NEXT:    vmovq %xmm8, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm8 = xmm6[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm7, %xmm7
-; SLOW-BDVER4-NEXT:    vmovq %xmm8, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm7, %xmm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm8[0],xmm5[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm6, %xmm8
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm5 = xmm5[0],xmm7[0],xmm5[1],xmm7[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm8, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm6, %xmm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm8, %xmm8
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm9
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm8[0],xmm7[0],xmm8[1],xmm7[1]
 ; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm5, %ymm7, %ymm5
 ; SLOW-BDVER4-NEXT:    vpandn %ymm6, %ymm5, %ymm7
 ; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm7, %xmm6
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm9 = xmm6[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm8
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm6, %xmm9
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm6 = xmm6[3,3,3,3]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm6, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm6, %xmm8
 ; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm6, %xmm6
-; SLOW-BDVER4-NEXT:    vmovq %xmm9, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vmovq %xmm6, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm6
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm8
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm9[0],xmm8[1],xmm9[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm9
-; SLOW-BDVER4-NEXT:    vmovq %xmm9, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm9 = xmm7[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vmovq %xmm9, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm8, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm9, %xmm10
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm9[0],xmm6[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm10[0],xmm8[1],xmm10[1]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm7, %xmm9
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm6 = xmm6[0],xmm8[0],xmm6[1],xmm8[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm9, %xmm10
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm7, %xmm8
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm9, %xmm9
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm8[0],xmm10[0],xmm8[1],xmm10[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm10
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm8 = xmm9[0],xmm8[0],xmm9[1],xmm8[1]
 ; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm6, %ymm8, %ymm6
-; SLOW-BDVER4-NEXT:    vpandn %ymm7, %ymm6, %ymm7
-; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm7, %xmm8
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm7, %xmm11
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm10 = xmm8[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm9
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm10, %xmm10
+; SLOW-BDVER4-NEXT:    vpandn %ymm7, %ymm6, %ymm8
+; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm8, %xmm7
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm7, %xmm10
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm7, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm10, %xmm11
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm10
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm10[0],xmm7[1],xmm10[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm8, %xmm10
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm7 = xmm7[0],xmm9[0],xmm7[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm10, %xmm11
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm8, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm10, %xmm10
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm11
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm11[0],xmm10[0],xmm11[1],xmm10[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm10[0],xmm9[0],xmm10[1],xmm9[1]
+; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm7, %ymm9, %ymm7
+; SLOW-BDVER4-NEXT:    vpandn %ymm8, %ymm7, %ymm8
+; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm8, %xmm9
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm8, %xmm13
+; SLOW-BDVER4-NEXT:    vpsrlq $32, %xmm9, %xmm11
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm9, %xmm10
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm9, %xmm9
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm11, %xmm12
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm11, %xmm11
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm10[0],xmm12[0],xmm10[1],xmm12[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm11[0],xmm9[1],xmm11[1]
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm3, %xmm13, %xmm12
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm3, %xmm13, %xmm3
 ; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm10[0],xmm9[1],xmm10[1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $1, %xmm2, %xmm8, %xmm10
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm8 = xmm8[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm8
-; SLOW-BDVER4-NEXT:    vmovq %xmm10, %rax
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm10 = xmm7[1,1,1,1]
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm10, %xmm10
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm9, %xmm9
-; SLOW-BDVER4-NEXT:    vmovq %xmm8, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm9, %xmm8
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm9
-; SLOW-BDVER4-NEXT:    vpshufd {{.*#+}} xmm7 = xmm7[3,3,3,3]
-; SLOW-BDVER4-NEXT:    vmovq %xmm11, %rax
-; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm7, %xmm2
-; SLOW-BDVER4-NEXT:    vpxor %ymm3, %ymm1, %ymm7
-; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm9 = xmm9[0],xmm10[0],xmm9[1],xmm10[1]
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm9, %xmm9
-; SLOW-BDVER4-NEXT:    vmovq %xmm2, %rax
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %eax, %xmm9, %xmm2
-; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm8, %ymm2, %ymm2
-; SLOW-BDVER4-NEXT:    vpsrld $1, %ymm3, %ymm8
-; SLOW-BDVER4-NEXT:    vpor %ymm7, %ymm8, %ymm7
-; SLOW-BDVER4-NEXT:    vpand %ymm7, %ymm4, %ymm4
-; SLOW-BDVER4-NEXT:    vpxor %ymm4, %ymm7, %ymm7
-; SLOW-BDVER4-NEXT:    vpsrld $2, %ymm4, %ymm8
-; SLOW-BDVER4-NEXT:    vpor %ymm7, %ymm8, %ymm7
-; SLOW-BDVER4-NEXT:    vpand %ymm7, %ymm5, %ymm5
-; SLOW-BDVER4-NEXT:    vpxor %ymm5, %ymm7, %ymm7
-; SLOW-BDVER4-NEXT:    vpsrld $4, %ymm5, %ymm8
-; SLOW-BDVER4-NEXT:    vpor %ymm7, %ymm8, %ymm7
-; SLOW-BDVER4-NEXT:    vpand %ymm7, %ymm6, %ymm6
-; SLOW-BDVER4-NEXT:    vpxor %ymm6, %ymm7, %ymm7
-; SLOW-BDVER4-NEXT:    vpsrld $8, %ymm6, %ymm8
-; SLOW-BDVER4-NEXT:    vpor %ymm7, %ymm8, %ymm7
+; SLOW-BDVER4-NEXT:    vpclmulqdq $17, %xmm2, %xmm8, %xmm10
+; SLOW-BDVER4-NEXT:    vpclmulqdq $0, %xmm2, %xmm8, %xmm2
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm10 = xmm10[0],xmm12[0],xmm10[1],xmm12[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SLOW-BDVER4-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm2[0],xmm10[0],xmm2[1],xmm10[1]
+; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm9, %ymm2, %ymm2
+; SLOW-BDVER4-NEXT:    vpand %ymm1, %ymm4, %ymm9
+; SLOW-BDVER4-NEXT:    vpxor %ymm1, %ymm9, %ymm4
+; SLOW-BDVER4-NEXT:    vpsrld $1, %ymm9, %ymm8
+; SLOW-BDVER4-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-BDVER4-NEXT:    vpand %ymm4, %ymm5, %ymm5
+; SLOW-BDVER4-NEXT:    vpxor %ymm5, %ymm4, %ymm4
+; SLOW-BDVER4-NEXT:    vpsrld $2, %ymm5, %ymm8
+; SLOW-BDVER4-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-BDVER4-NEXT:    vpand %ymm4, %ymm6, %ymm6
+; SLOW-BDVER4-NEXT:    vpxor %ymm6, %ymm4, %ymm4
+; SLOW-BDVER4-NEXT:    vpsrld $4, %ymm6, %ymm8
+; SLOW-BDVER4-NEXT:    vpor %ymm4, %ymm8, %ymm4
+; SLOW-BDVER4-NEXT:    vpand %ymm4, %ymm7, %ymm7
+; SLOW-BDVER4-NEXT:    vpxor %ymm7, %ymm4, %ymm4
+; SLOW-BDVER4-NEXT:    vpsrld $8, %ymm7, %ymm8
+; SLOW-BDVER4-NEXT:    vpor %ymm4, %ymm8, %ymm4
 ; SLOW-BDVER4-NEXT:    vpslld $16, %ymm0, %ymm8
-; SLOW-BDVER4-NEXT:    vpand %ymm7, %ymm2, %ymm2
+; SLOW-BDVER4-NEXT:    vpand %ymm4, %ymm2, %ymm2
 ; SLOW-BDVER4-NEXT:    vpcmov %ymm2, %ymm0, %ymm8, %ymm0
 ; SLOW-BDVER4-NEXT:    vpslld $8, %ymm0, %ymm2
-; SLOW-BDVER4-NEXT:    vpcmov %ymm6, %ymm0, %ymm2, %ymm0
+; SLOW-BDVER4-NEXT:    vpcmov %ymm7, %ymm0, %ymm2, %ymm0
 ; SLOW-BDVER4-NEXT:    vpslld $4, %ymm0, %ymm2
-; SLOW-BDVER4-NEXT:    vpcmov %ymm5, %ymm0, %ymm2, %ymm0
+; SLOW-BDVER4-NEXT:    vpcmov %ymm6, %ymm0, %ymm2, %ymm0
 ; SLOW-BDVER4-NEXT:    vpslld $2, %ymm0, %ymm2
-; SLOW-BDVER4-NEXT:    vpcmov %ymm4, %ymm0, %ymm2, %ymm0
+; SLOW-BDVER4-NEXT:    vpcmov %ymm5, %ymm0, %ymm2, %ymm0
 ; SLOW-BDVER4-NEXT:    vpaddd %ymm0, %ymm0, %ymm2
-; SLOW-BDVER4-NEXT:    vpcmov %ymm3, %ymm0, %ymm2, %ymm0
+; SLOW-BDVER4-NEXT:    vpcmov %ymm9, %ymm0, %ymm2, %ymm0
 ; SLOW-BDVER4-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; SLOW-BDVER4-NEXT:    retq
 ;
