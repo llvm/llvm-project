@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implementation of orc-rt-internal/support/sys/Memory.h on POSIX
+// Implementation of orc-rt-internal/bedrock/sys/Memory.h on POSIX
 // systems, in terms of mmap / munmap / mprotect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-internal/support/sys/Memory.h"
+#include "orc-rt-internal/bedrock/sys/Memory.h"
 
 #include "orc-rt-internal/support/sys/CacheControl.h"
 #include "orc-rt-internal/support/sys/Errno.h"

@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_INTERNAL_SUPPORT_SYS_MEMORY_H
-#define ORC_RT_INTERNAL_SUPPORT_SYS_MEMORY_H
+#ifndef ORC_RT_INTERNAL_BEDROCK_SYS_MEMORY_H
+#define ORC_RT_INTERNAL_BEDROCK_SYS_MEMORY_H
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/MemoryFlags.h"
@@ -41,4 +41,4 @@ Error protectMemory(void *Base, size_t Size, MemProt MP);
 
 } // namespace orc_rt::sys
 
-#endif // ORC_RT_INTERNAL_SUPPORT_SYS_MEMORY_H
+#endif // ORC_RT_INTERNAL_BEDROCK_SYS_MEMORY_H
