@@ -13421,8 +13421,19 @@ SDValue SITargetLowering::widenLoad(LoadSDNode *Ld,
   assert((!MemVT.isVector() || Ld->getExtensionType() == ISD::NON_EXTLOAD) &&
          "unexpected vector extload");
 
-  // TODO: Drop only high part of range.
   SDValue Ptr = Ld->getBasePtr();
+
+  // The immediate byte offset for S_LOAD_DWORD* must be dword aligned. Do not
+  // widen a constant-address-space sub-dword load if its constant offset does
+  // not meet this requirement.
+  if (AS == AMDGPUAS::CONSTANT_ADDRESS &&
+      DAG.isBaseWithConstantOffset(Ptr)) {
+    auto *Offset = dyn_cast<ConstantSDNode>(Ptr.getOperand(1));
+    if (Offset && (Offset->getSExtValue() & 3) != 0)
+      return SDValue();
+  }
+
+  // TODO: Drop only high part of range.
   SDValue NewLoad = DAG.getLoad(
       ISD::UNINDEXED, ISD::NON_EXTLOAD, MVT::i32, SL, Ld->getChain(), Ptr,
       Ld->getOffset(), Ld->getPointerInfo(), MVT::i32, Ld->getAlign(),
