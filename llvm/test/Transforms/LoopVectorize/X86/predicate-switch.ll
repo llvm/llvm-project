@@ -1140,6 +1140,10 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[TMP13]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP16:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; FORCED-NEXT:    [[TMP17:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD3]], [[BROADCAST_SPLAT]]
+; FORCED-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP8]], <4 x i1> [[TMP16]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP24]])
+; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP7]], <4 x i1> [[TMP25]])
 ; FORCED-NEXT:    [[TMP18:%.*]] = xor <4 x i1> [[TMP16]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP19:%.*]] = xor <4 x i1> [[TMP17]], splat (i1 true)
 ; FORCED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP8]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
@@ -1148,10 +1152,6 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[TMP21]], [[TMP11]]
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP22]])
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> zeroinitializer, ptr align 1 [[TMP7]], <4 x i1> [[TMP23]])
-; FORCED-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP8]], <4 x i1> [[TMP16]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP9]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP24]])
-; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP7]], <4 x i1> [[TMP25]])
 ; FORCED-NEXT:    [[TMP26:%.*]] = or <4 x i1> [[TMP24]], [[TMP14]]
 ; FORCED-NEXT:    [[TMP27:%.*]] = or <4 x i1> [[TMP25]], [[TMP15]]
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP26]])

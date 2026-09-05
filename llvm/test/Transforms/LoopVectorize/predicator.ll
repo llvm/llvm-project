@@ -94,17 +94,17 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c3, i1 %c4, i1 %c6)
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT8]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP4]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x i1> [[BROADCAST_SPLAT6]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[BROADCAST_SPLAT4]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP13:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP14]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP5]], <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i1> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 1)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE12]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE12]] ]
