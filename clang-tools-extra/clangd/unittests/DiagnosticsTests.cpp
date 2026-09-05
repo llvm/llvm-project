@@ -32,6 +32,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -44,6 +45,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -63,13 +65,10 @@ using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
-::testing::Matcher<const Diag &> withFix(::testing::Matcher<Fix> FixMatcher) {
-  return Field(&Diag::Fixes, ElementsAre(FixMatcher));
-}
-
+template <typename... T>
 ::testing::Matcher<const Diag &> withFix(::testing::Matcher<Fix> FixMatcher1,
-                                         ::testing::Matcher<Fix> FixMatcher2) {
-  return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, FixMatcher2));
+                                         T... Rest) {
+  return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, Rest...));
 }
 
 ::testing::Matcher<const Diag &> withID(unsigned ID) {
@@ -127,9 +126,13 @@ MATCHER_P(equalToFix, Fix, "LSP fix " + llvm::to_string(Fix)) {
     return false;
   if (arg.Edits.size() != Fix.Edits.size())
     return false;
+  auto LHSEdits = arg.Edits;
+  auto RHSEdits = Fix.Edits;
+  llvm::sort(LHSEdits);
+  llvm::sort(RHSEdits);
   for (std::size_t I = 0; I < arg.Edits.size(); ++I) {
-    if (arg.Edits[I].range != Fix.Edits[I].range ||
-        arg.Edits[I].newText != Fix.Edits[I].newText)
+    if (LHSEdits[I].range != RHSEdits[I].range ||
+        LHSEdits[I].newText != RHSEdits[I].newText)
       return false;
   }
   return true;
@@ -178,6 +181,22 @@ o]]();
       $macro[[ID($macroarg[[fod]])]]();
     }
   )cpp");
+
+  clangd::Fix ExpectedUndeclaredVar;
+  ExpectedUndeclaredVar.Message =
+      "apply all 'undeclared_var_use_suggest' fixes";
+  ExpectedUndeclaredVar.Edits.push_back(TextEdit{Test.range("typo"), "foo"});
+  ExpectedUndeclaredVar.Edits.push_back(
+      TextEdit{Test.range("macroarg"), "foo"});
+
+  clangd::Fix ExpectedFixAll;
+  ExpectedFixAll.Message = "apply all clangd fixes";
+  ExpectedFixAll.Edits.push_back(TextEdit{Test.range("insertstar"), "*"});
+  ExpectedFixAll.Edits.push_back(TextEdit{Test.range("semicolon"), ";"});
+  ExpectedFixAll.Edits.insert(ExpectedFixAll.Edits.end(),
+                              ExpectedUndeclaredVar.Edits.begin(),
+                              ExpectedUndeclaredVar.Edits.end());
+
   auto TU = TestTU::withCode(Test.code());
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -186,20 +205,24 @@ o]]();
           AllOf(Diag(Test.range("range"),
                      "invalid range expression of type 'struct Container *'; "
                      "did you mean to dereference it with '*'?"),
-                withFix(Fix(Test.range("insertstar"), "*", "insert '*'"))),
+                withFix(Fix(Test.range("insertstar"), "*", "insert '*'"),
+                        equalToFix(ExpectedFixAll))),
           // This range spans lines.
-          AllOf(Diag(Test.range("typo"),
-                     "use of undeclared identifier 'goo'; did you mean 'foo'?"),
-                diagSource(Diag::Clang), diagName("undeclared_var_use_suggest"),
-                withFix(
-                    Fix(Test.range("typo"), "foo", "change 'go\\…' to 'foo'")),
-                // This is a pretty normal range.
-                withNote(Diag(Test.range("decl"), "'foo' declared here"))),
+          AllOf(
+              Diag(Test.range("typo"),
+                   "use of undeclared identifier 'goo'; did you mean 'foo'?"),
+              diagSource(Diag::Clang), diagName("undeclared_var_use_suggest"),
+              withFix(Fix(Test.range("typo"), "foo", "change 'go\\…' to 'foo'"),
+                      equalToFix(ExpectedUndeclaredVar),
+                      equalToFix(ExpectedFixAll)),
+              // This is a pretty normal range.
+              withNote(Diag(Test.range("decl"), "'foo' declared here"))),
           // This range is zero-width and insertion. Therefore make sure we are
           // not expanding it into other tokens. Since we are not going to
           // replace those.
           AllOf(Diag(Test.range("semicolon"), "expected ';' after expression"),
-                withFix(Fix(Test.range("semicolon"), ";", "insert ';'"))),
+                withFix(Fix(Test.range("semicolon"), ";", "insert ';'"),
+                        equalToFix(ExpectedFixAll))),
           // This range isn't provided by clang, we expand to the token.
           Diag(Test.range("unk"), "use of undeclared identifier 'unknown'"),
           Diag(Test.range("type"),
@@ -210,8 +233,10 @@ o]]();
                "no member named 'test' in namespace 'test'"),
           AllOf(Diag(Test.range("macro"),
                      "use of undeclared identifier 'fod'; did you mean 'foo'?"),
-                withFix(Fix(Test.range("macroarg"), "foo",
-                            "change 'fod' to 'foo'")))));
+                withFix(
+                    Fix(Test.range("macroarg"), "foo", "change 'fod' to 'foo'"),
+                    equalToFix(ExpectedUndeclaredVar),
+                    equalToFix(ExpectedFixAll)))));
 }
 
 // Verify that the -Wswitch case-not-covered diagnostic range covers the
@@ -338,7 +363,8 @@ TEST(DiagnosticsTest, ClangTidy) {
                 diagSource(Diag::ClangTidy),
                 diagName("modernize-deprecated-headers"),
                 withFix(Fix(Test.range("deprecated"), "<cassert>",
-                            "change '\"assert.h\"' to '<cassert>'"))),
+                            "change '\"assert.h\"' to '<cassert>'"),
+                        fixMessage("apply all clangd fixes"))),
           Diag(Test.range("doubled"),
                "suspicious usage of 'sizeof(sizeof(...))'"),
           AllOf(Diag(Test.range("macroarg"),
@@ -354,8 +380,9 @@ TEST(DiagnosticsTest, ClangTidy) {
                 diagSource(Diag::ClangTidy),
                 diagName("modernize-use-trailing-return-type"),
                 // Verify there's no "[check-name]" suffix in the message.
-                withFix(fixMessage(
-                    "use a trailing return type for this function"))),
+                withFix(
+                    fixMessage("use a trailing return type for this function"),
+                    fixMessage("apply all clangd fixes"))),
           Diag(Test.range("foo"),
                "function 'foo' is within a recursive call chain"),
           Diag(Test.range("bar"),
@@ -945,9 +972,29 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
   // first warning. However we need the include attaching for both warnings.
   clangd::Fix ExpectedDFix;
   ExpectedDFix.Message = "variable 'D' is not initialized";
+  ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
+
+  // The two member-initializer fixes both insert at the same point (the
+  // constructor's brace), so combining them verbatim would produce invalid
+  // C++ (" : A(1) : B(1)" instead of ", "-joined). The conflict check
+  // correctly suppresses any "apply all" fix for this diagnostic, and since
+  // the same edits would also be pulled into the file-wide "apply all clangd
+  // fixes", that one is suppressed too.
+  clangd::Fix ExpectedInitVariablesFix;
+  ExpectedInitVariablesFix.Message =
+      "apply all 'cppcoreguidelines-init-variables' fixes";
+  ExpectedInitVariablesFix.Edits.insert(ExpectedInitVariablesFix.Edits.end(),
+                                        ExpectedCFix.Edits.begin(),
+                                        ExpectedCFix.Edits.end());
+  ExpectedInitVariablesFix.Edits.insert(ExpectedInitVariablesFix.Edits.end(),
+                                        ExpectedDFix.Edits.begin(),
+                                        ExpectedDFix.Edits.end());
+
+  // This edit is duplicated in C, so add it after inserting all of the "fix
+  // all" edits
   ExpectedDFix.Edits.push_back(
       TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
-  ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
+
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       ifTidyChecks(UnorderedElementsAre(
@@ -958,9 +1005,11 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
                                       "initializer of the constructor"),
                 withFix(equalToFix(ExpectedBFix))),
           AllOf(Diag(Main.range("C"), "variable 'C' is not initialized"),
-                withFix(equalToFix(ExpectedCFix))),
+                withFix(equalToFix(ExpectedCFix),
+                        equalToFix(ExpectedInitVariablesFix))),
           AllOf(Diag(Main.range("D"), "variable 'D' is not initialized"),
-                withFix(equalToFix(ExpectedDFix))))));
+                withFix(equalToFix(ExpectedDFix),
+                        equalToFix(ExpectedInitVariablesFix))))));
 }
 
 TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
@@ -991,6 +1040,19 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
       {TextEdit{Main.range("virtual2"), ""},
        TextEdit{Main.range("override2"), " override"}},
       {}};
+  // The two fixes don't conflict (they touch disjoint ranges), and this is
+  // the only fixable diagnostic category in the file, so we expect a
+  // category-wide "apply all" fix but no file-wide "apply all clangd fixes"
+  // (that one only appears when there are multiple distinct categories).
+  clangd::Fix ExpectedCategoryFix;
+  ExpectedCategoryFix.Message =
+      "apply all 'cppcoreguidelines-explicit-virtual-functions' fixes";
+  ExpectedCategoryFix.Edits.insert(ExpectedCategoryFix.Edits.end(),
+                                   ExpectedFix1.Edits.begin(),
+                                   ExpectedFix1.Edits.end());
+  ExpectedCategoryFix.Edits.insert(ExpectedCategoryFix.Edits.end(),
+                                   ExpectedFix2.Edits.begin(),
+                                   ExpectedFix2.Edits.end());
   // Note that in the Fix we expect the "virtual" keyword and the following
   // whitespace to be deleted
   EXPECT_THAT(TU.build().getDiagnostics(),
@@ -998,11 +1060,13 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
                   AllOf(Diag(Main.range("Reset1"),
                              "prefer using 'override' or (rarely) 'final' "
                              "instead of 'virtual'"),
-                        withFix(equalToFix(ExpectedFix1))),
+                        withFix(equalToFix(ExpectedFix1),
+                                equalToFix(ExpectedCategoryFix))),
                   AllOf(Diag(Main.range("Reset2"),
                              "prefer using 'override' or (rarely) 'final' "
                              "instead of 'virtual'"),
-                        withFix(equalToFix(ExpectedFix2))))));
+                        withFix(equalToFix(ExpectedFix2),
+                                equalToFix(ExpectedCategoryFix))))));
 }
 
 TEST(DiagnosticsTest, ClangTidyCallingIntoPreprocessor) {
@@ -1467,6 +1531,18 @@ using Type = ns::$template[[Foo]]<int>;
        SymbolWithHeader{"ns::Foo", "unittest:///foo.h", "\"foo.h\""}});
   TU.ExternalIndex = Index.get();
 
+  // All of these fixes insert at the same point ("insert"), i.e. they all
+  // use the same zero-width range (start == end, so nothing gets replaced),
+  // but with different headers to include. The conflict check treats any
+  // two edits sharing a range as unsafe to combine, so every "apply all"
+  // fix that would pull in more than one of them (per-category or
+  // file-wide) is suppressed, leaving only the original per-diagnostic
+  // fixes.
+  // TODO: This is overly conservative: independent #include insertions at
+  // the same point are actually safe to combine. Relax this once we have a
+  // heuristic for recognizing edits that are safe to concatenate (e.g.
+  // self-contained, newline-terminated line insertions) rather than treating
+  // every same-range edit as an unresolvable conflict.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
@@ -1519,7 +1595,9 @@ ID(ns::X a6);
   // FIXME: -fms-compatibility (which is default on windows) breaks the
   // ns::X cases when the namespace is undeclared. Find out why!
   TU.ExtraArgs = {"-fno-ms-compatibility"};
-  EXPECT_THAT(TU.build().getDiagnostics(), Each(withFix(_)));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(withFix(_), withFix(_), withFix(_),
+                                   withFix(_), withFix(_), withFix(_)));
 }
 
 TEST(IncludeFixerTest, MultipleMatchedSymbols) {
@@ -1682,6 +1760,13 @@ void f() {
        SymbolWithHeader{"clang::clangd::ns::Y", "unittest:///y.h", "\"y.h\""}});
   TU.ExternalIndex = Index.get();
 
+  // As in IncludeFixerTest.Typo, all these fixes insert at the same point,
+  // i.e. their ranges are all the same zero-width range, so every "apply
+  // all" fix that would combine more than one of them is suppressed by the
+  // conflict check; only the original per-diagnostic fixes remain.
+  // TODO: see the TODO in IncludeFixerTest.Typo above; this is the same
+  // overly conservative case (independent #include insertions) and should
+  // be relaxed by the same future heuristic.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
@@ -2040,10 +2125,10 @@ TEST(ParsedASTTest, ModuleSawDiag) {
   TestTU TU;
 
   auto AST = TU.build();
-        #if 0
+#if 0
   EXPECT_THAT(AST.getDiagnostics(),
               testing::Contains(Diag(Code.range(), KDiagMsg.str())));
-        #endif
+#endif
 }
 
 TEST(Preamble, EndsOnNonEmptyLine) {
