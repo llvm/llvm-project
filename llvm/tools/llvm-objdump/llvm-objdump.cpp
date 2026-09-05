@@ -2251,7 +2251,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           uint8_t SymTy = SymbolsHere[i].Type;
           if (SymTy != ELF::STT_OBJECT && SymTy != ELF::STT_COMMON) {
             DisassembleAsELFData = false;
-            DisplaySymIndex = i;
+            if(SymTy != ELF::STT_NOTYPE || SymbolsHere[DisplaySymIndex].Type == ELF::STT_NOTYPE) {
+              DisplaySymIndex = i;
+            }
           }
         }
       }
