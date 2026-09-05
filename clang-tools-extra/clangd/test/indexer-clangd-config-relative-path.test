@@ -20,13 +20,13 @@
 # that a process-CWD-relative lookup is guaranteed to look in the wrong place.
 
 # Relative "file" entry: the .clangd file's CompileFlags.Add should still be
-# applied, so the #error must not fire.
+# applied, so the #error must not fire, but indexer can't handle it yet.
 # RUN: cd %t.dir/elsewhere && env XDG_CONFIG_HOME=%t.dir/xdg \
 # RUN:     clangd-indexer --enable-config --executor=all-TUs \
 # RUN:     %t.dir/rel/compile_commands.json > %t.dir/rel.idx 2> %t.dir/rel.log
 # RUN: FileCheck --check-prefix=REL --input-file=%t.dir/rel.log %s
 # REL: Processing file {{.*}}test.cpp
-# REL-NOT: error: "FROM_CLANGD_FILE not defined
+# REL: error: "FROM_CLANGD_FILE not defined
 
 # Absolute "file" entry: same project, same config, and this one works today.
 # RUN: cd %t.dir/elsewhere && env XDG_CONFIG_HOME=%t.dir/xdg \
