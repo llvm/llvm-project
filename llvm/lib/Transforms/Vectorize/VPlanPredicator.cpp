@@ -15,10 +15,12 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 
 #define DEBUG_TYPE "vplan-predicator"
 
@@ -66,6 +68,7 @@ public:
 
   auto begin() const { return Blocks.begin(); }
   auto end() const { return Blocks.end(); }
+  unsigned size() const { return Blocks.size(); }
   unsigned getIndex(const VPBlockBase *BB) const { return BlockIndex.at(BB); }
 };
 
@@ -81,9 +84,14 @@ class VPPredicator {
   /// Post-dominator tree for the VPlan.
   VPPostDominatorTree VPPDT;
 
+  DenseMap<VPValue *, DenseMap<VPBasicBlock *, VPValue *>>
+      SSAReconstructionDefsMap;
+
   // Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks.
   CompactRPOT BlocksInCompactRPOTOrder;
+
+  bool DisablePartialLinearization = false;
 
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
@@ -110,6 +118,10 @@ class VPPredicator {
 
   /// Create a logical-or, factoring out a common header mask if present.
   VPValue *createMaskOr(VPValue *LHS, VPValue *RHS, DebugLoc DL);
+
+  VPValue *reconstructSSA(VPBasicBlock *UseBB, VPValue *V, bool IsMask);
+  void fixSSA(VPRecipeBase *U, VPValue *V, bool IsMask);
+  bool shouldPreserveTerminator(VPBasicBlock *VPBB);
 
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
@@ -140,6 +152,10 @@ class VPPredicator {
 
   using BlendTermTy = std::pair<VPValue *, VPBasicBlock *>;
 
+  /// Pre-linearization blend terms, indexed by block's index in
+  /// BlocksInCompactRPOTOrder and phi.
+  SmallVector<DenseMap<VPPhi *, SmallVector<BlendTermTy>>> BlendTerms;
+
   /// Return true if every path starting at \p Root reaches one of \p Blocks.
   /// All blocks in \p Blocks are expected to be dominated by \p Root.
   bool
@@ -155,7 +171,18 @@ public:
   VPPredicator(VPlan &Plan)
       : Plan(Plan), VPDT(Plan), VPPDT(Plan),
         BlocksInCompactRPOTOrder(
-            Plan.getVectorLoopRegion()->getEntryBasicBlock(), VPDT) {}
+            Plan.getVectorLoopRegion()->getEntryBasicBlock(), VPDT),
+        BlendTerms(BlocksInCompactRPOTOrder.size()) {
+    if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+               IsaPred<VPReductionPHIRecipe>)) {
+      // TODO: `LoopVectorizationPlanner::addReductionResultComputation` needs
+      // fixes.
+      LLVM_DEBUG(
+          dbgs()
+          << "Partial linearization disabled due to reductions present\n");
+      DisablePartialLinearization = true;
+    }
+  }
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -207,6 +234,80 @@ VPValue *VPPredicator::createMaskOr(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
     return HeaderMask;
   return Builder.createLogicalAnd(
       HeaderMask, Builder.createOr(LHSRemainder, RHSRemainder, DL), DL);
+}
+
+VPValue *VPPredicator::reconstructSSA(VPBasicBlock *UseBB, VPValue *V,
+                                      bool IsMask) {
+  auto *RecipeValue = dyn_cast<VPRecipeValue>(V);
+  if (!RecipeValue)
+    return V;
+
+  auto &SSADefs = SSAReconstructionDefsMap[RecipeValue];
+  VPBasicBlock *DefBB = RecipeValue->getDefiningRecipe()->getParent();
+  SSADefs[DefBB] = RecipeValue;
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  if (DefBB != Header)
+    SSADefs[Header] =
+        IsMask ? Plan.getFalse() : Plan.getPoison(RecipeValue->getScalarType());
+  return vputils::reconstructSSA(UseBB, SSADefs,
+                                 /*CreateWidenPhis=*/true);
+}
+
+void VPPredicator::fixSSA(VPRecipeBase *U, VPValue *V, bool IsMask) {
+  VPValue *Fixed = reconstructSSA(U->getParent(), V, IsMask);
+  if (Fixed == V)
+    return;
+
+  LLVM_DEBUG({
+    dbgs() << "SSA Fixup in  ";
+    U->dump();
+    dbgs() << "  replacing ";
+    V->dump();
+    dbgs() << "  with ";
+    Fixed->dump();
+  });
+  U->replaceUsesOfWith(V, Fixed);
+}
+
+bool VPPredicator::shouldPreserveTerminator(VPBasicBlock *VPBB) {
+  LLVM_DEBUG(dbgs() << "Checking if can preserve the branch at the end of "
+                    << VPBB->getName() << "\n");
+  auto False = []([[maybe_unused]] StringRef Reason = "") {
+    LLVM_DEBUG(dbgs() << "  can't be preserved"
+                      << (Reason.empty() ? Twine() : (": " + Reason)) << "\n");
+    return false;
+  };
+  if (DisablePartialLinearization)
+    return False("Disabled");
+
+  if (VPBB->getNumSuccessors() != 2)
+    return False("#Successors != 2");
+  auto *Term = dyn_cast<VPInstruction>(VPBB->getTerminator());
+  if (!Term || Term->getOpcode() != VPInstruction::BranchOnCond)
+    return False("Not a branch");
+
+  if (auto *IRV = dyn_cast<VPIRValue>(Term->getOperand(0))) {
+    if (isa<Constant>(IRV->getValue())) {
+      // `removeBranchOnConst` only does shallow traversal so can't optimize
+      // this away. Changing it to deep requires extra work as some tests
+      // crash. As such, treat as non-uniform and optimize away post
+      // linearization/predication.
+      return False("branch on constant");
+    }
+  }
+
+  if (!vputils::isUniformAcrossVFsAndUFs(Term->getOperand(0)))
+    return False("non-uniform");
+
+  // Should not happen in the end-to-end pass pipeline (simplifycfg would
+  // have handled it), but possible when running `loop-vectorize` pass
+  // alone. Just don't preserve so that we won't have to handle that when
+  // executing VPlan.
+  if (all_equal(VPBB->successors()))
+    return False("All successors are the same");
+
+  LLVM_DEBUG(dbgs() << "...yes, can be preserved.\n");
+  return true;
 }
 
 VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
@@ -414,8 +515,14 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
-    Phis.push_back(cast<VPPhi>(&R));
+    if (auto *Phi = dyn_cast<VPPhi>(&R))
+      Phis.push_back(Phi);
+  // All PHIs in VPBB use the same blend masks. Keep the SSA reconstruction
+  // definitions for each mask block so subsequent PHIs reuse reconstructed
+  // phis.
+  DenseMap<VPBasicBlock *, DenseMap<VPBasicBlock *, VPValue *>> BlendMaskDefs;
   for (VPPhi *PhiR : Phis) {
+    LLVM_DEBUG(dbgs() << "Converting " << *PhiR << " to blend\n");
     // The non-header Phi is converted into a Blend recipe below,
     // so we don't have to worry about the insertion order and we can just use
     // the builder. At this point we generate the predication tree. There may
@@ -426,35 +533,61 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
       return !match(V, m_Poison());
     });
     if (all_equal(NotPoison)) {
+      LLVM_DEBUG(dbgs() << "  all incoming values are the same or poison, "
+                           "replacing with single value "
+                        << PhiR->getIncomingValue(0) << "\n");
       PhiR->replaceAllUsesWith(NotPoison.empty() ? PhiR->getIncomingValue(0)
                                                  : *NotPoison.begin());
       PhiR->eraseFromParent();
       continue;
     }
 
-    auto Terms = computeBlendTerms(PhiR);
+    unsigned BlockIdx = BlocksInCompactRPOTOrder.getIndex(VPBB);
+    const auto &Terms = BlendTerms[BlockIdx].at(PhiR);
 
-    // The in-mask of the common dominator is true on all paths from an
-    // incoming block to the phi. Remove it from the blend masks.
+    // The in-mask of the common dominator is true on all paths from an incoming
+    // block to the phi. The dominator tree still represents the
+    // pre-linearization CFG.
     VPBasicBlock *CommonIncomingDom = cast<VPBasicBlock>(
         VPDT.findNearestCommonDominator(make_second_range(Terms)));
     VPValue *CommonIncomingMask = getBlockInMask(CommonIncomingDom);
+    LLVM_DEBUG(dbgs() << "  common incoming dominator: "
+                      << CommonIncomingDom->getName() << "\n");
 
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (auto [V, MaskBlock] : Terms) {
+      VPValue *OriginalV = V;
       VPValue *Mask = getBlockInMask(MaskBlock);
+
+      // Reconstruct values at the blend location rather than fixing up the
+      // blend after it has been created.
+      V = reconstructSSA(VPBB, OriginalV, /*IsMask=*/false);
+
+      // Remove common dominator mask before reconstructing the masks while it's
+      // easier because we don't have to handle SSA phis.
       VPValue *RemainingMask = nullptr;
       bool RemovedCommonMask =
           CommonIncomingMask && Mask &&
           match(Mask, m_RemoveMask(CommonIncomingMask, RemainingMask));
-      VPValue *BlendMask = RemovedCommonMask ? RemainingMask : Mask;
-      OperandsWithMask.append({V, BlendMask ? BlendMask : Plan.getTrue()});
+      if (RemovedCommonMask) {
+        Mask = RemainingMask ? RemainingMask : Plan.getTrue();
+      }
+      if (!Mask)
+        Mask = Plan.getTrue();
+
+      auto &Defs = BlendMaskDefs[MaskBlock];
+      Defs[Plan.getVectorLoopRegion()->getEntryBasicBlock()] = Plan.getFalse();
+      Defs[MaskBlock] = Mask;
+      VPValue *BlendMask =
+          vputils::reconstructSSA(VPBB, Defs, /*CreateWidenPhis=*/true);
+      OperandsWithMask.append({V, BlendMask});
     }
 
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =
         new VPBlendRecipe(IRPhi, OperandsWithMask, *PhiR, PhiR->getDebugLoc());
     Builder.insert(Blend);
+    LLVM_DEBUG(dbgs() << "  blend: " << *Blend << "\n");
     PhiR->replaceAllUsesWith(Blend);
     PhiR->eraseFromParent();
   }
@@ -465,9 +598,7 @@ void VPPredicator::run() {
   for (VPBlockBase *VPB : BlocksInCompactRPOTOrder) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
-    // Introduce the mask for VPBB, which may introduce needed edge masks, and
-    // convert all phi recipes of VPBB to blend recipes unless VPBB is the
-    // header.
+    // Introduce the mask for VPBB, which may introduce needed edge masks.
     if (VPBB != Header)
       createBlockInMask(VPBB);
 
@@ -478,30 +609,190 @@ void VPPredicator::run() {
     // Mask all VPInstructions in the block.
     for (VPRecipeBase &R : *VPBB) {
       if (auto *VPI = dyn_cast<VPInstruction>(&R))
-        VPI->addMask(BlockMask);
+        if (VPI->getOpcode() != VPInstruction::BranchOnCond)
+          VPI->addMask(BlockMask);
     }
   }
 
-  for (VPBlockBase *VPBB : reverse(BlocksInCompactRPOTOrder))
+  // Cache blend terms before linearization. Computing them requires the
+  // original phi predecessor mappings and CFG successor relation, both of
+  // which are rewritten below. Skip the header which is the first block.
+  for (auto [BlockIdx, VPBB] : drop_begin(enumerate(
+           VPBlockUtils::blocksOnly<VPBasicBlock>(BlocksInCompactRPOTOrder)))) {
+    auto &Terms = BlendTerms[BlockIdx];
+    for (VPRecipeBase &R : VPBB->phis()) {
+      auto *Phi = cast<VPPhi>(&R);
+      Terms[Phi] = computeBlendTerms(Phi);
+      LLVM_DEBUG({
+        dbgs() << "Computed blend terms for ";
+        Phi->dump();
+        dbgs() << "\n";
+        for (BlendTermTy &Term : Terms[Phi]) {
+          dbgs() << "  " << Term.second->getName() << ": ";
+          Term.first->dump();
+        }
+      });
+    }
+  }
+
+  // The following implements "Partial Control-Flow Linearization" by Simon Moll
+  // and Sebastian Hack.
+
+  using DeferredSuccessorsTy = SmallPtrSet<VPBlockBase *, 4>;
+  DenseMap<VPBlockBase *, DeferredSuccessorsTy> DeferredMap;
+  auto PopDeferred = [&](VPBlockBase *VPBB) -> DeferredSuccessorsTy {
+    auto It = DeferredMap.find(VPBB);
+    if (It != DeferredMap.end()) {
+      DeferredSuccessorsTy Res = std::move(It->second);
+      DeferredMap.erase(It);
+      return Res;
+    }
+    return {};
+  };
+
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(BlocksInCompactRPOTOrder)) {
+    LLVM_DEBUG(dbgs() << "Setting successors for " << VPBB->getName() << "\n");
+    auto Successors = to_vector(VPBB->getSuccessors());
+
+    if (shouldPreserveTerminator(VPBB)) {
+      VPValue *BlockMask = getBlockInMask(VPBB);
+      if (BlockMask && !match(BlockMask, m_HeaderMask())) {
+        // The branch might never be executed in a scalar loop so its condition
+        // can be `poison`. As such we need to `freeze` it. If the block is
+        // masked by the header mask itself, lane zero is known to be active
+        // whenever the branch is executed, so the scalar condition is not
+        // speculative.
+        auto *Term = cast<VPInstruction>(VPBB->getTerminator());
+        VPValue *Cond = Term->getOperand(0);
+        auto *FrozenCond = VPBuilder(Term).createNaryOp(
+            Instruction::Freeze, {Cond}, {}, Term->getDebugLoc());
+        Term->setOperand(0, FrozenCond);
+      }
+
+      for (auto *Succ : Successors)
+        VPBlockUtils::disconnectBlocks(VPBB, Succ);
+
+      auto Deferred = PopDeferred(VPBB);
+      LLVM_DEBUG({
+        dbgs() << "Deferred successors: ";
+        for (auto *B : Deferred) {
+          dbgs() << " " << B->getName();
+        }
+        dbgs() << "\n";
+      });
+
+      VPBlockBase *MinDeferred = nullptr;
+      unsigned MinDeferredIdx = BlocksInCompactRPOTOrder.size() + 1;
+
+      if (!Deferred.empty()) {
+        MinDeferred =
+            *std::min_element(Deferred.begin(), Deferred.end(),
+                              [&](VPBlockBase *A, VPBlockBase *B) {
+                                return BlocksInCompactRPOTOrder.getIndex(A) <
+                                       BlocksInCompactRPOTOrder.getIndex(B);
+                              });
+        MinDeferredIdx = BlocksInCompactRPOTOrder.getIndex(MinDeferred);
+        LLVM_DEBUG(dbgs() << "Min deferred: " << MinDeferred->getName() << "("
+                          << MinDeferredIdx << ")\n");
+      }
+      for (auto *Succ : Successors) {
+        VPBlockBase *Next =
+            BlocksInCompactRPOTOrder.getIndex(Succ) < MinDeferredIdx
+                ? Succ
+                : MinDeferred;
+        if (is_contained(VPBB->successors(), Next)) {
+          LLVM_DEBUG(dbgs() << "Duplicate next " << Next->getName()
+                            << " for original successor " << Succ->getName()
+                            << ", linearizing\n");
+          assert(Successors.size() == 2 &&
+                 "Partial linearization of switch terminator isn't supported");
+          // Both branches lead to the same block, just make it unconditional.
+          // Can't use `getTerminator()` as it checks for having two successors
+          // for a conditional branch.
+          auto &Term = VPBB->back();
+          assert(match(&Term, m_BranchOnCond()));
+          Term.eraseFromParent();
+        } else {
+          LLVM_DEBUG(dbgs() << "Original Succ: " << Succ->getName()
+                            << ", connecting to " << Next->getName() << "\n");
+          VPBlockUtils::connectBlocks(VPBB, Next);
+          LLVM_DEBUG(VPBB->dump());
+        }
+        auto &Entry = DeferredMap[Next];
+        assert(Entry.count(Next) == 0 &&
+               "If that fails, then erase below must be done on Deferred/Succ "
+               "before insertion.");
+        Entry.insert_range(Deferred);
+        Entry.insert(Succ);
+        Entry.erase(Next);
+      }
+    } else {
+      if (Successors.size() > 1)
+        VPBB->getTerminator()->eraseFromParent();
+
+      for (auto *Succ : Successors)
+        VPBlockUtils::disconnectBlocks(VPBB, Succ);
+
+      auto CombinedSuccessors = PopDeferred(VPBB);
+      CombinedSuccessors.insert_range(Successors);
+
+      if (CombinedSuccessors.size() == 0)
+        continue;
+
+      LLVM_DEBUG({
+        dbgs() << "Combined successors: ";
+        for (auto *B : CombinedSuccessors) {
+          dbgs() << " " << B->getName();
+        }
+        dbgs() << "\n";
+      });
+
+      VPBlockBase *Next = *std::min_element(
+          CombinedSuccessors.begin(), CombinedSuccessors.end(),
+          [&](VPBlockBase *A, VPBlockBase *B) {
+            return BlocksInCompactRPOTOrder.getIndex(A) <
+                   BlocksInCompactRPOTOrder.getIndex(B);
+          });
+
+      LLVM_DEBUG(dbgs() << "Connecting to: " << Next->getName() << "\n");
+      VPBlockUtils::connectBlocks(VPBB, Next);
+
+      CombinedSuccessors.erase(Next);
+      auto &Entry = DeferredMap[Next];
+      if (Entry.empty()) {
+        Entry = std::move(CombinedSuccessors);
+      } else {
+        Entry.insert_range(CombinedSuccessors);
+      }
+    }
+  }
+
+  for (VPBlockBase *VPBB : reverse(BlocksInCompactRPOTOrder)) {
+    LLVM_DEBUG(dbgs() << "Predicating phis and fixing up ssa for "
+                      << VPBB->getName() << "\n");
+    LLVM_DEBUG(VPBB->dump());
+
     if (VPBB != Header)
       convertPhisToBlends(cast<VPBasicBlock>(VPBB));
 
-  // Linearize the blocks of the loop into one serial chain.
-  VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<VPBasicBlock>(BlocksInCompactRPOTOrder)) {
-    auto Successors = to_vector(VPBB->getSuccessors());
-    if (Successors.size() > 1)
-      VPBB->getTerminator()->eraseFromParent();
+    for (VPRecipeBase &R : *cast<VPBasicBlock>(VPBB)) {
+      auto *I = dyn_cast<VPInstruction>(&R);
+      if (!I)
+        continue;
 
-    // Flatten the CFG in the loop. To do so, first disconnect VPBB from its
-    // successors. Then connect VPBB to the previously visited VPBB.
-    for (auto *Succ : Successors)
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-    if (PrevVPBB)
-      VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
-
-    PrevVPBB = VPBB;
+      switch (I->getOpcode()) {
+      case VPInstruction::Not:
+      case VPInstruction::LogicalAnd:
+      case VPInstruction::LogicalOr:
+      case Instruction::And:
+      case Instruction::Or: {
+        LLVM_DEBUG(dbgs() << "visiting " << *I << " for SSA fixup\n");
+        for (auto *V : I->operands())
+          fixSSA(I, V, /*IsMask*/ true);
+      }
+      }
+    }
   }
 }
 

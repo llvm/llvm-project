@@ -6548,6 +6548,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
            vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
+      // No processing needed for the uniform branch preserved by the
+      // predicator.
+      if (VPI->getOpcode() == VPInstruction::BranchOnCond)
+        continue;
       if (!VPI->getUnderlyingValue())
         continue;
 

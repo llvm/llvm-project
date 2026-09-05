@@ -282,18 +282,34 @@ define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT5]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[C2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT5]], splat (i1 true)
+; CHECK-NEXT:    [[TMP16:%.*]] = freeze i1 [[C1]]
+; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    br i1 [[C3]], label [[IF_ELSE16:%.*]], label [[IF_THEN5:%.*]]
+; CHECK:       if.then5:
+; CHECK-NEXT:    br i1 [[TMP16]], label [[IF_ELSE27:%.*]], label [[IF_ELSE16]]
+; CHECK:       if.else16:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_BODY1]] ], [ [[TMP2]], [[IF_THEN5]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <vscale x 4 x i1> [[TMP13]], [[BROADCAST_SPLAT5]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C3]], <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[BROADCAST_SPLAT4]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    br i1 [[TMP11]], label [[VECTOR_BODY:%.*]], label [[IF_ELSE27]]
+; CHECK:       if.else27:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <vscale x 4 x float> [ poison, [[IF_THEN5]] ], [ [[PREDPHI]], [[IF_ELSE16]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[IF_THEN5]] ], [ [[TMP3]], [[IF_ELSE16]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <vscale x 4 x i1> [ [[TMP2]], [[IF_THEN5]] ], [ [[TMP12]], [[IF_ELSE16]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[BROADCAST_SPLAT4]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <vscale x 4 x i1> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x float> splat (float 2.000000e+00), <vscale x 4 x float> [[PREDPHI]]
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
+; CHECK-NEXT:    br label [[VECTOR_BODY]]
+; CHECK:       latch8:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <vscale x 4 x float> [ [[PREDPHI]], [[IF_ELSE16]] ], [ [[TMP9]], [[IF_ELSE27]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[IF_ELSE16]] ], [ [[TMP7]], [[IF_ELSE27]] ]
+; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <vscale x 4 x i1> [[TMP15]], <vscale x 4 x float> splat (float 2.000000e+00), <vscale x 4 x float> [[TMP14]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[PREDPHI5]], ptr align 4 [[DST:%.*]], <vscale x 4 x i1> splat (i1 true), i32 57)
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:

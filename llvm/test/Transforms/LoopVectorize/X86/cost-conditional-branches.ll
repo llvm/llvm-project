@@ -873,12 +873,17 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <32 x i1> poison, i1 [[C:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <32 x i1> [[BROADCAST_SPLATINSERT1]], <32 x i1> poison, <32 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP131:%.*]] = xor <32 x i1> [[BROADCAST_SPLAT1]], splat (i1 true)
+; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE62:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_UDIV_CONTINUE62]] ]
+; CHECK-NEXT:    br i1 [[C]], label [[PRED_UDIV_CONTINUE62]], label [[VECTOR_BODY:%.*]]
+; CHECK:       then1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i32> @llvm.usub.sat.v32i32(<32 x i32> [[VEC_IND]], <32 x i32> splat (i32 1))
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <32 x i32> [[TMP1]], i64 0
@@ -887,347 +892,398 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; CHECK:       pred.udiv.continue:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <32 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP4]], [[PRED_UDIV_IF]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF1:%.*]], label [[PRED_UDIV_CONTINUE2:%.*]]
-; CHECK:       pred.udiv.if1:
+; CHECK-NEXT:    [[TMP168:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP168]], label [[PRED_UDIV_IF1:%.*]], label [[PRED_UDIV_CONTINUE2:%.*]]
+; CHECK:       pred.udiv.if2:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <32 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = udiv i32 [[TMP6]], [[D]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <32 x i32> [[TMP5]], i32 [[TMP7]], i64 1
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
-; CHECK:       pred.udiv.continue2:
+; CHECK:       pred.udiv.continue3:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <32 x i32> [ [[TMP5]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP8]], [[PRED_UDIV_IF1]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4:%.*]]
-; CHECK:       pred.udiv.if3:
+; CHECK-NEXT:    [[TMP170:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP170]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4:%.*]]
+; CHECK:       pred.udiv.if4:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <32 x i32> [[TMP1]], i64 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = udiv i32 [[TMP10]], [[D]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <32 x i32> [[TMP9]], i32 [[TMP11]], i64 2
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE4]]
-; CHECK:       pred.udiv.continue4:
+; CHECK:       pred.udiv.continue5:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <32 x i32> [ [[TMP9]], [[PRED_UDIV_CONTINUE2]] ], [ [[TMP12]], [[PRED_UDIV_IF3]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF5:%.*]], label [[PRED_UDIV_CONTINUE6:%.*]]
-; CHECK:       pred.udiv.if5:
+; CHECK-NEXT:    [[TMP171:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP171]], label [[PRED_UDIV_IF5:%.*]], label [[PRED_UDIV_CONTINUE6:%.*]]
+; CHECK:       pred.udiv.if6:
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <32 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = udiv i32 [[TMP14]], [[D]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <32 x i32> [[TMP13]], i32 [[TMP15]], i64 3
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE6]]
-; CHECK:       pred.udiv.continue6:
+; CHECK:       pred.udiv.continue7:
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi <32 x i32> [ [[TMP13]], [[PRED_UDIV_CONTINUE4]] ], [ [[TMP16]], [[PRED_UDIV_IF5]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF7:%.*]], label [[PRED_UDIV_CONTINUE8:%.*]]
-; CHECK:       pred.udiv.if7:
+; CHECK-NEXT:    [[TMP172:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP172]], label [[PRED_UDIV_IF7:%.*]], label [[PRED_UDIV_CONTINUE8:%.*]]
+; CHECK:       pred.udiv.if8:
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <32 x i32> [[TMP1]], i64 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = udiv i32 [[TMP18]], [[D]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <32 x i32> [[TMP17]], i32 [[TMP19]], i64 4
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
-; CHECK:       pred.udiv.continue8:
+; CHECK:       pred.udiv.continue9:
 ; CHECK-NEXT:    [[TMP21:%.*]] = phi <32 x i32> [ [[TMP17]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP20]], [[PRED_UDIV_IF7]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF9:%.*]], label [[PRED_UDIV_CONTINUE10:%.*]]
-; CHECK:       pred.udiv.if9:
+; CHECK-NEXT:    [[TMP173:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP173]], label [[PRED_UDIV_IF9:%.*]], label [[PRED_UDIV_CONTINUE10:%.*]]
+; CHECK:       pred.udiv.if10:
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <32 x i32> [[TMP1]], i64 5
 ; CHECK-NEXT:    [[TMP23:%.*]] = udiv i32 [[TMP22]], [[D]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <32 x i32> [[TMP21]], i32 [[TMP23]], i64 5
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE10]]
-; CHECK:       pred.udiv.continue10:
+; CHECK:       pred.udiv.continue11:
 ; CHECK-NEXT:    [[TMP25:%.*]] = phi <32 x i32> [ [[TMP21]], [[PRED_UDIV_CONTINUE8]] ], [ [[TMP24]], [[PRED_UDIV_IF9]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF11:%.*]], label [[PRED_UDIV_CONTINUE12:%.*]]
-; CHECK:       pred.udiv.if11:
+; CHECK-NEXT:    [[TMP175:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP175]], label [[PRED_UDIV_IF11:%.*]], label [[PRED_UDIV_CONTINUE12:%.*]]
+; CHECK:       pred.udiv.if12:
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <32 x i32> [[TMP1]], i64 6
 ; CHECK-NEXT:    [[TMP27:%.*]] = udiv i32 [[TMP26]], [[D]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <32 x i32> [[TMP25]], i32 [[TMP27]], i64 6
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE12]]
-; CHECK:       pred.udiv.continue12:
+; CHECK:       pred.udiv.continue13:
 ; CHECK-NEXT:    [[TMP29:%.*]] = phi <32 x i32> [ [[TMP25]], [[PRED_UDIV_CONTINUE10]] ], [ [[TMP28]], [[PRED_UDIV_IF11]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF13:%.*]], label [[PRED_UDIV_CONTINUE14:%.*]]
-; CHECK:       pred.udiv.if13:
+; CHECK-NEXT:    [[TMP176:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP176]], label [[PRED_UDIV_IF13:%.*]], label [[PRED_UDIV_CONTINUE14:%.*]]
+; CHECK:       pred.udiv.if14:
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <32 x i32> [[TMP1]], i64 7
 ; CHECK-NEXT:    [[TMP31:%.*]] = udiv i32 [[TMP30]], [[D]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <32 x i32> [[TMP29]], i32 [[TMP31]], i64 7
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE14]]
-; CHECK:       pred.udiv.continue14:
+; CHECK:       pred.udiv.continue15:
 ; CHECK-NEXT:    [[TMP33:%.*]] = phi <32 x i32> [ [[TMP29]], [[PRED_UDIV_CONTINUE12]] ], [ [[TMP32]], [[PRED_UDIV_IF13]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF15:%.*]], label [[PRED_UDIV_CONTINUE16:%.*]]
-; CHECK:       pred.udiv.if15:
+; CHECK-NEXT:    [[TMP177:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP177]], label [[PRED_UDIV_IF15:%.*]], label [[PRED_UDIV_CONTINUE16:%.*]]
+; CHECK:       pred.udiv.if16:
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <32 x i32> [[TMP1]], i64 8
 ; CHECK-NEXT:    [[TMP35:%.*]] = udiv i32 [[TMP34]], [[D]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <32 x i32> [[TMP33]], i32 [[TMP35]], i64 8
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE16]]
-; CHECK:       pred.udiv.continue16:
+; CHECK:       pred.udiv.continue17:
 ; CHECK-NEXT:    [[TMP37:%.*]] = phi <32 x i32> [ [[TMP33]], [[PRED_UDIV_CONTINUE14]] ], [ [[TMP36]], [[PRED_UDIV_IF15]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF17:%.*]], label [[PRED_UDIV_CONTINUE18:%.*]]
-; CHECK:       pred.udiv.if17:
+; CHECK-NEXT:    [[TMP178:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP178]], label [[PRED_UDIV_IF17:%.*]], label [[PRED_UDIV_CONTINUE18:%.*]]
+; CHECK:       pred.udiv.if18:
 ; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <32 x i32> [[TMP1]], i64 9
 ; CHECK-NEXT:    [[TMP39:%.*]] = udiv i32 [[TMP38]], [[D]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <32 x i32> [[TMP37]], i32 [[TMP39]], i64 9
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE18]]
-; CHECK:       pred.udiv.continue18:
+; CHECK:       pred.udiv.continue19:
 ; CHECK-NEXT:    [[TMP41:%.*]] = phi <32 x i32> [ [[TMP37]], [[PRED_UDIV_CONTINUE16]] ], [ [[TMP40]], [[PRED_UDIV_IF17]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF19:%.*]], label [[PRED_UDIV_CONTINUE20:%.*]]
-; CHECK:       pred.udiv.if19:
+; CHECK-NEXT:    [[TMP180:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP180]], label [[PRED_UDIV_IF19:%.*]], label [[PRED_UDIV_CONTINUE20:%.*]]
+; CHECK:       pred.udiv.if20:
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <32 x i32> [[TMP1]], i64 10
 ; CHECK-NEXT:    [[TMP43:%.*]] = udiv i32 [[TMP42]], [[D]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <32 x i32> [[TMP41]], i32 [[TMP43]], i64 10
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE20]]
-; CHECK:       pred.udiv.continue20:
+; CHECK:       pred.udiv.continue21:
 ; CHECK-NEXT:    [[TMP45:%.*]] = phi <32 x i32> [ [[TMP41]], [[PRED_UDIV_CONTINUE18]] ], [ [[TMP44]], [[PRED_UDIV_IF19]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF21:%.*]], label [[PRED_UDIV_CONTINUE22:%.*]]
-; CHECK:       pred.udiv.if21:
+; CHECK-NEXT:    [[TMP181:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP181]], label [[PRED_UDIV_IF21:%.*]], label [[PRED_UDIV_CONTINUE22:%.*]]
+; CHECK:       pred.udiv.if22:
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <32 x i32> [[TMP1]], i64 11
 ; CHECK-NEXT:    [[TMP47:%.*]] = udiv i32 [[TMP46]], [[D]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <32 x i32> [[TMP45]], i32 [[TMP47]], i64 11
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE22]]
-; CHECK:       pred.udiv.continue22:
+; CHECK:       pred.udiv.continue23:
 ; CHECK-NEXT:    [[TMP49:%.*]] = phi <32 x i32> [ [[TMP45]], [[PRED_UDIV_CONTINUE20]] ], [ [[TMP48]], [[PRED_UDIV_IF21]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF23:%.*]], label [[PRED_UDIV_CONTINUE24:%.*]]
-; CHECK:       pred.udiv.if23:
+; CHECK-NEXT:    [[TMP182:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP182]], label [[PRED_UDIV_IF23:%.*]], label [[PRED_UDIV_CONTINUE24:%.*]]
+; CHECK:       pred.udiv.if24:
 ; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <32 x i32> [[TMP1]], i64 12
 ; CHECK-NEXT:    [[TMP51:%.*]] = udiv i32 [[TMP50]], [[D]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <32 x i32> [[TMP49]], i32 [[TMP51]], i64 12
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE24]]
-; CHECK:       pred.udiv.continue24:
+; CHECK:       pred.udiv.continue25:
 ; CHECK-NEXT:    [[TMP53:%.*]] = phi <32 x i32> [ [[TMP49]], [[PRED_UDIV_CONTINUE22]] ], [ [[TMP52]], [[PRED_UDIV_IF23]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF25:%.*]], label [[PRED_UDIV_CONTINUE26:%.*]]
-; CHECK:       pred.udiv.if25:
+; CHECK-NEXT:    [[TMP183:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP183]], label [[PRED_UDIV_IF25:%.*]], label [[PRED_UDIV_CONTINUE26:%.*]]
+; CHECK:       pred.udiv.if26:
 ; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <32 x i32> [[TMP1]], i64 13
 ; CHECK-NEXT:    [[TMP55:%.*]] = udiv i32 [[TMP54]], [[D]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <32 x i32> [[TMP53]], i32 [[TMP55]], i64 13
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE26]]
-; CHECK:       pred.udiv.continue26:
+; CHECK:       pred.udiv.continue27:
 ; CHECK-NEXT:    [[TMP57:%.*]] = phi <32 x i32> [ [[TMP53]], [[PRED_UDIV_CONTINUE24]] ], [ [[TMP56]], [[PRED_UDIV_IF25]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF27:%.*]], label [[PRED_UDIV_CONTINUE28:%.*]]
-; CHECK:       pred.udiv.if27:
+; CHECK-NEXT:    [[TMP185:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP185]], label [[PRED_UDIV_IF27:%.*]], label [[PRED_UDIV_CONTINUE28:%.*]]
+; CHECK:       pred.udiv.if28:
 ; CHECK-NEXT:    [[TMP58:%.*]] = extractelement <32 x i32> [[TMP1]], i64 14
 ; CHECK-NEXT:    [[TMP59:%.*]] = udiv i32 [[TMP58]], [[D]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <32 x i32> [[TMP57]], i32 [[TMP59]], i64 14
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE28]]
-; CHECK:       pred.udiv.continue28:
+; CHECK:       pred.udiv.continue29:
 ; CHECK-NEXT:    [[TMP61:%.*]] = phi <32 x i32> [ [[TMP57]], [[PRED_UDIV_CONTINUE26]] ], [ [[TMP60]], [[PRED_UDIV_IF27]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF29:%.*]], label [[PRED_UDIV_CONTINUE30:%.*]]
-; CHECK:       pred.udiv.if29:
+; CHECK-NEXT:    [[TMP186:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP186]], label [[PRED_UDIV_IF29:%.*]], label [[PRED_UDIV_CONTINUE30:%.*]]
+; CHECK:       pred.udiv.if30:
 ; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <32 x i32> [[TMP1]], i64 15
 ; CHECK-NEXT:    [[TMP63:%.*]] = udiv i32 [[TMP62]], [[D]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <32 x i32> [[TMP61]], i32 [[TMP63]], i64 15
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE30]]
-; CHECK:       pred.udiv.continue30:
+; CHECK:       pred.udiv.continue31:
 ; CHECK-NEXT:    [[TMP65:%.*]] = phi <32 x i32> [ [[TMP61]], [[PRED_UDIV_CONTINUE28]] ], [ [[TMP64]], [[PRED_UDIV_IF29]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF31:%.*]], label [[PRED_UDIV_CONTINUE32:%.*]]
-; CHECK:       pred.udiv.if31:
+; CHECK-NEXT:    [[TMP187:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP187]], label [[PRED_UDIV_IF31:%.*]], label [[PRED_UDIV_CONTINUE32:%.*]]
+; CHECK:       pred.udiv.if32:
 ; CHECK-NEXT:    [[TMP66:%.*]] = extractelement <32 x i32> [[TMP1]], i64 16
 ; CHECK-NEXT:    [[TMP67:%.*]] = udiv i32 [[TMP66]], [[D]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = insertelement <32 x i32> [[TMP65]], i32 [[TMP67]], i64 16
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE32]]
-; CHECK:       pred.udiv.continue32:
+; CHECK:       pred.udiv.continue33:
 ; CHECK-NEXT:    [[TMP69:%.*]] = phi <32 x i32> [ [[TMP65]], [[PRED_UDIV_CONTINUE30]] ], [ [[TMP68]], [[PRED_UDIV_IF31]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF33:%.*]], label [[PRED_UDIV_CONTINUE34:%.*]]
-; CHECK:       pred.udiv.if33:
+; CHECK-NEXT:    [[TMP188:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP188]], label [[PRED_UDIV_IF33:%.*]], label [[PRED_UDIV_CONTINUE34:%.*]]
+; CHECK:       pred.udiv.if34:
 ; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <32 x i32> [[TMP1]], i64 17
 ; CHECK-NEXT:    [[TMP71:%.*]] = udiv i32 [[TMP70]], [[D]]
 ; CHECK-NEXT:    [[TMP72:%.*]] = insertelement <32 x i32> [[TMP69]], i32 [[TMP71]], i64 17
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE34]]
-; CHECK:       pred.udiv.continue34:
+; CHECK:       pred.udiv.continue35:
 ; CHECK-NEXT:    [[TMP73:%.*]] = phi <32 x i32> [ [[TMP69]], [[PRED_UDIV_CONTINUE32]] ], [ [[TMP72]], [[PRED_UDIV_IF33]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF35:%.*]], label [[PRED_UDIV_CONTINUE36:%.*]]
-; CHECK:       pred.udiv.if35:
+; CHECK-NEXT:    [[TMP190:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP190]], label [[PRED_UDIV_IF35:%.*]], label [[PRED_UDIV_CONTINUE36:%.*]]
+; CHECK:       pred.udiv.if36:
 ; CHECK-NEXT:    [[TMP74:%.*]] = extractelement <32 x i32> [[TMP1]], i64 18
 ; CHECK-NEXT:    [[TMP75:%.*]] = udiv i32 [[TMP74]], [[D]]
 ; CHECK-NEXT:    [[TMP76:%.*]] = insertelement <32 x i32> [[TMP73]], i32 [[TMP75]], i64 18
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE36]]
-; CHECK:       pred.udiv.continue36:
+; CHECK:       pred.udiv.continue37:
 ; CHECK-NEXT:    [[TMP77:%.*]] = phi <32 x i32> [ [[TMP73]], [[PRED_UDIV_CONTINUE34]] ], [ [[TMP76]], [[PRED_UDIV_IF35]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF37:%.*]], label [[PRED_UDIV_CONTINUE38:%.*]]
-; CHECK:       pred.udiv.if37:
+; CHECK-NEXT:    [[TMP191:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP191]], label [[PRED_UDIV_IF37:%.*]], label [[PRED_UDIV_CONTINUE38:%.*]]
+; CHECK:       pred.udiv.if38:
 ; CHECK-NEXT:    [[TMP78:%.*]] = extractelement <32 x i32> [[TMP1]], i64 19
 ; CHECK-NEXT:    [[TMP79:%.*]] = udiv i32 [[TMP78]], [[D]]
 ; CHECK-NEXT:    [[TMP80:%.*]] = insertelement <32 x i32> [[TMP77]], i32 [[TMP79]], i64 19
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE38]]
-; CHECK:       pred.udiv.continue38:
+; CHECK:       pred.udiv.continue39:
 ; CHECK-NEXT:    [[TMP81:%.*]] = phi <32 x i32> [ [[TMP77]], [[PRED_UDIV_CONTINUE36]] ], [ [[TMP80]], [[PRED_UDIV_IF37]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF39:%.*]], label [[PRED_UDIV_CONTINUE40:%.*]]
-; CHECK:       pred.udiv.if39:
+; CHECK-NEXT:    [[TMP192:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP192]], label [[PRED_UDIV_IF39:%.*]], label [[PRED_UDIV_CONTINUE40:%.*]]
+; CHECK:       pred.udiv.if40:
 ; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <32 x i32> [[TMP1]], i64 20
 ; CHECK-NEXT:    [[TMP83:%.*]] = udiv i32 [[TMP82]], [[D]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = insertelement <32 x i32> [[TMP81]], i32 [[TMP83]], i64 20
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE40]]
-; CHECK:       pred.udiv.continue40:
+; CHECK:       pred.udiv.continue41:
 ; CHECK-NEXT:    [[TMP85:%.*]] = phi <32 x i32> [ [[TMP81]], [[PRED_UDIV_CONTINUE38]] ], [ [[TMP84]], [[PRED_UDIV_IF39]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF41:%.*]], label [[PRED_UDIV_CONTINUE42:%.*]]
-; CHECK:       pred.udiv.if41:
+; CHECK-NEXT:    [[TMP193:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP193]], label [[PRED_UDIV_IF41:%.*]], label [[PRED_UDIV_CONTINUE42:%.*]]
+; CHECK:       pred.udiv.if42:
 ; CHECK-NEXT:    [[TMP86:%.*]] = extractelement <32 x i32> [[TMP1]], i64 21
 ; CHECK-NEXT:    [[TMP87:%.*]] = udiv i32 [[TMP86]], [[D]]
 ; CHECK-NEXT:    [[TMP88:%.*]] = insertelement <32 x i32> [[TMP85]], i32 [[TMP87]], i64 21
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE42]]
-; CHECK:       pred.udiv.continue42:
+; CHECK:       pred.udiv.continue43:
 ; CHECK-NEXT:    [[TMP89:%.*]] = phi <32 x i32> [ [[TMP85]], [[PRED_UDIV_CONTINUE40]] ], [ [[TMP88]], [[PRED_UDIV_IF41]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF43:%.*]], label [[PRED_UDIV_CONTINUE44:%.*]]
-; CHECK:       pred.udiv.if43:
+; CHECK-NEXT:    [[TMP195:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP195]], label [[PRED_UDIV_IF43:%.*]], label [[PRED_UDIV_CONTINUE44:%.*]]
+; CHECK:       pred.udiv.if44:
 ; CHECK-NEXT:    [[TMP90:%.*]] = extractelement <32 x i32> [[TMP1]], i64 22
 ; CHECK-NEXT:    [[TMP91:%.*]] = udiv i32 [[TMP90]], [[D]]
 ; CHECK-NEXT:    [[TMP92:%.*]] = insertelement <32 x i32> [[TMP89]], i32 [[TMP91]], i64 22
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE44]]
-; CHECK:       pred.udiv.continue44:
+; CHECK:       pred.udiv.continue45:
 ; CHECK-NEXT:    [[TMP93:%.*]] = phi <32 x i32> [ [[TMP89]], [[PRED_UDIV_CONTINUE42]] ], [ [[TMP92]], [[PRED_UDIV_IF43]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF45:%.*]], label [[PRED_UDIV_CONTINUE46:%.*]]
-; CHECK:       pred.udiv.if45:
+; CHECK-NEXT:    [[TMP196:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP196]], label [[PRED_UDIV_IF45:%.*]], label [[PRED_UDIV_CONTINUE46:%.*]]
+; CHECK:       pred.udiv.if46:
 ; CHECK-NEXT:    [[TMP94:%.*]] = extractelement <32 x i32> [[TMP1]], i64 23
 ; CHECK-NEXT:    [[TMP95:%.*]] = udiv i32 [[TMP94]], [[D]]
 ; CHECK-NEXT:    [[TMP96:%.*]] = insertelement <32 x i32> [[TMP93]], i32 [[TMP95]], i64 23
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE46]]
-; CHECK:       pred.udiv.continue46:
+; CHECK:       pred.udiv.continue47:
 ; CHECK-NEXT:    [[TMP97:%.*]] = phi <32 x i32> [ [[TMP93]], [[PRED_UDIV_CONTINUE44]] ], [ [[TMP96]], [[PRED_UDIV_IF45]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF47:%.*]], label [[PRED_UDIV_CONTINUE48:%.*]]
-; CHECK:       pred.udiv.if47:
+; CHECK-NEXT:    [[TMP197:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP197]], label [[PRED_UDIV_IF47:%.*]], label [[PRED_UDIV_CONTINUE48:%.*]]
+; CHECK:       pred.udiv.if48:
 ; CHECK-NEXT:    [[TMP98:%.*]] = extractelement <32 x i32> [[TMP1]], i64 24
 ; CHECK-NEXT:    [[TMP99:%.*]] = udiv i32 [[TMP98]], [[D]]
 ; CHECK-NEXT:    [[TMP100:%.*]] = insertelement <32 x i32> [[TMP97]], i32 [[TMP99]], i64 24
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE48]]
-; CHECK:       pred.udiv.continue48:
+; CHECK:       pred.udiv.continue49:
 ; CHECK-NEXT:    [[TMP101:%.*]] = phi <32 x i32> [ [[TMP97]], [[PRED_UDIV_CONTINUE46]] ], [ [[TMP100]], [[PRED_UDIV_IF47]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF49:%.*]], label [[PRED_UDIV_CONTINUE50:%.*]]
-; CHECK:       pred.udiv.if49:
+; CHECK-NEXT:    [[TMP198:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP198]], label [[PRED_UDIV_IF49:%.*]], label [[PRED_UDIV_CONTINUE50:%.*]]
+; CHECK:       pred.udiv.if50:
 ; CHECK-NEXT:    [[TMP102:%.*]] = extractelement <32 x i32> [[TMP1]], i64 25
 ; CHECK-NEXT:    [[TMP103:%.*]] = udiv i32 [[TMP102]], [[D]]
 ; CHECK-NEXT:    [[TMP104:%.*]] = insertelement <32 x i32> [[TMP101]], i32 [[TMP103]], i64 25
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE50]]
-; CHECK:       pred.udiv.continue50:
+; CHECK:       pred.udiv.continue51:
 ; CHECK-NEXT:    [[TMP105:%.*]] = phi <32 x i32> [ [[TMP101]], [[PRED_UDIV_CONTINUE48]] ], [ [[TMP104]], [[PRED_UDIV_IF49]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF51:%.*]], label [[PRED_UDIV_CONTINUE52:%.*]]
-; CHECK:       pred.udiv.if51:
+; CHECK-NEXT:    [[TMP200:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP200]], label [[PRED_UDIV_IF51:%.*]], label [[PRED_UDIV_CONTINUE52:%.*]]
+; CHECK:       pred.udiv.if52:
 ; CHECK-NEXT:    [[TMP106:%.*]] = extractelement <32 x i32> [[TMP1]], i64 26
 ; CHECK-NEXT:    [[TMP107:%.*]] = udiv i32 [[TMP106]], [[D]]
 ; CHECK-NEXT:    [[TMP108:%.*]] = insertelement <32 x i32> [[TMP105]], i32 [[TMP107]], i64 26
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE52]]
-; CHECK:       pred.udiv.continue52:
+; CHECK:       pred.udiv.continue53:
 ; CHECK-NEXT:    [[TMP109:%.*]] = phi <32 x i32> [ [[TMP105]], [[PRED_UDIV_CONTINUE50]] ], [ [[TMP108]], [[PRED_UDIV_IF51]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF53:%.*]], label [[PRED_UDIV_CONTINUE54:%.*]]
-; CHECK:       pred.udiv.if53:
+; CHECK-NEXT:    [[TMP201:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP201]], label [[PRED_UDIV_IF53:%.*]], label [[PRED_UDIV_CONTINUE54:%.*]]
+; CHECK:       pred.udiv.if54:
 ; CHECK-NEXT:    [[TMP110:%.*]] = extractelement <32 x i32> [[TMP1]], i64 27
 ; CHECK-NEXT:    [[TMP111:%.*]] = udiv i32 [[TMP110]], [[D]]
 ; CHECK-NEXT:    [[TMP112:%.*]] = insertelement <32 x i32> [[TMP109]], i32 [[TMP111]], i64 27
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE54]]
-; CHECK:       pred.udiv.continue54:
+; CHECK:       pred.udiv.continue55:
 ; CHECK-NEXT:    [[TMP113:%.*]] = phi <32 x i32> [ [[TMP109]], [[PRED_UDIV_CONTINUE52]] ], [ [[TMP112]], [[PRED_UDIV_IF53]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF55:%.*]], label [[PRED_UDIV_CONTINUE56:%.*]]
-; CHECK:       pred.udiv.if55:
+; CHECK-NEXT:    [[TMP202:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP202]], label [[PRED_UDIV_IF55:%.*]], label [[PRED_UDIV_CONTINUE56:%.*]]
+; CHECK:       pred.udiv.if56:
 ; CHECK-NEXT:    [[TMP114:%.*]] = extractelement <32 x i32> [[TMP1]], i64 28
 ; CHECK-NEXT:    [[TMP115:%.*]] = udiv i32 [[TMP114]], [[D]]
 ; CHECK-NEXT:    [[TMP116:%.*]] = insertelement <32 x i32> [[TMP113]], i32 [[TMP115]], i64 28
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE56]]
-; CHECK:       pred.udiv.continue56:
+; CHECK:       pred.udiv.continue57:
 ; CHECK-NEXT:    [[TMP117:%.*]] = phi <32 x i32> [ [[TMP113]], [[PRED_UDIV_CONTINUE54]] ], [ [[TMP116]], [[PRED_UDIV_IF55]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF57:%.*]], label [[PRED_UDIV_CONTINUE58:%.*]]
-; CHECK:       pred.udiv.if57:
+; CHECK-NEXT:    [[TMP203:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP203]], label [[PRED_UDIV_IF57:%.*]], label [[PRED_UDIV_CONTINUE58:%.*]]
+; CHECK:       pred.udiv.if58:
 ; CHECK-NEXT:    [[TMP118:%.*]] = extractelement <32 x i32> [[TMP1]], i64 29
 ; CHECK-NEXT:    [[TMP119:%.*]] = udiv i32 [[TMP118]], [[D]]
 ; CHECK-NEXT:    [[TMP120:%.*]] = insertelement <32 x i32> [[TMP117]], i32 [[TMP119]], i64 29
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE58]]
-; CHECK:       pred.udiv.continue58:
+; CHECK:       pred.udiv.continue59:
 ; CHECK-NEXT:    [[TMP121:%.*]] = phi <32 x i32> [ [[TMP117]], [[PRED_UDIV_CONTINUE56]] ], [ [[TMP120]], [[PRED_UDIV_IF57]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF59:%.*]], label [[PRED_UDIV_CONTINUE60:%.*]]
-; CHECK:       pred.udiv.if59:
+; CHECK-NEXT:    [[TMP205:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP205]], label [[PRED_UDIV_IF59:%.*]], label [[PRED_UDIV_CONTINUE60:%.*]]
+; CHECK:       pred.udiv.if60:
 ; CHECK-NEXT:    [[TMP122:%.*]] = extractelement <32 x i32> [[TMP1]], i64 30
 ; CHECK-NEXT:    [[TMP123:%.*]] = udiv i32 [[TMP122]], [[D]]
 ; CHECK-NEXT:    [[TMP124:%.*]] = insertelement <32 x i32> [[TMP121]], i32 [[TMP123]], i64 30
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE60]]
-; CHECK:       pred.udiv.continue60:
+; CHECK:       pred.udiv.continue61:
 ; CHECK-NEXT:    [[TMP125:%.*]] = phi <32 x i32> [ [[TMP121]], [[PRED_UDIV_CONTINUE58]] ], [ [[TMP124]], [[PRED_UDIV_IF59]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_UDIV_IF61:%.*]], label [[PRED_UDIV_CONTINUE62]]
-; CHECK:       pred.udiv.if61:
+; CHECK-NEXT:    [[TMP206:%.*]] = extractelement <32 x i1> [[TMP131]], i64 0
+; CHECK-NEXT:    br i1 [[TMP206]], label [[PRED_UDIV_IF61:%.*]], label [[PRED_UDIV_CONTINUE63:%.*]]
+; CHECK:       pred.udiv.if62:
 ; CHECK-NEXT:    [[TMP126:%.*]] = extractelement <32 x i32> [[TMP1]], i64 31
 ; CHECK-NEXT:    [[TMP127:%.*]] = udiv i32 [[TMP126]], [[D]]
 ; CHECK-NEXT:    [[TMP128:%.*]] = insertelement <32 x i32> [[TMP125]], i32 [[TMP127]], i64 31
-; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE62]]
-; CHECK:       pred.udiv.continue62:
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE63]]
+; CHECK:       pred.udiv.continue63:
 ; CHECK-NEXT:    [[TMP129:%.*]] = phi <32 x i32> [ [[TMP125]], [[PRED_UDIV_CONTINUE60]] ], [ [[TMP128]], [[PRED_UDIV_IF61]] ]
+; CHECK-NEXT:    [[TMP207:%.*]] = zext <32 x i32> [[TMP129]] to <32 x i64>
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE62]]
+; CHECK:       loop.latch64:
+; CHECK-NEXT:    [[TMP208:%.*]] = phi <32 x i64> [ poison, [[VECTOR_BODY1]] ], [ [[TMP207]], [[PRED_UDIV_CONTINUE63]] ]
+; CHECK-NEXT:    [[TMP212:%.*]] = phi <32 x i1> [ zeroinitializer, [[VECTOR_BODY1]] ], [ [[TMP131]], [[PRED_UDIV_CONTINUE63]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i32> [[VEC_IND]], splat (i32 32)
 ; CHECK-NEXT:    [[TMP130:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP130]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP130]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY1]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP131:%.*]] = zext <32 x i32> [[TMP129]] to <32 x i64>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <32 x i64> zeroinitializer, <32 x i64> [[TMP131]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <32 x i1> [[TMP212]], <32 x i64> [[TMP208]], <32 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <32 x i64> [[PREDPHI]], i64 31
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF13:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 992, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP133:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT65:%.*]] = insertelement <8 x i1> poison, i1 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT66:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT65]], <8 x i1> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP213:%.*]] = xor <8 x i1> [[BROADCAST_SPLAT66]], splat (i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[VEC_EPILOG_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY1:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX63:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT81:%.*]], [[PRED_UDIV_CONTINUE80:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND64:%.*]] = phi <8 x i32> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT82:%.*]], [[PRED_UDIV_CONTINUE80]] ]
+; CHECK-NEXT:    br i1 [[C]], label [[PRED_UDIV_CONTINUE80]], label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK:       then71:
 ; CHECK-NEXT:    [[TMP134:%.*]] = call <8 x i32> @llvm.usub.sat.v8i32(<8 x i32> [[VEC_IND64]], <8 x i32> splat (i32 1))
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF65:%.*]], label [[PRED_UDIV_CONTINUE66:%.*]]
-; CHECK:       pred.udiv.if65:
+; CHECK:       pred.udiv.if72:
 ; CHECK-NEXT:    [[TMP135:%.*]] = extractelement <8 x i32> [[TMP134]], i64 0
 ; CHECK-NEXT:    [[TMP136:%.*]] = udiv i32 [[TMP135]], [[D]]
 ; CHECK-NEXT:    [[TMP137:%.*]] = insertelement <8 x i32> poison, i32 [[TMP136]], i64 0
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE66]]
-; CHECK:       pred.udiv.continue66:
+; CHECK:       pred.udiv.continue73:
 ; CHECK-NEXT:    [[TMP138:%.*]] = phi <8 x i32> [ poison, [[VEC_EPILOG_VECTOR_BODY]] ], [ [[TMP137]], [[PRED_UDIV_IF65]] ]
-; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF67:%.*]], label [[PRED_UDIV_CONTINUE68:%.*]]
-; CHECK:       pred.udiv.if67:
+; CHECK-NEXT:    [[TMP174:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
+; CHECK-NEXT:    br i1 [[TMP174]], label [[PRED_UDIV_IF67:%.*]], label [[PRED_UDIV_CONTINUE68:%.*]]
+; CHECK:       pred.udiv.if74:
 ; CHECK-NEXT:    [[TMP139:%.*]] = extractelement <8 x i32> [[TMP134]], i64 1
 ; CHECK-NEXT:    [[TMP140:%.*]] = udiv i32 [[TMP139]], [[D]]
 ; CHECK-NEXT:    [[TMP141:%.*]] = insertelement <8 x i32> [[TMP138]], i32 [[TMP140]], i64 1
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE68]]
-; CHECK:       pred.udiv.continue68:
+; CHECK:       pred.udiv.continue75:
 ; CHECK-NEXT:    [[TMP142:%.*]] = phi <8 x i32> [ [[TMP138]], [[PRED_UDIV_CONTINUE66]] ], [ [[TMP141]], [[PRED_UDIV_IF67]] ]
-; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF69:%.*]], label [[PRED_UDIV_CONTINUE70:%.*]]
-; CHECK:       pred.udiv.if69:
+; CHECK-NEXT:    [[TMP179:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
+; CHECK-NEXT:    br i1 [[TMP179]], label [[PRED_UDIV_IF69:%.*]], label [[PRED_UDIV_CONTINUE70:%.*]]
+; CHECK:       pred.udiv.if76:
 ; CHECK-NEXT:    [[TMP143:%.*]] = extractelement <8 x i32> [[TMP134]], i64 2
 ; CHECK-NEXT:    [[TMP144:%.*]] = udiv i32 [[TMP143]], [[D]]
 ; CHECK-NEXT:    [[TMP145:%.*]] = insertelement <8 x i32> [[TMP142]], i32 [[TMP144]], i64 2
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE70]]
-; CHECK:       pred.udiv.continue70:
+; CHECK:       pred.udiv.continue77:
 ; CHECK-NEXT:    [[TMP146:%.*]] = phi <8 x i32> [ [[TMP142]], [[PRED_UDIV_CONTINUE68]] ], [ [[TMP145]], [[PRED_UDIV_IF69]] ]
-; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF71:%.*]], label [[PRED_UDIV_CONTINUE72:%.*]]
-; CHECK:       pred.udiv.if71:
+; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
+; CHECK-NEXT:    br i1 [[TMP184]], label [[PRED_UDIV_IF71:%.*]], label [[PRED_UDIV_CONTINUE72:%.*]]
+; CHECK:       pred.udiv.if78:
 ; CHECK-NEXT:    [[TMP147:%.*]] = extractelement <8 x i32> [[TMP134]], i64 3
 ; CHECK-NEXT:    [[TMP148:%.*]] = udiv i32 [[TMP147]], [[D]]
 ; CHECK-NEXT:    [[TMP149:%.*]] = insertelement <8 x i32> [[TMP146]], i32 [[TMP148]], i64 3
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE72]]
-; CHECK:       pred.udiv.continue72:
+; CHECK:       pred.udiv.continue79:
 ; CHECK-NEXT:    [[TMP150:%.*]] = phi <8 x i32> [ [[TMP146]], [[PRED_UDIV_CONTINUE70]] ], [ [[TMP149]], [[PRED_UDIV_IF71]] ]
-; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF73:%.*]], label [[PRED_UDIV_CONTINUE74:%.*]]
-; CHECK:       pred.udiv.if73:
+; CHECK-NEXT:    [[TMP189:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
+; CHECK-NEXT:    br i1 [[TMP189]], label [[PRED_UDIV_IF73:%.*]], label [[PRED_UDIV_CONTINUE74:%.*]]
+; CHECK:       pred.udiv.if80:
 ; CHECK-NEXT:    [[TMP151:%.*]] = extractelement <8 x i32> [[TMP134]], i64 4
 ; CHECK-NEXT:    [[TMP152:%.*]] = udiv i32 [[TMP151]], [[D]]
 ; CHECK-NEXT:    [[TMP153:%.*]] = insertelement <8 x i32> [[TMP150]], i32 [[TMP152]], i64 4
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE74]]
-; CHECK:       pred.udiv.continue74:
+; CHECK:       pred.udiv.continue81:
 ; CHECK-NEXT:    [[TMP154:%.*]] = phi <8 x i32> [ [[TMP150]], [[PRED_UDIV_CONTINUE72]] ], [ [[TMP153]], [[PRED_UDIV_IF73]] ]
-; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF75:%.*]], label [[PRED_UDIV_CONTINUE76:%.*]]
-; CHECK:       pred.udiv.if75:
+; CHECK-NEXT:    [[TMP194:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
+; CHECK-NEXT:    br i1 [[TMP194]], label [[PRED_UDIV_IF75:%.*]], label [[PRED_UDIV_CONTINUE76:%.*]]
+; CHECK:       pred.udiv.if82:
 ; CHECK-NEXT:    [[TMP155:%.*]] = extractelement <8 x i32> [[TMP134]], i64 5
 ; CHECK-NEXT:    [[TMP156:%.*]] = udiv i32 [[TMP155]], [[D]]
 ; CHECK-NEXT:    [[TMP157:%.*]] = insertelement <8 x i32> [[TMP154]], i32 [[TMP156]], i64 5
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE76]]
-; CHECK:       pred.udiv.continue76:
+; CHECK:       pred.udiv.continue83:
 ; CHECK-NEXT:    [[TMP158:%.*]] = phi <8 x i32> [ [[TMP154]], [[PRED_UDIV_CONTINUE74]] ], [ [[TMP157]], [[PRED_UDIV_IF75]] ]
-; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF77:%.*]], label [[PRED_UDIV_CONTINUE78:%.*]]
-; CHECK:       pred.udiv.if77:
+; CHECK-NEXT:    [[TMP199:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
+; CHECK-NEXT:    br i1 [[TMP199]], label [[PRED_UDIV_IF77:%.*]], label [[PRED_UDIV_CONTINUE78:%.*]]
+; CHECK:       pred.udiv.if84:
 ; CHECK-NEXT:    [[TMP159:%.*]] = extractelement <8 x i32> [[TMP134]], i64 6
 ; CHECK-NEXT:    [[TMP160:%.*]] = udiv i32 [[TMP159]], [[D]]
 ; CHECK-NEXT:    [[TMP161:%.*]] = insertelement <8 x i32> [[TMP158]], i32 [[TMP160]], i64 6
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE78]]
-; CHECK:       pred.udiv.continue78:
+; CHECK:       pred.udiv.continue85:
 ; CHECK-NEXT:    [[TMP162:%.*]] = phi <8 x i32> [ [[TMP158]], [[PRED_UDIV_CONTINUE76]] ], [ [[TMP161]], [[PRED_UDIV_IF77]] ]
-; CHECK-NEXT:    br i1 [[TMP133]], label [[PRED_UDIV_IF79:%.*]], label [[PRED_UDIV_CONTINUE80]]
-; CHECK:       pred.udiv.if79:
+; CHECK-NEXT:    [[TMP204:%.*]] = extractelement <8 x i1> [[TMP213]], i64 0
+; CHECK-NEXT:    br i1 [[TMP204]], label [[PRED_UDIV_IF79:%.*]], label [[PRED_UDIV_CONTINUE87:%.*]]
+; CHECK:       pred.udiv.if86:
 ; CHECK-NEXT:    [[TMP163:%.*]] = extractelement <8 x i32> [[TMP134]], i64 7
 ; CHECK-NEXT:    [[TMP164:%.*]] = udiv i32 [[TMP163]], [[D]]
 ; CHECK-NEXT:    [[TMP165:%.*]] = insertelement <8 x i32> [[TMP162]], i32 [[TMP164]], i64 7
-; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE80]]
-; CHECK:       pred.udiv.continue80:
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE87]]
+; CHECK:       pred.udiv.continue87:
 ; CHECK-NEXT:    [[TMP166:%.*]] = phi <8 x i32> [ [[TMP162]], [[PRED_UDIV_CONTINUE78]] ], [ [[TMP165]], [[PRED_UDIV_IF79]] ]
+; CHECK-NEXT:    [[TMP209:%.*]] = zext <8 x i32> [[TMP166]] to <8 x i64>
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE80]]
+; CHECK:       loop.latch88:
+; CHECK-NEXT:    [[TMP210:%.*]] = phi <8 x i64> [ poison, [[VEC_EPILOG_VECTOR_BODY1]] ], [ [[TMP209]], [[PRED_UDIV_CONTINUE87]] ]
+; CHECK-NEXT:    [[TMP211:%.*]] = phi <8 x i1> [ zeroinitializer, [[VEC_EPILOG_VECTOR_BODY1]] ], [ [[TMP213]], [[PRED_UDIV_CONTINUE87]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT81]] = add nuw i32 [[INDEX63]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT82]] = add <8 x i32> [[VEC_IND64]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP167:%.*]] = icmp eq i32 [[INDEX_NEXT81]], 1000
-; CHECK-NEXT:    br i1 [[TMP167]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP167]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY1]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP168:%.*]] = zext <8 x i32> [[TMP166]] to <8 x i64>
-; CHECK-NEXT:    [[PREDPHI83:%.*]] = select i1 [[C]], <8 x i64> zeroinitializer, <8 x i64> [[TMP168]]
+; CHECK-NEXT:    [[PREDPHI83:%.*]] = select <8 x i1> [[TMP211]], <8 x i64> [[TMP210]], <8 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP169:%.*]] = extractelement <8 x i64> [[PREDPHI83]], i64 7
 ; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:

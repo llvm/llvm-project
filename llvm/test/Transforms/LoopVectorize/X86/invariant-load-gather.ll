@@ -33,16 +33,22 @@ define i32 @inv_load_conditional(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT4]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LATCH7:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP2]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP1]], i64 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[COND_LOAD6:%.*]], label [[LATCH7]]
+; CHECK:       cond_load6:
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 [[BROADCAST_SPLAT]], <16 x i1> [[TMP1]], <16 x i32> poison), !alias.scope [[META3]]
+; CHECK-NEXT:    br label [[LATCH7]]
+; CHECK:       latch7:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <16 x i32> [ poison, [[VECTOR_BODY]] ], [ [[WIDE_MASKED_GATHER]], [[COND_LOAD6]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <16 x i1> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP1]], [[COND_LOAD6]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP1]], i64 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP10]], <16 x i32> [[WIDE_MASKED_GATHER]], <16 x i32> splat (i32 1)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP11]], <16 x i32> [[TMP10]], <16 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i32> [[PREDPHI]], i64 15
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -60,16 +66,22 @@ define i32 @inv_load_conditional(ptr %a, i64 %n, ptr %b, i32 %k) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT11]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[LATCH16:%.*]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX10]]
 ; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT12]], ptr [[TMP6]], align 4, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER13:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[BROADCAST_SPLAT9]], <8 x i1> [[TMP5]], <8 x i32> poison), !alias.scope [[META3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
+; CHECK-NEXT:    br i1 [[TMP12]], label [[COND_LOAD14:%.*]], label [[LATCH16]]
+; CHECK:       cond_load14:
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER15:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[BROADCAST_SPLAT9]], <8 x i1> [[TMP5]], <8 x i32> poison), !alias.scope [[META3]]
+; CHECK-NEXT:    br label [[LATCH16]]
+; CHECK:       latch16:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <8 x i32> [ poison, [[VEC_EPILOG_VECTOR_BODY]] ], [ [[WIDE_MASKED_GATHER15]], [[COND_LOAD14]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <8 x i1> [ zeroinitializer, [[VEC_EPILOG_VECTOR_BODY]] ], [ [[TMP5]], [[COND_LOAD14]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX10]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
-; CHECK-NEXT:    [[PREDPHI14:%.*]] = select i1 [[TMP9]], <8 x i32> [[WIDE_MASKED_GATHER13]], <8 x i32> splat (i32 1)
+; CHECK-NEXT:    [[PREDPHI14:%.*]] = select <8 x i1> [[TMP14]], <8 x i32> [[TMP13]], <8 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[PREDPHI14]], i64 7
 ; CHECK-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[CMP_N16]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]

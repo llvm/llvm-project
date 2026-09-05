@@ -2774,7 +2774,17 @@ public:
            "all incoming values must have the same type");
   }
 
+  /// Create a new VPWidenPHIRecipe without any incoming values that will be
+  /// added later.
+  VPWidenPHIRecipe(Type *ResultTy, DebugLoc DL = DebugLoc::getUnknown(),
+                   const Twine &Name = "")
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, {}, ResultTy,
+                          /*UV=*/nullptr, DL),
+        Name(Name.str()) {}
+
   VPWidenPHIRecipe *clone() override {
+    if (operands().empty())
+      return new VPWidenPHIRecipe(getScalarType(), getDebugLoc(), Name);
     return new VPWidenPHIRecipe(operands(), getDebugLoc(), Name);
   }
 
