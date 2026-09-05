@@ -1471,6 +1471,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.ignoreFunctionAddressEquality =
       args.hasArg(OPT_ignore_function_address_equality);
   ctx.arg.init = args.getLastArgValue(OPT_init, "_init");
+  ctx.arg.keepFoldedDebugInfo = args.hasFlag(
+      OPT_keep_folded_debug_info, OPT_no_keep_folded_debug_info, false);
   ctx.arg.ltoAAPipeline = args.getLastArgValue(OPT_lto_aa_pipeline);
   ctx.arg.ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
   ctx.arg.ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
