@@ -91,11 +91,10 @@ define i64 @scalar_i64(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB6-LABEL: scalar_i64:
 ; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    mvns r1, r1
-; THUMB6-NEXT:    mvns r0, r0
-; THUMB6-NEXT:    subs r0, r2, r0
-; THUMB6-NEXT:    sbcs r3, r1
-; THUMB6-NEXT:    mov r1, r3
+; THUMB6-NEXT:    mvns r3, r3
+; THUMB6-NEXT:    mvns r2, r2
+; THUMB6-NEXT:    subs r0, r0, r2
+; THUMB6-NEXT:    sbcs r1, r3
 ; THUMB6-NEXT:    bx lr
 ;
 ; THUMB78-LABEL: scalar_i64:
@@ -195,11 +194,11 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ;
 ; ARM78-LABEL: vector_i128_i8:
 ; ARM78:       @ %bb.0:
-; ARM78-NEXT:    vmov d17, r2, r3
-; ARM78-NEXT:    vmov d16, r0, r1
-; ARM78-NEXT:    mov r0, sp
+; ARM78-NEXT:    mov r12, sp
+; ARM78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; ARM78-NEXT:    vmvn q8, q8
-; ARM78-NEXT:    vld1.64 {d18, d19}, [r0]
+; ARM78-NEXT:    vmov d19, r2, r3
+; ARM78-NEXT:    vmov d18, r0, r1
 ; ARM78-NEXT:    vsub.i8 q8, q9, q8
 ; ARM78-NEXT:    vmov r0, r1, d16
 ; ARM78-NEXT:    vmov r2, r3, d17
@@ -290,11 +289,11 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ;
 ; THUMB78-LABEL: vector_i128_i8:
 ; THUMB78:       @ %bb.0:
-; THUMB78-NEXT:    vmov d17, r2, r3
-; THUMB78-NEXT:    vmov d16, r0, r1
-; THUMB78-NEXT:    mov r0, sp
+; THUMB78-NEXT:    mov r12, sp
+; THUMB78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; THUMB78-NEXT:    vmvn q8, q8
-; THUMB78-NEXT:    vld1.64 {d18, d19}, [r0]
+; THUMB78-NEXT:    vmov d19, r2, r3
+; THUMB78-NEXT:    vmov d18, r0, r1
 ; THUMB78-NEXT:    vsub.i8 q8, q9, q8
 ; THUMB78-NEXT:    vmov r0, r1, d16
 ; THUMB78-NEXT:    vmov r2, r3, d17
@@ -349,11 +348,11 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ;
 ; ARM78-LABEL: vector_i128_i16:
 ; ARM78:       @ %bb.0:
-; ARM78-NEXT:    vmov d17, r2, r3
-; ARM78-NEXT:    vmov d16, r0, r1
-; ARM78-NEXT:    mov r0, sp
+; ARM78-NEXT:    mov r12, sp
+; ARM78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; ARM78-NEXT:    vmvn q8, q8
-; ARM78-NEXT:    vld1.64 {d18, d19}, [r0]
+; ARM78-NEXT:    vmov d19, r2, r3
+; ARM78-NEXT:    vmov d18, r0, r1
 ; ARM78-NEXT:    vsub.i16 q8, q9, q8
 ; ARM78-NEXT:    vmov r0, r1, d16
 ; ARM78-NEXT:    vmov r2, r3, d17
@@ -404,11 +403,11 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ;
 ; THUMB78-LABEL: vector_i128_i16:
 ; THUMB78:       @ %bb.0:
-; THUMB78-NEXT:    vmov d17, r2, r3
-; THUMB78-NEXT:    vmov d16, r0, r1
-; THUMB78-NEXT:    mov r0, sp
+; THUMB78-NEXT:    mov r12, sp
+; THUMB78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; THUMB78-NEXT:    vmvn q8, q8
-; THUMB78-NEXT:    vld1.64 {d18, d19}, [r0]
+; THUMB78-NEXT:    vmov d19, r2, r3
+; THUMB78-NEXT:    vmov d18, r0, r1
 ; THUMB78-NEXT:    vsub.i16 q8, q9, q8
 ; THUMB78-NEXT:    vmov r0, r1, d16
 ; THUMB78-NEXT:    vmov r2, r3, d17
@@ -437,11 +436,11 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; ARM78-LABEL: vector_i128_i32:
 ; ARM78:       @ %bb.0:
-; ARM78-NEXT:    vmov d17, r2, r3
-; ARM78-NEXT:    vmov d16, r0, r1
-; ARM78-NEXT:    mov r0, sp
+; ARM78-NEXT:    mov r12, sp
+; ARM78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; ARM78-NEXT:    vmvn q8, q8
-; ARM78-NEXT:    vld1.64 {d18, d19}, [r0]
+; ARM78-NEXT:    vmov d19, r2, r3
+; ARM78-NEXT:    vmov d18, r0, r1
 ; ARM78-NEXT:    vsub.i32 q8, q9, q8
 ; ARM78-NEXT:    vmov r0, r1, d16
 ; ARM78-NEXT:    vmov r2, r3, d17
@@ -466,11 +465,11 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; THUMB78-LABEL: vector_i128_i32:
 ; THUMB78:       @ %bb.0:
-; THUMB78-NEXT:    vmov d17, r2, r3
-; THUMB78-NEXT:    vmov d16, r0, r1
-; THUMB78-NEXT:    mov r0, sp
+; THUMB78-NEXT:    mov r12, sp
+; THUMB78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; THUMB78-NEXT:    vmvn q8, q8
-; THUMB78-NEXT:    vld1.64 {d18, d19}, [r0]
+; THUMB78-NEXT:    vmov d19, r2, r3
+; THUMB78-NEXT:    vmov d18, r0, r1
 ; THUMB78-NEXT:    vsub.i32 q8, q9, q8
 ; THUMB78-NEXT:    vmov r0, r1, d16
 ; THUMB78-NEXT:    vmov r2, r3, d17
@@ -500,11 +499,11 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ;
 ; ARM78-LABEL: vector_i128_i64:
 ; ARM78:       @ %bb.0:
-; ARM78-NEXT:    vmov d17, r2, r3
-; ARM78-NEXT:    vmov d16, r0, r1
-; ARM78-NEXT:    mov r0, sp
+; ARM78-NEXT:    mov r12, sp
+; ARM78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; ARM78-NEXT:    vmvn q8, q8
-; ARM78-NEXT:    vld1.64 {d18, d19}, [r0]
+; ARM78-NEXT:    vmov d19, r2, r3
+; ARM78-NEXT:    vmov d18, r0, r1
 ; ARM78-NEXT:    vsub.i64 q8, q9, q8
 ; ARM78-NEXT:    vmov r0, r1, d16
 ; ARM78-NEXT:    vmov r2, r3, d17
@@ -513,27 +512,27 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; THUMB6-LABEL: vector_i128_i64:
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    push {r4, r5, r7, lr}
-; THUMB6-NEXT:    mvns r4, r1
-; THUMB6-NEXT:    mvns r0, r0
-; THUMB6-NEXT:    ldr r1, [sp, #20]
+; THUMB6-NEXT:    ldr r4, [sp, #20]
+; THUMB6-NEXT:    mvns r4, r4
 ; THUMB6-NEXT:    ldr r5, [sp, #16]
-; THUMB6-NEXT:    subs r0, r5, r0
+; THUMB6-NEXT:    mvns r5, r5
+; THUMB6-NEXT:    subs r0, r0, r5
 ; THUMB6-NEXT:    sbcs r1, r4
-; THUMB6-NEXT:    mvns r4, r3
-; THUMB6-NEXT:    mvns r2, r2
-; THUMB6-NEXT:    ldr r3, [sp, #28]
+; THUMB6-NEXT:    ldr r4, [sp, #28]
+; THUMB6-NEXT:    mvns r4, r4
 ; THUMB6-NEXT:    ldr r5, [sp, #24]
-; THUMB6-NEXT:    subs r2, r5, r2
+; THUMB6-NEXT:    mvns r5, r5
+; THUMB6-NEXT:    subs r2, r2, r5
 ; THUMB6-NEXT:    sbcs r3, r4
 ; THUMB6-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB78-LABEL: vector_i128_i64:
 ; THUMB78:       @ %bb.0:
-; THUMB78-NEXT:    vmov d17, r2, r3
-; THUMB78-NEXT:    vmov d16, r0, r1
-; THUMB78-NEXT:    mov r0, sp
+; THUMB78-NEXT:    mov r12, sp
+; THUMB78-NEXT:    vld1.64 {d16, d17}, [r12]
 ; THUMB78-NEXT:    vmvn q8, q8
-; THUMB78-NEXT:    vld1.64 {d18, d19}, [r0]
+; THUMB78-NEXT:    vmov d19, r2, r3
+; THUMB78-NEXT:    vmov d18, r0, r1
 ; THUMB78-NEXT:    vsub.i64 q8, q9, q8
 ; THUMB78-NEXT:    vmov r0, r1, d16
 ; THUMB78-NEXT:    vmov r2, r3, d17
