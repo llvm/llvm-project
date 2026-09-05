@@ -7936,12 +7936,18 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // check), so that e.g. '&*(int *)0' is not rejected.
     if (!Ctx.getLangOpts().CPlusPlus) {
       const Expr *Sub = SubExpr->IgnoreParens();
+
       if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
-          Deref && Deref->getOpcode() == UO_Deref)
-        return this->delegate(Deref->getSubExpr());
+          Deref && Deref->getOpcode() == UO_Deref) {
+        if (DiscardResult)
+          return this->discard(Deref->getSubExpr());
+        return this->visit(Deref->getSubExpr()) && this->emitAddrOf(E);
+      }
     }
     // We should already have a pointer when we get here.
-    return this->delegate(SubExpr);
+    if (DiscardResult)
+      return this->discard(SubExpr);
+    return this->delegate(SubExpr) && this->emitAddrOf(E);
   case UO_Deref: // *x
     if (DiscardResult)
       return this->discard(SubExpr);
@@ -8730,11 +8736,10 @@ template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
 
-  if (ToLValue) {
-    if (const auto *VD = D.asValueDecl())
-      return this->emitGetOpaquePtr(VD, CU, E);
-  }
+  if (const auto *VD = D.asValueDecl())
+    return this->emitGetOpaquePtr(VD, CU, E);
 
+  assert(D.asExpr());
   unsigned DummyID = P.getOrCreateDummy(D, CU);
   if (!this->emitGetPtrGlobal(DummyID, E))
     return false;
