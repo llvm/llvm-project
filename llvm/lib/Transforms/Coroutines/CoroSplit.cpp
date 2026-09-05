@@ -294,6 +294,23 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
   case coro::ABI::RetconOnce: {
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
     auto *CoroEnd = cast<CoroEndInst>(End);
+
+    if (InRamp) {
+      auto *RetTy = End->getFunction()->getReturnType();
+      Value *ReturnValue;
+      if (auto *RetStructTy = dyn_cast<StructType>(RetTy)) {
+        ReturnValue = Builder.CreateInsertValue(
+            PoisonValue::get(RetStructTy),
+            ConstantPointerNull::get(
+                cast<PointerType>(RetStructTy->getElementType(0))),
+            0);
+      } else {
+        ReturnValue = ConstantPointerNull::get(cast<PointerType>(RetTy));
+      }
+      Builder.CreateRet(ReturnValue);
+      break;
+    }
+
     auto *RetTy = Shape.getResumeFunctionType()->getReturnType();
 
     if (!CoroEnd->hasResults()) {
@@ -1248,9 +1265,11 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
     break;
   }
   case coro::ABI::Async:
+    CoroBegin->replaceAllUsesWith(PoisonValue::get(CoroBegin->getType()));
+    break;
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
-    CoroBegin->replaceAllUsesWith(PoisonValue::get(CoroBegin->getType()));
+    CoroBegin->replaceAllUsesWith(Shape.getRetconCoroId()->getStorage());
     break;
   }
 
