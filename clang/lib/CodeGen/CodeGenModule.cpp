@@ -397,15 +397,21 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be: {
+    llvm::abi::AArch64ABIOptions Opts;
     StringRef ABI = getTarget().getABI();
-    llvm::abi::AArch64ABIKind Kind = llvm::abi::AArch64ABIKind::AAPCS;
     if (ABI == "darwinpcs")
-      Kind = llvm::abi::AArch64ABIKind::DarwinPCS;
+      Opts.Kind = llvm::abi::AArch64ABIKind::DarwinPCS;
     else if (T.isOSWindows())
-      Kind = llvm::abi::AArch64ABIKind::Win64;
+      Opts.Kind = llvm::abi::AArch64ABIKind::Win64;
     else if (ABI == "aapcs-soft")
-      Kind = llvm::abi::AArch64ABIKind::AAPCSSoft;
-    TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Kind);
+      Opts.Kind = llvm::abi::AArch64ABIKind::AAPCSSoft;
+    else
+      Opts.Kind = llvm::abi::AArch64ABIKind::AAPCS;
+
+    Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
+    Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+
+    TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
 

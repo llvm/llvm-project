@@ -7,8 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ABI/TargetInfo.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cstdint>
 
 using namespace llvm::abi;
+using llvm::alignTo;
+using llvm::bit_ceil;
+using llvm::dyn_cast;
 
 bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
   // Check for fundamental scalar types.
@@ -81,4 +88,124 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
   }
 
   return false;
+}
+
+namespace {
+
+bool isEmptyRecordForHA(const Type *Ty) {
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  return RT && RT->isEmpty();
+}
+
+/// Storage-container width mirroring Clang's ASTContext::getTypeSize for the
+/// types that matter to homogeneous-aggregate detection.
+uint64_t getHATypeSizeInBits(const Type *Ty) {
+  if (const auto *VT = dyn_cast<VectorType>(Ty)) {
+    uint64_t EltWidth = VT->getElementType()->getSizeInBits().getFixedValue();
+    uint64_t Width = std::max<uint64_t>(
+        8, EltWidth * VT->getNumElements().getKnownMinValue());
+    if (Width & (Width - 1))
+      Width = alignTo(Width, bit_ceil(Width));
+    return Width;
+  }
+  return Ty->getSizeInBits().getFixedValue();
+}
+
+} // namespace
+
+bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
+                                        uint64_t &Members) const {
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    uint64_t NElements = AT->getNumElements();
+    if (NElements == 0)
+      return false;
+    if (!isHomogeneousAggregate(AT->getElementType(), Base, Members))
+      return false;
+    Members *= NElements;
+  } else if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+    if (RT->hasFlexibleArrayMember())
+      return false;
+
+    Members = 0;
+
+    // If this is a C++ record, check bases and ABI-specific restrictions.
+    if (RT->isCXXRecord()) {
+      if (!isPermittedToBeHomogeneousAggregate(RT))
+        return false;
+
+      for (const FieldInfo &BaseField : RT->getBaseClasses()) {
+        if (isEmptyRecordForHA(BaseField.FieldType))
+          continue;
+
+        uint64_t FldMembers = 0;
+        if (!isHomogeneousAggregate(BaseField.FieldType, Base, FldMembers))
+          return false;
+
+        Members += FldMembers;
+      }
+    }
+
+    for (const FieldInfo &FD : RT->getFields()) {
+      // Ignore (non-zero arrays of) empty records.
+      const Type *FT = FD.FieldType;
+      while (const auto *AT = dyn_cast<ArrayType>(FT)) {
+        if (AT->getNumElements() == 0)
+          return false;
+        FT = AT->getElementType();
+      }
+      if (isEmptyRecordForHA(FT))
+        continue;
+
+      if (isZeroLengthBitfieldPermittedInHomogeneousAggregate() &&
+          FD.IsBitField && FD.BitFieldWidth == 0)
+        continue;
+
+      uint64_t FldMembers = 0;
+      if (!isHomogeneousAggregate(FD.FieldType, Base, FldMembers))
+        return false;
+
+      Members =
+          RT->isUnion() ? std::max(Members, FldMembers) : Members + FldMembers;
+    }
+
+    if (!Base)
+      return false;
+
+    // Ensure there is no padding.
+    if (getHATypeSizeInBits(Base) * Members != getHATypeSizeInBits(Ty))
+      return false;
+  } else {
+    Members = 1;
+    const Type *ElemTy = Ty;
+    if (const auto *CT = dyn_cast<ComplexType>(Ty)) {
+      Members = 2;
+      ElemTy = CT->getElementType();
+    }
+
+    // Most ABIs only support float, double, and some vector type widths.
+    if (!isHomogeneousAggregateBaseType(ElemTy))
+      return false;
+
+    // The base type must be the same for all members. Types that agree in both
+    // total size and mode (float vs. vector) are treated as equivalent here.
+    if (!Base) {
+      Base = ElemTy;
+      // If it's a non-power-of-2 vector, its ABI size is already a power-of-2,
+      // so widen it explicitly to match Clang.
+      if (const auto *VT = dyn_cast<VectorType>(Base)) {
+        uint64_t EltSize =
+            VT->getElementType()->getSizeInBits().getFixedValue();
+        unsigned NumElements = getHATypeSizeInBits(VT) / EltSize;
+        if (NumElements != VT->getNumElements().getKnownMinValue())
+          Base = TB.getVectorType(VT->getElementType(),
+                                  ElementCount::getFixed(NumElements),
+                                  VT->getAlignment());
+      }
+    }
+
+    if (Base->isVector() != ElemTy->isVector() ||
+        getHATypeSizeInBits(Base) != getHATypeSizeInBits(ElemTy))
+      return false;
+  }
+  return Members > 0 && isHomogeneousAggregateSmallEnough(Base, Members);
 }

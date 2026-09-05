@@ -74,7 +74,6 @@ public:
   enum Class { Integer, Sse, SseUp, X87, X87Up, ComplexX87, NoClass, Memory };
 
 private:
-  TypeBuilder &TB;
   X86AVXABILevel AVXLevel;
   bool Has64BitPointers;
 
@@ -115,7 +114,7 @@ private:
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
                    bool Has64BitPtrs, const ABICompatInfo &Compat)
-      : TargetInfo(Compat), TB(TypeBuilder), AVXLevel(AVXABILevel),
+      : TargetInfo(TypeBuilder, Compat), AVXLevel(AVXABILevel),
         Has64BitPointers(Has64BitPtrs) {}
 
   bool has64BitPointers() const { return Has64BitPointers; }

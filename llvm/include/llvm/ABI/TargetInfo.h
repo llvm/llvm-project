@@ -63,9 +63,13 @@ class TargetInfo {
 private:
   ABICompatInfo CompatInfo;
 
+protected:
+  TypeBuilder &TB;
+
 public:
-  TargetInfo() : CompatInfo() {}
-  explicit TargetInfo(const ABICompatInfo &Info) : CompatInfo(Info) {}
+  explicit TargetInfo(TypeBuilder &Builder) : CompatInfo(), TB(Builder) {}
+  TargetInfo(TypeBuilder &Builder, const ABICompatInfo &Info)
+      : CompatInfo(Info), TB(Builder) {}
 
   virtual ~TargetInfo() = default;
 
@@ -89,6 +93,35 @@ protected:
 
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
+
+  /// Return true if \p Ty is a valid base type for a homogeneous aggregate.
+  virtual bool isHomogeneousAggregateBaseType(const Type *Ty) const {
+    return false;
+  }
+
+  /// Return true if a homogeneous aggregate with \p Members copies of \p Base
+  /// is small enough to be passed in registers for this ABI.
+  virtual bool isHomogeneousAggregateSmallEnough(const Type *Base,
+                                                 uint64_t Members) const {
+    return false;
+  }
+
+  /// Return true if zero-length bitfields should be ignored when deciding
+  /// whether an aggregate is homogeneous.
+  virtual bool isZeroLengthBitfieldPermittedInHomogeneousAggregate() const {
+    return false;
+  }
+
+  /// Return true if the C++ ABI permits \p RT to be a homogeneous aggregate.
+  virtual bool isPermittedToBeHomogeneousAggregate(const RecordType *RT) const {
+    return true;
+  }
+
+  /// Return true if \p Ty is an ELFv2-style homogeneous aggregate. \p Base is
+  /// set to the base element type and \p Members to the number of base
+  /// elements.
+  LLVM_ABI bool isHomogeneousAggregate(const Type *Ty, const Type *&Base,
+                                       uint64_t &Members) const;
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
@@ -112,8 +145,20 @@ enum class AArch64ABIKind {
   AAPCSSoft,
 };
 
+/// Target / language flags that affect AArch64 ABI classification.
+/// Callers (e.g. Clang) resolve Triple and LangOptions into these flags
+/// rather than passing a Triple into the ABI library.
+struct AArch64ABIOptions {
+  AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
+  bool IsILP32 = false;
+  bool IsMicrosoftCXXABI = false;
+
+  AArch64ABIOptions() = default;
+  AArch64ABIOptions(AArch64ABIKind Kind) : Kind(Kind) {}
+};
+
 LLVM_ABI std::unique_ptr<TargetInfo>
-createAArch64TargetInfo(TypeBuilder &TB, AArch64ABIKind Kind);
+createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts);
 
 } // namespace abi
 } // namespace llvm

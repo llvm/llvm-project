@@ -86,3 +86,31 @@ _BitInt(128) ret_bitint128(void) { return 0; }
 
 _BitInt(129) ret_bitint129(void) { return 0; }
 // CHECK: define{{.*}} void @ret_bitint129(ptr dead_on_unwind noalias writable sret(i256) align 16 %{{.*}})
+
+// Homogeneous floating-point aggregates are returned directly.
+_Complex float ret_complex_float() { return 1.0f; }
+// CHECK: define{{.*}} { float, float } @ret_complex_float
+
+typedef struct {
+  float a, b;
+} HFA2f;
+HFA2f ret_hfa2f() { return (HFA2f){1.0f, 2.0f}; }
+// CHECK: define{{.*}} %struct.HFA2f @ret_hfa2f
+
+typedef struct {
+  double a, b, c, d;
+} HFA4d;
+HFA4d ret_hfa4d() { return (HFA4d){1.0, 2.0, 3.0, 4.0}; }
+// CHECK: define{{.*}} %struct.HFA4d @ret_hfa4d
+
+typedef struct {
+  float v[3];
+} HFA3arr;
+HFA3arr ret_hfa3arr() { return (HFA3arr){{1.0f, 2.0f, 3.0f}}; }
+// CHECK: define{{.*}} %struct.HFA3arr @ret_hfa3arr
+
+typedef struct {
+  _Float16 a, b;
+} HFA2h;
+HFA2h ret_hfa2h() { return (HFA2h){1.0f, 2.0f}; }
+// CHECK: define{{.*}} %struct.HFA2h @ret_hfa2h
