@@ -214,6 +214,12 @@ public:
   }
 
   void processFunctionScopes(mlir::func::FuncOp func);
+  // Find variables whose addresses are assigned to Cray pointers in the same
+  // function. Such variables are pointer targets for the purpose of TBAA even
+  // when they do not have the Fortran TARGET attribute.
+  void collectCrayPointerTargets(mlir::ModuleOp module);
+  bool isCrayPointerTarget(const fir::AliasAnalysis::Source &source,
+                           mlir::func::FuncOp func) const;
   // For the given fir.declare returns the dominating fir.dummy_scope
   // operation.
   fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp);
@@ -320,6 +326,12 @@ private:
   llvm::DenseMap<mlir::func::FuncOp, llvm::SmallVector<fir::DummyScopeOp, 16>>
       sortedScopeOperations;
 
+  // Declaration sites of variables whose addresses are visibly assigned to a
+  // Cray pointer, grouped by function so this does not change interprocedural
+  // aliasing assumptions.
+  llvm::DenseMap<mlir::func::FuncOp, llvm::DenseSet<mlir::Operation *>>
+      crayPointerTargets;
+
   // Local pass cache for derived types that contain descriptor
   // member(s), to avoid the cost of isRecordWithDescriptorMember().
   llvm::DenseSet<mlir::Type> typesContainingDescriptors;
@@ -331,6 +343,34 @@ private:
   // is initialized by collectPhysicalStorageAliasSets().
   bool declToStorageMapComputed = false;
 };
+
+void PassState::collectCrayPointerTargets(mlir::ModuleOp module) {
+  module.walk([&](fir::StoreOp store) {
+    const fir::AliasAnalysis::Source &pointerSource =
+        getSource(store.getMemref());
+    if (!pointerSource.isCrayPointer())
+      return;
+
+    const fir::AliasAnalysis::Source &targetSource =
+        getSource(store.getValue());
+    mlir::Operation *targetDecl = targetSource.origin.instantiationPoint;
+    if (!targetDecl || !targetSource.isData() ||
+        targetSource.kind == fir::AliasAnalysis::SourceKind::Indirect ||
+        targetSource.kind == fir::AliasAnalysis::SourceKind::Unknown)
+      return;
+
+    if (mlir::func::FuncOp func = store->getParentOfType<mlir::func::FuncOp>())
+      crayPointerTargets[func].insert(targetDecl);
+  });
+}
+
+bool PassState::isCrayPointerTarget(const fir::AliasAnalysis::Source &source,
+                                    mlir::func::FuncOp func) const {
+  mlir::Operation *decl = source.origin.instantiationPoint;
+  auto funcIt = crayPointerTargets.find(func);
+  return decl && funcIt != crayPointerTargets.end() &&
+         funcIt->second.contains(decl);
+}
 
 // Process fir.dummy_scope operations in the given func:
 // sort them according to the dominance information, and
@@ -670,6 +710,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
 
   const fir::AliasAnalysis::Source &source = state.getSource(memref);
   LLVM_DEBUG(llvm::dbgs() << "Got source " << source << "\n");
+  bool isCrayPointerTarget = state.isCrayPointerTarget(source, func);
 
   // Process the scopes, if not processed yet.
   state.processFunctionScopes(func);
@@ -704,7 +745,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     // POINTERS can alias with any POINTER or TARGET. Assume that TARGET dummy
     // arguments might alias with each other (because of the "TARGET" hole for
     // dummy arguments). See flang/docs/Aliasing.md.
-    if (source.isTargetOrPointer()) {
+    if (source.isTargetOrPointer() || isCrayPointerTarget) {
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
     } else if (!name.empty()) {
       tag = state.getFuncTreeWithScope(func, scopeOp)
@@ -778,7 +819,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     if (source.isPointer()) {
       // Pointers can alias with any pointer or target.
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else if (source.isTarget()) {
+    } else if (source.isTarget() || isCrayPointerTarget) {
       // Targets could alias with any pointer but not with each other.
       addTagUsingStorageDesc(
           &state.getMutableFuncTreeWithScope(func, scopeOp).targetDataTree);
@@ -801,7 +842,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
         tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
       // Targets could alias with any pointer but not with each other so they
       // get their own node inside of the target data tree.
-      else if (source.isTarget())
+      else if (source.isTarget() || isCrayPointerTarget)
         tag = state.getFuncTreeWithScope(func, scopeOp)
                   .targetDataTree.getTag(name);
       else
@@ -865,12 +906,14 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "Found reference to POINTER allocation at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else if (name && source.isTarget() && state.attachLocalAllocTag()) {
+    } else if (name && (source.isTarget() || isCrayPointerTarget) &&
+               state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "Found reference to TARGET allocation at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .targetDataTree.getTag(*name);
-    } else if (source.isTarget() && state.attachLocalAllocTag()) {
+    } else if ((source.isTarget() || isCrayPointerTarget) &&
+               state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for TARGET allocation " << *op
                  << "\n");
@@ -930,6 +973,7 @@ void AddAliasTagsPass::runOnOperation() {
                   localAllocsThreshold.getPosition()
                       ? std::optional<unsigned>(localAllocsThreshold)
                       : std::nullopt);
+  state.collectCrayPointerTargets(module);
 
   module.walk(
       [&](fir::FirAliasTagOpInterface op) { runOnAliasInterface(op, state); });
