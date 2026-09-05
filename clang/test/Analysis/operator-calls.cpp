@@ -69,15 +69,18 @@ namespace RValues {
     }
   };
 
+  // 1.0 is no longer unknown. This function forces an unknown float.
+  float getUnknownFloat();
+
   SmallOpaque getSmallOpaque() {
     SmallOpaque obj;
-    obj.x = 1.0;
+    obj.x = getUnknownFloat();
     return obj;
   }
 
   LargeOpaque getLargeOpaque() {
     LargeOpaque obj = LargeOpaque();
-    obj.x[0] = 1.0;
+    obj.x[0] = getUnknownFloat();
     return obj;
   }
 

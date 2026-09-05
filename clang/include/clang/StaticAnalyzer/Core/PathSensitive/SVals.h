@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APFloatPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
@@ -300,6 +301,23 @@ public:
   }
 
   static bool classof(SVal V) { return V.getKind() == SymbolValKind; }
+};
+
+/// Value representing floating-point constant.
+///
+/// The value wrapped here will always satisfy
+/// \c SValBuilder::isModeledFloatValue() such that it is finite and
+/// non-subnormal. Since infinities and NaNs are unmodeled, testing such values
+/// with \c isZero alone is sufficient to evaluate them in boolean contexts.
+class ConcreteFloat : public NonLoc {
+public:
+  explicit ConcreteFloat(APFloatPtr V) : NonLoc(ConcreteFloatKind, V.get()) {}
+
+  APFloatPtr getValue() const {
+    return APFloatPtr(castDataAs<llvm::APFloat>());
+  }
+
+  static bool classof(SVal V) { return V.getKind() == ConcreteFloatKind; }
 };
 
 /// Value representing integer constant.

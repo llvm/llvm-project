@@ -98,6 +98,14 @@ public:
     return Visit(V.getSymbol());
   }
 
+  std::string VisitConcreteFloat(nonloc::ConcreteFloat V) {
+    const llvm::APFloat &F = *V.getValue();
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    OS << "concrete floating-point value '" << F << "'";
+    return Str;
+  }
+
   std::string VisitConcreteInt(nonloc::ConcreteInt V) {
     const llvm::APSInt &I = V.getValue();
     std::string Str;

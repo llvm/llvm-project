@@ -288,8 +288,13 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 
       if (const MemRegion *MR = State->getSVal(Ex, SF).getAsRegion()) {
         SVal OrigV = State->getSVal(MR);
-        CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
-                                       CastE->getType(), Ex->getType());
+        // evalCast converts the value, but we are doing a bitcast here,
+        // which coincide only if no floats are involved.
+        if (!Ex->getType()->isFloatingType() &&
+            !CastE->getType()->isFloatingType()) {
+          CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
+                                         CastE->getType(), Ex->getType());
+        }
       }
       Dst.insert(Engine.makeNodeWithBinding(Node, CastE, CastedV));
     }
@@ -971,12 +976,22 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
           if (std::optional<Loc> LV = V.getAs<Loc>()) {
           Loc X = svalBuilder.makeNullWithType(Ex->getType());
           Result = evalBinOp(state, BO_EQ, *LV, X, U->getType());
+          } else if (Ex->getType()->isRealFloatingType()) {
+            // Create a zero with matching semantics to the floating point.
+            DefinedOrUnknownSVal X = svalBuilder.makeZeroVal(Ex->getType());
+            if (std::optional<NonLoc> ZeroNL = X.getAs<NonLoc>()) {
+              Result = evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), *ZeroNL,
+                                 U->getType());
+            } else {
+              Result = UnknownVal();
+            }
           } else if (Ex->getType()->isFloatingType()) {
-          // FIXME: handle floating point types.
-          Result = UnknownVal();
+            // FIXME: handle complex floating point types.
+            Result = UnknownVal();
           } else {
-          nonloc::ConcreteInt X(getBasicVals().getValue(0, Ex->getType()));
-          Result = evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), X, U->getType());
+            nonloc::ConcreteInt X(getBasicVals().getValue(0, Ex->getType()));
+            Result =
+                evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), X, U->getType());
           }
 
           state = state->BindExpr(U, SF, Result);
@@ -1031,12 +1046,22 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     SVal RHS;
     SVal Result;
 
-    if (U->getType()->isAnyPointerType())
+    if (U->getType()->isAnyPointerType()) {
       RHS = svalBuilder.makeArrayIndex(1);
-    else if (U->getType()->isIntegralOrEnumerationType())
+    } else if (U->getType()->isIntegralOrEnumerationType()) {
       RHS = svalBuilder.makeIntVal(1, U->getType());
-    else
+    } else if (U->getType()->isRealFloatingType()) {
+      // C99 6.5.3.1: ++E is equivalent to (E += 1). Then the usual arithmetic
+      // conversions convert the 1 to E's type, so just build it as that type
+      // here.
+      if (auto One = svalBuilder.makeFloatVal(llvm::APFloat::getOne(
+              getContext().getFloatTypeSemantics(U->getType()))))
+        RHS = *One;
+      else
+        RHS = UnknownVal();
+    } else {
       RHS = UnknownVal();
+    }
 
     // The use of an operand of type bool with the ++ operators is deprecated
     // but valid until C++17. And if the operand of the ++ operator is of type

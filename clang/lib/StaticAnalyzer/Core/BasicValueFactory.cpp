@@ -83,6 +83,9 @@ BasicValueFactory::~BasicValueFactory() {
   for (const auto &I : APSIntSet)
     I.getValue().~APSInt();
 
+  for (const auto &I : APFloatSet)
+    I.getValue().~APFloat();
+
   delete (PersistentSValsTy*) PersistentSVals;
   delete (PersistentSValPairsTy*) PersistentSValPairs;
 }
@@ -119,6 +122,26 @@ APSIntPtr BasicValueFactory::getValue(uint64_t X, unsigned BitWidth,
 
 APSIntPtr BasicValueFactory::getValue(uint64_t X, QualType T) {
   return getValue(getAPSIntType(T).getValue(X));
+}
+
+APFloatPtr BasicValueFactory::getFloatValue(const llvm::APFloat &X) {
+  llvm::FoldingSetNodeID ID;
+  void *InsertPos;
+
+  using FoldNodeTy = llvm::FoldingSetNodeWrapper<llvm::APFloat>;
+
+  // ID must be unique to differentiate between nodes. Unlike integers, bit
+  // size and pattern are not sufficient, so add semantics to the ID as well.
+  ID.AddInteger(llvm::APFloat::SemanticsToEnum(X.getSemantics()));
+  X.Profile(ID);
+  FoldNodeTy *P = APFloatSet.FindNodeOrInsertPos(ID, InsertPos);
+
+  if (!P) {
+    P = new (BPAlloc) FoldNodeTy(X);
+    APFloatSet.InsertNode(P, InsertPos);
+  }
+
+  return APFloatPtr(&P->getValue());
 }
 
 const CompoundValData*
