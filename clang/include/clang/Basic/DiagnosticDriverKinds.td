@@ -667,6 +667,12 @@ def remark_printing_module_graph : Remark<
 def err_module_defined_outside_of_module_source : Error<
   "module '%0' is defined in file '%1', but module declarations are only "
   "allowed in C++ module inputs; use the '.cppm' extension or '-x c++module'">;
+def err_drv_depscan_log_path_empty : Error<
+  "'-fdepscan-log-path=' requires a non-empty file path">;
+def err_drv_depscan_log_path_inconsistent : Error<
+  "'-fdepscan-log-path' set inconsistently within a dependency scan: "
+  "%select{no log path|log path '%1'}0 conflicts with "
+  "%select{no log path|log path '%3'}2 requested earlier">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,

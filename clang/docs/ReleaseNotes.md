@@ -670,6 +670,8 @@ features cannot lower the translation-unit ABI level;
   declaration. (#GH217489)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
+- Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
+  on `if consteval {}`. (#GH220004)
 
 ### OpenACC Specific Changes
 

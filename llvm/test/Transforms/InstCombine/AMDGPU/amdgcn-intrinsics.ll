@@ -246,7 +246,7 @@ define double @test_constant_fold_sqrt_qnan_f64() nounwind {
 ; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double +qnan)
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
-  %val = call double @llvm.amdgcn.sqrt.f64(double 0x7FF8000000000000)
+  %val = call double @llvm.amdgcn.sqrt.f64(double +qnan)
   ret double %val
 }
 
@@ -417,7 +417,7 @@ define float @test_constant_fold_frexp_mant_f32_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_nan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.frexp.mant.f32(float 0x7FF8000000000000)
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float +qnan)
   ret float %val
 }
 
@@ -425,7 +425,7 @@ define double @test_constant_fold_frexp_mant_f64_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f64_nan(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %val = call double @llvm.amdgcn.frexp.mant.f64(double 0x7FF8000000000000)
+  %val = call double @llvm.amdgcn.frexp.mant.f64(double +qnan)
   ret double %val
 }
 
@@ -609,7 +609,7 @@ define i32 @test_constant_fold_frexp_exp_f32_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_nan(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float 0x7FF8000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float +qnan)
   ret i32 %val
 }
 
@@ -617,7 +617,7 @@ define i32 @test_constant_fold_frexp_exp_f64_nan() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f64_nan(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %val = call i32 @llvm.amdgcn.frexp.exp.f64(double 0x7FF8000000000000)
+  %val = call i32 @llvm.amdgcn.frexp.exp.f64(double +qnan)
   ret i32 %val
 }
 
@@ -854,7 +854,7 @@ define i1 @test_constant_class_qnan_test_qnan_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_qnan_test_qnan_f64(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 2)
+  %val = call i1 @llvm.amdgcn.class.f64(double +qnan, i32 2)
   ret i1 %val
 }
 
@@ -862,7 +862,7 @@ define i1 @test_constant_class_qnan_test_snan_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_qnan_test_snan_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 1)
+  %val = call i1 @llvm.amdgcn.class.f64(double +qnan, i32 1)
   ret i1 %val
 }
 
@@ -886,7 +886,7 @@ define i1 @test_constant_class_qnan_test_ninf_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_qnan_test_ninf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 4)
+  %val = call i1 @llvm.amdgcn.class.f64(double +qnan, i32 4)
   ret i1 %val
 }
 
@@ -1014,7 +1014,7 @@ define i1 @test_constant_class_qnan_test_pinf_f64() nounwind {
 ; CHECK-LABEL: @test_constant_class_qnan_test_pinf_f64(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %val = call i1 @llvm.amdgcn.class.f64(double 0x7FF8000000000000, i32 512)
+  %val = call i1 @llvm.amdgcn.class.f64(double +qnan, i32 512)
   ret i1 %val
 }
 
@@ -5020,7 +5020,7 @@ define double @trig_preop_qnan(i32 %arg) {
 ; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double +qnan, i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7FF8000000000000, i32 %arg)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double +qnan, i32 %arg)
   ret double %val
 }
 
@@ -5507,7 +5507,7 @@ define float @test_constant_fold_log_f32_qnan() {
 ; CHECK-LABEL: @test_constant_fold_log_f32_qnan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000)
+  %val = call float @llvm.amdgcn.log.f32(float +qnan)
   ret float %val
 }
 
@@ -5540,7 +5540,7 @@ define float @test_constant_fold_log_f32_qnan_strictfp() strictfp {
 ; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float +qnan) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
-  %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000) strictfp
+  %val = call float @llvm.amdgcn.log.f32(float +qnan) strictfp
   ret float %val
 }
 
@@ -5752,7 +5752,7 @@ define float @test_constant_fold_exp2_f32_qnan() {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_qnan(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000)
+  %val = call float @llvm.amdgcn.exp2.f32(float +qnan)
   ret float %val
 }
 
@@ -5786,7 +5786,7 @@ define float @test_constant_fold_exp2_f32_qnan_strictfp() strictfp {
 ; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float +qnan) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
-  %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000) strictfp
+  %val = call float @llvm.amdgcn.exp2.f32(float +qnan) strictfp
   ret float %val
 }
 

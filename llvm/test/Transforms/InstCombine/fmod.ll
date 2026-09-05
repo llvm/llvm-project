@@ -132,7 +132,7 @@ define float @test_nan_input_noerrno(float nofpclass(zero) %g, i1 %c) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
-  %f = select i1 %c, float 0x7FF8000000000000, float 1.0
+  %f = select i1 %c, float +qnan, float 1.0
   %call = tail call float @fmodf(float %f, float %g)
   ret float %call
 }

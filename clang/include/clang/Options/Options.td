@@ -3822,6 +3822,13 @@ def fno_modules_driver :
   Group<f_Group>,
   Visibility<[ClangOption]>,
   HelpText<"Disable support for driver managed module builds (experimental)">;
+def fdepscan_log_path : Joined<["-"], "fdepscan-log-path=">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  Flags<[NoArgumentUnused]>,
+  MetaVarName<"<file>">,
+  HelpText<"Log the timing of dependency scanning actions to <file>. Only "
+           "takes effect while running the dependency scanner.">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,

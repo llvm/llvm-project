@@ -1153,8 +1153,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  unsigned EltSize = 4;
   unsigned Opcode = AMDGPU::V_MOV_B32_e32;
+  unsigned WideOpcode = AMDGPU::INSTRUCTION_LIST_END;
   if (RI.isAGPRClass(RC)) {
     if (ST.hasGFX90AInsts() && RI.isAGPRClass(SrcRC))
       Opcode = AMDGPU::V_ACCVGPR_MOV_B32;
@@ -1165,18 +1165,23 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opcode = AMDGPU::INSTRUCTION_LIST_END;
   } else if (RI.hasVGPRs(RC) && RI.isAGPRClass(SrcRC)) {
     Opcode = AMDGPU::V_ACCVGPR_READ_B32_e64;
-  } else if ((Size % 64 == 0) && RI.hasVGPRs(RC) &&
-             (RI.isProperlyAlignedRC(*RC) &&
-              (SrcRC == RC || RI.isSGPRClass(SrcRC)))) {
-    // TODO: In 96-bit case, could do a 64-bit mov and then a 32-bit mov.
-    if (ST.hasVMovB64Inst()) {
-      Opcode = AMDGPU::V_MOV_B64_e32;
-      EltSize = 8;
-    } else if (ST.hasPkMovB32()) {
-      Opcode = AMDGPU::V_PK_MOV_B32;
-      EltSize = 8;
-    }
+  } else if (RI.isVGPRClass(RC)) {
+    if (ST.hasVMovB64Inst())
+      WideOpcode = AMDGPU::V_MOV_B64_e32;
+    else if (ST.hasPkMovB32())
+      WideOpcode = AMDGPU::V_PK_MOV_B32;
   }
+
+  const TargetRegisterClass *WideRC{};
+  if (WideOpcode != AMDGPU::INSTRUCTION_LIST_END) {
+    unsigned SrcOp = WideOpcode == AMDGPU::V_PK_MOV_B32 ? 2 : 1;
+    WideRC = getRegClass(get(WideOpcode), SrcOp);
+  }
+
+  // If there is an overlap, we can't kill the super-register on the last
+  // instruction, since it will also kill the components made live by this def.
+  const bool Overlap = RI.regsOverlap(SrcReg, DestReg);
+  const bool CanKillSuperReg = KillSrc && !Overlap;
 
   // For the cases where we need an intermediate instruction/temporary register
   // (destination is an AGPR), we need a scavenger.
@@ -1187,30 +1192,43 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (Opcode == AMDGPU::INSTRUCTION_LIST_END)
     RS = std::make_unique<RegScavenger>();
 
-  ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, EltSize);
+  ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, 4);
 
-  // If there is an overlap, we can't kill the super-register on the last
-  // instruction, since it will also kill the components made live by this def.
-  const bool Overlap = RI.regsOverlap(SrcReg, DestReg);
-  const bool CanKillSuperReg = KillSrc && !Overlap;
+  for (unsigned Idx{}; Idx < SubIndices.size();) {
+    unsigned NumRegs = 1;
+    unsigned ThisOpcode = Opcode;
+    unsigned SubIdx =
+        Forward ? SubIndices[Idx] : SubIndices[SubIndices.size() - Idx - 1];
 
-  for (unsigned Idx = 0; Idx < SubIndices.size(); ++Idx) {
-    unsigned SubIdx;
-    if (Forward)
-      SubIdx = SubIndices[Idx];
-    else
-      SubIdx = SubIndices[SubIndices.size() - Idx - 1];
+    if (WideRC && Idx + 1 < SubIndices.size()) {
+      unsigned Channel = RI.getChannelFromSubReg(SubIdx);
+      if (!Forward)
+        --Channel;
+
+      unsigned WideSubIdx = RI.getSubRegFromChannel(Channel, 2);
+      Register WideDst = RI.getSubReg(DestReg, WideSubIdx);
+      Register WideSrc = RI.getSubReg(SrcReg, WideSubIdx);
+
+      if (WideDst && WideSrc && WideRC->contains(WideDst) &&
+          WideRC->contains(WideSrc)) {
+        SubIdx = WideSubIdx;
+        NumRegs = 2;
+        ThisOpcode = WideOpcode;
+      }
+    }
+
     Register DestSubReg = RI.getSubReg(DestReg, SubIdx);
     Register SrcSubReg = RI.getSubReg(SrcReg, SubIdx);
     assert(DestSubReg && SrcSubReg && "Failed to find subregs!");
 
-    bool UseKill = CanKillSuperReg && Idx == SubIndices.size() - 1;
+    Idx += NumRegs;
+    bool UseKill = CanKillSuperReg && Idx == SubIndices.size();
 
-    if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
+    if (ThisOpcode == AMDGPU::INSTRUCTION_LIST_END) {
       Register ImpUseSuper = SrcReg;
       indirectCopyToAGPR(*this, MBB, MI, DL, DestSubReg, SrcSubReg, UseKill,
                          *RS, Overlap, ImpUseSuper);
-    } else if (Opcode == AMDGPU::V_PK_MOV_B32) {
+    } else if (ThisOpcode == AMDGPU::V_PK_MOV_B32) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestSubReg)
           .addImm(SISrcMods::OP_SEL_1)
           .addReg(SrcSubReg)
@@ -1224,7 +1242,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
     } else {
       MachineInstrBuilder Builder =
-          BuildMI(MBB, MI, DL, get(Opcode), DestSubReg).addReg(SrcSubReg);
+          BuildMI(MBB, MI, DL, get(ThisOpcode), DestSubReg).addReg(SrcSubReg);
 
       Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
     }
