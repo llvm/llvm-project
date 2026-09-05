@@ -732,6 +732,16 @@ def CSR_AArch64_StackProbe_Windows
                            (sequence "X%u", 18, 28), FP, SP,
                            (sequence "Q%u", 0, 31))>;
 
+// ___chkstk_darwin takes the prospective stack allocation size in X9. The
+// compatibility implementation used by older Darwin versions also uses X10,
+// and its dispatch veneer uses X16.
+def CSR_AArch64_StackProbe_Darwin
+    : CalleeSavedRegs<(add (sequence "X%u", 0, 8),
+                           (sequence "X%u", 11, 15),
+                           (sequence "X%u", 17, 28), FP, SP,
+                           (sequence "Z%u", 0, 31),
+                           (sequence "P%u", 0, 15))>;
+
 // Darwin variants of AAPCS.
 // Darwin puts the frame-record at the top of the callee-save area.
 def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
