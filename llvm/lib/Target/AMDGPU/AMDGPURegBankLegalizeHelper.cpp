@@ -1485,6 +1485,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   case VgprToVccCopy: {
     Register Src = MI.getOperand(1).getReg();
     LLT Ty = MRI.getType(Src);
+    if (Ty.isAnyScalar()) {
+      Ty = LLT::integer(Ty.getSizeInBits());
+      Src = B.buildCopy({VgprRB, Ty}, Src).getReg(0);
+    }
     // Take lowest bit from each lane and put it in lane mask.
     // Lowering via compare, but we need to clean high bits first as compare
     // compares all bits in register.
