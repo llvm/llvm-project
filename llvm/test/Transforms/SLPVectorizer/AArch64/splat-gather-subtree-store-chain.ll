@@ -12,25 +12,20 @@ define void @test(ptr %matrix, double %0) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP10]], double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 832
-; CHECK-NEXT:    store double [[TMP3]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd double [[TMP1]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP0]], double 0.000000e+00, double [[TMP2]])
-; CHECK-NEXT:    [[TMP11:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 840
-; CHECK-NEXT:    store double [[TMP11]], ptr [[GEP1]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double [[TMP2]], double 0.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double 0.000000e+00, double [[TMP5]])
-; CHECK-NEXT:    [[TMP9:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP6]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 848
-; CHECK-NEXT:    store double [[TMP9]], ptr [[GEP2]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP4]], double 0.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP1]], double 0.000000e+00, double [[TMP7]])
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP8]], double 0.000000e+00, double 0.000000e+00)
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[MATRIX]], i64 856
-; CHECK-NEXT:    store double [[TMP12]], ptr [[GEP3]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> poison, double [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP10]], double [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> [[TMP12]], <4 x double> zeroinitializer, <4 x double> zeroinitializer)
+; CHECK-NEXT:    store <4 x double> [[TMP13]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 entry:

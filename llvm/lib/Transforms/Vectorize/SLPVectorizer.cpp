@@ -794,6 +794,7 @@ public:
     IsGraphTransformMode = false;
     GatheredLoadsEntriesFirst.reset();
     SplatGatheredScalarsRoots.clear();
+    NumSplatSubtreeEntries = 0;
     CompressEntryToData.clear();
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
@@ -826,6 +827,9 @@ public:
 
   /// Returns the base graph size, before any transformations.
   unsigned getCanonicalGraphSize() const { return BaseGraphSize; }
+
+  /// Number of tree entries that form the splat gather subtrees.
+  unsigned getNumSplatSubtreeEntries() const { return NumSplatSubtreeEntries; }
 
   /// Perform LICM and CSE on the newly generated gather sequences.
   void optimizeGatherSequence();
@@ -3633,6 +3637,11 @@ private:
   /// scalars. They have no users in the tree and must be emitted explicitly
   /// before the root node.
   SmallVector<TreeEntry *> SplatGatheredScalarsRoots;
+
+  /// Number of tree entries added while building the splat gather subtrees.
+  /// The subtrees are auxiliary and must not inflate the tree size recorded
+  /// for failed store chain attempts.
+  unsigned NumSplatSubtreeEntries = 0;
 
   /// Maps compress entries to their mask data for the final codegen.
   SmallDenseMap<const TreeEntry *,
@@ -12065,6 +12074,7 @@ public:
 } // namespace
 
 void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
+  unsigned PrevTreeSize = VectorizableTree.size();
   auto LoadsSubkey = [](size_t /*Key*/, LoadInst *LI) {
     return hash_value(getUnderlyingObject(LI->getPointerOperand()));
   };
@@ -12136,6 +12146,7 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
   };
   BuildSubtree(Groups);
   BuildSubtree(FallbackGroups);
+  NumSplatSubtreeEntries = VectorizableTree.size() - PrevTreeSize;
 }
 
 BoUpSLP::ScalarsVectorizationLegality
@@ -29099,7 +29110,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
   InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
   R.buildExternalUses();
 
-  Size = R.getCanonicalGraphSize();
+  Size = R.getCanonicalGraphSize() - R.getNumSplatSubtreeEntries();
   if (S && S.getOpcode() == Instruction::Load)
     Size = 2; // cut off masked gather small trees
   InstructionCost Cost = R.getTreeCost(TreeCost);
