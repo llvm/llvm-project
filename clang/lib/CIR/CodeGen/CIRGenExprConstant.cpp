@@ -962,6 +962,12 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
   if (cir::GlobalOp addr = cgm.getAddrOfConstantCompoundLiteralIfEmitted(e))
     return builder.getGlobalViewAttr(addr);
 
+  // A file-scope compound literal is a constant-initialized global, so emit
+  // its initializer under constant-evaluation rules even when reached from a
+  // non-constant context.
+  if (e->isFileScope())
+    emitter.setInConstantContext(true);
+
   assert(!cir::MissingFeatures::addressSpace());
   mlir::Attribute c =
       emitter.tryEmitForInitializer(e->getInitializer(), e->getType());
