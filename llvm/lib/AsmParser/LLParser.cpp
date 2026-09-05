@@ -9250,6 +9250,14 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
     return error(NewLoc, "compare value and new value type do not match");
   if (!New->getType()->isFirstClassType())
     return error(NewLoc, "cmpxchg operand must be a first class value");
+  if (Cmp->getType()->isScalableTy())
+    return error(CmpLoc, "cmpxchg operand may not be scalable");
+  if (!Cmp->getType()->isIntOrIntVectorTy() &&
+      !Cmp->getType()->isFPOrFPVectorTy() &&
+      !Cmp->getType()->isPtrOrPtrVectorTy())
+    return error(CmpLoc,
+                 "cmpxchg operand must be an integer type, floating-point type,"
+                 "pointer type, or fixed vector of any of these types");
 
   const Align DefaultAlignment(
       PFS.getFunction().getDataLayout().getTypeStoreSize(

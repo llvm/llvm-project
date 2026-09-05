@@ -828,6 +828,8 @@ define void @atomics(ptr %word) {
   ;; Atomic Compare And Exchange w/o alignment
   %cmpxchg_no_align.0 = cmpxchg ptr %word, i32 0, i32 4 monotonic monotonic
   ; CHECK: %cmpxchg_no_align.0 = cmpxchg ptr %word, i32 0, i32 4 monotonic monotonic
+  %cmpxchg_no_align.vector = cmpxchg ptr %word, <2 x i16> <i16 0, i16 1>, <2 x i16> <i16 4, i16 5> monotonic monotonic
+  ; CHECK: %cmpxchg_no_align.vector = cmpxchg ptr %word, <2 x i16> <i16 0, i16 1>, <2 x i16> <i16 4, i16 5> monotonic monotonic
   %cmpxchg_no_align.1 = cmpxchg ptr %word, i32 0, i32 5 acq_rel monotonic
   ; CHECK: %cmpxchg_no_align.1 = cmpxchg ptr %word, i32 0, i32 5 acq_rel monotonic
   %cmpxchg_no_align.2 = cmpxchg ptr %word, i32 0, i32 6 acquire monotonic

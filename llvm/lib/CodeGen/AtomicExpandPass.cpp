@@ -414,10 +414,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       return true;
     }
 
-    // TODO: when we're ready to make the change at the IR level, we can
-    // extend convertCmpXchgToInteger for floating point too.
     bool MadeChange = false;
-    if (CASI->getCompareOperand()->getType()->isPointerTy()) {
+    if (!CASI->getCompareOperand()->getType()->isIntegerTy()) {
       // TODO: add a TLI hook to control this so that each target can
       // convert to lowering the original type one at a time.
       CASI = convertCmpXchgToIntegerType(CASI);
@@ -1427,11 +1425,10 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   return Loaded;
 }
 
-/// Convert an atomic cmpxchg of a non-integral type to an integer cmpxchg of
-/// the equivalent bitwidth.  We used to not support pointer cmpxchg in the
-/// IR.  As a migration step, we convert back to what use to be the standard
-/// way to represent a pointer cmpxchg so that we can update backends one by
-/// one.
+/// Convert an atomic cmpxchg of a non-integer type to an integer cmpxchg of
+/// the equivalent bitwidth. We used to not support pointer, floating-point, and
+/// vector cmpxchg in the IR. As a migration step, convert back to what used to
+/// be the standard representation so that we can update backends one by one.
 AtomicCmpXchgInst *
 AtomicExpandImpl::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
   auto *M = CI->getModule();
@@ -1442,8 +1439,10 @@ AtomicExpandImpl::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
 
   Value *Addr = CI->getPointerOperand();
 
-  Value *NewCmp = Builder.CreatePtrToInt(CI->getCompareOperand(), NewTy);
-  Value *NewNewVal = Builder.CreatePtrToInt(CI->getNewValOperand(), NewTy);
+  Value *NewCmp =
+      Builder.CreateBitPreservingCastChain(*DL, CI->getCompareOperand(), NewTy);
+  Value *NewNewVal =
+      Builder.CreateBitPreservingCastChain(*DL, CI->getNewValOperand(), NewTy);
 
   auto *NewCI = Builder.CreateAtomicCmpXchg(
       Addr, NewCmp, NewNewVal, CI->getAlign(), CI->getSuccessOrdering(),
@@ -1455,7 +1454,8 @@ AtomicExpandImpl::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
   Value *OldVal = Builder.CreateExtractValue(NewCI, 0);
   Value *Succ = Builder.CreateExtractValue(NewCI, 1);
 
-  OldVal = Builder.CreateIntToPtr(OldVal, CI->getCompareOperand()->getType());
+  OldVal = Builder.CreateBitPreservingCastChain(
+      *DL, OldVal, CI->getCompareOperand()->getType());
 
   Value *Res = PoisonValue::get(CI->getType());
   Res = Builder.CreateInsertValue(Res, OldVal, 0);
