@@ -14,6 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ConvertEBCDIC.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -65,35 +67,62 @@ static const unsigned char IBM1047ToISO88591[256] = {
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0xb3, 0xdb,
     0xdc, 0xd9, 0xda, 0x9f};
 
+// Returns true if [Ptr, End) can be completed to form a valid UTF-8 sequence.
+static bool isPotentiallyValidUTF8Prefix(const UTF8 *Ptr, const UTF8 *End) {
+  assert(Ptr != End);
+  UTF8 Lead = *Ptr++;
+  if (Lead < 0xc2 || Lead > 0xf4)
+    return false;
+  if (Ptr == End)
+    return true;
+
+  UTF8 Second = *Ptr++;
+  if ((Second & 0xc0) != 0x80)
+    return false;
+  if ((Lead == 0xe0 && Second < 0xa0) || (Lead == 0xed && Second > 0x9f) ||
+      (Lead == 0xf0 && Second < 0x90) || (Lead == 0xf4 && Second > 0x8f))
+    return false;
+
+  while (Ptr != End)
+    if ((*Ptr++ & 0xc0) != 0x80)
+      return false;
+  return true;
+}
+
 std::error_code
 ConverterEBCDIC::convertToEBCDIC(StringRef Source,
                                  SmallVectorImpl<char> &Result) {
   assert(Result.empty() && "Result must be empty!");
-  const unsigned char *Table = ISO88591ToIBM1047;
-  const unsigned char *Ptr =
-      reinterpret_cast<const unsigned char *>(Source.data());
-  size_t Length = Source.size();
-  Result.reserve(Length);
-  while (Length--) {
-    unsigned char Ch = *Ptr++;
-    // Handle UTF-8 2-byte-sequences in input.
-    if (Ch >= 128) {
-      // Only two-byte sequences can be decoded.
-      if (Ch != 0xc2 && Ch != 0xc3)
-        return std::make_error_code(std::errc::illegal_byte_sequence);
-      // Is buffer truncated?
-      if (!Length)
-        return std::make_error_code(std::errc::invalid_argument);
-      unsigned char Ch2 = *Ptr++;
-      // Is second byte well-formed?
-      if ((Ch2 & 0xc0) != 0x80)
-        return std::make_error_code(std::errc::illegal_byte_sequence);
-      Ch = Ch2 | (Ch << 6);
-      Length--;
+  Result.reserve(Source.size());
+  if (Source.empty())
+    return std::error_code();
+
+  const UTF8 *Ptr = reinterpret_cast<const UTF8 *>(Source.data());
+  const UTF8 *End = Ptr + Source.size();
+  while (Ptr != End) {
+    if (*Ptr < 0x80) {
+      Result.push_back(static_cast<char>(ISO88591ToIBM1047[*Ptr++]));
+      continue;
     }
-    // Translate the character.
-    Ch = Table[Ch];
-    Result.push_back(static_cast<char>(Ch));
+
+    UTF32 Ch;
+    switch (convertUTF8Sequence(&Ptr, End, &Ch, strictConversion)) {
+    case conversionOK:
+      break;
+    case sourceExhausted:
+      if (!isPotentiallyValidUTF8Prefix(Ptr, End))
+        return std::make_error_code(std::errc::illegal_byte_sequence);
+      return std::make_error_code(std::errc::invalid_argument);
+    case sourceIllegal:
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+    case targetExhausted:
+      llvm_unreachable("unexpected UTF-32 target exhaustion");
+    }
+
+    if (Ch > 0xff)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+
+    Result.push_back(static_cast<char>(ISO88591ToIBM1047[Ch]));
   }
   return std::error_code();
 }
