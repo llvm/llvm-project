@@ -38,7 +38,7 @@
 #  define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS 0
 #endif
 
-#if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
+#if __has_feature(thread_sanitizer)
 #  define _LIBCPP_ENABLE_TSAN_ANNOTATIONS 1
 #else
 #  define _LIBCPP_ENABLE_TSAN_ANNOTATIONS 0
@@ -69,13 +69,6 @@ _LIBCPP_EXPORTED_FROM_ABI void __tsan_release(void*);
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_tsan_release(void* __addr) {
-#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
-  ::__tsan_release(__addr);
-#else
-  (void)__addr;
-#endif
-}
 
 // ASan choices
 #if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS

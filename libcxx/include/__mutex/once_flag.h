@@ -83,16 +83,14 @@ private:
 template <class _Fp>
 class __call_once_param {
   _Fp& __f_;
-  void* __flag_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f, void* __flag) : __f_(__f), __flag_(__flag) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
 
   _LIBCPP_HIDE_FROM_ABI void operator()() {
     [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> void {
       std::__invoke(std::get<_Indices>(std::move(__f_))...);
     }(__make_index_sequence<tuple_size<_Fp>::value>());
-    std::__libcpp_tsan_release(__flag_);
   }
 };
 
@@ -101,12 +99,11 @@ public:
 template <class _Fp>
 class __call_once_param {
   _Fp& __f_;
-  void* __flag_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f, void* __flag) : __f_(__f), __flag_(__flag) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
 
-  _LIBCPP_HIDE_FROM_ABI void operator()() { __f_(); std::__libcpp_tsan_release(__flag_); }
+  _LIBCPP_HIDE_FROM_ABI void operator()() { __f_(); }
 };
 
 #endif
@@ -116,6 +113,22 @@ void _LIBCPP_HIDE_FROM_ABI __call_once_proxy(void* __vp) {
   __call_once_param<_Fp>* __p = static_cast<__call_once_param<_Fp>*>(__vp);
   (*__p)();
 }
+
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+
+struct __call_once_tsan_param {
+  void* __arg_;
+  void (*__func_)(void*);
+  void* __flag_;
+};
+
+inline _LIBCPP_HIDE_FROM_ABI void __call_once_tsan_proxy(void* __vp) {
+  __call_once_tsan_param* __p = static_cast<__call_once_tsan_param*>(__vp);
+  __p->__func_(__p->__arg_);
+  ::__tsan_release(__p->__flag_);
+}
+
+#endif
 
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile once_flag::_State_type&, void*, void (*)(void*));
@@ -137,8 +150,16 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __fun
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     typedef tuple<_Callable&&, _Args&&...> _Gp;
     _Gp __f(std::forward<_Callable>(__func), std::forward<_Args>(__args)...);
-    __call_once_param<_Gp> __p(__f, std::addressof(__flag.__state_));
+    __call_once_param<_Gp> __p(__f);
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+    __call_once_tsan_param __tsan_p = {
+        std::addressof(__p),
+        std::addressof(__call_once_proxy<_Gp>),
+        std::addressof(__flag.__state_)};
+    std::__call_once(__flag.__state_, std::addressof(__tsan_p), std::addressof(__call_once_tsan_proxy));
+#else
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Gp>));
+#endif
   }
 }
 
@@ -147,16 +168,32 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __fun
 template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
-    __call_once_param<_Callable> __p(__func, std::addressof(__flag.__state_));
+    __call_once_param<_Callable> __p(__func);
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+    __call_once_tsan_param __tsan_p = {
+        std::addressof(__p),
+        std::addressof(__call_once_proxy<_Callable>),
+        std::addressof(__flag.__state_)};
+    std::__call_once(__flag.__state_, std::addressof(__tsan_p), std::addressof(__call_once_tsan_proxy));
+#else
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Callable>));
+#endif
   }
 }
 
 template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, const _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
-    __call_once_param<const _Callable> __p(__func, std::addressof(__flag.__state_));
+    __call_once_param<const _Callable> __p(__func);
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+    __call_once_tsan_param __tsan_p = {
+        std::addressof(__p),
+        std::addressof(__call_once_proxy<const _Callable>),
+        std::addressof(__flag.__state_)};
+    std::__call_once(__flag.__state_, std::addressof(__tsan_p), std::addressof(__call_once_tsan_proxy));
+#else
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<const _Callable>));
+#endif
   }
 }
 
