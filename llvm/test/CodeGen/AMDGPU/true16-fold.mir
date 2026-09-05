@@ -265,3 +265,21 @@ body:             |
     $vgpr0 = COPY %5
     SI_RETURN implicit $vgpr0
 ...
+
+---
+name:            sgpr_hi16_copy_not_folded
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: sgpr_hi16_copy_not_folded
+    ; CHECK: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[DEF]].hi16
+    ; CHECK-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF1]], killed [[COPY]], implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %0.hi16
+    %3:sreg_32 = S_PACK_LL_B32_B16 %1, killed %2, implicit-def dead $scc
+    S_ENDPGM 0, implicit %3
+...
