@@ -81,7 +81,10 @@ LIBC_ERRNO_MODE_SYSTEM_INLINE.
 
 namespace LIBC_NAMESPACE_DECL {
 
-extern "C" int *__llvm_libc_errno() noexcept;
+// This is what <errno.h> makes errno stand for, so a program which touches
+// errno binds to it. That crosses into libc.so, which the hidden visibility
+// LIBC_NAMESPACE_DECL carries would not allow.
+extern "C" LIBC_SHARED_INTERNAL int *__llvm_libc_errno() noexcept;
 
 // libm.so and libmvec.so share libc.so's errno.
 struct LIBC_SHARED_INTERNAL Errno {

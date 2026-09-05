@@ -25,7 +25,9 @@ namespace {
 LIBC_THREAD_LOCAL int thread_errno;
 }
 
-extern "C" int *__llvm_libc_errno() noexcept { return &thread_errno; }
+extern "C" LIBC_SHARED_INTERNAL int *__llvm_libc_errno() noexcept {
+  return &thread_errno;
+}
 
 void Errno::operator=(int a) { thread_errno = a; }
 Errno::operator int() { return thread_errno; }
@@ -36,7 +38,9 @@ namespace {
 int shared_errno;
 }
 
-extern "C" int *__llvm_libc_errno() noexcept { return &shared_errno; }
+extern "C" LIBC_SHARED_INTERNAL int *__llvm_libc_errno() noexcept {
+  return &shared_errno;
+}
 
 void Errno::operator=(int a) { shared_errno = a; }
 Errno::operator int() { return shared_errno; }
